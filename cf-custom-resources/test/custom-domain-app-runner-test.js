@@ -70,7 +70,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                let expectedErrMessageRegex = /^upsert record mockDomain: some error \(Log: .*\)$/;
+                let expectedErrMessageRegex = /^update record mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1
@@ -125,7 +125,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                let expectedErrMessageRegex = /^wait for record sets change for mockDomain: some error \(Log: .*\)$/;
+                let expectedErrMessageRegex = /^update record mockDomain: wait for record sets change for mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1
@@ -182,7 +182,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                let expectedErrMessageRegex = /^get custom domains for service mockService: some error \(Log: .*\)$/;
+                let expectedErrMessageRegex = /^update validation records for domain mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1
@@ -230,7 +230,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                let expectedErrMessageRegex = /^failed waiting for custom domain mockDomain to change to state pending_certificate_dns_validation \(Log: .*\)$/;
+                let expectedErrMessageRegex = /^update validation records for domain mockDomain: fail to wait for state pending_certificate_dns_validation \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1
@@ -296,7 +296,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                let expectedErrMessageRegex = /^upsert certificate validation record: upsert record mock-record-name-2: some error \(Log: .*\)$/;
+                let expectedErrMessageRegex = /^update validation records for domain mockDomain: update record mock-record-name-2: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1

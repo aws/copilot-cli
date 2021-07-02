@@ -109,7 +109,7 @@ exports.handler = async function (event, context) {
             await report(event, context, "SUCCESS", event.LogicalResourceId);
             return;
         }
-        console.log(`Caught error: ${err.message}`);
+        console.log(`Caught error for service ${serviceARN}: ${err.message}`);
         await report(event, context, "FAILED", event.LogicalResourceId, null, err.message);
     }
 };
@@ -146,7 +146,7 @@ async function validateCertForDomain(serviceARN, domainName) {
         const data = await appRunnerClient.describeCustomDomains({
             ServiceArn: serviceARN,
         }).promise().catch(err => {
-            throw new Error(`get custom domains for service ${serviceARN}: ` + err.message);
+            throw new Error(`update validation records for domain ${domainName}: ` + err.message);
         });
 
         let domain;
@@ -158,7 +158,7 @@ async function validateCertForDomain(serviceARN, domainName) {
         }
 
         if (!domain) {
-            throw new Error(`domain ${domainName} is not associated`);
+            throw new Error(`update validation records for domain ${domainName}: domain ${domainName} is not associated`);
         }
 
         if (domain.Status !== DOMAIN_STATUS_PENDING_VERIFICATION) {
@@ -170,14 +170,14 @@ async function validateCertForDomain(serviceARN, domainName) {
         const records = domain.CertificateValidationRecords;
         for (const record of records) {
             await updateCNAMERecordAndWait(record.Name, record.Value, appHostedZoneID, "UPSERT").catch(err => {
-                throw new Error("upsert certificate validation record: " + err.message);
+                throw new Error(`update validation records for domain ${domainName}: ` + err.message);
             });
         }
         break;
     }
 
     if (i === ATTEMPTS) {
-        throw new Error(`failed waiting for custom domain ${domainName} to change to state ${DOMAIN_STATUS_PENDING_VERIFICATION}`);
+        throw new Error(`update validation records for domain ${domainName}: fail to wait for state ${DOMAIN_STATUS_PENDING_VERIFICATION}`);
     }
 }
 
@@ -213,7 +213,7 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
     };
 
      const data = await appRoute53Client.changeResourceRecordSets(params).promise().catch((err) => {
-        throw new Error(`upsert record ${recordName}: ` + err.message);
+        throw new Error(`update record ${recordName}: ` + err.message);
     });
 
      await appRoute53Client.waitFor('resourceRecordSetsChanged', {
@@ -224,7 +224,7 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
          },
          Id: data.ChangeInfo.Id,
      }).promise().catch((err) => {
-         throw new Error(`wait for record sets change for ${recordName}: ` + err.message);
+         throw new Error(`update record ${recordName}: wait for record sets change for ${recordName}: ` + err.message);
      });
 }
 
