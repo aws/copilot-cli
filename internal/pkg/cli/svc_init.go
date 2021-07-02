@@ -432,23 +432,18 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 	}, nil
 }
 
-func (o *initSvcOpts) dockerPlatform() (operatingSystem, architecture string, err error) {
-	var os string
-	var arch string
-	if o.image != "" {
-		os = runtime.GOOS
-		arch = runtime.GOARCH
-	} else {
+func (o *initSvcOpts) dockerPlatform() (os, arch string, err error) {
+	os, arch = runtime.GOOS, runtime.GOARCH
+	if o.image == "" {
 		os, arch, err = o.dockerEngine.GetPlatform()
 		if err != nil {
 			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
 		}
 	}
 	// Until we target X86_64 for ARM architectures, log a warning.
-	if arch == "arm" || arch == "arm64" {
+	if arch == exec.ArmArch || arch == exec.Arm64Arch {
 		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
 	}
-
 	return os, arch, nil
 }
 

@@ -357,40 +357,29 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 func TestDockerCommand_GetPlatform(t *testing.T) {
 	mockError := errors.New("some error")
 	mockOS := "operatingSystem"
-	mockArch := "archie"
+	mockArch := "archer"
 	var mockRunner *Mockrunner
 
 	tests := map[string]struct {
-		setupMocks   func(controller *gomock.Controller)
-		inOSBuffer   *bytes.Buffer
-		inArchBuffer *bytes.Buffer
-		wantedOS     string
-		wantedArch   string
+		setupMocks func(controller *gomock.Controller)
+		inBuffer   *bytes.Buffer
+		wantedOS   string
+		wantedArch string
 
 		wantedErr error
 	}{
-		"error running 'docker version' for os": {
+		"error running 'docker version'": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
-				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, gomock.Any()).Return(mockError)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Return(mockError)
 			},
-			wantedErr: fmt.Errorf("get docker os: some error"),
-		},
-		"error running 'docker version' for arch": {
-			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = NewMockrunner(controller)
-				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, gomock.Any()).Return(nil)
-				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Arch}}'"}, gomock.Any()).Return(mockError)
-			},
-			wantedErr: fmt.Errorf("get docker architecture: some error"),
+			wantedErr: fmt.Errorf("run docker version: some error"),
 		},
 		"success": {
-			inOSBuffer:   bytes.NewBufferString(`linux`),
-			inArchBuffer: bytes.NewBufferString(`amd64`),
+			inBuffer: bytes.NewBufferString(`'{"Os":"linux","Arch":"amd64"}'`),
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
-				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, gomock.Any()).Return(nil)
-				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Arch}}'"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Return(nil)
 			},
 			wantedOS:   mockOS,
 			wantedArch: mockArch,
@@ -403,7 +392,7 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 			tc.setupMocks(controller)
 			s := DockerCommand{
 				runner: mockRunner,
-				buf:    tc.inOSBuffer,
+				buf:    tc.inBuffer,
 			}
 
 			os, arch, err := s.GetPlatform()

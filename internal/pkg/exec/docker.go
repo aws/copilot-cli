@@ -50,6 +50,8 @@ type dockerConfig struct {
 
 const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
+	ArmArch           = "arm"
+	Arm64Arch         = "arm64"
 )
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
@@ -171,27 +173,29 @@ func (c DockerCommand) GetPlatform() (os, arch string, err error) {
 	if _, err := exec.LookPath("docker"); err != nil {
 		return "", "", ErrDockerCommandNotFound
 	}
-	osBuf := &bytes.Buffer{}
-	err = c.runner.Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, Stdout(osBuf))
+	buf := &bytes.Buffer{}
+	err = c.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, Stdout(buf))
 	if err != nil {
-		return "", "", fmt.Errorf("get docker os: %w", err)
+		return "", "", fmt.Errorf("run docker version: %w", err)
 	}
 	if c.buf != nil {
-		osBuf = c.buf
+		buf = c.buf
 	}
-	os = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(osBuf.String()), "'"), "'")
 
-	archBuf := &bytes.Buffer{}
-	err = c.runner.Run("docker", []string{"version", "-f", "'{{.Server.Arch}}'"}, Stdout(archBuf))
-	if err != nil {
-		return "", "", fmt.Errorf("get docker architecture: %w", err)
+	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
+	type dockerServer struct {
+		OS   string `json:"Os"`
+		Arch string `json:"Arch"`
 	}
-	if c.buf != nil {
-		archBuf = c.buf
+	type dockerResponse struct {
+		DockerServer dockerServer `json:"Server"`
 	}
-	arch = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(archBuf.String()), "'"), "'")
+	var platform dockerServer
+	if err := json.Unmarshal([]byte(out), &platform); err != nil {
+		return "", "", fmt.Errorf("unmarshal docker platform: %w", err)
 
-	return os, arch, nil
+	}
+	return platform.OS, platform.Arch, nil
 }
 
 func imageName(uri, tag string) string {
