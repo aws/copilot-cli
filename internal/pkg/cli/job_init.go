@@ -63,6 +63,8 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+	os           string
+	arch         string
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -184,6 +186,12 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
+
+	o.os, o.arch, err = o.getOSArch()
+	if err != nil {
+		return err
+	}
+
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -191,6 +199,10 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
+			Platform: &manifest.PlatformConfig{
+				OS:   o.os,
+				Arch: o.arch,
+			},
 		},
 
 		Schedule:    o.schedule,
@@ -321,6 +333,20 @@ func jobTypePromptOpts() []prompt.Option {
 		})
 	}
 	return options
+}
+
+func (o initJobOpts) getOSArch() (os, arch string, err error) {
+	os, arch, err = o.dockerEngineValidator.GetPlatform()
+	if err != nil {
+		return "", "", fmt.Errorf("get os/arch from docker: %w", err)
+	}
+	// Until we target X86_64 for ARM architectures, log a warning.
+	if arch == "arm" || arch == "arm64" {
+		log.Warningf("Architecture type %s is currently unsupported. To deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
+		return os, arch, nil
+	}
+
+	return os, arch, nil
 }
 
 // buildJobInitCmd builds the command for creating a new job.

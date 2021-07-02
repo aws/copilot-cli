@@ -483,6 +483,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		mockJobInit    func(m *mocks.MockjobInitializer)
 		mockDockerfile func(m *mocks.MockdockerfileParser)
+		mockValidator  func(m *mocks.MockdockerEngineValidator)
 
 		inApp  string
 		inName string
@@ -511,6 +512,9 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					Retries:     zero,
 				}, nil)
 			},
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(&initialize.JobProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -518,6 +522,10 @@ func TestJobInitOpts_Execute(t *testing.T) {
 						Name:           "mailer",
 						Type:           "Scheduled Job",
 						DockerfilePath: "./Dockerfile",
+						Platform: &manifest.PlatformConfig{
+							OS:   "linux",
+							Arch: "amd64",
+						},
 					},
 					Schedule: "@hourly",
 					HealthCheck: &manifest.ContainerHealthCheck{
@@ -531,6 +539,9 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			},
 		},
 		"fail to init job": {
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
 			},
@@ -545,12 +556,16 @@ func TestJobInitOpts_Execute(t *testing.T) {
 
 			mockJobInitializer := mocks.NewMockjobInitializer(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
+			mockDockerValidator := mocks.NewMockdockerEngineValidator(ctrl)
 
 			if tc.mockJobInit != nil {
 				tc.mockJobInit(mockJobInitializer)
 			}
 			if tc.mockDockerfile != nil {
 				tc.mockDockerfile(mockDockerfile)
+			}
+			if tc.mockValidator != nil {
+				tc.mockValidator(mockDockerValidator)
 			}
 
 			opts := initJobOpts{
@@ -567,6 +582,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				initParser: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
+				dockerEngineValidator: mockDockerValidator,
 			}
 
 			// WHEN
