@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -589,8 +590,8 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:  "Backend Service",
 						Image: "nginx:latest",
 						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
-							Arch: "amd64",
+							OS:   runtime.GOOS,
+							Arch: runtime.GOARCH,
 						},
 					},
 				}).Return("manifest/path", nil)
@@ -614,8 +615,8 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:  "Load Balanced Web Service",
 						Image: "nginx:latest",
 						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
-							Arch: "amd64",
+							OS:   runtime.GOOS,
+							Arch: runtime.GOARCH,
 						},
 					},
 				}).Return("manifest/path", nil)
