@@ -3,7 +3,7 @@ module github.com/aws/copilot-cli
 go 1.15
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.12
+	github.com/AlecAivazis/survey/v2 v2.2.14
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
 	github.com/aws/aws-sdk-go v1.38.68
 	github.com/briandowns/spinner v1.16.0
