@@ -45,8 +45,6 @@ Conditions:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
-  LegacyServiceDiscovery:
-    !Equals [ !Ref ServiceDiscoveryEndpoint, "" ]
 Resources:
 {{- if not .ImportVPC}}
 {{include "vpc-resources" .VPCConfig | indent 2}}
@@ -58,11 +56,7 @@ Resources:
   ServiceDiscoveryNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
-        Name: 
-          !If
-            - LegacyServiceDiscovery
-            - !Sub ${AppName}.local
-            - !Ref ServiceDiscoveryEndpoint
+        Name: !Ref ServiceDiscoveryEndpoint
 {{- if .ImportVPC}}
         Vpc: {{.ImportVPC.ID}}
 {{- else}}
