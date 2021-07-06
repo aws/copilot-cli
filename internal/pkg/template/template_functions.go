@@ -131,3 +131,38 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 	return string(out)
 
 }
+
+// generatePublisherJSON turns a list of Topics objects into a JSON string:
+// `{"myTopic": ["hello"], "mySecondTopic": ["hello","goodbye"]}`
+// This function must be called on an array of correctly constructed Topic objects.
+func generatePublisherJSON(topics []*Topics) string {
+	publisherMap := make(map[string][]string)
+
+	for _, pb := range topics {
+		if aws.StringValue(pb.Name) == "" {
+			continue
+		}
+		publisherMap[aws.StringValue(pb.Name)] = aws.StringValueSlice(pb.AllowedWorkers)
+	}
+
+	out, ok := getJSONMap(publisherMap)
+	if !ok {
+		return "{}"
+	}
+
+	return string(out)
+}
+
+func getJSONMap(inMap map[string][]string) ([]byte, bool) {
+	// Check for empty maps
+	if len(inMap) == 0 {
+		return nil, false
+	}
+
+	out, err := json.Marshal(inMap)
+	if err != nil {
+		return nil, false
+	}
+
+	return out, true
+}

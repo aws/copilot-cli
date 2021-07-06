@@ -442,12 +442,22 @@ type SidecarConfig struct {
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
 	CPU            *int              `yaml:"cpu"`
-	Memory         *int              `yaml:"memory"`
+	Memory         *int              `yaml:"memoryxx"`
 	Count          Count             `yaml:"count"`
 	ExecuteCommand ExecuteCommand    `yaml:"exec"`
 	Variables      map[string]string `yaml:"variables"`
 	Secrets        map[string]string `yaml:"secrets"`
 	Storage        *Storage          `yaml:"storage"`
+}
+
+// PublishConfig represents the configurable options for setting up publishers to send messages.
+type PublishConfig struct {
+	Topics []Topic `yaml:"topics"`
+}
+
+type Topic struct {
+	Name           *string  `yaml:"name"`
+	AllowedWorkers []string `yaml:"allowed_workers"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.

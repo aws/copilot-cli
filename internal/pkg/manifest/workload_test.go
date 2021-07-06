@@ -635,3 +635,63 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalPublishers(t *testing.T) {
+	testCases := map[string]struct {
+		inContent     string
+		wantedPublish PublishConfig
+		wantedErr     error
+	}{
+		"Valid publish yaml": {
+			inContent: `topics:
+  - name: tests
+    allowed_workers:
+      - hello
+`,
+			wantedPublish: PublishConfig{
+				Topics: []Topic{
+					{
+						Name:           aws.String("tests"),
+						AllowedWorkers: []string{"hello"},
+					},
+				},
+			},
+		},
+		"Empty workers don't appear in topic": {
+			inContent: `topics:
+  - name: tests
+`,
+			wantedPublish: PublishConfig{
+				Topics: []Topic{
+					{
+						Name: aws.String("tests"),
+					},
+				},
+			},
+		},
+		"Error when unmarshalable": {
+			inContent: `topics:
+   - name: tests
+    allowed_workers:
+      - hello
+  - name: orders
+`,
+			wantedErr: errors.New("yaml: line 1: did not find expected '-' indicator"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			p := PublishConfig{}
+
+			err := yaml.Unmarshal([]byte(tc.inContent), &p)
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPublish, p)
+			}
+		})
+	}
+}
