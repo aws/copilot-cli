@@ -13,8 +13,8 @@ const sinon = require("sinon");
 const nock = require("nock");
 
 describe("Custom Domain for App Runner Service During Create", () => {
-    const [mockServiceARN, mockCustomDomain, mockHostedZoneID] = ["mockService", "mockDomain", "mockHostedZoneID",];
-    const mockResponseURL = "https://mock.com/";
+    const [mockServiceARN, mockCustomDomain, mockHostedZoneID, mockResponseURL, mockPhysicalResourceID, mockLogicalResourceID] =
+        ["mockService", "mockDomain", "mockHostedZoneID", "https://mock.com/", "mockPhysicalResourceID", "mockLogicalResourceID", ];
 
     beforeEach(() => {
         withSleep(_ => {
@@ -37,7 +37,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason.search(expectedErrMessageRegex) !== -1
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID
                 );
             })
             .reply(200);
@@ -51,6 +52,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                // PhysicalResourceId is undefined for "Create"
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve( () => {
                 expect(expectedResponse.isDone()).toBe(true);
@@ -73,7 +76,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^update record mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason.search(expectedErrMessageRegex) !== -1
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID
                 );
             })
             .reply(200);
@@ -87,6 +91,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve( () => {
                 expect(expectedResponse.isDone()).toBe(true);
@@ -128,7 +133,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^update record mockDomain: wait for record sets change for mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason.search(expectedErrMessageRegex) !== -1
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID
                 );
             })
             .reply(200);
@@ -142,6 +148,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve( err => {
                 expect(expectedResponse.isDone()).toBe(true);
@@ -185,7 +192,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^update validation records for domain mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason.search(expectedErrMessageRegex) !== -1
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID
                 );
             })
             .reply(200);
@@ -199,6 +207,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve( err => {
                 expect(expectedResponse.isDone()).toBe(true);
@@ -233,7 +242,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^update validation records for domain mockDomain: fail to wait for state pending_certificate_dns_validation \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason.search(expectedErrMessageRegex) !== -1
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID
                 );
             })
             .reply(200);
@@ -247,6 +257,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve( () => {
                 expect(expectedResponse.isDone()).toBe(true);
@@ -299,7 +310,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^update validation records for domain mockDomain: update record mock-record-name-2: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason.search(expectedErrMessageRegex) !== -1
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID
                 );
             })
             .reply(200);
@@ -313,6 +325,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve( () => {
                 expect(expectedResponse.isDone()).toBe(true);
@@ -357,22 +370,6 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     HostedZoneId: mockHostedZoneID,
                 }));
             });
-    });
-
-    test("fail to send failure response", () => {
-        const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
-        AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-        return LambdaTester( handler )
-            .event({
-                ResponseURL: "super weird URL",
-                ResourceProperties: {
-                    ServiceARN: mockServiceARN,
-                    AppDNSRole: "",
-                    CustomDomain: mockCustomDomain,
-                    HostedZoneID: mockHostedZoneID,
-                },
-            })
-            .expectReject(() => {});
     });
 
     test("fail to wait for domain to become active", () => {
@@ -422,7 +419,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^fail to wait for domain mockDomain to become active \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason.search(expectedErrMessageRegex) !== -1
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID
                 );
             })
             .reply(200);
@@ -436,10 +434,29 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve(() => {
                 expect(expectedResponse.isDone()).toBe(true);
             });
+    });
+
+    test("fail to send failure response", () => {
+        const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
+        AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
+        return LambdaTester( handler )
+            .event({
+                ResponseURL: "super weird URL",
+                ResourceProperties: {
+                    ServiceARN: mockServiceARN,
+                    AppDNSRole: "",
+                    CustomDomain: mockCustomDomain,
+                    HostedZoneID: mockHostedZoneID,
+                },
+                PhysicalResourceId: mockPhysicalResourceID,
+                LogicalResourceId: mockLogicalResourceID,
+            })
+            .expectReject(() => {});
     });
 
     test("success", () => {
@@ -496,7 +513,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                return body.Status === "SUCCESS";
+                return body.Status === "SUCCESS"  &&
+                       body.PhysicalResourceId === "/associate-domain-app-runner/mockDomain";
             })
             .reply(200);
         return LambdaTester( handler )
@@ -509,6 +527,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     CustomDomain: mockCustomDomain,
                     HostedZoneID: mockHostedZoneID,
                 },
+                PhysicalResourceId: mockPhysicalResourceID,
+                LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve(() => {
                 expect(expectedResponse.isDone()).toBe(true);

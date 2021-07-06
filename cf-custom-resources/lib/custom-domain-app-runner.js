@@ -85,6 +85,7 @@ exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
     const [serviceARN, appDNSRole, customDomain] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain,];
     appHostedZoneID = props.HostedZoneID;
+    let physicalResourceID = event.PhysicalResourceId || event.LogicalResourceId;
     try {
         // Configure clients.
         appRoute53Client = new AWS.Route53({
@@ -99,6 +100,7 @@ exports.handler = async function (event, context) {
             case "Create":
                 await addCustomDomain(serviceARN, customDomain);
                 await waitForCustomDomainToBeActive(serviceARN, customDomain);
+                physicalResourceID = `/associate-domain-app-runner/${customDomain}`;
                 break;
             case "Update":
             case "Delete":
@@ -106,14 +108,14 @@ exports.handler = async function (event, context) {
             default:
                 throw new Error(`Unsupported request type ${event.RequestType}`);
         }
-        await report(event, context, "SUCCESS", event.LogicalResourceId);
+        await report(event, context, "SUCCESS", physicalResourceID);
     } catch (err) {
         if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
-            await report(event, context, "SUCCESS", event.LogicalResourceId);
+            await report(event, context, "SUCCESS", physicalResourceID);
             return;
         }
         console.log(`Caught error for service ${serviceARN}: ${err.message}`);
-        await report(event, context, "FAILED", event.LogicalResourceId, null, err.message);
+        await report(event, context, "FAILED", physicalResourceID, null, err.message);
     }
 };
 
