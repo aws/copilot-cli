@@ -346,7 +346,7 @@ func (o *initJobOpts) dockerPlatform() (os, arch string, err error) {
 	}
 	// Until we target X86_64 for ARM architectures, log a warning.
 	if arch == exec.ArmArch || arch == exec.Arm64Arch {
-		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
+		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot deploy`")
 	}
 	return os, arch, nil
 }
