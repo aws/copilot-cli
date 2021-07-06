@@ -13,11 +13,13 @@ const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
 const ATTEMPTS_WAIT_FOR_PENDING = 10;
 const ATTEMPTS_WAIT_FOR_ACTIVE = 12;
+const LAMBDA_TIME_OUT = 14*60*1000; // Lambda times out at 15 minutes, we report failure 1 minute so that there is enough time for `report` to be executed.
 
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
 let sleep = defaultSleep;
+let lambdaTimeOut = new Promise((resolve) => setTimeout(resolve, LAMBDA_TIME_OUT));
 let appRoute53Client, appRunnerClient, appHostedZoneID;
 
 /**
@@ -86,7 +88,16 @@ exports.handler = async function (event, context) {
     const [serviceARN, appDNSRole, customDomain] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain,];
     appHostedZoneID = props.HostedZoneID;
     let physicalResourceID = event.PhysicalResourceId || event.LogicalResourceId;
-    try {
+
+    // Report with failure if lambda times out.
+    let timedOut = () => {
+        return lambdaTimeOut.then(async () => {
+            console.log(`Lambda is about to time out. Operation fails.`);
+            throw new Error("Lambda about to time out");
+        });
+    };
+
+    let handler = async function () {
         // Configure clients.
         appRoute53Client = new AWS.Route53({
             credentials: new AWS.ChainableTemporaryCredentials({
@@ -108,6 +119,10 @@ exports.handler = async function (event, context) {
             default:
                 throw new Error(`Unsupported request type ${event.RequestType}`);
         }
+    };
+
+    try {
+        await Promise.race([timedOut(), handler(),]);
         await report(event, context, "SUCCESS", physicalResourceID);
     } catch (err) {
         if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
@@ -285,3 +300,6 @@ exports.withSleep = function (s) {
 exports.reset = function () {
     sleep = defaultSleep;
 };
+exports.withLambdaTimeOut = function (t) {
+    lambdaTimeOut = t;
+}

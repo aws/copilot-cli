@@ -8,7 +8,7 @@
 
 const AWS = require("aws-sdk-mock");
 const LambdaTester = require("lambda-tester").noVersionCheck();
-const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, withSleep, reset} = require("../lib/custom-domain-app-runner");
+const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, withSleep, reset, withLambdaTimeOut} = require("../lib/custom-domain-app-runner");
 const sinon = require("sinon");
 const nock = require("nock");
 
@@ -528,6 +528,34 @@ describe("Custom Domain for App Runner Service During Create", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
                 PhysicalResourceId: mockPhysicalResourceID,
+                LogicalResourceId: mockLogicalResourceID,
+            })
+            .expectResolve(() => {
+                expect(expectedResponse.isDone()).toBe(true);
+            });
+    });
+
+    test("lambda time out", () => {
+        withLambdaTimeOut(new Promise((resolve) => setTimeout(resolve, 1)));
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                let expectedErrMessageRegex = /^Lambda about to time out \(Log: .*\)$/;
+                return body.Status === "FAILED"  &&
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === mockLogicalResourceID;
+
+            })
+            .reply(200);
+        return LambdaTester( handler )
+            .event({
+                RequestType: "Create",
+                ResponseURL: mockResponseURL,
+                ResourceProperties: {
+                    ServiceARN: mockServiceARN,
+                    AppDNSRole: "",
+                    CustomDomain: mockCustomDomain,
+                    HostedZoneID: mockHostedZoneID,
+                },
                 LogicalResourceId: mockLogicalResourceID,
             })
             .expectResolve(() => {
