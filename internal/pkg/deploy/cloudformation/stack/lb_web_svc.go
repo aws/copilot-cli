@@ -151,6 +151,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			aliases = append(aliases, albAlias)
 		}
 	}
+
+	var allowedSourceIPs []string
+	if s.manifest.AllowedSourceIps != nil {
+		allowedSourceIPs = *s.manifest.AllowedSourceIps
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                s.manifest.Variables,
 		Secrets:                  s.manifest.Secrets,
@@ -166,7 +171,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		WorkloadType:             manifest.LoadBalancedWebServiceType,
 		HealthCheck:              s.manifest.ImageConfig.HealthCheckOpts(),
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.HealthCheck),
-		AllowedSourceIps:         s.manifest.AllowedSourceIps,
+		AllowedSourceIps:         allowedSourceIPs,
 		RulePriorityLambda:       rulePriorityLambda.String(),
 		DesiredCountLambda:       desiredCountLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
