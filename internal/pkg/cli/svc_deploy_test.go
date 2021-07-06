@@ -689,10 +689,12 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 					appName: mockAppName,
 					envName: mockEnvName,
 				},
-				ws:                mockWorkspace,
-				buildRequired:     tc.inBuildRequire,
-				appCFN:            mockAppResourcesGetter,
-				appVersionGetter:  mockAppVersionGetter,
+				ws:            mockWorkspace,
+				buildRequired: tc.inBuildRequire,
+				appCFN:        mockAppResourcesGetter,
+				newAppVersionGetter: func(s string) (versionGetter, error) {
+					return mockAppVersionGetter, nil
+				},
 				endpointGetter:    mockEndpointGetter,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
