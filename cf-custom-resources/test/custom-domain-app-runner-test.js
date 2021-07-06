@@ -5,7 +5,6 @@
 /* jshint node: true */
 /*jshint esversion: 8 */
 
-
 const AWS = require("aws-sdk-mock");
 const LambdaTester = require("lambda-tester").noVersionCheck();
 const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, withSleep, reset, withLambdaTimeOut} = require("../lib/custom-domain-app-runner");
@@ -18,8 +17,14 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
     beforeEach(() => {
         withSleep(_ => {
-            return new Promise((resolve) => setTimeout(resolve, 1));
+            return Promise.resolve();
         });
+
+        withLambdaTimeOut(_ => {
+            return new Promise((resolve) => {
+                setTimeout(resolve, 1000);
+            });
+        }); // Mock lambda should time out after normal operations.
     });
 
     afterEach(() => {
@@ -68,8 +73,12 @@ describe("Custom Domain for App Runner Service During Create", () => {
         const mockTarget = "mockTarget";
         const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
         const mockChangeResourceRecordSets = sinon.fake.rejects(new Error("some error"));
+        const mockDescribeCustomDomains = sinon.fake(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        });
         AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
         AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+        AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
@@ -124,9 +133,13 @@ describe("Custom Domain for App Runner Service During Create", () => {
         const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
         const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
         const mockWaitFor = sinon.fake.rejects(new Error("some error"));
+        const mockDescribeCustomDomains = sinon.fake(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        });
         AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
         AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
         AWS.mock("Route53", "waitFor", mockWaitFor);
+        AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
@@ -464,7 +477,6 @@ describe("Custom Domain for App Runner Service During Create", () => {
         const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
         const mockWaitFor = sinon.fake.resolves();
         const mockDescribeCustomDomains = sinon.stub();
-
         // Successfully wait for custom domain's status to be "pending" after several waits.
         for (let i = 0; i < waitForDomainStatusPendingAttempts - 1; i++) {
             mockDescribeCustomDomains.onCall(i).resolves({
@@ -502,7 +514,6 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 },
             ],
         });
-
         const mockChangeResourceRecordSets = sinon.stub();
         mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockID", }, });
 
@@ -536,7 +547,15 @@ describe("Custom Domain for App Runner Service During Create", () => {
     });
 
     test("lambda time out", () => {
-        withLambdaTimeOut(new Promise((resolve) => setTimeout(resolve, 1)));
+        withLambdaTimeOut(_ => {
+            return Promise.resolve();
+        });
+
+        const mockAssociateCustomDomain = sinon.fake(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        });
+        AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
+
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
                 let expectedErrMessageRegex = /^Lambda about to time out \(Log: .*\)$/;

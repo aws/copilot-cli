@@ -19,7 +19,10 @@ let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
 let sleep = defaultSleep;
-let lambdaTimeOut = new Promise((resolve) => setTimeout(resolve, LAMBDA_TIME_OUT));
+let defaultLambdaTimeOut = function () {
+    return new Promise((resolve) => setTimeout(resolve, LAMBDA_TIME_OUT));
+};
+let lambdaTimeOut = defaultLambdaTimeOut;
 let appRoute53Client, appRunnerClient, appHostedZoneID;
 
 /**
@@ -88,15 +91,6 @@ exports.handler = async function (event, context) {
     const [serviceARN, appDNSRole, customDomain] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain,];
     appHostedZoneID = props.HostedZoneID;
     let physicalResourceID = event.PhysicalResourceId || event.LogicalResourceId;
-
-    // Report with failure if lambda times out.
-    let timedOut = () => {
-        return lambdaTimeOut.then(async () => {
-            console.log(`Lambda is about to time out. Operation fails.`);
-            throw new Error("Lambda about to time out");
-        });
-    };
-
     let handler = async function () {
         // Configure clients.
         appRoute53Client = new AWS.Route53({
@@ -122,7 +116,11 @@ exports.handler = async function (event, context) {
     };
 
     try {
-        await Promise.race([timedOut(), handler(),]);
+        let timedOut = lambdaTimeOut().then(async () => {
+            console.log(`Lambda is about to time out. Operation fails.`);
+            throw new Error("Lambda about to time out");
+        });
+        await Promise.race([timedOut, handler(),]);
         await report(event, context, "SUCCESS", physicalResourceID);
     } catch (err) {
         if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
@@ -190,7 +188,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
         ServiceArn: serviceARN,
     }).promise();
 
-    await Promise.all([
+    return Promise.all([
         updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
         validateCertForDomain(serviceARN, customDomainName),
     ]);
@@ -228,7 +226,6 @@ async function validateCertForDomain(serviceARN, domainName) {
             await sleep(3000);
             continue;
         }
-
         // Upsert all records needed for certificate validation.
         const records = domain.CertificateValidationRecords;
         for (const record of records) {
@@ -299,6 +296,8 @@ exports.withSleep = function (s) {
 };
 exports.reset = function () {
     sleep = defaultSleep;
+    lambdaTimeOut = defaultLambdaTimeOut;
+
 };
 exports.withLambdaTimeOut = function (t) {
     lambdaTimeOut = t;
