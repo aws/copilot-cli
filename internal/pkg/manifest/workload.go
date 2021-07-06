@@ -442,7 +442,7 @@ type SidecarConfig struct {
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
 	CPU            *int              `yaml:"cpu"`
-	Memory         *int              `yaml:"memoryxx"`
+	Memory         *int              `yaml:"memory"`
 	Count          Count             `yaml:"count"`
 	ExecuteCommand ExecuteCommand    `yaml:"exec"`
 	Variables      map[string]string `yaml:"variables"`
