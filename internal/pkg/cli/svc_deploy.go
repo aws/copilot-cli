@@ -428,11 +428,11 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
 		if o.targetApp.RequiresDNSDelegation() {
-			appVersionGetter, err := o.newAppVersionGetter(o.appName)
-			if err != nil {
+			var appVersionGetter versionGetter
+			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 				return nil, err
 			}
-			if err := validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
+			if err = validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
