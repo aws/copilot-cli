@@ -223,7 +223,7 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	o.os, o.arch, err = o.dockerPlatform()
+	o.os, o.arch, err = dockerPlatform(o.dockerEngine, o.image)
 	if err != nil {
 		return err
 	}
@@ -432,17 +432,17 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 	}, nil
 }
 
-func (o *initSvcOpts) dockerPlatform() (os, arch string, err error) {
+func dockerPlatform(engine dockerEngine, image string) (os, arch string, err error) {
 	os, arch = runtime.GOOS, runtime.GOARCH
-	if o.image == "" {
-		os, arch, err = o.dockerEngine.GetPlatform()
+	if image == "" {
+		os, arch, err = engine.GetPlatform()
 		if err != nil {
 			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
 		}
 	}
 	// Until we target X86_64 for ARM architectures, log a warning.
 	if arch == exec.ArmArch || arch == exec.Arm64Arch {
-		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
+		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot deploy`")
 	}
 	return os, arch, nil
 }

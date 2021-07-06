@@ -50,8 +50,12 @@ type dockerConfig struct {
 
 const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
-	ArmArch           = "arm"
-	Arm64Arch         = "arm64"
+)
+
+// Architectures that receive special handling.
+const (
+	ArmArch   = "arm"
+	Arm64Arch = "arm64"
 )
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
