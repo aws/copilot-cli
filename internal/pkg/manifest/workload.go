@@ -450,11 +450,12 @@ type TaskConfig struct {
 	Storage        *Storage          `yaml:"storage"`
 }
 
-// PublishConfig represents the configurable options for setting up publishers to send messages.
+// PublishConfig represents the configurable options for setting up publishers.
 type PublishConfig struct {
 	Topics []Topic `yaml:"topics"`
 }
 
+// Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
 	Name           *string  `yaml:"name"`
 	AllowedWorkers []string `yaml:"allowed_workers"`

@@ -345,7 +345,7 @@ func withSvcParsingFuncs() ParseOption {
 			"quoteSlice":          QuotePSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
-			"jsonPublishers":      generatePublisherJSON,
+			"jsonPublishers":      generatePublishJSON,
 			"envControllerParams": envControllerParameters,
 		})
 	}

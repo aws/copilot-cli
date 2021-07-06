@@ -636,7 +636,7 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestUnmarshalPublishers(t *testing.T) {
+func TestUnmarshalPublish(t *testing.T) {
 	testCases := map[string]struct {
 		inContent     string
 		wantedPublish PublishConfig
