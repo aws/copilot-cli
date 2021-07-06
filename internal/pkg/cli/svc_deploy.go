@@ -49,18 +49,18 @@ type deployWkldVars struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store              store
-	ws                 wsSvcDirReader
-	imageBuilderPusher imageBuilderPusher
-	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
-	s3                 artifactUploader
-	cmd                runner
-	addons             templater
-	appCFN             appResourcesGetter
-	svcCFN             cloudformation.CloudFormation
-	sessProvider       sessionProvider
-	envUpgradeCmd      actionCommand
-	appVersionGetter   versionGetter
+	store               store
+	ws                  wsSvcDirReader
+	imageBuilderPusher  imageBuilderPusher
+	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	s3                  artifactUploader
+	cmd                 runner
+	addons              templater
+	appCFN              appResourcesGetter
+	svcCFN              cloudformation.CloudFormation
+	sessProvider        sessionProvider
+	envUpgradeCmd       actionCommand
+	newAppVersionGetter func(string) (versionGetter, error)
 
 	spinner progress
 	sel     wsSelector
@@ -83,23 +83,25 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	d, err := describe.NewAppDescriber(vars.appName)
-	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
-	}
 	prompter := prompt.New()
 	return &deploySvcOpts{
 		deployWkldVars: vars,
 
-		store:            store,
-		ws:               ws,
-		unmarshal:        manifest.UnmarshalWorkload,
-		spinner:          termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:           prompter,
-		appVersionGetter: d,
-		cmd:              exec.NewCmd(),
-		sessProvider:     sessions.NewProvider(),
+		store:     store,
+		ws:        ws,
+		unmarshal: manifest.UnmarshalWorkload,
+		spinner:   termprogress.NewSpinner(log.DiagnosticWriter),
+		sel:       selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:    prompter,
+		newAppVersionGetter: func(appName string) (versionGetter, error) {
+			d, err := describe.NewAppDescriber(appName)
+			if err != nil {
+				return nil, fmt.Errorf("new app describer for application %s: %w", appName, err)
+			}
+			return d, nil
+		},
+		cmd:          exec.NewCmd(),
+		sessProvider: sessions.NewProvider(),
 	}, nil
 }
 
@@ -426,7 +428,11 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
 		if o.targetApp.RequiresDNSDelegation() {
-			if err := validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, o.appVersionGetter); err != nil {
+			appVersionGetter, err := o.newAppVersionGetter(o.appName)
+			if err != nil {
+				return nil, err
+			}
+			if err := validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)

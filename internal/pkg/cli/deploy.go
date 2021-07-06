@@ -52,10 +52,6 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	d, err := describe.NewAppDescriber(vars.appName)
-	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
-	}
 	prompter := prompt.New()
 	return &deployOpts{
 		deployWkldVars: vars,
@@ -83,15 +79,17 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 				o.deployWkld = &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
-					store:            o.store,
-					ws:               o.ws,
-					unmarshal:        manifest.UnmarshalWorkload,
-					spinner:          termprogress.NewSpinner(log.DiagnosticWriter),
-					sel:              selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
-					prompt:           o.prompt,
-					cmd:              exec.NewCmd(),
-					sessProvider:     sessions.NewProvider(),
-					appVersionGetter: d,
+					store:        o.store,
+					ws:           o.ws,
+					unmarshal:    manifest.UnmarshalWorkload,
+					spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
+					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+					prompt:       o.prompt,
+					cmd:          exec.NewCmd(),
+					sessProvider: sessions.NewProvider(),
+					newAppVersionGetter: func(appName string) (versionGetter, error) {
+						return describe.NewAppDescriber(appName)
+					},
 				}
 			}
 		},
