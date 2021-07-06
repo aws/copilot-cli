@@ -30,7 +30,7 @@ Parameters:
     Default: ""
   ServiceDiscoveryEndpoint:
     Type: String
-    Default: ""
+    Default: {{.AppName}}.local
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]

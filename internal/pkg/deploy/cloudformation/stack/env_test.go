@@ -29,6 +29,7 @@ func TestEnv_Template(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().ParseEnv(&template.EnvOpts{
+					AppName:                   "project",
 					ScriptBucketName:          "mockbucket",
 					DNSCertValidatorLambda:    "mockkey1",
 					DNSDelegationLambda:       "mockkey2",

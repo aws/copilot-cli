@@ -93,6 +93,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
+		AppName:                   e.in.AppName,
 		DNSCertValidatorLambda:    dnsCertValidator,
 		DNSDelegationLambda:       dnsDelegation,
 		EnableLongARNFormatLambda: enableLongARN,
