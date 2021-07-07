@@ -133,6 +133,25 @@ exports.deadlineExpired = function () {
 };
 
 /**
+ * Validate certificates of the custom domain for the service by upserting validation records.
+ * Errors are not handled and are directly passed to the caller.
+ *
+ * @param {string} serviceARN ARN of the service that the custom domain applies to.
+ * @param {string} customDomainName the custom domain name.
+ */
+async function addCustomDomain(serviceARN, customDomainName) {
+    const data = await appRunnerClient.associateCustomDomain({
+        DomainName: customDomainName,
+        ServiceArn: serviceARN,
+    }).promise();
+
+    return Promise.all([
+        updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
+        validateCertForDomain(serviceARN, customDomainName),
+    ]);
+}
+
+/**
  * Wait for the custom domain to be ACTIVE.
  * @param {string} serviceARN the service to which the domain is added.
  * @param {string} customDomainName the domain name.
@@ -170,28 +189,9 @@ async function waitForCustomDomainToBeActive(serviceARN, customDomainName) {
     }
 
     if (i === ATTEMPTS_WAIT_FOR_ACTIVE) {
-        console.log("Fail to wait for state to become ACTIVE. However, this doesn't necessarily mean the operation has failed. It usually takes a long time to validate domain and can be longer than the 15 minutes duration for which a Lambda function can run at most.");
+        console.log("Fail to wait for the domain status to become ACTIVE. It usually takes a long time to validate domain and can be longer than the 15 minutes duration for which a Lambda function can run at most. Try associating the domain manually.");
         throw new Error(`fail to wait for domain ${customDomainName} to become ${DOMAIN_STATUS_ACTIVE}`);
     }
-}
-
-/**
- * Validate certificates of the custom domain for the service by upserting validation records.
- * Errors are not handled and are directly passed to the caller.
- *
- * @param {string} serviceARN ARN of the service that the custom domain applies to.
- * @param {string} customDomainName the custom domain name.
- */
-async function addCustomDomain(serviceARN, customDomainName) {
-    const data = await appRunnerClient.associateCustomDomain({
-        DomainName: customDomainName,
-        ServiceArn: serviceARN,
-    }).promise();
-
-    return Promise.all([
-        updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
-        validateCertForDomain(serviceARN, customDomainName),
-    ]);
 }
 
 /**
