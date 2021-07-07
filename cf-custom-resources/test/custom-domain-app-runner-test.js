@@ -252,7 +252,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                let expectedErrMessageRegex = /^update validation records for domain mockDomain: fail to wait for state pending_certificate_dns_validation \(Log: .*\)$/;
+                let expectedErrMessageRegex = /^update validation records for domain mockDomain: fail to wait for state pending_certificate_dns_validation, stuck in not-pending \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&

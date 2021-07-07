@@ -202,7 +202,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
  * @throws wrapped error.
  */
 async function validateCertForDomain(serviceARN, domainName) {
-    let i;
+    let i, lastDomainStatus;
     for (i = 0; i < ATTEMPTS_WAIT_FOR_PENDING; i++){
         const data = await appRunnerClient.describeCustomDomains({
             ServiceArn: serviceARN,
@@ -222,7 +222,8 @@ async function validateCertForDomain(serviceARN, domainName) {
             throw new Error(`update validation records for domain ${domainName}: domain ${domainName} is not associated`);
         }
 
-        if (domain.Status !== DOMAIN_STATUS_PENDING_VERIFICATION) {
+        lastDomainStatus = domain.Status;
+        if (lastDomainStatus !== DOMAIN_STATUS_PENDING_VERIFICATION) {
             await sleep(3000);
             continue;
         }
@@ -237,7 +238,7 @@ async function validateCertForDomain(serviceARN, domainName) {
     }
 
     if (i === ATTEMPTS_WAIT_FOR_PENDING) {
-        throw new Error(`update validation records for domain ${domainName}: fail to wait for state ${DOMAIN_STATUS_PENDING_VERIFICATION}`);
+        throw new Error(`update validation records for domain ${domainName}: fail to wait for state ${DOMAIN_STATUS_PENDING_VERIFICATION}, stuck in ${lastDomainStatus}`);
     }
 }
 
