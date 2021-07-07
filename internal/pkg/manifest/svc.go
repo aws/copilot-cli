@@ -228,16 +228,17 @@ func IsTypeAService(t string) bool {
 // These options are specifiable under the "healthcheck" field.
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
 type HTTPHealthCheckArgs struct {
-	Path               *string        `yaml:"path"`
-	SuccessCodes       *string        `yaml:"success_codes"`
-	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
-	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
-	Timeout            *time.Duration `yaml:"timeout"`
-	Interval           *time.Duration `yaml:"interval"`
+	Path                *string        `yaml:"path"`
+	SuccessCodes        *string        `yaml:"success_codes"`
+	HealthyThreshold    *int64         `yaml:"healthy_threshold"`
+	UnhealthyThreshold  *int64         `yaml:"unhealthy_threshold"`
+	Timeout             *time.Duration `yaml:"timeout"`
+	Interval            *time.Duration `yaml:"interval"`
+	DeregistrationDelay *time.Duration `yaml:"deregistration_delay"`
 }
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
+	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil && h.DeregistrationDelay == nil
 }
 
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which

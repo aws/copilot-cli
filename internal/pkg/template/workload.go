@@ -159,12 +159,13 @@ type LogConfigOpts struct {
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
-	HealthCheckPath    string
-	SuccessCodes       string
-	HealthyThreshold   *int64
-	UnhealthyThreshold *int64
-	Interval           *int64
-	Timeout            *int64
+	HealthCheckPath     string
+	SuccessCodes        string
+	HealthyThreshold    *int64
+	UnhealthyThreshold  *int64
+	Interval            *int64
+	Timeout             *int64
+	DeregistrationDelay *int64
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider

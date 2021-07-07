@@ -158,7 +158,7 @@ Resources:
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 60                  # Default is 300.
+          Value: {{.HTTPHealthCheck.DeregistrationDelay}}                  # Default is 300.
         - Key: stickiness.enabled
           Value: !Ref Stickiness
       TargetType: ip
