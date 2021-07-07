@@ -151,9 +151,6 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
-	if c.buf != nil {
-		buf = c.buf
-	}
 	// Trim redundant prefix and suffix. For example: '{"ServerErrors":["Cannot connect...}'\n returns
 	// {"ServerErrors":["Cannot connect...}
 	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
@@ -181,9 +178,6 @@ func (c DockerCommand) GetPlatform() (os, arch string, err error) {
 	err = c.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, Stdout(buf))
 	if err != nil {
 		return "", "", fmt.Errorf("run docker version: %w", err)
-	}
-	if c.buf != nil {
-		buf = c.buf
 	}
 
 	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")

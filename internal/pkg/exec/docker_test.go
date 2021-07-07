@@ -302,7 +302,6 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 
 	tests := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
-		inBuffer   *bytes.Buffer
 
 		wantedErr error
 	}{
@@ -315,10 +314,14 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 			wantedErr: fmt.Errorf("get docker info: some error"),
 		},
 		"return when docker engine is not started": {
-			inBuffer: bytes.NewBufferString(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`),
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
-				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).
+					Do(func(_ string, _ []string, opt CmdOption) {
+						cmd := &exec.Cmd{}
+						opt(cmd)
+						_, _ = cmd.Stdout.Write([]byte(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`))
+					}).Return(nil)
 			},
 
 			wantedErr: &ErrDockerDaemonNotResponsive{
@@ -326,11 +329,15 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 			},
 		},
 		"success": {
-			inBuffer: bytes.NewBufferString(`'{"ID":"A2VY:4WTA:HDKK:UR76:SD2I:EQYZ:GCED:H4GT:6O7X:P72W:LCUP:ZQJD","Containers":15}'
-`),
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
-				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).
+					Do(func(_ string, _ []string, opt CmdOption) {
+						cmd := &exec.Cmd{}
+						opt(cmd)
+						_, _ = cmd.Stdout.Write([]byte(`'{"ID":"A2VY:4WTA:HDKK:UR76:SD2I:EQYZ:GCED:H4GT:6O7X:P72W:LCUP:ZQJD","Containers":15}'
+`))
+					}).Return(nil)
 			},
 		},
 	}
@@ -341,7 +348,6 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 			tc.setupMocks(controller)
 			s := DockerCommand{
 				runner: mockRunner,
-				buf:    tc.inBuffer,
 			}
 
 			err := s.CheckDockerEngineRunning()
@@ -360,7 +366,6 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 
 	tests := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
-		inBuffer   *bytes.Buffer
 		wantedOS   string
 		wantedArch string
 
@@ -374,10 +379,14 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 			wantedErr: fmt.Errorf("run docker version: some error"),
 		},
 		"success": {
-			inBuffer: bytes.NewBufferString(`'{"Os":"linus","Arch":"archer"}'`),
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
-				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).
+					Do(func(_ string, _ []string, opt CmdOption) {
+						cmd := &exec.Cmd{}
+						opt(cmd)
+						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Components\":[{\"Name\":\"Engine\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"linus\",\"Arch\":\"archer\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
+					}).Return(nil)
 			},
 			wantedOS:   "linus",
 			wantedArch: "archer",
@@ -390,7 +399,6 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 			tc.setupMocks(controller)
 			s := DockerCommand{
 				runner: mockRunner,
-				buf:    tc.inBuffer,
 			}
 
 			os, arch, err := s.GetPlatform()
