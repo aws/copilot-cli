@@ -174,7 +174,7 @@ async function waitForCustomDomainToBeActive(serviceARN, customDomainName) {
         }
 
         if (!domain) {
-            throw new Error(`wait for domain ${customDomainName} to be active: : domain ${customDomainName} is not associated`);
+            throw new Error(`wait for domain ${customDomainName} to be active: domain ${customDomainName} is not associated`);
         }
 
         if (domain.Status !== DOMAIN_STATUS_ACTIVE) {
