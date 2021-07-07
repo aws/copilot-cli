@@ -202,6 +202,17 @@ type StateMachineOpts struct {
 	Retries *int
 }
 
+// PublishOpts holds configuration needed if the service has publishers.
+type PublishOpts struct {
+	Topics []*Topics
+}
+
+// Topics holds information needed to render a SNSTopic in a container definition.
+type Topics struct {
+	Name           *string
+	AllowedWorkers []*string
+}
+
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
 	AssignPublicIP string
@@ -237,6 +248,7 @@ type WorkloadOpts struct {
 	DomainAlias        string
 	DockerLabels       map[string]string
 	DependsOn          map[string]string
+	Publish            *PublishOpts
 
 	// Additional options for service templates.
 	WorkloadType        string
@@ -333,6 +345,7 @@ func withSvcParsingFuncs() ParseOption {
 			"quoteSlice":          QuotePSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
+			"jsonPublishers":      generatePublishJSON,
 			"envControllerParams": envControllerParameters,
 		})
 	}
