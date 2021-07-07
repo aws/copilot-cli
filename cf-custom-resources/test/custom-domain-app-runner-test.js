@@ -228,23 +228,87 @@ describe("Custom Domain for App Runner Service During Create", () => {
             });
     });
 
+    test("fail to find domain information in the service", () => {
+        const mockTarget = "mockTarget";
+        const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
+        const mockWaitFor = sinon.fake.resolves();
+        const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
+
+        // Try to find domain information until all pages are searched through.
+        const mockDescribeCustomDomains = sinon.stub();
+        mockDescribeCustomDomains.onFirstCall().resolves({
+            CustomDomains: [{ DomainName: "some-other-domain", },],
+            NextToken: "1",
+        });
+        mockDescribeCustomDomains.onSecondCall().resolves({
+            CustomDomains: [{ DomainName: "some-other-domain", },],
+        });
+
+        AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
+        AWS.mock("Route53", "changeResourceRecordSets",mockChangeResourceRecordSets);
+        AWS.mock("Route53", "waitFor", mockWaitFor);
+        AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
+
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                let expectedErrMessageRegex = /^update validation records for domain mockDomain: domain mockDomain is not associated \(Log: .*\)$/;
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason.search(expectedErrMessageRegex) !== -1 &&
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
+                );
+            })
+            .reply(200);
+        return LambdaTester( handler )
+            .event({
+                RequestType: "Create",
+                ResponseURL: mockResponseURL,
+                ResourceProperties: {
+                    ServiceARN: mockServiceARN,
+                    AppDNSRole: "",
+                    CustomDomain: mockCustomDomain,
+                    HostedZoneID: mockHostedZoneID,
+                },
+                LogicalResourceId: mockLogicalResourceID,
+            })
+            .expectResolve( () => {
+                expect(expectedResponse.isDone()).toBe(true);
+
+                // Asserts that mockDescribeCustomDomains is called with `NextToken: 1` for at least once;
+                // There is no good native way to test individual call arguments: https://github.com/sinonjs/sinon/issues/583.
+                sinon.assert.calledWith(mockDescribeCustomDomains, sinon.match({
+                    ServiceArn: mockServiceARN,
+                    NextToken: "1",
+                }));
+                sinon.assert.calledTwice(mockDescribeCustomDomains);
+            });
+    });
+
     test("fail to wait for app runner to provide validation records", () => {
         const mockTarget = "mockTarget";
         const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
         const mockWaitFor = sinon.fake.resolves();
         const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
         const mockDescribeCustomDomains = sinon.stub();
+
         for (let i = 0; i < waitForDomainStatusPendingAttempts; i++) {
-            mockDescribeCustomDomains.onCall(i).resolves({
-                CustomDomains: [
-                    {
-                        DomainName: mockCustomDomain,
-                        Status: "not-pending",
-                    },
-                ],
+            // Mock response such that the domain we are looking for locates at the third page.
+            mockDescribeCustomDomains.onCall(i*3).resolves({
+                CustomDomains: [{ DomainName: "other-domain", },],
+                NextToken: "token",
+            });
+            mockDescribeCustomDomains.onCall((i*3)+1).resolves({
+                CustomDomains: [{ DomainName: "other-domain", },],
+                NextToken: "token",
+            });
+            mockDescribeCustomDomains.onCall((i*3)+2).resolves({
+                CustomDomains: [{
+                    DomainName: mockCustomDomain,
+                    Status: "not-pending",
+                },],
+                NextToken: "token",
             });
         }
-
         AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
         AWS.mock("Route53", "changeResourceRecordSets",mockChangeResourceRecordSets);
         AWS.mock("Route53", "waitFor", mockWaitFor);
@@ -281,32 +345,43 @@ describe("Custom Domain for App Runner Service During Create", () => {
         const mockTarget = "mockTarget";
         const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
         const mockWaitFor = sinon.fake.resolves();
-        const mockDescribeCustomDomains = sinon.fake.resolves({
-            CustomDomains: [
-                {
-                    DomainName: "other-domain",
-                    CertificateValidationRecords: [
-                        {
-                            Name: "this shouldn't appear",
-                            Value: "this shouldn't appear",
-                        },
-                    ],
-                },
-                {
-                    DomainName: mockCustomDomain,
-                    CertificateValidationRecords: [
-                        {
-                            Name: "mock-record-name-1",
-                            Value: "mock-record-value-1",
-                        },
-                        {
-                            Name: "mock-record-name-2",
-                            Value: "mock-record-value-2",
-                        },
-                    ],
-                    Status: "pending_certificate_dns_validation",
-                },
-            ],
+
+        const mockDescribeCustomDomains = sinon.stub();
+        // Mock response such that the domain we are looking for locates at the third page.
+        mockDescribeCustomDomains.onCall(0).resolves({
+            CustomDomains: [{
+                DomainName: "other-domain",
+                CertificateValidationRecords: [
+                    {
+                        Name: "this shouldn't appear",
+                        Value: "this shouldn't appear",
+                    },
+                ],
+            },],
+            NextToken: "token",
+        });
+        mockDescribeCustomDomains.onCall(1).resolves({
+            CustomDomains: [{
+                DomainName: "other-domain",
+            },],
+            NextToken: "token",
+        });
+        mockDescribeCustomDomains.onCall(2).resolves({
+            CustomDomains: [{
+                DomainName: mockCustomDomain,
+                Status: "pending_certificate_dns_validation",
+                CertificateValidationRecords: [
+                    {
+                        Name: "mock-record-name-1",
+                        Value: "mock-record-value-1",
+                    },
+                    {
+                        Name: "mock-record-name-2",
+                        Value: "mock-record-value-2",
+                    },
+                ],
+            },],
+            NextToken: "token",
         });
         const mockChangeResourceRecordSets = sinon.stub();
         mockChangeResourceRecordSets.onCall(0).resolves({ ChangeInfo: {Id: "mockID", }, });

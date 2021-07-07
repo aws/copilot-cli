@@ -195,6 +195,31 @@ async function waitForCustomDomainToBeActive(serviceARN, customDomainName) {
 }
 
 /**
+ * Get information about domain.
+ * @param {string} serviceARN
+ * @param {string} domainName
+ * @returns {object} CustomDomain object that contains information such as DomainName, Status, CertificateValidationRecords, etc.
+ * @throws error if domain is not found in service.
+ */
+async function getDomainInfo(serviceARN, domainName) {
+    let describeCustomDomainsInput = {ServiceArn: serviceARN,};
+    while (true) {
+        const resp = await appRunnerClient.describeCustomDomains(describeCustomDomainsInput).promise();
+
+        for (const d of resp.CustomDomains) {
+            if (d.DomainName === domainName) {
+                return d;
+            }
+        }
+
+        if (!resp.NextToken) {
+            throw new Error(`domain ${domainName} is not associated`);
+        }
+        describeCustomDomainsInput.NextToken = resp.NextToken;
+    }
+}
+
+/**
  * Validate certificates of the custom domain for the service by upserting validation records.
  *
  * @param {string} serviceARN ARN of the service that the custom domain applies to.
@@ -204,23 +229,9 @@ async function waitForCustomDomainToBeActive(serviceARN, customDomainName) {
 async function validateCertForDomain(serviceARN, domainName) {
     let i, lastDomainStatus;
     for (i = 0; i < ATTEMPTS_WAIT_FOR_PENDING; i++){
-        const data = await appRunnerClient.describeCustomDomains({
-            ServiceArn: serviceARN,
-        }).promise().catch(err => {
+        const domain = await getDomainInfo(serviceARN, domainName).catch(err => {
             throw new Error(`update validation records for domain ${domainName}: ` + err.message);
         });
-
-        let domain;
-        for (const d of data.CustomDomains) {
-            if (d.DomainName === domainName) {
-                domain = d;
-                break;
-            }
-        }
-
-        if (!domain) {
-            throw new Error(`update validation records for domain ${domainName}: domain ${domainName} is not associated`);
-        }
 
         lastDomainStatus = domain.Status;
         if (lastDomainStatus !== DOMAIN_STATUS_PENDING_VERIFICATION) {
