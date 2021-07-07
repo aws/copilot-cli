@@ -21,7 +21,7 @@ func Test_convertSidecar(t *testing.T) {
 	mockCredsParam := aws.String("mockCredsParam")
 	circularDependencyErr := fmt.Errorf("circular container dependency chain includes the following containers: ")
 	testCases := map[string]struct {
-		inPort            string
+		inPort            *string
 		inEssential       bool
 		inLabels          map[string]string
 		inDependsOn       map[string]string
@@ -32,12 +32,12 @@ func Test_convertSidecar(t *testing.T) {
 		wantedErr error
 	}{
 		"invalid port": {
-			inPort: "b/a/d/P/o/r/t",
+			inPort: aws.String("b/a/d/P/o/r/t"),
 
 			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
 		},
 		"good port without protocol": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
@@ -51,7 +51,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"good port with protocol": {
-			inPort:      "2000/udp",
+			inPort:      aws.String("2000/udp"),
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
@@ -66,7 +66,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"invalid container dependency due to circularly depending on itself": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"foo": "start",
@@ -75,7 +75,7 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: fmt.Errorf("container foo cannot depend on itself"),
 		},
 		"invalid container dependency due to circularly depending on another container": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "start",
@@ -89,7 +89,7 @@ func Test_convertSidecar(t *testing.T) {
 			circDepContainers: []string{"frontend", "foo"},
 		},
 		"invalid container dependency status": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "never",
@@ -97,7 +97,7 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: errInvalidDependsOnStatus,
 		},
 		"invalid essential container dependency status": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "complete",
@@ -105,7 +105,7 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: errEssentialContainerStatus,
 		},
 		"good essential container dependencies": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "start",
@@ -125,7 +125,6 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"good nonessential container dependencies": {
-			inPort:      "2000",
 			inEssential: false,
 			inDependsOn: map[string]string{
 				"frontend": "start",
@@ -133,7 +132,6 @@ func Test_convertSidecar(t *testing.T) {
 
 			wanted: &template.SidecarOpts{
 				Name:       aws.String("foo"),
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockMap,
@@ -145,7 +143,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"specify essential as false": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: false,
 			inLabels: map[string]string{
 				"com.amazonaws.ecs.copilot.sidecar.description": "wow",
@@ -174,7 +172,7 @@ func Test_convertSidecar(t *testing.T) {
 					Secrets:      mockMap,
 					Variables:    mockMap,
 					Essential:    aws.Bool(tc.inEssential),
-					Port:         aws.String(tc.inPort),
+					Port:         tc.inPort,
 					DockerLabels: tc.inLabels,
 					DependsOn:    tc.inDependsOn,
 				},

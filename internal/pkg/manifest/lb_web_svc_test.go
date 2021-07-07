@@ -1037,6 +1037,128 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
+		"with routing rule overridden": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					RoutingRule: RoutingRule{
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("path"),
+						},
+						AllowedSourceIps: &[]string{"ip1", "ip2"},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						RoutingRule: RoutingRule{
+							AllowedSourceIps: &[]string{"ip1", "ip3"},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					RoutingRule: RoutingRule{
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("path"),
+						},
+						AllowedSourceIps: &[]string{"ip1", "ip3"},
+					},
+				},
+			},
+		},
+		"with routing rule overridden without allowed source ips": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					RoutingRule: RoutingRule{
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("path"),
+						},
+						AllowedSourceIps: &[]string{"ip1", "ip2"},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						RoutingRule: RoutingRule{
+							HealthCheck: HealthCheckArgsOrString{
+								HealthCheckPath: aws.String("another-path"),
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					RoutingRule: RoutingRule{
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("another-path"),
+						},
+						AllowedSourceIps: &[]string{"ip1", "ip2"},
+					},
+				},
+			},
+		},
+		"with routing rule overridden without empty allowed source ips": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					RoutingRule: RoutingRule{
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("path"),
+						},
+						AllowedSourceIps: &[]string{"ip1", "ip2"},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						RoutingRule: RoutingRule{
+							HealthCheck: HealthCheckArgsOrString{
+								HealthCheckPath: aws.String("another-path"),
+							},
+							AllowedSourceIps: &[]string{},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					RoutingRule: RoutingRule{
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("another-path"),
+						},
+						AllowedSourceIps: &[]string{},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {

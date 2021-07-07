@@ -211,8 +211,8 @@ func (i *Image) cacheFrom() []string {
 
 // ImageOverride holds fields that override Dockerfile image defaults.
 type ImageOverride struct {
-	EntryPoint *EntryPointOverride `yaml:"entrypoint"`
-	Command    *CommandOverride    `yaml:"command"`
+	EntryPoint *EntryPointOverride `yaml:"entrypoint"` // TODO: the type needs to be updated after we upgrade mergo
+	Command    *CommandOverride    `yaml:"command"`    // TODO: the type needs to be updated after we upgrade mergo
 }
 
 // EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
@@ -448,6 +448,17 @@ type TaskConfig struct {
 	Variables      map[string]string `yaml:"variables"`
 	Secrets        map[string]string `yaml:"secrets"`
 	Storage        *Storage          `yaml:"storage"`
+}
+
+// PublishConfig represents the configurable options for setting up publishers.
+type PublishConfig struct {
+	Topics []Topic `yaml:"topics"`
+}
+
+// Topic represents the configurable options for setting up a SNS Topic.
+type Topic struct {
+	Name           *string  `yaml:"name"`
+	AllowedWorkers []string `yaml:"allowed_workers"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
