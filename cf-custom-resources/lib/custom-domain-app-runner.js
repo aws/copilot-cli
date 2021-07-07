@@ -13,16 +13,11 @@ const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
 const ATTEMPTS_WAIT_FOR_PENDING = 10;
 const ATTEMPTS_WAIT_FOR_ACTIVE = 12;
-const LAMBDA_TIME_OUT = 14*60*1000; // Lambda times out at 15 minutes, we report failure 1 minute so that there is enough time for `report` to be executed.
 
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
 let sleep = defaultSleep;
-let defaultLambdaTimeOut = function () {
-    return new Promise((resolve) => setTimeout(resolve, LAMBDA_TIME_OUT));
-};
-let lambdaTimeOut = defaultLambdaTimeOut;
 let appRoute53Client, appRunnerClient, appHostedZoneID;
 
 /**
@@ -116,11 +111,7 @@ exports.handler = async function (event, context) {
     };
 
     try {
-        let timedOut = lambdaTimeOut().then(async () => {
-            console.log(`Lambda is about to time out. Operation fails.`);
-            throw new Error("Lambda about to time out");
-        });
-        await Promise.race([timedOut, handler(),]);
+        await Promise.race([exports.deadlineExpired().catch(err => {throw err;}), handler(),]);
         await report(event, context, "SUCCESS", physicalResourceID);
     } catch (err) {
         if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
@@ -130,6 +121,16 @@ exports.handler = async function (event, context) {
         console.log(`Caught error for service ${serviceARN}: ${err.message}`);
         await report(event, context, "FAILED", physicalResourceID, null, err.message);
     }
+};
+
+exports.deadlineExpired = function () {
+    return new Promise(function (resolve, reject) {
+        setTimeout(
+            reject,
+            14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/,
+            new Error("Lambda took longer than 14.5 minutes to update environment")
+        );
+    });
 };
 
 /**
@@ -296,9 +297,8 @@ exports.withSleep = function (s) {
 };
 exports.reset = function () {
     sleep = defaultSleep;
-    lambdaTimeOut = defaultLambdaTimeOut;
 
 };
-exports.withLambdaTimeOut = function (t) {
-    lambdaTimeOut = t;
-}
+exports.withDeadlineExpired = function (d) {
+    exports.deadlineExpired = d;
+};

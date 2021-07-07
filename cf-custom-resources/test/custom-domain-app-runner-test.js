@@ -7,7 +7,7 @@
 
 const AWS = require("aws-sdk-mock");
 const LambdaTester = require("lambda-tester").noVersionCheck();
-const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, withSleep, reset, withLambdaTimeOut} = require("../lib/custom-domain-app-runner");
+const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, withSleep, reset, withDeadlineExpired} = require("../lib/custom-domain-app-runner");
 const sinon = require("sinon");
 const nock = require("nock");
 
@@ -20,11 +20,11 @@ describe("Custom Domain for App Runner Service During Create", () => {
             return Promise.resolve();
         });
 
-        withLambdaTimeOut(_ => {
+        withDeadlineExpired(_ => {
             return new Promise((resolve) => {
                 setTimeout(resolve, 1000);
             });
-        }); // Mock lambda should time out after normal operations.
+        }); // Mock deadline should time out after normal operations.
     });
 
     afterEach(() => {
@@ -547,8 +547,14 @@ describe("Custom Domain for App Runner Service During Create", () => {
     });
 
     test("lambda time out", () => {
-        withLambdaTimeOut(_ => {
-            return Promise.resolve();
+        withDeadlineExpired(() => {
+            return new Promise(function (resolve, reject) {
+                setTimeout(
+                    reject,
+                    1,
+                    new Error("Lambda took longer than 14.5 minutes to add alias")
+                );
+            });
         });
 
         const mockAssociateCustomDomain = sinon.fake(async () => {
@@ -558,7 +564,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
-                let expectedErrMessageRegex = /^Lambda about to time out \(Log: .*\)$/;
+                let expectedErrMessageRegex = /^Lambda took longer than 14.5 minutes to add alias \(Log: .*\)$/;
                 return body.Status === "FAILED"  &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
                     body.PhysicalResourceId === mockLogicalResourceID;
