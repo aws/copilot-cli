@@ -56,6 +56,12 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 
 func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
 	appConfig := stack.NewAppStackConfig(in)
+	appStack, err := cf.cfnClient.Describe(appConfig.StackName())
+	if err != nil {
+		return fmt.Errorf("get existing application infrastructure stack: %w", err)
+	}
+	in.DNSDelegationAccounts = stack.DNSDelegatedAccountsForStack(appStack.SDK())
+	appConfig = stack.NewAppStackConfig(in)
 	s, err := toStack(appConfig)
 	if err != nil {
 		return err

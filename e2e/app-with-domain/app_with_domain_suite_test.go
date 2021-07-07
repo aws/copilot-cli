@@ -15,6 +15,7 @@ import (
 
 var cli *client.CLI
 var appName string
+var prodEnvironmentProfile string
 
 func TestAppWithDomain(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -22,6 +23,7 @@ func TestAppWithDomain(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	prodEnvironmentProfile = "e2eprodenv"
 	copilotCLI, err := client.NewCLI()
 	cli = copilotCLI
 	Expect(err).NotTo(HaveOccurred())
