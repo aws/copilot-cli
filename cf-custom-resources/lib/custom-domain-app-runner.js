@@ -110,7 +110,7 @@ exports.handler = async function (event, context) {
     };
 
     try {
-        await Promise.race([exports.deadlineExpired().catch(err => {throw err;}), handler(),]);
+        await Promise.race([exports.deadlineExpired(), handler(),]);
         await report(event, context, "SUCCESS", physicalResourceID);
     } catch (err) {
         if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
