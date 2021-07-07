@@ -237,3 +237,18 @@ func TestGenerateMountPointJSON(t *testing.T) {
 	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{}), "nil list of arguments should render ")
 	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{{SourceVolume: aws.String("fromEFS")}}), "empty paths should not get injected")
 }
+
+func TestGeneratePublishJSON(t *testing.T) {
+	require.Equal(t, `{"tests":["testsWorker1","testsWorker2"]}`,
+		generatePublishJSON(
+			[]*Topics{
+				{
+					Name:           aws.String("tests"),
+					AllowedWorkers: aws.StringSlice([]string{"testsWorker1", "testsWorker2"}),
+				},
+			},
+		), "JSON should render correctly")
+
+	require.Equal(t, `{"tests":[]}`, generatePublishJSON([]*Topics{{Name: aws.String("tests")}}), "Topics with no workers show empty list")
+	require.Equal(t, "{}", generatePublishJSON([]*Topics{}), "nil list of arguments should render")
+}

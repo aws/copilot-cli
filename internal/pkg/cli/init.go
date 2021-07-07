@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -159,6 +160,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:      spin,
 		cmd:          exec.NewCmd(),
 		sessProvider: sessProvider,
+		newAppVersionGetter: func(appName string) (versionGetter, error) {
+			return describe.NewAppDescriber(appName)
+		},
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
