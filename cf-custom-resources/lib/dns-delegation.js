@@ -300,7 +300,7 @@ exports.domainDelegationHandler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}${
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}/${
         defaultLogStream || context.logStreamName
       })`
     );
