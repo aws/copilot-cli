@@ -356,8 +356,6 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 
 func TestDockerCommand_GetPlatform(t *testing.T) {
 	mockError := errors.New("some error")
-	mockOS := "operatingSystem"
-	mockArch := "archer"
 	var mockRunner *Mockrunner
 
 	tests := map[string]struct {
@@ -376,13 +374,13 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 			wantedErr: fmt.Errorf("run docker version: some error"),
 		},
 		"success": {
-			inBuffer: bytes.NewBufferString(`'{"Os":"linux","Arch":"amd64"}'`),
+			inBuffer: bytes.NewBufferString(`'{"Os":"linus","Arch":"archer"}'`),
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Return(nil)
 			},
-			wantedOS:   mockOS,
-			wantedArch: mockArch,
+			wantedOS:   "linus",
+			wantedArch: "archer",
 		},
 	}
 
@@ -398,14 +396,14 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 			os, arch, err := s.GetPlatform()
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
-			} else {
-				require.EqualError(t, err, tc.wantedErr.Error())
 				if tc.wantedOS != "" {
 					require.Equal(t, tc.wantedOS, os)
 				}
 				if tc.wantedArch != "" {
 					require.Equal(t, tc.wantedArch, arch)
 				}
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
 			}
 		})
 	}
