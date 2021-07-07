@@ -466,6 +466,12 @@ type NetworkConfig struct {
 	VPC *vpcConfig `yaml:"vpc"`
 }
 
+// PlatformConfig represents operating system and architecture specifications.
+type PlatformConfig struct {
+	OS   string `yaml:"os"`
+	Arch string `yaml:"architecture"`
+}
+
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
 // If the user specified a placement that's not valid then throw an error.
 func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
