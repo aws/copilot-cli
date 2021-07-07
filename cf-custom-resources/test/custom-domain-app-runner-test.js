@@ -43,7 +43,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
                 );
             })
             .reply(200);
@@ -86,7 +86,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
                 );
             })
             .reply(200);
@@ -147,7 +147,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
                 );
             })
             .reply(200);
@@ -206,7 +206,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
                 );
             })
             .reply(200);
@@ -256,7 +256,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
                 );
             })
             .reply(200);
@@ -324,7 +324,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
                 );
             })
             .reply(200);
@@ -433,7 +433,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 return (
                     body.Status === "FAILED" &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
                 );
             })
             .reply(200);
@@ -567,7 +567,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
                 let expectedErrMessageRegex = /^Lambda took longer than 14.5 minutes to add alias \(Log: .*\)$/;
                 return body.Status === "FAILED"  &&
                     body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                    body.PhysicalResourceId === mockLogicalResourceID;
+                    body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`;
 
             })
             .reply(200);

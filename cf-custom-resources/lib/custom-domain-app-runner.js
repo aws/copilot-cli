@@ -85,7 +85,7 @@ exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
     const [serviceARN, appDNSRole, customDomain] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain,];
     appHostedZoneID = props.HostedZoneID;
-    let physicalResourceID = event.PhysicalResourceId || event.LogicalResourceId;
+    const physicalResourceID = `/associate-domain-app-runner/${customDomain}`;
     let handler = async function () {
         // Configure clients.
         appRoute53Client = new AWS.Route53({
@@ -100,7 +100,6 @@ exports.handler = async function (event, context) {
             case "Create":
                 await addCustomDomain(serviceARN, customDomain);
                 await waitForCustomDomainToBeActive(serviceARN, customDomain);
-                physicalResourceID = `/associate-domain-app-runner/${customDomain}`;
                 break;
             case "Update":
             case "Delete":
