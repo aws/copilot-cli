@@ -245,6 +245,17 @@ type TopicSubscription struct {
 	Service *string
 }
 
+// SubscribeOpts holds configuration needed if the service has subscriptions.
+type SubscribeOpts struct {
+	Topics []*TopicSubscription
+}
+
+// TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
+type TopicSubscription struct {
+	Name    *string
+	Service *string
+}
+
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
 	AssignPublicIP string
@@ -293,6 +304,7 @@ type WorkloadOpts struct {
 	DesiredCountLambda   string
 	EnvControllerLambda  string
 	CredentialsParameter string
+	Subscribe            SubscribeOpts
 
 	// Additional options for job templates.
 	ScheduleExpression string
