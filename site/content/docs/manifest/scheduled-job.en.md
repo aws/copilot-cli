@@ -225,7 +225,7 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-The logging section contains log configuration parameters for your container's FireLens log driver. This will create a logging [sidecar](../developing/sidecars.en.md#sidecar-patterns).
+The logging section contains log configuration parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
 Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
@@ -234,7 +234,7 @@ Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:la
 Optional. The configuration options to send to the FireLens log driver.
 
 <span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
-Optional. Whether to include ECS metadata in logs. Defaults to true.
+Optional. Whether to include ECS metadata in logs. Defaults to `true`.
 
 <span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
 Optional. The secrets to pass to the log configuration.
