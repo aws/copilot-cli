@@ -22,6 +22,7 @@ http:
     unhealthy_threshold: 2
     interval: 15s
     timeout: 10s
+    deregistration_delay: 60s
 ```
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-path" href="#http-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
@@ -41,6 +42,9 @@ The approximate amount of time, in seconds, between health checks of an individu
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 The amount of time, in seconds, during which no response from a target means a failed health check. The default is 5s. Range 5s-300s.
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-deregistration-delay" href="#http-healthcheck-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
+The amount of time, in seconds, to wait for targets to drain connections during deregistration. The default is 60s. Setting this to a larger value gives targets more time to gracefully drain connections, but increases the time required for new deployments.
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 A sidecar container that takes the place of a service container.

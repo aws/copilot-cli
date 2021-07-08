@@ -235,10 +235,13 @@ type HTTPHealthCheckArgs struct {
 	Timeout             *time.Duration `yaml:"timeout"`
 	Interval            *time.Duration `yaml:"interval"`
 	DeregistrationDelay *time.Duration `yaml:"deregistration_delay"`
+	GracePeriod         *time.Duration `yaml:"grace_period"`
 }
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil && h.DeregistrationDelay == nil
+	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
+		h.Interval == nil && h.Timeout == nil && h.DeregistrationDelay == nil &&
+		h.GracePeriod == nil
 }
 
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which

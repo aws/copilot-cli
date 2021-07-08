@@ -166,6 +166,7 @@ type HTTPHealthCheckOpts struct {
 	Interval            *int64
 	Timeout             *int64
 	DeregistrationDelay *int64
+	GracePeriod         *int64
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
