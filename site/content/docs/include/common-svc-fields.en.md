@@ -216,7 +216,7 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-The logging section blahblah.
+The logging section contains parameters for log configuration options to send to a firelens log driver for the container.
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 Optional. The configuration options to send to the FireLens log driver.
