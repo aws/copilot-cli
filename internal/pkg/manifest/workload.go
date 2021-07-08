@@ -542,6 +542,12 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
 		}
 		return m, nil
+	case WorkerServiceType:
+		m := newDefaultWorkerService()
+		if err := yaml.Unmarshal(in, m); err != nil {
+			return nil, fmt.Errorf("unmarshal to worker service: %w", err)
+		}
+		return m, nil
 	case ScheduledJobType:
 		m := newDefaultScheduledJob()
 		if err := yaml.Unmarshal(in, m); err != nil {
