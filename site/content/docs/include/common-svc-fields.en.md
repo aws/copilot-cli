@@ -216,7 +216,7 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-The logging section contains parameters for log configuration options to send to a FireLens log driver for the container. This will create a logging [sidecar](../developing/sidecars.en.md#sidecar-patterns).
+The logging section contains log configuration parameters for your container's FireLens log driver. This will create a logging [sidecar](../developing/sidecars.en.md#sidecar-patterns).
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
 Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
