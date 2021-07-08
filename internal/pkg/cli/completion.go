@@ -83,7 +83,7 @@ The code must be evaluated to provide interactive completion of commands.`,
   /code$ copilot completion fish > ~/.config/fish/completions/copilot.fish`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return errors.New("requires a single shell argument (bash or zsh or fish)")
+				return errors.New("requires a single shell argument (bash, zsh or fish)")
 			}
 			return nil
 		},
