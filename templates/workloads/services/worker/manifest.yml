@@ -29,7 +29,7 @@ count: {{.Count.Value}}       # Number of tasks that should be running in your s
 exec: true     # Enable running commands in your container.
 
 {{- if .Subscribe}}{{- if .Subscribe.Topics}}
-Subscribe:
+subscribe:
   topics:
 {{- range $topic := .Subscribe.Topics}}
     - name: {{.Name}}
