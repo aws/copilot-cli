@@ -10,16 +10,18 @@ const LambdaTester = require("lambda-tester").noVersionCheck();
 const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, withSleep, reset, withDeadlineExpired} = require("../lib/custom-domain-app-runner");
 const sinon = require("sinon");
 const nock = require("nock");
+let origLog = console.log;
 
 describe("Custom Domain for App Runner Service During Create", () => {
     const [mockServiceARN, mockCustomDomain, mockHostedZoneID, mockResponseURL, mockPhysicalResourceID, mockLogicalResourceID] =
         ["mockService", "mockDomain", "mockHostedZoneID", "https://mock.com/", "mockPhysicalResourceID", "mockLogicalResourceID", ];
 
     beforeEach(() => {
+        // Prevent logging.
+        console.log = function () {};
         withSleep(_ => {
             return Promise.resolve();
         });
-
         withDeadlineExpired(_ => {
             return new Promise((resolve) => {
                 setTimeout(resolve, 1000);
@@ -28,6 +30,8 @@ describe("Custom Domain for App Runner Service During Create", () => {
     });
 
     afterEach(() => {
+        // Restore logger
+        console.log = origLog;
         AWS.restore();
         reset();
     });
