@@ -215,5 +215,16 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <div class="separator"></div>
 
+<a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
+The logging section blahblah.
+
+<span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
+Optional. The configuration options to send to the FireLens log driver.
+
+<span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
+Optional. The secrets to pass to the log configuration.
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.

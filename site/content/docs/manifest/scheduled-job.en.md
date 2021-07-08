@@ -222,6 +222,19 @@ Optional. Defaults to `true`. Whether or not to use IAM authorization to determi
 <span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
 Optional. Defaults to `""`. The ID of the EFS access point to connect to. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
+<div class="separator"></div>
+
+<a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
+The logging section blahblah.
+
+<span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
+Optional. The configuration options to send to the FireLens log driver.
+
+<span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
+Optional. The secrets to pass to the log configuration.
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in.
 In the example manifest above, we're overriding the CPU parameter so that our production container is more performant.
