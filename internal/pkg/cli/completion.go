@@ -38,7 +38,7 @@ func (opts *completionOpts) Validate() error {
 	if opts.Shell == "fish" {
 		return nil
 	}
-	return errors.New("shell must be bash or zsh or fish")
+	return errors.New("shell must be bash, zsh or fish")
 }
 
 // Execute writes the completion code to the writer.
