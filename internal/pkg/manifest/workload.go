@@ -450,9 +450,26 @@ type TaskConfig struct {
 	Storage        *Storage          `yaml:"storage"`
 }
 
+// PublishConfig represents the configurable options for setting up publishers.
+type PublishConfig struct {
+	Topics []Topic `yaml:"topics"`
+}
+
+// Topic represents the configurable options for setting up a SNS Topic.
+type Topic struct {
+	Name           *string  `yaml:"name"`
+	AllowedWorkers []string `yaml:"allowed_workers"`
+}
+
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
 	VPC *vpcConfig `yaml:"vpc"`
+}
+
+// PlatformConfig represents operating system and architecture specifications.
+type PlatformConfig struct {
+	OS   string `yaml:"os"`
+	Arch string `yaml:"architecture"`
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.

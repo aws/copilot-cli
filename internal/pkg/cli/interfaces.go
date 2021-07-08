@@ -572,8 +572,9 @@ type runningTaskSelector interface {
 	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
 }
 
-type dockerEngineValidator interface {
+type dockerEngine interface {
 	CheckDockerEngineRunning() error
+	GetPlatform() (string, string, error)
 }
 
 type codestar interface {

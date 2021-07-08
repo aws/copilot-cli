@@ -6041,31 +6041,31 @@ func (mr *MockrunningTaskSelectorMockRecorder) RunningTask(prompt, help interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTask", reflect.TypeOf((*MockrunningTaskSelector)(nil).RunningTask), varargs...)
 }
 
-// MockdockerEngineValidator is a mock of dockerEngineValidator interface.
-type MockdockerEngineValidator struct {
+// MockdockerEngine is a mock of dockerEngine interface.
+type MockdockerEngine struct {
 	ctrl     *gomock.Controller
-	recorder *MockdockerEngineValidatorMockRecorder
+	recorder *MockdockerEngineMockRecorder
 }
 
-// MockdockerEngineValidatorMockRecorder is the mock recorder for MockdockerEngineValidator.
-type MockdockerEngineValidatorMockRecorder struct {
-	mock *MockdockerEngineValidator
+// MockdockerEngineMockRecorder is the mock recorder for MockdockerEngine.
+type MockdockerEngineMockRecorder struct {
+	mock *MockdockerEngine
 }
 
-// NewMockdockerEngineValidator creates a new mock instance.
-func NewMockdockerEngineValidator(ctrl *gomock.Controller) *MockdockerEngineValidator {
-	mock := &MockdockerEngineValidator{ctrl: ctrl}
-	mock.recorder = &MockdockerEngineValidatorMockRecorder{mock}
+// NewMockdockerEngine creates a new mock instance.
+func NewMockdockerEngine(ctrl *gomock.Controller) *MockdockerEngine {
+	mock := &MockdockerEngine{ctrl: ctrl}
+	mock.recorder = &MockdockerEngineMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdockerEngineValidator) EXPECT() *MockdockerEngineValidatorMockRecorder {
+func (m *MockdockerEngine) EXPECT() *MockdockerEngineMockRecorder {
 	return m.recorder
 }
 
 // CheckDockerEngineRunning mocks base method.
-func (m *MockdockerEngineValidator) CheckDockerEngineRunning() error {
+func (m *MockdockerEngine) CheckDockerEngineRunning() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckDockerEngineRunning")
 	ret0, _ := ret[0].(error)
@@ -6073,9 +6073,25 @@ func (m *MockdockerEngineValidator) CheckDockerEngineRunning() error {
 }
 
 // CheckDockerEngineRunning indicates an expected call of CheckDockerEngineRunning.
-func (mr *MockdockerEngineValidatorMockRecorder) CheckDockerEngineRunning() *gomock.Call {
+func (mr *MockdockerEngineMockRecorder) CheckDockerEngineRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineValidator)(nil).CheckDockerEngineRunning))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngine)(nil).CheckDockerEngineRunning))
+}
+
+// GetPlatform mocks base method.
+func (m *MockdockerEngine) GetPlatform() (string, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPlatform")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetPlatform indicates an expected call of GetPlatform.
+func (mr *MockdockerEngineMockRecorder) GetPlatform() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatform", reflect.TypeOf((*MockdockerEngine)(nil).GetPlatform))
 }
 
 // Mockcodestar is a mock of codestar interface.
