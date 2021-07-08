@@ -1,4 +1,6 @@
 # The manifest for the "{{.Name}}" service.
+# Read the full specification for the "Worker Service" type at:
+# https://aws.github.io/copilot-cli/docs/manifest/worker-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
