@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -159,6 +160,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:      spin,
 		cmd:          exec.NewCmd(),
 		sessProvider: sessProvider,
+		newAppVersionGetter: func(appName string) (versionGetter, error) {
+			return describe.NewAppDescriber(appName)
+		},
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
@@ -210,11 +214,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initJobOpts{
 					initJobVars: jobVars,
 
-					fs:                    fs,
-					init:                  wlInitializer,
-					sel:                   sel,
-					prompt:                prompt,
-					dockerEngineValidator: exec.NewDockerCommand(),
+					fs:           fs,
+					init:         wlInitializer,
+					sel:          sel,
+					prompt:       prompt,
+					dockerEngine: exec.NewDockerCommand(),
 					initParser: func(s string) dockerfileParser {
 						return exec.NewDockerfile(fs, s)
 					},
@@ -230,11 +234,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
 
-					fs:                    fs,
-					init:                  wlInitializer,
-					sel:                   sel,
-					prompt:                prompt,
-					dockerEngineValidator: exec.NewDockerCommand(),
+					fs:           fs,
+					init:         wlInitializer,
+					sel:          sel,
+					prompt:       prompt,
+					dockerEngine: exec.NewDockerCommand(),
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {

@@ -10,6 +10,8 @@ const defaultSleep = function (ms) {
 
 // These are used for test purposes only
 let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
 let waiter;
 let sleep = defaultSleep;
 let random = Math.random;
@@ -238,102 +240,75 @@ const updateHostedZoneRecords = async function (
 // deleteHostedZoneRecords deletes the validation records associated with the certificate.
 // We don't want to delete a validation record if it's used by another certificate because
 // the validation records are used to renew the certificate.
-// The legacy certificate (only `${envName}.${appName}.${domainName}`) and the new
-// certificate generated with the "alias" field share the same validation record.
-// Therefore, we check if there is more than one certificate using the record and only delete
-// if there is no other certificate using the record.
 const deleteHostedZoneRecords = async function (
-  options,
-  certDomain,
+  oldCertOptions,
+  oldCertArn,
+  defaultDomain,
   envRoute53,
   appRoute53,
   acm,
   envHostedZoneId
 ) {
-  let isLegacyCert = false;
-  // Legacy cert only has two DomainValidationOptions:
-  // `${envName}.${appName}.${domainName}` and `*.${envName}.${appName}.${domainName}`
-  if (options.length <= 2) {
-    isLegacyCert = true;
-  }
-
-  const certsWithEnvDomain = await numOfGeneratedCertificates(acm, certDomain);
-  const isLastOne = certsWithEnvDomain === 1;
-
-  const newOptions = [];
-  switch (`${isLegacyCert}|${isLastOne}`) {
-    case `true|true`:
-      // If it is a legacy cert and it is the last Copilot cert,
-      // we'll go ahead to remove the validation CNAME record in env hosted zone.
-      newOptions.push(...options);
-      break;
-    case `true|false`:
-      // If it is a legacy cert but it is not the last Copilot cert,
-      // we'll do nothing since the new Copilot cert needs validation CNAME record
-      // in the env hosted zone.
-      break;
-    case `false|true`:
-      // If it is not a legacy cert and it is the last Copilot cert,
-      // we'll remove all validation CNAME records in env/app/root hosted zone.
-      newOptions.push(...options);
-      break;
-    case `false|false`:
-      // If it is not a legacy cert and it is not the last Copilot cert,
-      // we'll remove validation CNAME records only for app and root hosted zone,
-      // since the legacy cert still needs the validation record in the env hosted zone.
-      for (const option of options) {
-        if (option.DomainName === certDomain || option.DomainName === `*.${certDomain}`) {
-          continue;
-        }
-        newOptions.push(option);
+  let listCertificatesInput = {};
+  let newCertOptions = [];
+  // Look for the new certificate, and note down its validation records.
+  // This is to make sure if there is a new certificate, we don't delete any DNS validation records that are used by the new certificate.
+  let isNewCertFound = false;
+  while (!isNewCertFound) {
+    const listCertResp = await acm
+      .listCertificates(listCertificatesInput)
+      .promise();
+    for (const certSummary of listCertResp.CertificateSummaryList || []) {
+      if (
+        certSummary.DomainName !== defaultDomain ||
+        certSummary.CertificateArn === oldCertArn
+      ) {
+        // Skip if it is not the new certificate for the domain.
+        continue;
       }
+      // There exists another certificate created by Copilot which has the updated alias fields as SANs.
+      // We don't want to delete any validation records associated with the new certificate.
+      const { Certificate } = await acm
+        .describeCertificate({
+          CertificateArn: certSummary.CertificateArn,
+        })
+        .promise();
+      newCertOptions = Certificate.DomainValidationOptions || [];
+      isNewCertFound = true;
       break;
+    }
+    if (!listCertResp.NextToken) {
+      break;
+    }
+    listCertificatesInput.NextToken = listCertResp.NextToken;
+  }
+  const newCertSANs = new Set(newCertOptions.map((item) => item.DomainName));
+  const recordOptionsToDelete = [];
+  for (const oldCertOption of oldCertOptions) {
+    if (!newCertSANs.has(oldCertOption.DomainName)) {
+      // This alias field is no longer in use, we can safely delete its validation.
+      recordOptionsToDelete.push(oldCertOption);
+    }
   }
   // Make sure DNS validation records are unique. For example: "example.com" and "*.example.com"
   // might have the same DNS validation record.
-  const filteredOption = [];
+  const filteredRecordOption = [];
   var uniqueValidateRecordNames = new Set();
-  for (const option of newOptions) {
+  for (const option of recordOptionsToDelete) {
     var id = `${option.ResourceRecord.Name} ${option.ResourceRecord.Value}`;
     if (uniqueValidateRecordNames.has(id)) {
       continue;
     }
     uniqueValidateRecordNames.add(id);
-    filteredOption.push(option);
+    filteredRecordOption.push(option);
   }
   await updateHostedZoneRecords(
     "DELETE",
-    filteredOption,
+    filteredRecordOption,
     envRoute53,
     appRoute53,
     envHostedZoneId
   );
-};
-
-// numOfGeneratedCertificates returns the number of Copilot generated certificates for a given domain name.
-const numOfGeneratedCertificates = async function (
-  acm,
-  defaultEnvDomain,
-  maxCount = 2
-) {
-  let certsWithEnvDomain = 0;
-  let listCertificatesInput = {};
-  while (certsWithEnvDomain < maxCount) {
-    const listCertResp = await acm
-      .listCertificates(listCertificatesInput)
-      .promise();
-    for (const certSummary of listCertResp.CertificateSummaryList || []) {
-      if (certSummary.DomainName === defaultEnvDomain) {
-        certsWithEnvDomain++;
-      }
-    }
-    const nextToken = listCertResp.NextToken;
-    if (!nextToken) {
-      break;
-    }
-    listCertificatesInput.NextToken = nextToken;
-  }
-  return certsWithEnvDomain;
 };
 
 const validateDomain = async function ({
@@ -428,6 +403,7 @@ const deleteCertificate = async function (
 
     await deleteHostedZoneRecords(
       options,
+      arn,
       certDomain,
       envRoute53,
       appRoute53,
@@ -506,9 +482,11 @@ const getAllAliases = function (aliases) {
   for (var m in obj) {
     aliasList.push(...obj[m]);
   }
-  return new Set(aliasList.filter(function (itm) {
-    return getDomainType(itm) != domainTypes.OtherDomainZone;
-  }));
+  return new Set(
+    aliasList.filter(function (itm) {
+      return getDomainType(itm) != domainTypes.OtherDomainZone;
+    })
+  );
 };
 
 const getDomainType = function (alias) {
@@ -547,7 +525,7 @@ const clients = function (region, rootDnsRole) {
  */
 exports.certificateRequestHandler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  var physicalResourceId = event.PhysicalResourceId;
   var certificateArn;
   const props = event.ResourceProperties;
   const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
@@ -613,7 +591,6 @@ exports.certificateRequestHandler = async function (event, context) {
         responseData.Arn = physicalResourceId = certificateArn;
         break;
       case "Delete":
-        physicalResourceId = event.PhysicalResourceId;
         // If the resource didn't create correctly, the physical resource ID won't be the
         // certificate ARN, so don't try to delete it in that case.
         if (physicalResourceId.startsWith("arn:")) {
@@ -638,7 +615,9 @@ exports.certificateRequestHandler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}/${
+        defaultLogStream || context.logStreamName
+      })`
     );
   }
 };
@@ -686,4 +665,18 @@ exports.withRandom = function (r) {
  */
 exports.withMaxAttempts = function (ma) {
   maxAttempts = ma;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };

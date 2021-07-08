@@ -23,7 +23,7 @@ Copilot はいくつかのコマンドで CodePipeline をセットアップし�
 2. __Build Stage__ - リポジトリからコードがダウンロードされると、Service 用のコンテナイメージがビルドされ、すべての Environment の Amazon ECR リポジトリにプッシュされます。
 3. __Deploy Stages__ - ビルドが終わると、一部あるいはすべての Environment にデプロイできます。オプションとしてデプロイ完了後のテスト実行やデプロイ実行に手動承認を挟むことが可能です。
 
-Copiot を使って CodePipeline のセットアップを済ませたら、あとは GitHub、Bitbucket、あるいは CodeCommit リポジトリにプッシュするだけです。あとは CodePipeline がデプロイまでのプロセスを実行してくれます。
+Copilot を使って CodePipeline のセットアップを済ませたら、あとは GitHub、Bitbucket、あるいは CodeCommit リポジトリにプッシュするだけです。あとは CodePipeline がデプロイまでのプロセスを実行してくれます。
 
 CodePipeline についてより深く学びたい場合は、[CodePipeline のドキュメント](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/welcome-introducing.html)も参考にしてください。
 

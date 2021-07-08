@@ -6,6 +6,8 @@ const aws = require("aws-sdk");
 
 // These are used for test purposes only
 let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
 
 const updateStackWaiter = {
   delay: 30,
@@ -104,9 +106,9 @@ const controlEnv = async function (
     const updatedEnvStack = describeStackResp.Stacks[0];
     const envParams = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
     const envSet = setOfParameterKeysWithWorkload(envParams, workload);
-    const controllerSet = new Set(envControllerParameters.filter(
-      (param) => param.endsWith("Workloads")
-    ));
+    const controllerSet = new Set(
+      envControllerParameters.filter((param) => param.endsWith("Workloads"))
+    );
 
     const parametersToRemove = [...envSet].filter(
       (param) => !controllerSet.has(param)
@@ -203,8 +205,10 @@ const controlEnv = async function (
  */
 exports.handler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
   const props = event.ResourceProperties;
+  const physicalResourceId =
+    event.PhysicalResourceId ||
+    `envcontoller/${props.EnvStack}/${props.Workload}`;
 
   try {
     switch (event.RequestType) {
@@ -218,7 +222,6 @@ exports.handler = async function (event, context) {
             props.Parameters
           ),
         ]);
-        physicalResourceId = `envcontoller/${props.EnvStack}/${props.Workload}`;
         break;
       case "Update":
         responseData = await Promise.race([
@@ -230,7 +233,6 @@ exports.handler = async function (event, context) {
             props.Parameters
           ),
         ]);
-        physicalResourceId = event.PhysicalResourceId;
         break;
       case "Delete":
         responseData = await Promise.race([
@@ -241,7 +243,6 @@ exports.handler = async function (event, context) {
             [] // Set to empty to denote that Workload should not be included in any env stack parameter.
           ),
         ]);
-        physicalResourceId = event.PhysicalResourceId;
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
@@ -249,13 +250,18 @@ exports.handler = async function (event, context) {
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.log(`Caught error ${err}.`);
+    console.log(
+      `Responding FAILED for physical resource id: ${physicalResourceId}`
+    );
     await report(
       event,
       context,
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}/${
+        defaultLogStream || context.logStreamName
+      })`
     );
   }
 };
@@ -333,4 +339,18 @@ exports.deadlineExpired = function () {
  */
 exports.withDefaultResponseURL = function (url) {
   defaultResponseURL = url;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };

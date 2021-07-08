@@ -123,9 +123,21 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 
 		wantedErr error
 	}{
+		"error if fail to get existing application infrastructure stack": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(nil, errors.New("some error"))
+
+				return &CloudFormation{
+					cfnClient: m,
+				}
+			},
+			wantedErr: fmt.Errorf("get existing application infrastructure stack: some error"),
+		},
 		"error if fail to describe app stack": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
 				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(nil, errors.New("some error"))
 
 				return &CloudFormation{
@@ -137,7 +149,7 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 		"error if fail to update app stack": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
+				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil).Times(2)
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("some error"))
 				return &CloudFormation{
 					cfnClient: m,
@@ -148,7 +160,7 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 		"error if fail to wait until stack set last operation complete": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				mockCFNClient := mocks.NewMockcfnClient(ctrl)
-				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
+				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil).Times(2)
 				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
 
 				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
@@ -165,7 +177,7 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 		"success": {
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				mockCFNClient := mocks.NewMockcfnClient(ctrl)
-				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
+				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil).Times(2)
 				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
 
 				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
@@ -186,7 +198,7 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 				mockCFNClient := mocks.NewMockcfnClient(ctrl)
 				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{
 					StackStatus: aws.String(awscfn.StackStatusCreateInProgress),
-				}, nil)
+				}, nil).Times(2)
 				mockCFNClient.EXPECT().WaitForUpdate(gomock.Any(), "phonetool-infrastructure-roles").Return(nil)
 				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
 				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)

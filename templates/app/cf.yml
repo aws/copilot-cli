@@ -5,7 +5,7 @@ AWSTemplateFormatVersion: '2010-09-09'{{$accounts := .Accounts}}{{$app := .App}}
 # to support the CodePipeline for a workspace
 Description: Cross-regional resources to support the CodePipeline for a workspace
 Metadata:
-  TemplateVersion: 'v1.0.0'
+  TemplateVersion: 'v1.0.2'
   Version: {{.Version}}
   Services:{{if not $services}} []{{else}}{{range $service := $services}}
   - {{$service}}{{end}}{{end}}
@@ -26,7 +26,7 @@ Resources:
             # Allows the key to be administered in the tools account
             Effect: Allow
             Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
             Action:
               - "kms:Create*"
               - "kms:Describe*"
@@ -48,8 +48,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - !Sub arn:aws:iam::${AWS::AccountId}:root{{range $accounts}}
-                - arn:aws:iam::{{.}}:root{{end}}
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
+                - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
             Action:
               - kms:Encrypt
               - kms:Decrypt
@@ -69,12 +69,12 @@ Resources:
               - s3:*
             Effect: Allow
             Resource:
-              - !Sub arn:aws:s3:::${PipelineBuiltArtifactBucket}
-              - !Sub arn:aws:s3:::${PipelineBuiltArtifactBucket}/*
+              - !Sub arn:${AWS::Partition}:s3:::${PipelineBuiltArtifactBucket}
+              - !Sub arn:${AWS::Partition}:s3:::${PipelineBuiltArtifactBucket}/*
             Principal:
               AWS:
-                - !Sub arn:aws:iam::${AWS::AccountId}:root{{range $accounts}}
-                - arn:aws:iam::{{.}}:root{{end}}
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
+                - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
   PipelineBuiltArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -101,8 +101,8 @@ Resources:
           Effect: Allow
           Principal:
               AWS:
-                - !Sub arn:aws:iam::${AWS::AccountId}:root{{range $accounts}}
-                - arn:aws:iam::{{.}}:root{{end}}
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
+                - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
           Action:
           - ecr:GetDownloadUrlForLayer
           - ecr:BatchGetImage
@@ -121,7 +121,11 @@ Outputs:
   PipelineBucket:
     Description: Bucket used for CodePipeline to stage resources in.
     Value: !Ref PipelineBuiltArtifactBucket
-{{range $service := $services}}  ECRRepo{{logicalIDSafe $service}}:
+{{- range $service := $services}} 
+  ECRRepo{{logicalIDSafe $service}}:
     Description: ECR Repo used to store images of the {{$service}} service.
     Value: !GetAtt ECRRepo{{logicalIDSafe $service}}.Arn
-{{end}}
+{{- end}}
+  TemplateVersion:
+    Description: Required output to force the stackset to update if mutating version.
+    Value: {{.TemplateVersion}}
