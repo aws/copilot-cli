@@ -52,18 +52,20 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{})
+				m.EXPECT().Outputs(gomock.Any()).Return(nil, errors.New("some error"))
 				return m
 			},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				return nil
 			},
-			want: fmt.Errorf("get stack set administrator role arn: find the partition for region bad-region"),
+			want: errors.New("get outputs from app stack: some error"),
 		},
 		"Infrastructure Roles Stack Already Exists": {
 			region: "us-west-2",
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{})
+				m.EXPECT().Outputs(gomock.Any()).Return(map[string]string{"k": "v"}, nil)
 				return m
 			},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
@@ -78,6 +80,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(nil)
+				m.EXPECT().Outputs(gomock.Any()).Return(map[string]string{"k": "v"}, nil)
 				return m
 			},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
@@ -109,7 +112,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 
 			// THEN
 			if tc.want != nil {
-				require.EqualError(t, tc.want, got.Error())
+				require.EqualError(t, got, tc.want.Error())
 			} else {
 				require.NoError(t, got)
 			}

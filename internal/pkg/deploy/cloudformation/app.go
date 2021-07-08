@@ -43,15 +43,23 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 	if err != nil {
 		return err
 	}
-	stackSetAdminRoleARN, err := appConfig.StackSetAdminRoleARN(cf.region)
+	stackSetAdminRoleARN, err := cf.adminRoleARN(s)
 	if err != nil {
-		return fmt.Errorf("get stack set administrator role arn: %w", err)
+		return err
 	}
 	return cf.appStackSet.Create(appConfig.StackSetName(), blankAppTemplate,
 		stackset.WithDescription(appConfig.StackSetDescription()),
 		stackset.WithExecutionRoleName(appConfig.StackSetExecutionRoleName()),
 		stackset.WithAdministrationRoleARN(stackSetAdminRoleARN),
 		stackset.WithTags(toMap(appConfig.Tags())))
+}
+
+func (cf CloudFormation) adminRoleARN(appStack *cloudformation.Stack) (string, error) {
+	outputs, err := cf.cfnClient.Outputs(appStack)
+	if err != nil {
+		return "", fmt.Errorf("get outputs from app stack: %w", err)
+	}
+	return outputs[stack.AppAdminRoleOutputName], nil
 }
 
 func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {

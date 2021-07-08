@@ -64,6 +64,8 @@ const (
 
 	// arn:${partition}:iam::${account}:role/${roleName}
 	fmtStackSetAdminRoleARN = "arn:%s:iam::%s:role/%s"
+
+	AppAdminRoleOutputName = "AdministrationRoleARN"
 )
 
 var cfTemplateFunctions = map[string]interface{}{
