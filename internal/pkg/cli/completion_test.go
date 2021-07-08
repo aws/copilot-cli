@@ -31,7 +31,7 @@ func TestCompletionOpts_Validate(t *testing.T) {
 		},
 		"invalid shell": {
 			inputShell:  "chicken",
-			wantedError: errors.New("shell must be bash or zsh or fish"),
+			wantedError: errors.New("shell must be bash, zsh or fish"),
 		},
 	}
 
