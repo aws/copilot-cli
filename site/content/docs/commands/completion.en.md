@@ -4,7 +4,7 @@ $ copilot completion [shell] [flags]
 ```
 
 ## What does it do?
-`copilot completion` prints shell completion code for bash or zsh or fish. The code must be evaluated to provide interactive completion of commands.
+`copilot completion` prints shell completion code for bash, zsh or fish. The code must be evaluated to provide interactive completion of commands.
 
 See the help menu for instructions on how to setup auto-completion for your respective shell.
 
