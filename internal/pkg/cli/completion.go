@@ -76,7 +76,7 @@ The code must be evaluated to provide interactive completion of commands.`,
   /code $ copilot completion bash > copilot.sh
   /code $ sudo mv copilot.sh /etc/bash_completion.d/copilot
 
-	Install fish completion
+  Install fish completion
   /code$ copilot completion fish | source
 
   To load completions for each session, execute once:
