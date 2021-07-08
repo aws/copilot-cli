@@ -225,13 +225,22 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-The logging section contains parameters for log configuration options to send to a firelens log driver for the container.
+The logging section contains parameters for log configuration options to send to a FireLens log driver for the container. This will create a logging [sidecar](../developing/sidecars.en.md#sidecar-patterns).
+
+<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
+Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 Optional. The configuration options to send to the FireLens log driver.
 
+<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
+Optional. Whether to include ECS metadata in logs. Defaults to true.
+
 <span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
 Optional. The secrets to pass to the log configuration.
+
+<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
+Optional. The full config file path in your custom Fluent Bit image.
 
 <div class="separator"></div>
 
