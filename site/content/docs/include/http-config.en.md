@@ -44,7 +44,10 @@ The approximate amount of time, in seconds, between health checks of an individu
 The amount of time, in seconds, during which no response from a target means a failed health check. The default is 5s. Range 5s-300s.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-deregistration-delay" href="#http-healthcheck-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
-The amount of time, in seconds, to wait for targets to drain connections during deregistration. The default is 60s. Setting this to a larger value gives targets more time to gracefully drain connections, but increases the time required for new deployments.
+The amount of time to wait for targets to drain connections during deregistration. The default is 60s. Setting this to a larger value gives targets more time to gracefully drain connections, but increases the time required for new deployments.
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-grace-period" href="#http-healthcheck-grace-period" class="field">`grace_period`</a> <span class="type">Duration</span>  
+The amount of time to ignore failing target group healthchecks on container start. The default is 60s. This can be useful to fix deployment issues for containers which take a while to become healthy and begin listening for incoming connections, or to speed up deployment of containers guaranteed to start quickly.
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 A sidecar container that takes the place of a service container.
