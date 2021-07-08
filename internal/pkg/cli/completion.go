@@ -59,7 +59,7 @@ func BuildCompletionCmd(rootCmd *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion [shell]",
 		Short: "Output shell completion code.",
-		Long: `Output shell completion code for bash or zsh or fish.
+		Long: `Output shell completion code for bash, zsh or fish.
 The code must be evaluated to provide interactive completion of commands.`,
 		Example: `
   Install zsh completion
