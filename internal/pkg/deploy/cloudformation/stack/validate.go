@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -25,6 +26,7 @@ var (
 	errNoContainerPath = errors.New("`path` cannot be empty")
 	errNoSourceVolume  = errors.New("`source_volume` cannot be empty")
 	errEmptyEFSConfig  = errors.New("bad EFS configuration: `efs` cannot be empty")
+	errNoPubSubName    = errors.New("topic/worker names cannot be empty")
 )
 
 // Conditional errors.
@@ -40,6 +42,7 @@ var (
 	errInvalidSidecarDependsOnStatus = fmt.Errorf("sidecar container dependency status must be one of < %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess)
 	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
+	errInvalidPubSubName             = errors.New("topic/worker names can only contain letters, numbers, underscores, and hypthens")
 )
 
 // Container dependency status options
@@ -391,4 +394,44 @@ func validateRootDirPath(input string) error {
 
 func validateContainerPath(input string) error {
 	return validatePath(input, maxDockerContainerPathLength)
+}
+
+func validateName(name *string) error {
+	if name == nil || len(aws.StringValue(name)) == 0 {
+		return errNoPubSubName
+	}
+
+	// name must contain letters, numbers, and can't use special characters besides _ and -
+	re := regexp.MustCompile("^[a-zA-Z0-9_-]*$")
+	if !re.MatchString(aws.StringValue(name)) {
+		return errInvalidPubSubName
+	}
+
+	return nil
+}
+
+func validateWorkers(w []string) ([]*string, error) {
+	if w == nil {
+		return nil, nil
+	}
+
+	workers := []*string{}
+	for _, name := range w {
+		if len(name) == 0 {
+			continue
+		}
+
+		err := validateName(aws.String(name))
+		if err != nil {
+			return nil, err
+		}
+
+		workers = append(workers, aws.String(name))
+	}
+
+	if len(workers) == 0 {
+		return nil, nil
+	}
+
+	return workers, nil
 }

@@ -574,3 +574,32 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 	}
 	return out, nil
 }
+
+func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
+	if p == nil || p.Topics == nil {
+		return nil, nil
+	}
+	publishers := template.PublishOpts{}
+	// convert the topics to template Topics
+	for _, topic := range p.Topics {
+
+		err := validateName(topic.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		workers, err := validateWorkers(topic.AllowedWorkers)
+		if err != nil {
+			return nil, err
+		}
+
+		publishers.Topics = append(publishers.Topics, &template.Topics{
+			Name:           topic.Name,
+			AllowedWorkers: workers,
+		})
+	}
+
+	// validate
+
+	return &publishers, nil
+}

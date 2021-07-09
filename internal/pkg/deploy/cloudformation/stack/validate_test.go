@@ -498,3 +498,66 @@ func TestValidateImageDependsOn(t *testing.T) {
 		})
 	}
 }
+
+func Test_validateNames(t *testing.T) {
+	testCases := map[string]struct {
+		inName *string
+
+		wantErr error
+	}{
+		"valid topic name": {
+			inName: aws.String("a-Perfectly_V4l1dString"),
+		},
+		"error when no topic name": {
+			inName:  nil,
+			wantErr: errNoPubSubName,
+		},
+		"error when invalid topic name": {
+			inName:  aws.String("OHNO~/`...,"),
+			wantErr: errInvalidPubSubName,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateName(tc.inName)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateWorkers(t *testing.T) {
+	testCases := map[string]struct {
+		inWorker []string
+
+		wanted  []*string
+		wantErr error
+	}{
+		"nil when no worker": {
+			inWorker: []string{},
+			wanted:   nil,
+		},
+		"valid worker": {
+			inWorker: []string{"a-Perfectly_V4l1dString"},
+			wanted:   []*string{aws.String("a-Perfectly_V4l1dString")},
+		},
+		"error when invalid worker name": {
+			inWorker: []string{"OHNO~/`...,"},
+			wantErr:  errInvalidPubSubName,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			outWorkers, err := validateWorkers(tc.inWorker)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+				require.Equal(t, tc.wanted, outWorkers)
+			}
+		})
+	}
+}
