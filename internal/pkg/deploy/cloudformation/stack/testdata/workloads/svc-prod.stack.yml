@@ -218,7 +218,7 @@ Resources:
     Properties:
       Code:
         ZipFile: |
-          "use strict";const aws=require("aws-sdk");let defaultResponseURL,report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const getRunningTaskCount=async function(a,b,c,d,e){var f=new aws.ResourceGroupsTaggingAPI;const g=await f.getResources({ResourceTypeFilters:["ecs:service"],TagFilters:[{Key:"copilot-application",Values:[c]},{Key:"copilot-environment",Values:[d]},{Key:"copilot-service",Values:[e]}]}).promise(),h=g.ResourceTagMappingList;if(1!==h.length)return a;const i=h[0].ResourceARN;var j=new aws.ECS;const k=await j.describeServices({cluster:b,services:[i]}).promise();return 1===k.services.length?k.services[0].desiredCount:a};exports.handler=async function(a,b){var c,d={};const e=a.ResourceProperties;try{switch(a.RequestType){case"Create":d.DesiredCount=await getRunningTaskCount(e.DefaultDesiredCount,e.Cluster,e.App,e.Env,e.Svc),c=`copilot/apps/${e.App}/envs/${e.Env}/services/${e.Svc}/autoscaling`;break;case"Update":d.DesiredCount=await getRunningTaskCount(e.DefaultDesiredCount,e.Cluster,e.App,e.Env,e.Svc),c=a.PhysicalResourceId;break;case"Delete":c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,d)}catch(f){d.DesiredCount=e.DefaultDesiredCount,console.log(`Caught error ${f}. Set back desired count to ${d.DesiredCount}`),await report(a,b,"SUCCESS",c,d)}},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
+          mockDynamicDesiredCountZipFile
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -275,7 +275,7 @@ Resources:
     Properties:
       Code:
         ZipFile: |
-          Abracadabra
+          mockEnvControllerZipFile
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -392,7 +392,7 @@ Resources:
     Properties:
       Code:
         ZipFile: |
-          "use strict";const aws=require("aws-sdk"),priorityForRootRule="50000";let defaultResponseURL,report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const calculateNextRulePriority=async function(a){var b,c=new aws.ELBv2,d=[];do{const e=await c.describeRules({ListenerArn:a,Marker:b}).promise();d=d.concat(e.Rules),b=e.NextMarker}while(b);let e=1;if(0<d.length){const a=d.map(a=>"default"===a.Priority||a.Priority===priorityForRootRule?0:parseInt(a.Priority)),b=Math.max(...a);e=b+1}return e};exports.nextAvailableRulePriorityHandler=async function(a,b){var c,d,e={};try{switch(a.RequestType){case"Create":d=await calculateNextRulePriority(a.ResourceProperties.ListenerArn),e.Priority=d,c=`alb-rule-priority-${a.LogicalResourceId}`;break;case"Update":case"Delete":c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,e)}catch(d){console.log(`Caught error ${d}.`),await report(a,b,"FAILED",c,null,d.message)}},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
+          mockRulePriorityZipFile
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
