@@ -3,14 +3,14 @@
 {{.Name}}SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', {{.Name}}]]
+      TopicName: ${AWS::StackName}-{{.Name}}-SNSTopic
       
   {{.Name}}SNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     DependsOn: {{.Name}}SNSTopic
     Properties:
       Topics: 
-        - !Ref ${AWS::StackName}-{{.Name}}-SNSTopic
+        - !Ref ${{.Name}}SNSTopic
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -20,7 +20,7 @@
               Service: sqs.amazonaws.com
             Action: 
               - sns:Subscribe
-            Resource: !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*'
+            Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
             Condition:
               StringEquals:
                 'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
