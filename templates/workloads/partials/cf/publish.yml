@@ -1,13 +1,13 @@
 {{- if .Publish}}
 {{- range $topic := .Publish.Topics}}
-{{.Name}}SNSTopic:
+{{$topic.Name}}SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: ${AWS::StackName}-{{.Name}}-SNSTopic
+      TopicName: ${AWS::StackName}-{{$topic.Name}}-SNSTopic
       
-  {{.Name}}SNSTopicPolicy:
+  {{$topic.Name}}SNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
-    DependsOn: {{.Name}}SNSTopic
+    DependsOn: {{$topic.Name}}SNSTopic
     Properties:
       Topics: 
         - !Ref ${{.Name}}SNSTopic
