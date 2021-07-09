@@ -396,7 +396,7 @@ func validateContainerPath(input string) error {
 	return validatePath(input, maxDockerContainerPathLength)
 }
 
-func validateName(name *string) error {
+func validatePubSubName(name *string) error {
 	if name == nil || len(aws.StringValue(name)) == 0 {
 		return errNoPubSubName
 	}
@@ -408,30 +408,4 @@ func validateName(name *string) error {
 	}
 
 	return nil
-}
-
-func validateWorkers(w []string) ([]*string, error) {
-	if w == nil {
-		return nil, nil
-	}
-
-	workers := []*string{}
-	for _, name := range w {
-		if len(name) == 0 {
-			continue
-		}
-
-		err := validateName(aws.String(name))
-		if err != nil {
-			return nil, err
-		}
-
-		workers = append(workers, aws.String(name))
-	}
-
-	if len(workers) == 0 {
-		return nil, nil
-	}
-
-	return workers, nil
 }
