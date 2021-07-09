@@ -11,8 +11,10 @@ const AWS = require('aws-sdk');
 const ERR_NAME_INVALID_REQUEST = "InvalidRequestException";
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
+const DOMAIN_STATUS_DELETE_FAILED = "delete_failed";
 const ATTEMPTS_WAIT_FOR_PENDING = 10;
-const ATTEMPTS_WAIT_FOR_ACTIVE = 12;
+const ATTEMPTS_WAIT_FOR_ACTIVE = 12;  // TODO: Expectedly lambda time out would be triggered before 20-th attempt.
+const ATTEMPTS_WAIT_FOR_DISASSOCIATED = 20;
 
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -102,8 +104,11 @@ exports.handler = async function (event, context) {
                 await waitForCustomDomainToBeActive(serviceARN, customDomain);
                 break;
             case "Update":
-            case "Delete":
                 throw new Error("not yet implemented");
+            case "Delete":
+                await removeCustomDomain(serviceARN, customDomain);
+                await waitForCustomDomainToBeDisassociated(serviceARN, customDomain);
+                break;
             default:
                 throw new Error(`Unsupported request type ${event.RequestType}`);
         }
@@ -127,13 +132,13 @@ exports.deadlineExpired = function () {
         setTimeout(
             reject,
             14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/,
-            new Error("Lambda took longer than 14.5 minutes to update environment")
+            new Error(`Lambda took longer than 14.5 minutes to update custom domain`)
         );
     });
 };
 
 /**
- * Validate certificates of the custom domain for the service by upserting validation records.
+ * Add custom domain for service by associating and adding records for both the domain and the validation.
  * Errors are not handled and are directly passed to the caller.
  *
  * @param {string} serviceARN ARN of the service that the custom domain applies to.
@@ -234,11 +239,15 @@ async function validateCertForDomain(serviceARN, domainName) {
         });
 
         lastDomainStatus = domain.Status;
+
+        // TODO: handle it if it's alraedy ACTIVE (could be false ACTIVE though)
+
         if (lastDomainStatus !== DOMAIN_STATUS_PENDING_VERIFICATION) {
             await sleep(3000);
             continue;
         }
         // Upsert all records needed for certificate validation.
+        // TODO: these can be done async. Test if it shortens the execution time - if it still frequently fails due to lambda time out, we should think about handling lambda time out differently.
         const records = domain.CertificateValidationRecords;
         for (const record of records) {
             await updateCNAMERecordAndWait(record.Name, record.Value, appHostedZoneID, "UPSERT").catch(err => {
@@ -251,6 +260,85 @@ async function validateCertForDomain(serviceARN, domainName) {
     if (i === ATTEMPTS_WAIT_FOR_PENDING) {
         throw new Error(`update validation records for domain ${domainName}: fail to wait for state ${DOMAIN_STATUS_PENDING_VERIFICATION}, stuck in ${lastDomainStatus}`);
     }
+}
+
+/**
+ * Remove custom domain from service by disassociating and removing the records for both the domain and the validation.
+ * If the custom domain is not found in the service, the function returns without error.
+ * Errors are not handled and are directly passed to the caller.
+ *
+ * @param {string} serviceARN ARN of the service that the custom domain applies to.
+ * @param {string} customDomainName the custom domain name.
+ */
+async function removeCustomDomain(serviceARN, customDomainName) {
+    let data;
+    try {
+        data = await appRunnerClient.disassociateCustomDomain({
+            DomainName: customDomainName,
+            ServiceArn: serviceARN,
+        }).promise();
+    } catch (err) {
+        if (err.message.includes(`No custom domain ${customDomainName} found for the provided service`)) {
+            return;
+        }
+        throw err;
+    }
+
+    return Promise.all([
+        updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "DELETE"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
+        removeValidationRecords(data.CustomDomain),
+    ]);
+}
+
+/**
+ * Remove validation records for a custom domain.
+ *
+ * @param {object} domain information containing DomainName, Status, CertificateValidationRecords, etc.
+ * @throws wrapped error.
+ */
+async function removeValidationRecords(domain) {
+    const records = domain.CertificateValidationRecords;
+    let promises = [];
+    for (const record of records) {
+        promises.push(
+            updateCNAMERecordAndWait(record.Name, record.Value, appHostedZoneID, "DELETE").catch(err => {
+                throw new Error(`delete validation records for domain ${domain.DomainName}: ` + err.message);
+            })
+        );
+    }
+    return Promise.all(promises);
+}
+
+/**
+ * Wait for the custom domain to be disassociated.
+ * @param {string} serviceARN the service to which the domain is added.
+ * @param {string} customDomainName the domain name.
+ */
+async function waitForCustomDomainToBeDisassociated(serviceARN, customDomainName) {
+    let i, lastDomainStatus, domain;
+    for (i = 0; i < ATTEMPTS_WAIT_FOR_DISASSOCIATED; i++) {
+        try {
+            domain = await getDomainInfo(serviceARN, customDomainName);
+        } catch (err) {
+            // Domain is disassociated.
+            if (err.message.includes(`domain ${customDomainName} is not associated`)) {
+                return;
+            }
+            throw new Error(`wait for domain ${customDomainName} to be active: ` + err.message);
+        }
+
+        lastDomainStatus = domain.Status;
+
+        if (domain.Status === DOMAIN_STATUS_DELETE_FAILED) {
+            throw new Error(`fails to disassociate domain ${customDomainName}: domain status is ${DOMAIN_STATUS_DELETE_FAILED}`);
+        }
+
+        const base = Math.pow(2, i);
+        await sleep(Math.random() * base * 50 + base * 150);
+    }
+
+    console.log(`Fail to wait for the domain status to be disassociated. The last reported status of domain ${customDomainName} is ${lastDomainStatus}`);
+    throw new Error(`fail to wait for domain ${customDomainName} to be disassociated`);
 }
 
 /**
@@ -303,6 +391,7 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
 exports.domainStatusPendingVerification = DOMAIN_STATUS_PENDING_VERIFICATION;
 exports.waitForDomainStatusPendingAttempts = ATTEMPTS_WAIT_FOR_PENDING;
 exports.waitForDomainStatusActiveAttempts = ATTEMPTS_WAIT_FOR_ACTIVE;
+exports.waitForDomainToBeDisassociatedAttempts = ATTEMPTS_WAIT_FOR_DISASSOCIATED;
 exports.withSleep = function (s) {
     sleep = s;
 };
