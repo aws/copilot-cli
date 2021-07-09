@@ -13,7 +13,9 @@ const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
 const DOMAIN_STATUS_DELETE_FAILED = "delete_failed";
 const ATTEMPTS_WAIT_FOR_PENDING = 10;
-const ATTEMPTS_WAIT_FOR_ACTIVE = 12;  // TODO: Expectedly lambda time out would be triggered before 20-th attempt.
+// Expectedly lambda time out would be triggered before 20-th attempt. This ensures that we attempts to wait for ACTIVE as much as possible.
+const ATTEMPTS_WAIT_FOR_ACTIVE = 20;
+// Expectedly lambda time out would be triggered before 20-th attempt. This ensures that we attempts to wait for it to be disassociated as much as possible.
 const ATTEMPTS_WAIT_FOR_DISASSOCIATED = 20;
 
 let defaultSleep = function (ms) {
