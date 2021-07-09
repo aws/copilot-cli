@@ -33,3 +33,7 @@
     StartPeriod: {{.HealthCheck.StartPeriod}}
     Timeout: {{.HealthCheck.Timeout}}
 {{- end}}
+{{- if .CredentialsParameter}}
+  RepositoryCredentials:
+    CredentialsParameter: {{.CredentialsParameter}}
+{{- end}}
