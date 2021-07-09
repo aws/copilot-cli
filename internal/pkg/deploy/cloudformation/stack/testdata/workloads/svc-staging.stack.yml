@@ -81,7 +81,7 @@ Resources:
           - Name: COPILOT_APPLICATION_NAME
             Value: !Sub '${AppName}'
           - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
-            Value: test.my-app.local
+            Value: staging.my-app.local
           - Name: COPILOT_ENVIRONMENT_NAME
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
