@@ -17,8 +17,7 @@ const (
 )
 
 var (
-	errUnmarshalDeadLetter = errors.New(`cannot unmarshal Dead Letter field into bool or map`)
-	errUnmarshalFifo       = errors.New(`cannot unmarshal FIFO field into bool or map`)
+	errUnmarshalFifo = errors.New(`cannot unmarshal FIFO field into bool or map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
