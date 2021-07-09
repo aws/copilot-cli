@@ -193,3 +193,5 @@ Resources:
                 Resource:
                   - "*"
 {{- end }}
+
+{include "publish" . | indent 2}}

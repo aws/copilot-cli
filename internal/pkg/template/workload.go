@@ -65,6 +65,7 @@ var (
 		"image-overrides",
 		"instancerole",
 		"accessrole",
+		"publish",
 	}
 )
 

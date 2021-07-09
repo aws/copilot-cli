@@ -19,6 +19,10 @@ Environment:
 - Name: COPILOT_MOUNT_POINTS
   Value: '{{jsonMountPoints .Storage.MountPoints}}'
 {{- end}}{{end}}
+{{- if .Publish}}{{- if .Publish.Topics}}
+- Name: COPILOT_PUBLISHERS
+  Value: '{{jsonPublishers .Publish.Topics}}'
+{{- end}} {{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
 - Name: COPILOT_LB_DNS
   Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
