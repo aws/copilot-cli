@@ -91,6 +91,8 @@ type SidecarOpts struct {
 	MountPoints  []*MountPoint
 	DockerLabels map[string]string
 	DependsOn    map[string]string
+	EntryPoint   []string
+	Command      []string
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points

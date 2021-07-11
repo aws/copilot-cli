@@ -437,6 +437,7 @@ type SidecarConfig struct {
 	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
 	DockerLabels map[string]string   `yaml:"labels"`
 	DependsOn    map[string]string   `yaml:"depends_on"`
+	ImageOverride `yaml:",inline"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
