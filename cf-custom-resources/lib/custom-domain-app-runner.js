@@ -242,9 +242,7 @@ async function validateCertForDomain(serviceARN, domainName) {
 
         lastDomainStatus = domain.Status;
 
-        // TODO: handle it if it's alraedy ACTIVE (could be false ACTIVE though)
-
-        if (lastDomainStatus !== DOMAIN_STATUS_PENDING_VERIFICATION) {
+        if (!domainValidationRecordReady(domain)) {
             await sleep(3000);
             continue;
         }
@@ -262,6 +260,25 @@ async function validateCertForDomain(serviceARN, domainName) {
     if (i === ATTEMPTS_WAIT_FOR_PENDING) {
         throw new Error(`update validation records for domain ${domainName}: fail to wait for state ${DOMAIN_STATUS_PENDING_VERIFICATION}, stuck in ${lastDomainStatus}`);
     }
+}
+
+function domainValidationRecordReady(domain) {
+    if (domain.Status === DOMAIN_STATUS_PENDING_VERIFICATION) {
+        return true;
+    }
+
+    if (domain.Status === DOMAIN_STATUS_ACTIVE && domain.CertificateValidationRecords && domain.CertificateValidationRecords.length === 3) {
+        // There are one known scenarios where status could be ACTIVE right after it's associated:
+        // When the domain just got deleted and added again. In this case, even though the validation records could
+        // have been deleted, the previously successful validation results are still cached. Because of the cache,
+        // the domain will show to be ACTIVE immediately after it's associated , although the validation records are not
+        // there anymore.
+        // In this case, the status won't transit to PENDING_VERIFICATION, so we need to check whether the validation
+        // records are ready by counting if there are three of them.
+        return true;
+    }
+
+    return false;
 }
 
 /**
