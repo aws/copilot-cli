@@ -103,7 +103,9 @@ exports.handler = async function (event, context) {
         switch (event.RequestType) {
             case "Create":
                 await addCustomDomain(serviceARN, customDomain);
-                await waitForCustomDomainToBeActive(serviceARN, customDomain);
+                console.log("Finished associating the custom domain with your service and upserting domain records as well as validation records. " +
+                    "You can check whether your custom domain is ACTIVE using the AWS Console or AWS CLI (https://docs.aws.amazon.com/cli/latest/reference/apprunner/describe-custom-domains.html)." +
+                    "It usually takes App Runner 15 minutes to validate your domain.");
                 break;
             case "Update":
                 throw new Error("not yet implemented");
@@ -156,49 +158,6 @@ async function addCustomDomain(serviceARN, customDomainName) {
         updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
         validateCertForDomain(serviceARN, customDomainName),
     ]);
-}
-
-/**
- * Wait for the custom domain to be ACTIVE.
- * @param {string} serviceARN the service to which the domain is added.
- * @param {string} customDomainName the domain name.
- */
-async function waitForCustomDomainToBeActive(serviceARN, customDomainName) {
-    let i;
-    for (i = 0; i < ATTEMPTS_WAIT_FOR_ACTIVE; i++) {
-        const data = await appRunnerClient.describeCustomDomains({
-            ServiceArn: serviceARN,
-        }).promise().catch(err => {
-            throw new Error(`wait for domain ${customDomainName} to be active: ` + err.message);
-        });
-
-        let domain;
-        for (const d of data.CustomDomains) {
-            if (d.DomainName === customDomainName) {
-                domain = d;
-                break;
-            }
-        }
-
-        if (!domain) {
-            throw new Error(`wait for domain ${customDomainName} to be active: domain ${customDomainName} is not associated`);
-        }
-
-        if (domain.Status !== DOMAIN_STATUS_ACTIVE) {
-            // Exponential backoff with jitter based on 200ms base
-            // component of backoff fixed to ensure minimum total wait time on
-            // slow targets.
-            const base = Math.pow(2, i);
-            await sleep(Math.random() * base * 50 + base * 150);
-            continue;
-        }
-        return;
-    }
-
-    if (i === ATTEMPTS_WAIT_FOR_ACTIVE) {
-        console.log("Fail to wait for the domain status to become ACTIVE. It usually takes a long time to validate domain and can be longer than the 15 minutes duration for which a Lambda function can run at most. Try associating the domain manually.");
-        throw new Error(`fail to wait for domain ${customDomainName} to become ${DOMAIN_STATUS_ACTIVE}`);
-    }
 }
 
 /**
