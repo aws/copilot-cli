@@ -182,7 +182,7 @@ environments:
 		})
 	})
 
-	Context("when deploying a svc to test and prod envs", func() {
+	Context("when deploying a svc to test, prod, and shared envs", func() {
 		var (
 			testDeployErr    error
 			prodEndDeployErr error
@@ -221,7 +221,7 @@ environments:
 				Name:    svcName,
 			})
 			Expect(svcShowErr).NotTo(HaveOccurred())
-			Expect(len(svc.Routes)).To(Equal(2))
+			Expect(len(svc.Routes)).To(Equal(3))
 			// Group routes by environment
 			envRoutes := map[string]client.SvcShowRoutes{}
 			for _, route := range svc.Routes {
