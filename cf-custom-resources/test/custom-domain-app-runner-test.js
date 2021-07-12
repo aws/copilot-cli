@@ -17,10 +17,11 @@ describe("Custom Domain for App Runner Service", () => {
         ["mockService", "mockDomain", "mockHostedZoneID", "https://mock.com/", "mockPhysicalResourceID", "mockLogicalResourceID", "mockTarget"];
 
     beforeEach(() => {
+        // Prevent logging.
+        console.log = function () {};
         withSleep(_ => {
             return Promise.resolve();
         });
-
         withDeadlineExpired(_ => {
             return new Promise((resolve) => {
                 setTimeout(resolve, 1000);
@@ -31,6 +32,8 @@ describe("Custom Domain for App Runner Service", () => {
     });
 
     afterEach(() => {
+        // Restore logger
+        console.log = origLog;
         AWS.restore();
         reset();
         console.log = origLog;
