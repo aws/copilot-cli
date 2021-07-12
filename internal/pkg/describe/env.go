@@ -162,12 +162,13 @@ func (d *EnvDescriber) ServiceDiscoveryEndpoint() (string, error) {
 		if k != cfnstack.EnvParamServiceDiscoveryEndpoint {
 			continue
 		}
-		// Stacks upgraded from legacy environments will have empty ServiceDiscoveryEndpoint params.
-		// Stacks created at 1.5.0 or later will have a non-empty value of `env.app.local`
+		// Stacks upgraded from legacy environments will have `app.local` as the parameter value.
+		// Stacks created after 1.5.0 will use `env.app.local`.
 		if v != "" {
 			return v, nil
 		}
 	}
+	// If the param does not exist, the environment is legacy, has not been upgraded, and uses `app.local`.
 	return fmt.Sprintf(fmtLegacySvcDiscoveryEndpoint, d.app), nil
 }
 
