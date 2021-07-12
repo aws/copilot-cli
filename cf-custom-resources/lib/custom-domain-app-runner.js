@@ -266,7 +266,7 @@ async function removeCustomDomain(serviceARN, customDomainName) {
     }
 
     return Promise.all([
-        updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "DELETE"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
+        updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "DELETE"), // Delete the record that maps `customDomainName` to the DNS of the app runner service.
         removeValidationRecords(data.CustomDomain),
     ]);
 }
@@ -305,13 +305,13 @@ async function waitForCustomDomainToBeDisassociated(serviceARN, customDomainName
             if (err.message.includes(`domain ${customDomainName} is not associated`)) {
                 return;
             }
-            throw new Error(`wait for domain ${customDomainName} to be active: ` + err.message);
+            throw new Error(`wait for domain ${customDomainName} to be unused: ` + err.message);
         }
 
         lastDomainStatus = domain.Status;
 
         if (domain.Status === DOMAIN_STATUS_DELETE_FAILED) {
-            throw new Error(`fails to disassociate domain ${customDomainName}: domain status is ${DOMAIN_STATUS_DELETE_FAILED}`);
+            throw new Error(`fail to disassociate domain ${customDomainName}: domain status is ${DOMAIN_STATUS_DELETE_FAILED}`);
         }
 
         const base = Math.pow(2, i);

@@ -1076,7 +1076,7 @@ describe("Custom Domain for App Runner Service", () => {
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
-                    let expectedErrMessageRegex = /^fails to disassociate domain mockDomain: domain status is delete_failed \(Log: .*\)$/;
+                    let expectedErrMessageRegex = /^fail to disassociate domain mockDomain: domain status is delete_failed \(Log: .*\)$/;
                     return body.Status === "FAILED"  &&
                         body.Reason.search(expectedErrMessageRegex) !== -1 &&
                         body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`;
