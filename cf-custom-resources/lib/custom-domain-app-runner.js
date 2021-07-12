@@ -296,8 +296,9 @@ async function removeValidationRecords(domain) {
  * @param {string} customDomainName the domain name.
  */
 async function waitForCustomDomainToBeDisassociated(serviceARN, customDomainName) {
-    let i, lastDomainStatus, domain;
-    for (i = 0; i < ATTEMPTS_WAIT_FOR_DISASSOCIATED; i++) {
+    let lastDomainStatus;
+    for (let i = 0; i < ATTEMPTS_WAIT_FOR_DISASSOCIATED; i++) {
+        let domain;
         try {
             domain = await getDomainInfo(serviceARN, customDomainName);
         } catch (err) {
@@ -310,7 +311,7 @@ async function waitForCustomDomainToBeDisassociated(serviceARN, customDomainName
 
         lastDomainStatus = domain.Status;
 
-        if (domain.Status === DOMAIN_STATUS_DELETE_FAILED) {
+        if (lastDomainStatus === DOMAIN_STATUS_DELETE_FAILED) {
             throw new Error(`fail to disassociate domain ${customDomainName}: domain status is ${DOMAIN_STATUS_DELETE_FAILED}`);
         }
 
