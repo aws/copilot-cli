@@ -21,7 +21,7 @@ Environment:
 {{- end}}{{end}}
 {{- if .Publish}}{{- if .Publish.Topics}}
 - Name: COPILOT_PUBLISHERS
-  Value: '{{jsonPublishers .Publish.Topics}}'
+  Value: '{{jsonSNSTopics .Publish.Topics}}'
 {{- end}} {{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
 - Name: COPILOT_LB_DNS

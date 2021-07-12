@@ -1,16 +1,17 @@
 {{- if .Publish}}
 {{- range $topic := .Publish.Topics}}
-{{$topic.Name}}SNSTopic:
+{{logicalIDSafe $topic.Name}}SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: ${AWS::StackName}-{{$topic.Name}}-SNSTopic
-      
-  {{$topic.Name}}SNSTopicPolicy:
+      TopicName: ${AWS::StackName}-{{$topic.Name}}
+  
+  {{- if $topic.AllowedWorkers}}
+  {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     DependsOn: {{$topic.Name}}SNSTopic
     Properties:
       Topics: 
-        - !Ref ${{.Name}}SNSTopic
+        - !Ref {{$topic.Name}}SNSTopic
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -27,5 +28,6 @@
                 'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
                 'sqs:ResourceTag/copilot-service': !Sub {{$worker}}
           {{- end}}
+  {{- end}}
 {{- end}}
 {{- end}}
