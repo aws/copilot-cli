@@ -10,7 +10,7 @@ const LambdaTester = require("lambda-tester").noVersionCheck();
 const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, waitForDomainToBeDisassociatedAttempts, withSleep, reset, withDeadlineExpired} = require("../lib/custom-domain-app-runner");
 const sinon = require("sinon");
 const nock = require("nock");
-const origLog = console.log;
+let origLog = console.log;
 
 describe("Custom Domain for App Runner Service", () => {
     const [mockServiceARN, mockCustomDomain, mockHostedZoneID, mockResponseURL, mockPhysicalResourceID, mockLogicalResourceID, mockTarget] =
