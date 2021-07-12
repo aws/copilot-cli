@@ -39,6 +39,6 @@ When our front-end makes this request, the endpoint `api.test.kudos.local` resol
 
 ## Legacy Environments and Service Discovery
 
-Prior to Copilot v1.9.0, the service discovery namespace used the format _{app name}.local_, without including the environment. This limitation made it impossible to deploy multiple environments in the same VPC. Any environments created with Copilot v1.8.0 and newer can share a VPC with any other environment.
+Prior to Copilot v1.9.0, the service discovery namespace used the format _{app name}.local_, without including the environment. This limitation made it impossible to deploy multiple environments in the same VPC. Any environments created with Copilot v1.9.0 and newer can share a VPC with any other environment.
 
-When your environments are upgraded, Copilot will honor the service discovery namespace that the environment was created with. That means that the endpoint your services are reachable at will not change. Any new environments created with Copilot v1.8.0 and above will use the _{env name}.{app name}.local_ format for service discovery, and can share VPCs with older environments. 
+When your environments are upgraded, Copilot will honor the service discovery namespace that the environment was created with. That means that the endpoint your services are reachable at will not change. Any new environments created with Copilot v1.9.0 and above will use the _{env name}.{app name}.local_ format for service discovery, and can share VPCs with older environments. 
