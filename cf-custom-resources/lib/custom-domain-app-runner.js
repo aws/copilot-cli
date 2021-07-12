@@ -246,15 +246,18 @@ async function validateCertForDomain(serviceARN, domainName) {
             await sleep(3000);
             continue;
         }
+
         // Upsert all records needed for certificate validation.
-        // TODO: these can be done async. Test if it shortens the execution time - if it still frequently fails due to lambda time out, we should think about handling lambda time out differently.
         const records = domain.CertificateValidationRecords;
+        let promises = [];
         for (const record of records) {
-            await updateCNAMERecordAndWait(record.Name, record.Value, appHostedZoneID, "UPSERT").catch(err => {
-                throw new Error(`update validation records for domain ${domainName}: ` + err.message);
-            });
+            promises.push(
+                updateCNAMERecordAndWait(record.Name, record.Value, appHostedZoneID, "UPSERT").catch(err => {
+                    throw new Error(`update validation records for domain ${domainName}: ` + err.message);
+                })
+            );
         }
-        break;
+        return Promise.all(promises);
     }
 
     if (i === ATTEMPTS_WAIT_FOR_PENDING) {
