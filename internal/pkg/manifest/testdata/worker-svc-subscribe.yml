@@ -8,19 +8,19 @@ type: Worker Service
 
 # Configuration for your containers and service.
 image:
-  location: copilot/test-sample
-  healthcheck:
-    # Container health checks
-    command: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
-    interval: 6s
-    retries: 0
-    timeout: 20s
-    start_period: 15s
+  # Docker build arguments.
+  build: ./testers/Dockerfile
 
 cpu: 256       # Number of CPU units for the task.
 memory: 512    # Amount of memory in MiB used by the task.
 count: 1       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
+subscribe:
+  topics:
+    - name: testTopic
+      service: service4TestTopic
+    - name: testTopic2
+      service: service4TestTopic2
 
 # Optional fields for more advanced use-cases.
 #
@@ -30,14 +30,14 @@ exec: true     # Enable running commands in your container.
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
-# You can override any of the values defined above by environment.
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
-
 # You can enable self-publishing or publishing to other services.
 #publish:
 #  topics:
 #    - name: testersTopic
 #      allowed_workers:
 #        - testers
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.

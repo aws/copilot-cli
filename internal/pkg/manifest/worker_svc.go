@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	errUnmarshalFifo = errors.New(`cannot unmarshal FIFO field into bool or map`)
+	errUnmarshalFIFO = errors.New(`cannot unmarshal FIFO field into bool or map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -45,15 +45,16 @@ type WorkerServiceConfig struct {
 type WorkerServiceProps struct {
 	WorkloadProps
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Topics      *[]TopicSubscription  // Optional topics for subscriptions
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
-	Topics []TopicSubscription `yaml:"topics"`
-	Queue  *SQSQueue           `yaml:"queue"`
+	Topics *[]TopicSubscription `yaml:"topics"`
+	Queue  *SQSQueue            `yaml:"queue"`
 }
 
-// TopicSubscriptions represents the configurable options for setting up a SNS Topic Subscription.
+// TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
 	Name    string    `yaml:"name"`
 	Service string    `yaml:"service"`
@@ -68,35 +69,35 @@ type SQSQueue struct {
 	Timeout    *string          `yaml:"timeout"`
 	Encryption *bool            `yaml:"encryption"`
 	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
-	Fifo       *FifoOrBool      `yaml:"fifo"`
+	FIFO       *FIFOOrBool      `yaml:"fifo"`
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
-	Id    *string `yaml:"queue_id"`
+	ID    *string `yaml:"queue_id"`
 	Tries uint16  `yaml:"tries"`
 }
 
-// FifoOrBool contains custom unmarshaling logic for the `fifo` field in the manifest.
-type FifoOrBool struct {
-	Fifo    FifoQueue
+// FIFOOrBool contains custom unmarshaling logic for the `fifo` field in the manifest.
+type FIFOOrBool struct {
+	FIFO    FIFOQueue
 	Enabled *bool
 }
 
-// FifoQueue represents the configurable options for setting up a FIFO queue.
-type FifoQueue struct {
+// FIFOQueue represents the configurable options for setting up a FIFO queue.
+type FIFOQueue struct {
 	HighThroughput *bool `yaml:"high_throughput"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
-func (q *FifoQueue) IsEmpty() bool {
+func (q *FIFOQueue) IsEmpty() bool {
 	return q.HighThroughput == nil
 }
 
-// UnmarshalYAML implements the yaml(v2) interface. It allows FifoQueue to be specified as a
+// UnmarshalYAML implements the yaml(v2) interface. It allows FIFOQueue to be specified as a
 // string or a struct alternately.
-func (q *FifoOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&q.Fifo); err != nil {
+func (q *FIFOOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&q.FIFO); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -105,18 +106,18 @@ func (q *FifoOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if !q.Fifo.IsEmpty() {
+	if !q.FIFO.IsEmpty() {
 		q.Enabled = nil
 		return nil
 	}
 
 	if err := unmarshal(&q.Enabled); err != nil {
-		return errUnmarshalFifo
+		return errUnmarshalFIFO
 	}
 	return nil
 }
 
-// NewWorkerervice applies the props to a default Worker service configuration with
+// NewWorkerService applies the props to a default Worker service configuration with
 // minimal cpu/memory thresholds, single replica, no healthcheck, and then returns it.
 func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc := newDefaultWorkerService()
@@ -125,6 +126,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.parser = template.New()
 	return svc
 }
@@ -137,6 +139,7 @@ func newDefaultWorkerService() *WorkerService {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{},
+			Subscribe:   &SubscribeConfig{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
@@ -149,7 +152,7 @@ func newDefaultWorkerService() *WorkerService {
 			},
 			Network: &NetworkConfig{
 				VPC: &vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement: aws.String(PublicSubnetPlacement),
 				},
 			},
 		},

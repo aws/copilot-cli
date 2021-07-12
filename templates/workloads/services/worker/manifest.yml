@@ -29,13 +29,12 @@ cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
-
 {{- if .Subscribe}}{{- if .Subscribe.Topics}}
 subscribe:
   topics:
 {{- range $topic := .Subscribe.Topics}}
-    - name: {{.Name}}
-      service: {{.Service}}
+    - name: {{$topic.Name}}
+      service: {{$topic.Service}}
 {{- end}}
 {{- end}}{{- end}}
 
@@ -47,14 +46,14 @@ subscribe:
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
-# You can override any of the values defined above by environment.
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
-
 # You can enable self-publishing or publishing to other services.
 #publish:
 #  topics:
 #    - name: {{.Name}}Topic
 #      allowed_workers:
 #        - {{.Name}}
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.

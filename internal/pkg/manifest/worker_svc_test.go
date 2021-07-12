@@ -15,7 +15,7 @@ import (
 )
 
 type testFIFO struct {
-	FIFO *FifoOrBool `yaml:"fifo"`
+	FIFO *FIFOOrBool `yaml:"fifo"`
 }
 
 func Test_UnmarshalFifo(t *testing.T) {
@@ -29,8 +29,8 @@ func Test_UnmarshalFifo(t *testing.T) {
 fifo:
   high_throughput: true`),
 			want: testFIFO{
-				FIFO: &FifoOrBool{
-					Fifo: FifoQueue{
+				FIFO: &FIFOOrBool{
+					FIFO: FIFOQueue{
 						HighThroughput: aws.Bool(true),
 					},
 				},
@@ -40,7 +40,7 @@ fifo:
 			manifest: []byte(`
 fifo: true`),
 			want: testFIFO{
-				FIFO: &FifoOrBool{
+				FIFO: &FIFOOrBool{
 					Enabled: aws.Bool(true),
 				},
 			},
@@ -50,7 +50,7 @@ fifo: true`),
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			v := testFIFO{
-				FIFO: &FifoOrBool{},
+				FIFO: &FIFOOrBool{},
 			}
 
 			// WHEN
@@ -59,7 +59,7 @@ fifo: true`),
 			if tc.wantErr == "" {
 				require.NoError(t, err)
 				require.Equal(t, tc.want.FIFO.Enabled, v.FIFO.Enabled)
-				require.Equal(t, tc.want.FIFO.Fifo.HighThroughput, v.FIFO.Fifo.HighThroughput)
+				require.Equal(t, tc.want.FIFO.FIFO.HighThroughput, v.FIFO.FIFO.HighThroughput)
 			} else {
 				require.EqualError(t, err, tc.wantErr)
 			}
@@ -95,6 +95,7 @@ func TestNewWorkerSvc(t *testing.T) {
 							},
 						},
 					},
+					Subscribe: &SubscribeConfig{},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
@@ -135,6 +136,7 @@ func TestNewWorkerSvc(t *testing.T) {
 							},
 						},
 					},
+					Subscribe: &SubscribeConfig{},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
@@ -176,30 +178,33 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 
 		wantedTestdata string
 	}{
-		"without healthcheck": {
+		"without subscribe": {
 			inProps: WorkerServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
 				},
 			},
-			wantedTestdata: "worker-svc-nohealthcheck.yml",
+			wantedTestdata: "worker-svc-nosubscribe.yml",
 		},
-		"with custom healthcheck command": {
+		"with subscribe": {
 			inProps: WorkerServiceProps{
 				WorkloadProps: WorkloadProps{
-					Name:  "testers",
-					Image: "copilot/test-sample",
+					Name:       "testers",
+					Dockerfile: "./testers/Dockerfile",
 				},
-				HealthCheck: &ContainerHealthCheck{
-					Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-					Interval:    durationp(6 * time.Second),
-					Retries:     aws.Int(0),
-					Timeout:     durationp(20 * time.Second),
-					StartPeriod: durationp(15 * time.Second),
+				Topics: &[]TopicSubscription{
+					{
+						Name:    "testTopic",
+						Service: "service4TestTopic",
+					},
+					{
+						Name:    "testTopic2",
+						Service: "service4TestTopic2",
+					},
 				},
 			},
-			wantedTestdata: "worker-svc-customhealthcheck.yml",
+			wantedTestdata: "worker-svc-subscribe.yml",
 		},
 	}
 
@@ -307,7 +312,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 			},
 			Subscribe: &SubscribeConfig{
-				Topics: []TopicSubscription{
+				Topics: &[]TopicSubscription{
 					{
 						Name:    "topicName",
 						Service: "bestService",
@@ -347,7 +352,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 				Subscribe: &SubscribeConfig{
-					Topics: []TopicSubscription{
+					Topics: &[]TopicSubscription{
 						{
 							Name:    "topicName",
 							Service: "bestService",
@@ -532,7 +537,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 					Subscribe: &SubscribeConfig{
-						Topics: []TopicSubscription{
+						Topics: &[]TopicSubscription{
 							{
 								Name:    "topicName",
 								Service: "bestService",
