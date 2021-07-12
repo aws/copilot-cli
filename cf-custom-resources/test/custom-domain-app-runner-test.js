@@ -27,8 +27,6 @@ describe("Custom Domain for App Runner Service", () => {
                 setTimeout(resolve, 1000);
             });
         }); // Mock deadline should time out after normal operations.
-
-        console.log = function () {};
     });
 
     afterEach(() => {
@@ -36,7 +34,6 @@ describe("Custom Domain for App Runner Service", () => {
         console.log = origLog;
         AWS.restore();
         reset();
-        console.log = origLog;
     });
 
     describe("During CREATE", () => {
