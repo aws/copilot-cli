@@ -171,9 +171,15 @@ var _ = Describe("Multiple Env App", func() {
 				envRoutes[route.Environment] = route
 			}
 
-			Expect(len(svc.ServiceDiscoveries)).To(Equal(1))
-			Expect(svc.ServiceDiscoveries[0].Environment).To(ConsistOf("test", "prod"))
-			Expect(svc.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", svc.SvcName, appName)))
+			Expect(len(svc.ServiceDiscoveries)).To(Equal(2))
+			var envs, namespaces, wantedNamespaces []string
+			for _, sd := range svc.ServiceDiscoveries {
+				envs = append(envs, sd.Environment[0])
+				namespaces = append(namespaces, sd.Namespace)
+				wantedNamespaces = append(wantedNamespaces, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
+			}
+			Expect(envs).To(ConsistOf("test", "prod"))
+			Expect(namespaces).To(ConsistOf(wantedNamespaces))
 
 			// Call each environment's endpoint and ensure it returns a 200
 			for _, env := range []string{"test", "prod"} {
