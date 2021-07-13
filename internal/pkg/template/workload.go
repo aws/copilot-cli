@@ -210,7 +210,7 @@ type PublishOpts struct {
 // Topics holds information needed to render a SNSTopic in a container definition.
 type Topics struct {
 	Name           *string
-	AllowedWorkers []*string
+	AllowedWorkers []string
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.

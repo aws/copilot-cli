@@ -142,7 +142,11 @@ func generatePublishJSON(topics []*Topics) string {
 		if aws.StringValue(pb.Name) == "" {
 			continue
 		}
-		publisherMap[aws.StringValue(pb.Name)] = aws.StringValueSlice(pb.AllowedWorkers)
+		if pb.AllowedWorkers == nil {
+			publisherMap[aws.StringValue(pb.Name)] = []string{}
+		} else {
+			publisherMap[aws.StringValue(pb.Name)] = pb.AllowedWorkers
+		}
 	}
 
 	out, ok := getJSONMap(publisherMap)

@@ -22,11 +22,11 @@ const (
 
 // Empty field errors.
 var (
-	errNoFSID          = errors.New("volume field `efs.id` cannot be empty")
-	errNoContainerPath = errors.New("`path` cannot be empty")
-	errNoSourceVolume  = errors.New("`source_volume` cannot be empty")
-	errEmptyEFSConfig  = errors.New("bad EFS configuration: `efs` cannot be empty")
-	errNoPubSubName    = errors.New("topic/worker names cannot be empty")
+	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
+	errNoContainerPath          = errors.New("`path` cannot be empty")
+	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
+	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
+	errMissingPublishTopicField = errors.New("topic `name` cannot be empty")
 )
 
 // Conditional errors.
@@ -42,7 +42,7 @@ var (
 	errInvalidSidecarDependsOnStatus = fmt.Errorf("sidecar container dependency status must be one of < %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess)
 	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
-	errInvalidPubSubName             = errors.New("topic/worker names can only contain letters, numbers, underscores, and hypthens")
+	errInvalidPubSubTopicName        = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
 )
 
 // Container dependency status options
@@ -50,6 +50,11 @@ var (
 	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	sidecarDependsOnValidStatuses   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
+)
+
+// Regex options
+var (
+	awsSNSTopicRegexp = regexp.MustCompile("^[a-zA-Z0-9_-]*$") // Validates that an expression contains only letters, numbers, -, and _
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -396,15 +401,16 @@ func validateContainerPath(input string) error {
 	return validatePath(input, maxDockerContainerPathLength)
 }
 
+// ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
+// SNS Topic intended for a publisher.
 func validatePubSubName(name *string) error {
 	if name == nil || len(aws.StringValue(name)) == 0 {
-		return errNoPubSubName
+		return errMissingPublishTopicField
 	}
 
 	// name must contain letters, numbers, and can't use special characters besides _ and -
-	re := regexp.MustCompile("^[a-zA-Z0-9_-]*$")
-	if !re.MatchString(aws.StringValue(name)) {
-		return errInvalidPubSubName
+	if !awsSNSTopicRegexp.MatchString(aws.StringValue(name)) {
+		return errInvalidPubSubTopicName
 	}
 
 	return nil

@@ -1383,7 +1383,7 @@ func Test_convertPublish(t *testing.T) {
 					{},
 				},
 			},
-			wantedError: errNoPubSubName,
+			wantedError: errMissingPublishTopicField,
 		},
 		"publish with no workers": {
 			inPublish: &manifest.PublishConfig{
@@ -1414,7 +1414,7 @@ func Test_convertPublish(t *testing.T) {
 				Topics: []*template.Topics{
 					{
 						Name:           aws.String("topic1"),
-						AllowedWorkers: []*string{aws.String("worker1")},
+						AllowedWorkers: []string{"worker1"},
 					},
 				},
 			},
@@ -1428,7 +1428,7 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errInvalidPubSubName,
+			wantedError: errInvalidPubSubTopicName,
 		},
 		"invalid topic name": {
 			inPublish: &manifest.PublishConfig{
@@ -1439,7 +1439,7 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errInvalidPubSubName,
+			wantedError: errInvalidPubSubTopicName,
 		},
 	}
 	for name, tc := range testCases {

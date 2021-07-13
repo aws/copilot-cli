@@ -510,11 +510,11 @@ func Test_validateNames(t *testing.T) {
 		},
 		"error when no topic name": {
 			inName:  nil,
-			wantErr: errNoPubSubName,
+			wantErr: errMissingPublishTopicField,
 		},
 		"error when invalid topic name": {
 			inName:  aws.String("OHNO~/`...,"),
-			wantErr: errInvalidPubSubName,
+			wantErr: errInvalidPubSubTopicName,
 		},
 	}
 	for name, tc := range testCases {

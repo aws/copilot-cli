@@ -580,9 +580,9 @@ func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
 		return nil, nil
 	}
 	publishers := template.PublishOpts{}
-	// convert the topics to template Topics
+	// convert the topics to template Topicsz
 	for _, topic := range p.Topics {
-		t, err := convertTopic(&topic)
+		t, err := convertTopic(topic)
 		if err != nil {
 			return nil, err
 		}
@@ -593,7 +593,7 @@ func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
 	return &publishers, nil
 }
 
-func convertTopic(t *manifest.Topic) (*template.Topics, error) {
+func convertTopic(t manifest.Topic) (*template.Topics, error) {
 	err := validatePubSubName(t.Name)
 	if err != nil {
 		return nil, err
@@ -610,12 +610,11 @@ func convertTopic(t *manifest.Topic) (*template.Topics, error) {
 	}, nil
 }
 
-func convertTopicWorkers(w []string) ([]*string, error) {
-	if w == nil {
+func convertTopicWorkers(w []string) ([]string, error) {
+	if w == nil || len(w) == 0 {
 		return nil, nil
 	}
 
-	workers := []*string{}
 	for _, name := range w {
 		if len(name) == 0 {
 			continue
@@ -625,13 +624,7 @@ func convertTopicWorkers(w []string) ([]*string, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		workers = append(workers, aws.String(name))
 	}
 
-	if len(workers) == 0 {
-		return nil, nil
-	}
-
-	return workers, nil
+	return w, nil
 }
