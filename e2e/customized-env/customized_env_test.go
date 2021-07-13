@@ -233,7 +233,7 @@ environments:
 			for _, sd := range svc.ServiceDiscoveries {
 				envs = append(envs, sd.Environment[0])
 				namespaces = append(namespaces, sd.Namespace)
-				wantedNamespaces = append(wantedNamespaces, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment, appName))
+				wantedNamespaces = append(wantedNamespaces, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
 			}
 			Expect(envs).To(ConsistOf("test", "prod", "shared"))
 			Expect(namespaces).To(ConsistOf(wantedNamespaces))
