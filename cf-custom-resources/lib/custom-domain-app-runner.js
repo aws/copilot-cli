@@ -179,7 +179,7 @@ async function getDomainInfo(serviceARN, domainName) {
         }
 
         if (!resp.NextToken) {
-            throw new Error(`domain ${domainName} is not associated`);
+            throw new NotAssociatedError(`domain ${domainName} is not associated`);
         }
         describeCustomDomainsInput.NextToken = resp.NextToken;
     }
@@ -303,7 +303,7 @@ async function waitForCustomDomainToBeDisassociated(serviceARN, customDomainName
             domain = await getDomainInfo(serviceARN, customDomainName);
         } catch (err) {
             // Domain is disassociated.
-            if (err.message.includes(`domain ${customDomainName} is not associated`)) {
+            if (err instanceof NotAssociatedError) {
                 return;
             }
             throw new Error(`wait for domain ${customDomainName} to be unused: ` + err.message);
@@ -369,6 +369,11 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
          throw new Error(`update record ${recordName}: wait for record sets change for ${recordName}: ` + err.message);
      });
 }
+
+function NotAssociatedError(message = "") {
+    this.message = message;
+}
+NotAssociatedError.prototype = Error.prototype;
 
 exports.domainStatusPendingVerification = DOMAIN_STATUS_PENDING_VERIFICATION;
 exports.waitForDomainStatusPendingAttempts = ATTEMPTS_WAIT_FOR_PENDING;
