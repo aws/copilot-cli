@@ -138,6 +138,7 @@ func (s *BackendService) Template() (string, error) {
 		Command:              command,
 		DependsOn:            dependencies,
 		CredentialsParameter: aws.StringValue(s.manifest.ImageConfig.Credentials),
+		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -104,6 +105,17 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
 			stackSerializer:  o.stackSerializer,
+			newEndpointGetter: func(app, env string) (endpointGetter, error) {
+				d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+					App:         app,
+					Env:         env,
+					ConfigStore: store,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("new env describer for environment %s in app %s: %v", env, app, err)
+				}
+				return d, nil
+			},
 		}
 	}
 	return opts, nil

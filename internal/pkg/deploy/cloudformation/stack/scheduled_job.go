@@ -178,6 +178,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Command:              command,
 		DependsOn:            dependencies,
 		CredentialsParameter: aws.StringValue(j.manifest.ImageConfig.Credentials),
+		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
 
 		EnvControllerLambda: envControllerLambda.String(),
 	})

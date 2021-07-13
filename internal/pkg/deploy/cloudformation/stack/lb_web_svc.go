@@ -181,6 +181,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Command:              command,
 		DependsOn:            dependencies,
 		CredentialsParameter: aws.StringValue(s.manifest.ImageConfig.Credentials),
+		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 	})
 	if err != nil {
 		return "", err
@@ -201,10 +202,13 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, 
 	if mftTargetContainer != nil {
 		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
 		if ok {
+			if sidecar.Port == nil {
+				return nil, nil, fmt.Errorf("target container %s doesn't expose any port", *mftTargetContainer)
+			}
 			targetContainer = mftTargetContainer
 			targetPort = sidecar.Port
 		} else {
-			return nil, nil, fmt.Errorf("target container %s doesn't exist", *s.manifest.TargetContainer)
+			return nil, nil, fmt.Errorf("target container %s doesn't exist", *mftTargetContainer)
 		}
 	}
 	return

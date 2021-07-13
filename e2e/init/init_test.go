@@ -133,7 +133,7 @@ var _ = Describe("init flow", func() {
 		It("should return a valid service discovery namespace", func() {
 			Expect(len(svc.ServiceDiscoveries)).To(Equal(1))
 			Expect(svc.ServiceDiscoveries[0].Environment).To(Equal([]string{"test"}))
-			Expect(svc.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", svcName, appName)))
+			Expect(svc.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.%s.local:80", svcName, envName, appName)))
 		})
 
 		It("should return the correct environment variables", func() {
@@ -143,7 +143,7 @@ var _ = Describe("init flow", func() {
 				"COPILOT_ENVIRONMENT_NAME":           "test",
 				"COPILOT_LB_DNS":                     strings.TrimPrefix(svc.Routes[0].URL, "http://"),
 				"COPILOT_SERVICE_NAME":               svcName,
-				"COPILOT_SERVICE_DISCOVERY_ENDPOINT": fmt.Sprintf("%s.local", appName),
+				"COPILOT_SERVICE_DISCOVERY_ENDPOINT": fmt.Sprintf("%s.%s.local", envName, appName),
 			}
 			for _, variable := range svc.Variables {
 				Expect(variable.Value).To(Equal(expectedVars[variable.Name]))
