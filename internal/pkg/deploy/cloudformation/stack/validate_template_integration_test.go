@@ -30,6 +30,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 			RepoURL:  imageURL,
 			ImageTag: imageTag,
 		},
+		ServiceDiscoveryEndpoint: "test.app.local",
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
@@ -54,7 +55,9 @@ func TestScheduledJob_Validate(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.ScheduledJob)
 	require.True(t, ok)
-	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{})
+	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{
+		ServiceDiscoveryEndpoint: "test.app.local",
+	})
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
