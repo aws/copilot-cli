@@ -102,13 +102,12 @@ exports.handler = async function (event, context) {
 
         switch (event.RequestType) {
             case "Create":
+            case "Update":
                 await addCustomDomain(serviceARN, customDomain);
                 console.log("Finished associating the custom domain with your service and upserting domain records as well as validation records. " +
                     "You can check whether your custom domain is ACTIVE using the AWS Console or AWS CLI (https://docs.aws.amazon.com/cli/latest/reference/apprunner/describe-custom-domains.html)." +
                     "It usually takes App Runner 15 minutes to validate your domain.");
                 break;
-            case "Update":
-                throw new Error("not yet implemented");
             case "Delete":
                 await removeCustomDomain(serviceARN, customDomain);
                 await waitForCustomDomainToBeDisassociated(serviceARN, customDomain);
@@ -122,10 +121,6 @@ exports.handler = async function (event, context) {
         await Promise.race([exports.deadlineExpired(), handler(),]);
         await report(event, context, "SUCCESS", physicalResourceID);
     } catch (err) {
-        if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
-            await report(event, context, "SUCCESS", physicalResourceID);
-            return;
-        }
         console.log(`Caught error for service ${serviceARN}: ${err.message}`);
         await report(event, context, "FAILED", physicalResourceID, null, err.message);
     }
@@ -149,10 +144,25 @@ exports.deadlineExpired = function () {
  * @param {string} customDomainName the custom domain name.
  */
 async function addCustomDomain(serviceARN, customDomainName) {
-    const data = await appRunnerClient.associateCustomDomain({
-        DomainName: customDomainName,
-        ServiceArn: serviceARN,
-    }).promise();
+    let data;
+    try {
+        data = await appRunnerClient.associateCustomDomain({
+            DomainName: customDomainName,
+            ServiceArn: serviceARN,
+        }).promise();
+    } catch (err) {
+        const isDomainAlreadyAssociated = err.message.includes(`${customDomainName} is already associated with`);
+        if (!isDomainAlreadyAssociated) {
+            throw err;
+        }
+    }
+
+    if (!data) {
+        // If domain is already associated, data would be undefined.
+        data = await appRunnerClient.describeCustomDomains({
+            ServiceArn: serviceARN,
+        }).promise();
+    }
 
     return Promise.all([
         updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.

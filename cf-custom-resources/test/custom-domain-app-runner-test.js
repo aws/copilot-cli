@@ -52,7 +52,7 @@ describe("Custom Domain for App Runner Service", () => {
                     );
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -65,7 +65,7 @@ describe("Custom Domain for App Runner Service", () => {
                     // PhysicalResourceId is undefined for "Create"
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectResolve( () => {
+                .expectResolve(() => {
                     expect(expectedResponse.isDone()).toBe(true);
                     sinon.assert.calledWith(mockAssociateCustomDomain, sinon.match({
                         DomainName: mockCustomDomain,
@@ -76,7 +76,7 @@ describe("Custom Domain for App Runner Service", () => {
 
         test("fail to add the record for custom domain", () => {
             const mockTarget = "mockTarget";
-            const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
+            const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockChangeResourceRecordSets = sinon.fake.rejects(new Error("some error"));
             const mockDescribeCustomDomains = sinon.fake(async () => {
                 await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -95,7 +95,7 @@ describe("Custom Domain for App Runner Service", () => {
                     );
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -107,7 +107,7 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectResolve( () => {
+                .expectResolve(() => {
                     expect(expectedResponse.isDone()).toBe(true);
                     sinon.assert.calledOnce(mockAssociateCustomDomain);
                     sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
@@ -135,8 +135,8 @@ describe("Custom Domain for App Runner Service", () => {
 
         test("fail to wait for the custom domain record to change", () => {
             const mockTarget = "mockTarget";
-            const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
-            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
+            const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
+            const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
             const mockWaitFor = sinon.fake.rejects(new Error("some error"));
             const mockDescribeCustomDomains = sinon.fake(async () => {
                 await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -156,7 +156,7 @@ describe("Custom Domain for App Runner Service", () => {
                     );
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -168,7 +168,7 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectResolve( err => {
+                .expectResolve(err => {
                     expect(expectedResponse.isDone()).toBe(true);
                     sinon.assert.calledOnce(mockAssociateCustomDomain);
                     sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
@@ -196,8 +196,8 @@ describe("Custom Domain for App Runner Service", () => {
 
         test("fail to describe custom domain", () => {
             const mockTarget = "mockTarget";
-            const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
-            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
+            const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
+            const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
             const mockWaitFor = sinon.fake.resolves();
             const mockDescribeCustomDomains = sinon.fake.rejects(new Error("some error"));
             AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
@@ -215,7 +215,7 @@ describe("Custom Domain for App Runner Service", () => {
                     );
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -227,30 +227,30 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectResolve( err => {
+                .expectResolve(err => {
                     expect(expectedResponse.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockDescribeCustomDomains, sinon.match({ ServiceArn: mockServiceARN, }));
+                    sinon.assert.calledWith(mockDescribeCustomDomains, sinon.match({ServiceArn: mockServiceARN,}));
                 });
         });
 
         test("fail to find domain information in the service", () => {
             const mockTarget = "mockTarget";
-            const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
+            const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockWaitFor = sinon.fake.resolves();
-            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
+            const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
 
             // Try to find domain information until all pages are searched through.
             const mockDescribeCustomDomains = sinon.stub();
             mockDescribeCustomDomains.onFirstCall().resolves({
-                CustomDomains: [{ DomainName: "some-other-domain", },],
+                CustomDomains: [{DomainName: "some-other-domain",},],
                 NextToken: "1",
             });
             mockDescribeCustomDomains.onSecondCall().resolves({
-                CustomDomains: [{ DomainName: "some-other-domain", },],
+                CustomDomains: [{DomainName: "some-other-domain",},],
             });
 
             AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets",mockChangeResourceRecordSets);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
             AWS.mock("Route53", "waitFor", mockWaitFor);
             AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
@@ -264,7 +264,7 @@ describe("Custom Domain for App Runner Service", () => {
                     );
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -276,7 +276,7 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectResolve( () => {
+                .expectResolve(() => {
                     expect(expectedResponse.isDone()).toBe(true);
 
                     // Asserts that mockDescribeCustomDomains is called with `NextToken: 1` for at least once;
@@ -291,22 +291,22 @@ describe("Custom Domain for App Runner Service", () => {
 
         test("fail to wait for app runner to provide validation records", () => {
             const mockTarget = "mockTarget";
-            const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
+            const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockWaitFor = sinon.fake.resolves();
-            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
+            const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
             const mockDescribeCustomDomains = sinon.stub();
 
             for (let i = 0; i < waitForDomainStatusPendingAttempts; i++) {
                 // Mock response such that the domain we are looking for locates at the third page.
-                mockDescribeCustomDomains.onCall(i*3).resolves({
-                    CustomDomains: [{ DomainName: "other-domain", },],
+                mockDescribeCustomDomains.onCall(i * 3).resolves({
+                    CustomDomains: [{DomainName: "other-domain",},],
                     NextToken: "token",
                 });
-                mockDescribeCustomDomains.onCall((i*3)+1).resolves({
-                    CustomDomains: [{ DomainName: "other-domain", },],
+                mockDescribeCustomDomains.onCall((i * 3) + 1).resolves({
+                    CustomDomains: [{DomainName: "other-domain",},],
                     NextToken: "token",
                 });
-                mockDescribeCustomDomains.onCall((i*3)+2).resolves({
+                mockDescribeCustomDomains.onCall((i * 3) + 2).resolves({
                     CustomDomains: [{
                         DomainName: mockCustomDomain,
                         Status: "not-pending",
@@ -315,7 +315,7 @@ describe("Custom Domain for App Runner Service", () => {
                 });
             }
             AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets",mockChangeResourceRecordSets);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
             AWS.mock("Route53", "waitFor", mockWaitFor);
             AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
@@ -329,7 +329,7 @@ describe("Custom Domain for App Runner Service", () => {
                     );
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -341,14 +341,14 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectResolve( () => {
+                .expectResolve(() => {
                     expect(expectedResponse.isDone()).toBe(true);
                 });
         });
 
         test("fail to add cert validation record", () => {
             const mockTarget = "mockTarget";
-            const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
+            const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockWaitFor = sinon.fake.resolves();
 
             const mockDescribeCustomDomains = sinon.stub();
@@ -389,8 +389,8 @@ describe("Custom Domain for App Runner Service", () => {
                 NextToken: "token",
             });
             const mockChangeResourceRecordSets = sinon.stub();
-            mockChangeResourceRecordSets.onCall(0).resolves({ ChangeInfo: {Id: "mockID", }, });
-            mockChangeResourceRecordSets.onCall(1).resolves({ ChangeInfo: {Id: "mockID", }, });
+            mockChangeResourceRecordSets.onCall(0).resolves({ChangeInfo: {Id: "mockID",},});
+            mockChangeResourceRecordSets.onCall(1).resolves({ChangeInfo: {Id: "mockID",},});
             mockChangeResourceRecordSets.onCall(2).rejects(new Error("some error"));
 
             AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
@@ -408,7 +408,7 @@ describe("Custom Domain for App Runner Service", () => {
                     );
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -420,7 +420,7 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectResolve( () => {
+                .expectResolve(() => {
                     expect(expectedResponse.isDone()).toBe(true);
                     sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
                         ChangeBatch: {
@@ -468,7 +468,7 @@ describe("Custom Domain for App Runner Service", () => {
         test("fail to send failure response", () => {
             const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
             AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     ResponseURL: "super weird URL",
                     ResourceProperties: {
@@ -480,12 +480,13 @@ describe("Custom Domain for App Runner Service", () => {
                     PhysicalResourceId: mockPhysicalResourceID,
                     LogicalResourceId: mockLogicalResourceID,
                 })
-                .expectReject(() => {});
+                .expectReject(() => {
+                });
         });
 
         test("success", () => {
             const mockTarget = "mockTarget";
-            const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
+            const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockWaitFor = sinon.fake.resolves();
             const mockDescribeCustomDomains = sinon.stub();
             // Successfully wait for custom domain's status to be "pending" after several waits.
@@ -526,7 +527,7 @@ describe("Custom Domain for App Runner Service", () => {
                 ],
             });
             const mockChangeResourceRecordSets = sinon.stub();
-            mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockID", }, });
+            mockChangeResourceRecordSets.resolves({ChangeInfo: {Id: "mockID",},});
 
             AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
             AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
@@ -535,11 +536,11 @@ describe("Custom Domain for App Runner Service", () => {
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
-                    return body.Status === "SUCCESS"  &&
+                    return body.Status === "SUCCESS" &&
                         body.PhysicalResourceId === "/associate-domain-app-runner/mockDomain";
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -557,32 +558,67 @@ describe("Custom Domain for App Runner Service", () => {
                 });
         });
 
-        test("lambda time out", () => {
-            withDeadlineExpired(() => {
-                return new Promise(function (resolve, reject) {
-                    setTimeout(
-                        reject,
-                        1,
-                        new Error("Lambda took longer than 14.5 minutes to add alias")
-                    );
+        test("success when domain is already associated", () => {
+            const mockAssociateCustomDomain = sinon.fake.rejects("mockDomain is already associated with service");
+            const mockDescribeCustomDomains = sinon.stub();
+            // In the case where the domain is already associated, we need an additional `DescribeCustomDomains` call
+            // to retrieve the `DNSTarget`.
+            mockDescribeCustomDomains.onCall(0).resolves({
+                DNSTarget: mockTarget,
+            });
+            // Successfully wait for custom domain's status to be "pending" after several waits.
+            for (let i = 1; i < waitForDomainStatusPendingAttempts; i++) {
+                mockDescribeCustomDomains.onCall(i+1).resolves({
+                    CustomDomains: [
+                        {
+                            DomainName: mockCustomDomain,
+                            Status: "not-pending",
+                        },
+                    ],
                 });
+            }
+            mockDescribeCustomDomains.onCall(waitForDomainStatusPendingAttempts).resolves({
+                CustomDomains: [
+                    {
+                        DomainName: mockCustomDomain,
+                        CertificateValidationRecords: [
+                            {
+                                Name: "mock-record-name-1",
+                                Value: "mock-record-value-1",
+                            },
+                            {
+                                Name: "mock-record-name-2",
+                                Value: "mock-record-value-2",
+                            },
+                        ],
+                        Status: domainStatusPendingVerification,
+                    },
+                ],
             });
+            mockDescribeCustomDomains.onCall(waitForDomainStatusPendingAttempts).resolves({
+                CustomDomains: [
+                    {
+                        DomainName: mockCustomDomain,
+                        Status: "active",
+                    },
+                ],
+            });
+            const mockChangeResourceRecordSets = sinon.stub();
+            const mockWaitFor = sinon.fake.resolves();
+            mockChangeResourceRecordSets.resolves({ChangeInfo: {Id: "mockID",},});
 
-            const mockAssociateCustomDomain = sinon.fake(async () => {
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-            });
             AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "waitFor", mockWaitFor);
+            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
-                    let expectedErrMessageRegex = /^Lambda took longer than 14.5 minutes to add alias \(Log: .*\)$/;
-                    return body.Status === "FAILED"  &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1 &&
-                        body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`;
-
+                    return body.Status === "SUCCESS" &&
+                        body.PhysicalResourceId === "/associate-domain-app-runner/mockDomain";
                 })
                 .reply(200);
-            return LambdaTester( handler )
+            return LambdaTester(handler)
                 .event({
                     RequestType: "Create",
                     ResponseURL: mockResponseURL,
@@ -592,6 +628,7 @@ describe("Custom Domain for App Runner Service", () => {
                         CustomDomain: mockCustomDomain,
                         HostedZoneID: mockHostedZoneID,
                     },
+                    PhysicalResourceId: mockPhysicalResourceID,
                     LogicalResourceId: mockLogicalResourceID,
                 })
                 .expectResolve(() => {
