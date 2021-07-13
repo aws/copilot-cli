@@ -531,31 +531,31 @@ func Test_validatePubSubTopicName(t *testing.T) {
 
 func TestValidateWorkerName(t *testing.T) {
 	testCases := map[string]struct {
-		inName string
+		inName []string
 
 		wantErr error
 	}{
 		"good case": {
-			inName:  "good-name",
+			inName:  []string{"good-name"},
 			wantErr: nil,
 		},
 		"empty name": {
-			inName:  "",
+			inName:  []string{""},
 			wantErr: fmt.Errorf("worker name `` is invalid: %s", errInvalidName),
 		},
 		"contains spaces": {
-			inName:  "a re@!!y b#d n&me",
+			inName:  []string{"a re@!!y b#d n&me"},
 			wantErr: fmt.Errorf("worker name `a re@!!y b#d n&me` is invalid: %s", errNameBadFormat),
 		},
 		"too long": {
-			inName:  "this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long",
+			inName:  []string{"this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long"},
 			wantErr: fmt.Errorf("worker name `this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long` is invalid: %s", errNameTooLong),
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateWorkerName(tc.inName)
+			err := validateWorkerNames(tc.inName)
 
 			if tc.wantErr == nil {
 				require.NoError(t, err)

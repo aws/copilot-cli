@@ -1428,7 +1428,7 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errInvalidPubSubTopicName,
+			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errNameBadFormat),
 		},
 		"invalid topic name": {
 			inPublish: &manifest.PublishConfig{

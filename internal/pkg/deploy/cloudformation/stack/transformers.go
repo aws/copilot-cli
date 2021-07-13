@@ -599,32 +599,13 @@ func convertTopic(t manifest.Topic) (*template.Topics, error) {
 		return nil, err
 	}
 
-	w, err := convertTopicWorkers(t.AllowedWorkers)
-	if err != nil {
-		return nil, err
+	workerErr := validateWorkerNames(t.AllowedWorkers)
+	if workerErr != nil {
+		return nil, workerErr
 	}
 
 	return &template.Topics{
 		Name:           t.Name,
-		AllowedWorkers: w,
+		AllowedWorkers: t.AllowedWorkers,
 	}, nil
-}
-
-func convertTopicWorkers(w []string) ([]string, error) {
-	if w == nil || len(w) == 0 {
-		return nil, nil
-	}
-
-	for _, name := range w {
-		if len(name) == 0 {
-			continue
-		}
-
-		err := validatePubSubName(aws.String(name))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return w, nil
 }

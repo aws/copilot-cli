@@ -422,10 +422,12 @@ func validatePubSubName(name *string) error {
 	return nil
 }
 
-func validateWorkerName(name string) error {
-	err := validateName(name)
-	if err != nil {
-		return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
+func validateWorkerNames(names []string) error {
+	for _, name := range names {
+		err := validateName(name)
+		if err != nil {
+			return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
+		}
 	}
 	return nil
 }
@@ -456,9 +458,5 @@ func isCorrectFormat(s string) bool {
 	}
 
 	trailingMatch := trailingPunctRegExp.FindStringSubmatch(s)
-	if len(trailingMatch) != 0 {
-		return false
-	}
-
-	return true
+	return len(trailingMatch) == 0
 }
