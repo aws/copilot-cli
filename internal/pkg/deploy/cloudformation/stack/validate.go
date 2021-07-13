@@ -43,6 +43,9 @@ var (
 	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
 	errInvalidPubSubTopicName        = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
+	errInvalidName                   = errors.New("names cannot be empty")
+	errNameTooLong                   = errors.New("names must not exceed 255 characters")
+	errNameBadFormat                 = errors.New("names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 )
 
 // Container dependency status options
@@ -54,7 +57,10 @@ var (
 
 // Regex options
 var (
-	awsSNSTopicRegexp = regexp.MustCompile("^[a-zA-Z0-9_-]*$") // Validates that an expression contains only letters, numbers, -, and _
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, -, and _
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression only contains letters, numbers, and -
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -414,4 +420,45 @@ func validatePubSubName(name *string) error {
 	}
 
 	return nil
+}
+
+func validateWorkerName(name string) error {
+	err := validateName(name)
+	if err != nil {
+		return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
+	}
+	return nil
+}
+
+func validateName(name string) error {
+	if name == "" {
+		return errInvalidName
+	}
+	if len(name) > 255 {
+		return errNameTooLong
+	}
+	if !isCorrectFormat(name) {
+		return errNameBadFormat
+	}
+
+	return nil
+}
+
+func isCorrectFormat(s string) bool {
+	if !awsNameRegexp.MatchString(s) {
+		return false
+	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(s)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(s)
+	if len(trailingMatch) != 0 {
+		return false
+	}
+
+	return true
 }
