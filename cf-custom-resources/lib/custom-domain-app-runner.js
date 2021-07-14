@@ -8,13 +8,10 @@
 
 const AWS = require('aws-sdk');
 
-const ERR_NAME_INVALID_REQUEST = "InvalidRequestException";
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
 const DOMAIN_STATUS_DELETE_FAILED = "delete_failed";
 const ATTEMPTS_WAIT_FOR_PENDING = 10;
-// Expectedly lambda time out would be triggered before 20-th attempt. This ensures that we attempts to wait for ACTIVE as much as possible.
-const ATTEMPTS_WAIT_FOR_ACTIVE = 20;
 // Expectedly lambda time out would be triggered before 20-th attempt. This ensures that we attempts to wait for it to be disassociated as much as possible.
 const ATTEMPTS_WAIT_FOR_DISASSOCIATED = 20;
 
@@ -390,7 +387,6 @@ NotAssociatedError.prototype = Error.prototype;
 
 exports.domainStatusPendingVerification = DOMAIN_STATUS_PENDING_VERIFICATION;
 exports.waitForDomainStatusPendingAttempts = ATTEMPTS_WAIT_FOR_PENDING;
-exports.waitForDomainStatusActiveAttempts = ATTEMPTS_WAIT_FOR_ACTIVE;
 exports.waitForDomainToBeDisassociatedAttempts = ATTEMPTS_WAIT_FOR_DISASSOCIATED;
 exports.withSleep = function (s) {
     sleep = s;
