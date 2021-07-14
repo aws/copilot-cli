@@ -14,59 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type testFIFO struct {
-	FIFO *FIFOOrBool `yaml:"fifo"`
-}
-
-func Test_UnmarshalFifo(t *testing.T) {
-	testCases := map[string]struct {
-		manifest []byte
-		want     testFIFO
-		wantErr  string
-	}{
-		"fifo specified": {
-			manifest: []byte(`
-fifo:
-  high_throughput: true`),
-			want: testFIFO{
-				FIFO: &FIFOOrBool{
-					FIFO: FIFOQueue{
-						HighThroughput: aws.Bool(true),
-					},
-				},
-			},
-		},
-		"enabled": {
-			manifest: []byte(`
-fifo: true`),
-			want: testFIFO{
-				FIFO: &FIFOOrBool{
-					Enabled: aws.Bool(true),
-				},
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			v := testFIFO{
-				FIFO: &FIFOOrBool{},
-			}
-
-			// WHEN
-			err := yaml.Unmarshal(tc.manifest, &v)
-			// THEN
-			if tc.wantErr == "" {
-				require.NoError(t, err)
-				require.Equal(t, tc.want.FIFO.Enabled, v.FIFO.Enabled)
-				require.Equal(t, tc.want.FIFO.FIFO.HighThroughput, v.FIFO.FIFO.HighThroughput)
-			} else {
-				require.EqualError(t, err, tc.wantErr)
-			}
-		})
-	}
-}
-
 func TestNewWorkerSvc(t *testing.T) {
 	testCases := map[string]struct {
 		inProps WorkerServiceProps
