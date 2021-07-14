@@ -4,7 +4,7 @@
 // Package override renders the manifest override rules to the CloudFormation template.
 package override
 
-type templateContent map[interface{}]interface{}
+import "gopkg.in/yaml.v3"
 
 // CloudFormationTemplate overrides the given CloudFormation template by applying
 // the override rules.
@@ -17,25 +17,24 @@ func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	overriddenContent, err := content.applyRulesToCFNTemplate(ruleNodes)
-	if err != nil {
+	if err := applyRulesToCFNTemplate(ruleNodes, content); err != nil {
 		return nil, err
 	}
-	output, err := marshalCFNYaml(overriddenContent)
+	output, err := marshalCFNYaml(content)
 	if err != nil {
 		return nil, err
 	}
 	return output, nil
 }
 
-func unmarshalCFNYaml(temp []byte) (templateContent, error) {
+func unmarshalCFNYaml(temp []byte) (*yaml.Node, error) {
 	return nil, nil
 }
 
-func marshalCFNYaml(content templateContent) ([]byte, error) {
+func marshalCFNYaml(content *yaml.Node) ([]byte, error) {
 	return nil, nil
 }
 
-func (c templateContent) applyRulesToCFNTemplate(rules []*ruleNode) (templateContent, error) {
-	return nil, nil
+func applyRulesToCFNTemplate(rules []*ruleNode, content *yaml.Node) error {
+	return nil
 }
