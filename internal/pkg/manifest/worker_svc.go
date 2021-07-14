@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"errors"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -13,10 +11,6 @@ import (
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
-)
-
-var (
-	errUnmarshalFIFO = errors.New(`cannot unmarshal FIFO field into bool or map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
