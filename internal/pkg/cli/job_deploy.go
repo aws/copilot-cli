@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -47,6 +48,7 @@ type deployJobOpts struct {
 	sessProvider       sessionProvider
 	s3                 artifactUploader
 	envUpgradeCmd      actionCommand
+	endpointGetter     endpointGetter
 
 	spinner progress
 	sel     wsSelector
@@ -206,6 +208,14 @@ func (o *deployJobOpts) configureClients() error {
 
 	// CF client against env account profile AND target environment region
 	o.jobCFN = cloudformation.New(envSession)
+	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return fmt.Errorf("initiate environment describer: %w", err)
+	}
 
 	addonsSvc, err := addon.New(o.name)
 	if err != nil {
@@ -300,10 +310,15 @@ func (o *deployJobOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 }
 
 func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	endpoint, err := o.endpointGetter.ServiceDiscoveryEndpoint()
+	if err != nil {
+		return nil, err
+	}
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
-			AddonsTemplateURL: addonsURL,
-			AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+			AddonsTemplateURL:        addonsURL,
+			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
+			ServiceDiscoveryEndpoint: endpoint,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
@@ -324,8 +339,9 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			ImageTag: o.imageTag,
 			Digest:   o.imageDigest,
 		},
-		AddonsTemplateURL: addonsURL,
-		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+		AddonsTemplateURL:        addonsURL,
+		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
+		ServiceDiscoveryEndpoint: endpoint,
 	}, nil
 }
 
