@@ -104,9 +104,6 @@ exports.handler = async function (event, context) {
             case "Create":
             case "Update":
                 await addCustomDomain(serviceARN, customDomain);
-                console.log("Finished associating the custom domain with your service and upserting domain records as well as validation records. " +
-                    "You can check whether your custom domain is ACTIVE using the AWS Console or AWS CLI (https://docs.aws.amazon.com/cli/latest/reference/apprunner/describe-custom-domains.html)." +
-                    "It usually takes App Runner 15 minutes to validate your domain.");
                 break;
             case "Delete":
                 await removeCustomDomain(serviceARN, customDomain);
