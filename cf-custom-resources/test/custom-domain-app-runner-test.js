@@ -646,13 +646,9 @@ describe("Custom Domain for App Runner Service", () => {
         });
 
         test("lambda time out", () => {
-            withDeadlineExpired(() => {
+            withDeadlineExpired(_ => {
                 return new Promise(function (resolve, reject) {
-                    setTimeout(
-                        reject,
-                        1,
-                        new Error("Lambda took longer than 14.5 minutes to add alias")
-                    );
+                    reject(new Error("lambda time out error"));;
                 });
             });
 
@@ -663,7 +659,7 @@ describe("Custom Domain for App Runner Service", () => {
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
-                    let expectedErrMessageRegex = /^Lambda took longer than 14.5 minutes to add alias \(Log: .*\)$/;
+                    let expectedErrMessageRegex = /^lambda time out error \(Log: .*\)$/;
                     return body.Status === "FAILED"  &&
                         body.Reason.search(expectedErrMessageRegex) !== -1 &&
                         body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`;
@@ -1256,18 +1252,14 @@ describe("Custom Domain for App Runner Service", () => {
         });
 
         test("lambda time out", () => {
-            withDeadlineExpired((errMessage) => {
-                return new Promise(function (resolve, reject) {
-                    setTimeout(
-                        reject,
-                        1,
-                        new Error("lambda time out error")
-                    );
+            withDeadlineExpired(_ => {
+                return new Promise(function (_, reject) {
+                    reject(new Error("lambda time out error"));
                 });
             });
 
             const mockDisassociateCustomDomain = sinon.fake(async () => {
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(_ => {});
             });
             AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
 
