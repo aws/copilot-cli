@@ -3,32 +3,36 @@
 
 package override
 
-type cfnOverrideRule struct {
-	// ruleString example: "ContainerDefinitions[0].Ulimits.HardLimit: 1024"
-	ruleString string
+// Rule is the override rule override package uses.
+type Rule struct {
+	// pathSegment example: "ContainerDefinitions[0].Ulimits.HardLimit: 1024"
+	pathSegment string
+	value       interface{}
 }
 
-func parseRules(inputs []string) ([]cfnOverrideRule, error) {
-	var rules []cfnOverrideRule
-	for _, input := range inputs {
-		r := cfnOverrideRule{
-			ruleString: input,
-		}
+type ruleNode struct {
+	next *ruleNode
+}
+
+func parseRules(rules []Rule) ([]*ruleNode, error) {
+	var ruleNodes []*ruleNode
+	for _, r := range rules {
 		if err := r.validate(); err != nil {
 			return nil, err
 		}
-		if err := r.parse(); err != nil {
+		node, err := r.parse()
+		if err != nil {
 			return nil, err
 		}
-		rules = append(rules, r)
+		ruleNodes = append(ruleNodes, node)
 	}
-	return rules, nil
+	return ruleNodes, nil
 }
 
-func (r cfnOverrideRule) validate() error {
+func (r Rule) validate() error {
 	return nil
 }
 
-func (r cfnOverrideRule) parse() error {
-	return nil
+func (r Rule) parse() (*ruleNode, error) {
+	return nil, nil
 }

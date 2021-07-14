@@ -4,18 +4,18 @@
 // Package override renders the manifest override rules to the CloudFormation template.
 package override
 
-// OverrideCloudFormationTemplate overrides the given CloudFormation template by applying
+// CloudFormationTemplate overrides the given CloudFormation template by applying
 // the override rules.
-func OverrideCloudFormationTemplate(overrideRules []string, origTemp string) (string, error) {
+func CloudFormationTemplate(overrideRules []Rule, origTemp string) (string, error) {
 	content, err := unmarshalCFNYaml(origTemp)
 	if err != nil {
 		return "", err
 	}
-	rules, err := parseRules(overrideRules)
+	ruleNodes, err := parseRules(overrideRules)
 	if err != nil {
 		return "", err
 	}
-	destContent, err := applyRulesToCFNTemplate(rules, content)
+	destContent, err := applyRulesToCFNTemplate(ruleNodes, content)
 	if err != nil {
 		return "", err
 	}
@@ -34,6 +34,6 @@ func marshalCFNYaml(content map[interface{}]interface{}) (string, error) {
 	return "", nil
 }
 
-func applyRulesToCFNTemplate(rules []cfnOverrideRule, origContent map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+func applyRulesToCFNTemplate(rules []*ruleNode, origContent map[interface{}]interface{}) (map[interface{}]interface{}, error) {
 	return nil, nil
 }

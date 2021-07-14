@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_OverrideCloudFormationTemplate(t *testing.T) {
+func Test_CloudFormationTemplate(t *testing.T) {
 	testCases := map[string]struct {
 		wantedContent string
 		wantedError   error
@@ -20,7 +20,7 @@ func Test_OverrideCloudFormationTemplate(t *testing.T) {
 			// GIVEN
 
 			// WHEN
-			actualContent, err := OverrideCloudFormationTemplate(nil, "")
+			actualContent, err := CloudFormationTemplate(nil, "")
 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
