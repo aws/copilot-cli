@@ -4,36 +4,38 @@
 // Package override renders the manifest override rules to the CloudFormation template.
 package override
 
+type templateContent map[interface{}]interface{}
+
 // CloudFormationTemplate overrides the given CloudFormation template by applying
 // the override rules.
-func CloudFormationTemplate(overrideRules []Rule, origTemp string) (string, error) {
+func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, error) {
 	content, err := unmarshalCFNYaml(origTemp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	ruleNodes, err := parseRules(overrideRules)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	destContent, err := applyRulesToCFNTemplate(ruleNodes, content)
+	overriddenContent, err := content.applyRulesToCFNTemplate(ruleNodes)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	output, err := marshalCFNYaml(destContent)
+	output, err := marshalCFNYaml(overriddenContent)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return output, nil
 }
 
-func unmarshalCFNYaml(temp string) (map[interface{}]interface{}, error) {
+func unmarshalCFNYaml(temp []byte) (templateContent, error) {
 	return nil, nil
 }
 
-func marshalCFNYaml(content map[interface{}]interface{}) (string, error) {
-	return "", nil
+func marshalCFNYaml(content templateContent) ([]byte, error) {
+	return nil, nil
 }
 
-func applyRulesToCFNTemplate(rules []*ruleNode, origContent map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+func (c templateContent) applyRulesToCFNTemplate(rules []*ruleNode) (templateContent, error) {
 	return nil, nil
 }

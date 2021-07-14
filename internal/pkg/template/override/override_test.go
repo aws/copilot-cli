@@ -20,7 +20,7 @@ func Test_CloudFormationTemplate(t *testing.T) {
 			// GIVEN
 
 			// WHEN
-			actualContent, err := CloudFormationTemplate(nil, "")
+			actualContent, err := CloudFormationTemplate(nil, nil)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

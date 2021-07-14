@@ -6,12 +6,12 @@ package override
 // Rule is the override rule override package uses.
 type Rule struct {
 	// pathSegment example: "ContainerDefinitions[0].Ulimits.HardLimit: 1024"
-	pathSegment string
-	value       interface{}
+	// pathSegment string
+	// value       interface{}
 }
 
 type ruleNode struct {
-	next *ruleNode
+	// next *ruleNode
 }
 
 func parseRules(rules []Rule) ([]*ruleNode, error) {
