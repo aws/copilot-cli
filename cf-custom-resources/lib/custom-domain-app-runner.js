@@ -205,6 +205,7 @@ async function getDomainInfo(serviceARN, domainName) {
 async function validateCertForDomain(serviceARN, domainName) {
     let i, lastDomainStatus;
     for (i = 0; i < ATTEMPTS_WAIT_FOR_PENDING; i++){
+
         const domain = await getDomainInfo(serviceARN, domainName).catch(err => {
             throw new Error(`update validation records for domain ${domainName}: ` + err.message);
         });
@@ -369,11 +370,11 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
         HostedZoneId: hostedZoneID,
     };
 
-     const data = await appRoute53Client.changeResourceRecordSets(params).promise().catch((err) => {
+    const data = await appRoute53Client.changeResourceRecordSets(params).promise().catch((err) => {
         throw new Error(`update record ${recordName}: ` + err.message);
     });
 
-     await appRoute53Client.waitFor('resourceRecordSetsChanged', {
+    await appRoute53Client.waitFor('resourceRecordSetsChanged', {
          // Wait up to 5 minutes
          $waiter: {
              delay: 30,
