@@ -648,7 +648,7 @@ describe("Custom Domain for App Runner Service", () => {
         test("lambda time out", () => {
             withDeadlineExpired(_ => {
                 return new Promise(function (resolve, reject) {
-                    reject(new Error("lambda time out error"));;
+                    reject(new Error("lambda time out error"));
                 });
             });
 
@@ -725,6 +725,53 @@ describe("Custom Domain for App Runner Service", () => {
             const mockDisassociateCustomDomain = sinon.fake.rejects(new Error("No custom domain mockDomain found for the provided service"));
             const mockDescribeCustomDomains = sinon.fake.rejects(new Error("domain mockDomain is not associated"));
             AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
+            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
+
+            const expectedResponse = nock(mockResponseURL)
+                .put("/", (body) => {
+                    return (
+                        body.Status === "SUCCESS" &&
+                        body.PhysicalResourceId === `/associate-domain-app-runner/mockDomain`
+                    );
+                })
+                .reply(200);
+            return LambdaTester( handler )
+                .event({
+                    RequestType: "Delete",
+                    ResponseURL: mockResponseURL,
+                    ResourceProperties: {
+                        ServiceARN: mockServiceARN,
+                        AppDNSRole: "",
+                        CustomDomain: mockCustomDomain,
+                        HostedZoneID: mockHostedZoneID,
+                    },
+                    PhysicalResourceId: `/associate-domain-app-runner/mockDomain`,
+                    LogicalResourceId: mockLogicalResourceID,
+                })
+                .expectResolve( () => {
+                    expect(expectedResponse.isDone()).toBe(true);
+                    sinon.assert.calledWith(mockDisassociateCustomDomain, sinon.match({
+                        DomainName: mockCustomDomain,
+                        ServiceArn: mockServiceARN,
+                    }));
+                });
+        });
+
+        test("do not error out if a record to be deleted does not exist", () => {
+            const mockDisassociateCustomDomain = sinon.fake.resolves({
+                DNSTarget: mockTarget,
+                CustomDomain: {
+                    DomainName: mockCustomDomain,
+                    CertificateValidationRecords: [{
+                        Name: "mock-record-name-1",
+                        Value: "mock-record-value-1",
+                    },],
+                },
+            });
+            const mockChangeResourceRecordSets = sinon.fake.rejects(new Error("Tried to delete resource record set [name='mock-record-name-1', type='CNAME'] but it was not found"),);
+            const mockDescribeCustomDomains = sinon.fake.rejects(new Error("domain mockDomain is not associated"));
+            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
             AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
             const expectedResponse = nock(mockResponseURL)

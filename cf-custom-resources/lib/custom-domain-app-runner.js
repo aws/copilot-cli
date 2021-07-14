@@ -364,9 +364,16 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
         HostedZoneId: hostedZoneID,
     };
 
-    const data = await appRoute53Client.changeResourceRecordSets(params).promise().catch((err) => {
+    let data;
+    try {
+        data = await appRoute53Client.changeResourceRecordSets(params).promise();
+    } catch (err) {
+        let recordSetNotFoundErrMessageRegex = /Tried to delete resource record set \[name='.*', type='CNAME'] but it was not found/;
+        if (action === "DELETE" && err.message.search(recordSetNotFoundErrMessageRegex) !== -1) {
+            return; // If we attempt to `DELETE` a record that doesn't exist, the job is already done, skip waiting.
+        }
         throw new Error(`update record ${recordName}: ` + err.message);
-    });
+    }
 
     await appRoute53Client.waitFor('resourceRecordSetsChanged', {
          // Wait up to 5 minutes
