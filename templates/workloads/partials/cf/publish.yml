@@ -3,19 +3,19 @@
 {{logicalIDSafe $topic.Name}}SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: ${AWS::StackName}-{{$topic.Name}}
+      TopicName: ${AWS::StackName}-{{logicalIDSafe $topic.Name}}
   
   {{- if $topic.AllowedWorkers}}
   {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
-    DependsOn: {{$topic.Name}}SNSTopic
+    DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
     Properties:
       Topics: 
-        - !Ref {{$topic.Name}}SNSTopic
+        - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          {{- range $worker := .AllowedWorkers}}
+          {{- range $worker := $topic.AllowedWorkers}}
           - Effect: Allow
             Principal:
               Service: sqs.amazonaws.com
@@ -26,7 +26,7 @@
               StringEquals:
                 'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
                 'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
-                'sqs:ResourceTag/copilot-service': !Sub {{$worker}}
+                'sqs:ResourceTag/copilot-service': '{{$worker}}'
           {{- end}}
   {{- end}}
 {{- end}}

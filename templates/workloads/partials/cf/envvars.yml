@@ -20,7 +20,7 @@ Environment:
   Value: '{{jsonMountPoints .Storage.MountPoints}}'
 {{- end}}{{end}}
 {{- if .Publish}}{{- if .Publish.Topics}}
-- Name: COPILOT_PUBLISHERS
+- Name: COPILOT_SNS_TOPIC_ARNS
   Value: '{{jsonSNSTopics .Publish.Topics}}'
 {{- end}} {{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}

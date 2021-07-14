@@ -239,16 +239,31 @@ func TestGenerateMountPointJSON(t *testing.T) {
 }
 
 func TestGenerateSNSJSON(t *testing.T) {
-	require.Equal(t, `{"tests":["testsWorker1","testsWorker2"]}`,
-		generateSNSJSON(
-			[]*Topics{
-				{
-					Name:           aws.String("tests"),
-					AllowedWorkers: []string{"testsWorker1", "testsWorker2"},
-				},
+	testCases := map[string]struct {
+		in     map[string]string
+		wanted string
+	}{
+		"JSON should render correctly": {
+			in: map[string]string{
+				"tests": "arn:aws:sns:us-west-2:123456789012:appName-envName-tests",
 			},
-		), "JSON should render correctly")
+			wanted: `{"tests":"arn:aws:sns:us-west-2:123456789012:appName-envName-tests"}`,
+		},
+		"Topics with no workers show empty list": {
+			in: map[string]string{
+				"tests": "",
+			},
+			wanted: `{}`,
+		},
+		"nil list of arguments should render": {
+			in:     map[string]string{},
+			wanted: `{}`,
+		},
+	}
 
-	require.Equal(t, `{"tests":[]}`, generateSNSJSON([]*Topics{{Name: aws.String("tests")}}), "Topics with no workers show empty list")
-	require.Equal(t, "{}", generateSNSJSON([]*Topics{}), "nil list of arguments should render")
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, generateSNSJSON(tc.in))
+		})
+	}
 }
