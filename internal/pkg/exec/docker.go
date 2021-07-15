@@ -20,14 +20,14 @@ import (
 type DockerCommand struct {
 	runner
 	// Override in unit tests.
-	buf *bytes.Buffer
+	buf      *bytes.Buffer
 	homePath string
 }
 
 // NewDockerCommand returns a DockerCommand.
 func NewDockerCommand() DockerCommand {
 	return DockerCommand{
-		runner: NewCmd(),
+		runner:   NewCmd(),
 		homePath: userHomeDirectory(),
 	}
 }
@@ -48,8 +48,14 @@ type dockerConfig struct {
 	CredHelpers map[string]string `json:"credHelpers,omitempty"`
 }
 
-const(
+const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
+)
+
+// Architectures that receive special handling.
+const (
+	ArmArch   = "arm"
+	Arm64Arch = "arm64"
 )
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
@@ -145,9 +151,6 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
-	if c.buf != nil {
-		buf = c.buf
-	}
 	// Trim redundant prefix and suffix. For example: '{"ServerErrors":["Cannot connect...}'\n returns
 	// {"ServerErrors":["Cannot connect...}
 	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
@@ -164,6 +167,30 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	return &ErrDockerDaemonNotResponsive{
 		msg: strings.Join(msg.ServerErrors, "\n"),
 	}
+}
+
+// GetPlatform will run the `docker version` command to get the OS/Arch.
+func (c DockerCommand) GetPlatform() (os, arch string, err error) {
+	if _, err := exec.LookPath("docker"); err != nil {
+		return "", "", ErrDockerCommandNotFound
+	}
+	buf := &bytes.Buffer{}
+	err = c.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, Stdout(buf))
+	if err != nil {
+		return "", "", fmt.Errorf("run docker version: %w", err)
+	}
+
+	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
+	type dockerServer struct {
+		OS   string `json:"Os"`
+		Arch string `json:"Arch"`
+	}
+	var platform dockerServer
+	if err := json.Unmarshal([]byte(out), &platform); err != nil {
+		return "", "", fmt.Errorf("unmarshal docker platform: %w", err)
+
+	}
+	return platform.OS, platform.Arch, nil
 }
 
 func imageName(uri, tag string) string {
@@ -205,13 +232,13 @@ func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 	/*
-	Sample docker config file
-    {
-        "credsStore" : "ecr-login",
-        "credHelpers": {
-            "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
-        }
-    }
+			Sample docker config file
+		    {
+		        "credsStore" : "ecr-login",
+		        "credHelpers": {
+		            "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
+		        }
+		    }
 	*/
 	cred := dockerConfig{}
 	err := json.Unmarshal(config, &cred)
@@ -224,7 +251,7 @@ func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 
 func userHomeDirectory() string {
 	home, err := os.UserHomeDir()
-	if err!= nil{
+	if err != nil {
 		return ""
 	}
 

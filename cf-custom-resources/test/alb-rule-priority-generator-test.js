@@ -10,7 +10,7 @@ describe("ALB Rule Priority Generator", () => {
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
   const LogGroup = "/aws/lambda/testLambda";
-  const LogStream = "/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
+  const LogStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
 

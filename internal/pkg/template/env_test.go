@@ -4,7 +4,6 @@
 package template
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/gobuffalo/packd"
@@ -13,35 +12,14 @@ import (
 
 func TestTemplate_ParseEnv(t *testing.T) {
 	testCases := map[string]struct {
-		version          string
 		mockDependencies func(t *Template)
 		wantedContent    string
 		wantedErr        error
 	}{
-		"renders all nested templates in legacy template": {
+		"renders env template": {
 			mockDependencies: func(t *Template) {
 				mockBox := packd.NewMemoryBox()
-				var baseContent string
-				for _, name := range envCFSubTemplateNames {
-					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
-				}
-				mockBox.AddString("environment/versions/cf-v0.0.0.yml", baseContent)
-				t.box = mockBox
-			},
-			wantedContent: `  cfn-execution-role
-  custom-resources
-  custom-resources-role
-  environment-manager-role
-  lambdas
-  vpc-resources
-  nat-gateways
-`,
-		},
-		"renders v1.0.0 template": {
-			version: "v1.0.0",
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("environment/versions/cf-v1.0.0.yml", "test")
+				mockBox.AddString("environment/cf.yml", "test")
 				t.box = mockBox
 			},
 			wantedContent: "test",
@@ -62,9 +40,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
 			tpl.box.AddString("environment/partials/nat-gateways.yml", "nat-gateways")
 
 			// WHEN
-			c, err := tpl.ParseEnv(&EnvOpts{
-				Version: tc.version,
-			})
+			c, err := tpl.ParseEnv(&EnvOpts{})
 
 			if tc.wantedErr != nil {
 				require.Contains(t, err.Error(), tc.wantedErr.Error())

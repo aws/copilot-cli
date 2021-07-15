@@ -72,6 +72,7 @@ type Workload struct {
 type Image struct {
 	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
 	Location     *string           `yaml:"location"`        // Use an existing image instead.
+	Credentials  *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
 	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
 }
@@ -437,6 +438,7 @@ type SidecarConfig struct {
 	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
 	DockerLabels map[string]string   `yaml:"labels"`
 	DependsOn    map[string]string   `yaml:"depends_on"`
+	ImageOverride `yaml:",inline"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
@@ -450,9 +452,26 @@ type TaskConfig struct {
 	Storage        *Storage          `yaml:"storage"`
 }
 
+// PublishConfig represents the configurable options for setting up publishers.
+type PublishConfig struct {
+	Topics []Topic `yaml:"topics"`
+}
+
+// Topic represents the configurable options for setting up a SNS Topic.
+type Topic struct {
+	Name           *string  `yaml:"name"`
+	AllowedWorkers []string `yaml:"allowed_workers"`
+}
+
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
 	VPC *vpcConfig `yaml:"vpc"`
+}
+
+// PlatformConfig represents operating system and architecture specifications.
+type PlatformConfig struct {
+	OS   string `yaml:"os"`
+	Arch string `yaml:"architecture"`
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.

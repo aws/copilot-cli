@@ -43,25 +43,12 @@ func TestAppTemplate(t *testing.T) {
 			inVersion: "v1.0.0",
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(fmt.Sprintf(fmtAppTemplatePath, "v1.0.0"), struct {
-					TemplateVersion string
+				m.EXPECT().Parse(appTemplatePath, struct {
+					TemplateVersion         string
+					AppDNSDelegatedAccounts []string
 				}{
 					"v1.0.0",
-				}, gomock.Any()).Return(&template.Content{
-					Buffer: bytes.NewBufferString("template"),
-				}, nil)
-				c.parser = m
-			},
-
-			wantedTemplate: "template",
-		},
-		"success for legacy template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(fmt.Sprintf(fmtAppTemplatePath, "v0.0.0"), struct {
-					TemplateVersion string
-				}{
-					"",
+					[]string{"123456"},
 				}, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
@@ -79,7 +66,8 @@ func TestAppTemplate(t *testing.T) {
 			defer ctrl.Finish()
 			appStack := &AppStackConfig{
 				CreateAppInput: &deploy.CreateAppInput{
-					Version: tc.inVersion,
+					Version:   tc.inVersion,
+					AccountID: "123456",
 				},
 			}
 			tc.mockDependencies(ctrl, appStack)
@@ -159,7 +147,7 @@ func TestAppResourceTemplate(t *testing.T) {
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(fmt.Sprintf(fmtAppResourcesTemplatePath, "v0.0.0"), struct {
+				m.EXPECT().Parse(appResourcesTemplatePath, struct {
 					*AppResourcesConfig
 					ServiceTagKey   string
 					TemplateVersion string

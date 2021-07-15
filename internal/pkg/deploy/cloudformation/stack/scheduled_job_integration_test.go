@@ -39,7 +39,9 @@ func TestScheduledJob_Template(t *testing.T) {
 	v, ok := envMft.(*manifest.ScheduledJob)
 	require.True(t, ok)
 
-	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{})
+	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{
+		ServiceDiscoveryEndpoint: "test.my-app.local",
+	})
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")

@@ -116,6 +116,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			services = appendServiceDiscovery(services, serviceDiscovery{
 				Service: d.svc,
 				Port:    port,
+				Env:     env,
 				App:     d.app,
 			}, env)
 		}

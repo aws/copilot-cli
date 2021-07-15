@@ -25,9 +25,13 @@ func TestCompletionOpts_Validate(t *testing.T) {
 			inputShell:  "bash",
 			wantedError: nil,
 		},
+		"fish": {
+			inputShell:  "fish",
+			wantedError: nil,
+		},
 		"invalid shell": {
 			inputShell:  "chicken",
-			wantedError: errors.New("shell must be bash or zsh"),
+			wantedError: errors.New("shell must be bash, zsh or fish"),
 		},
 	}
 
@@ -63,6 +67,7 @@ func TestCompletionOpts_Execute(t *testing.T) {
 			mocking: func(mock *mocks.MockshellCompleter) {
 				mock.EXPECT().GenBashCompletion(gomock.Any()).Times(1)
 				mock.EXPECT().GenZshCompletion(gomock.Any()).Times(0)
+				mock.EXPECT().GenFishCompletion(gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		"zsh": {
@@ -70,6 +75,15 @@ func TestCompletionOpts_Execute(t *testing.T) {
 			mocking: func(mock *mocks.MockshellCompleter) {
 				mock.EXPECT().GenBashCompletion(gomock.Any()).Times(0)
 				mock.EXPECT().GenZshCompletion(gomock.Any()).Times(1)
+				mock.EXPECT().GenFishCompletion(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		"fish": {
+			inputShell: "fish",
+			mocking: func(mock *mocks.MockshellCompleter) {
+				mock.EXPECT().GenBashCompletion(gomock.Any()).Times(0)
+				mock.EXPECT().GenZshCompletion(gomock.Any()).Times(0)
+				mock.EXPECT().GenFishCompletion(gomock.Any(), gomock.Any()).Times(1)
 			},
 		},
 	}
