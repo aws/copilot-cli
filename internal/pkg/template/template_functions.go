@@ -132,10 +132,10 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 
 }
 
-// generatePublisherJSON turns a list of Topics objects into a JSON string:
+// generateSNSJSON turns a list of Topics objects into a JSON string:
 // `{"myTopic": ["hello"], "mySecondTopic": ["hello","goodbye"]}`
 // This function must be called on an array of correctly constructed Topic objects.
-func generatePublishJSON(topics []*Topics) string {
+func generateSNSJSON(topics []*Topics) string {
 	publisherMap := make(map[string][]string)
 
 	for _, pb := range topics {

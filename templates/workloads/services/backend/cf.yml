@@ -111,6 +111,8 @@ Resources:
 
 {{include "addons" . | indent 2}}
 
+{{include "publish" . | indent 2}}
+
 {{include "env-controller" . | indent 2}}
 
 Outputs:

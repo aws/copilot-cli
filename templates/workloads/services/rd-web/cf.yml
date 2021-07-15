@@ -122,3 +122,5 @@ Resources:
 
 {{include "addons" . | indent 2}}
 
+{{include "publish" . | indent 2}}
+
