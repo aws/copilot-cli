@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT-0
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
-  Version: 'v1.4.1'
+  Version: 'v1.5.1'
 Parameters:
   AppName:
     Type: String
@@ -28,6 +28,9 @@ Parameters:
   Aliases:
     Type: String
     Default: ""
+  ServiceDiscoveryEndpoint:
+    Type: String
+    Default: {{.AppName}}.local
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
@@ -47,12 +50,13 @@ Resources:
 {{include "vpc-resources" .VPCConfig | indent 2}}
 {{include "nat-gateways" .VPCConfig | indent 2}}
 {{- end}}
-  # Creates a service discovery namespace with the form:
-  # {svc}.{appname}.local
+  # Creates a service discovery namespace with the form provided in the parameter.
+  # For new environments after 1.5.0, this is "env.app.local". For upgraded environments from
+  # before 1.5.0, this is app.local.
   ServiceDiscoveryNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
-      Name: !Sub ${AppName}.local
+      Name: !Ref ServiceDiscoveryEndpoint
 {{- if .ImportVPC}}
       Vpc: {{.ImportVPC.ID}}
 {{- else}}

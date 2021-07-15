@@ -27,7 +27,7 @@ By default, the AWS Copilot CLI passes in some default environment variables for
 * `COPILOT_ENVIRONMENT_NAME` - this is the name of the environment the service is running in (test vs prod, for example)
 * `COPILOT_SERVICE_NAME` - this is the name of the current service. 
 * `COPILOT_LB_DNS` - this is the DNS name of the Load Balancer (if it exists) such as _kudos-Publi-MC2WNHAIOAVS-588300247.us-west-2.elb.amazonaws.com_. Note: if you're using a custom domain name, this value will still be the Load Balancer's DNS name. 
-* `COPILOT_SERVICE_DISCOVERY_ENDPOINT` - this is the endpoint to add after a service name to talk to another service in your environment via service discovery. The value is `{app name}.local`. For more information about service discovery, check out our [Service Discovery guide](../developing/service-discovery.en.md).
+* `COPILOT_SERVICE_DISCOVERY_ENDPOINT` - this is the endpoint to add after a service name to talk to another service in your environment via service discovery. The value is `{env name}.{app name}.local`. For more information about service discovery, check out our [Service Discovery guide](../developing/service-discovery.en.md).
 
 ## How do I add my own Environment Variables?
 

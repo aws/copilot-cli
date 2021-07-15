@@ -54,11 +54,12 @@ func (u *LBWebServiceURI) String() string {
 type serviceDiscovery struct {
 	Service string
 	App     string
+	Env     string
 	Port    string
 }
 
 func (s *serviceDiscovery) String() string {
-	return fmt.Sprintf("%s.%s.local:%s", s.Service, s.App, s.Port)
+	return fmt.Sprintf("%s.%s.%s.local:%s", s.Service, s.Env, s.App, s.Port)
 }
 
 type envDescriber interface {
@@ -163,6 +164,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service: d.svc,
 			Port:    d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
+			Env:     env,
 			App:     d.app,
 		}, env)
 		webSvcEnvVars, err := d.svcDescriber[env].EnvVars()

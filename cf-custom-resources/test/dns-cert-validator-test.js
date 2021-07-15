@@ -22,13 +22,14 @@ describe("DNS Validated Certificate Handler", () => {
   const testRootDNSRole = "mockRole";
   const testAliases = `{
     "frontend": ["v1.${testAppName}.${testDomainName}", "foobar.com"],
-    "backend": ["v2.${testDomainName}"]
+    "backend": ["v2.${testDomainName}", "${testEnvName}.${testAppName}.${testDomainName}"]
   }`;
   const testUpdatedAliases = `{
     "frontend": ["v1.${testAppName}.${testDomainName}"],
-    "backend": ["v2.${testDomainName}"]
+    "backend": ["v2.${testDomainName}", "${testEnvName}.${testAppName}.${testDomainName}"]
   }`;
   const testSANs = [
+    "test.myapp.example.com",
     "*.test.myapp.example.com",
     "v1.myapp.example.com",
     "v2.example.com",
@@ -518,6 +519,7 @@ describe("DNS Validated Certificate Handler", () => {
           sinon.match({
             DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
             SubjectAlternativeNames: [
+              `${testEnvName}.${testAppName}.${testDomainName}`,
               `*.${testEnvName}.${testAppName}.${testDomainName}`,
             ],
             ValidationMethod: "DNS",
