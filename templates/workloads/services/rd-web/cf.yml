@@ -38,15 +38,6 @@ Parameters:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ''
-  Alias:
-    Type: String
-    Default: ""
-  AppDNSDelegationRole:
-    Type: String
-    Default: ""
-  AppDNSName:
-    Type: String
-    Default: ""
 
 Conditions:
   # App Runner will not accept an AccessRole for ImageRepositoryTypes other than ECR.
@@ -65,8 +56,6 @@ Conditions:
     !Not [!Equals [!Ref HealthCheckUnhealthyThreshold, '']]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, '']]
-  HasAlias:
-    !Not [!Equals [!Ref Alias, '']]
 
 Resources:
 {{include "accessrole" . | indent 2}}
@@ -133,9 +122,9 @@ Resources:
 
 {{include "addons" . | indent 2}}
 
+{{- if .Alias}}
   CustomDomainFunctionAWSSDKLayer:
     Type: AWS::Lambda::LayerVersion
-    Condition: HasAlias
     Properties:
       CompatibleRuntimes:
         - nodejs14.x
@@ -148,7 +137,6 @@ Resources:
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
-    Condition: HasAlias
     Properties:
       Code:
         S3Bucket: {{ .ScriptBucketName }}
@@ -164,19 +152,17 @@ Resources:
   CustomDomainAction:
       Metadata:
         'aws:copilot:description': 'Associate the domain with the service as well as upserting the domain record and validation records'
-      Condition: HasAlias
       DependsOn: CustomDomainFunction
       Type: Custom::CustomDomainFunction
       Properties:
         ServiceToken: !GetAtt CustomDomainFunction.Arn
         ServiceARN: !GetAtt Service.ServiceArn
-        CustomDomain: !Ref Alias
-        AppDNSRole: !Ref AppDNSDelegationRole
-        AppDNSName: !Ref AppDNSName
+        CustomDomain: {{ .Alias }}
+        AppDNSRole: {{ .AppDNSRole }}
+        AppDNSName: {{ .AppDNSName }
 
   CustomResourceRole:
     Type: AWS::IAM::Role
-    Condition: HasAlias
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -206,3 +192,4 @@ Resources:
                   - "route53:ListHostedZonesByName"
                 Resource:
                   - "*"
+{{- end }}
