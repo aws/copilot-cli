@@ -576,7 +576,7 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 }
 
 func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
-	if p == nil || p.Topics == nil {
+	if p == nil || len(p.Topics) == 0 {
 		return nil, nil
 	}
 	publishers := template.PublishOpts{}
