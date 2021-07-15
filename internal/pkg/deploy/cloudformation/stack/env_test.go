@@ -41,6 +41,7 @@ func TestEnv_Template(t *testing.T) {
 						PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
 						PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
 					},
+					LatestVersion: deploy.LatestEnvTemplateVersion,
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
 				e.parser = m
 			},
