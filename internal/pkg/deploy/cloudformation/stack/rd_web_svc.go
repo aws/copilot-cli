@@ -21,12 +21,13 @@ type requestDrivenWebSvcReadParser interface {
 type RequestDrivenWebService struct {
 	*appRunnerWkld
 	manifest *manifest.RequestDrivenWebService
+	app      AppInformation
 
 	parser requestDrivenWebSvcReadParser
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app string, rc RuntimeConfig) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -37,7 +38,7 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app 
 			wkld: &wkld{
 				name:   aws.StringValue(mft.Name),
 				env:    env,
-				app:    app,
+				app:    app.Name,
 				rc:     rc,
 				image:  mft.ImageConfig,
 				addons: addons,
@@ -47,6 +48,7 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app 
 			imageConfig:       mft.ImageConfig,
 			healthCheckConfig: mft.HealthCheckConfiguration,
 		},
+		app:      app,
 		manifest: mft,
 		parser:   parser,
 	}, nil
@@ -58,11 +60,21 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	alias := "" // TODO: parse from manifest
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
 		Tags:              s.manifest.Tags,
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
+
+		// TODO: fill these
+		ScriptBucketName:     "",
+		CustomDomainLambda:   "",
+		AWSSDKLayer:          "",
+		Alias:                alias,
+		AppDNSDelegationRole: s.app.dnsDelegationRole(),
+		AppDNSName:           s.app.DNSName, // TODO: is this "" or nil
 	})
 	if err != nil {
 		return "", err
