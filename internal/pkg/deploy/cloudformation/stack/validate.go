@@ -57,8 +57,8 @@ var (
 
 // Regex options
 var (
-	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, -, and _
-	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression only contains letters, numbers, and -
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression only contains letters, numbers, and hyphens.
 	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
 	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 )
@@ -414,7 +414,7 @@ func validatePubSubName(name *string) error {
 		return errMissingPublishTopicField
 	}
 
-	// name must contain letters, numbers, and can't use special characters besides _ and -
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
 	if !awsSNSTopicRegexp.MatchString(aws.StringValue(name)) {
 		return errInvalidPubSubTopicName
 	}
@@ -424,7 +424,7 @@ func validatePubSubName(name *string) error {
 
 func validateWorkerNames(names []string) error {
 	for _, name := range names {
-		err := validateName(name)
+		err := validateSvcName(name)
 		if err != nil {
 			return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
 		}
@@ -432,21 +432,21 @@ func validateWorkerNames(names []string) error {
 	return nil
 }
 
-func validateName(name string) error {
+func validateSvcName(name string) error {
 	if name == "" {
 		return errInvalidName
 	}
 	if len(name) > 255 {
 		return errNameTooLong
 	}
-	if !isCorrectFormat(name) {
+	if !isCorrectSvcNameFormat(name) {
 		return errNameBadFormat
 	}
 
 	return nil
 }
 
-func isCorrectFormat(s string) bool {
+func isCorrectSvcNameFormat(s string) bool {
 	if !awsNameRegexp.MatchString(s) {
 		return false
 	}
