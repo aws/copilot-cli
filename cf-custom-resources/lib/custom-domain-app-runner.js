@@ -131,7 +131,6 @@ exports.deadlineExpired = function () {
 /**
  * Get the hosted zone ID of the domain name from the app account.
  * @param {string} domainName
- * @returns {Promise<void>}
  */
 async function domainHostedZoneID(domainName) {
     const data = await appRoute53Client.listHostedZonesByName({
