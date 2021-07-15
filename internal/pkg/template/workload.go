@@ -275,6 +275,14 @@ type ParseRequestDrivenWebServiceInput struct {
 	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	EnableHealthCheck   bool
 	EnvControllerLambda string
+
+	// Input needed for the custom resource that adds a custom domain to the service.
+	ScriptBucketName     string
+	CustomDomainLambda   string
+	AWSSDKLayer          string
+	Alias                string
+	AppDNSDelegationRole string
+	AppDNSName           string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
