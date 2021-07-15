@@ -41,6 +41,8 @@ type EnvOpts struct {
 
 	ImportVPC *config.ImportVPC
 	VPCConfig *config.AdjustVPC
+
+	LatestVersion string
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
