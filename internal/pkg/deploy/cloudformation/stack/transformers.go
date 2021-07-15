@@ -72,6 +72,17 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 		if err := validateSidecarDependsOn(*config, name, s); err != nil {
 			return nil, err
 		}
+
+		entrypoint, err := convertEntryPoint(config.EntryPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		command, err := convertCommand(config.Command)
+		if err != nil {
+			return nil, err
+		}
+
 		mp := convertSidecarMountPoints(config.MountPoints)
 
 		sidecars = append(sidecars, &template.SidecarOpts{
@@ -86,6 +97,8 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 			MountPoints:  mp,
 			DockerLabels: config.DockerLabels,
 			DependsOn:    config.DependsOn,
+			EntryPoint:   entrypoint,
+			Command:      command,
 		})
 	}
 	return sidecars, nil
