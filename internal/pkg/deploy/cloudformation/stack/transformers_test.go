@@ -26,6 +26,7 @@ func Test_convertSidecar(t *testing.T) {
 		inLabels          map[string]string
 		inDependsOn       map[string]string
 		inImg             manifest.Image
+		inImageOverride   manifest.ImageOverride
 		circDepContainers []string
 
 		wanted    *template.SidecarOpts
@@ -162,19 +163,96 @@ func Test_convertSidecar(t *testing.T) {
 				},
 			},
 		},
+		"do not specify image override": {
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: nil,
+				Command:    nil,
+			},
+		},
+		"specify entrypoint as a string": {
+			inImageOverride: manifest.ImageOverride{
+				EntryPoint: &manifest.EntryPointOverride{String: aws.String("bin")},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: []string{"bin"},
+				Command:    nil,
+			},
+		},
+		"specify entrypoint as a string slice": {
+			inImageOverride: manifest.ImageOverride{
+				EntryPoint: &manifest.EntryPointOverride{StringSlice: []string{"bin", "arg"}},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: []string{"bin", "arg"},
+				Command:    nil,
+			},
+		},
+		"specify command as a string": {
+			inImageOverride: manifest.ImageOverride{
+				Command: &manifest.CommandOverride{String: aws.String("arg")},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: nil,
+				Command:    []string{"arg"},
+			},
+		},
+		"specify command as a string slice": {
+			inImageOverride: manifest.ImageOverride{
+				Command: &manifest.CommandOverride{StringSlice: []string{"arg1", "arg2"}},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: nil,
+				Command:    []string{"arg1", "arg2"},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			sidecar := map[string]*manifest.SidecarConfig{
 				"foo": {
-					CredsParam:   mockCredsParam,
-					Image:        mockImage,
-					Secrets:      mockMap,
-					Variables:    mockMap,
-					Essential:    aws.Bool(tc.inEssential),
-					Port:         tc.inPort,
-					DockerLabels: tc.inLabels,
-					DependsOn:    tc.inDependsOn,
+					CredsParam:    mockCredsParam,
+					Image:         mockImage,
+					Secrets:       mockMap,
+					Variables:     mockMap,
+					Essential:     aws.Bool(tc.inEssential),
+					Port:          tc.inPort,
+					DockerLabels:  tc.inLabels,
+					DependsOn:     tc.inDependsOn,
+					ImageOverride: tc.inImageOverride,
 				},
 			}
 			got, err := convertSidecar(convertSidecarOpts{
