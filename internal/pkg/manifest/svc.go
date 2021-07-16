@@ -21,6 +21,8 @@ const (
 	RequestDrivenWebServiceType = "Request-Driven Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
+	// WorkerServiceType is a worker service that manages the consumption of messages.
+	WorkerServiceType = "Worker Service"
 )
 
 // ServiceTypes are the supported service manifest types.

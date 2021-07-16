@@ -1457,3 +1457,91 @@ func Test_convertImageDependsOn(t *testing.T) {
 		})
 	}
 }
+
+func Test_convertPublish(t *testing.T) {
+	testCases := map[string]struct {
+		inPublish *manifest.PublishConfig
+
+		wanted      *template.PublishOpts
+		wantedError error
+	}{
+		"empty publish": {
+			inPublish: &manifest.PublishConfig{},
+			wanted:    nil,
+		},
+		"publish with no topic names": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{},
+				},
+			},
+			wantedError: errMissingPublishTopicField,
+		},
+		"publish with no workers": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name: aws.String("topic1"),
+					},
+				},
+			},
+			wanted: &template.PublishOpts{
+				Topics: []*template.Topics{
+					{
+						Name: aws.String("topic1"),
+					},
+				},
+			},
+		},
+		"publish with workers": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name:           aws.String("topic1"),
+						AllowedWorkers: []string{"worker1"},
+					},
+				},
+			},
+			wanted: &template.PublishOpts{
+				Topics: []*template.Topics{
+					{
+						Name:           aws.String("topic1"),
+						AllowedWorkers: []string{"worker1"},
+					},
+				},
+			},
+		},
+		"invalid worker name": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name:           aws.String("topic1"),
+						AllowedWorkers: []string{"worker1~~@#$"},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errNameBadFormat),
+		},
+		"invalid topic name": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name:           aws.String("topic1~~@#$"),
+						AllowedWorkers: []string{"worker1"},
+					},
+				},
+			},
+			wantedError: errInvalidPubSubTopicName,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertPublish(tc.inPublish)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}

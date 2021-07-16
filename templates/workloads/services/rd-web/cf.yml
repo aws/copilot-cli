@@ -159,7 +159,7 @@ Resources:
         ServiceARN: !GetAtt Service.ServiceArn
         CustomDomain: {{ .Alias }}
         AppDNSRole: {{ .AppDNSRole }}
-        AppDNSName: {{ .AppDNSName }
+        AppDNSName: {{ .AppDNSName }}
 
   CustomResourceRole:
     Type: AWS::IAM::Role

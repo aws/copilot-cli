@@ -5,7 +5,6 @@ package manifest
 
 import (
 	"errors"
-	"path/filepath"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -127,17 +126,11 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(lbWebSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
-		"dirName": tplDirName,
-	}))
+	content, err := s.parser.Parse(lbWebSvcManifestPath, *s)
 	if err != nil {
 		return nil, err
 	}
 	return content.Bytes(), nil
-}
-
-func tplDirName(s string) string {
-	return filepath.Dir(s)
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
