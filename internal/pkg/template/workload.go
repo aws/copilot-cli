@@ -259,6 +259,7 @@ type WorkloadOpts struct {
 	WorkloadType         string
 	HealthCheck          *ecs.HealthCheck
 	HTTPHealthCheck      HTTPHealthCheckOpts
+	DeregistrationDelay  *int64
 	AllowedSourceIps     []string
 	RulePriorityLambda   string
 	DesiredCountLambda   string

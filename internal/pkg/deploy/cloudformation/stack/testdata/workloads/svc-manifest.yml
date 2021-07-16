@@ -47,8 +47,8 @@ environments:
     http:
       healthcheck:
         path: /
-        deregistration_delay: 30s
         grace_period: 30s
+      deregistration_delay: 30s
   prod:
     count:
       range:

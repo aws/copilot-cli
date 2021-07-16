@@ -266,11 +266,10 @@ func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, e
 // convertHTTPHealthCheck converts the ALB health check configuration into a format parsable by the templates pkg.
 func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
 	opts := template.HTTPHealthCheckOpts{
-		HealthCheckPath:     manifest.DefaultHealthCheckPath,
-		HealthyThreshold:    hc.HealthCheckArgs.HealthyThreshold,
-		UnhealthyThreshold:  hc.HealthCheckArgs.UnhealthyThreshold,
-		DeregistrationDelay: aws.Int64(manifest.DefaultHealthCheckDeregistrationDelay),
-		GracePeriod:         aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+		HealthCheckPath:    manifest.DefaultHealthCheckPath,
+		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
+		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
+		GracePeriod:        aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 	}
 	if hc.HealthCheckArgs.Path != nil {
 		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
@@ -285,9 +284,6 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	}
 	if hc.HealthCheckArgs.Timeout != nil {
 		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
-	}
-	if hc.HealthCheckArgs.DeregistrationDelay != nil {
-		opts.DeregistrationDelay = aws.Int64(int64(hc.HealthCheckArgs.DeregistrationDelay.Seconds()))
 	}
 	if hc.HealthCheckArgs.GracePeriod != nil {
 		opts.GracePeriod = aws.Int64(int64(hc.HealthCheckArgs.GracePeriod.Seconds()))

@@ -158,7 +158,7 @@ Resources:
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: {{.HTTPHealthCheck.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+          Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
           Value: !Ref Stickiness
       TargetType: ip
