@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	cfstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
@@ -288,6 +289,77 @@ func TestEnvDescriber_Version(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedVersion, actual)
+			}
+		})
+	}
+}
+
+func TestEnvDescriber_ServiceDiscoveryEndpoint(t *testing.T) {
+	testCases := map[string]struct {
+		given func(ctrl *gomock.Controller) *EnvDescriber
+
+		wantedEndpoint string
+		wantedErr      error
+	}{
+		"should return app.local if legacy, unupgraded environment": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().Describe().Return(stack.StackDescription{Parameters: map[string]string{}}, nil)
+				return &EnvDescriber{
+					app: "phonetool",
+					env: &config.Environment{Name: "test"},
+					cfn: m,
+				}
+			},
+			wantedEndpoint: "phonetool.local",
+		},
+		"should return the new env template if the parameter is set": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: map[string]string{
+						cfstack.EnvParamServiceDiscoveryEndpoint: "test.phonetool.local",
+					}}, nil)
+				return &EnvDescriber{
+					app: "phonetool",
+					env: &config.Environment{Name: "test"},
+					cfn: m,
+				}
+			},
+			wantedEndpoint: "test.phonetool.local",
+		},
+		"should return the old env template if the parameter is empty": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: map[string]string{
+						cfstack.EnvParamServiceDiscoveryEndpoint: "",
+					}}, nil)
+				return &EnvDescriber{
+					app: "phonetool",
+					env: &config.Environment{Name: "test"},
+					cfn: m,
+				}
+			},
+			wantedEndpoint: "phonetool.local",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			d := tc.given(ctrl)
+
+			// WHEN
+			actual, err := d.ServiceDiscoveryEndpoint()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedEndpoint, actual)
 			}
 		})
 	}

@@ -72,6 +72,17 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 		if err := validateSidecarDependsOn(*config, name, s); err != nil {
 			return nil, err
 		}
+
+		entrypoint, err := convertEntryPoint(config.EntryPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		command, err := convertCommand(config.Command)
+		if err != nil {
+			return nil, err
+		}
+
 		mp := convertSidecarMountPoints(config.MountPoints)
 
 		sidecars = append(sidecars, &template.SidecarOpts{
@@ -86,6 +97,8 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 			MountPoints:  mp,
 			DockerLabels: config.DockerLabels,
 			DependsOn:    config.DependsOn,
+			EntryPoint:   entrypoint,
+			Command:      command,
 		})
 	}
 	return sidecars, nil
@@ -567,4 +580,39 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 		return nil, fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	return out, nil
+}
+
+func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
+	if p == nil || len(p.Topics) == 0 {
+		return nil, nil
+	}
+	publishers := template.PublishOpts{}
+	// convert the topics to template Topics
+	for _, topic := range p.Topics {
+		t, err := convertTopic(topic)
+		if err != nil {
+			return nil, err
+		}
+
+		publishers.Topics = append(publishers.Topics, t)
+	}
+
+	return &publishers, nil
+}
+
+func convertTopic(t manifest.Topic) (*template.Topics, error) {
+	err := validatePubSubName(t.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	workerErr := validateWorkerNames(t.AllowedWorkers)
+	if workerErr != nil {
+		return nil, workerErr
+	}
+
+	return &template.Topics{
+		Name:           t.Name,
+		AllowedWorkers: t.AllowedWorkers,
+	}, nil
 }

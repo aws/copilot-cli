@@ -16,7 +16,7 @@
 // サービス検出を使って front-end Service から api Service を呼び出す
 func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
     endpoint := fmt.Sprintf("http://api.%s/some-request", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
-    resp, err := http.Get(endpoint /* http://api.kudos.local/some-request */)
+    resp, err := http.Get(endpoint /* http://api.test.kudos.local/some-request */)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
@@ -34,6 +34,6 @@ func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter
 endpoint := fmt.Sprintf("http://api.%s/some-request", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
 ```
 
-`COPILOT_SERVICE_DISCOVERY_ENDPOINT` は特別な環境変数で Copilot CLI は Service 作成時にこの環境変数を設定します。これは _{app name}.local_ というフォーマットで登録されており、今回の例だと _kudos_ Application の場合、リクエストは `http://api.kudos.local/some-request` に送信されます。 _api_ Service は 80 番ポートで動いているので、 URL のなかでポートを指定していません。しかし Service が例えば 8080 番のような別のポートで動いている場合はリクエストの中にポート番号を含める必要があります。今回の例だと `http://api.kudos.local:8080/some-request` のようになります。
+`COPILOT_SERVICE_DISCOVERY_ENDPOINT` は特別な環境変数で Copilot CLI は Service 作成時にこの環境変数を設定します。これは _{env name}.{app name}.local_ というフォーマットで登録されており、今回の例だと _kudos_ Application の場合、リクエストは `http://api.test.kudos.local/some-request` に送信されます。 _api_ Service は 80 番ポートで動いているので、 URL のなかでポートを指定していません。しかし Service が例えば 8080 番のような別のポートで動いている場合はリクエストの中にポート番号を含める必要があります。今回の例だと `http://api.test.kudos.local:8080/some-request` のようになります。
 
-`front-end` Service がリクエストを送信するとき `api.kudos.local` というエンドポイントはプライベート IP アドレスに変換され VPC のなかでプライベートにルーティングされます。
+`front-end` Service がリクエストを送信するとき `api.test.kudos.local` というエンドポイントはプライベート IP アドレスに変換され VPC のなかでプライベートにルーティングされます。

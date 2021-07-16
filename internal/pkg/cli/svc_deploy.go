@@ -49,18 +49,19 @@ type deployWkldVars struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store               store
-	ws                  wsSvcDirReader
-	imageBuilderPusher  imageBuilderPusher
-	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
-	s3                  artifactUploader
-	cmd                 runner
-	addons              templater
-	appCFN              appResourcesGetter
-	svcCFN              cloudformation.CloudFormation
-	sessProvider        sessionProvider
-	envUpgradeCmd       actionCommand
+	store              store
+	ws                 wsSvcDirReader
+	imageBuilderPusher imageBuilderPusher
+	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
+	s3                 artifactUploader
+	cmd                runner
+	addons             templater
+	appCFN             appResourcesGetter
+	svcCFN             cloudformation.CloudFormation
+	sessProvider       sessionProvider
+	envUpgradeCmd      actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
+	endpointGetter     endpointGetter
 
 	spinner progress
 	sel     wsSelector
@@ -262,6 +263,14 @@ func (o *deploySvcOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.svcCFN = cloudformation.New(envSession)
 
+	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return fmt.Errorf("initiate env describer: %w", err)
+	}
 	addonsSvc, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
@@ -386,10 +395,15 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 }
 
 func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	endpoint, err := o.endpointGetter.ServiceDiscoveryEndpoint()
+	if err != nil {
+		return nil, err
+	}
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
-			AddonsTemplateURL: addonsURL,
-			AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+			AddonsTemplateURL:        addonsURL,
+			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
+			ServiceDiscoveryEndpoint: endpoint,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
@@ -412,6 +426,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			ImageTag: o.imageTag,
 			Digest:   o.imageDigest,
 		},
+		ServiceDiscoveryEndpoint: endpoint,
 	}, nil
 }
 

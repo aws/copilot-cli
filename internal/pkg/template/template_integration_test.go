@@ -20,13 +20,15 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 		opts template.WorkloadOpts
 	}{
 		"renders a valid template by default": {
-			opts: template.WorkloadOpts{},
+			opts: template.WorkloadOpts{
+				ServiceDiscoveryEndpoint: "test.app.local"},
 		},
 		"renders with timeout and no retries": {
 			opts: template.WorkloadOpts{
 				StateMachine: &template.StateMachineOpts{
 					Timeout: aws.Int(3600),
 				},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 		"renders with options": {
@@ -35,6 +37,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					Retries: aws.Int(5),
 					Timeout: aws.Int(3600),
 				},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 		"renders with options and addons": {
@@ -48,6 +51,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SecretOutputs:   []string{"TablePassword"},
 					PolicyOutputs:   []string{"TablePolicy"},
 				},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 	}
@@ -81,7 +85,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 	}{
 		"renders a valid template by default": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 		"renders a valid template with addons with no outputs": {
@@ -90,6 +95,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				NestedStack: &template.WorkloadNestedStackOpts{
 					StackName: "AddonsStack",
 				},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 		"renders a valid template with addons with outputs": {
@@ -101,6 +107,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					SecretOutputs:   []string{"TablePassword"},
 					PolicyOutputs:   []string{"TablePolicy"},
 				},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 		"renders a valid template with private subnet placement": {
@@ -110,11 +117,13 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: "DISABLED",
 					SubnetsType:    "PrivateSubnets",
 				},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 		"renders a valid template with all storage options": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ServiceDiscoveryEndpoint: "test.app.local",
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 					EFSPerms: []*template.EFSPermission{
@@ -147,7 +156,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with minimal storage options": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ServiceDiscoveryEndpoint: "test.app.local",
 				Storage: &template.StorageOpts{
 					EFSPerms: []*template.EFSPermission{
 						{
@@ -175,7 +185,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with ephemeral storage": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ServiceDiscoveryEndpoint: "test.app.local",
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 				},
@@ -183,9 +194,10 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with entrypoint and command overrides": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck: defaultHttpHealthCheck,
-				EntryPoint:      []string{"/bin/echo", "hello"},
-				Command:         []string{"world"},
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				EntryPoint:               []string{"/bin/echo", "hello"},
+				Command:                  []string{"world"},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 	}

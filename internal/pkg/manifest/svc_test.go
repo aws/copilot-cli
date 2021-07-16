@@ -27,6 +27,7 @@ name: frontend
 type: "Load Balanced Web Service"
 image:
   location: foo/bar
+  credentials: some arn
   port: 80
 cpu: 512
 memory: 1024
@@ -80,6 +81,7 @@ environments:
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
 								Location: aws.String("foo/bar"),
+								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
 						RoutingRule: RoutingRule{
