@@ -15,6 +15,7 @@ import (
 
 var cli *client.CLI
 var appName string
+var envName string
 
 /**
 The Init Suite runs through the copilot init workflow for a brand new
@@ -31,6 +32,7 @@ var _ = BeforeSuite(func() {
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-init-%d", time.Now().Unix())
+	envName = "test"
 })
 
 var _ = AfterSuite(func() {

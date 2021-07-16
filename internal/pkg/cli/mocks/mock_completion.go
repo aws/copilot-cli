@@ -48,6 +48,20 @@ func (mr *MockshellCompleterMockRecorder) GenBashCompletion(w interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenBashCompletion", reflect.TypeOf((*MockshellCompleter)(nil).GenBashCompletion), w)
 }
 
+// GenFishCompletion mocks base method.
+func (m *MockshellCompleter) GenFishCompletion(w io.Writer, includeDesc bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenFishCompletion", w, includeDesc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GenFishCompletion indicates an expected call of GenFishCompletion.
+func (mr *MockshellCompleterMockRecorder) GenFishCompletion(w, includeDesc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenFishCompletion", reflect.TypeOf((*MockshellCompleter)(nil).GenFishCompletion), w, includeDesc)
+}
+
 // GenZshCompletion mocks base method.
 func (m *MockshellCompleter) GenZshCompletion(w io.Writer) error {
 	m.ctrl.T.Helper()

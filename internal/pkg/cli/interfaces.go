@@ -408,6 +408,10 @@ type versionGetter interface {
 	Version() (string, error)
 }
 
+type endpointGetter interface {
+	ServiceDiscoveryEndpoint() (string, error)
+}
+
 type envTemplater interface {
 	EnvironmentTemplate(appName, envName string) (string, error)
 }
@@ -568,8 +572,9 @@ type runningTaskSelector interface {
 	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
 }
 
-type dockerEngineValidator interface {
+type dockerEngine interface {
 	CheckDockerEngineRunning() error
+	GetPlatform() (string, string, error)
 }
 
 type codestar interface {

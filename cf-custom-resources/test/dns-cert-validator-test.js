@@ -10,7 +10,7 @@ describe("DNS Validated Certificate Handler", () => {
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
   const LogGroup = "/aws/lambda/testLambda";
-  const LogStream = "/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
+  const LogStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
@@ -22,13 +22,14 @@ describe("DNS Validated Certificate Handler", () => {
   const testRootDNSRole = "mockRole";
   const testAliases = `{
     "frontend": ["v1.${testAppName}.${testDomainName}", "foobar.com"],
-    "backend": ["v2.${testDomainName}"]
+    "backend": ["v2.${testDomainName}", "${testEnvName}.${testAppName}.${testDomainName}"]
   }`;
   const testUpdatedAliases = `{
     "frontend": ["v1.${testAppName}.${testDomainName}"],
-    "backend": ["v2.${testDomainName}"]
+    "backend": ["v2.${testDomainName}", "${testEnvName}.${testAppName}.${testDomainName}"]
   }`;
   const testSANs = [
+    "test.myapp.example.com",
     "*.test.myapp.example.com",
     "v1.myapp.example.com",
     "v2.example.com",
@@ -518,6 +519,7 @@ describe("DNS Validated Certificate Handler", () => {
           sinon.match({
             DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
             SubjectAlternativeNames: [
+              `${testEnvName}.${testAppName}.${testDomainName}`,
               `*.${testEnvName}.${testAppName}.${testDomainName}`,
             ],
             ValidationMethod: "DNS",

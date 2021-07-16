@@ -17,16 +17,17 @@ import (
 type shellCompleter interface {
 	GenBashCompletion(w io.Writer) error
 	GenZshCompletion(w io.Writer) error
+	GenFishCompletion(w io.Writer, includeDesc bool) error
 }
 
 type completionOpts struct {
-	Shell string // must be "bash" or "zsh"
+	Shell string // must be "bash" or "zsh" or "fish"
 
 	w         io.Writer
 	completer shellCompleter
 }
 
-// Validate returns an error if the shell is not "bash" or "zsh".
+// Validate returns an error if the shell is not "bash" or "zsh" or "fish".
 func (opts *completionOpts) Validate() error {
 	if opts.Shell == "bash" {
 		return nil
@@ -34,7 +35,10 @@ func (opts *completionOpts) Validate() error {
 	if opts.Shell == "zsh" {
 		return nil
 	}
-	return errors.New("shell must be bash or zsh")
+	if opts.Shell == "fish" {
+		return nil
+	}
+	return errors.New("shell must be bash, zsh or fish")
 }
 
 // Execute writes the completion code to the writer.
@@ -43,16 +47,19 @@ func (opts *completionOpts) Execute() error {
 	if opts.Shell == "bash" {
 		return opts.completer.GenBashCompletion(opts.w)
 	}
-	return opts.completer.GenZshCompletion(opts.w)
+	if opts.Shell == "zsh" {
+		return opts.completer.GenZshCompletion(opts.w)
+	}
+	return opts.completer.GenFishCompletion(opts.w, true)
 }
 
-// BuildCompletionCmd returns the command to output shell completion code for the specified shell (bash or zsh).
+// BuildCompletionCmd returns the command to output shell completion code for the specified shell (bash or zsh or fish).
 func BuildCompletionCmd(rootCmd *cobra.Command) *cobra.Command {
 	opts := &completionOpts{}
 	cmd := &cobra.Command{
 		Use:   "completion [shell]",
 		Short: "Output shell completion code.",
-		Long: `Output shell completion code for bash or zsh.
+		Long: `Output shell completion code for bash, zsh or fish.
 The code must be evaluated to provide interactive completion of commands.`,
 		Example: `
   Install zsh completion
@@ -67,10 +74,16 @@ The code must be evaluated to provide interactive completion of commands.`,
   Install bash completion on linux
   /code $ source <(copilot completion bash)
   /code $ copilot completion bash > copilot.sh
-  /code $ sudo mv copilot.sh /etc/bash_completion.d/copilot`,
+  /code $ sudo mv copilot.sh /etc/bash_completion.d/copilot
+
+  Install fish completion
+  /code$ copilot completion fish | source
+
+  To load completions for each session, execute once:
+  /code$ copilot completion fish > ~/.config/fish/completions/copilot.fish`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return errors.New("requires a single shell argument (bash or zsh)")
+				return errors.New("requires a single shell argument (bash, zsh or fish)")
 			}
 			return nil
 		},

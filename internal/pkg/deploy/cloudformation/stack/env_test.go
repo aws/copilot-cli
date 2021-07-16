@@ -29,6 +29,7 @@ func TestEnv_Template(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().ParseEnv(&template.EnvOpts{
+					AppName:                   "project",
 					ScriptBucketName:          "mockbucket",
 					DNSCertValidatorLambda:    "mockkey1",
 					DNSDelegationLambda:       "mockkey2",
@@ -40,6 +41,7 @@ func TestEnv_Template(t *testing.T) {
 						PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
 						PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
 					},
+					LatestVersion: deploy.LatestEnvTemplateVersion,
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
 				e.parser = m
 			},
@@ -102,6 +104,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String(""),
 				},
+				{
+					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+					ParameterValue: aws.String("env.project.local"),
+				},
 			},
 		},
 		"with DNS": {
@@ -126,6 +132,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String("arn:aws:iam::000000000:role/project-DNSDelegationRole"),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+					ParameterValue: aws.String("env.project.local"),
 				},
 			},
 		},

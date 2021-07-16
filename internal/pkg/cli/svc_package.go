@@ -57,19 +57,20 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient     templater
-	initAddonsClient func(*packageSvcOpts) error // Overridden in tests.
-	ws               wsSvcReader
-	store            store
-	appCFN           appResourcesGetter
-	stackWriter      io.Writer
-	paramsWriter     io.Writer
-	addonsWriter     io.Writer
-	fs               afero.Fs
-	runner           runner
-	sel              wsSelector
-	prompt           prompter
-	stackSerializer  func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	addonsClient      templater
+	initAddonsClient  func(*packageSvcOpts) error // Overridden in tests.
+	ws                wsSvcReader
+	store             store
+	appCFN            appResourcesGetter
+	stackWriter       io.Writer
+	paramsWriter      io.Writer
+	addonsWriter      io.Writer
+	fs                afero.Fs
+	runner            runner
+	sel               wsSelector
+	prompt            prompter
+	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	newEndpointGetter func(app, env string) (endpointGetter, error)
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -137,6 +138,17 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)
 		}
 		return serializer, nil
+	}
+	opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
+		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         app,
+			Env:         env,
+			ConfigStore: store,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("new env describer for environment %s in app %s: %v", env, app, err)
+		}
+		return d, nil
 	}
 	return opts, nil
 }
@@ -280,9 +292,19 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	rc := stack.RuntimeConfig{
-		AdditionalTags: app.Tags,
+	endpointGetter, err := o.newEndpointGetter(o.appName, o.envName)
+	if err != nil {
+		return nil, err
 	}
+	endpoint, err := endpointGetter.ServiceDiscoveryEndpoint()
+	if err != nil {
+		return nil, err
+	}
+	rc := stack.RuntimeConfig{
+		AdditionalTags:           app.Tags,
+		ServiceDiscoveryEndpoint: endpoint,
+	}
+
 	if imgNeedsBuild {
 		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
 		if err != nil {

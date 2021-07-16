@@ -28,11 +28,6 @@ const (
 	defaultWritePermission = false
 )
 
-// Default value for Sidecar port.
-const (
-	defaultSidecarPort = "80"
-)
-
 // Min and Max values for task ephemeral storage in GiB.
 const (
 	ephemeralMinValueGiB = 21
@@ -77,6 +72,17 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 		if err := validateSidecarDependsOn(*config, name, s); err != nil {
 			return nil, err
 		}
+
+		entrypoint, err := convertEntryPoint(config.EntryPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		command, err := convertCommand(config.Command)
+		if err != nil {
+			return nil, err
+		}
+
 		mp := convertSidecarMountPoints(config.MountPoints)
 
 		sidecars = append(sidecars, &template.SidecarOpts{
@@ -91,6 +97,8 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 			MountPoints:  mp,
 			DockerLabels: config.DockerLabels,
 			DependsOn:    config.DependsOn,
+			EntryPoint:   entrypoint,
+			Command:      command,
 		})
 	}
 	return sidecars, nil
@@ -130,8 +138,7 @@ func convertImageDependsOn(s convertSidecarOpts) (map[string]string, error) {
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
 func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	if s == nil {
-		// default port for sidecar container to be 80.
-		return aws.String(defaultSidecarPort), nil, nil
+		return nil, nil, nil
 	}
 	portProtocol := strings.Split(*s, "/")
 	switch len(portProtocol) {

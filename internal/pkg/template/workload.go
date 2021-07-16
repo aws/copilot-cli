@@ -91,6 +91,8 @@ type SidecarOpts struct {
 	MountPoints  []*MountPoint
 	DockerLabels map[string]string
 	DependsOn    map[string]string
+	EntryPoint   []string
+	Command      []string
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -230,34 +232,36 @@ func defaultNetworkOpts() *NetworkOpts {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables          map[string]string
-	Secrets            map[string]string
-	Aliases            []string
-	Tags               map[string]string        // Used by App Runner workloads to tag App Runner service resources
-	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars           []*SidecarOpts
-	LogConfig          *LogConfigOpts
-	Autoscaling        *AutoscalingOpts
-	CapacityProviders  []*CapacityProviderStrategy
-	DesiredCountOnSpot *int
-	Storage            *StorageOpts
-	Network            *NetworkOpts
-	ExecuteCommand     *ExecuteCommandOpts
-	EntryPoint         []string
-	Command            []string
-	DomainAlias        string
-	DockerLabels       map[string]string
-	DependsOn          map[string]string
-	Publish            *PublishOpts
+	Variables                map[string]string
+	Secrets                  map[string]string
+	Aliases                  []string
+	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
+	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars                 []*SidecarOpts
+	LogConfig                *LogConfigOpts
+	Autoscaling              *AutoscalingOpts
+	CapacityProviders        []*CapacityProviderStrategy
+	DesiredCountOnSpot       *int
+	Storage                  *StorageOpts
+	Network                  *NetworkOpts
+	ExecuteCommand           *ExecuteCommandOpts
+	EntryPoint               []string
+	Command                  []string
+	DomainAlias              string
+	DockerLabels             map[string]string
+	DependsOn                map[string]string
+	Publish                  *PublishOpts
+	ServiceDiscoveryEndpoint string
 
 	// Additional options for service templates.
-	WorkloadType        string
-	HealthCheck         *ecs.HealthCheck
-	HTTPHealthCheck     HTTPHealthCheckOpts
-	AllowedSourceIps    []string
-	RulePriorityLambda  string
-	DesiredCountLambda  string
-	EnvControllerLambda string
+	WorkloadType         string
+	HealthCheck          *ecs.HealthCheck
+	HTTPHealthCheck      HTTPHealthCheckOpts
+	AllowedSourceIps     []string
+	RulePriorityLambda   string
+	DesiredCountLambda   string
+	EnvControllerLambda  string
+	CredentialsParameter string
 
 	// Additional options for job templates.
 	ScheduleExpression string
