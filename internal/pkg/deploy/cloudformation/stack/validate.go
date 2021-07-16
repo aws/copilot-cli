@@ -20,6 +20,15 @@ const (
 	dependsOnHealthy  = "HEALTHY"
 )
 
+const (
+	// AppTagKey is tag key for Copilot app.
+	AppTagKey = "copilot-application"
+	// EnvTagKey is tag key for Copilot env.
+	EnvTagKey = "copilot-environment"
+	// ServiceTagKey is tag key for Copilot svc.
+	ServiceTagKey = "copilot-service"
+)
+
 // Empty field errors.
 var (
 	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
@@ -43,9 +52,9 @@ var (
 	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
 	errInvalidPubSubTopicName        = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
-	errInvalidName                   = errors.New("names cannot be empty")
-	errNameTooLong                   = errors.New("names must not exceed 255 characters")
-	errNameBadFormat                 = errors.New("names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	errInvalidSvcName                = errors.New("service names cannot be empty")
+	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
+	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 )
 
 // Container dependency status options
@@ -411,7 +420,7 @@ func validateContainerPath(input string) error {
 // SNS Topic intended for a publisher.
 func validatePubSubName(name *string) error {
 	if name == nil || len(aws.StringValue(name)) == 0 {
-		return errMissingPublishTopicField
+		return errMissingPubSubTopicField
 	}
 
 	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
@@ -434,13 +443,13 @@ func validateWorkerNames(names []string) error {
 
 func validateSvcName(name string) error {
 	if name == "" {
-		return errInvalidName
+		return errInvalidSvcName
 	}
 	if len(name) > 255 {
-		return errNameTooLong
+		return errSvcNameTooLong
 	}
 	if !isCorrectSvcNameFormat(name) {
-		return errNameBadFormat
+		return errSvcNameBadFormat
 	}
 
 	return nil
@@ -459,4 +468,16 @@ func isCorrectSvcNameFormat(s string) bool {
 
 	trailingMatch := trailingPunctRegExp.FindStringSubmatch(s)
 	return len(trailingMatch) == 0
+}
+
+func validateTopicSubscription(ts manifest.TopicSubscription) error {
+	if err := validatePubSubName(aws.String(ts.Name)); err != nil {
+		return err
+	}
+
+	if err := validateSvcName(ts.Service); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -510,7 +510,7 @@ func Test_validatePubSubTopicName(t *testing.T) {
 		},
 		"error when no topic name": {
 			inName:  nil,
-			wantErr: errMissingPublishTopicField,
+			wantErr: errMissingPubSubTopicField,
 		},
 		"error when invalid topic name": {
 			inName:  aws.String("OHNO~/`...,"),
@@ -541,15 +541,15 @@ func TestValidateWorkerName(t *testing.T) {
 		},
 		"empty name": {
 			inName:  []string{""},
-			wantErr: fmt.Errorf("worker name `` is invalid: %s", errInvalidName),
+			wantErr: fmt.Errorf("worker name `` is invalid: %s", errInvalidSvcName),
 		},
 		"contains spaces": {
 			inName:  []string{"a re@!!y b#d n&me"},
-			wantErr: fmt.Errorf("worker name `a re@!!y b#d n&me` is invalid: %s", errNameBadFormat),
+			wantErr: fmt.Errorf("worker name `a re@!!y b#d n&me` is invalid: %s", errSvcNameBadFormat),
 		},
 		"too long": {
 			inName:  []string{"this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long"},
-			wantErr: fmt.Errorf("worker name `this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long` is invalid: %s", errNameTooLong),
+			wantErr: fmt.Errorf("worker name `this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long` is invalid: %s", errSvcNameTooLong),
 		},
 	}
 
