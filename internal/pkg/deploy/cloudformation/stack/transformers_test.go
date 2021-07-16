@@ -556,6 +556,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		inputUnhealthyThreshold *int64
 		inputInterval           *time.Duration
 		inputTimeout            *time.Duration
+		inputGracePeriod        *time.Duration
 
 		wantedOpts template.HTTPHealthCheckOpts
 	}{
@@ -566,9 +567,11 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"just HealthyThreshold": {
@@ -578,10 +581,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:  "/",
 				HealthyThreshold: aws.Int64(5),
+				GracePeriod:      aws.Int64(60),
 			},
 		},
 		"just UnhealthyThreshold": {
@@ -591,10 +596,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: aws.Int64(5),
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/",
 				UnhealthyThreshold: aws.Int64(5),
+				GracePeriod:        aws.Int64(60),
 			},
 		},
 		"just Interval": {
@@ -604,10 +611,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           &duration15Seconds,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Interval:        aws.Int64(15),
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"just Timeout": {
@@ -617,10 +626,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            &duration15Seconds,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Timeout:         aws.Int64(15),
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"just SuccessCodes": {
@@ -630,10 +641,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				SuccessCodes:    "200,301",
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"all values changed in manifest": {
@@ -643,6 +656,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: aws.Int64(3),
 			inputInterval:           &duration60Seconds,
 			inputTimeout:            &duration60Seconds,
+			inputGracePeriod:        &duration15Seconds,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
@@ -651,6 +665,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
 				Timeout:            aws.Int64(60),
+				GracePeriod:        aws.Int64(15),
 			},
 		},
 	}
@@ -666,6 +681,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 					UnhealthyThreshold: tc.inputUnhealthyThreshold,
 					Timeout:            tc.inputTimeout,
 					Interval:           tc.inputInterval,
+					GracePeriod:        tc.inputGracePeriod,
 				},
 			}
 			// WHEN
