@@ -547,7 +547,8 @@ type ssmPluginManager interface {
 type taskStopper interface {
 	StopOneOffTasks(app, env, family string) error
 	StopDefaultClusterTasks(familyName string) error
-	StopWorkloadTasks(app, env, workload string) error
+	StopWorkloadTasks(app, env, workload string, stopMessage ...string) error
+	StopTasksWithTaskIds(app string, env string, taskIDs[] string, stopMessage ...string) error
 }
 
 type serviceLinkedRoleCreator interface {

@@ -5805,18 +5805,42 @@ func (mr *MocktaskStopperMockRecorder) StopOneOffTasks(app, env, family interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopOneOffTasks", reflect.TypeOf((*MocktaskStopper)(nil).StopOneOffTasks), app, env, family)
 }
 
-// StopWorkloadTasks mocks base method.
-func (m *MocktaskStopper) StopWorkloadTasks(app, env, workload string) error {
+// StopTasksWithTaskIds mocks base method.
+func (m *MocktaskStopper) StopTasksWithTaskIds(app, env string, taskIDs []string, stopMessage ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StopWorkloadTasks", app, env, workload)
+	varargs := []interface{}{app, env, taskIDs}
+	for _, a := range stopMessage {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StopTasksWithTaskIds", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopTasksWithTaskIds indicates an expected call of StopTasksWithTaskIds.
+func (mr *MocktaskStopperMockRecorder) StopTasksWithTaskIds(app, env, taskIDs interface{}, stopMessage ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{app, env, taskIDs}, stopMessage...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasksWithTaskIds", reflect.TypeOf((*MocktaskStopper)(nil).StopTasksWithTaskIds), varargs...)
+}
+
+// StopWorkloadTasks mocks base method.
+func (m *MocktaskStopper) StopWorkloadTasks(app, env, workload string, stopMessage ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{app, env, workload}
+	for _, a := range stopMessage {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StopWorkloadTasks", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StopWorkloadTasks indicates an expected call of StopWorkloadTasks.
-func (mr *MocktaskStopperMockRecorder) StopWorkloadTasks(app, env, workload interface{}) *gomock.Call {
+func (mr *MocktaskStopperMockRecorder) StopWorkloadTasks(app, env, workload interface{}, stopMessage ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopWorkloadTasks", reflect.TypeOf((*MocktaskStopper)(nil).StopWorkloadTasks), app, env, workload)
+	varargs := append([]interface{}{app, env, workload}, stopMessage...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopWorkloadTasks", reflect.TypeOf((*MocktaskStopper)(nil).StopWorkloadTasks), varargs...)
 }
 
 // MockserviceLinkedRoleCreator is a mock of serviceLinkedRoleCreator interface.

@@ -192,6 +192,7 @@ Allows you to categorize resources.`
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
 unless any time filtering flags are set.`
 	followFlagDescription = "Optional. Specifies if the logs should be streamed."
+	allFlagDescription = "Optional. Specifies if all the tasks running in the service needs to get stopped"
 	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
 	startTimeFlagDescription = `Optional. Only return logs after a specific date (RFC3339).
