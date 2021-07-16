@@ -370,6 +370,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							SecurityGroups: []string{"sg-123"},
 						},
 					},
+					Publish: &PublishConfig{
+						Topics: []Topic{
+							{
+								Name:           aws.String("publisher1"),
+								AllowedWorkers: []string{"worker1", "worker2"},
+							},
+						},
+					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
@@ -433,6 +441,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Network: &NetworkConfig{
 							VPC: &vpcConfig{
 								SecurityGroups: []string{"sg-456", "sg-789"},
+							},
+						},
+						Publish: &PublishConfig{
+							Topics: []Topic{
+								{
+									Name:           aws.String("publisher1"),
+									AllowedWorkers: []string{"worker1", "worker2"},
+								},
 							},
 						},
 					},
@@ -525,6 +541,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						VPC: &vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-456", "sg-789"},
+						},
+					},
+					Publish: &PublishConfig{
+						Topics: []Topic{
+							{
+								Name:           aws.String("publisher1"),
+								AllowedWorkers: []string{"worker1", "worker2"},
+							},
 						},
 					},
 				},

@@ -35,21 +35,25 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		envName       string
 		svcStackPath  string
 		svcParamsPath string
+		topicArns     map[string]string
 	}{
 		"default env": {
 			envName:       "test",
 			svcStackPath:  "svc-test.stack.yml",
 			svcParamsPath: "svc-test.params.json",
+			topicArns:     nil,
 		},
 		"staging env": {
 			envName:       "staging",
 			svcStackPath:  "svc-staging.stack.yml",
 			svcParamsPath: "svc-staging.params.json",
+			topicArns:     nil,
 		},
 		"prod env": {
 			envName:       "prod",
 			svcStackPath:  "svc-prod.stack.yml",
 			svcParamsPath: "svc-prod.params.json",
+			topicArns:     map[string]string{"givesdogs": "arn:aws:sns:us-west-2:123456789123:my-app-prod-givesdogs"},
 		},
 	}
 	path := filepath.Join("testdata", "workloads", svcManifestPath)
@@ -64,7 +68,10 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := envMft.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
-		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{ServiceDiscoveryEndpoint: svcDiscoveryEndpointName})
+		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
+			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
+			SNSTopicARNs:             tc.topicArns,
+		})
 
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

@@ -209,7 +209,8 @@ type StateMachineOpts struct {
 
 // PublishOpts holds configuration needed if the service has publishers.
 type PublishOpts struct {
-	Topics []*Topics
+	Topics    []*Topics
+	TopicArns map[string]string
 }
 
 // Topics holds information needed to render a SNSTopic in a container definition.
@@ -279,6 +280,7 @@ type ParseRequestDrivenWebServiceInput struct {
 	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	EnableHealthCheck   bool
 	EnvControllerLambda string
+	Publish             *PublishOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	ScriptBucketName     string

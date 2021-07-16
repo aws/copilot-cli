@@ -90,6 +90,8 @@ Resources:
             Value: "info"
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"persistence":"/etc/scratch"}'
+          - Name: COPILOT_SNS_TOPIC_ARNS
+            Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-givesdogs"}'
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           
@@ -591,6 +593,43 @@ Resources:
         Name: !Ref WorkloadName
       TemplateURL:
         !Ref AddonsTemplateURL
+
+  givesdogsSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${AWS::StackName}-givesdogs
+    
+  givesdogsSNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      DependsOn: givesdogsSNSTopic
+      Properties:
+        Topics: 
+          - !Ref givesdogsSNSTopic
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: sqs.amazonaws.com
+              Action: 
+                - sns:Subscribe
+              Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
+              Condition:
+                StringEquals:
+                  'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                  'sqs:ResourceTag/copilot-service': 'takes-dogs'
+            - Effect: Allow
+              Principal:
+                Service: sqs.amazonaws.com
+              Action: 
+                - sns:Subscribe
+              Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
+              Condition:
+                StringEquals:
+                  'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                  'sqs:ResourceTag/copilot-service': 'takes-animals'
 
 Outputs:
   DiscoveryServiceARN:

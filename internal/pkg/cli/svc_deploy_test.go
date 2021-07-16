@@ -540,7 +540,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Name: mockAppName,
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil).Times(2)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{
@@ -564,7 +564,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				AccountID: "1234567890",
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil).Times(2)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{
@@ -591,7 +591,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil).Times(2)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
@@ -613,7 +613,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil).Times(2)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
@@ -635,7 +635,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil).Times(2)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
@@ -657,7 +657,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil).Times(2)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
