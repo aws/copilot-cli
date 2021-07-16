@@ -659,3 +659,33 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 		Service: aws.String(t.Service),
 	}, nil
 }
+
+func convertSubscribe(s *manifest.SubscribeConfig) (*template.SubscribeOpts, error) {
+	if s == nil || s.Topics == nil {
+		return nil, nil
+	}
+
+	subscriptions := template.SubscribeOpts{}
+	for _, sb := range *s.Topics {
+		ts, err := convertTopicSubscription(sb)
+		if err != nil {
+			return nil, err
+		}
+
+		subscriptions.Topics = append(subscriptions.Topics, ts)
+	}
+
+	return &subscriptions, nil
+}
+
+func convertTopicSubscription(t manifest.TopicSubscription) (*template.TopicSubscription, error) {
+	err := validateTopicSubscription(t)
+	if err != nil {
+		return nil, fmt.Errorf(`invalid topic subscription %s: %w`, t.Name, err)
+	}
+
+	return &template.TopicSubscription{
+		Name:    aws.String(t.Name),
+		Service: aws.String(t.Service),
+	}, nil
+}

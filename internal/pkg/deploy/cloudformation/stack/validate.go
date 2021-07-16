@@ -21,13 +21,30 @@ const (
 	dependsOnHealthy  = "HEALTHY"
 )
 
+const (
+	// AppTagKey is tag key for Copilot app.
+	AppTagKey = "copilot-application"
+	// EnvTagKey is tag key for Copilot env.
+	EnvTagKey = "copilot-environment"
+	// ServiceTagKey is tag key for Copilot svc.
+	ServiceTagKey = "copilot-service"
+)
+
 // Empty field errors.
 var (
+<<<<<<< HEAD
 	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
 	errNoContainerPath          = errors.New("`path` cannot be empty")
 	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
 	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
+=======
+	errNoFSID                  = errors.New("volume field `efs.id` cannot be empty")
+	errNoContainerPath         = errors.New("`path` cannot be empty")
+	errNoSourceVolume          = errors.New("`source_volume` cannot be empty")
+	errEmptyEFSConfig          = errors.New("bad EFS configuration: `efs` cannot be empty")
+	errMissingPubSubTopicField = errors.New("topic `name` cannot be empty")
+>>>>>>> 8cc1426c (adds validation/converters for template)
 )
 
 // Conditional errors.
@@ -47,7 +64,10 @@ var (
 	errInvalidSvcName                = errors.New("service names cannot be empty")
 	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
 	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+<<<<<<< HEAD
 	errTopicSubscriptionNotAllowed   = errors.New("topic not in list of topics available to subscribe to")
+=======
+>>>>>>> 8cc1426c (adds validation/converters for template)
 )
 
 // Container dependency status options
@@ -411,9 +431,15 @@ func validateContainerPath(input string) error {
 
 // ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
 // SNS Topic intended for a publisher.
+<<<<<<< HEAD
 func validatePubSubName(name string) error {
 	if len(name) == 0 {
 		return errMissingPublishTopicField
+=======
+func validatePubSubName(name *string) error {
+	if name == nil || len(aws.StringValue(name)) == 0 {
+		return errMissingPubSubTopicField
+>>>>>>> 8cc1426c (adds validation/converters for template)
 	}
 
 	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
