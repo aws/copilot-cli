@@ -84,8 +84,7 @@ function report (
 
 exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
-    const [serviceARN, appDNSRole, customDomain] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain,];
-    appHostedZoneID = props.HostedZoneID;
+    const [serviceARN, appDNSRole, customDomain, appDNSName] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain, props.AppDNSName, ];
     const physicalResourceID = `/associate-domain-app-runner/${customDomain}`;
     let handler = async function () {
         // Configure clients.
@@ -96,7 +95,7 @@ exports.handler = async function (event, context) {
             }),
         });
         appRunnerClient = new AWS.AppRunner();
-
+        appHostedZoneID = await domainHostedZoneID(appDNSName);
         switch (event.RequestType) {
             case "Create":
             case "Update":
@@ -110,7 +109,6 @@ exports.handler = async function (event, context) {
                 throw new Error(`Unsupported request type ${event.RequestType}`);
         }
     };
-
     try {
         await Promise.race([exports.deadlineExpired(), handler(),]);
         await report(event, context, "SUCCESS", physicalResourceID);
@@ -129,6 +127,22 @@ exports.deadlineExpired = function () {
         );
     });
 };
+
+/**
+ * Get the hosted zone ID of the domain name from the app account.
+ * @param {string} domainName
+ */
+async function domainHostedZoneID(domainName) {
+    const data = await appRoute53Client.listHostedZonesByName({
+        DNSName: domainName,
+        MaxItems: "1",
+    }).promise();
+
+    if (!data.HostedZones || data.HostedZones.length === 0) {
+        throw new Error(`couldn't find any Hosted Zone with DNS name ${domainName}`);
+    }
+    return data.HostedZones[0].Id.split("/").pop();
+}
 
 /**
  * Add custom domain for service by associating and adding records for both the domain and the validation.
@@ -364,9 +378,16 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
         HostedZoneId: hostedZoneID,
     };
 
-    const data = await appRoute53Client.changeResourceRecordSets(params).promise().catch((err) => {
+    let data;
+    try {
+        data = await appRoute53Client.changeResourceRecordSets(params).promise();
+    } catch (err) {
+        let recordSetNotFoundErrMessageRegex = /Tried to delete resource record set \[name='.*', type='CNAME'] but it was not found/;
+        if (action === "DELETE" && err.message.search(recordSetNotFoundErrMessageRegex) !== -1) {
+            return; // If we attempt to `DELETE` a record that doesn't exist, the job is already done, skip waiting.
+        }
         throw new Error(`update record ${recordName}: ` + err.message);
-    });
+    }
 
     await appRoute53Client.waitFor('resourceRecordSetsChanged', {
          // Wait up to 5 minutes
