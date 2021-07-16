@@ -100,7 +100,6 @@ func (s *WorkerService) MarshalBinary() ([]byte, error) {
 	content, err := s.parser.Parse(workerSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
-		"dirName":    tplDirName,
 	}))
 	if err != nil {
 		return nil, err

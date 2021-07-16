@@ -77,9 +77,7 @@ func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(requestDrivenWebSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
-		"dirName": tplDirName,
-	}))
+	content, err := s.parser.Parse(requestDrivenWebSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{}))
 	if err != nil {
 		return nil, err
 	}
