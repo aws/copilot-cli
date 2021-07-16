@@ -45,8 +45,10 @@ environments:
     count:
       spot: 5
     http:
-      deregistration_delay: 30s
-      grace_period: 30s
+      healthcheck:
+        path: /
+        deregistration_delay: 30s
+        grace_period: 30s
   prod:
     count:
       range:

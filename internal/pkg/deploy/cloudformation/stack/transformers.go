@@ -292,7 +292,6 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	if hc.HealthCheckArgs.GracePeriod != nil {
 		opts.GracePeriod = aws.Int64(int64(hc.HealthCheckArgs.GracePeriod.Seconds()))
 	}
-
 	return opts
 }
 
