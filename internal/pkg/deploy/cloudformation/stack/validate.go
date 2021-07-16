@@ -58,7 +58,7 @@ var (
 // Regex options
 var (
 	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
-	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression only contains letters, numbers, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
 	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
 	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 )

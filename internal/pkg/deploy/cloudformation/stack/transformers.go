@@ -580,7 +580,7 @@ func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
 		return nil, nil
 	}
 	publishers := template.PublishOpts{}
-	// convert the topics to template Topicsz
+	// convert the topics to template Topics
 	for _, topic := range p.Topics {
 		t, err := convertTopic(topic)
 		if err != nil {
