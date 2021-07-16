@@ -60,7 +60,6 @@ const (
 	appDomainNameKey              = "AppDomainName"
 	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
 	appNameKey                    = "AppName"
-	appDNSDelegationRoleName      = "DNSDelegationRole"
 
 	// arn:${partition}:iam::${account}:role/${roleName}
 	fmtStackSetAdminRoleARN = "arn:%s:iam::%s:role/%s"
@@ -152,7 +151,7 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(appDNSDelegationRoleParamName),
-			ParameterValue: aws.String(dnsDelegationRoleName(c.Name)),
+			ParameterValue: aws.String(deploy.DNSDelegationRoleName(c.Name)),
 		},
 	}, nil
 }
@@ -267,8 +266,4 @@ func DNSDelegatedAccountsForStack(stack *cloudformation.Stack) []string {
 	}
 
 	return []string{}
-}
-
-func dnsDelegationRoleName(appName string) string {
-	return fmt.Sprintf("%s-%s", appName, appDNSDelegationRoleName)
 }

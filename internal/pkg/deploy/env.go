@@ -21,15 +21,13 @@ type CreateEnvironmentInput struct {
 	// The version of the environment template to create the stack. If empty, creates the legacy stack.
 	Version string
 
-	AppName                  string            // Name of the application this environment belongs to.
-	Name                     string            // Name of the environment, must be unique within an application.
-	Prod                     bool              // Whether or not this environment is a production environment.
-	ToolsAccountPrincipalARN string            // The Principal ARN of the tools account.
-	AppDNSName               string            // The DNS name of this application, if it exists
-	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the application.
-	CustomResourcesURLs      map[string]string // Environment custom resource script S3 object URLs.
-	ImportVPCConfig          *config.ImportVPC // Optional configuration if users have an existing VPC.
-	AdjustVPCConfig          *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
+	App                 AppInformation    // Information about the application that the environment belongs to, include app name, DNS name, the principal ARN of the account.
+	Name                string            // Name of the environment, must be unique within an application.
+	Prod                bool              // Whether or not this environment is a production environment.
+	AdditionalTags      map[string]string // AdditionalTags are labels applied to resources under the application.
+	CustomResourcesURLs map[string]string // Environment custom resource script S3 object URLs.
+	ImportVPCConfig     *config.ImportVPC // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig     *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }

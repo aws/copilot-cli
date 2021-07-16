@@ -280,8 +280,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().UpgradeEnvironment(&deploy.CreateEnvironmentInput{
 					Version: deploy.LatestEnvTemplateVersion,
-					AppName: "phonetool",
-					Name:    "test",
+					App: deploy.AppInformation{
+						Name: "phonetool",
+					},
+					Name: "test",
 					ImportVPCConfig: &config.ImportVPC{
 						ID: "abc",
 					},
@@ -354,8 +356,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().EnvironmentTemplate("phonetool", "test").Return("template", nil)
 				mockUpgrader.EXPECT().UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-					Version:             deploy.LatestEnvTemplateVersion,
-					AppName:             "phonetool",
+					Version: deploy.LatestEnvTemplateVersion,
+					App: deploy.AppInformation{
+						Name: "phonetool",
+					},
 					Name:                "test",
 					CFNServiceRoleARN:   "execARN",
 					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
@@ -421,8 +425,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().EnvironmentTemplate("phonetool", "test").Return("modified template", nil)
 				mockUpgrader.EXPECT().UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-					Version:           deploy.LatestEnvTemplateVersion,
-					AppName:           "phonetool",
+					Version: deploy.LatestEnvTemplateVersion,
+					App: deploy.AppInformation{
+						Name: "phonetool",
+					},
 					Name:              "test",
 					CFNServiceRoleARN: "execARN",
 					ImportVPCConfig: &config.ImportVPC{

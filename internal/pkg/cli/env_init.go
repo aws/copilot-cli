@@ -560,16 +560,18 @@ func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map
 		return fmt.Errorf("get identity: %w", err)
 	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
-		Name:                     o.name,
-		AppName:                  o.appName,
-		Prod:                     o.isProduction,
-		ToolsAccountPrincipalARN: caller.RootUserARN,
-		AppDNSName:               app.Domain,
-		AdditionalTags:           app.Tags,
-		CustomResourcesURLs:      customResourcesURLs,
-		AdjustVPCConfig:          o.adjustVPCConfig(),
-		ImportVPCConfig:          o.importVPCConfig(),
-		Version:                  deploy.LatestEnvTemplateVersion,
+		Name: o.name,
+		App: deploy.AppInformation{
+			Name:                o.appName,
+			DNSName:             app.Domain,
+			AccountPrincipalARN: caller.RootUserARN,
+		},
+		Prod:                o.isProduction,
+		AdditionalTags:      app.Tags,
+		CustomResourcesURLs: customResourcesURLs,
+		AdjustVPCConfig:     o.adjustVPCConfig(),
+		ImportVPCConfig:     o.importVPCConfig(),
+		Version:             deploy.LatestEnvTemplateVersion,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {

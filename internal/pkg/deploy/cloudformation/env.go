@@ -52,8 +52,10 @@ func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env
 // DeleteEnvironment deletes the CloudFormation stack of an environment.
 func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN string) error {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
-		AppName: appName,
-		Name:    envName,
+		App: deploy.AppInformation{
+			Name: appName,
+		},
+		Name: envName,
 	})
 	return cf.cfnClient.DeleteAndWaitWithRoleARN(conf.StackName(), cfnExecRoleARN)
 }
@@ -61,8 +63,10 @@ func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN stri
 // GetEnvironment returns the Environment metadata from the CloudFormation stack.
 func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Environment, error) {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
-		AppName: appName,
-		Name:    envName,
+		App: deploy.AppInformation{
+			Name: appName,
+		},
+		Name: envName,
 	})
 	descr, err := cf.cfnClient.Describe(conf.StackName())
 	if err != nil {
