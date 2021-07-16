@@ -63,20 +63,11 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 
-	alias := "" // TODO: parse from manifest
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
 		Tags:              s.manifest.Tags,
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
-
-		// TODO: fill these
-		ScriptBucketName:     "",
-		CustomDomainLambda:   "",
-		AWSSDKLayer:          "",
-		Alias:                alias,
-		AppDNSDelegationRole: s.app.DNSDelegationRole(),
-		AppDNSName:           s.app.DNSName, // TODO: is this "" or nil
 	})
 	if err != nil {
 		return "", err
