@@ -244,7 +244,7 @@ func TestGeneratePublishJSON(t *testing.T) {
 			[]*Topics{
 				{
 					Name:           aws.String("tests"),
-					AllowedWorkers: aws.StringSlice([]string{"testsWorker1", "testsWorker2"}),
+					AllowedWorkers: []string{"testsWorker1", "testsWorker2"},
 				},
 			},
 		), "JSON should render correctly")

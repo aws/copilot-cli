@@ -29,14 +29,21 @@ cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
-
 {{- if .Subscribe}}{{- if .Subscribe.Topics}}
+# The events will be available in an SQS queue via the env var $COPILOT_SQS_QUEUE_ARN
 subscribe:
   topics:
 {{- range $topic := .Subscribe.Topics}}
-    - name: {{.Name}}
-      service: {{.Service}}
+    - name: {{$topic.Name}}
+      service: {{$topic.Service}}
 {{- end}}
+{{- else}}
+# You can register to topics from other services.
+# The events will be available in an SQS queue via the env var $COPILOT_SQS_QUEUE_ARN
+# subscribe:
+#   topics: 
+#     - name: topic-from-another-service
+#       service: another-service
 {{- end}}{{- end}}
 
 # Optional fields for more advanced use-cases.
@@ -51,10 +58,3 @@ subscribe:
 #environments:
 #  test:
 #    count: 2               # Number of tasks to run for the "test" environment.
-
-# You can enable self-publishing or publishing to other services.
-#publish:
-#  topics:
-#    - name: {{.Name}}Topic
-#      allowed_workers:
-#        - {{.Name}}
