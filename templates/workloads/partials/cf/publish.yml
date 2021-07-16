@@ -6,7 +6,7 @@
       TopicName: ${AWS::StackName}-{{logicalIDSafe $topic.Name}}
   
   {{- if $topic.AllowedWorkers}}
-  {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
+{{logicalIDSafe $topic.Name}}SNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
     Properties:

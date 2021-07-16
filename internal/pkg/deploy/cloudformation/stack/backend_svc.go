@@ -90,6 +90,10 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
+	publishers, err := convertPublish(s.manifest.Publish, s.rc.SNSTopicARNs)
+	if err != nil {
+		return "", fmt.Errorf("convert the publish field for service %s: %w", s.name, err)
+	}
 
 	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
 	if err != nil {
@@ -118,27 +122,28 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
-		Variables:            s.manifest.BackendServiceConfig.Variables,
-		Secrets:              s.manifest.BackendServiceConfig.Secrets,
-		NestedStack:          outputs,
-		Sidecars:             sidecars,
-		Autoscaling:          autoscaling,
-		CapacityProviders:    capacityProviders,
-		DesiredCountOnSpot:   desiredCountOnSpot,
-		ExecuteCommand:       convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:         manifest.BackendServiceType,
-		HealthCheck:          s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
-		LogConfig:            convertLogging(s.manifest.Logging),
-		DockerLabels:         s.manifest.ImageConfig.DockerLabels,
-		DesiredCountLambda:   desiredCountLambda.String(),
-		EnvControllerLambda:  envControllerLambda.String(),
-		Storage:              storage,
-		Network:              convertNetworkConfig(s.manifest.Network),
-		EntryPoint:           entrypoint,
-		Command:              command,
-		DependsOn:            dependencies,
-		CredentialsParameter: aws.StringValue(s.manifest.ImageConfig.Credentials),
+		Variables:                s.manifest.BackendServiceConfig.Variables,
+		Secrets:                  s.manifest.BackendServiceConfig.Secrets,
+		NestedStack:              outputs,
+		Sidecars:                 sidecars,
+		Autoscaling:              autoscaling,
+		CapacityProviders:        capacityProviders,
+		DesiredCountOnSpot:       desiredCountOnSpot,
+		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:             manifest.BackendServiceType,
+		HealthCheck:              s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
+		LogConfig:                convertLogging(s.manifest.Logging),
+		DockerLabels:             s.manifest.ImageConfig.DockerLabels,
+		DesiredCountLambda:       desiredCountLambda.String(),
+		EnvControllerLambda:      envControllerLambda.String(),
+		Storage:                  storage,
+		Network:                  convertNetworkConfig(s.manifest.Network),
+		EntryPoint:               entrypoint,
+		Command:                  command,
+		DependsOn:                dependencies,
+		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
+		Publish:                  publishers,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

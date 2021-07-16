@@ -44,6 +44,7 @@ type ScheduledJobConfig struct {
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
 	Network                 *NetworkConfig `yaml:"network"`
+	Publish                 *PublishConfig `yaml:"publish"`
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.
@@ -143,6 +144,11 @@ func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (j *ScheduledJob) BuildRequired() (bool, error) {
 	return requiresBuild(j.ImageConfig.Image)
+}
+
+// PublishArgs returns a manifest.PublishConfig object for the service
+func (s *ScheduledJob) PublishCfg() *PublishConfig {
+	return s.ScheduledJobConfig.Publish
 }
 
 // JobDockerfileBuildRequired returns if the job container image should be built from local Dockerfile.

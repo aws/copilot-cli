@@ -53,6 +53,7 @@ type LoadBalancedWebServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
+	Publish       *PublishConfig            `yaml:"publish"`
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -141,6 +142,11 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)
+}
+
+// PublishCfg returns a manifest.PublishConfig object for the service
+func (s *LoadBalancedWebService) PublishCfg() *PublishConfig {
+	return s.LoadBalancedWebServiceConfig.Publish
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

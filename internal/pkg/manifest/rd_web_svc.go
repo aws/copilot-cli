@@ -29,6 +29,7 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
+	Publish                           *PublishConfig          `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {
@@ -92,6 +93,11 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)
+}
+
+// PublishCfg returns a manifest.PublishConfig object for the service
+func (s *RequestDrivenWebService) PublishCfg() *PublishConfig {
+	return s.RequestDrivenWebServiceConfig.Publish
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

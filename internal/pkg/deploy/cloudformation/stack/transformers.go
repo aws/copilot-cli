@@ -586,11 +586,13 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 	return out, nil
 }
 
-func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
-	if p == nil || len(p.Topics) == 0 {
+func convertPublish(p *manifest.PublishConfig, ta map[string]string) (*template.PublishOpts, error) {
+	if p == nil || len(p.Topics) == 0 || ta == nil {
 		return nil, nil
 	}
-	publishers := template.PublishOpts{}
+	publishers := template.PublishOpts{
+		TopicArns: ta,
+	}
 	// convert the topics to template Topics
 	for _, topic := range p.Topics {
 		t, err := convertTopic(topic)
@@ -605,14 +607,12 @@ func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
 }
 
 func convertTopic(t manifest.Topic) (*template.Topics, error) {
-	err := validatePubSubName(t.Name)
-	if err != nil {
+	// topic should have a valid name and valid service worker names
+	if err := validatePubSubName(t.Name); err != nil {
 		return nil, err
 	}
-
-	workerErr := validateWorkerNames(t.AllowedWorkers)
-	if workerErr != nil {
-		return nil, workerErr
+	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
+		return nil, err
 	}
 
 	return &template.Topics{

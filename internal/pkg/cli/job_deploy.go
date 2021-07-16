@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 
@@ -32,6 +33,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
+)
+
+const (
+	snsArnPattern = "arn:%s:sns:%s:%s:%s:%s:%s"
 )
 
 type deployJobOpts struct {
@@ -267,6 +272,31 @@ func (o *deployJobOpts) configureContainerImage() error {
 	return nil
 }
 
+func (o *deployJobOpts) getTopics(name string) (map[string]string, error) {
+	type publish interface {
+		PublishCfg() *manifest.PublishConfig
+	}
+	svc, err := o.manifest()
+	if err != nil {
+		return nil, err
+	}
+	mf, ok := svc.(publish)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required method Publish()", name)
+	}
+
+	if mf.PublishCfg() == nil || mf.PublishCfg().Topics == nil {
+		return nil, nil
+	}
+	topics := make(map[string]string)
+	for _, topic := range mf.PublishCfg().Topics {
+		arn := fmt.Sprintf(snsArnPattern, "aws", o.targetEnvironment.Region, o.targetApp.AccountID, o.targetApp.Name, o.envName, aws.StringValue(topic.Name))
+		topics[aws.StringValue(topic.Name)] = arn
+	}
+
+	return topics, nil
+}
+
 func (o *deployJobOpts) dfBuildArgs(job interface{}) (*exec.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
@@ -314,11 +344,16 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	if err != nil {
 		return nil, err
 	}
+	topicARNs, err := o.getTopics(o.name)
+	if err != nil {
+		return nil, err
+	}
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
+			SNSTopicARNs:             topicARNs,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
@@ -342,6 +377,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		AddonsTemplateURL:        addonsURL,
 		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 		ServiceDiscoveryEndpoint: endpoint,
+		SNSTopicARNs:             topicARNs,
 	}, nil
 }
 

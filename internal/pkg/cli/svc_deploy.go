@@ -49,19 +49,19 @@ type deployWkldVars struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store              store
-	ws                 wsSvcDirReader
-	imageBuilderPusher imageBuilderPusher
-	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
-	s3                 artifactUploader
-	cmd                runner
-	addons             templater
-	appCFN             appResourcesGetter
-	svcCFN             cloudformation.CloudFormation
-	sessProvider       sessionProvider
-	envUpgradeCmd      actionCommand
+	store               store
+	ws                  wsSvcDirReader
+	imageBuilderPusher  imageBuilderPusher
+	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	s3                  artifactUploader
+	cmd                 runner
+	addons              templater
+	appCFN              appResourcesGetter
+	svcCFN              cloudformation.CloudFormation
+	sessProvider        sessionProvider
+	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
-	endpointGetter     endpointGetter
+	endpointGetter      endpointGetter
 
 	spinner progress
 	sel     wsSelector
@@ -321,6 +321,30 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	return nil
 }
 
+func (o *deploySvcOpts) getTopics(name string) (map[string]string, error) {
+	type publish interface {
+		PublishCfg() *manifest.PublishConfig
+	}
+	svc, err := o.manifest()
+	if err != nil {
+		return nil, err
+	}
+	mf, ok := svc.(publish)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required method Publish()", name)
+	}
+
+	if mf.PublishCfg() == nil || mf.PublishCfg().Topics == nil {
+		return nil, nil
+	}
+	topics := make(map[string]string)
+	for _, topic := range mf.PublishCfg().Topics {
+		arn := fmt.Sprintf(snsArnPattern, "aws", o.targetEnvironment.Region, o.targetApp.AccountID, o.targetApp.Name, o.envName, aws.StringValue(topic.Name))
+		topics[aws.StringValue(topic.Name)] = arn
+	}
+	return topics, nil
+}
+
 func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
@@ -399,11 +423,17 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	if err != nil {
 		return nil, err
 	}
+
+	topicARNs, err := o.getTopics(o.name)
+	if err != nil {
+		return nil, err
+	}
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
+			SNSTopicARNs:             topicARNs,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
@@ -427,6 +457,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			Digest:   o.imageDigest,
 		},
 		ServiceDiscoveryEndpoint: endpoint,
+		SNSTopicARNs:             topicARNs,
 	}, nil
 }
 
