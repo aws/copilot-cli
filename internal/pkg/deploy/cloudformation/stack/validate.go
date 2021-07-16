@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -21,10 +22,11 @@ const (
 
 // Empty field errors.
 var (
-	errNoFSID          = errors.New("volume field `efs.id` cannot be empty")
-	errNoContainerPath = errors.New("`path` cannot be empty")
-	errNoSourceVolume  = errors.New("`source_volume` cannot be empty")
-	errEmptyEFSConfig  = errors.New("bad EFS configuration: `efs` cannot be empty")
+	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
+	errNoContainerPath          = errors.New("`path` cannot be empty")
+	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
+	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
+	errMissingPublishTopicField = errors.New("topic `name` cannot be empty")
 )
 
 // Conditional errors.
@@ -40,6 +42,10 @@ var (
 	errInvalidSidecarDependsOnStatus = fmt.Errorf("sidecar container dependency status must be one of < %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess)
 	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
+	errInvalidPubSubTopicName        = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
+	errInvalidName                   = errors.New("names cannot be empty")
+	errNameTooLong                   = errors.New("names must not exceed 255 characters")
+	errNameBadFormat                 = errors.New("names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 )
 
 // Container dependency status options
@@ -47,6 +53,14 @@ var (
 	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	sidecarDependsOnValidStatuses   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
+)
+
+// Regex options
+var (
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -391,4 +405,58 @@ func validateRootDirPath(input string) error {
 
 func validateContainerPath(input string) error {
 	return validatePath(input, maxDockerContainerPathLength)
+}
+
+// ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
+// SNS Topic intended for a publisher.
+func validatePubSubName(name *string) error {
+	if name == nil || len(aws.StringValue(name)) == 0 {
+		return errMissingPublishTopicField
+	}
+
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(aws.StringValue(name)) {
+		return errInvalidPubSubTopicName
+	}
+
+	return nil
+}
+
+func validateWorkerNames(names []string) error {
+	for _, name := range names {
+		err := validateSvcName(name)
+		if err != nil {
+			return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
+		}
+	}
+	return nil
+}
+
+func validateSvcName(name string) error {
+	if name == "" {
+		return errInvalidName
+	}
+	if len(name) > 255 {
+		return errNameTooLong
+	}
+	if !isCorrectSvcNameFormat(name) {
+		return errNameBadFormat
+	}
+
+	return nil
+}
+
+func isCorrectSvcNameFormat(s string) bool {
+	if !awsNameRegexp.MatchString(s) {
+		return false
+	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(s)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(s)
+	return len(trailingMatch) == 0
 }

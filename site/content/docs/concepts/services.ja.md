@@ -137,7 +137,7 @@ Routes
 Service Discovery
 
   Environment       Namespace
-  test              front-end.my-app.local:8080
+  test              front-end.test.my-app.local:8080
 
 Variables
 
@@ -145,7 +145,7 @@ Variables
   COPILOT_APPLICATION_NAME            test                my-app
   COPILOT_ENVIRONMENT_NAME            test                test
   COPILOT_LB_DNS                      test                my-ap-Publi-1RV8QEBNTEQCW-1762184596.ca-central-1.elb.amazonaws.com
-  COPILOT_SERVICE_DISCOVERY_ENDPOINT  test                my-app.local
+  COPILOT_SERVICE_DISCOVERY_ENDPOINT  test                test.my-app.local
   COPILOT_SERVICE_NAME                test                front-end
 ```
 

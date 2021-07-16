@@ -30,6 +30,7 @@ var (
 
 // EnvOpts holds data that can be provided to enable features in an environment stack template.
 type EnvOpts struct {
+	AppName string // The application name. Needed to create default value for svc discovery endpoint for upgraded environments.
 	Version string // The template version to use for the environment. If empty uses the "legacy" template.
 
 	DNSDelegationLambda       string
@@ -40,6 +41,8 @@ type EnvOpts struct {
 
 	ImportVPC *config.ImportVPC
 	VPCConfig *config.AdjustVPC
+
+	LatestVersion string
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

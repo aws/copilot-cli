@@ -44,6 +44,12 @@ sidecars:
 
 ```
 
+{% include 'sidecar-config.en.md' %}
+
+<div class="separator"></div>
+
+## Example
+
 Below is an example of specifying the [nginx](https://www.nginx.com/) sidecar container in a load balanced web service manifest.
 
 ``` yaml

@@ -108,11 +108,12 @@ const requestCertificate = async function (
 ) {
   const crypto = require("crypto");
   const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
-  // For backward compatiblity.
-  const sansToUse = [`*.${certDomain}`];
+  // For backward compatiblity, and make sure the SANs we use are unique.
+  const uniqueSansToUse = new Set([certDomain, `*.${certDomain}`]);
   for (const alias of aliases) {
-    sansToUse.push(alias);
+    uniqueSansToUse.add(alias);
   }
+  const sansToUse = [...uniqueSansToUse];
   const reqCertResponse = await acm
     .requestCertificate({
       DomainName: certDomain,
@@ -138,8 +139,7 @@ const requestCertificate = async function (
 
   let options;
   let attempt;
-  // We need to count the domain name itself.
-  const expectedValidationOptionsNum = sansToUse.length + 1;
+  const expectedValidationOptionsNum = sansToUse.length;
   for (attempt = 0; attempt < maxAttempts; attempt++) {
     const { Certificate } = await acm
       .describeCertificate({

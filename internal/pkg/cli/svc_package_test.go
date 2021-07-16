@@ -6,6 +6,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -287,6 +288,11 @@ count: 1`), nil)
 					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
 					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
 					return mockStackSerializer, nil
+				}
+				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
+					mockendpointGetter := mocks.NewMockendpointGetter(ctrl)
+					mockendpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(fmt.Sprintf("%s.%s.local", env, app), nil)
+					return mockendpointGetter, nil
 				}
 			},
 

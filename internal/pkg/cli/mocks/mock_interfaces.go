@@ -4283,6 +4283,44 @@ func (mr *MockversionGetterMockRecorder) Version() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionGetter)(nil).Version))
 }
 
+// MockendpointGetter is a mock of endpointGetter interface.
+type MockendpointGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockendpointGetterMockRecorder
+}
+
+// MockendpointGetterMockRecorder is the mock recorder for MockendpointGetter.
+type MockendpointGetterMockRecorder struct {
+	mock *MockendpointGetter
+}
+
+// NewMockendpointGetter creates a new mock instance.
+func NewMockendpointGetter(ctrl *gomock.Controller) *MockendpointGetter {
+	mock := &MockendpointGetter{ctrl: ctrl}
+	mock.recorder = &MockendpointGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockendpointGetter) EXPECT() *MockendpointGetterMockRecorder {
+	return m.recorder
+}
+
+// ServiceDiscoveryEndpoint mocks base method.
+func (m *MockendpointGetter) ServiceDiscoveryEndpoint() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceDiscoveryEndpoint")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceDiscoveryEndpoint indicates an expected call of ServiceDiscoveryEndpoint.
+func (mr *MockendpointGetterMockRecorder) ServiceDiscoveryEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDiscoveryEndpoint", reflect.TypeOf((*MockendpointGetter)(nil).ServiceDiscoveryEndpoint))
+}
+
 // MockenvTemplater is a mock of envTemplater interface.
 type MockenvTemplater struct {
 	ctrl     *gomock.Controller
