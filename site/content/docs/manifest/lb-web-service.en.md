@@ -17,6 +17,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         unhealthy_threshold: 2
         interval: 15s
         timeout: 10s
+        deregistration_delay: 30s
+        grace_period: 45s
       stickiness: false
       allowed_source_ips: ["10.24.34.0/23"]
       alias: example.com

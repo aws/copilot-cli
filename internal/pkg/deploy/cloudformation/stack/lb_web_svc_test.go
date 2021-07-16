@@ -195,7 +195,9 @@ Outputs:
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
 					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath: "/",
+						HealthCheckPath:     "/",
+						DeregistrationDelay: aws.Int64(60),
+						GracePeriod:         aws.Int64(60),
 					},
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
@@ -231,7 +233,9 @@ Outputs:
 					},
 					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath: "/",
+						HealthCheckPath:     "/",
+						DeregistrationDelay: aws.Int64(60),
+						GracePeriod:         aws.Int64(60),
 					},
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
