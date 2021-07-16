@@ -8,8 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -62,7 +60,6 @@ const (
 	appDomainNameKey              = "AppDomainName"
 	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
 	appNameKey                    = "AppName"
-	appDNSDelegationRoleName      = "DNSDelegationRole"
 
 	// arn:${partition}:iam::${account}:role/${roleName}
 	fmtStackSetAdminRoleARN = "arn:%s:iam::%s:role/%s"
@@ -154,7 +151,7 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(appDNSDelegationRoleParamName),
-			ParameterValue: aws.String(dnsDelegationRoleName(c.Name)),
+			ParameterValue: aws.String(deploy.DNSDelegationRoleName(c.Name)),
 		},
 	}, nil
 }
@@ -269,27 +266,4 @@ func DNSDelegatedAccountsForStack(stack *cloudformation.Stack) []string {
 	}
 
 	return []string{}
-}
-
-func dnsDelegationRoleName(appName string) string {
-	return fmt.Sprintf("%s-%s", appName, appDNSDelegationRoleName)
-}
-
-// AppInformation holds information about the application that need to be propagated to the env stacks and workload stacks.
-type AppInformation struct {
-	AccountPrincipalARN string
-	DNSName             string
-	Name                string
-}
-
-func (a *AppInformation) dnsDelegationRole() string {
-	if a.AccountPrincipalARN == "" || a.DNSName == "" {
-		return ""
-	}
-
-	appRole, err := arn.Parse(a.AccountPrincipalARN)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("arn:%s:iam::%s:role/%s", appRole.Partition, appRole.AccountID, dnsDelegationRoleName(a.Name))
 }

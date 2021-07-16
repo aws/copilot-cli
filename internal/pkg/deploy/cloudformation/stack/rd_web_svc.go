@@ -6,6 +6,8 @@ package stack
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -21,13 +23,13 @@ type requestDrivenWebSvcReadParser interface {
 type RequestDrivenWebService struct {
 	*appRunnerWkld
 	manifest *manifest.RequestDrivenWebService
-	app      AppInformation
+	app      deploy.AppInformation
 
 	parser requestDrivenWebSvcReadParser
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -73,7 +75,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		CustomDomainLambda:   "",
 		AWSSDKLayer:          "",
 		Alias:                alias,
-		AppDNSDelegationRole: s.app.dnsDelegationRole(),
+		AppDNSDelegationRole: s.app.DNSDelegationRole(),
 		AppDNSName:           s.app.DNSName, // TODO: is this "" or nil
 	})
 	if err != nil {

@@ -125,7 +125,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				}
 			}
 		case *manifest.RequestDrivenWebService:
-			appInfo := stack.AppInformation{
+			appInfo := deploy.AppInformation{
 				Name:                env.App,
 				DNSName:             app.Domain,
 				AccountPrincipalARN: app.AccountID,

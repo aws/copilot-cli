@@ -455,7 +455,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		appInfo := stack.AppInformation{
+		appInfo := deploy.AppInformation{
 			Name:                o.targetEnvironment.App,
 			DNSName:             o.targetApp.Domain,
 			AccountPrincipalARN: o.targetApp.AccountID,

@@ -19,7 +19,9 @@ import (
 )
 
 var mockCreateEnvInput = deploy.CreateEnvironmentInput{
-	AppName: "phonetool",
+	App: deploy.AppInformation{
+		Name: "phonetool",
+	},
 	Name:    "test",
 	Version: "v1.0.0",
 	CustomResourcesURLs: map[string]string{
