@@ -36,7 +36,9 @@ import (
 )
 
 const (
-	snsArnPattern = "arn:%s:sns:%s:%s:%s:%s:%s"
+	snsArnPattern     = "arn:%s:sns:%s:%s:%s:%s:%s-%s-%s"
+	AWSPartition      = "aws"
+	AWSChinaPartition = "aws-cn"
 )
 
 type deployJobOpts struct {
@@ -289,8 +291,12 @@ func (o *deployJobOpts) getTopics(name string) (map[string]string, error) {
 		return nil, nil
 	}
 	topics := make(map[string]string)
+	partition := AWSPartition
 	for _, topic := range mf.PublishCfg().Topics {
-		arn := fmt.Sprintf(snsArnPattern, "aws", o.targetEnvironment.Region, o.targetApp.AccountID, o.targetApp.Name, o.envName, aws.StringValue(topic.Name))
+		if contains(o.targetEnvironment.Region, []string{"cn-"}) {
+			partition = AWSChinaPartition
+		}
+		arn := fmt.Sprintf(snsArnPattern, partition, o.targetEnvironment.Region, o.targetApp.AccountID, o.targetApp.Name, o.envName, o.appName, o.envName, aws.StringValue(topic.Name))
 		topics[aws.StringValue(topic.Name)] = arn
 	}
 
