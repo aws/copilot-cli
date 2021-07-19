@@ -352,7 +352,7 @@ type DockerBuildArgs struct {
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
 	Args       map[string]string `yaml:"args,omitempty"`
 	Target     *string           `yaml:"target,omitempty"`
-	Platform   string            `yaml:"platform,omitempty`
+	Platform   string            `yaml:"platform,omitempty"`
 	CacheFrom  []string          `yaml:"cache_from,omitempty"`
 }
 
@@ -432,15 +432,15 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port         *string             `yaml:"port"`
-	Image        *string             `yaml:"image"`
-	Essential    *bool               `yaml:"essential"`
-	CredsParam   *string             `yaml:"credentialsParameter"`
-	Variables    map[string]string   `yaml:"variables"`
-	Secrets      map[string]string   `yaml:"secrets"`
-	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
-	DockerLabels map[string]string   `yaml:"labels"`
-	DependsOn    map[string]string   `yaml:"depends_on"`
+	Port          *string             `yaml:"port"`
+	Image         *string             `yaml:"image"`
+	Essential     *bool               `yaml:"essential"`
+	CredsParam    *string             `yaml:"credentialsParameter"`
+	Variables     map[string]string   `yaml:"variables"`
+	Secrets       map[string]string   `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint `yaml:"mount_points"`
+	DockerLabels  map[string]string   `yaml:"labels"`
+	DependsOn     map[string]string   `yaml:"depends_on"`
 	ImageOverride `yaml:",inline"`
 }
 
