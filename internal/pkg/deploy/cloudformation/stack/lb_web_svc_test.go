@@ -105,7 +105,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	testLBWebServiceManifest.ImageConfig.HealthCheck = &manifest.ContainerHealthCheck{
 		Retries: aws.Int(5),
 	}
-	testLBWebServiceManifest.Alias = aws.String("mockAlias")
+	testLBWebServiceManifest.Alias = &manifest.AliasOverride{String: aws.String("mockAlias")}
 	testLBWebServiceManifest.EntryPoint = &manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},

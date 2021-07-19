@@ -578,6 +578,18 @@ func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts
 	return opts
 }
 
+func convertAlias(alias *manifest.AliasOverride) ([]string, error) {
+	if alias == nil {
+		return nil, nil
+	}
+
+	out, err := alias.ToStringSlice()
+	if err != nil {
+		return nil, fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
+	}
+	return out, nil
+}
+
 func convertEntryPoint(entrypoint *manifest.EntryPointOverride) ([]string, error) {
 	if entrypoint == nil {
 		return nil, nil

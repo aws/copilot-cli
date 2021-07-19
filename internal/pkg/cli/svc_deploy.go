@@ -492,7 +492,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 				return nil, err
 			}
-			if err = validateAliasAndAppVersion(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
+			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
@@ -558,32 +558,42 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func validateAliasAndAppVersion(svcName, alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
-	if alias == "" {
+func validateLBSvcAliasAndAppVersion(svcName string, aliases *manifest.AliasOverride, app *config.Application, envName string, appVersionGetter versionGetter) error {
+	if aliases == nil {
 		return nil
+	}
+	aliasList, err := aliases.ToStringSlice()
+	if err != nil {
+		return fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
 	}
 	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
 		logAppVersionOutdatedError(svcName)
 		return err
 	}
-	// Alias should be within either env, app, or root hosted zone.
-	var regEnvHostedZone, regAppHostedZone, regRootHostedZone *regexp.Regexp
-	var err error
-	if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
-		return err
-	}
-	if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
-		return err
-	}
-	if regRootHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain)); err != nil {
-		return err
-	}
-	for _, re := range []*regexp.Regexp{regEnvHostedZone, regAppHostedZone, regRootHostedZone} {
-		if re.MatchString(alias) {
-			return nil
+	for _, alias := range aliasList {
+		// Alias should be within either env, app, or root hosted zone.
+		var regEnvHostedZone, regAppHostedZone, regRootHostedZone *regexp.Regexp
+		var err error
+		if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
+			return err
 		}
-	}
-	log.Errorf(`%s must match one of the following patterns:
+		if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
+			return err
+		}
+		if regRootHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain)); err != nil {
+			return err
+		}
+		validAlias := false
+		for _, re := range []*regexp.Regexp{regEnvHostedZone, regAppHostedZone, regRootHostedZone} {
+			if re.MatchString(alias) {
+				validAlias = true
+				break
+			}
+		}
+		if validAlias {
+			continue
+		}
+		log.Errorf(`%s must match one of the following patterns:
 - %s.%s.%s,
 - <name>.%s.%s.%s,
 - %s.%s,
@@ -591,12 +601,14 @@ func validateAliasAndAppVersion(svcName, alias string, app *config.Application, 
 - %s,
 - <name>.%s
 `, color.HighlightCode("http.alias"), envName, app.Name, app.Domain, envName,
-		app.Name, app.Domain, app.Name, app.Domain, app.Name,
-		app.Domain, app.Domain, app.Domain)
-	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
+			app.Name, app.Domain, app.Name, app.Domain, app.Name,
+			app.Domain, app.Domain, app.Domain)
+		return fmt.Errorf(`alias "%s" is not supported in hosted zones managed by Copilot`, alias)
+	}
+	return nil
 }
 
-func checkUnsupportedAlias(alias, envName string, app *config.Application) error {
+func checkUnsupportedRDSvcAlias(alias, envName string, app *config.Application) error {
 	var regEnvHostedZone, regAppHostedZone *regexp.Regexp
 	var err error
 	// Example: subdomain.env.app.domain, env.app.domain
@@ -636,7 +648,7 @@ func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config
 	aliasInvalidLog := fmt.Sprintf(`%s of %s field should match the pattern <subdomain>.%s 
 Where <subdomain> cannot be the application name.
 `, color.HighlightUserInput(alias), color.HighlightCode("http.alias"), app.Domain)
-	if err := checkUnsupportedAlias(alias, envName, app); err != nil {
+	if err := checkUnsupportedRDSvcAlias(alias, envName, app); err != nil {
 		log.Errorf(aliasInvalidLog)
 		return err
 	}

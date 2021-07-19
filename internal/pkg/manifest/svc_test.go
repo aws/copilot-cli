@@ -36,6 +36,9 @@ exec: true
 http:
   path: "svc"
   target_container: "frontend"
+  alias:
+    - foobar.com
+    - v1.foobar.com
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -85,6 +88,12 @@ environments:
 							}, Port: aws.Uint16(80)},
 						},
 						RoutingRule: RoutingRule{
+							Alias: &AliasOverride{
+								StringSlice: []string{
+									"foobar.com",
+									"v1.foobar.com",
+								},
+							},
 							Path:            aws.String("svc"),
 							TargetContainer: aws.String("frontend"),
 							HealthCheck: HealthCheckArgsOrString{
