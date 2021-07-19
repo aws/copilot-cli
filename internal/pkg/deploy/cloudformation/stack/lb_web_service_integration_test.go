@@ -53,7 +53,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			envName:       "prod",
 			svcStackPath:  "svc-prod.stack.yml",
 			svcParamsPath: "svc-prod.params.json",
-			topicArns:     map[string]string{"givesdogs": "arn:aws:sns:us-west-2:123456789123:my-app-prod-givesdogs"},
+			topicArns:     map[string]string{"givesdogs": "arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs"},
 		},
 	}
 	path := filepath.Join("testdata", "workloads", svcManifestPath)

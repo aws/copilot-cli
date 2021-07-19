@@ -91,7 +91,7 @@ Resources:
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"persistence":"/etc/scratch"}'
           - Name: COPILOT_SNS_TOPIC_ARNS
-            Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-givesdogs"}'
+            Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs"}'
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           

@@ -343,7 +343,7 @@ func (o *deploySvcOpts) getTopics(name string) (map[string]string, error) {
 		partition = AWSChinaPartition
 	}
 	for _, topic := range mf.PublishCfg().Topics {
-		arn := fmt.Sprintf(snsArnPattern, partition, o.targetEnvironment.Region, o.targetApp.AccountID, o.targetApp.Name, o.envName, o.appName, o.envName, aws.StringValue(topic.Name))
+		arn := fmt.Sprintf(snsArnPattern, partition, o.targetEnvironment.Region, o.targetApp.AccountID, o.appName, o.envName, o.name, aws.StringValue(topic.Name))
 		topics[aws.StringValue(topic.Name)] = arn
 	}
 	return topics, nil
