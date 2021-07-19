@@ -8,6 +8,7 @@ type: {{.Type}}
 {{- if .Platform}}
 platform: {{.Platform}}
 {{- end}}
+
 # Configuration for your containers and service.
 image:
 {{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
