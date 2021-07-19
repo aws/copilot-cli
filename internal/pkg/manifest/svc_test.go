@@ -76,11 +76,13 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType),
+						Platform: "",
+					},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
-								Location: aws.String("foo/bar"),
+								Location:    aws.String("foo/bar"),
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
@@ -199,8 +201,9 @@ secrets:
 				require.True(t, ok)
 				wantedManifest := &BackendService{
 					Workload: Workload{
-						Name: aws.String("subscribers"),
-						Type: aws.String(BackendServiceType),
+						Name:     aws.String("subscribers"),
+						Type:     aws.String(BackendServiceType),
+						Platform: "",
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{

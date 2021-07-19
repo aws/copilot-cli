@@ -51,6 +51,7 @@ type AppRunnerInstanceConfig struct {
 func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDrivenWebService {
 	svc := newDefaultRequestDrivenWebService()
 	svc.Name = aws.String(props.Name)
+	svc.Platform = props.Platform
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
@@ -91,7 +92,9 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.BuildConfig(wsRoot)
+	ic := s.ImageConfig.BuildConfig(wsRoot)
+	ic.Platform = s.Platform
+	return ic
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

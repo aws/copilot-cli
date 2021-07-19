@@ -49,19 +49,19 @@ type deployWkldVars struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store              store
-	ws                 wsSvcDirReader
-	imageBuilderPusher imageBuilderPusher
-	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
-	s3                 artifactUploader
-	cmd                runner
-	addons             templater
-	appCFN             appResourcesGetter
-	svcCFN             cloudformation.CloudFormation
-	sessProvider       sessionProvider
-	envUpgradeCmd      actionCommand
+	store               store
+	ws                  wsSvcDirReader
+	imageBuilderPusher  imageBuilderPusher
+	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	s3                  artifactUploader
+	cmd                 runner
+	addons              templater
+	appCFN              appResourcesGetter
+	svcCFN              cloudformation.CloudFormation
+	sessProvider        sessionProvider
+	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
-	endpointGetter     endpointGetter
+	endpointGetter      endpointGetter
 
 	spinner progress
 	sel     wsSelector
@@ -73,6 +73,10 @@ type deploySvcOpts struct {
 	targetSvc         *config.Workload
 	imageDigest       string
 	buildRequired     bool
+}
+
+var validPlatforms = []string{
+	fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch),
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -155,7 +159,6 @@ func (o *deploySvcOpts) Execute() error {
 		return fmt.Errorf("get service configuration: %w", err)
 	}
 	o.targetSvc = svc
-
 	if err := o.configureClients(); err != nil {
 		return err
 	}
@@ -312,6 +315,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
+
 	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
 	if err != nil {
 		return fmt.Errorf("build and push image: %w", err)
@@ -342,12 +346,16 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
+	if err := validatePlatform(args.Platform); err != nil {
+		return nil, err
+	}
 	return &exec.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
+		Platform:   args.Platform,
 		Tags:       tags,
 	}, nil
 }
@@ -528,6 +536,20 @@ func validateAppVersion(alias string, app *config.Application, appVersionGetter 
 	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 	if diff < 0 {
 		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
+	}
+	return nil
+}
+
+func validatePlatform(platform string) error {
+	if platform == "" {
+		return nil
+	}
+	osArch := strings.Split(platform, "/")
+	if len(osArch) < 2 {
+		return fmt.Errorf("platform %s is invalid; must be of format 'os/arch'", platform)
+	}
+	if osArch[0] != exec.LinuxOS || osArch[1] != exec.Amd64Arch {
+		return fmt.Errorf("platform %s is invalid; valid platforms are: %s", platform, validPlatforms)
 	}
 	return nil
 }

@@ -60,6 +60,8 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
+
+	fmtOSArch = "%s/%s" // Stringified platform.
 )
 
 var serviceTypeHints = map[string]string{
@@ -94,8 +96,7 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	os           string
-	arch         string
+	osArch       string
 
 	// Cache variables
 	df dockerfileParser
@@ -223,7 +224,7 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	o.os, o.arch, err = dockerPlatform(o.dockerEngine, o.image)
+	o.osArch, err = dockerPlatform(o.dockerEngine, o.image)
 	if err != nil {
 		return err
 	}
@@ -235,10 +236,7 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform: &manifest.PlatformConfig{
-				OS:   o.os,
-				Arch: o.arch,
-			},
+			Platform:       o.osArch,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -432,19 +430,24 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 	}, nil
 }
 
-func dockerPlatform(engine dockerEngine, image string) (os, arch string, err error) {
+func dockerPlatform(engine dockerEngine, image string) (osArch string, err error) {
+	var os, arch string
 	os, arch = runtime.GOOS, runtime.GOARCH
 	if image == "" {
 		os, arch, err = engine.GetPlatform()
 		if err != nil {
-			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
+			return "", fmt.Errorf("get os/arch from docker: %w", err)
 		}
 	}
-	// Until we target X86_64 for ARM architectures, log a warning.
-	if arch == exec.ArmArch || arch == exec.Arm64Arch {
-		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot deploy`")
+	// Log a message informing non-amd arch users of platform for build.
+	if arch != exec.Amd64Arch {
+		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch))
+		// Redirect architectures that don't build on Fargate to build as amd64.
+		arch = exec.Amd64Arch
+		return fmt.Sprintf(fmtOSArch, os, arch), nil
 	}
-	return os, arch, nil
+	// Leave the platform field empty if it has the default architecture that doesn't require special handling.
+	return "", nil
 }
 
 func svcTypePromptOpts() []prompt.Option {

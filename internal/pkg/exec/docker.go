@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 // DockerCommand represents docker commands that can be run.
@@ -37,9 +39,10 @@ type BuildArguments struct {
 	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
 	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
 	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
-	Context    string            // Optional. Build context directory to pass to `docker build`
-	Target     string            // Optional. The target build stage to pass to `docker build`
+	Context    string            // Optional. Build context directory to pass to `docker build`.
+	Target     string            // Optional. The target build stage to pass to `docker build`.
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
+	Platform   string            // Optional. OS/Arch to pass to `docker build`.
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 }
 
@@ -52,10 +55,10 @@ const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
 )
 
-// Architectures that receive special handling.
+// Operating systems and architectures.
 const (
-	ArmArch   = "arm"
-	Arm64Arch = "arm64"
+	LinuxOS   = "linux"
+	Amd64Arch = "amd64"
 )
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
@@ -73,19 +76,24 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
 
-	// Add cache from options
+	// Add cache from options.
 	for _, imageFrom := range in.CacheFrom {
 		args = append(args, "--cache-from", imageFrom)
 	}
 
-	// Add target option
+	// Add target option.
 	if in.Target != "" {
 		args = append(args, "--target", in.Target)
 	}
 
-	// Add the "args:" override section from manifest to the docker build call
+	// Add platform option.
+	if in.Platform != "" {
+		args = append(args, "--platform", in.Platform)
+	}
 
-	// Collect the keys in a slice to sort for test stability
+	// Add the "args:" override section from manifest to the docker build call.
+
+	// Collect the keys in a slice to sort for test stability.
 	var keys []string
 	for k := range in.Args {
 		keys = append(keys, k)
@@ -96,7 +104,10 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 	}
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
-
+	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
+	if in.Platform != "" {
+		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
+	}
 	if err := c.Run("docker", args); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}

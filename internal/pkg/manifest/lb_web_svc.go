@@ -82,6 +82,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc := newDefaultLoadBalancedWebService()
 	// Apply overrides.
 	svc.Name = stringP(props.Name)
+	svc.Platform = props.Platform
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
@@ -140,7 +141,9 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.BuildConfig(wsRoot)
+	ic := s.ImageConfig.BuildConfig(wsRoot)
+	ic.Platform = s.Platform
+	return ic
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

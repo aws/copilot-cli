@@ -36,8 +36,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
-					Name: stringP("frontend"),
-					Type: stringP("Load Balanced Web Service"),
+					Name:     stringP("frontend"),
+					Type:     stringP("Load Balanced Web Service"),
+					Platform: "",
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{

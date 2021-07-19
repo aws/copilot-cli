@@ -5,6 +5,9 @@
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
 type: {{.Type}}
+{{- if .Platform}}
+platform: {{.Platform}}
+{{- end}}
 {{if .ImageConfig.Port}}
 # Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.ImageConfig.Port}}" but is not public.
 {{- else}}

@@ -5,7 +5,9 @@
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
 type: {{.Type}}
-
+{{- if .Platform}}
+platform: {{.Platform}}
+{{- end}}
 # Configuration for your containers and service.
 image:
 {{- if .ImageConfig.Build.BuildArgs.Dockerfile}}

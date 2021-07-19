@@ -60,12 +60,14 @@ type WorkloadProps struct {
 	Name       string
 	Dockerfile string
 	Image      string
+	Platform   string
 }
 
 // Workload holds the basic data that every workload manifest file needs to have.
 type Workload struct {
-	Name *string `yaml:"name"`
-	Type *string `yaml:"type"` // must be one of the supported manifest types.
+	Name     *string `yaml:"name"`
+	Type     *string `yaml:"type"`     // must be one of the supported manifest types.
+	Platform string  `yaml:"platform"` // must be one of the supported os/arch types.
 }
 
 // Image represents the workload's container image.
@@ -350,6 +352,7 @@ type DockerBuildArgs struct {
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
 	Args       map[string]string `yaml:"args,omitempty"`
 	Target     *string           `yaml:"target,omitempty"`
+	Platform   string            `yaml:"platform,omitempty`
 	CacheFrom  []string          `yaml:"cache_from,omitempty"`
 }
 
@@ -466,12 +469,6 @@ type Topic struct {
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
 	VPC *vpcConfig `yaml:"vpc"`
-}
-
-// PlatformConfig represents operating system and architecture specifications.
-type PlatformConfig struct {
-	OS   string `yaml:"os"`
-	Arch string `yaml:"architecture"`
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.

@@ -95,6 +95,7 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
 	job.Name = stringP(props.Name)
+	job.Platform = props.Platform
 	job.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	job.ImageConfig.Location = stringP(props.Image)
 	job.ImageConfig.HealthCheck = props.HealthCheck
@@ -137,7 +138,9 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
 func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return j.ImageConfig.BuildConfig(wsRoot)
+	ic := j.ImageConfig.BuildConfig(wsRoot)
+	ic.Platform = j.Platform
+	return ic
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.

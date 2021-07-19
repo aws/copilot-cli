@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -529,10 +528,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
-						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
-							Arch: "amd64",
-						},
+						Platform:       "",
 					},
 					Port: 80,
 				}).Return("manifest/path", nil)
@@ -559,10 +555,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Backend Service",
 						DockerfilePath: "./Dockerfile",
-						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
-							Arch: "amd64",
-						},
+						Platform:       "",
 					},
 				}).Return("manifest/path", nil)
 			},
@@ -585,14 +578,11 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
-						App:   "sample",
-						Name:  "backend",
-						Type:  "Backend Service",
-						Image: "nginx:latest",
-						Platform: &manifest.PlatformConfig{
-							OS:   runtime.GOOS,
-							Arch: runtime.GOARCH,
-						},
+						App:      "sample",
+						Name:     "backend",
+						Type:     "Backend Service",
+						Image:    "nginx:latest",
+						Platform: "",
 					},
 				}).Return("manifest/path", nil)
 			},
@@ -610,18 +600,43 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
-						App:   "sample",
-						Name:  "frontend",
-						Type:  "Load Balanced Web Service",
-						Image: "nginx:latest",
-						Platform: &manifest.PlatformConfig{
-							OS:   runtime.GOOS,
-							Arch: runtime.GOARCH,
-						},
+						App:      "sample",
+						Name:     "frontend",
+						Type:     "Load Balanced Web Service",
+						Image:    "nginx:latest",
+						Platform: "",
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+
+			wantedManifestPath: "manifest/path",
+		},
+		"return default platform if arch is unsupported": {
+			inAppName:        "sample",
+			inSvcName:        "frontend",
+			inDockerfilePath: "./Dockerfile",
+			inSvcType:        manifest.LoadBalancedWebServiceType,
+
+			inSvcPort: 80,
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().GetPlatform().Return("linux", "abc23", nil)
+			},
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "frontend",
+						Type:           "Load Balanced Web Service",
+						DockerfilePath: "./Dockerfile",
+						Platform:       "linux/amd64",
+					},
+					Port: 80,
+				}).Return("manifest/path", nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},

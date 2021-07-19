@@ -29,8 +29,9 @@ func TestNewBackendSvc(t *testing.T) {
 			},
 			wantedManifest: &BackendService{
 				Workload: Workload{
-					Name: aws.String("subscribers"),
-					Type: aws.String(BackendServiceType),
+					Name:     aws.String("subscribers"),
+					Type:     aws.String(BackendServiceType),
+					Platform: "",
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -75,8 +76,9 @@ func TestNewBackendSvc(t *testing.T) {
 			},
 			wantedManifest: &BackendService{
 				Workload: Workload{
-					Name: aws.String("subscribers"),
-					Type: aws.String(BackendServiceType),
+					Name:     aws.String("subscribers"),
+					Type:     aws.String(BackendServiceType),
+					Platform: "",
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{

@@ -6,7 +6,9 @@
 name: {{.Name}}
 # The "architecture" of the service you're running.
 type: {{.Type}}
-
+{{- if .Platform}}
+platform: {{.Platform}}
+{{- end}}
 image:
 {{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
   # Docker build arguments.

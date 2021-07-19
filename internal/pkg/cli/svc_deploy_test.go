@@ -207,6 +207,22 @@ image:
     dockerfile: path/to/Dockerfile
     context: path
 `)
+	mockManifestWithBadPlatform := []byte(`name: serviceA
+type: 'Load Balanced Web Service'
+platform: linus/abc123
+image:
+  build:
+    dockerfile: path/to/Dockerfile
+    context: path
+`)
+	mockManifestWithGoodPlatform := []byte(`name: serviceA
+type: 'Load Balanced Web Service'
+platform: linux/amd64
+image:
+  build:
+    dockerfile: path/to/Dockerfile
+    context: path
+`)
 	mockMftNoBuild := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
@@ -248,6 +264,31 @@ image:
 				)
 			},
 			wantErr: fmt.Errorf("get copilot directory: %w", mockError),
+		},
+		"should return error if platform is invalid": {
+			inputSvc: "serviceA",
+			setupMocks: func(m deploySvcMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithBadPlatform, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+				)
+			},
+			wantErr: fmt.Errorf("platform %s is invalid; valid platforms are: %s", "linus/abc123", validPlatforms),
+		},
+		"success with valid platform": {
+			inputSvc: "serviceA",
+			setupMocks: func(m deploySvcMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithGoodPlatform, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
+						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+						Context:    filepath.Join("/ws", "root", "path"),
+						Platform:   "linux/amd64",
+					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
+				)
+			},
+			wantedDigest: "sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49",
 		},
 		"success without building and pushing": {
 			inputSvc: "serviceA",
