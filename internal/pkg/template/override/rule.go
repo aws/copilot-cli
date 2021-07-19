@@ -3,15 +3,41 @@
 
 package override
 
+import "gopkg.in/yaml.v3"
+
+type nodeValueType int
+
+const (
+	endNodeType nodeValueType = iota + 1
+	seqType
+	mapType
+)
+
+const (
+	nodeTagBool = "!!bool"
+	nodeTagInt  = "!!int"
+	nodeTagStr  = "!!str"
+	nodeTagSeq  = "!!seq"
+	nodeTagMap  = "!!map"
+)
+
 // Rule is the override rule override package uses.
 type Rule struct {
-	// pathSegment example: "ContainerDefinitions[0].Ulimits.HardLimit: 1024"
-	// pathSegment string
-	// value       interface{}
+	// PathSegment example: "ContainerDefinitions[0].Ulimits.HardLimit"
+	// PathSegment string
+	// Value       *yaml.Node
 }
 
 type ruleNode struct {
-	// next *ruleNode
+	name         string
+	valueType    nodeValueType
+	seqValue     nodeSeqValue
+	endNodeValue *yaml.Node
+	next         *ruleNode
+}
+
+type nodeSeqValue struct {
+	index int
 }
 
 func parseRules(rules []Rule) ([]*ruleNode, error) {
