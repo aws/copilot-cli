@@ -321,6 +321,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	return nil
 }
 
+<<<<<<< HEAD
 func (o *deploySvcOpts) getTopics(name string) (map[string]string, error) {
 	type publish interface {
 		PublishCfg() *manifest.PublishConfig
@@ -332,6 +333,15 @@ func (o *deploySvcOpts) getTopics(name string) (map[string]string, error) {
 	mf, ok := svc.(publish)
 	if !ok {
 		return nil, fmt.Errorf("%s does not have required method Publish()", name)
+=======
+func (o *deploySvcOpts) getTopics(unmarshaledManifest interface{}) (map[string]string, error) {
+	type publish interface {
+		PublishCfg() *manifest.PublishConfig
+	}
+	mf, ok := unmarshaledManifest.(publish)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required method Publish()", o.name)
+>>>>>>> 28ec1dc39533b1d4a3e820197dccf5daf6659671
 	}
 
 	if mf.PublishCfg() == nil || mf.PublishCfg().Topics == nil {
@@ -339,9 +349,16 @@ func (o *deploySvcOpts) getTopics(name string) (map[string]string, error) {
 	}
 	topics := make(map[string]string)
 	for _, topic := range mf.PublishCfg().Topics {
+<<<<<<< HEAD
 		arn := fmt.Sprintf(snsArnPattern, "aws", o.targetEnvironment.Region, o.targetApp.AccountID, o.targetApp.Name, o.envName, aws.StringValue(topic.Name))
 		topics[aws.StringValue(topic.Name)] = arn
 	}
+=======
+		arn := "arn:aws:sns:" + o.targetEnvironment.Region + ":" + o.targetApp.AccountID + ":" + o.targetApp.Name + "-" + o.envName + "-" + aws.StringValue(topic.Name)
+		topics[aws.StringValue(topic.Name)] = arn
+	}
+
+>>>>>>> 28ec1dc39533b1d4a3e820197dccf5daf6659671
 	return topics, nil
 }
 
@@ -424,7 +441,15 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		return nil, err
 	}
 
+<<<<<<< HEAD
 	topicARNs, err := o.getTopics(o.name)
+=======
+	svc, err := o.manifest()
+	if err != nil {
+		return nil, err
+	}
+	topicARNs, err := o.getTopics(svc)
+>>>>>>> 28ec1dc39533b1d4a3e820197dccf5daf6659671
 	if err != nil {
 		return nil, err
 	}
