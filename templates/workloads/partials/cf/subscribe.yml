@@ -1,0 +1,226 @@
+{{- if .Subscribe}}
+SQSQueue:
+  Type: AWS::SQS::Queue
+  {{- if .Subscribe.Queue}}
+  Properties:
+    QueueName: !Sub ${AWS::StackName}-{{- if .Subscribe.Queue}}{{if .Subscribe.Queue.Name}}{{logicalIDSafe .Subscribe.Queue.Name}}{{- else}}SQSQueue{{- end}}{{- if .Subscribe.Queue.FIFO}}.fifo{{- end}}{{- end}}
+    {{- if .Subscribe.Queue.Retention}}
+    MessageRetentionPeriod: {{.Subscribe.Queue.Retention}}
+    {{- end}}
+    {{- if .Subscribe.Queue.Delay}}
+    DelaySeconds: {{.Subscribe.Queue.Delay}}
+    {{- end}}
+    {{- if .Subscribe.Queue.Timeout}}
+    VisibilityTimeout: {{.Subscribe.Queue.Timeout}}
+    {{- end}}
+    {{- if .Subscribe.Queue.KMS}}
+    KmsMasterKeyId: !Ref SQSQueueKMSKey
+    {{- else}}
+    KmsMasterKeyId: 'alias/aws/sqs'
+    {{- end}}
+    {{- if .Subscribe.Queue.FIFO}}
+    FifoQueue: true
+    {{- if .Subscribe.Queue.FIFO.HighThroughput}}
+    FifoThroughputLimit: 'perMessageGroupId'
+    DeduplicationScope: 'messageGroup'
+    {{- end}}
+    {{- end}}
+    {{- if .Subscribe.Queue.DeadLetter}}
+    RedrivePolicy:
+      {{- if .Subscribe.Queue.DeadLetter.Id}}
+      deadLetterTargetArn: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:{{logicalIDSafe .Subscribe.Queue.DeadLetter.Id}}'
+      {{- else}}
+      deadLetterTargetArn: !GetAtt DeadLetter.Arn
+      {{- end}}
+      maxReceiveCount: {{.Subscribe.Queue.DeadLetter.Tries}}
+    {{- end}}
+  {{- end}}
+
+{{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}{{- if not .Subscribe.Queue.DeadLetter.Id}}
+DeadLetter:
+  Type: AWS::SQS::Queue
+  Properties:
+    QueueName: !Join ['', [!GetAtt SQSQueue.Name, "-", "DeadLetter"]]
+
+DeadLetterPolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref 'DeadLetter']
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: Allow-TaskRole-Subscribe
+          Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:GetMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt SQSQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Ref 'TaskRole'
+{{- end}}{{- end}}{{- end}}
+
+{{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.KMS}}
+SQSQueueKMSKey:
+  Type: AWS::KMS::Key
+  Properties:
+    KeyPolicy:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+          Action: kms:*
+          Resource: '*'
+{{- end}}{{- end}}
+
+QueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref 'SQSQueue']
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Sid: Allow-TaskRole-Subscribe
+          Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:GetMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt SQSQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Ref 'TaskRole'
+        {{- range $topic := .Subscribe.Topics}}
+        {{- if not $topic.Queue}}
+        - Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:SendMessage
+          Resource: !GetAtt SQSQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+        {{- end}}
+        {{- end}}
+
+{{- range $topic := .Subscribe.Topics}}
+{{logicalIDSafe $topic.Name}}SNSTopicSubscription:
+  Type: AWS::SNS::Subscription
+  Properties:
+    TopicArn: !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+    Protocol: 'sqs'
+    {{- if $topic.Queue}}
+    Endpoint: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+    {{- else}}
+    Endpoint: !GetAtt SQSQueue.Arn
+    {{- end}}
+
+{{- if $topic.Queue}}
+{{logicalIDSafe $topic.Name}}SQSQueue:
+    Type: AWS::SQS::Queue
+  Properties:
+    QueueName: !Sub ${AWS::StackName}-{{- if $topic.Queue.Name}}{{- logicalIDSafe $topic.Queue.Name}}{{- else}}{{logicalIDSafe $topic.Name}}{{- end}}{{- if $topic.Queue.FIFO}}.fifo{{- end}}
+    {{- if $topic.Queue.Retention}}
+    MessageRetentionPeriod: {{$topic.Queue.Retention}}
+    {{- end}}
+    {{- if $topic.Queue.Delay}}
+    DelaySeconds: {{$topic.Queue.Delay}}
+    {{- end}}
+    {{- if $topic.Queue.Timeout}}
+    VisibilityTimeout: {{$topic.Queue.Timeout}}
+    {{- end}}
+    {{- if $topic.Queue.KMS}}
+    KmsMasterKeyId: !Ref {{logicalIDSafe $topic.Name}}KMSKey
+    {{- else}}
+    KmsMasterKeyId: 'alias/aws/sqs'
+    {{- end}}
+    {{- if $topic.Queue.FIFO}}
+    FifoQueue: true
+    {{- if $topic.Queue.FIFO.HighThroughput}}
+    FifoThroughputLimit: 'perMessageGroupId'
+    DeduplicationScope: 'messageGroup'
+    {{- end}}
+    {{- end}}
+    {{- if $topic.Queue.DeadLetter}}
+    RedrivePolicy:
+      {{- if $topic.Queue.DeadLetter.Id}}
+      deadLetterTargetArn: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:{{logicalIDSafe $topic.Queue.DeadLetter.Id}}'
+      {{- else}}
+      deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Name}}DeadLetter.Arn
+      {{- end}}
+      maxReceiveCount: {{$topic.Queue.DeadLetter.Tries}}
+    {{- end}}
+
+{{- if $topic.Queue.DeadLetter}}{{- if not $topic.Queue.DeadLetter.Id}}
+{{logicalIDSafe $topic.Name}}DeadLetter:
+  Type: AWS::SQS::Queue
+  Properties:
+    QueueName: !Join ['', [!GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Name, "-", "DeadLetter"]]
+
+{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref '{{logicalIDSafe $topic.Name}}DeadLetter']
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: Allow-TaskRole-Subscribe
+          Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:GetMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Ref 'TaskRole'
+{{- end}}{{- end}}
+
+{{- if $topic.Queue.KMS}}
+{{logicalIDSafe $topic.Name}}KMSKey:
+  Type: AWS::KMS::Key
+  Properties:
+    KeyPolicy:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+          Action: kms:*
+          Resource: '*'
+{{- end}}
+
+{{logicalIDSafe $topic.Name}}QueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref '{{logicalIDSafe $topic.Name}}SQSQueue']
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Sid: Allow-TaskRole-Subscribe
+          Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:GetMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Ref 'TaskRole'
+        - Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:SendMessage
+          Resource: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+{{- end}}{{- end}}{{- end}}
