@@ -292,10 +292,10 @@ func (o *deployJobOpts) getTopics(name string) (map[string]string, error) {
 	}
 	topics := make(map[string]string)
 	partition := AWSPartition
+	if strings.Contains(o.targetEnvironment.Region, "cn-") {
+		partition = AWSChinaPartition
+	}
 	for _, topic := range mf.PublishCfg().Topics {
-		if contains(o.targetEnvironment.Region, []string{"cn-"}) {
-			partition = AWSChinaPartition
-		}
 		arn := fmt.Sprintf(snsArnPattern, partition, o.targetEnvironment.Region, o.targetApp.AccountID, o.targetApp.Name, o.envName, o.appName, o.envName, aws.StringValue(topic.Name))
 		topics[aws.StringValue(topic.Name)] = arn
 	}
