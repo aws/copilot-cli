@@ -196,7 +196,9 @@ Outputs:
 					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
+						GracePeriod:     aws.Int64(60),
 					},
+					DeregistrationDelay: aws.Int64(60),
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
@@ -232,7 +234,9 @@ Outputs:
 					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
+						GracePeriod:     aws.Int64(60),
 					},
+					DeregistrationDelay: aws.Int64(60),
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",

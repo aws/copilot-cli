@@ -152,35 +152,41 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		}
 	}
 
+	var deregistrationDelay *int64 = aws.Int64(60)
+	if s.manifest.RoutingRule.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
+	}
+
 	var allowedSourceIPs []string
 	if s.manifest.AllowedSourceIps != nil {
 		allowedSourceIPs = *s.manifest.AllowedSourceIps
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		Variables:            s.manifest.Variables,
-		Secrets:              s.manifest.Secrets,
-		Aliases:              aliases,
-		NestedStack:          outputs,
-		Sidecars:             sidecars,
-		LogConfig:            convertLogging(s.manifest.Logging),
-		DockerLabels:         s.manifest.ImageConfig.DockerLabels,
-		Autoscaling:          autoscaling,
-		CapacityProviders:    capacityProviders,
-		DesiredCountOnSpot:   desiredCountOnSpot,
-		ExecuteCommand:       convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:         manifest.LoadBalancedWebServiceType,
-		HealthCheck:          s.manifest.ImageConfig.HealthCheckOpts(),
-		HTTPHealthCheck:      convertHTTPHealthCheck(&s.manifest.HealthCheck),
-		AllowedSourceIps:     allowedSourceIPs,
-		RulePriorityLambda:   rulePriorityLambda.String(),
-		DesiredCountLambda:   desiredCountLambda.String(),
-		EnvControllerLambda:  envControllerLambda.String(),
-		Storage:              storage,
-		Network:              convertNetworkConfig(s.manifest.Network),
-		EntryPoint:           entrypoint,
-		Command:              command,
-		DependsOn:            dependencies,
-		CredentialsParameter: aws.StringValue(s.manifest.ImageConfig.Credentials),
+		Variables:                s.manifest.Variables,
+		Secrets:                  s.manifest.Secrets,
+		Aliases:                  aliases,
+		NestedStack:              outputs,
+		Sidecars:                 sidecars,
+		LogConfig:                convertLogging(s.manifest.Logging),
+		DockerLabels:             s.manifest.ImageConfig.DockerLabels,
+		Autoscaling:              autoscaling,
+		CapacityProviders:        capacityProviders,
+		DesiredCountOnSpot:       desiredCountOnSpot,
+		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:             manifest.LoadBalancedWebServiceType,
+		HealthCheck:              s.manifest.ImageConfig.HealthCheckOpts(),
+		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.HealthCheck),
+		DeregistrationDelay:      deregistrationDelay,
+		AllowedSourceIps:         allowedSourceIPs,
+		RulePriorityLambda:       rulePriorityLambda.String(),
+		DesiredCountLambda:       desiredCountLambda.String(),
+		EnvControllerLambda:      envControllerLambda.String(),
+		Storage:                  storage,
+		Network:                  convertNetworkConfig(s.manifest.Network),
+		EntryPoint:               entrypoint,
+		Command:                  command,
+		DependsOn:                dependencies,
+		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 	})
 	if err != nil {

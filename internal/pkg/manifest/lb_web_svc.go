@@ -18,7 +18,9 @@ const (
 
 // Default values for HTTPHealthCheck for a load balanced web service.
 const (
-	DefaultHealthCheckPath = "/"
+	DefaultHealthCheckPath                = "/"
+	DefaultHealthCheckDeregistrationDelay = 60
+	DefaultHealthCheckGracePeriod         = 60
 )
 
 var (
@@ -55,10 +57,11 @@ type LoadBalancedWebServiceConfig struct {
 
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
-	Path        *string                 `yaml:"path"`
-	HealthCheck HealthCheckArgsOrString `yaml:"healthcheck"`
-	Stickiness  *bool                   `yaml:"stickiness"`
-	Alias       *string                 `yaml:"alias"`
+	Path                *string                 `yaml:"path"`
+	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
+	Stickiness          *bool                   `yaml:"stickiness"`
+	Alias               *string                 `yaml:"alias"`
+	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer          *string   `yaml:"target_container"`
 	TargetContainerCamelCase *string   `yaml:"targetContainer"`    // "targetContainerCamelCase" for backwards compatibility
