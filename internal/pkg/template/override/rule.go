@@ -6,7 +6,7 @@ package override
 import "gopkg.in/yaml.v3"
 
 const (
-	seqAppendToLastSymbol = "+"
+	seqAppendToLastSymbol = "-"
 )
 
 type nodeValueType int

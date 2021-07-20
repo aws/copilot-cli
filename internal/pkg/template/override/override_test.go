@@ -275,7 +275,7 @@ func Test_applyRulesToCFNTemplate(t *testing.T) {
 				referBadSeqIndex(),
 			},
 
-			wantedError: fmt.Errorf("cannot specify PortMappings[1] because the current length is 1. Use [+] to append to the sequence instead"),
+			wantedError: fmt.Errorf("cannot specify PortMappings[1] because the current length is 1. Use [%s] to append to the sequence instead", seqAppendToLastSymbol),
 		},
 		"success": {
 			inContent: testContent,
