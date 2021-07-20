@@ -240,23 +240,49 @@ func TestGenerateMountPointJSON(t *testing.T) {
 
 func TestGenerateSNSJSON(t *testing.T) {
 	testCases := map[string]struct {
-		in     map[string]string
+		in     []*Topic
 		wanted string
 	}{
 		"JSON should render correctly": {
-			in: map[string]string{
-				"tests": "arn:aws:sns:us-west-2:123456789012:appName-envName-tests",
+			in: []*Topic{
+				{
+					Name:      aws.String("tests"),
+					AccountID: "123456789012",
+					Region:    "us-west-2",
+					App:       "appName",
+					Env:       "envName",
+					Svc:       "svcName",
+				},
 			},
-			wanted: `{"tests":"arn:aws:sns:us-west-2:123456789012:appName-envName-tests"}`,
+			wanted: `{"tests":"arn:aws:sns:us-west-2:123456789012:appName-envName-svcName-tests"}`,
 		},
-		"Topics with no workers show empty list": {
-			in: map[string]string{
-				"tests": "",
+		"JSON should render china partition correctly": {
+			in: []*Topic{
+				{
+					Name:      aws.String("tests"),
+					AccountID: "123456789012",
+					Region:    "cn-north-1",
+					App:       "appName",
+					Env:       "envName",
+					Svc:       "svcName",
+				},
+			},
+			wanted: `{"tests":"arn:aws-cn:sns:cn-north-1:123456789012:appName-envName-svcName-tests"}`,
+		},
+		"Topics with no names show empty": {
+			in: []*Topic{
+				{
+					AccountID: "123456789012",
+					Region:    "us-west-2",
+					App:       "appName",
+					Env:       "envName",
+					Svc:       "svcName",
+				},
 			},
 			wanted: `{}`,
 		},
 		"nil list of arguments should render": {
-			in:     map[string]string{},
+			in:     []*Topic{},
 			wanted: `{}`,
 		},
 	}

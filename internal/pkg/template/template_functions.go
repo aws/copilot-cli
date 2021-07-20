@@ -132,15 +132,18 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 // generatePublisherJSON turns a list of Topics objects into a JSON string:
 // `{"myTopic": "topicArn", "mySecondTopic": "secondTopicArn"}`
 // This function must be called on an array of correctly constructed Topic objects.
-func generateSNSJSON(topicArns map[string]string) string {
+func generateSNSJSON(topics []*Topic) string {
+	if topics == nil {
+		return ""
+	}
 	topicMap := make(map[string]string)
 
-	for name, arn := range topicArns {
-		// Topics with no ARN will not be included in the json
-		if arn == "" {
+	for _, topic := range topics {
+		// Topics with no name will not be included in the json
+		if topic.Name == nil {
 			continue
 		}
-		topicMap[name] = arn
+		topicMap[aws.StringValue(topic.Name)] = topic.ARN()
 	}
 
 	out, ok := getJSONMap(topicMap)

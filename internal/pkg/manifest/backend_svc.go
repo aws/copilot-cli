@@ -38,7 +38,6 @@ type BackendServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       *NetworkConfig            `yaml:"network"`
-	Publish       *PublishConfig            `yaml:"publish"`
 }
 
 // NewBackendService applies the props to a default backend service configuration with
@@ -76,11 +75,6 @@ func (s *BackendService) BuildRequired() (bool, error) {
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
 func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)
-}
-
-// PublishCfg returns a manifest.PublishConfig object for the service
-func (s *BackendService) PublishCfg() *PublishConfig {
-	return s.BackendServiceConfig.Publish
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

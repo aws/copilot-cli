@@ -274,14 +274,6 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					"exclude-pattern": "*",
 				},
 			},
-			Publish: &PublishConfig{
-				Topics: []Topic{
-					{
-						Name:           aws.String("publisher1"),
-						AllowedWorkers: []string{"worker1", "worker2"},
-					},
-				},
-			},
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
@@ -512,14 +504,6 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							"Name":            "datadog",
 							"include-pattern": "*",
 							"exclude-pattern": "fe/",
-						},
-					},
-					Publish: &PublishConfig{
-						Topics: []Topic{
-							{
-								Name:           aws.String("publisher1"),
-								AllowedWorkers: []string{"worker1", "worker2"},
-							},
 						},
 					},
 				},

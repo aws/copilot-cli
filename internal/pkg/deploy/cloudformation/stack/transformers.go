@@ -586,16 +586,14 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 	return out, nil
 }
 
-func convertPublish(p *manifest.PublishConfig, ta map[string]string) (*template.PublishOpts, error) {
-	if p == nil || len(p.Topics) == 0 || ta == nil {
+func convertPublish(p *manifest.PublishConfig, accountID string, region string, app string, env string, svc string) (*template.PublishOpts, error) {
+	if p == nil || len(p.Topics) == 0 {
 		return nil, nil
 	}
-	publishers := template.PublishOpts{
-		TopicArns: ta,
-	}
+	publishers := template.PublishOpts{}
 	// convert the topics to template Topics
 	for _, topic := range p.Topics {
-		t, err := convertTopic(topic)
+		t, err := convertTopic(topic, accountID, region, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
@@ -606,7 +604,7 @@ func convertPublish(p *manifest.PublishConfig, ta map[string]string) (*template.
 	return &publishers, nil
 }
 
-func convertTopic(t manifest.Topic) (*template.Topics, error) {
+func convertTopic(t manifest.Topic, accountID string, region string, app string, env string, svc string) (*template.Topic, error) {
 	// topic should have a valid name and valid service worker names
 	if err := validatePubSubName(t.Name); err != nil {
 		return nil, err
@@ -614,9 +612,17 @@ func convertTopic(t manifest.Topic) (*template.Topics, error) {
 	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
 		return nil, err
 	}
+	if err := validateARNParemeters(accountID, region, app, env, svc); err != nil {
+		return nil, err
+	}
 
-	return &template.Topics{
+	return &template.Topic{
 		Name:           t.Name,
 		AllowedWorkers: t.AllowedWorkers,
+		AccountID:      accountID,
+		Region:         region,
+		App:            app,
+		Env:            env,
+		Svc:            svc,
 	}, nil
 }

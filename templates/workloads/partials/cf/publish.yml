@@ -15,7 +15,6 @@
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          {{- range $worker := $topic.AllowedWorkers}}
           - Effect: Allow
             Principal:
               Service: sqs.amazonaws.com
@@ -26,8 +25,11 @@
               StringEquals:
                 'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
                 'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
-                'sqs:ResourceTag/copilot-service': '{{$worker}}'
-          {{- end}}
+              ForAnyValue:StringEquals:
+                'sqs:ResourceTag/copilot-service': 
+                {{- range $worker := $topic.AllowedWorkers}}
+                  - '{{$worker}}'
+                {{- end}}
   {{- end}}
 {{- end}}
 {{- end}}

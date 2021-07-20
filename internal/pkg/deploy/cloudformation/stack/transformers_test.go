@@ -1459,16 +1459,19 @@ func Test_convertImageDependsOn(t *testing.T) {
 }
 
 func Test_convertPublish(t *testing.T) {
+	accountId := "123456789123"
+	region := "us-west-2"
+	app := "testapp"
+	env := "testenv"
+	svc := "hello"
 	testCases := map[string]struct {
 		inPublish *manifest.PublishConfig
-		inArns    map[string]string
 
 		wanted      *template.PublishOpts
 		wantedError error
 	}{
 		"empty publish": {
 			inPublish: &manifest.PublishConfig{},
-			inArns:    nil,
 			wanted:    nil,
 		},
 		"publish with no topic names": {
@@ -1477,7 +1480,6 @@ func Test_convertPublish(t *testing.T) {
 					{},
 				},
 			},
-			inArns:      map[string]string{},
 			wantedError: errMissingPublishTopicField,
 		},
 		"publish with no workers": {
@@ -1488,14 +1490,17 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			inArns: map[string]string{"topic1": "arn:aws:sns:us-west-2:123456789123:app-env-topic1"},
 			wanted: &template.PublishOpts{
-				Topics: []*template.Topics{
+				Topics: []*template.Topic{
 					{
-						Name: aws.String("topic1"),
+						Name:      aws.String("topic1"),
+						AccountID: accountId,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
 					},
 				},
-				TopicArns: map[string]string{"topic1": "arn:aws:sns:us-west-2:123456789123:app-env-topic1"},
 			},
 		},
 		"publish with workers": {
@@ -1507,15 +1512,18 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			inArns: map[string]string{"topic1": "arn:aws:sns:us-west-2:123456789123:app-env-topic1"},
 			wanted: &template.PublishOpts{
-				Topics: []*template.Topics{
+				Topics: []*template.Topic{
 					{
 						Name:           aws.String("topic1"),
 						AllowedWorkers: []string{"worker1"},
+						AccountID:      accountId,
+						Region:         region,
+						App:            app,
+						Env:            env,
+						Svc:            svc,
 					},
 				},
-				TopicArns: map[string]string{"topic1": "arn:aws:sns:us-west-2:123456789123:app-env-topic1"},
 			},
 		},
 		"invalid worker name": {
@@ -1527,7 +1535,6 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			inArns:      map[string]string{"topic1": "arn:aws:sns:us-west-2:123456789123:app-env-topic1"},
 			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errNameBadFormat),
 		},
 		"invalid topic name": {
@@ -1539,13 +1546,12 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			inArns:      map[string]string{"topic1~~@#$": "arn:aws:sns:us-west-2:123456789123:app-env-topic1"},
 			wantedError: errInvalidPubSubTopicName,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertPublish(tc.inPublish, tc.inArns)
+			got, err := convertPublish(tc.inPublish, accountId, region, app, env, svc)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

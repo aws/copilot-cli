@@ -72,7 +72,6 @@ type RuntimeConfig struct {
 	AddonsTemplateURL        string            // Optional. S3 object URL for the addons template.
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources in the workload stack.
 	ServiceDiscoveryEndpoint string            // Endpoint for the service discovery namespace in the environment.
-	SNSTopicARNs             map[string]string // Optional. SNS Topic arns for the envvars template.
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
@@ -165,10 +164,6 @@ func (w *wkld) Tags() []*cloudformation.Tag {
 	})
 }
 
-func (w *wkld) PublishArns() map[string]string {
-	return w.rc.SNSTopicARNs
-}
-
 type templateConfigurer interface {
 	Parameters() ([]*cloudformation.Parameter, error)
 	Tags() []*cloudformation.Tag
@@ -198,7 +193,7 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	stack, err := w.addons.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
-		if !errors.As(err, &notFoundErr) {
+		if !errors.As(err, &notFoundErr){
 			return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
 		}
 		return nil, nil // No addons found, so there are no outputs and error.

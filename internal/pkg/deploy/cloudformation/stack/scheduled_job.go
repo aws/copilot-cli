@@ -133,10 +133,6 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
 	}
-	publishers, err := convertPublish(j.manifest.Publish, j.rc.SNSTopicARNs)
-	if err != nil {
-		return "", fmt.Errorf("convert the publish field for service %s: %w", j.name, err)
-	}
 	schedule, err := j.awsSchedule()
 	if err != nil {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
@@ -167,23 +163,22 @@ func (j *ScheduledJob) Template() (string, error) {
 	}
 
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
-		Variables:                j.manifest.Variables,
-		Secrets:                  j.manifest.Secrets,
-		NestedStack:              outputs,
-		Sidecars:                 sidecars,
-		ScheduleExpression:       schedule,
-		StateMachine:             stateMachine,
-		HealthCheck:              j.manifest.ImageConfig.HealthCheckOpts(),
-		LogConfig:                convertLogging(j.manifest.Logging),
-		DockerLabels:             j.manifest.ImageConfig.DockerLabels,
-		Storage:                  storage,
-		Network:                  convertNetworkConfig(j.manifest.Network),
-		EntryPoint:               entrypoint,
-		Command:                  command,
-		DependsOn:                dependencies,
-		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Credentials),
+		Variables:            j.manifest.Variables,
+		Secrets:              j.manifest.Secrets,
+		NestedStack:          outputs,
+		Sidecars:             sidecars,
+		ScheduleExpression:   schedule,
+		StateMachine:         stateMachine,
+		HealthCheck:          j.manifest.ImageConfig.HealthCheckOpts(),
+		LogConfig:            convertLogging(j.manifest.Logging),
+		DockerLabels:         j.manifest.ImageConfig.DockerLabels,
+		Storage:              storage,
+		Network:              convertNetworkConfig(j.manifest.Network),
+		EntryPoint:           entrypoint,
+		Command:              command,
+		DependsOn:            dependencies,
+		CredentialsParameter: aws.StringValue(j.manifest.ImageConfig.Credentials),
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
-		Publish:                  publishers,
 
 		EnvControllerLambda: envControllerLambda.String(),
 	})

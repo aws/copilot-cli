@@ -6,10 +6,12 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/google/uuid"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
@@ -37,6 +39,13 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
+)
+
+// Constants for ARN options.
+const (
+	snsArnPattern     = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
+	AWSPartition      = "aws"
+	AWSChinaPartition = "aws-cn"
 )
 
 var (
@@ -209,14 +218,19 @@ type StateMachineOpts struct {
 
 // PublishOpts holds configuration needed if the service has publishers.
 type PublishOpts struct {
-	Topics    []*Topics
-	TopicArns map[string]string
+	Topics []*Topic
 }
 
 // Topics holds information needed to render a SNSTopic in a container definition.
-type Topics struct {
+type Topic struct {
 	Name           *string
 	AllowedWorkers []string
+
+	Region    string
+	AccountID string
+	App       string
+	Env       string
+	Svc       string
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.
@@ -401,4 +415,25 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+func (t Topic) ARN() string {
+	if !t.hasARNParameters() {
+		return ""
+	}
+	partition := AWSPartition
+	if strings.Contains(t.Region, "cn-") {
+		partition = AWSChinaPartition
+	}
+	return fmt.Sprintf(snsArnPattern, partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
+}
+
+func (t Topic) hasARNParameters() bool {
+	if t.AccountID == "" || t.Region == "" {
+		return false
+	}
+	if t.App == "" || t.Env == "" || t.Svc == "" {
+		return false
+	}
+	return true
 }
