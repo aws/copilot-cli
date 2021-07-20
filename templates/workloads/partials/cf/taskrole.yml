@@ -69,6 +69,19 @@ TaskRole:
               Resource:
                 - !Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/{{$EFS.FilesystemID}}'
       {{- end}}
+      {{- if .Publish}}{{- if .Publish.Topics}}
+      - PolicyName: 'Publish2SNS' 
+          PolicyDocument:
+            Version: '2012-10-17'
+            Id: SNSPublicationPolicy
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource:
+                {{- range $topic := $Publish.Topics}}
+                  - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
+                {{- end}}
+      {{- end}}{{- end}}
       {{- if .Storage.ManagedVolumeInfo}}
       - PolicyName: 'GrantAccessCopilotManagedEFS'
         PolicyDocument:
