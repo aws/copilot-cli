@@ -341,7 +341,7 @@ func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
 }
 
-// ParseWorkerService parses a backend service's CloudFormation template with the specified data object and returns its content.
+// ParseWorkerService parses a worker service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
 	if data.Network == nil {
 		data.Network = defaultNetworkOpts()
