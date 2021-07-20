@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
@@ -21,30 +23,14 @@ const (
 	dependsOnHealthy  = "HEALTHY"
 )
 
-const (
-	// AppTagKey is tag key for Copilot app.
-	AppTagKey = "copilot-application"
-	// EnvTagKey is tag key for Copilot env.
-	EnvTagKey = "copilot-environment"
-	// ServiceTagKey is tag key for Copilot svc.
-	ServiceTagKey = "copilot-service"
-)
-
 // Empty field errors.
 var (
-<<<<<<< HEAD
 	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
 	errNoContainerPath          = errors.New("`path` cannot be empty")
 	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
 	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
-=======
-	errNoFSID                  = errors.New("volume field `efs.id` cannot be empty")
-	errNoContainerPath         = errors.New("`path` cannot be empty")
-	errNoSourceVolume          = errors.New("`source_volume` cannot be empty")
-	errEmptyEFSConfig          = errors.New("bad EFS configuration: `efs` cannot be empty")
-	errMissingPubSubTopicField = errors.New("topic `name` cannot be empty")
->>>>>>> 8cc1426c (adds validation/converters for template)
+	errDeadLetterQueueTries     = errors.New("DeadLetter `tries` field cannot exceed 1000")
 )
 
 // Conditional errors.
@@ -64,10 +50,7 @@ var (
 	errInvalidSvcName                = errors.New("service names cannot be empty")
 	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
 	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
-<<<<<<< HEAD
 	errTopicSubscriptionNotAllowed   = errors.New("topic not in list of topics available to subscribe to")
-=======
->>>>>>> 8cc1426c (adds validation/converters for template)
 )
 
 // Container dependency status options
@@ -431,15 +414,9 @@ func validateContainerPath(input string) error {
 
 // ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
 // SNS Topic intended for a publisher.
-<<<<<<< HEAD
 func validatePubSubName(name string) error {
 	if len(name) == 0 {
 		return errMissingPublishTopicField
-=======
-func validatePubSubName(name *string) error {
-	if name == nil || len(aws.StringValue(name)) == 0 {
-		return errMissingPubSubTopicField
->>>>>>> 8cc1426c (adds validation/converters for template)
 	}
 
 	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
@@ -500,16 +477,31 @@ func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []s
 
 	// Check that the topic is included in the list of available topics
 	for _, topicARN := range validTopicARNs {
-		splitArn := strings.Split(topicARN, ":")
-		topicName := strings.Split(splitArn[len(splitArn)-1], "-")
-		if len(topicName) < 4 {
-			continue
+		arn, err := arn.Parse(topicARN)
+		if err != nil {
+			return err
 		}
+		topicName := arn.Resource
 
-		if topicName[2] == ts.Service && topicName[3] == ts.Name {
+		if strings.Contains(topicName, ts.Service) && strings.Contains(topicName, ts.Name) {
 			return nil
 		}
 	}
 
 	return errTopicSubscriptionNotAllowed
+}
+
+func validateTime(t time.Duration, floor, ceiling float64) error {
+	if t.Seconds() < floor || t.Seconds() > ceiling {
+		return fmt.Errorf("time must be between %0.0f and %0.0f seconds", floor, ceiling)
+	}
+
+	return nil
+}
+
+func validateDeadLetter(dl *manifest.DeadLetterQueue) error {
+	if dl.Tries > 1000 {
+		return errDeadLetterQueueTries
+	}
+	return nil
 }

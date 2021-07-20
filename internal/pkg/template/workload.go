@@ -43,9 +43,8 @@ const (
 
 // Constants for ARN options.
 const (
-	snsArnPattern     = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
-	AWSPartition      = "aws"
-	AWSChinaPartition = "aws-cn"
+	snsArnPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
+	sqsArnPattern = "arn:%s:sqs:%s:%s:%s-%s-%s-%s"
 )
 
 var (
@@ -237,23 +236,43 @@ type Topic struct {
 // SubscribeOpts holds configuration needed if the service has subscriptions.
 type SubscribeOpts struct {
 	Topics []*TopicSubscription
+	Queue  *SQSQueue
 }
 
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
 	Name    *string
 	Service *string
+	Queue   *SQSQueue
 }
 
-// SubscribeOpts holds configuration needed if the service has subscriptions.
-type SubscribeOpts struct {
-	Topics []*TopicSubscription
+// SQSQueue holds information needed to render a SQS Queue in a container definition.
+type SQSQueue struct {
+	Name       *string
+	Retention  *int
+	Delay      *int
+	Timeout    *int
+	KMS        *bool
+	DeadLetter *DeadLetterQueue
+	FIFO       *FIFOQueue
+
+	Region    string
+	Partition string
+	AccountID string
+	App       string
+	Env       string
+	Svc       string
 }
 
-// TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
-type TopicSubscription struct {
-	Name    *string
-	Service *string
+// DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
+type DeadLetterQueue struct {
+	Id    *string
+	Tries *uint16
+}
+
+// FIFOQueue holds information needed to specify a SQS Queue as FIFO in a container definition.
+type FIFOQueue struct {
+	HighThroughput *bool
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.
@@ -304,7 +323,6 @@ type WorkloadOpts struct {
 	DesiredCountLambda   string
 	EnvControllerLambda  string
 	CredentialsParameter string
-	Subscribe            SubscribeOpts
 
 	// Additional options for job templates.
 	ScheduleExpression string
@@ -455,4 +473,17 @@ func envControllerParameters(o WorkloadOpts) []string {
 // ARN determines the arn for a topic using the SNSTopic arn start and the name of the topic
 func (t Topic) ARN() string {
 	return fmt.Sprintf(snsArnPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
+}
+
+// ARN determines the arn for a queue using the SNSTopic arn start and the name of the topic
+func (q SQSQueue) ARN(topicName *string) string {
+	var name string
+	if q.Name != nil {
+		name = aws.StringValue(q.Name)
+	} else if topicName != nil {
+		name = aws.StringValue(topicName)
+	} else {
+		name = "SQSQueue"
+	}
+	return fmt.Sprintf(snsArnPattern, q.Partition, q.Region, q.AccountID, q.App, q.Env, q.Svc, name)
 }

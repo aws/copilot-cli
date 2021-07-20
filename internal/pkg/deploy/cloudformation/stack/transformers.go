@@ -630,26 +630,39 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	}, nil
 }
 
-func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string) (*template.SubscribeOpts, error) {
+func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
 	if s == nil || s.Topics == nil {
 		return nil, nil
 	}
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return nil, fmt.Errorf("find the partition for region %s", region)
+	}
 
 	var subscriptions template.SubscribeOpts
-	for _, sb := range *s.Topics {
-		ts, err := convertTopicSubscription(sb, validTopicARNs)
+	for _, sb := range s.Topics {
+		ts, err := convertTopicSubscription(sb, validTopicARNs, accountID, partition.ID(), region, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
 
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
+	queue, err := convertTopicQueue(s.Queue, accountID, partition.ID(), region, app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+	subscriptions.Queue = queue
 
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string) (*template.TopicSubscription, error) {
+func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, accountID, partition, region, app, env, svc string) (*template.TopicSubscription, error) {
 	err := validateTopicSubscription(t, validTopicARNs)
+	if err != nil {
+		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+	}
+	queue, err := convertTopicQueue(t.Queue, accountID, partition, region, app, env, svc)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -657,35 +670,79 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	return &template.TopicSubscription{
 		Name:    aws.String(t.Name),
 		Service: aws.String(t.Service),
+		Queue:   queue,
 	}, nil
 }
 
-func convertSubscribe(s *manifest.SubscribeConfig) (*template.SubscribeOpts, error) {
-	if s == nil || s.Topics == nil {
+func convertTopicQueue(q *manifest.SQSQueue, accountID, partition, region, app, env, svc string) (*template.SQSQueue, error) {
+	if q == nil {
+		return nil, nil
+	}
+	retention, err := convertTime(q.Retention, 0, 1209600)
+	if err != nil {
+		return nil, fmt.Errorf("invalid `retention`: %w", err)
+	}
+	delay, err := convertTime(q.Delay, 0, 900)
+	if err != nil {
+		return nil, fmt.Errorf("invalid `delay`: %w", err)
+	}
+	timeout, err := convertTime(q.Timeout, 0, 43200)
+	if err != nil {
+		return nil, fmt.Errorf("invalid `timeout`: %w", err)
+	}
+	deadletter := convertDeadLetter(q.DeadLetter)
+
+	return &template.SQSQueue{
+		Name:       q.Name,
+		Retention:  retention,
+		Delay:      delay,
+		Timeout:    timeout,
+		KMS:        q.KMS,
+		DeadLetter: deadletter,
+		FIFO:       convertFIFO(q.FIFO),
+		AccountID:  accountID,
+		Region:     region,
+		Partition:  partition,
+		App:        app,
+		Env:        env,
+		Svc:        svc,
+	}, nil
+}
+
+func convertTime(t *string, floor, ceiling float64) (*int, error) {
+	if t == nil {
 		return nil, nil
 	}
 
-	subscriptions := template.SubscribeOpts{}
-	for _, sb := range *s.Topics {
-		ts, err := convertTopicSubscription(sb)
-		if err != nil {
-			return nil, err
-		}
-
-		subscriptions.Topics = append(subscriptions.Topics, ts)
+	tm, err := time.ParseDuration(aws.StringValue(t))
+	if err != nil {
+		return nil, errDurationInvalid{reason: err}
+	}
+	if err := validateTime(tm, floor, ceiling); err != nil {
+		return nil, err
 	}
 
-	return &subscriptions, nil
+	return aws.Int(int(tm.Seconds())), nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription) (*template.TopicSubscription, error) {
-	err := validateTopicSubscription(t)
-	if err != nil {
-		return nil, fmt.Errorf(`invalid topic subscription %s: %w`, t.Name, err)
+func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
+	if f == nil || (f.Enabled != nil && aws.BoolValue(f.Enabled) == false) {
+		return nil
 	}
 
-	return &template.TopicSubscription{
-		Name:    aws.String(t.Name),
-		Service: aws.String(t.Service),
-	}, nil
+	return &template.FIFOQueue{
+		HighThroughput: f.FIFO.HighThroughput,
+	}
+}
+
+func convertDeadLetter(d *manifest.DeadLetterQueue) *template.DeadLetterQueue {
+	if d == nil {
+		return nil
+	}
+	validateDeadLetter(d)
+
+	return &template.DeadLetterQueue{
+		Id:    d.ID,
+		Tries: &d.Tries,
+	}
 }

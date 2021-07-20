@@ -4,8 +4,10 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -567,7 +569,7 @@ func TestValidateWorkerName(t *testing.T) {
 }
 
 func TestValidateTopicSubscription(t *testing.T) {
-	validTopics := []string{"arn:aws:us-east-1:123456789012:app-env-svc-name", "arn:aws:us-east-1:123456789012:app-env-svc-name2"}
+	validTopics := []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"}
 	testCases := map[string]struct {
 		inTS manifest.TopicSubscription
 
@@ -604,6 +606,74 @@ func TestValidateTopicSubscription(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := validateTopicSubscription(tc.inTS, validTopics)
+
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func TestValidateTime(t *testing.T) {
+	testCases := map[string]struct {
+		inTime    time.Duration
+		inFloor   float64
+		inCeiling float64
+
+		wantErr error
+	}{
+		"good case": {
+			inTime:    500,
+			inFloor:   0,
+			inCeiling: 600,
+			wantErr:   nil,
+		},
+		"bad time": {
+			inTime:    601000000000,
+			inFloor:   0,
+			inCeiling: 600,
+			wantErr:   errors.New("time must be between 0 and 600 seconds"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateTime(tc.inTime, tc.inFloor, tc.inCeiling)
+
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func TestValidateDeadLetter(t *testing.T) {
+	testCases := map[string]struct {
+		inDL *manifest.DeadLetterQueue
+
+		wantErr error
+	}{
+		"good case": {
+			inDL: &manifest.DeadLetterQueue{
+				Tries: 35,
+			},
+			wantErr: nil,
+		},
+		"wrong number of tries": {
+			inDL: &manifest.DeadLetterQueue{
+				Tries: 9999,
+			},
+			wantErr: errDeadLetterQueueTries,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateDeadLetter(tc.inDL)
 
 			if tc.wantErr == nil {
 				require.NoError(t, err)
