@@ -455,7 +455,12 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+		appInfo := deploy.AppInformation{
+			Name:                o.targetEnvironment.App,
+			DNSName:             o.targetApp.Domain,
+			AccountPrincipalARN: o.targetApp.AccountID,
+		}
+		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
