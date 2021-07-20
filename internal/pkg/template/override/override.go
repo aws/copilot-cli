@@ -114,19 +114,20 @@ func upsertSeqNode(rule *ruleNode, content *yaml.Node) (*yaml.Node, error) {
 	for i := 0; i < len(content.Content); i += 2 {
 		if content.Content[i].Value == rule.name {
 			seqNode := content.Content[i+1]
+			if rule.seqValue.appendToLast {
+				newMapNode := &yaml.Node{
+					Kind: yaml.MappingNode,
+					Tag:  nodeTagMap,
+				}
+				seqNode.Content = append(seqNode.Content, newMapNode)
+				return newMapNode, nil
+			}
 			if rule.seqValue.index < len(seqNode.Content) {
 				return seqNode.Content[rule.seqValue.index], nil
+			} else {
+				return nil, fmt.Errorf("cannot specify %s[%d] because the current length is %d. Use [%s] to append to the sequence instead",
+					rule.name, rule.seqValue.index, len(seqNode.Content), seqAppendToLastSymbol)
 			}
-			if rule.seqValue.index > len(seqNode.Content) {
-				return nil, fmt.Errorf("cannot specify %s[%d] because the current length is %d. Use index %d to append to the sequence instead",
-					rule.name, rule.seqValue.index, len(seqNode.Content), len(seqNode.Content))
-			}
-			newMapNode := &yaml.Node{
-				Kind: yaml.MappingNode,
-				Tag:  nodeTagMap,
-			}
-			seqNode.Content = append(seqNode.Content, newMapNode)
-			return newMapNode, nil
 		}
 	}
 	newLabelNode := &yaml.Node{

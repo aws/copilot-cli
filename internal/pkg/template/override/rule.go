@@ -5,6 +5,10 @@ package override
 
 import "gopkg.in/yaml.v3"
 
+const (
+	seqAppendToLastSymbol = "+"
+)
+
 type nodeValueType int
 
 const (
@@ -37,7 +41,8 @@ type ruleNode struct {
 }
 
 type nodeSeqValue struct {
-	index int
+	index        int
+	appendToLast bool
 }
 
 func parseRules(rules []Rule) ([]*ruleNode, error) {

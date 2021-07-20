@@ -190,7 +190,7 @@ func addUlimits() *ruleNode {
 		name:      "Ulimits",
 		valueType: seqType,
 		seqValue: nodeSeqValue{
-			index: 0,
+			appendToLast: true,
 		},
 		next: node3,
 	}
@@ -217,7 +217,7 @@ func exposeExtraPort() *ruleNode {
 		name:      "PortMappings",
 		valueType: seqType,
 		seqValue: nodeSeqValue{
-			index: 1,
+			appendToLast: true,
 		},
 		next: node3,
 	}
@@ -243,7 +243,7 @@ func referBadSeqIndex() *ruleNode {
 		name:      "PortMappings",
 		valueType: seqType,
 		seqValue: nodeSeqValue{
-			index: 2,
+			index: 1,
 		},
 		next: node3,
 	}
@@ -275,7 +275,7 @@ func Test_applyRulesToCFNTemplate(t *testing.T) {
 				referBadSeqIndex(),
 			},
 
-			wantedError: fmt.Errorf("cannot specify PortMappings[2] because the current length is 1. Use index 1 to append to the sequence instead"),
+			wantedError: fmt.Errorf("cannot specify PortMappings[1] because the current length is 1. Use [+] to append to the sequence instead"),
 		},
 		"success": {
 			inContent: testContent,
