@@ -26,9 +26,7 @@ var (
 	errNoContainerPath          = errors.New("`path` cannot be empty")
 	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
 	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
-	errMissingPublishTopicField = errors.New("topic `name` cannot be empty")
-	errInvalidARNAccountInfo    = errors.New("topic account number and region cannot be empty")
-	errInvalidARNSvcInfo        = errors.New("all topics must have an application name, environment name, and service name")
+	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
 )
 
 // Conditional errors.
@@ -461,14 +459,4 @@ func isCorrectSvcNameFormat(s string) bool {
 
 	trailingMatch := trailingPunctRegExp.FindStringSubmatch(s)
 	return len(trailingMatch) == 0
-}
-
-func validateARNParemeters(accountID string, region string, app string, env string, svc string) error {
-	if accountID == "" || region == "" {
-		return errInvalidARNAccountInfo
-	}
-	if app == "" || env == "" || svc == "" {
-		return errInvalidARNSvcInfo
-	}
-	return nil
 }

@@ -49,19 +49,19 @@ type deployWkldVars struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store              store
-	ws                 wsSvcDirReader
-	imageBuilderPusher imageBuilderPusher
-	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
-	s3                 artifactUploader
-	cmd                runner
-	addons             templater
-	appCFN             appResourcesGetter
-	svcCFN             cloudformation.CloudFormation
-	sessProvider       sessionProvider
-	envUpgradeCmd      actionCommand
+	store               store
+	ws                  wsSvcDirReader
+	imageBuilderPusher  imageBuilderPusher
+	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	s3                  artifactUploader
+	cmd                 runner
+	addons              templater
+	appCFN              appResourcesGetter
+	svcCFN              cloudformation.CloudFormation
+	sessProvider        sessionProvider
+	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
-	endpointGetter     endpointGetter
+	endpointGetter      endpointGetter
 
 	spinner progress
 	sel     wsSelector

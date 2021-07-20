@@ -193,7 +193,7 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	stack, err := w.addons.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
-		if !errors.As(err, &notFoundErr){
+		if !errors.As(err, &notFoundErr) {
 			return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
 		}
 		return nil, nil // No addons found, so there are no outputs and error.

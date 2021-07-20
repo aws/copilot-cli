@@ -586,7 +586,7 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 	return out, nil
 }
 
-func convertPublish(p *manifest.PublishConfig, accountID string, region string, app string, env string, svc string) (*template.PublishOpts, error) {
+func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
 	if p == nil || len(p.Topics) == 0 {
 		return nil, nil
 	}
@@ -604,15 +604,12 @@ func convertPublish(p *manifest.PublishConfig, accountID string, region string, 
 	return &publishers, nil
 }
 
-func convertTopic(t manifest.Topic, accountID string, region string, app string, env string, svc string) (*template.Topic, error) {
+func convertTopic(t manifest.Topic, accountID, region, app, env, svc string) (*template.Topic, error) {
 	// topic should have a valid name and valid service worker names
 	if err := validatePubSubName(t.Name); err != nil {
 		return nil, err
 	}
 	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
-		return nil, err
-	}
-	if err := validateARNParemeters(accountID, region, app, env, svc); err != nil {
 		return nil, err
 	}
 
