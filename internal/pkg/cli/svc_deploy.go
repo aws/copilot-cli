@@ -404,6 +404,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
+			AccountID:                o.targetApp.AccountID,
+			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)

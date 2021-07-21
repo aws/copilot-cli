@@ -133,6 +133,10 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
 	}
+	publishers, err := convertPublish(j.manifest.Publish, j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
+	if err != nil {
+		return "", fmt.Errorf("convert the publish field for service %s: %w", j.name, err)
+	}
 	schedule, err := j.awsSchedule()
 	if err != nil {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
@@ -179,6 +183,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		DependsOn:                dependencies,
 		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Credentials),
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
+		Publish:                  publishers,
 
 		EnvControllerLambda: envControllerLambda.String(),
 	})

@@ -65,6 +65,8 @@ const maxEFSPathLength = 255
 // https://github.com/moby/moby/issues/1413
 const maxDockerContainerPathLength = 242
 
+const fmtSNSTopicARN = "arn:%s:sns:%s:%s:%s-%s-%s"
+
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
@@ -72,6 +74,8 @@ type RuntimeConfig struct {
 	AddonsTemplateURL        string            // Optional. S3 object URL for the addons template.
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources in the workload stack.
 	ServiceDiscoveryEndpoint string            // Endpoint for the service discovery namespace in the environment.
+	AccountID                string            // Account ID for constructing ARNs
+	Region                   string            // Region for constructing ARNs
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to

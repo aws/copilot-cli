@@ -115,6 +115,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
+	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	if err != nil {
+		return "", fmt.Errorf("convert the publish field for service %s: %w", s.name, err)
+	}
 
 	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
 	if err != nil {
@@ -188,6 +192,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		DependsOn:                dependencies,
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
+		Publish:                  publishers,
 	})
 	if err != nil {
 		return "", err

@@ -64,7 +64,11 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := envMft.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
-		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{ServiceDiscoveryEndpoint: svcDiscoveryEndpointName})
+		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
+			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
+			AccountID:                "123456789123",
+			Region:                   "us-west-2",
+		})
 
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
