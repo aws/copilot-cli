@@ -53,7 +53,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 			},
 
-			expectedError: errors.New("Copilot currently accepts URLs to only GitHub, CodeCommit, and Bitbucket repository sources"),
+			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
 		},
 		"invalid environments": {
 			inAppName: "my-app",
@@ -323,7 +323,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedError: fmt.Errorf("Copilot currently accepts URLs to only GitHub, CodeCommit, and Bitbucket repository sources"),
+			expectedError: fmt.Errorf("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
 		},
 		"returns error if fail to parse GitHub URL": {
 			inEnvironments:      []string{},
