@@ -6,6 +6,8 @@ package stack
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,14 +24,15 @@ type requestDrivenWebSvcReadParser interface {
 // RequestDrivenWebService represents the configuration needed to create a CloudFormation stack from a request-drive web service manifest.
 type RequestDrivenWebService struct {
 	*appRunnerWkld
-	manifest *manifest.RequestDrivenWebService
-	app      deploy.AppInformation
+	manifest            *manifest.RequestDrivenWebService
+	app                 deploy.AppInformation
+	customResourcesURLs map[string]string
 
 	parser requestDrivenWebSvcReadParser
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig, urls map[string]string) (*RequestDrivenWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -50,9 +53,10 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env strin
 			imageConfig:       mft.ImageConfig,
 			healthCheckConfig: mft.HealthCheckConfiguration,
 		},
-		app:      app,
-		manifest: mft,
-		parser:   parser,
+		app:                 app,
+		manifest:            mft,
+		parser:              parser,
+		customResourcesURLs: urls,
 	}, nil
 }
 
@@ -63,11 +67,26 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 
+	bucket, customDomain, err := s3.ParseURL(s.customResourcesURLs[template.RDWkldCustomDomainFileName])
+	if err != nil {
+		return "", err
+	}
+	_, sdkLayer, err := s3.ParseURL(s.customResourcesURLs[template.RDWkldCustomDomainAWSSDKLayerFileName])
+	if err != nil {
+		return "", err
+	}
+
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
 		Tags:              s.manifest.Tags,
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
+
+		ScriptBucketName:     bucket,
+		CustomDomainLambda:   customDomain,
+		AWSSDKLayer:          sdkLayer,
+		AppDNSDelegationRole: s.app.DNSDelegationRole(),
+		AppDNSName:           s.app.DNSName,
 	})
 	if err != nil {
 		return "", err

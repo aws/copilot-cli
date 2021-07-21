@@ -55,6 +55,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 		env     string
 		rc      RuntimeConfig
 		appInfo deploy.AppInformation
+		urls    map[string]string
 	}
 
 	testCases := map[string]struct {
@@ -71,6 +72,10 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 				rc:  RuntimeConfig{},
 				appInfo: deploy.AppInformation{
 					Name: testAppName,
+				},
+				urls: map[string]string{
+					"custom-domain-app-runner": "mockURL1",
+					"aws-sdk-layer":            "mockURL2",
 				},
 			},
 
@@ -90,6 +95,10 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 				app: deploy.AppInformation{
 					Name: testAppName,
 				},
+				customResourcesURLs: map[string]string{
+					"custom-domain-app-runner": "mockURL1",
+					"aws-sdk-layer":            "mockURL2",
+				},
 			},
 		},
 	}
@@ -104,6 +113,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 				tc.input.env,
 				tc.input.appInfo,
 				tc.input.rc,
+				tc.input.urls,
 			)
 
 			require.Equal(t, tc.wantedError, err)
@@ -115,6 +125,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			require.Equal(t, tc.wantedStack.manifest, stack.manifest)
 			require.Equal(t, tc.wantedStack.instanceConfig, stack.instanceConfig)
 			require.Equal(t, tc.wantedStack.imageConfig, stack.imageConfig)
+			require.Equal(t, tc.wantedStack.customResourcesURLs, stack.customResourcesURLs)
 			require.NotNil(t, stack.addons)
 			require.NotNil(t, stack.parser)
 		})
@@ -123,9 +134,10 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 
 func TestRequestDrivenWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
-		wantedTemplate   string
-		wantedError      error
+		inCustomResourceURLs map[string]string
+		mockDependencies     func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
+		wantedTemplate       string
+		wantedError          error
 	}{
 		"should throw an error if addons template cannot be parsed": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
@@ -135,6 +147,27 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				c.wkld.addons = addons
 			},
 			wantedError: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")), // TODO
+		},
+		"should be able to parse custom resource URLs": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
+				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
+				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+					Variables:          c.manifest.Variables,
+					Tags:               c.manifest.Tags,
+					EnableHealthCheck:  true,
+					ScriptBucketName:   "mockbucket",
+					CustomDomainLambda: "mockURL1",
+					AWSSDKLayer:        "mockURL2",
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				c.parser = mockParser
+				c.wkld.addons = addons
+			},
+			inCustomResourceURLs: map[string]string{
+				template.RDWkldCustomDomainFileName:            "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
+				template.RDWkldCustomDomainAWSSDKLayerFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
+			},
+			wantedTemplate: "template",
 		},
 		"should parse template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
@@ -212,7 +245,8 @@ Outputs:
 					},
 					healthCheckConfig: testRDWebServiceManifest.HealthCheckConfiguration,
 				},
-				manifest: testRDWebServiceManifest,
+				manifest:            testRDWebServiceManifest,
+				customResourcesURLs: tc.inCustomResourceURLs,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 
