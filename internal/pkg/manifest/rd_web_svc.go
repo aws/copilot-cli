@@ -43,15 +43,15 @@ type RequestDrivenWebServiceProps struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU    *int `yaml:"cpu"`
-	Memory *int `yaml:"memory"`
+	CPU      *int   `yaml:"cpu"`
+	Memory   *int   `yaml:"memory"`
+	Platform string `yaml:platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
 func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDrivenWebService {
 	svc := newDefaultRequestDrivenWebService()
 	svc.Name = aws.String(props.Name)
-	svc.Platform = props.Platform
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
@@ -90,11 +90,14 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
+// TaskPlatform returns the os/arch for the service. This is an empty string if the default (linux/amd64) is detected.
+func (s *RequestDrivenWebService) TaskPlatform() string {
+	return s.InstanceConfig.Platform
+}
+
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	ic := s.ImageConfig.BuildConfig(wsRoot)
-	ic.Platform = s.Platform
-	return ic
+	return s.ImageConfig.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

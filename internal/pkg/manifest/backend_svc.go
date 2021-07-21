@@ -46,7 +46,6 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc := newDefaultBackendService()
 	// Apply overrides.
 	svc.Name = stringP(props.Name)
-	svc.Platform = props.Platform
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
@@ -73,11 +72,14 @@ func (s *BackendService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
+// TaskPlatform returns the os/arch for the service. This is an empty string if the default (linux/amd64) is detected.
+func (s *BackendService) TaskPlatform() string {
+	return s.TaskConfig.Platform
+}
+
+// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory.
 func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	ic := s.ImageConfig.BuildConfig(wsRoot)
-	ic.Platform = s.Platform
-	return ic
+	return s.ImageConfig.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

@@ -76,9 +76,7 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType),
-						Platform: "",
-					},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
@@ -94,8 +92,9 @@ environments:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(512),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(512),
+							Memory:   aws.Int(1024),
+							Platform: "",
 							Count: Count{
 								Value: aws.Int(1),
 							},
@@ -201,9 +200,8 @@ secrets:
 				require.True(t, ok)
 				wantedManifest := &BackendService{
 					Workload: Workload{
-						Name:     aws.String("subscribers"),
-						Type:     aws.String(BackendServiceType),
-						Platform: "",
+						Name: aws.String("subscribers"),
+						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
@@ -220,8 +218,9 @@ secrets:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(1024),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(1024),
+							Memory:   aws.Int(1024),
+							Platform: "",
 							Count: Count{
 								Value: aws.Int(1),
 							},

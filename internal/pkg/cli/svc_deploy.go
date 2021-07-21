@@ -336,6 +336,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, erro
 func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*exec.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+		TaskPlatform() string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
@@ -346,7 +347,8 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
-	if err := validatePlatform(args.Platform); err != nil {
+	platform := mf.TaskPlatform()
+	if err := validatePlatform(platform); err != nil {
 		return nil, err
 	}
 	return &exec.BuildArguments{
@@ -355,7 +357,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
-		Platform:   args.Platform,
+		Platform:   platform,
 		Tags:       tags,
 	}, nil
 }

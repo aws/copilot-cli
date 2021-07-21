@@ -60,14 +60,14 @@ type WorkloadProps struct {
 	Name       string
 	Dockerfile string
 	Image      string
-	Platform   string
+	//Platform   string
 }
 
 // Workload holds the basic data that every workload manifest file needs to have.
 type Workload struct {
-	Name     *string `yaml:"name"`
-	Type     *string `yaml:"type"`     // must be one of the supported manifest types.
-	Platform string  `yaml:"platform"` // must be one of the supported os/arch types.
+	Name *string `yaml:"name"`
+	Type *string `yaml:"type"` // must be one of the supported manifest types.
+	//Platform string  `yaml:"platform"` // must be one of the supported os/arch types.
 }
 
 // Image represents the workload's container image.
@@ -352,8 +352,8 @@ type DockerBuildArgs struct {
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
 	Args       map[string]string `yaml:"args,omitempty"`
 	Target     *string           `yaml:"target,omitempty"`
-	Platform   string            `yaml:"platform,omitempty"`
-	CacheFrom  []string          `yaml:"cache_from,omitempty"`
+	//Platform   string            `yaml:"platform,omitempty"`
+	CacheFrom []string `yaml:"cache_from,omitempty"`
 }
 
 func (b *DockerBuildArgs) isEmpty() bool {
@@ -448,6 +448,7 @@ type SidecarConfig struct {
 type TaskConfig struct {
 	CPU            *int              `yaml:"cpu"`
 	Memory         *int              `yaml:"memory"`
+	Platform       string            `yaml:"platform,omitempty"`
 	Count          Count             `yaml:"count"`
 	ExecuteCommand ExecuteCommand    `yaml:"exec"`
 	Variables      map[string]string `yaml:"variables"`
