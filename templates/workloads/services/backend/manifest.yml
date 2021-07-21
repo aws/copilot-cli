@@ -5,9 +5,6 @@
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
 type: {{.Type}}
-{{- if .Platform}}
-platform: {{.Platform}}
-{{- end}}
 {{if .ImageConfig.Port}}
 # Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.ImageConfig.Port}}" but is not public.
 {{- else}}
@@ -39,6 +36,9 @@ image:
 
 cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
+{{- if .Platform}}
+platform: {{.Platform}}
+{{- end}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
 
