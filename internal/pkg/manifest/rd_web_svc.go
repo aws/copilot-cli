@@ -45,7 +45,7 @@ type RequestDrivenWebServiceProps struct {
 type AppRunnerInstanceConfig struct {
 	CPU      *int   `yaml:"cpu"`
 	Memory   *int   `yaml:"memory"`
-	Platform string `yaml:platform,omitempty"`
+	Platform string `yaml:"platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.

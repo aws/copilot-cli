@@ -438,10 +438,10 @@ func dockerPlatform(engine dockerEngine, image string) (osArch string, err error
 			return "", fmt.Errorf("get os/arch from docker: %w", err)
 		}
 	}
-	// Log a message informing non-amd arch users of platform for build.
+	// Log a message informing non-default arch users of platform for build.
 	if arch != exec.Amd64Arch {
 		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch))
-		// Redirect architectures that don't build on Fargate to build as amd64.
+		// Redirect architectures that don't build on Fargate to build as linux/amd64.
 		os = exec.LinuxOS
 		arch = exec.Amd64Arch
 		return fmt.Sprintf(fmtOSArch, os, arch), nil
