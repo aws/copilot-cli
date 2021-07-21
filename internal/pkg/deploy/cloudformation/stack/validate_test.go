@@ -510,7 +510,7 @@ func Test_validatePubSubTopicName(t *testing.T) {
 		},
 		"error when no topic name": {
 			inName:  "",
-			wantErr: errMissingPubSubTopicField,
+			wantErr: errMissingPublishTopicField,
 		},
 		"error when invalid topic name": {
 			inName:  "OHNO~/`...,",
@@ -584,7 +584,7 @@ func TestValidateTopicSubscription(t *testing.T) {
 			inTS: manifest.TopicSubscription{
 				Service: "svc",
 			},
-			wantErr: errMissingPubSubTopicField,
+			wantErr: errMissingPublishTopicField,
 		},
 		"empty svc name": {
 			inTS: manifest.TopicSubscription{

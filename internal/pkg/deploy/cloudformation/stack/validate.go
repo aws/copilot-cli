@@ -47,7 +47,7 @@ var (
 	errInvalidSvcName                = errors.New("service names cannot be empty")
 	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
 	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
-	errTopicSubscriptionNotAllowed   = errors.New("topic not in valid list of topics to subscribe to")
+	errTopicSubscriptionNotAllowed   = errors.New("topic not in list of topics available to subscribe to")
 )
 
 // Container dependency status options
@@ -413,7 +413,7 @@ func validateContainerPath(input string) error {
 // SNS Topic intended for a publisher.
 func validatePubSubName(name string) error {
 	if len(name) == 0 {
-		return errMissingPubSubTopicField
+		return errMissingPublishTopicField
 	}
 
 	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.

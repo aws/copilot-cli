@@ -1481,7 +1481,7 @@ func Test_convertPublish(t *testing.T) {
 					{},
 				},
 			},
-			wantedError: errMissingPubSubTopicField,
+			wantedError: errMissingPublishTopicField,
 		},
 		"publish with no workers": {
 			inPublish: &manifest.PublishConfig{
@@ -1582,7 +1582,7 @@ func Test_convertSubscribe(t *testing.T) {
 					{},
 				},
 			},
-			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPubSubTopicField),
+			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPublishTopicField),
 		},
 		"valid publish": {
 			inSubscribe: &manifest.SubscribeConfig{

@@ -595,7 +595,7 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 	if !ok {
 		return nil, fmt.Errorf("find the partition for region %s", region)
 	}
-	publishers := template.PublishOpts{}
+	var publishers template.PublishOpts
 	// convert the topics to template Topics
 	for _, topic := range p.Topics {
 		t, err := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
@@ -611,7 +611,7 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 
 func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc string) (*template.Topic, error) {
 	// topic should have a valid name and valid service worker names
-	if err := validatePubSubName(t.Name); err != nil {
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
 		return nil, err
 	}
 	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
