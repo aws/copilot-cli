@@ -224,10 +224,11 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	o.osArch, err = dockerPlatform(o.dockerEngine, o.image)
+	osArch, err := redirectPlatform(o.dockerEngine, o.image)
 	if err != nil {
 		return err
 	}
+	o.osArch = osArch
 
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -430,25 +431,29 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 	}, nil
 }
 
-func dockerPlatform(engine dockerEngine, image string) (osArch string, err error) {
-	var os, arch string
-	os, arch = runtime.GOOS, runtime.GOARCH
-	if image == "" {
-		os, arch, err = engine.GetPlatform()
-		if err != nil {
-			return "", fmt.Errorf("get os/arch from docker: %w", err)
-		}
+func redirectPlatform(engine dockerEngine, image string) (string, error) {
+	_, arch, err := dockerPlatform(engine, image)
+	if err != nil {
+		return "", err
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != exec.Amd64Arch {
 		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch))
-		// Redirect architectures that don't build on Fargate to build as linux/amd64.
-		os = exec.LinuxOS
-		arch = exec.Amd64Arch
-		return fmt.Sprintf(fmtOSArch, os, arch), nil
+		return fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch), nil
 	}
-	// Leave the platform field empty if it has the default architecture that doesn't require special handling.
+	// For now, the above enables ARM archs; other non-default platforms will proceed as before.
 	return "", nil
+}
+
+func dockerPlatform(engine dockerEngine, image string) (os, arch string, err error) {
+	os, arch = runtime.GOOS, runtime.GOARCH
+	if image == "" {
+		os, arch, err = engine.GetPlatform()
+		if err != nil {
+			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
+		}
+	}
+	return os, arch, nil
 }
 
 func svcTypePromptOpts() []prompt.Option {

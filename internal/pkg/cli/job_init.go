@@ -186,10 +186,11 @@ func (o *initJobOpts) Execute() error {
 		}
 	}
 
-	o.osArch, err = dockerPlatform(o.dockerEngine, o.image)
+	osArch, err := redirectPlatform(o.dockerEngine, o.image)
 	if err != nil {
 		return err
 	}
+	o.osArch = osArch
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
