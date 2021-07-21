@@ -62,7 +62,7 @@ const (
 	FmtOSArch = "%s/%s" // Stringified platform.
 )
 
-var validPlatforms = []string{
+var ValidPlatforms = []string{
 	fmt.Sprintf(FmtOSArch, LinuxOS, Amd64Arch),
 }
 
@@ -256,7 +256,7 @@ func ValidatePlatform(platform string) error {
 		return fmt.Errorf("platform %s is invalid; must be of format 'os/arch'", platform)
 	}
 	if osArch[0] != LinuxOS || osArch[1] != Amd64Arch {
-		return fmt.Errorf("platform %s is invalid; valid platforms are: %s", platform, validPlatforms)
+		return fmt.Errorf("platform %s is invalid; valid platforms are: %s", platform, ValidPlatforms)
 	}
 	return nil
 }

@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -430,28 +429,21 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 }
 
 func redirectPlatform(engine dockerEngine, image string) (string, error) {
-	_, arch, err := dockerPlatform(engine, image)
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
+	if image != "" {
+		return "", nil
+	}
+	_, arch, err := engine.GetPlatform()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("get os/arch from docker: %w", err)
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != exec.Amd64Arch {
 		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(exec.FmtOSArch, exec.LinuxOS, exec.Amd64Arch))
 		return fmt.Sprintf(exec.FmtOSArch, exec.LinuxOS, exec.Amd64Arch), nil
 	}
-	// For now, the above enables ARM archs; other non-default platforms will proceed as before.
-	return "", nil
-}
 
-func dockerPlatform(engine dockerEngine, image string) (os, arch string, err error) {
-	os, arch = runtime.GOOS, runtime.GOARCH
-	if image == "" {
-		os, arch, err = engine.GetPlatform()
-		if err != nil {
-			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
-		}
-	}
-	return os, arch, nil
+	return "", nil
 }
 
 func svcTypePromptOpts() []prompt.Option {
