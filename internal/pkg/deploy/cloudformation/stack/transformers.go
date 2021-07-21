@@ -591,14 +591,14 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 	if p == nil || len(p.Topics) == 0 {
 		return nil, nil
 	}
-	partition, err := getSNSTopicPartition(region)
-	if err != nil {
-		return nil, err
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return nil, fmt.Errorf("find the partition for region %s", region)
 	}
 	publishers := template.PublishOpts{}
 	// convert the topics to template Topics
 	for _, topic := range p.Topics {
-		t, err := convertTopic(topic, accountID, partition, region, app, env, svc)
+		t, err := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
@@ -628,14 +628,4 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 		Env:            env,
 		Svc:            svc,
 	}, nil
-}
-
-// getSNSTopicPartition returns the partition of the SNS topic, up to but not including the actual topic name,
-// for the current service
-func getSNSTopicPartition(region string) (string, error) {
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return "", fmt.Errorf("find the partition for region %s", region)
-	}
-	return partition.ID(), nil
 }
