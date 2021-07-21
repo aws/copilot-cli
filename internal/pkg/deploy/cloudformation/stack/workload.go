@@ -65,8 +65,6 @@ const maxEFSPathLength = 255
 // https://github.com/moby/moby/issues/1413
 const maxDockerContainerPathLength = 242
 
-const fmtSNSTopicARN = "arn:%s:sns:%s:%s:%s-%s-%s"
-
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
