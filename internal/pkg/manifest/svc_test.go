@@ -80,7 +80,7 @@ environments:
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
-								Location: aws.String("foo/bar"),
+								Location:    aws.String("foo/bar"),
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},

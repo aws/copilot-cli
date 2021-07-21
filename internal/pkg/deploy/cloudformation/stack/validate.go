@@ -26,7 +26,7 @@ var (
 	errNoContainerPath          = errors.New("`path` cannot be empty")
 	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
 	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
-	errMissingPublishTopicField = errors.New("topic `name` cannot be empty")
+	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
 )
 
 // Conditional errors.

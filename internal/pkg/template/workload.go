@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
@@ -39,6 +40,13 @@ const (
 	PrivateSubnetsPlacement = "PrivateSubnets"
 )
 
+// Constants for ARN options.
+const (
+	snsArnPattern     = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
+	AWSPartition      = "aws"
+	AWSChinaPartition = "aws-cn"
+)
+
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
@@ -65,6 +73,7 @@ var (
 		"image-overrides",
 		"instancerole",
 		"accessrole",
+		"publish",
 	}
 )
 
@@ -208,13 +217,20 @@ type StateMachineOpts struct {
 
 // PublishOpts holds configuration needed if the service has publishers.
 type PublishOpts struct {
-	Topics []*Topics
+	Topics []*Topic
 }
 
 // Topics holds information needed to render a SNSTopic in a container definition.
-type Topics struct {
+type Topic struct {
 	Name           *string
 	AllowedWorkers []string
+
+	Region    string
+	Partition string
+	AccountID string
+	App       string
+	Env       string
+	Svc       string
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.
@@ -278,6 +294,7 @@ type ParseRequestDrivenWebServiceInput struct {
 	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	EnableHealthCheck   bool
 	EnvControllerLambda string
+	Publish             *PublishOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	ScriptBucketName     string
@@ -360,8 +377,9 @@ func withSvcParsingFuncs() ParseOption {
 			"quoteSlice":          QuotePSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
-			"jsonPublishers":      generatePublishJSON,
+			"jsonSNSTopics":       generateSNSJSON,
 			"envControllerParams": envControllerParameters,
+			"logicalIDSafe":       StripNonAlphaNumFunc,
 		})
 	}
 }
@@ -397,4 +415,9 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+// ARN determines the arn for a topic using the SNSTopic arn start and the name of the topic
+func (t Topic) ARN() string {
+	return fmt.Sprintf(snsArnPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }

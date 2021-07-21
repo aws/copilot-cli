@@ -23,7 +23,7 @@ import (
 
 const (
 	artifactDirName = "manual"
-	notFound = "NotFound"
+	notFound        = "NotFound"
 )
 
 type s3ManagerAPI interface {
@@ -33,7 +33,7 @@ type s3ManagerAPI interface {
 type s3API interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
-	HeadBucket (input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
+	HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
 }
 
 // NamedBinary is a named binary to be uploaded.
@@ -110,8 +110,8 @@ func (s *S3) EmptyBucket(bucket string) error {
 	var err error
 
 	// Bucket is exists check to make sure the bucket exists before proceeding in emptying it
-	isExists, err:= s.isBucketExists(bucket)
-	if err!= nil {
+	isExists, err := s.isBucketExists(bucket)
+	if err != nil {
 		return fmt.Errorf("unable to determine the existance of bucket %s: %w", bucket, err)
 	}
 

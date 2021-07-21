@@ -119,37 +119,34 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 		}
 		volumeMap[aws.StringValue(mp.SourceVolume)] = aws.StringValue(mp.ContainerPath)
 	}
-	// Check for empty maps
-	if len(volumeMap) == 0 {
+
+	out, ok := getJSONMap(volumeMap)
+	if !ok {
 		return "{}"
 	}
 
-	out, err := json.Marshal(volumeMap)
-	if err != nil {
-		return "{}"
-	}
 	return string(out)
 
 }
 
 // generatePublisherJSON turns a list of Topics objects into a JSON string:
-// `{"myTopic": ["hello"], "mySecondTopic": ["hello","goodbye"]}`
+// `{"myTopic": "topicArn", "mySecondTopic": "secondTopicArn"}`
 // This function must be called on an array of correctly constructed Topic objects.
-func generatePublishJSON(topics []*Topics) string {
-	publisherMap := make(map[string][]string)
+func generateSNSJSON(topics []*Topic) string {
+	if topics == nil {
+		return ""
+	}
+	topicMap := make(map[string]string)
 
-	for _, pb := range topics {
-		if aws.StringValue(pb.Name) == "" {
+	for _, topic := range topics {
+		// Topics with no name will not be included in the json
+		if topic.Name == nil {
 			continue
 		}
-		if pb.AllowedWorkers == nil {
-			publisherMap[aws.StringValue(pb.Name)] = []string{}
-		} else {
-			publisherMap[aws.StringValue(pb.Name)] = pb.AllowedWorkers
-		}
+		topicMap[aws.StringValue(topic.Name)] = topic.ARN()
 	}
 
-	out, ok := getJSONMap(publisherMap)
+	out, ok := getJSONMap(topicMap)
 	if !ok {
 		return "{}"
 	}
@@ -157,7 +154,7 @@ func generatePublishJSON(topics []*Topics) string {
 	return string(out)
 }
 
-func getJSONMap(inMap map[string][]string) ([]byte, bool) {
+func getJSONMap(inMap map[string]string) ([]byte, bool) {
 	// Check for empty maps
 	if len(inMap) == 0 {
 		return nil, false

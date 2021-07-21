@@ -26,9 +26,9 @@ const (
 // '\x1b[2m'        (for Faint output)
 // '\x1b[1;31m'     (for bold, red output)
 const (
-	sgrStart = "\x1b\\["            // SGR sequences start with "ESC[".
-	sgrEnd = "m"                    // SGR sequences end with "m".
-	sgrParameter = "[0-9]{1,3}"     // SGR parameter values range from 0 to 107.
+	sgrStart     = "\x1b\\["    // SGR sequences start with "ESC[".
+	sgrEnd       = "m"          // SGR sequences end with "m".
+	sgrParameter = "[0-9]{1,3}" // SGR parameter values range from 0 to 107.
 )
 
 var (
