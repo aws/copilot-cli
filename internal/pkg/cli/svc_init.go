@@ -431,7 +431,8 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 }
 
 func dockerPlatform(engine dockerEngine, image string) (osArch string, err error) {
-	os, arch := runtime.GOOS, runtime.GOARCH
+	var os, arch string
+	os, arch = runtime.GOOS, runtime.GOARCH
 	if image == "" {
 		os, arch, err = engine.GetPlatform()
 		if err != nil {
