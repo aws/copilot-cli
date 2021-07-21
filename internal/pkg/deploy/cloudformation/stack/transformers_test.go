@@ -1565,6 +1565,7 @@ func Test_convertPublish(t *testing.T) {
 }
 
 func Test_convertSubscribe(t *testing.T) {
+	validTopics := []string{"arn:aws:us-east-1:123456789012:app-env-svc-name", "arn:aws:us-east-1:123456789012:app-env-svc-name2"}
 	testCases := map[string]struct {
 		inSubscribe *manifest.SubscribeConfig
 
@@ -1581,22 +1582,22 @@ func Test_convertSubscribe(t *testing.T) {
 					{},
 				},
 			},
-			wantedError: fmt.Errorf(`invalid topic subscription %s: %w`, "", errMissingPubSubTopicField),
+			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPubSubTopicField),
 		},
 		"valid publish": {
 			inSubscribe: &manifest.SubscribeConfig{
 				Topics: &[]manifest.TopicSubscription{
 					{
-						Name:    "topic1",
-						Service: "service1",
+						Name:    "name",
+						Service: "svc",
 					},
 				},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("topic1"),
-						Service: aws.String("service1"),
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
 					},
 				},
 			},
@@ -1610,7 +1611,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`invalid topic subscription %s: %w`, "t@p!c1~", errInvalidPubSubTopicName),
+			wantedError: fmt.Errorf(`invalid topic subscription "t@p!c1~": %w`, errInvalidPubSubTopicName),
 		},
 		"invalid service name": {
 			inSubscribe: &manifest.SubscribeConfig{
@@ -1621,12 +1622,23 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`invalid topic subscription %s: %w`, "topic1", errSvcNameBadFormat),
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errSvcNameBadFormat),
+		},
+		"topic not allowed": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "topic1",
+						Service: "svc",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errTopicSubscriptionNotAllowed),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertSubscribe(tc.inSubscribe)
+			got, err := convertSubscribe(tc.inSubscribe, validTopics)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

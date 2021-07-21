@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -18,15 +19,6 @@ const (
 	dependsOnComplete = "COMPLETE"
 	dependsOnSuccess  = "SUCCESS"
 	dependsOnHealthy  = "HEALTHY"
-)
-
-const (
-	// AppTagKey is tag key for Copilot app.
-	AppTagKey = "copilot-application"
-	// EnvTagKey is tag key for Copilot env.
-	EnvTagKey = "copilot-environment"
-	// ServiceTagKey is tag key for Copilot svc.
-	ServiceTagKey = "copilot-service"
 )
 
 // Empty field errors.
@@ -55,6 +47,7 @@ var (
 	errInvalidSvcName                = errors.New("service names cannot be empty")
 	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
 	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	errTopicSubscriptionNotAllowed   = errors.New("topic not in valid list of topics to subscribe to")
 )
 
 // Container dependency status options
@@ -418,13 +411,13 @@ func validateContainerPath(input string) error {
 
 // ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
 // SNS Topic intended for a publisher.
-func validatePubSubName(name *string) error {
-	if name == nil || len(aws.StringValue(name)) == 0 {
+func validatePubSubName(name string) error {
+	if len(name) == 0 {
 		return errMissingPubSubTopicField
 	}
 
 	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
-	if !awsSNSTopicRegexp.MatchString(aws.StringValue(name)) {
+	if !awsSNSTopicRegexp.MatchString(name) {
 		return errInvalidPubSubTopicName
 	}
 
@@ -470,8 +463,8 @@ func isCorrectSvcNameFormat(s string) bool {
 	return len(trailingMatch) == 0
 }
 
-func validateTopicSubscription(ts manifest.TopicSubscription) error {
-	if err := validatePubSubName(aws.String(ts.Name)); err != nil {
+func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []string) error {
+	if err := validatePubSubName(ts.Name); err != nil {
 		return err
 	}
 
@@ -479,5 +472,27 @@ func validateTopicSubscription(ts manifest.TopicSubscription) error {
 		return err
 	}
 
-	return nil
+	// Check that the topic is included in the list of available topics
+	for _, topicARN := range validTopicARNs {
+		splitArn := strings.Split(topicARN, ":")
+		topicName := strings.Split(splitArn[len(splitArn)-1], "-")
+		if len(topicName) < 4 {
+			continue
+		}
+
+		if topicName[2] == ts.Service && topicName[3] == ts.Name {
+			return nil
+		}
+	}
+
+	return errTopicSubscriptionNotAllowed
+}
+
+func contains(s string, items []string) bool {
+	for _, item := range items {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

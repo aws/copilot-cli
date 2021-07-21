@@ -293,11 +293,13 @@ type WorkloadOpts struct {
 	DesiredCountLambda   string
 	EnvControllerLambda  string
 	CredentialsParameter string
-	Subscribe            SubscribeOpts
 
 	// Additional options for job templates.
 	ScheduleExpression string
 	StateMachine       *StateMachineOpts
+
+	// Additional options for worker service templates.
+	Subscribe SubscribeOpts
 }
 
 // ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
