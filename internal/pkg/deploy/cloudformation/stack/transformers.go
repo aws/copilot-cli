@@ -591,7 +591,7 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 	if p == nil || len(p.Topics) == 0 {
 		return nil, nil
 	}
-	partition, err := getSNSTopicARN(region)
+	partition, err := getSNSTopicPartition(region)
 	if err != nil {
 		return nil, err
 	}
@@ -630,9 +630,9 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	}, nil
 }
 
-// getSNSTopicARN returns the starting ARN of the SNS topic, up to but not including the actual topic name,
+// getSNSTopicPartition returns the partition of the SNS topic, up to but not including the actual topic name,
 // for the current service
-func getSNSTopicARN(region string) (string, error) {
+func getSNSTopicPartition(region string) (string, error) {
 	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
 	if !ok {
 		return "", fmt.Errorf("find the partition for region %s", region)
