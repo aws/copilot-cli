@@ -6,6 +6,8 @@ package stack
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -21,12 +23,13 @@ type requestDrivenWebSvcReadParser interface {
 type RequestDrivenWebService struct {
 	*appRunnerWkld
 	manifest *manifest.RequestDrivenWebService
+	app      deploy.AppInformation
 
 	parser requestDrivenWebSvcReadParser
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app string, rc RuntimeConfig) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -37,7 +40,7 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app 
 			wkld: &wkld{
 				name:   aws.StringValue(mft.Name),
 				env:    env,
-				app:    app,
+				app:    app.Name,
 				rc:     rc,
 				image:  mft.ImageConfig,
 				addons: addons,
@@ -47,6 +50,7 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app 
 			imageConfig:       mft.ImageConfig,
 			healthCheckConfig: mft.HealthCheckConfiguration,
 		},
+		app:      app,
 		manifest: mft,
 		parser:   parser,
 	}, nil
@@ -58,6 +62,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
 		Tags:              s.manifest.Tags,

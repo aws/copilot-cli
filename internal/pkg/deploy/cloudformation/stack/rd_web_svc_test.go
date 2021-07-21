@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -49,10 +51,10 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 
 func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 	type testInput struct {
-		mft *manifest.RequestDrivenWebService
-		env string
-		app string
-		rc  RuntimeConfig
+		mft     *manifest.RequestDrivenWebService
+		env     string
+		rc      RuntimeConfig
+		appInfo deploy.AppInformation
 	}
 
 	testCases := map[string]struct {
@@ -66,8 +68,10 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			input: testInput{
 				mft: testRDWebServiceManifest,
 				env: testEnvName,
-				app: testAppName,
 				rc:  RuntimeConfig{},
+				appInfo: deploy.AppInformation{
+					Name: testAppName,
+				},
 			},
 
 			wantedStack: &RequestDrivenWebService{
@@ -83,6 +87,9 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 					imageConfig:    testRDWebServiceManifest.ImageConfig,
 				},
 				manifest: testRDWebServiceManifest,
+				app: deploy.AppInformation{
+					Name: testAppName,
+				},
 			},
 		},
 	}
@@ -95,7 +102,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			stack, err := NewRequestDrivenWebService(
 				tc.input.mft,
 				tc.input.env,
-				tc.input.app,
+				tc.input.appInfo,
 				tc.input.rc,
 			)
 

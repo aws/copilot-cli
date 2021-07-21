@@ -37,5 +37,5 @@ Dockerfile からコンテナイメージをビルドする代わりに、既存
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 公開するポート番号。Dockerfile 内に `EXPOSE` インストラクションが記述されている場合、Copilot はそれをパースした値をここに挿入します。  
 
-<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>  
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a> <span class="type">Map</span>  
 コンテナに付与したい [Docker ラベル](https://docs.docker.com/config/labels-custom-metadata/)を key/value の Map で指定できます。これは任意設定項目です。
