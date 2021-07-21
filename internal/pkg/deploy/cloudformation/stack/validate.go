@@ -487,12 +487,3 @@ func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []s
 
 	return errTopicSubscriptionNotAllowed
 }
-
-func contains(s string, items []string) bool {
-	for _, item := range items {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
