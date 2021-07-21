@@ -249,6 +249,7 @@ func TestGenerateSNSJSON(t *testing.T) {
 					Name:      aws.String("tests"),
 					AccountID: "123456789012",
 					Region:    "us-west-2",
+					Partition: "aws",
 					App:       "appName",
 					Env:       "envName",
 					Svc:       "svcName",
@@ -256,24 +257,12 @@ func TestGenerateSNSJSON(t *testing.T) {
 			},
 			wanted: `{"tests":"arn:aws:sns:us-west-2:123456789012:appName-envName-svcName-tests"}`,
 		},
-		"JSON should render china partition correctly": {
-			in: []*Topic{
-				{
-					Name:      aws.String("tests"),
-					AccountID: "123456789012",
-					Region:    "cn-north-1",
-					App:       "appName",
-					Env:       "envName",
-					Svc:       "svcName",
-				},
-			},
-			wanted: `{"tests":"arn:aws-cn:sns:cn-north-1:123456789012:appName-envName-svcName-tests"}`,
-		},
 		"Topics with no names show empty": {
 			in: []*Topic{
 				{
 					AccountID: "123456789012",
 					Region:    "us-west-2",
+					Partition: "aws",
 					App:       "appName",
 					Env:       "envName",
 					Svc:       "svcName",

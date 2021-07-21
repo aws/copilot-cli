@@ -6,7 +6,6 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -227,6 +226,7 @@ type Topic struct {
 	AllowedWorkers []string
 
 	Region    string
+	Partition string
 	AccountID string
 	App       string
 	Env       string
@@ -417,23 +417,7 @@ func envControllerParameters(o WorkloadOpts) []string {
 	return parameters
 }
 
+// ARN determines the arn for a topic using the SNSTopic arn start and the name of the topic
 func (t Topic) ARN() string {
-	if !t.hasARNParameters() {
-		return ""
-	}
-	partition := AWSPartition
-	if strings.Contains(t.Region, "cn-") {
-		partition = AWSChinaPartition
-	}
-	return fmt.Sprintf(snsArnPattern, partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
-}
-
-func (t Topic) hasARNParameters() bool {
-	if t.AccountID == "" || t.Region == "" {
-		return false
-	}
-	if t.App == "" || t.Env == "" || t.Svc == "" {
-		return false
-	}
-	return true
+	return fmt.Sprintf(snsArnPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }

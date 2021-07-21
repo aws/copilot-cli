@@ -1460,6 +1460,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 
 func Test_convertPublish(t *testing.T) {
 	accountId := "123456789123"
+	partition := "aws"
 	region := "us-west-2"
 	app := "testapp"
 	env := "testenv"
@@ -1495,6 +1496,7 @@ func Test_convertPublish(t *testing.T) {
 					{
 						Name:      aws.String("topic1"),
 						AccountID: accountId,
+						Partition: partition,
 						Region:    region,
 						App:       app,
 						Env:       env,
@@ -1518,6 +1520,7 @@ func Test_convertPublish(t *testing.T) {
 						Name:           aws.String("topic1"),
 						AllowedWorkers: []string{"worker1"},
 						AccountID:      accountId,
+						Partition:      partition,
 						Region:         region,
 						App:            app,
 						Env:            env,

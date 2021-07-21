@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -590,10 +591,14 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 	if p == nil || len(p.Topics) == 0 {
 		return nil, nil
 	}
+	partition, err := getSNSTopicARN(region)
+	if err != nil {
+		return nil, err
+	}
 	publishers := template.PublishOpts{}
 	// convert the topics to template Topics
 	for _, topic := range p.Topics {
-		t, err := convertTopic(topic, accountID, region, app, env, svc)
+		t, err := convertTopic(topic, accountID, partition, region, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
@@ -604,7 +609,7 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 	return &publishers, nil
 }
 
-func convertTopic(t manifest.Topic, accountID, region, app, env, svc string) (*template.Topic, error) {
+func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc string) (*template.Topic, error) {
 	// topic should have a valid name and valid service worker names
 	if err := validatePubSubName(t.Name); err != nil {
 		return nil, err
@@ -617,9 +622,20 @@ func convertTopic(t manifest.Topic, accountID, region, app, env, svc string) (*t
 		Name:           t.Name,
 		AllowedWorkers: t.AllowedWorkers,
 		AccountID:      accountID,
+		Partition:      partition,
 		Region:         region,
 		App:            app,
 		Env:            env,
 		Svc:            svc,
 	}, nil
+}
+
+// getSNSTopicARN returns the starting ARN of the SNS topic, up to but not including the actual topic name,
+// for the current service
+func getSNSTopicARN(region string) (string, error) {
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return "", fmt.Errorf("find the partition for region %s", region)
+	}
+	return partition.ID(), nil
 }
