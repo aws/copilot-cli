@@ -431,8 +431,7 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 }
 
 func dockerPlatform(engine dockerEngine, image string) (osArch string, err error) {
-	var os, arch string
-	os, arch = runtime.GOOS, runtime.GOARCH
+	os, arch := runtime.GOOS, runtime.GOARCH
 	if image == "" {
 		os, arch, err = engine.GetPlatform()
 		if err != nil {
@@ -443,6 +442,7 @@ func dockerPlatform(engine dockerEngine, image string) (osArch string, err error
 	if arch != exec.Amd64Arch {
 		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch))
 		// Redirect architectures that don't build on Fargate to build as amd64.
+		os = exec.LinuxOS
 		arch = exec.Amd64Arch
 		return fmt.Sprintf(fmtOSArch, os, arch), nil
 	}
