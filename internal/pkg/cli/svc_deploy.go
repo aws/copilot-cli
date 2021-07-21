@@ -75,10 +75,6 @@ type deploySvcOpts struct {
 	buildRequired     bool
 }
 
-var validPlatforms = []string{
-	fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch),
-}
-
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
@@ -348,7 +344,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
 	platform := mf.TaskPlatform()
-	if err := validatePlatform(platform); err != nil {
+	if err := exec.ValidatePlatform(platform); err != nil {
 		return nil, err
 	}
 	return &exec.BuildArguments{
@@ -538,20 +534,6 @@ func validateAppVersion(alias string, app *config.Application, appVersionGetter 
 	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 	if diff < 0 {
 		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
-	}
-	return nil
-}
-
-func validatePlatform(platform string) error {
-	if platform == "" {
-		return nil
-	}
-	osArch := strings.Split(platform, "/")
-	if len(osArch) < 2 {
-		return fmt.Errorf("platform %s is invalid; must be of format 'os/arch'", platform)
-	}
-	if osArch[0] != exec.LinuxOS || osArch[1] != exec.Amd64Arch {
-		return fmt.Errorf("platform %s is invalid; valid platforms are: %s", platform, validPlatforms)
 	}
 	return nil
 }

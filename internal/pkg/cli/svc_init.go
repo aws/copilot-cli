@@ -60,8 +60,6 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
-
-	fmtOSArch = "%s/%s" // Stringified platform.
 )
 
 var serviceTypeHints = map[string]string{
@@ -438,8 +436,8 @@ func redirectPlatform(engine dockerEngine, image string) (string, error) {
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != exec.Amd64Arch {
-		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch))
-		return fmt.Sprintf(fmtOSArch, exec.LinuxOS, exec.Amd64Arch), nil
+		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(exec.FmtOSArch, exec.LinuxOS, exec.Amd64Arch))
+		return fmt.Sprintf(exec.FmtOSArch, exec.LinuxOS, exec.Amd64Arch), nil
 	}
 	// For now, the above enables ARM archs; other non-default platforms will proceed as before.
 	return "", nil

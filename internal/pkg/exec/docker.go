@@ -59,7 +59,12 @@ const (
 const (
 	LinuxOS   = "linux"
 	Amd64Arch = "amd64"
+	FmtOSArch = "%s/%s" // Stringified platform.
 )
+
+var validPlatforms = []string{
+	fmt.Sprintf(FmtOSArch, LinuxOS, Amd64Arch),
+}
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c DockerCommand) Build(in *BuildArguments) error {
@@ -239,6 +244,21 @@ func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 	}
 
 	return false
+}
+
+// ValidatePlatform checks if the entered string is a Docker-buildable platform.
+func ValidatePlatform(platform string) error {
+	if platform == "" {
+		return nil
+	}
+	osArch := strings.Split(platform, "/")
+	if len(osArch) < 2 {
+		return fmt.Errorf("platform %s is invalid; must be of format 'os/arch'", platform)
+	}
+	if osArch[0] != LinuxOS || osArch[1] != Amd64Arch {
+		return fmt.Errorf("platform %s is invalid; valid platforms are: %s", platform, validPlatforms)
+	}
+	return nil
 }
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
