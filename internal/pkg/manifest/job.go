@@ -135,11 +135,6 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &j, nil
 }
 
-// TaskPlatform returns the os/arch for the service. This is an empty string if the default (linux/amd64) is detected.
-func (s *ScheduledJob) TaskPlatform() string {
-	return s.TaskConfig.Platform
-}
-
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
 func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return j.ImageConfig.BuildConfig(wsRoot)

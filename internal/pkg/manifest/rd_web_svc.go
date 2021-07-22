@@ -90,11 +90,6 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the os/arch for the service. This is an empty string if the default (linux/amd64) is detected.
-func (s *RequestDrivenWebService) TaskPlatform() string {
-	return s.InstanceConfig.Platform
-}
-
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)

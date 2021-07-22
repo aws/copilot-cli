@@ -139,8 +139,8 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 }
 
 // TaskPlatform returns the os/arch for the service. This is an empty string if the default (linux/amd64) is detected.
-func (s *LoadBalancedWebService) TaskPlatform() string {
-	return s.TaskConfig.Platform
+func (t *TaskConfig) TaskPlatform() string {
+	return t.Platform
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

@@ -273,7 +273,7 @@ image:
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 				)
 			},
-			wantErr: fmt.Errorf("platform %s is invalid; valid platforms are: %s", "linus/abc123", exec.ValidPlatforms),
+			wantErr: fmt.Errorf("platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
 		},
 		"success with valid platform": {
 			inputSvc: "serviceA",

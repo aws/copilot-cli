@@ -93,7 +93,7 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	osArch       string
+	platform     string
 
 	// Cache variables
 	df dockerfileParser
@@ -225,7 +225,7 @@ func (o *initSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	o.osArch = osArch
+	o.platform = osArch
 
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -234,7 +234,7 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.osArch,
+			Platform:       o.platform,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -439,8 +439,8 @@ func redirectPlatform(engine dockerEngine, image string) (string, error) {
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != exec.Amd64Arch {
-		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, fmt.Sprintf(exec.FmtOSArch, exec.LinuxOS, exec.Amd64Arch))
-		return fmt.Sprintf(exec.FmtOSArch, exec.LinuxOS, exec.Amd64Arch), nil
+		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch))
+		return exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch), nil
 	}
 
 	return "", nil

@@ -72,11 +72,6 @@ func (s *BackendService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the os/arch for the service. This is an empty string if the default (linux/amd64) is detected.
-func (s *BackendService) TaskPlatform() string {
-	return s.TaskConfig.Platform
-}
-
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory.
 func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)

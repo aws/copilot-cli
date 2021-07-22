@@ -15,6 +15,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
@@ -59,11 +61,10 @@ const (
 const (
 	LinuxOS   = "linux"
 	Amd64Arch = "amd64"
-	FmtOSArch = "%s/%s" // Stringified platform.
 )
 
-var ValidPlatforms = []string{
-	fmt.Sprintf(FmtOSArch, LinuxOS, Amd64Arch),
+var validPlatforms = []string{
+	DockerBuildPlatform(LinuxOS, Amd64Arch),
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
@@ -209,6 +210,10 @@ func (c DockerCommand) GetPlatform() (os, arch string, err error) {
 	return platform.OS, platform.Arch, nil
 }
 
+func DockerBuildPlatform(os, arch string) string {
+	return fmt.Sprintf("%s/%s", os, arch)
+}
+
 func imageName(uri, tag string) string {
 	if tag == "" {
 		return uri // If no tag is specified build with latest.
@@ -251,12 +256,8 @@ func ValidatePlatform(platform string) error {
 	if platform == "" {
 		return nil
 	}
-	osArch := strings.Split(platform, "/")
-	if len(osArch) < 2 {
-		return fmt.Errorf("platform %s is invalid; must be of format 'os/arch'", platform)
-	}
-	if osArch[0] != LinuxOS || osArch[1] != Amd64Arch {
-		return fmt.Errorf("platform %s is invalid; valid platforms are: %s", platform, ValidPlatforms)
+	if platform != DockerBuildPlatform(LinuxOS, Amd64Arch) {
+		return fmt.Errorf("platform %s is invalid; %s: %s", platform, english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 	}
 	return nil
 }
