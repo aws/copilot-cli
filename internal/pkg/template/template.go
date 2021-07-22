@@ -21,6 +21,7 @@ const (
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
 	scriptDirName                  = "scripts"
+	layerDirName                   = "layers"
 )
 
 // Environment custom resource file names.
@@ -31,6 +32,11 @@ const (
 	CustomDomainFileName     = "custom-domain"
 )
 
+const (
+	RDWkldCustomDomainFileName            = "custom-domain-app-runner"
+	RDWkldCustomDomainAWSSDKLayerFileName = "aws-sdk-layer"
+)
+
 var box = templates.Box()
 
 var envCustomResourceFiles = []string{
@@ -38,6 +44,14 @@ var envCustomResourceFiles = []string{
 	DNSDelegationFileName,
 	EnableLongARNsFileName,
 	CustomDomainFileName,
+}
+
+var rdWkldCustomResourceFiles = []string{
+	RDWkldCustomDomainFileName,
+}
+
+var rdWkldCustomResourceLayers = []string{
+	RDWkldCustomDomainAWSSDKLayerFileName,
 }
 
 // Parser is the interface that wraps the Parse method.
@@ -114,10 +128,38 @@ func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadF
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
+//UploadRequestDrivenWebServiceCustomResources uploads the request driven web service custom resource scripts.
+func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
+	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
+}
+
+// UploadRequestDrivenWebServiceLayers uploads already-zipped layers for a request driven web service.
+func (t *Template) UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error) {
+	urls := make(map[string]string)
+	for _, layerName := range rdWkldCustomResourceLayers {
+		content, err := t.Read(path.Join(customResourceRootPath, fmt.Sprintf("%s.zip", layerName)))
+		if err != nil {
+			return nil, err
+		}
+		name := path.Join(layerDirName, layerName)
+		url, err := upload(fmt.Sprintf("%s/%x", name, sha256.Sum256(content.Bytes())), Uploadable{
+			name:    layerName,
+			content: content.Bytes(),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("upload %s: %w", name, err)
+		}
+
+		urls[layerName] = url
+	}
+
+	return urls, nil
+}
+
 func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, name := range fileNames {
-		url, err := t.uploadfileToCompress(upload, fileToCompress{
+		url, err := t.uploadFileToCompress(upload, fileToCompress{
 			name: path.Join(scriptDirName, name),
 			uploadables: []Uploadable{
 				{
@@ -134,7 +176,7 @@ func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNa
 	return urls, nil
 }
 
-func (t *Template) uploadfileToCompress(upload s3.CompressAndUploadFunc, file fileToCompress) (string, error) {
+func (t *Template) uploadFileToCompress(upload s3.CompressAndUploadFunc, file fileToCompress) (string, error) {
 	var contents []byte
 	var nameBinaries []s3.NamedBinary
 	for _, uploadable := range file.uploadables {
