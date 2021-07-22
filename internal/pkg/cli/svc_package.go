@@ -130,7 +130,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				DNSName:             app.Domain,
 				AccountPrincipalARN: app.AccountID,
 			}
-			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc)
+			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc, nil)
 			if err != nil {
 				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
 			}

@@ -149,12 +149,14 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			wantedError: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")), // TODO
 		},
 		"should be able to parse custom resource URLs": {
+			inCustomResourceURLs: map[string]string{
+				template.RDWkldCustomDomainFileName:            "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
+				template.RDWkldCustomDomainAWSSDKLayerFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
+			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
-				mockBucket := "mockbucket"
-				mockCustomDomainLambda := "mockURL1"
-				mockAWSSDKLayer := "mockURL2"
+				mockBucket, mockCustomDomainLambda, mockAWSSDKLayer := "mockbucket", "mockURL1", "mockURL2"
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 					Variables:          c.manifest.Variables,
 					Tags:               c.manifest.Tags,
@@ -165,10 +167,6 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.wkld.addons = addons
-			},
-			inCustomResourceURLs: map[string]string{
-				template.RDWkldCustomDomainFileName:            "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
-				template.RDWkldCustomDomainAWSSDKLayerFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
 			},
 			wantedTemplate: "template",
 		},

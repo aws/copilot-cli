@@ -665,11 +665,11 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 }
 
 func convertRDWkldCustomResources(customDomainURLs map[string]string) (bucket *string, urls map[string]*string, err error) {
-	urls = make(map[string]*string)
 	if customDomainURLs == nil {
 		return nil, nil, nil
 	}
 
+	urls = make(map[string]*string)
 	bucketName, customDomainKey, err := s3.ParseURL(customDomainURLs[template.RDWkldCustomDomainFileName])
 	if err != nil {
 		return nil, nil, err
