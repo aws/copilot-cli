@@ -691,15 +691,15 @@ func convertTopicQueue(q *manifest.SQSQueue, url, accountID, app, env, svc strin
 	}
 	retention, err := convertRetention(q.Retention)
 	if err != nil {
-		return nil, fmt.Errorf("invalid `retention`: %w", err)
+		return nil, fmt.Errorf(" `retention` %w", err)
 	}
 	delay, err := convertDelay(q.Delay)
 	if err != nil {
-		return nil, fmt.Errorf("invalid `delay`: %w", err)
+		return nil, fmt.Errorf("`delay` %w", err)
 	}
 	timeout, err := convertTimeout(q.Timeout)
 	if err != nil {
-		return nil, fmt.Errorf("invalid `timeout`: %w", err)
+		return nil, fmt.Errorf("`timeout` %w", err)
 	}
 	deadletter, err := convertDeadLetter(q.DeadLetter)
 	if err != nil {

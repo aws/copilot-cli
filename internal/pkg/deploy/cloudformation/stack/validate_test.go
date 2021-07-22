@@ -636,7 +636,7 @@ func TestValidateTime(t *testing.T) {
 			inTime:    601000000000,
 			inFloor:   0,
 			inCeiling: 600,
-			wantErr:   errors.New("time must be between 0 and 600 seconds"),
+			wantErr:   errors.New("must be between 0 and 600 seconds"),
 		},
 	}
 

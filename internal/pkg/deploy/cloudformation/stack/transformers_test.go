@@ -1697,7 +1697,7 @@ func Test_convertSubscribe(t *testing.T) {
 					Delay: (*time.Duration)(aws.Int64(99900000000000)),
 				},
 			},
-			wantedError: fmt.Errorf("invalid `delay`: time must be between 0 and 900 seconds"),
+			wantedError: fmt.Errorf("`delay` must be between 0 and 900 seconds"),
 		},
 	}
 	for name, tc := range testCases {
