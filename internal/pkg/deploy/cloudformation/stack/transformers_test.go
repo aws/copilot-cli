@@ -1538,7 +1538,7 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errNameBadFormat),
+			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errSvcNameBadFormat),
 		},
 		"invalid topic name": {
 			inPublish: &manifest.PublishConfig{
@@ -1555,6 +1555,90 @@ func Test_convertPublish(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, err := convertPublish(tc.inPublish, accountId, region, app, env, svc)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}
+
+func Test_convertSubscribe(t *testing.T) {
+	validTopics := []string{"arn:aws:us-east-1:123456789012:app-env-svc-name", "arn:aws:us-east-1:123456789012:app-env-svc-name2"}
+	testCases := map[string]struct {
+		inSubscribe *manifest.SubscribeConfig
+
+		wanted      *template.SubscribeOpts
+		wantedError error
+	}{
+		"empty subscription": {
+			inSubscribe: &manifest.SubscribeConfig{},
+			wanted:      nil,
+		},
+		"subscription with empty topic subscriptions": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPublishTopicField),
+		},
+		"valid publish": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+			},
+		},
+		"invalid topic name": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "t@p!c1~",
+						Service: "service1",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "t@p!c1~": %w`, errInvalidPubSubTopicName),
+		},
+		"invalid service name": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "topic1",
+						Service: "s#rv!ce1~",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errSvcNameBadFormat),
+		},
+		"topic not allowed": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "topic1",
+						Service: "svc",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errTopicSubscriptionNotAllowed),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertSubscribe(tc.inSubscribe, validTopics)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

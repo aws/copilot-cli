@@ -28,6 +28,7 @@ const (
 	lbWebSvcTplName     = "lb-web"
 	rdWebSvcTplName     = "rd-web"
 	backendSvcTplName   = "backend"
+	workerSvcTplName    = "worker"
 	scheduledJobTplName = "scheduled-job"
 )
 
@@ -233,6 +234,17 @@ type Topic struct {
 	Svc       string
 }
 
+// SubscribeOpts holds configuration needed if the service has subscriptions.
+type SubscribeOpts struct {
+	Topics []*TopicSubscription
+}
+
+// TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
+type TopicSubscription struct {
+	Name    *string
+	Service *string
+}
+
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
 	AssignPublicIP string
@@ -285,6 +297,9 @@ type WorkloadOpts struct {
 	// Additional options for job templates.
 	ScheduleExpression string
 	StateMachine       *StateMachineOpts
+
+	// Additional options for worker service templates.
+	Subscribe SubscribeOpts
 }
 
 // ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
@@ -326,6 +341,14 @@ func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
 		data.Network = defaultNetworkOpts()
 	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
+}
+
+// ParseWorkerService parses a worker service's CloudFormation template with the specified data object and returns its content.
+func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
+	return t.parseSvc(workerSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
