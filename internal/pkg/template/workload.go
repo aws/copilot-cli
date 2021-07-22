@@ -44,7 +44,7 @@ const (
 // Constants for ARN options.
 const (
 	snsArnPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
-	sqsArnPattern = "arn:%s:sqs:%s:%s:%s-%s-%s-%s"
+	sqsURIPattern = "https://sqs.amazon%s.%s.com/%s/%s-%s-%s-%s"
 )
 
 var (
@@ -470,13 +470,13 @@ func envControllerParameters(o WorkloadOpts) []string {
 	return parameters
 }
 
-// ARN determines the arn for a topic using the SNSTopic arn start and the name of the topic
+// ARN determines the arn for a topic using the SNSTopic name and account information
 func (t Topic) ARN() string {
 	return fmt.Sprintf(snsArnPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }
 
-// ARN determines the arn for a queue using the SNSTopic arn start and the name of the topic
-func (q SQSQueue) ARN(topicName *string) string {
+// URI determines the uri for a queue using the queue name and account information
+func (q SQSQueue) URI(topicName *string) string {
 	var name string
 	if q.Name != nil {
 		name = aws.StringValue(q.Name)
@@ -485,5 +485,5 @@ func (q SQSQueue) ARN(topicName *string) string {
 	} else {
 		name = "SQSQueue"
 	}
-	return fmt.Sprintf(sqsArnPattern, q.Partition, q.Region, q.AccountID, q.App, q.Env, q.Svc, name)
+	return fmt.Sprintf(sqsURIPattern, q.Region, q.Partition, q.AccountID, q.App, q.Env, q.Svc, name)
 }
