@@ -238,17 +238,47 @@ func TestGenerateMountPointJSON(t *testing.T) {
 	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{{SourceVolume: aws.String("fromEFS")}}), "empty paths should not get injected")
 }
 
-func TestGeneratePublishJSON(t *testing.T) {
-	require.Equal(t, `{"tests":["testsWorker1","testsWorker2"]}`,
-		generatePublishJSON(
-			[]*Topics{
+func TestGenerateSNSJSON(t *testing.T) {
+	testCases := map[string]struct {
+		in     []*Topic
+		wanted string
+	}{
+		"JSON should render correctly": {
+			in: []*Topic{
 				{
-					Name:           aws.String("tests"),
-					AllowedWorkers: []string{"testsWorker1", "testsWorker2"},
+					Name:      aws.String("tests"),
+					AccountID: "123456789012",
+					Region:    "us-west-2",
+					Partition: "aws",
+					App:       "appName",
+					Env:       "envName",
+					Svc:       "svcName",
 				},
 			},
-		), "JSON should render correctly")
+			wanted: `{"tests":"arn:aws:sns:us-west-2:123456789012:appName-envName-svcName-tests"}`,
+		},
+		"Topics with no names show empty": {
+			in: []*Topic{
+				{
+					AccountID: "123456789012",
+					Region:    "us-west-2",
+					Partition: "aws",
+					App:       "appName",
+					Env:       "envName",
+					Svc:       "svcName",
+				},
+			},
+			wanted: `{}`,
+		},
+		"nil list of arguments should render": {
+			in:     []*Topic{},
+			wanted: `{}`,
+		},
+	}
 
-	require.Equal(t, `{"tests":[]}`, generatePublishJSON([]*Topics{{Name: aws.String("tests")}}), "Topics with no workers show empty list")
-	require.Equal(t, "{}", generatePublishJSON([]*Topics{}), "nil list of arguments should render")
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, generateSNSJSON(tc.in))
+		})
+	}
 }

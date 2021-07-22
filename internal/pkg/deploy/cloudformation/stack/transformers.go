@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -586,14 +587,18 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 	return out, nil
 }
 
-func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
+func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
 	if p == nil || len(p.Topics) == 0 {
 		return nil, nil
 	}
-	publishers := template.PublishOpts{}
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return nil, fmt.Errorf("find the partition for region %s", region)
+	}
+	var publishers template.PublishOpts
 	// convert the topics to template Topics
 	for _, topic := range p.Topics {
-		t, err := convertTopic(topic)
+		t, err := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
@@ -604,19 +609,53 @@ func convertPublish(p *manifest.PublishConfig) (*template.PublishOpts, error) {
 	return &publishers, nil
 }
 
-func convertTopic(t manifest.Topic) (*template.Topics, error) {
-	err := validatePubSubName(t.Name)
-	if err != nil {
+func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc string) (*template.Topic, error) {
+	// topic should have a valid name and valid service worker names
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return nil, err
+	}
+	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
 		return nil, err
 	}
 
-	workerErr := validateWorkerNames(t.AllowedWorkers)
-	if workerErr != nil {
-		return nil, workerErr
-	}
-
-	return &template.Topics{
+	return &template.Topic{
 		Name:           t.Name,
 		AllowedWorkers: t.AllowedWorkers,
+		AccountID:      accountID,
+		Partition:      partition,
+		Region:         region,
+		App:            app,
+		Env:            env,
+		Svc:            svc,
+	}, nil
+}
+
+func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string) (*template.SubscribeOpts, error) {
+	if s == nil || s.Topics == nil {
+		return nil, nil
+	}
+
+	var subscriptions template.SubscribeOpts
+	for _, sb := range *s.Topics {
+		ts, err := convertTopicSubscription(sb, validTopicARNs)
+		if err != nil {
+			return nil, err
+		}
+
+		subscriptions.Topics = append(subscriptions.Topics, ts)
+	}
+
+	return &subscriptions, nil
+}
+
+func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string) (*template.TopicSubscription, error) {
+	err := validateTopicSubscription(t, validTopicARNs)
+	if err != nil {
+		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+	}
+
+	return &template.TopicSubscription{
+		Name:    aws.String(t.Name),
+		Service: aws.String(t.Service),
 	}, nil
 }
