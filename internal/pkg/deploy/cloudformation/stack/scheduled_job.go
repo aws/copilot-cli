@@ -135,7 +135,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	}
 	publishers, err := convertPublish(j.manifest.Publish, j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
-		return "", fmt.Errorf("convert the publish field for service %s: %w", j.name, err)
+		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, j.name, err)
 	}
 	schedule, err := j.awsSchedule()
 	if err != nil {

@@ -117,7 +117,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
-		return "", fmt.Errorf("convert the publish field for service %s: %w", s.name, err)
+		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 
 	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)

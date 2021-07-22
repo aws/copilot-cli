@@ -429,6 +429,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			Digest:   o.imageDigest,
 		},
 		ServiceDiscoveryEndpoint: endpoint,
+		AccountID:                o.targetApp.AccountID,
+		Region:                   o.targetEnvironment.Region,
 	}, nil
 }
 
