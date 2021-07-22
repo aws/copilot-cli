@@ -690,7 +690,10 @@ func convertTopicQueue(q *manifest.SQSQueue, accountID, partition, region, app, 
 	if err != nil {
 		return nil, fmt.Errorf("invalid `timeout`: %w", err)
 	}
-	deadletter := convertDeadLetter(q.DeadLetter)
+	deadletter, err := convertDeadLetter(q.DeadLetter)
+	if err != nil {
+		return nil, err
+	}
 
 	return &template.SQSQueue{
 		Name:       q.Name,
@@ -726,7 +729,7 @@ func convertTime(t *string, floor, ceiling float64) (*int, error) {
 }
 
 func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
-	if f == nil || (f.Enabled != nil && aws.BoolValue(f.Enabled) == false) {
+	if f == nil || !aws.BoolValue(f.Enabled) {
 		return nil
 	}
 
@@ -735,14 +738,16 @@ func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
 	}
 }
 
-func convertDeadLetter(d *manifest.DeadLetterQueue) *template.DeadLetterQueue {
+func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
 	if d == nil {
-		return nil
+		return nil, nil
 	}
-	validateDeadLetter(d)
+	if err := validateDeadLetter(d); err != nil {
+		return nil, err
+	}
 
 	return &template.DeadLetterQueue{
 		Id:    d.ID,
 		Tries: &d.Tries,
-	}
+	}, nil
 }
