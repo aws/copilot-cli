@@ -152,13 +152,16 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				mockBucket := "mockbucket"
+				mockCustomDomainLambda := "mockURL1"
+				mockAWSSDKLayer := "mockURL2"
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 					Variables:          c.manifest.Variables,
 					Tags:               c.manifest.Tags,
 					EnableHealthCheck:  true,
-					ScriptBucketName:   "mockbucket",
-					CustomDomainLambda: "mockURL1",
-					AWSSDKLayer:        "mockURL2",
+					ScriptBucketName:   &mockBucket,
+					CustomDomainLambda: &mockCustomDomainLambda,
+					AWSSDKLayer:        &mockAWSSDKLayer,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.wkld.addons = addons

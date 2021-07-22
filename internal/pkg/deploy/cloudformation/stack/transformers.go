@@ -10,6 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -658,4 +662,40 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 		Name:    aws.String(t.Name),
 		Service: aws.String(t.Service),
 	}, nil
+}
+
+func convertRDWkldCustomResources(customDomainURLs map[string]string) (bucket *string, urls map[string]*string, err error) {
+	urls = make(map[string]*string)
+	if customDomainURLs == nil {
+		return nil, nil, nil
+	}
+
+	bucketName, customDomainKey, err := s3.ParseURL(customDomainURLs[template.RDWkldCustomDomainFileName])
+	if err != nil {
+		return nil, nil, err
+	}
+	urls[template.RDWkldCustomDomainFileName] = &customDomainKey
+
+	_, layerKey, err := s3.ParseURL(customDomainURLs[template.RDWkldCustomDomainAWSSDKLayerFileName])
+	if err != nil {
+		return nil, nil, err
+	}
+	urls[template.RDWkldCustomDomainAWSSDKLayerFileName] = &layerKey
+
+	bucket = &bucketName
+	return
+}
+
+func convertAppInformation(app deploy.AppInformation) (delegationRole *string, dnsName *string) {
+	role := app.DNSDelegationRole()
+	if role != "" {
+		delegationRole = &role
+	}
+
+	dns := app.DNSName
+	if dns != "" {
+		dnsName = &dns
+	}
+
+	return
 }

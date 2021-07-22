@@ -6,8 +6,6 @@ package stack
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -67,15 +65,12 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 
-	bucket, customDomain, err := s3.ParseURL(s.customResourcesURLs[template.RDWkldCustomDomainFileName])
-	if err != nil {
-		return "", err
-	}
-	_, sdkLayer, err := s3.ParseURL(s.customResourcesURLs[template.RDWkldCustomDomainAWSSDKLayerFileName])
+	bucket, urls, err := convertRDWkldCustomResources(s.customResourcesURLs)
 	if err != nil {
 		return "", err
 	}
 
+	dnsDelegationRole, dnsName := convertAppInformation(s.app)
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
 		Tags:              s.manifest.Tags,
@@ -83,10 +78,10 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
 
 		ScriptBucketName:     bucket,
-		CustomDomainLambda:   customDomain,
-		AWSSDKLayer:          sdkLayer,
-		AppDNSDelegationRole: s.app.DNSDelegationRole(),
-		AppDNSName:           s.app.DNSName,
+		CustomDomainLambda:   urls[template.RDWkldCustomDomainFileName],
+		AWSSDKLayer:          urls[template.RDWkldCustomDomainAWSSDKLayerFileName],
+		AppDNSDelegationRole: dnsDelegationRole,
+		AppDNSName:           dnsName,
 	})
 	if err != nil {
 		return "", err
