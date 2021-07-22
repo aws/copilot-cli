@@ -570,6 +570,8 @@ func TestValidateWorkerName(t *testing.T) {
 
 func TestValidateTopicSubscription(t *testing.T) {
 	validTopics := []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"}
+	app := "app"
+	env := "env"
 	testCases := map[string]struct {
 		inTS manifest.TopicSubscription
 
@@ -605,7 +607,7 @@ func TestValidateTopicSubscription(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateTopicSubscription(tc.inTS, validTopics)
+			err := validateTopicSubscription(tc.inTS, validTopics, app, env)
 
 			if tc.wantErr == nil {
 				require.NoError(t, err)

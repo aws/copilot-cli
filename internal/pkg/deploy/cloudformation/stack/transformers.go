@@ -41,6 +41,16 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
+// Time interval options.
+const (
+	retentionMinValueSeconds = 0
+	retentionMaxValueSeconds = 1209600
+	delayMinValueSeconds     = 0
+	delayMaxValueSeconds     = 900
+	timeoutMinValueSeconds   = 0
+	timeoutMaxValueSeconds   = 43200
+)
+
 var (
 	errEphemeralBadSize  = errors.New("ephemeral storage must be between 20 GiB and 200 GiB")
 	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
@@ -659,7 +669,7 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 }
 
 func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
-	err := validateTopicSubscription(t, validTopicARNs)
+	err := validateTopicSubscription(t, validTopicARNs, app, env)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -679,15 +689,15 @@ func convertTopicQueue(q *manifest.SQSQueue, url, accountID, app, env, svc strin
 	if q == nil {
 		return nil, nil
 	}
-	retention, err := convertTime(q.Retention, 0, 1209600)
+	retention, err := convertRetention(q.Retention)
 	if err != nil {
 		return nil, fmt.Errorf("invalid `retention`: %w", err)
 	}
-	delay, err := convertTime(q.Delay, 0, 900)
+	delay, err := convertDelay(q.Delay)
 	if err != nil {
 		return nil, fmt.Errorf("invalid `delay`: %w", err)
 	}
-	timeout, err := convertTime(q.Timeout, 0, 43200)
+	timeout, err := convertTimeout(q.Timeout)
 	if err != nil {
 		return nil, fmt.Errorf("invalid `timeout`: %w", err)
 	}
@@ -712,20 +722,28 @@ func convertTopicQueue(q *manifest.SQSQueue, url, accountID, app, env, svc strin
 	}, nil
 }
 
-func convertTime(t *string, floor, ceiling float64) (*int, error) {
+func convertTime(t *time.Duration, floor, ceiling float64) (*int64, error) {
 	if t == nil {
 		return nil, nil
 	}
 
-	tm, err := time.ParseDuration(aws.StringValue(t))
-	if err != nil {
-		return nil, errDurationInvalid{reason: err}
-	}
-	if err := validateTime(tm, floor, ceiling); err != nil {
+	if err := validateTime(*t, floor, ceiling); err != nil {
 		return nil, err
 	}
 
-	return aws.Int(int(tm.Seconds())), nil
+	return aws.Int64(int64(t.Seconds())), nil
+}
+
+func convertRetention(t *time.Duration) (*int64, error) {
+	return convertTime(t, retentionMinValueSeconds, retentionMaxValueSeconds)
+}
+
+func convertDelay(t *time.Duration) (*int64, error) {
+	return convertTime(t, delayMinValueSeconds, delayMaxValueSeconds)
+}
+
+func convertTimeout(t *time.Duration) (*int64, error) {
+	return convertTime(t, timeoutMinValueSeconds, timeoutMaxValueSeconds)
 }
 
 func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {

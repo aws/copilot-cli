@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -64,9 +65,9 @@ type TopicSubscription struct {
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
 	Name       *string          `yaml:"name"`
-	Retention  *string          `yaml:"retention"`
-	Delay      *string          `yaml:"delay"`
-	Timeout    *string          `yaml:"timeout"`
+	Retention  *time.Duration   `yaml:"retention"`
+	Delay      *time.Duration   `yaml:"delay"`
+	Timeout    *time.Duration   `yaml:"timeout"`
 	KMS        *bool            `yaml:"kms"`
 	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
 	FIFO       *FIFOOrBool      `yaml:"fifo"`

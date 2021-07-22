@@ -1568,9 +1568,9 @@ func Test_convertSubscribe(t *testing.T) {
 	validTopics := []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:s-east-1:123456789012:app-env-svc-name2"}
 	accountId := "123456789123"
 	region := "us-west-2"
-	app := "testapp"
-	env := "testenv"
-	svc := "hello"
+	app := "app"
+	env := "env"
+	svc := "svc"
 	testCases := map[string]struct {
 		inSubscribe *manifest.SubscribeConfig
 
@@ -1599,9 +1599,9 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 				Queue: &manifest.SQSQueue{
 					Name:      aws.String("bestqueue"),
-					Retention: aws.String("111s"),
-					Delay:     aws.String("111s"),
-					Timeout:   aws.String("111s"),
+					Retention: (*time.Duration)(aws.Int64(111000000000)),
+					Delay:     (*time.Duration)(aws.Int64(111000000000)),
+					Timeout:   (*time.Duration)(aws.Int64(111000000000)),
 					KMS:       aws.Bool(true),
 					DeadLetter: &manifest.DeadLetterQueue{
 						Tries: 35,
@@ -1623,9 +1623,9 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 				Queue: &template.SQSQueue{
 					Name:      aws.String("bestqueue"),
-					Retention: aws.Int(111),
-					Delay:     aws.Int(111),
-					Timeout:   aws.Int(111),
+					Retention: aws.Int64(111),
+					Delay:     aws.Int64(111),
+					Timeout:   aws.Int64(111),
 					KMS:       aws.Bool(true),
 					DeadLetter: &template.DeadLetterQueue{
 						Tries: aws.Uint16(35),
@@ -1674,6 +1674,17 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errTopicSubscriptionNotAllowed),
 		},
+		"sneaky topic not allowed": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: []manifest.TopicSubscription{
+					{
+						Name:    "sneakytopic",
+						Service: "svc-name",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "sneakytopic": %w`, errTopicSubscriptionNotAllowed),
+		},
 		"subscribe queue delay invalid": {
 			inSubscribe: &manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
@@ -1683,7 +1694,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &manifest.SQSQueue{
-					Delay: aws.String("999s"),
+					Delay: (*time.Duration)(aws.Int64(99900000000000)),
 				},
 			},
 			wantedError: fmt.Errorf("invalid `delay`: time must be between 0 and 900 seconds"),

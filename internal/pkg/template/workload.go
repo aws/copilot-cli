@@ -249,9 +249,9 @@ type TopicSubscription struct {
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
 type SQSQueue struct {
 	Name       *string
-	Retention  *int
-	Delay      *int
-	Timeout    *int
+	Retention  *int64
+	Delay      *int64
+	Timeout    *int64
 	KMS        *bool
 	DeadLetter *DeadLetterQueue
 	FIFO       *FIFOQueue
