@@ -62,12 +62,16 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app.Name, s.env, s.name)
+	if err != nil {
+		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
+	}
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
 		Tags:              s.manifest.Tags,
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
+		Publish:           publishers,
 	})
 	if err != nil {
 		return "", err

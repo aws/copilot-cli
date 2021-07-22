@@ -169,6 +169,8 @@ Outputs:
 								ImageTag: testJobImageTag,
 								RepoURL:  testJobImageRepoURL,
 							},
+							AccountID: "0123456789012",
+							Region:    "us-west-2",
 						},
 					},
 				},

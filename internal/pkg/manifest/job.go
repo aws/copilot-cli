@@ -44,6 +44,7 @@ type ScheduledJobConfig struct {
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
 	Network                 *NetworkConfig `yaml:"network"`
+	Publish                 *PublishConfig `yaml:"publish"`
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.

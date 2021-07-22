@@ -308,6 +308,8 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	rc := stack.RuntimeConfig{
 		AdditionalTags:           app.Tags,
 		ServiceDiscoveryEndpoint: endpoint,
+		AccountID:                app.AccountID,
+		Region:                   env.Region,
 	}
 
 	if imgNeedsBuild {
