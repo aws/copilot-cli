@@ -268,66 +268,6 @@ func TestTemplate_UploadRequestDrivenWebServiceLayers(t *testing.T) {
 	}
 }
 
-//func TestTemplate_UploadAWSSDKLayer(t *testing.T) {
-//	fakeFilesCount := 10
-//	testCases := map[string]struct {
-//		mockBox      func(t *Template)
-//		mockUploader s3.CompressAndUploadFunc
-//
-//		wantedErr error
-//	}{
-//		"success": {
-//			mockBox: func(t *Template) {
-//				mockBox := packd.NewMemoryBox()
-//				for i := 0; i < fakeFilesCount; i++ {
-//					mockBox.AddString(fmt.Sprintf("custom-resources/layers/aws-sdk-layer/nodejs/%d.js", i), "hello")
-//				}
-//				t.box = mockBox
-//			},
-//			mockUploader: s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
-//				require.Contains(t, key, "aws-sdk-layer")
-//				require.Contains(t, key, "1d4846d65c1705e8b9551549312b1acb2406c68a0320191b66c5043122bb3b3d")
-//				for _, f := range files {
-//					require.True(t, strings.HasPrefix(f.Name(), "nodejs/"), "file name should starts with nodejs")
-//				}
-//				require.Equal(t, fakeFilesCount, len(files))
-//				return "mockURL", nil
-//			}),
-//		},
-//		"fails to upload files": {
-//			mockBox: func(t *Template) {
-//				mockBox := packd.NewMemoryBox()
-//				for i := 0; i < fakeFilesCount; i++ {
-//					mockBox.AddString(fmt.Sprintf("custom-resources/layers/aws-sdk-layer/nodejs/%d.js", i), "hello")
-//				}
-//				t.box = mockBox
-//			},
-//			mockUploader: s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
-//				return "", errors.New("some error")
-//			}),
-//			wantedErr: fmt.Errorf("upload aws-sdk-layer: some error"),
-//		},
-//	}
-//
-//	for name, tc := range testCases {
-//		t.Run(name, func(t *testing.T) {
-//			// GIVEN
-//			tpl := &Template{}
-//			tc.mockBox(tpl)
-//
-//			// WHEN
-//			got, err := tpl.upload(tc.mockUploader)
-//
-//			if tc.wantedErr != nil {
-//				require.EqualError(t, err, tc.wantedErr.Error())
-//			} else {
-//				require.NoError(t, err)
-//				require.Equal(t, "mockURL", got)
-//			}
-//		})
-//	}
-//}
-
 func TestTemplate_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		inPath           string
