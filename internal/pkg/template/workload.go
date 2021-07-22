@@ -485,5 +485,5 @@ func (q SQSQueue) ARN(topicName *string) string {
 	} else {
 		name = "SQSQueue"
 	}
-	return fmt.Sprintf(snsArnPattern, q.Partition, q.Region, q.AccountID, q.App, q.Env, q.Svc, name)
+	return fmt.Sprintf(sqsArnPattern, q.Partition, q.Region, q.AccountID, q.App, q.Env, q.Svc, name)
 }
