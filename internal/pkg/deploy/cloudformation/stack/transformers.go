@@ -634,21 +634,22 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 	if s == nil || s.Topics == nil {
 		return nil, nil
 	}
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return nil, fmt.Errorf("find the partition for region %s", region)
+
+	sqsEndpoint, err := endpoints.DefaultResolver().EndpointFor(endpoints.SqsServiceID, region)
+	if err != nil {
+		return nil, err
 	}
 
 	var subscriptions template.SubscribeOpts
 	for _, sb := range s.Topics {
-		ts, err := convertTopicSubscription(sb, validTopicARNs, accountID, partition.ID(), region, app, env, svc)
+		ts, err := convertTopicSubscription(sb, validTopicARNs, sqsEndpoint.URL, accountID, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
 
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	queue, err := convertTopicQueue(s.Queue, accountID, partition.ID(), region, app, env, svc)
+	queue, err := convertTopicQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
 	if err != nil {
 		return nil, err
 	}
@@ -657,12 +658,12 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, accountID, partition, region, app, env, svc string) (*template.TopicSubscription, error) {
+func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
 	err := validateTopicSubscription(t, validTopicARNs)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
-	queue, err := convertTopicQueue(t.Queue, accountID, partition, region, app, env, svc)
+	queue, err := convertTopicQueue(t.Queue, url, accountID, app, env, svc)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -674,7 +675,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	}, nil
 }
 
-func convertTopicQueue(q *manifest.SQSQueue, accountID, partition, region, app, env, svc string) (*template.SQSQueue, error) {
+func convertTopicQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
 	if q == nil {
 		return nil, nil
 	}
@@ -704,8 +705,7 @@ func convertTopicQueue(q *manifest.SQSQueue, accountID, partition, region, app, 
 		DeadLetter: deadletter,
 		FIFO:       convertFIFO(q.FIFO),
 		AccountID:  accountID,
-		Region:     region,
-		Partition:  partition,
+		URL:        url,
 		App:        app,
 		Env:        env,
 		Svc:        svc,

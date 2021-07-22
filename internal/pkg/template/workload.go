@@ -44,7 +44,7 @@ const (
 // Constants for ARN options.
 const (
 	snsArnPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
-	sqsURIPattern = "https://sqs.amazon%s.%s.com/%s/%s-%s-%s-%s"
+	sqsURIPattern = "%s/%s/%s-%s-%s-%s"
 )
 
 var (
@@ -256,8 +256,7 @@ type SQSQueue struct {
 	DeadLetter *DeadLetterQueue
 	FIFO       *FIFOQueue
 
-	Region    string
-	Partition string
+	URL       string
 	AccountID string
 	App       string
 	Env       string
@@ -485,5 +484,5 @@ func (q SQSQueue) URI(topicName *string) string {
 	} else {
 		name = "SQSQueue"
 	}
-	return fmt.Sprintf(sqsURIPattern, q.Region, q.Partition, q.AccountID, q.App, q.Env, q.Svc, name)
+	return fmt.Sprintf(sqsURIPattern, q.URL, q.AccountID, q.App, q.Env, q.Svc, name)
 }

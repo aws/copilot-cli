@@ -1567,7 +1567,6 @@ func Test_convertPublish(t *testing.T) {
 func Test_convertSubscribe(t *testing.T) {
 	validTopics := []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:s-east-1:123456789012:app-env-svc-name2"}
 	accountId := "123456789123"
-	partition := "aws"
 	region := "us-west-2"
 	app := "testapp"
 	env := "testenv"
@@ -1635,8 +1634,7 @@ func Test_convertSubscribe(t *testing.T) {
 						HighThroughput: aws.Bool(false),
 					},
 					AccountID: accountId,
-					Partition: partition,
-					Region:    region,
+					URL:       "https://sqs.us-west-2.amazonaws.com",
 					App:       app,
 					Env:       env,
 					Svc:       svc,
