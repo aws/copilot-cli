@@ -75,7 +75,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 
-	bucket, urls, err := convertRDWkldCustomResources(s.customResourceS3URL)
+	bucket, urls, err := parseS3URLs(s.customResourceS3URL)
 	if err != nil {
 		return "", err
 	}

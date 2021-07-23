@@ -664,13 +664,14 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	}, nil
 }
 
-func convertRDWkldCustomResources(customDomainURLs map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
-	if len(customDomainURLs) == 0 {
+//parseS3URLs(nameToS3URL map[string]string)
+func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
+	if len(nameToS3URL) == 0 {
 		return nil, nil, nil
 	}
 
 	s3ObjectKeys = make(map[string]*string)
-	for fname, s3url := range customDomainURLs {
+	for fname, s3url := range nameToS3URL {
 		bucketName, key, err := s3.ParseURL(s3url)
 		if err != nil {
 			return nil, nil, err
