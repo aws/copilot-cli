@@ -439,7 +439,7 @@ func redirectPlatform(engine dockerEngine, image string) (string, error) {
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != exec.Amd64Arch {
-		log.Warningf("Architecture type %s is currently unsupported. Setting platform %s instead.\n", arch, exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch))
+		log.Warningf(`Architecture type %s is currently unsupported. Setting platform %s instead.\nSee 'platform' field in your manifest.\n`, arch, exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch))
 		return exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch), nil
 	}
 

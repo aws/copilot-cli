@@ -344,9 +344,6 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
 	platform := mf.TaskPlatform()
-	if err := exec.ValidatePlatform(platform); err != nil {
-		return nil, err
-	}
 	return &exec.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,

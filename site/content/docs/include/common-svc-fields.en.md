@@ -33,6 +33,11 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 
 <div class="separator"></div>
 
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+
+<div class="separator"></div>
+
 <a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
 If you specify a number:
 ```yaml
