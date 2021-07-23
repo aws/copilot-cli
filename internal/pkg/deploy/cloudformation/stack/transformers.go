@@ -56,11 +56,6 @@ var (
 	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 )
 
-// ARN format options.
-var (
-	sqsARNFormat = "arn:%s:sqs:%s:%s:%s-%s-%s-%s"
-)
-
 type convertSidecarOpts struct {
 	sidecarConfig map[string]*manifest.SidecarConfig
 	imageConfig   *manifest.Image
