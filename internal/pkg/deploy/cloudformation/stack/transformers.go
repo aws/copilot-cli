@@ -56,6 +56,11 @@ var (
 	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 )
 
+// ARN format options.
+var (
+	sqsARNFormat = "arn:%s:sqs:%s:%s:%s-%s-%s-%s"
+)
+
 type convertSidecarOpts struct {
 	sidecarConfig map[string]*manifest.SidecarConfig
 	imageConfig   *manifest.Image
@@ -711,7 +716,7 @@ func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*
 		Retention:  retention,
 		Delay:      delay,
 		Timeout:    timeout,
-		KMS:        q.KMS,
+		KMS:        aws.BoolValue(q.KMS),
 		DeadLetter: deadletter,
 		FIFO:       convertFIFO(q.FIFO),
 		AccountID:  accountID,
@@ -752,7 +757,7 @@ func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
 	}
 
 	return &template.FIFOQueue{
-		HighThroughput: f.FIFO.HighThroughput,
+		HighThroughput: aws.BoolValue(f.FIFO.HighThroughput),
 	}
 }
 
@@ -765,7 +770,7 @@ func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, 
 	}
 
 	return &template.DeadLetterQueue{
-		Id:    d.ID,
+		ID:    d.ID,
 		Tries: d.Tries,
 	}, nil
 }

@@ -255,7 +255,7 @@ type SQSQueue struct {
 	Retention  *int64
 	Delay      *int64
 	Timeout    *int64
-	KMS        *bool
+	KMS        bool
 	DeadLetter *DeadLetterQueue
 	FIFO       *FIFOQueue
 
@@ -268,13 +268,13 @@ type SQSQueue struct {
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
 type DeadLetterQueue struct {
-	Id    *string
+	ID    *string
 	Tries *uint16
 }
 
 // FIFOQueue holds information needed to specify a SQS Queue as FIFO in a container definition.
 type FIFOQueue struct {
-	HighThroughput *bool
+	HighThroughput bool
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.

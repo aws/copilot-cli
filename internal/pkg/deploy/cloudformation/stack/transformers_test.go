@@ -1565,7 +1565,7 @@ func Test_convertPublish(t *testing.T) {
 }
 
 func Test_convertSubscribe(t *testing.T) {
-	validTopics := []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:s-east-1:123456789012:app-env-svc-name2"}
+	validTopics := []string{"arn:aws:sns:us-west-2:123456789123:app-env-svc-name", "arn:aws:sns:us-west-2:123456789123:app-env-svc-name2"}
 	accountId := "123456789123"
 	region := "us-west-2"
 	app := "app"
@@ -1607,6 +1607,7 @@ func Test_convertSubscribe(t *testing.T) {
 					KMS:       aws.Bool(true),
 					DeadLetter: &manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
+						ID:    aws.String("deadLetter"),
 					},
 					FIFO: &manifest.FIFOOrBool{
 						Enabled: aws.Bool(true),
@@ -1628,12 +1629,13 @@ func Test_convertSubscribe(t *testing.T) {
 					Retention: aws.Int64(111),
 					Delay:     aws.Int64(111),
 					Timeout:   aws.Int64(111),
-					KMS:       aws.Bool(true),
+					KMS:       true,
 					DeadLetter: &template.DeadLetterQueue{
 						Tries: aws.Uint16(35),
+						ID:    aws.String("deadLetter"),
 					},
 					FIFO: &template.FIFOQueue{
-						HighThroughput: aws.Bool(false),
+						HighThroughput: false,
 					},
 					AccountID: accountId,
 					URL:       "https://sqs.us-west-2.amazonaws.com",
@@ -1710,6 +1712,62 @@ func Test_convertSubscribe(t *testing.T) {
 			} else {
 				require.Equal(t, tc.wanted, got)
 			}
+		})
+	}
+}
+
+func Test_convertFIFO(t *testing.T) {
+	testCases := map[string]struct {
+		inFIFO *manifest.FIFOOrBool
+
+		wanted      *template.FIFOQueue
+		wantedError error
+	}{
+		"empty FIFO": {
+			inFIFO: &manifest.FIFOOrBool{},
+			wanted: nil,
+		},
+		"FIFO with enabled false": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(false),
+			},
+			wanted: nil,
+		},
+		"FIFO with enabled true and no high throughput": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: false,
+			},
+		},
+		"FIFO with enabled true and high throughput false": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+				FIFO: manifest.FIFOQueue{
+					HighThroughput: aws.Bool(false),
+				},
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: false,
+			},
+		},
+		"FIFO with enabled true and high throughput true": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+				FIFO: manifest.FIFOQueue{
+					HighThroughput: aws.Bool(true),
+				},
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: true,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := convertFIFO(tc.inFIFO)
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }
