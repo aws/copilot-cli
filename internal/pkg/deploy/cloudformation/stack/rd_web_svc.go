@@ -24,13 +24,24 @@ type RequestDrivenWebService struct {
 	*appRunnerWkld
 	manifest            *manifest.RequestDrivenWebService
 	app                 deploy.AppInformation
-	customResourcesURLs map[string]string
+	customResourceS3URL map[string]string
 
 	parser requestDrivenWebSvcReadParser
 }
 
+// NewRequestDrivenWebServiceWithAlias creates a new RequestDrivenWebService stack from a manifest file. It creates
+// custom resources needed for alias with scripts accessible from the urls.
+func NewRequestDrivenWebServiceWithAlias(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig, urls map[string]string) (*RequestDrivenWebService, error) {
+	rdSvc, err := NewRequestDrivenWebService(mft, env, app, rc)
+	if err != nil {
+		return nil, err
+	}
+	rdSvc.customResourceS3URL = urls
+	return rdSvc, nil
+}
+
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig, urls map[string]string) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -51,10 +62,9 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env strin
 			imageConfig:       mft.ImageConfig,
 			healthCheckConfig: mft.HealthCheckConfiguration,
 		},
-		app:                 app,
-		manifest:            mft,
-		parser:              parser,
-		customResourcesURLs: urls,
+		app:      app,
+		manifest: mft,
+		parser:   parser,
 	}, nil
 }
 
@@ -65,7 +75,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 
-	bucket, urls, err := convertRDWkldCustomResources(s.customResourcesURLs)
+	bucket, urls, err := convertRDWkldCustomResources(s.customResourceS3URL)
 	if err != nil {
 		return "", err
 	}

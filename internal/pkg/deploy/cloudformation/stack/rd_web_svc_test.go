@@ -95,7 +95,85 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 				app: deploy.AppInformation{
 					Name: testAppName,
 				},
-				customResourcesURLs: map[string]string{
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			stack, err := NewRequestDrivenWebService(
+				tc.input.mft,
+				tc.input.env,
+				tc.input.appInfo,
+				tc.input.rc,
+			)
+
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedStack.name, stack.name)
+			require.Equal(t, tc.wantedStack.env, stack.env)
+			require.Equal(t, tc.wantedStack.app, stack.app)
+			require.Equal(t, tc.wantedStack.rc, stack.rc)
+			require.Equal(t, tc.wantedStack.image, stack.image)
+			require.Equal(t, tc.wantedStack.manifest, stack.manifest)
+			require.Equal(t, tc.wantedStack.instanceConfig, stack.instanceConfig)
+			require.Equal(t, tc.wantedStack.imageConfig, stack.imageConfig)
+			require.Equal(t, tc.wantedStack.customResourceS3URL, stack.customResourceS3URL)
+			require.NotNil(t, stack.addons)
+			require.NotNil(t, stack.parser)
+		})
+	}
+}
+
+func TestRequestDrivenWebService_NewRequestDrivenWebServiceWithAlias(t *testing.T) {
+	type testInput struct {
+		mft     *manifest.RequestDrivenWebService
+		env     string
+		rc      RuntimeConfig
+		appInfo deploy.AppInformation
+		urls    map[string]string
+	}
+
+	testCases := map[string]struct {
+		input            testInput
+		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
+
+		wantedStack *RequestDrivenWebService
+		wantedError error
+	}{
+		"should return RequestDrivenWebService": {
+			input: testInput{
+				mft: testRDWebServiceManifest,
+				env: testEnvName,
+				rc:  RuntimeConfig{},
+				appInfo: deploy.AppInformation{
+					Name: testAppName,
+				},
+				urls: map[string]string{
+					"custom-domain-app-runner": "mockURL1",
+					"aws-sdk-layer":            "mockURL2",
+				},
+			},
+
+			wantedStack: &RequestDrivenWebService{
+				appRunnerWkld: &appRunnerWkld{
+					wkld: &wkld{
+						name:  aws.StringValue(testRDWebServiceManifest.Name),
+						env:   testEnvName,
+						app:   testAppName,
+						rc:    RuntimeConfig{},
+						image: testRDWebServiceManifest.ImageConfig,
+					},
+					instanceConfig: testRDWebServiceManifest.InstanceConfig,
+					imageConfig:    testRDWebServiceManifest.ImageConfig,
+				},
+				manifest: testRDWebServiceManifest,
+				app: deploy.AppInformation{
+					Name: testAppName,
+				},
+				customResourceS3URL: map[string]string{
 					"custom-domain-app-runner": "mockURL1",
 					"aws-sdk-layer":            "mockURL2",
 				},
@@ -108,7 +186,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			stack, err := NewRequestDrivenWebService(
+			stack, err := NewRequestDrivenWebServiceWithAlias(
 				tc.input.mft,
 				tc.input.env,
 				tc.input.appInfo,
@@ -125,7 +203,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			require.Equal(t, tc.wantedStack.manifest, stack.manifest)
 			require.Equal(t, tc.wantedStack.instanceConfig, stack.instanceConfig)
 			require.Equal(t, tc.wantedStack.imageConfig, stack.imageConfig)
-			require.Equal(t, tc.wantedStack.customResourcesURLs, stack.customResourcesURLs)
+			require.Equal(t, tc.wantedStack.customResourceS3URL, stack.customResourceS3URL)
 			require.NotNil(t, stack.addons)
 			require.NotNil(t, stack.parser)
 		})
@@ -247,7 +325,7 @@ Outputs:
 					healthCheckConfig: testRDWebServiceManifest.HealthCheckConfiguration,
 				},
 				manifest:            testRDWebServiceManifest,
-				customResourcesURLs: tc.inCustomResourceURLs,
+				customResourceS3URL: tc.inCustomResourceURLs,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 

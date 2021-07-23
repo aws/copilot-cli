@@ -460,7 +460,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			DNSName:             o.targetApp.Domain,
 			AccountPrincipalARN: o.targetApp.AccountID,
 		}
-		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc, nil)
+		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
