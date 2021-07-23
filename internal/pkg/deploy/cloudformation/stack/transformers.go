@@ -664,25 +664,20 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	}, nil
 }
 
-func convertRDWkldCustomResources(customDomainURLs map[string]string) (bucket *string, urls map[string]*string, err error) {
-	if customDomainURLs == nil {
+func convertRDWkldCustomResources(customDomainURLs map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
+	if len(customDomainURLs) == 0 {
 		return nil, nil, nil
 	}
 
-	urls = make(map[string]*string)
-	bucketName, customDomainKey, err := s3.ParseURL(customDomainURLs[template.RDWkldCustomDomainFileName])
-	if err != nil {
-		return nil, nil, err
+	s3ObjectKeys = make(map[string]*string)
+	for fname, s3url := range customDomainURLs {
+		bucketName, key, err := s3.ParseURL(s3url)
+		if err != nil {
+			return nil, nil, err
+		}
+		s3ObjectKeys[fname] = &key
+		bucket = &bucketName
 	}
-	urls[template.RDWkldCustomDomainFileName] = &customDomainKey
-
-	_, layerKey, err := s3.ParseURL(customDomainURLs[template.RDWkldCustomDomainAWSSDKLayerFileName])
-	if err != nil {
-		return nil, nil, err
-	}
-	urls[template.RDWkldCustomDomainAWSSDKLayerFileName] = &layerKey
-
-	bucket = &bucketName
 	return
 }
 
