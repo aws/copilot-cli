@@ -621,22 +621,22 @@ func TestValidateTopicSubscription(t *testing.T) {
 func TestValidateTime(t *testing.T) {
 	testCases := map[string]struct {
 		inTime    time.Duration
-		inFloor   float64
-		inCeiling float64
+		inFloor   time.Duration
+		inCeiling time.Duration
 
 		wantErr error
 	}{
 		"good case": {
-			inTime:    500,
-			inFloor:   0,
-			inCeiling: 600,
+			inTime:    500 * time.Second,
+			inFloor:   0 * time.Second,
+			inCeiling: 600 * time.Second,
 			wantErr:   nil,
 		},
 		"bad time": {
-			inTime:    601000000000,
-			inFloor:   0,
-			inCeiling: 600,
-			wantErr:   errors.New("must be between 0 and 600 seconds"),
+			inTime:    500 * time.Hour,
+			inFloor:   0 * time.Second,
+			inCeiling: 600 * time.Second,
+			wantErr:   errors.New("must be between 0s and 10m0s"),
 		},
 	}
 

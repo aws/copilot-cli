@@ -497,9 +497,9 @@ func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []s
 	return errTopicSubscriptionNotAllowed
 }
 
-func validateTime(t time.Duration, floor, ceiling float64) error {
-	if t.Seconds() < floor || t.Seconds() > ceiling {
-		return fmt.Errorf("must be between %0.0f and %0.0f seconds", floor, ceiling)
+func validateTime(t, floor, ceiling time.Duration) error {
+	if t < floor || t > ceiling {
+		return fmt.Errorf("must be between %v and %v", floor, ceiling)
 	}
 
 	return nil

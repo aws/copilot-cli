@@ -547,8 +547,8 @@ func Test_convertAutoscaling(t *testing.T) {
 
 func Test_convertHTTPHealthCheck(t *testing.T) {
 	// These are used by reference to represent the output of the manifest.durationp function.
-	duration15Seconds := time.Duration(15 * time.Second)
-	duration60Seconds := time.Duration(60 * time.Second)
+	duration15Seconds := 15 * time.Second
+	duration60Seconds := 60 * time.Second
 	testCases := map[string]struct {
 		inputPath               *string
 		inputSuccessCodes       *string
@@ -1571,6 +1571,8 @@ func Test_convertSubscribe(t *testing.T) {
 	app := "app"
 	env := "env"
 	svc := "svc"
+	duration111Seconds := 111 * time.Second
+	duration5Days := 120 * time.Hour
 	testCases := map[string]struct {
 		inSubscribe *manifest.SubscribeConfig
 
@@ -1599,9 +1601,9 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 				Queue: &manifest.SQSQueue{
 					Name:      aws.String("bestqueue"),
-					Retention: (*time.Duration)(aws.Int64(111000000000)),
-					Delay:     (*time.Duration)(aws.Int64(111000000000)),
-					Timeout:   (*time.Duration)(aws.Int64(111000000000)),
+					Retention: &duration111Seconds,
+					Delay:     &duration111Seconds,
+					Timeout:   &duration111Seconds,
 					KMS:       aws.Bool(true),
 					DeadLetter: &manifest.DeadLetterQueue{
 						Tries: 35,
@@ -1694,10 +1696,10 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &manifest.SQSQueue{
-					Delay: (*time.Duration)(aws.Int64(99900000000000)),
+					Delay: &duration5Days,
 				},
 			},
-			wantedError: fmt.Errorf("`delay` must be between 0 and 900 seconds"),
+			wantedError: fmt.Errorf("`delay` must be between 0s and 15m0s"),
 		},
 	}
 	for name, tc := range testCases {

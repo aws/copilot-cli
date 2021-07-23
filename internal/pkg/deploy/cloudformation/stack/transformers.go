@@ -659,7 +659,7 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	queue, err := convertTopicQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
+	queue, err := convertQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
 	if err != nil {
 		return nil, err
 	}
@@ -673,7 +673,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
-	queue, err := convertTopicQueue(t.Queue, url, accountID, app, env, svc)
+	queue, err := convertQueue(t.Queue, url, accountID, app, env, svc)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -685,7 +685,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	}, nil
 }
 
-func convertTopicQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
+func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
 	if q == nil {
 		return nil, nil
 	}
@@ -722,7 +722,7 @@ func convertTopicQueue(q *manifest.SQSQueue, url, accountID, app, env, svc strin
 	}, nil
 }
 
-func convertTime(t *time.Duration, floor, ceiling float64) (*int64, error) {
+func convertTime(t *time.Duration, floor, ceiling time.Duration) (*int64, error) {
 	if t == nil {
 		return nil, nil
 	}
@@ -735,15 +735,15 @@ func convertTime(t *time.Duration, floor, ceiling float64) (*int64, error) {
 }
 
 func convertRetention(t *time.Duration) (*int64, error) {
-	return convertTime(t, retentionMinValueSeconds, retentionMaxValueSeconds)
+	return convertTime(t, retentionMinValueSeconds*time.Second, retentionMaxValueSeconds*time.Second)
 }
 
 func convertDelay(t *time.Duration) (*int64, error) {
-	return convertTime(t, delayMinValueSeconds, delayMaxValueSeconds)
+	return convertTime(t, delayMinValueSeconds*time.Second, delayMaxValueSeconds*time.Second)
 }
 
 func convertTimeout(t *time.Duration) (*int64, error) {
-	return convertTime(t, timeoutMinValueSeconds, timeoutMaxValueSeconds)
+	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
 }
 
 func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
