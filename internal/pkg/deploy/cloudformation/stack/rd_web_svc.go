@@ -81,6 +81,12 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 	}
 
 	dnsDelegationRole, dnsName := convertAppInformation(s.app)
+
+	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app.Name, s.env, s.name)
+	if err != nil {
+		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
+	}
+
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
 		Tags:              s.manifest.Tags,
@@ -92,6 +98,8 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		AWSSDKLayer:          urls[template.AWSSDKLayerFileName],
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,
+
+		Publish: publishers,
 	})
 	if err != nil {
 		return "", err

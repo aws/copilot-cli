@@ -333,6 +333,8 @@ Outputs:
 								RepoURL:  testImageRepoURL,
 								ImageTag: testImageTag,
 							},
+							AccountID: "0123456789012",
+							Region:    "us-west-2",
 						},
 					},
 					healthCheckConfig: testRDWebServiceManifest.HealthCheckConfiguration,

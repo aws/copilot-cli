@@ -3,9 +3,9 @@
 {{logicalIDSafe $topic.Name}}SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: ${AWS::StackName}-{{logicalIDSafe $topic.Name}}
-  
-  {{- if $topic.AllowedWorkers}}
+      TopicName: !Sub '${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+
+{{- if $topic.AllowedWorkers}}
 {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
