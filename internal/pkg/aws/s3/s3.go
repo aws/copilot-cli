@@ -100,7 +100,7 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 	return s.upload(bucket, key, buf)
 }
 
-// Upload uploads a zipped file to an S3 bucket under the specified key.
+// Upload uploads a file to an S3 bucket under the specified key.
 func (s *S3) Upload(bucket, key string, file NamedBinary) (string, error) {
 	buf := new(bytes.Buffer)
 	buf.Write(file.Content())
