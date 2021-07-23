@@ -302,6 +302,19 @@ Outputs:
 			},
 			wantedError: errors.New("parsing error"),
 		},
+		"should return error if a custom resource url cannot be parsed": {
+			inCustomResourceURLs: map[string]string{
+				template.RDWkldCustomDomainFileName:            "such-a-weird-url",
+				template.RDWkldCustomDomainAWSSDKLayerFileName: "such-a-weird-url",
+			},
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
+				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
+				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				c.parser = mockParser
+				c.wkld.addons = addons
+			},
+			wantedError: errors.New("cannot parse S3 URL such-a-weird-url into bucket name and key"),
+		},
 	}
 
 	for name, tc := range testCases {
