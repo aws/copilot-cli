@@ -228,8 +228,8 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		},
 		"should be able to parse custom resource URLs": {
 			inCustomResourceURLs: map[string]string{
-				template.RDWkldCustomDomainFileName:            "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
-				template.RDWkldCustomDomainAWSSDKLayerFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
+				template.AppRunnerCustomDomainLambdaFileName: "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
+				template.AWSSDKLayerFileName:                 "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
@@ -304,8 +304,8 @@ Outputs:
 		},
 		"should return error if a custom resource url cannot be parsed": {
 			inCustomResourceURLs: map[string]string{
-				template.RDWkldCustomDomainFileName:            "such-a-weird-url",
-				template.RDWkldCustomDomainAWSSDKLayerFileName: "such-a-weird-url",
+				template.AppRunnerCustomDomainLambdaFileName: "such-a-weird-url",
+				template.AWSSDKLayerFileName:                 "such-a-weird-url",
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)

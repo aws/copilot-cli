@@ -88,8 +88,8 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
 
 		ScriptBucketName:     bucket,
-		CustomDomainLambda:   urls[template.RDWkldCustomDomainFileName],
-		AWSSDKLayer:          urls[template.RDWkldCustomDomainAWSSDKLayerFileName],
+		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
+		AWSSDKLayer:          urls[template.AWSSDKLayerFileName],
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,
 	})

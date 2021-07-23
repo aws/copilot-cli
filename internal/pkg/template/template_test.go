@@ -136,7 +136,7 @@ func TestTemplate_UploadRequestDrivenWebServiceCustomResources(t *testing.T) {
 				return "mockURL", nil
 			}),
 			wantedURLs: map[string]string{
-				RDWkldCustomDomainFileName: "mockURL",
+				AppRunnerCustomDomainLambdaFileName: "mockURL",
 			},
 		},
 		"errors if rd web service custom resource file doesn't exist": {

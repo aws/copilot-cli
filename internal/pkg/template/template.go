@@ -32,10 +32,11 @@ const (
 	CustomDomainFileName     = "custom-domain"
 )
 
-const (
-	RDWkldCustomDomainFileName            = "custom-domain-app-runner"
-	RDWkldCustomDomainAWSSDKLayerFileName = "aws-sdk-layer"
-)
+// AppRunnerCustomDomainLambdaFileName is the file name for app runner custom domaing lambda.
+const AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
+
+// AWSSDKLayerFileName is the file name for AWS-SDK lambda layer.
+const AWSSDKLayerFileName = "aws-sdk-layer"
 
 var box = templates.Box()
 
@@ -47,11 +48,11 @@ var envCustomResourceFiles = []string{
 }
 
 var rdWkldCustomResourceFiles = []string{
-	RDWkldCustomDomainFileName,
+	AppRunnerCustomDomainLambdaFileName,
 }
 
 var rdWkldCustomResourceLayers = []string{
-	RDWkldCustomDomainAWSSDKLayerFileName,
+	AWSSDKLayerFileName,
 }
 
 // Parser is the interface that wraps the Parse method.
