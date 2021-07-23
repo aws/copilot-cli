@@ -46,13 +46,13 @@ type WorkerServiceConfig struct {
 type WorkerServiceProps struct {
 	WorkloadProps
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	Topics      []TopicSubscription   // Optional topics for subscriptions
+	Topics      *[]TopicSubscription  // Optional topics for subscriptions
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
-	Topics []TopicSubscription `yaml:"topics"`
-	Queue  *SQSQueue           `yaml:"queue"`
+	Topics *[]TopicSubscription `yaml:"topics"`
+	Queue  *SQSQueue            `yaml:"queue"`
 }
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
@@ -76,7 +76,7 @@ type SQSQueue struct {
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
 	ID    *string `yaml:"queue_id"`
-	Tries uint16  `yaml:"tries"`
+	Tries *uint16 `yaml:"tries"`
 }
 
 // FIFOOrBool contains custom unmarshaling logic for the `fifo` field in the manifest.

@@ -39,11 +39,14 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
+
+	// SQSQueue Configurations.
+	SQSQueueName = "SQSQueue"
 )
 
 // Constants for ARN options.
 const (
-	snsArnPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
+	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
 	sqsURIPattern = "%s/%s/%s-%s-%s-%s"
 )
 
@@ -471,10 +474,10 @@ func envControllerParameters(o WorkloadOpts) []string {
 
 // ARN determines the arn for a topic using the SNSTopic name and account information
 func (t Topic) ARN() string {
-	return fmt.Sprintf(snsArnPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
+	return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }
 
-// URI determines the uri for a queue using the queue name and account information
+// URI determines the uri for a queue using the queue name, topic name, and account information
 func (q SQSQueue) URI(topicName *string) string {
 	var name string
 	if q.Name != nil {
@@ -482,7 +485,7 @@ func (q SQSQueue) URI(topicName *string) string {
 	} else if topicName != nil {
 		name = aws.StringValue(topicName)
 	} else {
-		name = "SQSQueue"
+		name = SQSQueueName
 	}
 	return fmt.Sprintf(sqsURIPattern, q.URL, q.AccountID, q.App, q.Env, q.Svc, name)
 }

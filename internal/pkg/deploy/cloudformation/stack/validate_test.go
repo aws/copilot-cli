@@ -569,11 +569,11 @@ func TestValidateWorkerName(t *testing.T) {
 }
 
 func TestValidateTopicSubscription(t *testing.T) {
-	validTopics := []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"}
 	app := "app"
 	env := "env"
 	testCases := map[string]struct {
-		inTS manifest.TopicSubscription
+		inTS          manifest.TopicSubscription
+		inValidTopics []string
 
 		wantErr error
 	}{
@@ -582,32 +582,44 @@ func TestValidateTopicSubscription(t *testing.T) {
 				Name:    "name2",
 				Service: "svc",
 			},
-			wantErr: nil,
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       nil,
 		},
 		"empty name": {
 			inTS: manifest.TopicSubscription{
 				Service: "svc",
 			},
-			wantErr: errMissingPublishTopicField,
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       errMissingPublishTopicField,
 		},
 		"empty svc name": {
 			inTS: manifest.TopicSubscription{
 				Name: "theName",
 			},
-			wantErr: errInvalidSvcName,
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       errInvalidSvcName,
 		},
 		"topic not in list of valid topics": {
 			inTS: manifest.TopicSubscription{
 				Name:    "badName",
 				Service: "svc",
 			},
-			wantErr: errTopicSubscriptionNotAllowed,
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       errTopicSubscriptionNotAllowed,
+		},
+		"topic in list of valid topics but one cannot be parsed": {
+			inTS: manifest.TopicSubscription{
+				Name:    "name2",
+				Service: "svc",
+			},
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       nil,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateTopicSubscription(tc.inTS, validTopics, app, env)
+			err := validateTopicSubscription(tc.inTS, tc.inValidTopics, app, env)
 
 			if tc.wantErr == nil {
 				require.NoError(t, err)
@@ -661,13 +673,13 @@ func TestValidateDeadLetter(t *testing.T) {
 	}{
 		"good case": {
 			inDL: &manifest.DeadLetterQueue{
-				Tries: 35,
+				Tries: aws.Uint16(35),
 			},
 			wantErr: nil,
 		},
 		"wrong number of tries": {
 			inDL: &manifest.DeadLetterQueue{
-				Tries: 9999,
+				Tries: aws.Uint16(9999),
 			},
 			wantErr: errDeadLetterQueueTries,
 		},

@@ -651,7 +651,7 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 	}
 
 	var subscriptions template.SubscribeOpts
-	for _, sb := range s.Topics {
+	for _, sb := range *s.Topics {
 		ts, err := convertTopicSubscription(sb, validTopicARNs, sqsEndpoint.URL, accountID, app, env, svc)
 		if err != nil {
 			return nil, err
@@ -766,6 +766,6 @@ func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, 
 
 	return &template.DeadLetterQueue{
 		Id:    d.ID,
-		Tries: &d.Tries,
+		Tries: d.Tries,
 	}, nil
 }

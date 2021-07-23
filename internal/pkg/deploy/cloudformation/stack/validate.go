@@ -67,7 +67,7 @@ var (
 	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 )
 
-// Options for SQS Queues
+// Options for SQS Queues.
 var (
 	resourceNameFormat      = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
 	deadLetterTriesMaxValue = 1000
@@ -485,7 +485,7 @@ func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []s
 	for _, topicARN := range validTopicARNs {
 		arn, err := arn.Parse(topicARN)
 		if err != nil {
-			return err
+			continue
 		}
 		validTopicName := arn.Resource
 
@@ -506,7 +506,7 @@ func validateTime(t, floor, ceiling time.Duration) error {
 }
 
 func validateDeadLetter(dl *manifest.DeadLetterQueue) error {
-	if dl.Tries > uint16(deadLetterTriesMaxValue) {
+	if aws.Uint16Value(dl.Tries) > uint16(deadLetterTriesMaxValue) {
 		return errDeadLetterQueueTries
 	}
 	return nil

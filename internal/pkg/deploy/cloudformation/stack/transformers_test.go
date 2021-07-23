@@ -1585,7 +1585,7 @@ func Test_convertSubscribe(t *testing.T) {
 		},
 		"subscription with empty topic subscriptions": {
 			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
+				Topics: &[]manifest.TopicSubscription{
 					{},
 				},
 			},
@@ -1593,7 +1593,7 @@ func Test_convertSubscribe(t *testing.T) {
 		},
 		"valid subscribe": {
 			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
+				Topics: &[]manifest.TopicSubscription{
 					{
 						Name:    "name",
 						Service: "svc",
@@ -1606,7 +1606,7 @@ func Test_convertSubscribe(t *testing.T) {
 					Timeout:   &duration111Seconds,
 					KMS:       aws.Bool(true),
 					DeadLetter: &manifest.DeadLetterQueue{
-						Tries: 35,
+						Tries: aws.Uint16(35),
 					},
 					FIFO: &manifest.FIFOOrBool{
 						Enabled: aws.Bool(true),
@@ -1645,7 +1645,7 @@ func Test_convertSubscribe(t *testing.T) {
 		},
 		"invalid topic name": {
 			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
+				Topics: &[]manifest.TopicSubscription{
 					{
 						Name:    "t@p!c1~",
 						Service: "service1",
@@ -1656,7 +1656,7 @@ func Test_convertSubscribe(t *testing.T) {
 		},
 		"invalid service name": {
 			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
+				Topics: &[]manifest.TopicSubscription{
 					{
 						Name:    "topic1",
 						Service: "s#rv!ce1~",
@@ -1667,7 +1667,7 @@ func Test_convertSubscribe(t *testing.T) {
 		},
 		"topic not allowed": {
 			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
+				Topics: &[]manifest.TopicSubscription{
 					{
 						Name:    "topic1",
 						Service: "svc",
@@ -1678,7 +1678,7 @@ func Test_convertSubscribe(t *testing.T) {
 		},
 		"sneaky topic not allowed": {
 			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
+				Topics: &[]manifest.TopicSubscription{
 					{
 						Name:    "sneakytopic",
 						Service: "svc-name",
@@ -1689,7 +1689,7 @@ func Test_convertSubscribe(t *testing.T) {
 		},
 		"subscribe queue delay invalid": {
 			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
+				Topics: &[]manifest.TopicSubscription{
 					{
 						Name:    "name",
 						Service: "svc",
