@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/sns"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -36,6 +37,8 @@ const (
 	pipelineEscapeOpt = "[No additional environments]"
 
 	fmtCopilotTaskGroup = "copilot-%s"
+
+	fmtTopicSlug = "%s (%s)"
 )
 
 const (
@@ -135,6 +138,11 @@ type TaskLister interface {
 	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
 }
 
+// SNSLister wraps methods for listing deployed SNS topics.
+type SNSLister interface {
+	ListAppEnvTopics(app, env string) ([]sns.Topic, error)
+}
+
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
@@ -170,6 +178,11 @@ type CFTaskSelect struct {
 	app            string
 	env            string
 	defaultCluster bool
+}
+
+type SNSTopicSelect struct {
+	prompt Prompter
+	lister SNSLister
 }
 
 func NewCFTaskSelect(prompt Prompter, store ConfigLister, cf TaskStackDescriber) *CFTaskSelect {
@@ -244,6 +257,13 @@ func NewDeploySelect(prompt Prompter, configStore ConfigLister, deployStore Depl
 // NewTaskSelect returns a new selector that chooses a running task.
 func NewTaskSelect(prompt Prompter, lister TaskLister) *TaskSelect {
 	return &TaskSelect{
+		prompt: prompt,
+		lister: lister,
+	}
+}
+
+func NewSNSTopicSelect(prompt Prompter, lister SNSLister) *SNSTopicSelect {
+	return &SNSTopicSelect{
 		prompt: prompt,
 		lister: lister,
 	}
@@ -1004,4 +1024,29 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 		}
 	}
 	return outServices, nil
+}
+
+func (s *SNSTopicSelect) Topics(prompt, help, app, env string) ([]string, error) {
+
+	topics, err := s.lister.ListAppEnvTopics(app, env)
+	if err != nil {
+		return nil, err
+	}
+	if len(topics) == 0 {
+		log.Infof("No currently deployed services in environment %s.", env)
+	}
+	var topicSlugs []string
+	for _, t := range topics {
+		n, err := t.Name()
+		if err != nil {
+			continue
+		}
+		topicSlugs = append(topicSlugs, fmt.Sprintf(fmtTopicSlug, n, t.Wkld))
+	}
+
+	selectedTopics, err := s.prompt.MultiSelect(prompt, help, topicSlugs)
+	if err != nil {
+		return nil, fmt.Errorf("select SNS topics: %w", err)
+	}
+	return selectedTopics, nil
 }
