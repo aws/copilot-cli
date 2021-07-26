@@ -179,10 +179,6 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	//if err := o.uploadCustomResources(); err != nil {
-	//	return err
-	//}
-
 	if err := o.deploySvc(addonsURL); err != nil {
 		return err
 	}
@@ -218,16 +214,6 @@ func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
 
 	urls := mergeMaps(layerURLS, customResourcesURLS)
 	return urls, nil
-}
-
-func mergeMaps(maps ...map[string]string) map[string]string {
-	out := make(map[string]string)
-	for _, m := range maps {
-		for k, v := range m {
-			out[k] = v
-		}
-	}
-	return out
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -522,7 +508,25 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		conf, err = requestDrivenWebServiceStackConfiguration(o, t, rc)
+		arn, err := o.rootUserARN()
+		if err != nil {
+			return nil, err
+		}
+
+		appInfo := deploy.AppInformation{
+			Name:                o.targetEnvironment.App,
+			DNSName:             o.targetApp.Domain,
+			AccountPrincipalARN: arn,
+		}
+		if t.Alias != nil {
+			urls, err := o.uploadCustomResources()
+			if err != nil {
+				return nil, err
+			}
+			conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)
+		} else {
+			conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
+		}
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
@@ -599,30 +603,6 @@ func validateAppVersion(alias string, app *config.Application, appVersionGetter 
 	return nil
 }
 
-func requestDrivenWebServiceStackConfiguration(opts *deploySvcOpts, t *manifest.RequestDrivenWebService, rc *stack.RuntimeConfig) (conf *stack.RequestDrivenWebService, err error) {
-	arn, err := opts.rootUserARN()
-	if err != nil {
-		return nil, err
-	}
-
-	appInfo := deploy.AppInformation{
-		Name:                opts.targetEnvironment.App,
-		DNSName:             opts.targetApp.Domain,
-		AccountPrincipalARN: arn,
-	}
-
-	if t.Alias != nil {
-		urls, err := opts.uploadCustomResources()
-		if err != nil {
-			return nil, err
-		}
-		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, opts.targetEnvironment.Name, appInfo, *rc, urls)
-	} else {
-		conf, err = stack.NewRequestDrivenWebService(t, opts.targetEnvironment.Name, appInfo, *rc)
-	}
-	return conf, err
-}
-
 func (o *deploySvcOpts) showSvcURI() error {
 	type identifier interface {
 		URI(string) (string, error)
@@ -677,6 +657,16 @@ func (o *deploySvcOpts) showSvcURI() error {
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}
 	return nil
+}
+
+func mergeMaps(maps ...map[string]string) map[string]string {
+	out := make(map[string]string)
+	for _, m := range maps {
+		for k, v := range m {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.

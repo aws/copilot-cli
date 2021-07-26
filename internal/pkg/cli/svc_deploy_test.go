@@ -646,6 +646,51 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
 		},
+		"fail to get identity when alias is enabled for rd web service": {
+			inAlias: "v1.v2.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+			},
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
+				m.EXPECT().Version().Return("v1.0.0", nil)
+			},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
+		},
+		//"errors cannot get app resources by region": {
+		//	expectStore: func(m *mocks.Mockstore) {
+		//		m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+		//	},
+		//	expectProgress: func(m *mocks.Mockprogress) {
+		//		m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+		//		m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
+		//	},
+		//	expectIdentity: func(m *mocks.MockidentityService) {
+		//		m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
+		//	},
+		//	expectIAM: func(m *mocks.MockroleManager) {
+		//		m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
+		//	},
+		//	expectDeployer: func(m *mocks.Mockdeployer) {
+		//		m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+		//	},
+		//	expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+		//		m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+		//			Return(nil, errors.New("some error"))
+		//	},
+		//	wantedErrorS: "get app resources: some error",
+		//},
 		"success": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
