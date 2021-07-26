@@ -39,15 +39,11 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
-
-	// SQSQueue Configurations.
-	SQSQueueName = "SQSQueue"
 )
 
 // Constants for ARN options.
 const (
 	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
-	sqsURIPattern = "%s/%s/%s-%s-%s-%s"
 )
 
 var (
