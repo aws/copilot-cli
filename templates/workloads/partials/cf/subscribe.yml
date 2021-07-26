@@ -1,9 +1,10 @@
 {{- if .Subscribe}}
-SQSQueue:
+EventsQueue:
   Type: AWS::SQS::Queue
   {{- if .Subscribe.Queue}}
   Properties:
-    QueueName: !Sub ${AWS::StackName}-{{- if .Subscribe.Queue}}{{if .Subscribe.Queue.Name}}{{logicalIDSafe .Subscribe.Queue.Name}}{{- else}}SQSQueue{{- end}}{{- if .Subscribe.Queue.FIFO}}.fifo{{- end}}{{- end}}
+    QueueName: !Sub ${AWS::StackName}-{{- if .Subscribe.Queue}}{{if .Subscribe.Queue.Name}}{{logicalIDSafe .Subscribe.Queue.Name}}{{- else}}EventsQueue{{- end}}{{- if .Subscribe.Queue.FIFO}}.fifo{{- end}}{{- end}}
+    KmsMasterKeyId: 'alias/aws/sqs'
     {{- if .Subscribe.Queue.Retention}}
     MessageRetentionPeriod: {{.Subscribe.Queue.Retention}}
     {{- end}}
@@ -12,11 +13,6 @@ SQSQueue:
     {{- end}}
     {{- if .Subscribe.Queue.Timeout}}
     VisibilityTimeout: {{.Subscribe.Queue.Timeout}}
-    {{- end}}
-    {{- if .Subscribe.Queue.KMS}}
-    KmsMasterKeyId: !Ref SQSQueueKMSKey
-    {{- else}}
-    KmsMasterKeyId: 'alias/aws/sqs'
     {{- end}}
     {{- if .Subscribe.Queue.FIFO}}
     FifoQueue: true
@@ -27,20 +23,18 @@ SQSQueue:
     {{- end}}
     {{- if .Subscribe.Queue.DeadLetter}}
     RedrivePolicy:
-      {{- if .Subscribe.Queue.DeadLetter.Id}}
-      deadLetterTargetArn: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:{{logicalIDSafe .Subscribe.Queue.DeadLetter.Id}}'
-      {{- else}}
       deadLetterTargetArn: !GetAtt DeadLetter.Arn
-      {{- end}}
       maxReceiveCount: {{.Subscribe.Queue.DeadLetter.Tries}}
     {{- end}}
   {{- end}}
 
-{{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}{{- if not .Subscribe.Queue.DeadLetter.Id}}
+{{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetter:
   Type: AWS::SQS::Queue
+  {{- if .Subscribe.Queue.DeadLetter.Name}}
   Properties:
-    QueueName: !Join ['', [!GetAtt SQSQueue.Name, "-", "DeadLetter"]]
+    QueueName: !Sub '${AWS::StackName}-{{logicalIDSafe .Subscribe.Queue.DeadLetter.Name}}'
+  {{- end}}
 
 DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
@@ -56,30 +50,16 @@ DeadLetterPolicy:
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
-          Resource: !GetAtt SQSQueue.Arn
+          Resource: !GetAtt EventsQueue.Arn
           Condition:
             ArnEquals:
               aws:SourceArn: !Ref 'TaskRole'
-{{- end}}{{- end}}{{- end}}
-
-{{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.KMS}}
-SQSQueueKMSKey:
-  Type: AWS::KMS::Key
-  Properties:
-    KeyPolicy:
-      Version: '2012-10-17'
-      Statement:
-        - Effect: Allow
-          Principal:
-            AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
-          Action: kms:*
-          Resource: '*'
 {{- end}}{{- end}}
 
 QueuePolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
-    Queues: [!Ref 'SQSQueue']
+    Queues: [!Ref 'EventsQueue']
     PolicyDocument:
       Version: '2012-10-17'
       Statement:
@@ -90,7 +70,7 @@ QueuePolicy:
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
-          Resource: !GetAtt SQSQueue.Arn
+          Resource: !GetAtt EventsQueue.Arn
           Condition:
             ArnEquals:
               aws:SourceArn: !Ref 'TaskRole'
@@ -101,30 +81,31 @@ QueuePolicy:
             Service: sns.amazonaws.com
           Action: 
             - sqs:SendMessage
-          Resource: !GetAtt SQSQueue.Arn
+          Resource: !GetAtt EventsQueue.Arn
           Condition:
             ArnEquals:
-              aws:SourceArn: !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{logicalIDSafe $topic.Service}}-{{logicalIDSafe $topic.Name}}']]
         {{- end}}
         {{- end}}
 
 {{- range $topic := .Subscribe.Topics}}
-{{logicalIDSafe $topic.Name}}SNSTopicSubscription:
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}SNSTopicSubscription:
   Type: AWS::SNS::Subscription
   Properties:
-    TopicArn: !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+    TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{logicalIDSafe $topic.Service}}-{{logicalIDSafe $topic.Name}}']]
     Protocol: 'sqs'
     {{- if $topic.Queue}}
-    Endpoint: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+    Endpoint: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
     {{- else}}
-    Endpoint: !GetAtt SQSQueue.Arn
+    Endpoint: !GetAtt EventsQueue.Arn
     {{- end}}
 
 {{- if $topic.Queue}}
-{{logicalIDSafe $topic.Name}}SQSQueue:
-    Type: AWS::SQS::Queue
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
+  Type: AWS::SQS::Queue
   Properties:
     QueueName: !Sub ${AWS::StackName}-{{- if $topic.Queue.Name}}{{- logicalIDSafe $topic.Queue.Name}}{{- else}}{{logicalIDSafe $topic.Name}}{{- end}}{{- if $topic.Queue.FIFO}}.fifo{{- end}}
+    KmsMasterKeyId: 'alias/aws/sqs'
     {{- if $topic.Queue.Retention}}
     MessageRetentionPeriod: {{$topic.Queue.Retention}}
     {{- end}}
@@ -133,11 +114,6 @@ QueuePolicy:
     {{- end}}
     {{- if $topic.Queue.Timeout}}
     VisibilityTimeout: {{$topic.Queue.Timeout}}
-    {{- end}}
-    {{- if $topic.Queue.KMS}}
-    KmsMasterKeyId: !Ref {{logicalIDSafe $topic.Name}}KMSKey
-    {{- else}}
-    KmsMasterKeyId: 'alias/aws/sqs'
     {{- end}}
     {{- if $topic.Queue.FIFO}}
     FifoQueue: true
@@ -148,24 +124,22 @@ QueuePolicy:
     {{- end}}
     {{- if $topic.Queue.DeadLetter}}
     RedrivePolicy:
-      {{- if $topic.Queue.DeadLetter.Id}}
-      deadLetterTargetArn: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:{{logicalIDSafe $topic.Queue.DeadLetter.Id}}'
-      {{- else}}
-      deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Name}}DeadLetter.Arn
-      {{- end}}
+      deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetter.Arn
       maxReceiveCount: {{$topic.Queue.DeadLetter.Tries}}
     {{- end}}
 
-{{- if $topic.Queue.DeadLetter}}{{- if not $topic.Queue.DeadLetter.Id}}
-{{logicalIDSafe $topic.Name}}DeadLetter:
+{{- if $topic.Queue.DeadLetter}}
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetter:
   Type: AWS::SQS::Queue
+  {{- if .Subscribe.Queue.DeadLetter.Name}}
   Properties:
-    QueueName: !Join ['', [!GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Name, "-", "DeadLetter"]]
+    QueueName: !Sub '${AWS::StackName}-{{logicalIDSafe .Subscribe.Queue.DeadLetter.Name}}'
+  {{- end}}
 
-{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
-    Queues: [!Ref '{{logicalIDSafe $topic.Name}}DeadLetter']
+    Queues: [!Ref '{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetter']
     PolicyDocument:
       Version: "2012-10-17"
       Statement:
@@ -176,30 +150,16 @@ QueuePolicy:
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
-          Resource: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
           Condition:
             ArnEquals:
               aws:SourceArn: !Ref 'TaskRole'
-{{- end}}{{- end}}
-
-{{- if $topic.Queue.KMS}}
-{{logicalIDSafe $topic.Name}}KMSKey:
-  Type: AWS::KMS::Key
-  Properties:
-    KeyPolicy:
-      Version: '2012-10-17'
-      Statement:
-        - Effect: Allow
-          Principal:
-            AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
-          Action: kms:*
-          Resource: '*'
 {{- end}}
 
-{{logicalIDSafe $topic.Name}}QueuePolicy:
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}QueuePolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
-    Queues: [!Ref '{{logicalIDSafe $topic.Name}}SQSQueue']
+    Queues: [!Ref '{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue']
     PolicyDocument:
       Version: '2012-10-17'
       Statement:
@@ -210,7 +170,7 @@ QueuePolicy:
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
-          Resource: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
           Condition:
             ArnEquals:
               aws:SourceArn: !Ref 'TaskRole'
@@ -219,8 +179,8 @@ QueuePolicy:
             Service: sns.amazonaws.com
           Action: 
             - sqs:SendMessage
-          Resource: !GetAtt {{logicalIDSafe $topic.Name}}SQSQueue.Arn
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
           Condition:
             ArnEquals:
-              aws:SourceArn: !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{logicalIDSafe $topic.Service}}-{{logicalIDSafe $topic.Name}}']]
 {{- end}}{{- end}}{{- end}}
