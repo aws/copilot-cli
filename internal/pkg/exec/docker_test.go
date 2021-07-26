@@ -360,25 +360,78 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 	}
 }
 
-func TestDockerCommand_GetPlatform(t *testing.T) {
+func TestDockerCommand_ValidatePlatform(t *testing.T) {
+	tests := map[string]struct {
+		inPlatform string
+		wantedErr  error
+	}{
+		"return nil for empty string": {
+			inPlatform: "",
+			wantedErr:  nil,
+		},
+		"return error for invalid platform (with singular case grammar)": {
+			inPlatform: "linus/art46",
+			wantedErr:  errors.New("platform linus/art46 is invalid; the valid platform is: linux/amd64"),
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			err := ValidatePlatform(tc.inPlatform)
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
+func TestDockerCommand_RedirectPlatform(t *testing.T) {
 	mockError := errors.New("some error")
 	var mockRunner *Mockrunner
 
 	tests := map[string]struct {
-		setupMocks func(controller *gomock.Controller)
-		wantedOS   string
-		wantedArch string
+		inImage        string
+		setupMocks     func(controller *gomock.Controller)
+		wantedPlatform string
 
 		wantedErr error
 	}{
+		"does not try to detect OS/arch; returns empty string if image passed in": {
+			inImage: "preexistingImage",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Times(0)
+			},
+			wantedPlatform: "",
+			wantedErr:      nil,
+		},
 		"error running 'docker version'": {
+			inImage: "",
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Return(mockError)
 			},
-			wantedErr: fmt.Errorf("run docker version: some error"),
+			wantedPlatform: "",
+			wantedErr:      fmt.Errorf("get os/arch from docker: run docker version: some error"),
 		},
-		"success": {
+		"successfully returns empty string if detects default platform": {
+			inImage: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).
+					Do(func(_ string, _ []string, opt CmdOption) {
+						cmd := &exec.Cmd{}
+						opt(cmd)
+						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Components\":[{\"Name\":\"Engine\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"linux\",\"Arch\":\"amd64\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
+					}).Return(nil)
+			},
+			wantedPlatform: "",
+			wantedErr:      nil,
+		},
+		"successfully redirects non-amd arch to 'linux/amd64'": {
+			inImage: "",
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).
@@ -388,8 +441,8 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Components\":[{\"Name\":\"Engine\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"linus\",\"Arch\":\"archer\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
 					}).Return(nil)
 			},
-			wantedOS:   "linus",
-			wantedArch: "archer",
+			wantedPlatform: "linux/amd64",
+			wantedErr:      nil,
 		},
 	}
 
@@ -401,14 +454,11 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 				runner: mockRunner,
 			}
 
-			os, arch, err := s.GetPlatform()
+			platform, err := s.RedirectPlatform(tc.inImage)
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
-				if tc.wantedOS != "" {
-					require.Equal(t, tc.wantedOS, os)
-				}
-				if tc.wantedArch != "" {
-					require.Equal(t, tc.wantedArch, arch)
+				if tc.wantedPlatform != "" {
+					require.Equal(t, tc.wantedPlatform, platform)
 				}
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())

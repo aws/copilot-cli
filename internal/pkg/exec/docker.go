@@ -64,7 +64,7 @@ const (
 )
 
 var validPlatforms = []string{
-	DockerBuildPlatform(LinuxOS, Amd64Arch),
+	dockerBuildPlatform(LinuxOS, Amd64Arch),
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
@@ -186,8 +186,8 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	}
 }
 
-// GetPlatform will run the `docker version` command to get the OS/Arch.
-func (c DockerCommand) GetPlatform() (os, arch string, err error) {
+// getPlatform will run the `docker version` command to get the OS/Arch.
+func (c DockerCommand) getPlatform() (os, arch string, err error) {
 	if _, err := exec.LookPath("docker"); err != nil {
 		return "", "", ErrDockerCommandNotFound
 	}
@@ -210,7 +210,7 @@ func (c DockerCommand) GetPlatform() (os, arch string, err error) {
 	return platform.OS, platform.Arch, nil
 }
 
-func DockerBuildPlatform(os, arch string) string {
+func dockerBuildPlatform(os, arch string) string {
 	return fmt.Sprintf("%s/%s", os, arch)
 }
 
@@ -256,10 +256,27 @@ func ValidatePlatform(platform string) error {
 	if platform == "" {
 		return nil
 	}
-	if platform != DockerBuildPlatform(LinuxOS, Amd64Arch) {
+	if platform != dockerBuildPlatform(LinuxOS, Amd64Arch) {
 		return fmt.Errorf("platform %s is invalid; %s: %s", platform, english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 	}
 	return nil
+}
+
+func (c DockerCommand) RedirectPlatform(image string) (string, error) {
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
+	if image != "" {
+		return "", nil
+	}
+	_, arch, err := c.getPlatform()
+	if err != nil {
+		return "", fmt.Errorf("get os/arch from docker: %w", err)
+	}
+	// Log a message informing non-default arch users of platform for build.
+	if arch != Amd64Arch {
+		log.Warningf(`Architecture type %s is currently unsupported. Setting platform %s instead.\nSee 'platform' field in your manifest.\n`, arch, dockerBuildPlatform(LinuxOS, Amd64Arch))
+		return dockerBuildPlatform(LinuxOS, Amd64Arch), nil
+	}
+	return "", nil
 }
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {

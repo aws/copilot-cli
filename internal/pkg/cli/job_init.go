@@ -186,7 +186,7 @@ func (o *initJobOpts) Execute() error {
 		}
 	}
 
-	osArch, err := redirectPlatform(o.dockerEngine, o.image)
+	osArch, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
 		return err
 	}

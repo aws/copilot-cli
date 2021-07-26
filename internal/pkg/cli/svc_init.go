@@ -221,9 +221,9 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	osArch, err := redirectPlatform(o.dockerEngine, o.image)
+	osArch, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
-		return err
+		return fmt.Errorf("get/redirect docker engine platform: %w", err)
 	}
 	o.platform = osArch
 
@@ -426,24 +426,6 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 		Retries:     &hc.Retries,
 		Command:     hc.Cmd,
 	}, nil
-}
-
-func redirectPlatform(engine dockerEngine, image string) (string, error) {
-	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
-	if image != "" {
-		return "", nil
-	}
-	_, arch, err := engine.GetPlatform()
-	if err != nil {
-		return "", fmt.Errorf("get os/arch from docker: %w", err)
-	}
-	// Log a message informing non-default arch users of platform for build.
-	if arch != exec.Amd64Arch {
-		log.Warningf(`Architecture type %s is currently unsupported. Setting platform %s instead.\nSee 'platform' field in your manifest.\n`, arch, exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch))
-		return exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch), nil
-	}
-
-	return "", nil
 }
 
 func svcTypePromptOpts() []prompt.Option {
