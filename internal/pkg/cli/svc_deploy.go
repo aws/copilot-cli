@@ -508,8 +508,11 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		arn, err := o.rootUserARN()
-		if err != nil {
+		var (
+			arn  string
+			urls map[string]string
+		)
+		if arn, err = o.rootUserARN(); err != nil {
 			return nil, err
 		}
 
@@ -519,8 +522,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			AccountPrincipalARN: arn,
 		}
 		if t.Alias != nil {
-			urls, err := o.uploadCustomResources()
-			if err != nil {
+			if urls, err = o.uploadCustomResources(); err != nil {
 				return nil, err
 			}
 			conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)

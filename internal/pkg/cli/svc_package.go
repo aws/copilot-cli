@@ -125,15 +125,15 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				}
 			}
 		case *manifest.RequestDrivenWebService:
-			appInfo := deploy.AppInformation{
-				Name:                env.App,
-				DNSName:             app.Domain,
-				AccountPrincipalARN: app.AccountID,
-			}
-			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc)
-			if err != nil {
-				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
-			}
+			//appInfo := deploy.AppInformation{
+			//	Name:                env.App,
+			//	DNSName:             app.Domain,
+			//	AccountPrincipalARN: app.AccountID,
+			//}
+			//serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc)
+			//if err != nil {
+			//	return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
+			//}
 		case *manifest.BackendService:
 			serializer, err = stack.NewBackendService(t, env.Name, app.Name, rc)
 			if err != nil {
