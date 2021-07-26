@@ -115,7 +115,6 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
-		//uploader:     template.New(),
 	}
 	opts.uploadOpts = &uploadCustomResourcesOpts{
 		uploader: template.New(),
@@ -129,15 +128,6 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 			return s3Client, nil
 		},
 	}
-	//opts.newS3Uploader = func() (Uploader, error) {
-	//	envRegion := opts.targetEnvironment.Region
-	//	sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
-	//	if err != nil {
-	//		return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
-	//	}
-	//	s3Client := s3.New(sess)
-	//	return s3Client, nil
-	//}
 	return opts, err
 }
 
@@ -473,7 +463,6 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	}, nil
 }
 
-//func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
 func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
 	log.Infoln("Uploading custom resources for associating custom domain with your app runner service...")
 	s3Client, err := o.newS3Uploader()

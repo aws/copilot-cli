@@ -146,7 +146,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 
 			resources, err := opts.appCFN.GetAppResourcesByRegion(app, env.Region)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
 			}
 			urls, err := uploadCustomResources(&uploadCustomResourcesOpts{
 				uploader: template.New(),
@@ -161,7 +161,9 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				},
 			}, resources)
 			serializer, err = stack.NewRequestDrivenWebServiceWithAlias(t, env.Name, appInfo, rc, urls)
-
+			if err != nil {
+				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
+			}
 		case *manifest.BackendService:
 			serializer, err = stack.NewBackendService(t, env.Name, app.Name, rc)
 			if err != nil {
