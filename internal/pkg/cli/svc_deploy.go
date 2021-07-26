@@ -65,6 +65,7 @@ type deploySvcOpts struct {
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
 	endpointGetter      endpointGetter
+	identity            identityService
 
 	spinner progress
 	sel     wsSelector
@@ -78,6 +79,8 @@ type deploySvcOpts struct {
 	buildRequired     bool
 
 	uploader customResourcesUploader
+
+	configureRDSvcCustomResourceClient func() (Uploader, error)
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -90,7 +93,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
-	return &deploySvcOpts{
+	opts := &deploySvcOpts{
 		deployWkldVars: vars,
 
 		store:     store,
@@ -109,7 +112,17 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
 		uploader:     template.New(),
-	}, nil
+	}
+	opts.configureRDSvcCustomResourceClient = func() (Uploader, error) {
+		envRegion := opts.targetEnvironment.Region
+		sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
+		if err != nil {
+			return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+		}
+		s3Client := s3.New(sess)
+		return s3Client, nil
+	}
+	return opts, err
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -183,37 +196,6 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 	return o.showSvcURI()
-}
-
-func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
-	envRegion := o.targetEnvironment.Region
-	sess, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
-	if err != nil {
-		return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
-	}
-	s3Client := s3.New(sess)
-
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, envRegion)
-	if err != nil {
-		return nil, fmt.Errorf("get resources for app %s by region %s: %w", o.targetApp.Name, envRegion, err)
-	}
-
-	layerURLS, err := o.uploader.UploadRequestDrivenWebServiceLayers(func(key string, file s3.NamedBinary) (string, error) {
-		return s3Client.Upload(resources.S3Bucket, key, file)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resource layer: %w", err)
-	}
-
-	customResourcesURLS, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
-	}
-
-	urls := mergeMaps(layerURLS, customResourcesURLS)
-	return urls, nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -328,6 +310,9 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("new env upgrade command: %v", err)
 	}
 	o.envUpgradeCmd = cmd
+
+	id := identity.New(defaultSess)
+	o.identity = id
 	return nil
 }
 
@@ -471,16 +456,41 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 }
 
 func (o *deploySvcOpts) rootUserARN() (string, error) {
-	defaultSession, err := o.sessProvider.Default()
+	caller, err := o.identity.Get()
 	if err != nil {
-		return "", err
-	}
-	id := identity.New(defaultSession)
-	caller, err := id.Get()
-	if err != nil {
-		return "", err
+		return "", fmt.Errorf("get identity of caller: %w", err)
 	}
 	return caller.RootUserARN, nil
+}
+
+func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
+	envRegion := o.targetEnvironment.Region
+	s3Client, err := o.configureRDSvcCustomResourceClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, envRegion)
+	if err != nil {
+		return nil, fmt.Errorf("get resources for app %s by region %s: %w", o.targetApp.Name, envRegion, err)
+	}
+
+	layerURLS, err := o.uploader.UploadRequestDrivenWebServiceLayers(func(key string, file s3.NamedBinary) (string, error) {
+		return s3Client.Upload(resources.S3Bucket, key, file)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resource layer: %w", err)
+	}
+
+	customResourcesURLS, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
+	}
+
+	urls := mergeMaps(layerURLS, customResourcesURLS)
+	return urls, nil
 }
 
 func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
@@ -508,27 +518,39 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		var (
-			arn  string
-			urls map[string]string
-		)
+		var arn string
 		if arn, err = o.rootUserARN(); err != nil {
 			return nil, err
 		}
-
 		appInfo := deploy.AppInformation{
 			Name:                o.targetEnvironment.App,
 			DNSName:             o.targetApp.Domain,
 			AccountPrincipalARN: arn,
 		}
-		if t.Alias != nil {
-			if urls, err = o.uploadCustomResources(); err != nil {
-				return nil, err
-			}
-			conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)
-		} else {
+		if t.Alias == nil {
 			conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
+			break
 		}
+
+		var (
+			urls             map[string]string
+			appVersionGetter versionGetter
+		)
+		if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
+			return nil, err
+		}
+		if err = validateAppVersion(o.targetApp, appVersionGetter); err != nil {
+			log.Errorf(`Cannot deploy service %s because the application version is incompatible.
+To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
+`, o.name,
+				color.HighlightCode("copilot app upgrade"))
+			return nil, err
+		}
+
+		if urls, err = o.uploadCustomResources(); err != nil {
+			return nil, err
+		}
+		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
@@ -556,7 +578,7 @@ func validateAlias(svcName, alias string, app *config.Application, envName strin
 	if alias == "" {
 		return nil
 	}
-	if err := validateAppVersion(alias, app, appVersionGetter); err != nil {
+	if err := validateAppVersion(app, appVersionGetter); err != nil {
 		log.Errorf(`Cannot deploy service %s because the application version is incompatible.
 To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
 `, svcName,
@@ -593,7 +615,7 @@ To upgrade the application, please run %s first (see https://aws.github.io/copil
 	return fmt.Errorf("alias is not supported in hosted zones not managed by Copilot")
 }
 
-func validateAppVersion(alias string, app *config.Application, appVersionGetter versionGetter) error {
+func validateAppVersion(app *config.Application, appVersionGetter versionGetter) error {
 	appVersion, err := appVersionGetter.Version()
 	if err != nil {
 		return fmt.Errorf("get version for app %s: %w", app.Name, err)

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -518,6 +520,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
 		mockAppVersionGetter   func(m *mocks.MockversionGetter)
 		mockEndpointGetter     func(m *mocks.MockendpointGetter)
+		mockIdentity           func(m *mocks.MockidentityService)
 
 		wantErr error
 	}{
@@ -646,51 +649,6 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
 		},
-		"fail to get identity when alias is enabled for rd web service": {
-			inAlias: "v1.v2.mockDomain",
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
-			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
-				m.EXPECT().Version().Return("v1.0.0", nil)
-			},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-			},
-			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
-		},
-		//"errors cannot get app resources by region": {
-		//	expectStore: func(m *mocks.Mockstore) {
-		//		m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
-		//	},
-		//	expectProgress: func(m *mocks.Mockprogress) {
-		//		m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-		//		m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
-		//	},
-		//	expectIdentity: func(m *mocks.MockidentityService) {
-		//		m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
-		//	},
-		//	expectIAM: func(m *mocks.MockroleManager) {
-		//		m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
-		//	},
-		//	expectDeployer: func(m *mocks.Mockdeployer) {
-		//		m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
-		//	},
-		//	expectAppCFN: func(m *mocks.MockappResourcesGetter) {
-		//		m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
-		//			Return(nil, errors.New("some error"))
-		//	},
-		//	wantedErrorS: "get app resources: some error",
-		//},
 		"success": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
@@ -766,4 +724,232 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			}
 		})
 	}
+}
+
+type deployRDSvcMocks struct {
+	mockWorkspace          *mocks.MockwsSvcDirReader
+	mockAppResourcesGetter *mocks.MockappResourcesGetter
+	mockAppVersionGetter   *mocks.MockversionGetter
+	mockEndpointGetter     *mocks.MockendpointGetter
+	mockIdentity           *mocks.MockidentityService
+	mockUploader           *mocks.MockcustomResourcesUploader
+}
+
+func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
+	const (
+		mockAppName   = "mockApp"
+		mockEnvName   = "mockEnv"
+		mockSvcName   = "mockSvc"
+		mockAddonsURL = "mockAddonsURL"
+	)
+	tests := map[string]struct {
+		inAlias        string
+		inApp          *config.Application
+		inEnvironment  *config.Environment
+		inBuildRequire bool
+
+		mock func(m *deployRDSvcMocks)
+
+		wantURLs map[string]string
+		wantErr  error
+	}{
+		"fail to get identity when alias is enabled for rd web service": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				//mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+				//m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{}, errors.New("some error"))
+			},
+
+			wantErr: fmt.Errorf("get identity of caller: some error"),
+		},
+		"errors getting app resources by region": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(nil, errors.New("some error"))
+			},
+
+			wantErr: fmt.Errorf("get resources for app mockApp by region us-west-2: some error"),
+		},
+		"fail to upload layer": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceLayers(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+
+			wantErr: fmt.Errorf("upload custom resource layer: some error"),
+		},
+		"fail to upload custom resource scripts": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceLayers(gomock.Any()).Return(map[string]string{
+					"mockResource1": "mockURL1",
+				}, nil)
+				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+
+			wantErr: fmt.Errorf("upload custom resources to bucket mockBucket: some error"),
+		},
+		"success": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceLayers(gomock.Any()).Return(map[string]string{
+					"mockResource1": "mockURL1",
+				}, nil)
+				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(map[string]string{
+					"mockResource2": "mockURL2",
+				}, nil)
+			},
+			wantURLs: map[string]string{
+				"mockResource1": "mockURL1",
+				"mockResource2": "mockURL2",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &deployRDSvcMocks{
+				mockWorkspace:          mocks.NewMockwsSvcDirReader(ctrl),
+				mockAppResourcesGetter: mocks.NewMockappResourcesGetter(ctrl),
+				mockAppVersionGetter:   mocks.NewMockversionGetter(ctrl),
+				mockEndpointGetter:     mocks.NewMockendpointGetter(ctrl),
+				mockIdentity:           mocks.NewMockidentityService(ctrl),
+				mockUploader:           mocks.NewMockcustomResourcesUploader(ctrl),
+			}
+			tc.mock(m)
+
+			opts := deploySvcOpts{
+				deployWkldVars: deployWkldVars{
+					name:    mockSvcName,
+					appName: mockAppName,
+					envName: mockEnvName,
+				},
+				ws:     m.mockWorkspace,
+				appCFN: m.mockAppResourcesGetter,
+				newAppVersionGetter: func(s string) (versionGetter, error) {
+					return m.mockAppVersionGetter, nil
+				},
+				endpointGetter:    m.mockEndpointGetter,
+				uploader:          m.mockUploader,
+				identity:          m.mockIdentity,
+				targetApp:         tc.inApp,
+				targetEnvironment: tc.inEnvironment,
+				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+					return &manifest.RequestDrivenWebService{
+						Workload: manifest.Workload{
+							Name: aws.String(mockSvcName),
+						},
+						RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
+							RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
+								Alias: aws.String(tc.inAlias),
+							},
+						},
+					}, nil
+				},
+				configureRDSvcCustomResourceClient: func() (Uploader, error) {
+					return nil, nil
+				},
+			}
+
+			_, gotErr := opts.stackConfiguration(mockAddonsURL)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+
 }

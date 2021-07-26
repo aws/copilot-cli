@@ -306,6 +306,11 @@ type zipAndUploader interface {
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
+type Uploader interface {
+	zipAndUploader
+	Upload(bucket, key string, file s3.NamedBinary) (string, error)
+}
+
 type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
