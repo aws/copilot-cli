@@ -11,8 +11,6 @@ Parameters:
     Type: String
   ContainerImage:
     Type: String
-  ContainerPort:
-    Type: Number
   TaskCPU:
     Type: String
   TaskMemory:
@@ -47,7 +45,6 @@ Resources:
 {{- end}}
 {{include "executionrole" . | indent 2}}
 {{include "taskrole" . | indent 2}}
-{{include "servicediscovery" . | indent 2}}
 {{- if .Autoscaling }}
 {{include "autoscaling" . | indent 2}}
   CustomResourceRole:
@@ -94,7 +91,7 @@ Resources:
               Resource: "*"
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-{{- end }}
+{{- end}}
   Service:
     DependsOn:
     - EnvControllerAction
@@ -112,10 +109,3 @@ Resources:
 {{include "addons" . | indent 2}}
 
 {{include "env-controller" . | indent 2}}
-
-Outputs:
-  DiscoveryServiceARN:
-    Description: ARN of the Discovery Service.
-    Value: !GetAtt DiscoveryService.Arn
-    Export:
-      Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
