@@ -11,10 +11,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"golang.org/x/mod/semver"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -73,6 +76,8 @@ type deploySvcOpts struct {
 	targetSvc         *config.Workload
 	imageDigest       string
 	buildRequired     bool
+
+	uploader customResourcesUploader
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -103,6 +108,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
+		uploader:     template.New(),
 	}, nil
 }
 
@@ -173,11 +179,55 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
+	//if err := o.uploadCustomResources(); err != nil {
+	//	return err
+	//}
+
 	if err := o.deploySvc(addonsURL); err != nil {
 		return err
 	}
-
 	return o.showSvcURI()
+}
+
+func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
+	envRegion := o.targetEnvironment.Region
+	sess, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
+	if err != nil {
+		return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+	}
+	s3Client := s3.New(sess)
+
+	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, envRegion)
+	if err != nil {
+		return nil, fmt.Errorf("get resources for app %s by region %s: %w", o.targetApp.Name, envRegion, err)
+	}
+
+	layerURLS, err := o.uploader.UploadRequestDrivenWebServiceLayers(func(key string, file s3.NamedBinary) (string, error) {
+		return s3Client.Upload(resources.S3Bucket, key, file)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resource layer: %w", err)
+	}
+
+	customResourcesURLS, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
+	}
+
+	urls := mergeMaps(layerURLS, customResourcesURLS)
+	return urls, nil
+}
+
+func mergeMaps(maps ...map[string]string) map[string]string {
+	out := make(map[string]string)
+	for _, m := range maps {
+		for k, v := range m {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -434,6 +484,19 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	}, nil
 }
 
+func (o *deploySvcOpts) rootUserARN() (string, error) {
+	defaultSession, err := o.sessProvider.Default()
+	if err != nil {
+		return "", err
+	}
+	id := identity.New(defaultSession)
+	caller, err := id.Get()
+	if err != nil {
+		return "", err
+	}
+	return caller.RootUserARN, nil
+}
+
 func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
@@ -459,12 +522,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		appInfo := deploy.AppInformation{
-			Name:                o.targetEnvironment.App,
-			DNSName:             o.targetApp.Domain,
-			AccountPrincipalARN: o.targetApp.AccountID,
-		}
-		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
+		conf, err = requestDrivenWebServiceStackConfiguration(o, t, rc)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
@@ -539,6 +597,30 @@ func validateAppVersion(alias string, app *config.Application, appVersionGetter 
 		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
 	}
 	return nil
+}
+
+func requestDrivenWebServiceStackConfiguration(opts *deploySvcOpts, t *manifest.RequestDrivenWebService, rc *stack.RuntimeConfig) (conf *stack.RequestDrivenWebService, err error) {
+	arn, err := opts.rootUserARN()
+	if err != nil {
+		return nil, err
+	}
+
+	appInfo := deploy.AppInformation{
+		Name:                opts.targetEnvironment.App,
+		DNSName:             opts.targetApp.Domain,
+		AccountPrincipalARN: arn,
+	}
+
+	if t.Alias != nil {
+		urls, err := opts.uploadCustomResources()
+		if err != nil {
+			return nil, err
+		}
+		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, opts.targetEnvironment.Name, appInfo, *rc, urls)
+	} else {
+		conf, err = stack.NewRequestDrivenWebService(t, opts.targetEnvironment.Name, appInfo, *rc)
+	}
+	return conf, err
 }
 
 func (o *deploySvcOpts) showSvcURI() error {

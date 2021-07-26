@@ -55,7 +55,7 @@ compile-darwin:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
 .PHONY: packr-build
-packr-build: tools package-custom-resources
+packr-build: tools package-custom-resources package-layer
 	@echo "Packaging static files" &&\
 	env -i PATH="$$PATH":${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
 	go generate ./...
@@ -87,12 +87,21 @@ package-custom-resources:
 	npm run package &&\
 	cd ..
 
+# NOTE: this target can be removed after Lambda updates the latest SDK or release a managed layer.
+.PHONY: package-layer
+package-layer:
+	@echo "Packaging layer"
+	cd ${SOURCE_CUSTOM_RESOURCES}/layers/aws-sdk-layer &&\
+	zip -r -q ../../../templates/custom-resources/aws-sdk-layer.zip .
+	cd ../../..
+
 # We only need the minified custom resources during building. After
 # they're packed, we can remove them.
 .PHONY: package-custom-resources-clean
 package-custom-resources-clean:
 	@echo "Removing minified templates/custom-resources" &&\
 	rm ${BUILT_CUSTOM_RESOURCES}/*.js
+	rm -rf ${BUILT_CUSTOM_RESOURCES}/aws-sdk-layer.zip # NOTE: this target can be removed after Lambda updates the latest SDK or release a managed layer.
 
 .PHONY: run-unit-test
 run-unit-test:
@@ -159,7 +168,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go -source=./internal/pkg/describe/describe.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/stack/mocks/mock_stack.go -source=./internal/pkg/describe/stack/stack.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status.go -source=./internal/pkg/describe/status.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status_describe.go -source=./internal/pkg/describe/status_descirbe.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status_describe.go -source=./internal/pkg/describe/status_describe.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_show.go -source=./internal/pkg/describe/pipeline_show.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_status.go -source=./internal/pkg/describe/pipeline_status.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ecr/mocks/mock_ecr.go -source=./internal/pkg/aws/ecr/ecr.go
