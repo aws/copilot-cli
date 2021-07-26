@@ -27,6 +27,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
     environments:
       prod:
         cpu: 2048               # Larger CPU value for prod environment 
+        memory: 4096
     ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
