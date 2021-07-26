@@ -251,23 +251,15 @@ type TopicSubscription struct {
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
 type SQSQueue struct {
-	Name       *string
 	Retention  *int64
 	Delay      *int64
 	Timeout    *int64
 	DeadLetter *DeadLetterQueue
 	FIFO       *FIFOQueue
-
-	URL       string
-	AccountID string
-	App       string
-	Env       string
-	Svc       string
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
 type DeadLetterQueue struct {
-	Name  *string
 	Tries *uint16
 }
 
@@ -474,17 +466,4 @@ func envControllerParameters(o WorkloadOpts) []string {
 // ARN determines the arn for a topic using the SNSTopic name and account information
 func (t Topic) ARN() string {
 	return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
-}
-
-// URI determines the uri for a queue using the queue name or topic name, and account information
-func (q SQSQueue) URI(topicName *string) string {
-	var name string
-	if q.Name != nil {
-		name = aws.StringValue(q.Name)
-	} else if topicName != nil {
-		name = aws.StringValue(topicName)
-	} else {
-		name = SQSQueueName
-	}
-	return fmt.Sprintf(sqsURIPattern, q.URL, q.AccountID, q.App, q.Env, q.Svc, name)
 }

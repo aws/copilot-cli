@@ -1600,13 +1600,11 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &manifest.SQSQueue{
-					Name:      aws.String("bestqueue"),
 					Retention: &duration111Seconds,
 					Delay:     &duration111Seconds,
 					Timeout:   &duration111Seconds,
 					DeadLetter: &manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
-						Name:  aws.String("deadLetter"),
 					},
 					FIFO: &manifest.FIFOOrBool{
 						Enabled: aws.Bool(true),
@@ -1624,22 +1622,15 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					Name:      aws.String("bestqueue"),
 					Retention: aws.Int64(111),
 					Delay:     aws.Int64(111),
 					Timeout:   aws.Int64(111),
 					DeadLetter: &template.DeadLetterQueue{
 						Tries: aws.Uint16(35),
-						Name:  aws.String("deadLetter"),
 					},
 					FIFO: &template.FIFOQueue{
 						HighThroughput: false,
 					},
-					AccountID: accountId,
-					URL:       "https://sqs.us-west-2.amazonaws.com",
-					App:       app,
-					Env:       env,
-					Svc:       svc,
 				},
 			},
 		},

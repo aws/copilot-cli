@@ -707,17 +707,11 @@ func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*
 	}
 
 	return &template.SQSQueue{
-		Name:       q.Name,
 		Retention:  retention,
 		Delay:      delay,
 		Timeout:    timeout,
 		DeadLetter: deadletter,
 		FIFO:       convertFIFO(q.FIFO),
-		AccountID:  accountID,
-		URL:        url,
-		App:        app,
-		Env:        env,
-		Svc:        svc,
 	}, nil
 }
 
@@ -764,7 +758,6 @@ func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, 
 	}
 
 	return &template.DeadLetterQueue{
-		Name:  d.Name,
 		Tries: d.Tries,
 	}, nil
 }

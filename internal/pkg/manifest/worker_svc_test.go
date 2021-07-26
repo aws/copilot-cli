@@ -423,7 +423,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Name:    "name",
 						Service: "svc",
 						Queue: &SQSQueue{
-							Name:       aws.String("queue"),
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -456,7 +455,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Name:    "name",
 							Service: "svc",
 							Queue: &SQSQueue{
-								Name:       aws.String("queue"),
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
@@ -481,7 +479,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Name:    "name",
 						Service: "svc",
 						Queue: &SQSQueue{
-							Name:       aws.String("queue"),
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -516,7 +513,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Name:    "name",
 							Service: "svc",
 							Queue: &SQSQueue{
-								Name:       aws.String("queue"),
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
@@ -541,7 +537,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Name:    "name",
 						Service: "svc",
 						Queue: &SQSQueue{
-							Name:       aws.String("queue"),
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -578,7 +573,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Name:    "name",
 							Service: "svc",
 							Queue: &SQSQueue{
-								Name:       aws.String("queue"),
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
@@ -769,7 +763,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Name:    "name",
 								Service: "svc",
 								Queue: &SQSQueue{
-									Name:       aws.String("queue"),
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -799,7 +792,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Name:    "name",
 								Service: "svc",
 								Queue: &SQSQueue{
-									Name:       aws.String("queue"),
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -832,7 +824,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Name:    "name",
 								Service: "svc",
 								Queue: &SQSQueue{
-									Name:       aws.String("queue"),
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -862,7 +853,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Name:    "name",
 								Service: "svc",
 								Queue: &SQSQueue{
-									Name:       aws.String("queue"),
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -892,7 +882,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Name:    "name",
 								Service: "svc",
 								Queue: &SQSQueue{
-									Name:       aws.String("queue"),
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -925,7 +914,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Name:    "name",
 								Service: "svc",
 								Queue: &SQSQueue{
-									Name:       aws.String("queue"),
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,

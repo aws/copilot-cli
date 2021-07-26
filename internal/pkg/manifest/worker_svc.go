@@ -64,7 +64,6 @@ type TopicSubscription struct {
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Name       *string          `yaml:"name"`
 	Retention  *time.Duration   `yaml:"retention"`
 	Delay      *time.Duration   `yaml:"delay"`
 	Timeout    *time.Duration   `yaml:"timeout"`
@@ -74,7 +73,6 @@ type SQSQueue struct {
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
-	Name  *string `yaml:"name"`
 	Tries *uint16 `yaml:"tries"`
 }
 
