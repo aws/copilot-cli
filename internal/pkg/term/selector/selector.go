@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/sns"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -124,6 +123,7 @@ type DeployStoreClient interface {
 	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 	IsJobDeployed(appName, envName, jobName string) (bool, error)
+	ListDeployedSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
 // TaskStackDescriber wraps cloudformation client methods to describe task stacks
@@ -136,11 +136,6 @@ type TaskStackDescriber interface {
 type TaskLister interface {
 	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
 	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
-}
-
-// SNSLister wraps methods for listing deployed SNS topics.
-type SNSLister interface {
-	ListAppEnvTopics(app, env string) ([]sns.Topic, error)
 }
 
 // Select prompts users to select the name of an application or environment.
@@ -178,11 +173,6 @@ type CFTaskSelect struct {
 	app            string
 	env            string
 	defaultCluster bool
-}
-
-type SNSTopicSelect struct {
-	prompt Prompter
-	lister SNSLister
 }
 
 func NewCFTaskSelect(prompt Prompter, store ConfigLister, cf TaskStackDescriber) *CFTaskSelect {
@@ -257,13 +247,6 @@ func NewDeploySelect(prompt Prompter, configStore ConfigLister, deployStore Depl
 // NewTaskSelect returns a new selector that chooses a running task.
 func NewTaskSelect(prompt Prompter, lister TaskLister) *TaskSelect {
 	return &TaskSelect{
-		prompt: prompt,
-		lister: lister,
-	}
-}
-
-func NewSNSTopicSelect(prompt Prompter, lister SNSLister) *SNSTopicSelect {
-	return &SNSTopicSelect{
 		prompt: prompt,
 		lister: lister,
 	}
@@ -1026,9 +1009,9 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 	return outServices, nil
 }
 
-func (s *SNSTopicSelect) Topics(prompt, help, app, env string) ([]string, error) {
+func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
 
-	topics, err := s.lister.ListAppEnvTopics(app, env)
+	topics, err := s.deployStoreSvc.ListDeployedSNSTopics(app, env)
 	if err != nil {
 		return nil, err
 	}

@@ -28,6 +28,11 @@ const (
 
 const (
 	stackResourceType = "cloudformation:stack"
+	snsResourceType   = "sns"
+
+	// fmtSNSTopicNamePrefix holds the App-Env-Workload- components of a topic name
+	fmtSNSTopicNamePrefix = "%s-%s-%s-"
+	snsServiceName        = "sns"
 )
 
 type resourceGetter interface {
@@ -125,6 +130,42 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	}
 	sort.Strings(wklds)
 	return wklds, nil
+}
+
+func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, error) {
+	rgClient, err := s.newRgClientFromIDs(appName, envName)
+	if err != nil {
+		return nil, err
+	}
+	topics, err := rgClient.GetResourcesByTags(snsResourceType, map[string]string{
+		AppTagKey: appName,
+		EnvTagKey: envName,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("get SNS topics for environment %s: %w", envName, err)
+	}
+
+	if len(topics) == 0 {
+		return nil, nil
+	}
+
+	var out []Topic
+	for _, r := range topics {
+		// TODO: if we add env-level SNS topics, remove this check.
+		// If the topic doesn't have a specific workload tag, don't return it.
+		if _, ok := r.Tags[ServiceTagKey]; !ok {
+			continue
+		}
+		out = append(out, Topic{
+			ARN:  r.ARN,
+			App:  appName,
+			Env:  envName,
+			Wkld: r.Tags[ServiceTagKey],
+		})
+	}
+
+	return out, nil
 }
 
 func contains(name string, names []string) bool {
