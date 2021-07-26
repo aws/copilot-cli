@@ -711,7 +711,6 @@ func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*
 		Retention:  retention,
 		Delay:      delay,
 		Timeout:    timeout,
-		KMS:        aws.BoolValue(q.KMS),
 		DeadLetter: deadletter,
 		FIFO:       convertFIFO(q.FIFO),
 		AccountID:  accountID,
@@ -765,7 +764,7 @@ func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, 
 	}
 
 	return &template.DeadLetterQueue{
-		ID:    d.ID,
+		Name:  d.Name,
 		Tries: d.Tries,
 	}, nil
 }

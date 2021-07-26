@@ -255,7 +255,6 @@ type SQSQueue struct {
 	Retention  *int64
 	Delay      *int64
 	Timeout    *int64
-	KMS        bool
 	DeadLetter *DeadLetterQueue
 	FIFO       *FIFOQueue
 
@@ -268,7 +267,7 @@ type SQSQueue struct {
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
 type DeadLetterQueue struct {
-	ID    *string
+	Name  *string
 	Tries *uint16
 }
 
@@ -477,7 +476,7 @@ func (t Topic) ARN() string {
 	return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }
 
-// URI determines the uri for a queue using the queue name, topic name, and account information
+// URI determines the uri for a queue using the queue name or topic name, and account information
 func (q SQSQueue) URI(topicName *string) string {
 	var name string
 	if q.Name != nil {

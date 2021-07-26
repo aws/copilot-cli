@@ -68,14 +68,13 @@ type SQSQueue struct {
 	Retention  *time.Duration   `yaml:"retention"`
 	Delay      *time.Duration   `yaml:"delay"`
 	Timeout    *time.Duration   `yaml:"timeout"`
-	KMS        *bool            `yaml:"kms"`
 	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
 	FIFO       *FIFOOrBool      `yaml:"fifo"`
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
-	ID    *string `yaml:"queue_id"`
+	Name  *string `yaml:"name"`
 	Tries *uint16 `yaml:"tries"`
 }
 
