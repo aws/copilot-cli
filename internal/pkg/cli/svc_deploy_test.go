@@ -753,7 +753,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 		wantURLs map[string]string
 		wantErr  error
 	}{
-		"fail to get identity when alias is enabled for rd web service": {
+		"fail to get identity for rd web service": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -765,13 +765,11 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-				//mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-				//m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{}, errors.New("some error"))
 			},
 
-			wantErr: fmt.Errorf("get identity of caller: some error"),
+			wantErr: fmt.Errorf("get identity: some error"),
 		},
 		"errors getting app resources by region": {
 			inAlias: "v1.mockDomain",
@@ -921,7 +919,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 					return m.mockAppVersionGetter, nil
 				},
 				endpointGetter:    m.mockEndpointGetter,
-				uploader:          m.mockUploader,
 				identity:          m.mockIdentity,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
@@ -937,8 +934,11 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						},
 					}, nil
 				},
-				newS3Uploader: func() (Uploader, error) {
-					return nil, nil
+				uploadOpts: &uploadCustomResourcesOpts{
+					uploader: m.mockUploader,
+					newS3Uploader: func() (Uploader, error) {
+						return nil, nil
+					},
 				},
 			}
 

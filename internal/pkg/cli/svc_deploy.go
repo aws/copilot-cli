@@ -11,13 +11,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"golang.org/x/mod/semver"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -26,6 +25,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -49,6 +49,11 @@ type deployWkldVars struct {
 	resourceTags map[string]string
 }
 
+type uploadCustomResourcesOpts struct {
+	uploader      customResourcesUploader
+	newS3Uploader func() (Uploader, error)
+}
+
 type deploySvcOpts struct {
 	deployWkldVars
 
@@ -66,7 +71,6 @@ type deploySvcOpts struct {
 	newAppVersionGetter func(string) (versionGetter, error)
 	endpointGetter      endpointGetter
 	identity            identityService
-	uploader            customResourcesUploader
 
 	spinner progress
 	sel     wsSelector
@@ -80,7 +84,7 @@ type deploySvcOpts struct {
 	buildRequired     bool
 	appEnvResources   *stack.AppRegionalResources
 
-	newS3Uploader func() (Uploader, error)
+	uploadOpts *uploadCustomResourcesOpts
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -111,17 +115,29 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
-		uploader:     template.New(),
+		//uploader:     template.New(),
 	}
-	opts.newS3Uploader = func() (Uploader, error) {
-		envRegion := opts.targetEnvironment.Region
-		sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
-		if err != nil {
-			return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
-		}
-		s3Client := s3.New(sess)
-		return s3Client, nil
+	opts.uploadOpts = &uploadCustomResourcesOpts{
+		uploader: template.New(),
+		newS3Uploader: func() (Uploader, error) {
+			envRegion := opts.targetEnvironment.Region
+			sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
+			if err != nil {
+				return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+			}
+			s3Client := s3.New(sess)
+			return s3Client, nil
+		},
 	}
+	//opts.newS3Uploader = func() (Uploader, error) {
+	//	envRegion := opts.targetEnvironment.Region
+	//	sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+	//	}
+	//	s3Client := s3.New(sess)
+	//	return s3Client, nil
+	//}
 	return opts, err
 }
 
@@ -457,28 +473,26 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	}, nil
 }
 
-func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
+//func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
+func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
+	log.Infoln("Uploading custom resources for associating custom domain with your app runner service...")
 	s3Client, err := o.newS3Uploader()
 	if err != nil {
 		return nil, err
 	}
 
-	if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
-		return nil, err
-	}
-
 	layerURLS, err := o.uploader.UploadRequestDrivenWebServiceLayers(func(key string, file s3.NamedBinary) (string, error) {
-		return s3Client.Upload(o.appEnvResources.S3Bucket, key, file)
+		return s3Client.Upload(appEnvResources.S3Bucket, key, file)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("upload custom resource layer: %w", err)
 	}
 
 	customResourcesURLS, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(o.appEnvResources.S3Bucket, key, objects...)
+		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", o.appEnvResources.S3Bucket, err)
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
 	}
 
 	urls := mergeMaps(layerURLS, customResourcesURLS)
@@ -510,14 +524,14 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		var arn string
-		if arn, err = o.rootUserARN(); err != nil {
-			return nil, err
+		caller, err := o.identity.Get()
+		if err != nil {
+			return nil, fmt.Errorf("get identity: %w", err)
 		}
 		appInfo := deploy.AppInformation{
 			Name:                o.targetEnvironment.App,
 			DNSName:             o.targetApp.Domain,
-			AccountPrincipalARN: arn,
+			AccountPrincipalARN: caller.RootUserARN,
 		}
 		if t.Alias == nil {
 			conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
@@ -532,14 +546,14 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			return nil, err
 		}
 		if err = validateAppVersion(o.targetApp, appVersionGetter); err != nil {
-			log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
-`, o.name,
-				color.HighlightCode("copilot app upgrade"))
+			logAppVersionOutdatedError(o.name)
 			return nil, err
 		}
 
-		if urls, err = o.uploadCustomResources(); err != nil {
+		if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
+			return nil, err
+		}
+		if urls, err = uploadCustomResources(o.uploadOpts, o.appEnvResources); err != nil {
 			return nil, err
 		}
 		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)
@@ -571,10 +585,7 @@ func validateAlias(svcName, alias string, app *config.Application, envName strin
 		return nil
 	}
 	if err := validateAppVersion(app, appVersionGetter); err != nil {
-		log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
-`, svcName,
-			color.HighlightCode("copilot app upgrade"))
+		logAppVersionOutdatedError(svcName)
 		return err
 	}
 	// Alias should be within either env, app, or root hosted zone.
@@ -629,12 +640,10 @@ func mergeMaps(maps ...map[string]string) map[string]string {
 	return out
 }
 
-func (o *deploySvcOpts) rootUserARN() (string, error) {
-	caller, err := o.identity.Get()
-	if err != nil {
-		return "", fmt.Errorf("get identity of caller: %w", err)
-	}
-	return caller.RootUserARN, nil
+func logAppVersionOutdatedError(name string) {
+	log.Errorf(`Cannot deploy service %s because the application version is incompatible.
+To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
+`, name, color.HighlightCode("copilot app upgrade"))
 }
 
 func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {
