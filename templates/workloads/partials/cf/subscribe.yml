@@ -22,19 +22,19 @@ EventsQueue:
     {{- end}}
     {{- if .Subscribe.Queue.DeadLetter}}
     RedrivePolicy:
-      deadLetterTargetArn: !GetAtt DeadLetter.Arn
+      deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
       maxReceiveCount: {{.Subscribe.Queue.DeadLetter.Tries}}
     {{- end}}
   {{- end}}
 
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
-DeadLetter:
+DeadLetterQueue:
   Type: AWS::SQS::Queue
 
 DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
-    Queues: [!Ref 'DeadLetter']
+    Queues: [!Ref 'DeadLetterQueue']
     PolicyDocument:
       Version: "2012-10-17"
       Statement:
@@ -118,18 +118,18 @@ QueuePolicy:
     {{- end}}
     {{- if $topic.Queue.DeadLetter}}
     RedrivePolicy:
-      deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetter.Arn
+      deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
       maxReceiveCount: {{$topic.Queue.DeadLetter.Tries}}
     {{- end}}
 
 {{- if $topic.Queue.DeadLetter}}
-{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetter:
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
   Type: AWS::SQS::Queue
 
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
-    Queues: [!Ref '{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetter']
+    Queues: [!Ref '{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue']
     PolicyDocument:
       Version: "2012-10-17"
       Statement:
