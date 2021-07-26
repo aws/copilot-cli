@@ -63,7 +63,7 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	osArch       string
+	platform     string
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -186,11 +186,11 @@ func (o *initJobOpts) Execute() error {
 		}
 	}
 
-	osArch, err := o.dockerEngine.RedirectPlatform(o.image)
+	platform, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
 		return err
 	}
-	o.osArch = osArch
+	o.platform = platform
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -199,7 +199,7 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.osArch,
+			Platform:       o.platform,
 		},
 
 		Schedule:    o.schedule,

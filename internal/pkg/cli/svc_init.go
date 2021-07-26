@@ -221,11 +221,11 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	osArch, err := o.dockerEngine.RedirectPlatform(o.image)
+	platform, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
 		return fmt.Errorf("get/redirect docker engine platform: %w", err)
 	}
-	o.platform = osArch
+	o.platform = platform
 
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
