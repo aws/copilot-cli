@@ -141,6 +141,9 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			}
 			if t.Alias == nil {
 				serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc)
+				if err != nil {
+					return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
+				}
 				break
 			}
 
@@ -160,6 +163,9 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 					return s3Client, nil
 				},
 			}, resources)
+			if err != nil {
+				return nil, err
+			}
 			serializer, err = stack.NewRequestDrivenWebServiceWithAlias(t, env.Name, appInfo, rc, urls)
 			if err != nil {
 				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)

@@ -513,7 +513,8 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		caller, err := o.identity.Get()
+		var caller identity.Caller
+		caller, err = o.identity.Get()
 		if err != nil {
 			return nil, fmt.Errorf("get identity: %w", err)
 		}
