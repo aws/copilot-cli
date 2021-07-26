@@ -104,7 +104,7 @@ QueuePolicy:
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
   Type: AWS::SQS::Queue
   Properties:
-    QueueName: !Sub ${AWS::StackName}-{{- if $topic.Queue.Name}}{{- logicalIDSafe $topic.Queue.Name}}{{- else}}{{logicalIDSafe $topic.Name}}{{- end}}{{- if $topic.Queue.FIFO}}.fifo{{- end}}
+    QueueName: !Sub ${AWS::StackName}-{{- if $topic.Queue.Name}}{{logicalIDSafe $topic.Queue.Name}}{{- else}}{{logicalIDSafe $topic.Name}}{{- end}}{{- if $topic.Queue.FIFO}}.fifo{{- end}}
     KmsMasterKeyId: 'alias/aws/sqs'
     {{- if $topic.Queue.Retention}}
     MessageRetentionPeriod: {{$topic.Queue.Retention}}
