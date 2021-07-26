@@ -66,6 +66,7 @@ type deploySvcOpts struct {
 	newAppVersionGetter func(string) (versionGetter, error)
 	endpointGetter      endpointGetter
 	identity            identityService
+	uploader            customResourcesUploader
 
 	spinner progress
 	sel     wsSelector
@@ -77,10 +78,9 @@ type deploySvcOpts struct {
 	targetSvc         *config.Workload
 	imageDigest       string
 	buildRequired     bool
+	appEnvResources   *stack.AppRegionalResources
 
-	uploader customResourcesUploader
-
-	configureRDSvcCustomResourceClient func() (Uploader, error)
+	newS3Uploader func() (Uploader, error)
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -113,7 +113,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		sessProvider: sessions.NewProvider(),
 		uploader:     template.New(),
 	}
-	opts.configureRDSvcCustomResourceClient = func() (Uploader, error) {
+	opts.newS3Uploader = func() (Uploader, error) {
 		envRegion := opts.targetEnvironment.Region
 		sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
 		if err != nil {
@@ -268,7 +268,7 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("assuming environment manager role: %w", err)
 	}
 
-	// ECR client against tools account profile AND target environment region
+	// ECR client against tools account profile AND target environment region.
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
 	registry := ecr.New(defaultSessEnvRegion)
 	o.imageBuilderPusher, err = repository.New(repoName, registry)
@@ -278,7 +278,7 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
-	// CF client against env account profile AND target environment region
+	// CF client against env account profile AND target environment region.
 	o.svcCFN = cloudformation.New(envSession)
 
 	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -295,7 +295,7 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.addons = addonsSvc
 
-	// client to retrieve an application's resources created with CloudFormation
+	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
@@ -311,6 +311,7 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.envUpgradeCmd = cmd
 
+	// client to retrieve caller identity.
 	id := identity.New(defaultSess)
 	o.identity = id
 	return nil
@@ -386,15 +387,15 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 		}
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return "", fmt.Errorf("get app resources: %w", err)
+
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return "", err
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
+		return "", fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}
 	return url, nil
 }
@@ -429,11 +430,12 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
+
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return nil, err
 	}
-	repoURL, ok := resources.RepositoryURLs[o.name]
+
+	repoURL, ok := o.appEnvResources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
 			wlName:       o.name,
@@ -455,38 +457,28 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	}, nil
 }
 
-func (o *deploySvcOpts) rootUserARN() (string, error) {
-	caller, err := o.identity.Get()
-	if err != nil {
-		return "", fmt.Errorf("get identity of caller: %w", err)
-	}
-	return caller.RootUserARN, nil
-}
-
 func (o *deploySvcOpts) uploadCustomResources() (map[string]string, error) {
-	envRegion := o.targetEnvironment.Region
-	s3Client, err := o.configureRDSvcCustomResourceClient()
+	s3Client, err := o.newS3Uploader()
 	if err != nil {
 		return nil, err
 	}
 
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, envRegion)
-	if err != nil {
-		return nil, fmt.Errorf("get resources for app %s by region %s: %w", o.targetApp.Name, envRegion, err)
+	if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return nil, err
 	}
 
 	layerURLS, err := o.uploader.UploadRequestDrivenWebServiceLayers(func(key string, file s3.NamedBinary) (string, error) {
-		return s3Client.Upload(resources.S3Bucket, key, file)
+		return s3Client.Upload(o.appEnvResources.S3Bucket, key, file)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("upload custom resource layer: %w", err)
 	}
 
 	customResourcesURLS, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
+		return s3Client.ZipAndUpload(o.appEnvResources.S3Bucket, key, objects...)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}
 
 	urls := mergeMaps(layerURLS, customResourcesURLS)
@@ -627,6 +619,35 @@ func validateAppVersion(app *config.Application, appVersionGetter versionGetter)
 	return nil
 }
 
+func mergeMaps(maps ...map[string]string) map[string]string {
+	out := make(map[string]string)
+	for _, m := range maps {
+		for k, v := range m {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func (o *deploySvcOpts) rootUserARN() (string, error) {
+	caller, err := o.identity.Get()
+	if err != nil {
+		return "", fmt.Errorf("get identity of caller: %w", err)
+	}
+	return caller.RootUserARN, nil
+}
+
+func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {
+	if o.appEnvResources == nil {
+		resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
+		if err != nil {
+			return fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
+		}
+		o.appEnvResources = resources
+	}
+	return nil
+}
+
 func (o *deploySvcOpts) showSvcURI() error {
 	type identifier interface {
 		URI(string) (string, error)
@@ -681,16 +702,6 @@ func (o *deploySvcOpts) showSvcURI() error {
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}
 	return nil
-}
-
-func mergeMaps(maps ...map[string]string) map[string]string {
-	out := make(map[string]string)
-	for _, m := range maps {
-		for k, v := range m {
-			out[k] = v
-		}
-	}
-	return out
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.

@@ -408,7 +408,7 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			},
 			mockS3Svc: func(m *mocks.MockartifactUploader) {},
 
-			wantErr: fmt.Errorf("get app resources: some error"),
+			wantErr: fmt.Errorf("get application mockApp resources from region us-west-2: some error"),
 		},
 		"should return error if fail to upload to S3 bucket": {
 			inputSvc: "mockSvc",
@@ -796,7 +796,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				}, "us-west-2").Return(nil, errors.New("some error"))
 			},
 
-			wantErr: fmt.Errorf("get resources for app mockApp by region us-west-2: some error"),
+			wantErr: fmt.Errorf("get application mockApp resources from region us-west-2: some error"),
 		},
 		"fail to upload layer": {
 			inAlias: "v1.mockDomain",
@@ -937,7 +937,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						},
 					}, nil
 				},
-				configureRDSvcCustomResourceClient: func() (Uploader, error) {
+				newS3Uploader: func() (Uploader, error) {
 					return nil, nil
 				},
 			}
