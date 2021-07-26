@@ -93,6 +93,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
 
+		Alias:                s.manifest.Alias,
 		ScriptBucketName:     bucket,
 		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
 		AWSSDKLayer:          urls[template.AWSSDKLayerFileName],
