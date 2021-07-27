@@ -1,9 +1,58 @@
 {{- if .Subscribe}}
+EventsKMSKey:
+  Type: AWS::KMS::Key
+  Properties:
+    KeyPolicy:
+      Version: '2012-10-17'
+      Statement:
+        - Sid: "Allow key use"
+          Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+          Action:
+            - "kms:Create*"
+            - "kms:Describe*"
+            - "kms:Enable*"
+            - "kms:List*"
+            - "kms:Put*"
+            - "kms:Update*"
+            - "kms:Revoke*"
+            - "kms:Disable*"
+            - "kms:Get*"
+            - "kms:Delete*"
+            - "kms:ScheduleKeyDeletion"
+            - "kms:CancelKeyDeletion"
+            - "kms:Tag*"
+            - "kms:UntagResource"
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+            - "kms:ReEncrypt*"
+            - "kms:GenerateDataKey*"
+          Resource: '*'
+        - Sid: "Allow SNS encryption"
+          Effect: "Allow"
+          Principal:
+            Service: sns.amazonaws.com
+          Action:
+            - "kms:Decrypt"
+            - "kms:GenerateDataKey*"
+          Resource: '*'
+        - Sid: "Allow SQS encryption"
+          Effect: "Allow"
+          Principal:
+            Service: sqs.amazonaws.com
+          Action:
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+            - "kms:ReEncrypt*"
+            - "kms:GenerateDataKey*"
+          Resource: '*'
+
 EventsQueue:
   Type: AWS::SQS::Queue
   {{- if .Subscribe.Queue}}
   Properties:
-    KmsMasterKeyId: 'alias/aws/sqs'
+    KmsMasterKeyId: !Ref EventsKMSKey
     {{- if .Subscribe.Queue.Retention}}
     MessageRetentionPeriod: {{.Subscribe.Queue.Retention}}
     {{- end}}
@@ -31,6 +80,7 @@ EventsQueue:
 DeadLetterQueue:
   Type: AWS::SQS::Queue
   Properties:
+    KmsMasterKeyId: !Ref EventsKMSKey
     MessageRetentionPeriod: 1209600 # 14 days
 
 DeadLetterPolicy:
@@ -95,7 +145,7 @@ QueuePolicy:
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
   Type: AWS::SQS::Queue
   Properties:
-    KmsMasterKeyId: 'alias/aws/sqs'
+    KmsMasterKeyId: !Ref EventsKMSKey
     {{- if $topic.Queue.Retention}}
     MessageRetentionPeriod: {{$topic.Queue.Retention}}
     {{- end}}
@@ -122,6 +172,7 @@ QueuePolicy:
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
   Type: AWS::SQS::Queue
   Properties:
+    KmsMasterKeyId: !Ref EventsKMSKey
     MessageRetentionPeriod: 1209600 # 14 days
 
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
