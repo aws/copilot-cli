@@ -611,16 +611,6 @@ func validateAppVersion(app *config.Application, appVersionGetter versionGetter)
 	return nil
 }
 
-func mergeMaps(maps ...map[string]string) map[string]string {
-	out := make(map[string]string)
-	for _, m := range maps {
-		for k, v := range m {
-			out[k] = v
-		}
-	}
-	return out
-}
-
 func logAppVersionOutdatedError(name string) {
 	log.Errorf(`Cannot deploy service %s because the application version is incompatible.
 To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
