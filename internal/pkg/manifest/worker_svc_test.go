@@ -301,8 +301,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: &SubscribeConfig{
 					Topics: &[]TopicSubscription{
 						{
-							Name:    "topicName",
-							Service: "bestService",
+							Name:    "topicName2",
+							Service: "bestService2",
 						},
 					},
 				},
@@ -410,6 +410,253 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			},
 		},
 	}
+	duration111Seconds := 111 * time.Second
+	mockWorkerServiceWithSubscribeNilOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Topics: &[]TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+						Queue: &SQSQueue{
+							Retention:  &duration111Seconds,
+							Delay:      &duration111Seconds,
+							Timeout:    &duration111Seconds,
+							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+						},
+					},
+				},
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: nil,
+			},
+		},
+	}
+	mockWorkerServiceWithNilSubscribeOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: nil,
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{
+					Topics: &[]TopicSubscription{
+						{
+							Name:    "name",
+							Service: "svc",
+							Queue: &SQSQueue{
+								Retention:  &duration111Seconds,
+								Delay:      &duration111Seconds,
+								Timeout:    &duration111Seconds,
+								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	mockWorkerServiceWithEmptySubscribeOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Topics: &[]TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+						Queue: &SQSQueue{
+							Retention:  &duration111Seconds,
+							Delay:      &duration111Seconds,
+							Timeout:    &duration111Seconds,
+							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+						},
+					},
+				},
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{},
+			},
+		},
+	}
+	mockWorkerServiceWithSubscribeTopicNilOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Topics: nil,
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{
+					Topics: &[]TopicSubscription{
+						{
+							Name:    "name",
+							Service: "svc",
+							Queue: &SQSQueue{
+								Retention:  &duration111Seconds,
+								Delay:      &duration111Seconds,
+								Timeout:    &duration111Seconds,
+								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	mockWorkerServiceWithNilSubscribeTopicOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Topics: &[]TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+						Queue: &SQSQueue{
+							Retention:  &duration111Seconds,
+							Delay:      &duration111Seconds,
+							Timeout:    &duration111Seconds,
+							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+						},
+					},
+				},
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{
+					Topics: nil,
+				},
+			},
+		},
+	}
+	mockWorkerServiceWithSubscribeTopicEmptyOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Topics: &[]TopicSubscription{},
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{
+					Topics: &[]TopicSubscription{
+						{
+							Name:    "name",
+							Service: "svc",
+							Queue: &SQSQueue{
+								Retention:  &duration111Seconds,
+								Delay:      &duration111Seconds,
+								Timeout:    &duration111Seconds,
+								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	mockWorkerServiceWithSubscribeQueueNilOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Queue: nil,
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{
+					Queue: &SQSQueue{
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+					},
+				},
+			},
+		},
+	}
+	mockWorkerServiceWithNilSubscribeQueueOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Queue: &SQSQueue{
+					Retention:  &duration111Seconds,
+					Delay:      &duration111Seconds,
+					Timeout:    &duration111Seconds,
+					DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+					FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+				},
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{
+					Queue: nil,
+				},
+			},
+		},
+	}
+	mockWorkerServiceWithSubscribeQueueEmptyOverride := WorkerService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			Subscribe: &SubscribeConfig{
+				Queue: &SQSQueue{},
+			},
+		},
+		Environments: map[string]*WorkerServiceConfig{
+			"test-sub": {
+				Subscribe: &SubscribeConfig{
+					Queue: &SQSQueue{
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+					},
+				},
+			},
+		},
+	}
 	testCases := map[string]struct {
 		svc       *WorkerService
 		inEnvName string
@@ -486,8 +733,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: &SubscribeConfig{
 						Topics: &[]TopicSubscription{
 							{
-								Name:    "topicName",
-								Service: "bestService",
+								Name:    "topicName2",
+								Service: "bestService2",
 							},
 						},
 					},
@@ -572,6 +819,258 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 			},
 			original: &mockWorkerServiceWithImageOverrideLocationByBuild,
+		},
+		"with nil subscribe overriden by full subscribe": {
+			svc:       &mockWorkerServiceWithNilSubscribeOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: &SubscribeConfig{
+						Topics: &[]TopicSubscription{
+							{
+								Name:    "name",
+								Service: "svc",
+								Queue: &SQSQueue{
+									Retention:  &duration111Seconds,
+									Delay:      &duration111Seconds,
+									Timeout:    &duration111Seconds,
+									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithNilSubscribeOverride,
+		},
+		"with full subscribe and nil subscribe env": {
+			svc:       &mockWorkerServiceWithSubscribeNilOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: &SubscribeConfig{
+						Topics: &[]TopicSubscription{
+							{
+								Name:    "name",
+								Service: "svc",
+								Queue: &SQSQueue{
+									Retention:  &duration111Seconds,
+									Delay:      &duration111Seconds,
+									Timeout:    &duration111Seconds,
+									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithSubscribeNilOverride,
+		},
+		"with full subscribe and empty subscribe env": {
+			svc:       &mockWorkerServiceWithEmptySubscribeOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{},
+					},
+					Subscribe: &SubscribeConfig{
+						Topics: &[]TopicSubscription{
+							{
+								Name:    "name",
+								Service: "svc",
+								Queue: &SQSQueue{
+									Retention:  &duration111Seconds,
+									Delay:      &duration111Seconds,
+									Timeout:    &duration111Seconds,
+									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithEmptySubscribeOverride,
+		},
+		"with nil subscribe topic overriden by full subscribe topic": {
+			svc:       &mockWorkerServiceWithNilSubscribeTopicOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: &SubscribeConfig{
+						Topics: &[]TopicSubscription{
+							{
+								Name:    "name",
+								Service: "svc",
+								Queue: &SQSQueue{
+									Retention:  &duration111Seconds,
+									Delay:      &duration111Seconds,
+									Timeout:    &duration111Seconds,
+									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithNilSubscribeTopicOverride,
+		},
+		"with full subscribe topic and nil subscribe topic env": {
+			svc:       &mockWorkerServiceWithSubscribeTopicNilOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: &SubscribeConfig{
+						Topics: &[]TopicSubscription{
+							{
+								Name:    "name",
+								Service: "svc",
+								Queue: &SQSQueue{
+									Retention:  &duration111Seconds,
+									Delay:      &duration111Seconds,
+									Timeout:    &duration111Seconds,
+									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithSubscribeTopicNilOverride,
+		},
+		"with empty subscribe topic overriden by full subscribe topic": {
+			svc:       &mockWorkerServiceWithSubscribeTopicEmptyOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{},
+					},
+					Subscribe: &SubscribeConfig{
+						Topics: &[]TopicSubscription{
+							{
+								Name:    "name",
+								Service: "svc",
+								Queue: &SQSQueue{
+									Retention:  &duration111Seconds,
+									Delay:      &duration111Seconds,
+									Timeout:    &duration111Seconds,
+									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithSubscribeTopicEmptyOverride,
+		},
+		"with nil subscribe queue overriden by full subscribe queue": {
+			svc:       &mockWorkerServiceWithNilSubscribeQueueOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: &SubscribeConfig{
+						Queue: &SQSQueue{
+							Retention:  &duration111Seconds,
+							Delay:      &duration111Seconds,
+							Timeout:    &duration111Seconds,
+							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithNilSubscribeQueueOverride,
+		},
+		"with full subscribe queue and nil subscribe queue env": {
+			svc:       &mockWorkerServiceWithSubscribeQueueNilOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: &SubscribeConfig{
+						Queue: &SQSQueue{
+							Retention:  &duration111Seconds,
+							Delay:      &duration111Seconds,
+							Timeout:    &duration111Seconds,
+							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithSubscribeQueueNilOverride,
+		},
+		"with empty subscribe queue overriden by full subscribe queue": {
+			svc:       &mockWorkerServiceWithSubscribeQueueEmptyOverride,
+			inEnvName: "test-sub",
+			wanted: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{},
+					},
+					Subscribe: &SubscribeConfig{
+						Queue: &SQSQueue{
+							Retention:  &duration111Seconds,
+							Delay:      &duration111Seconds,
+							Timeout:    &duration111Seconds,
+							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
+						},
+					},
+				},
+			},
+
+			original: &mockWorkerServiceWithSubscribeQueueEmptyOverride,
 		},
 	}
 
@@ -743,6 +1242,64 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+type testFIFO struct {
+	FIFO *FIFOOrBool `yaml:"fifo"`
+}
+
+func Test_UnmarshalFifo(t *testing.T) {
+	testCases := map[string]struct {
+		manifest []byte
+		want     testFIFO
+		wantErr  error
+	}{
+		"fifo specified": {
+			manifest: []byte(`
+fifo:
+  high_throughput: true`),
+			want: testFIFO{
+				FIFO: &FIFOOrBool{
+					FIFO: FIFOQueue{
+						HighThroughput: aws.Bool(true),
+					},
+				},
+			},
+		},
+		"enabled": {
+			manifest: []byte(`
+fifo: true`),
+			want: testFIFO{
+				FIFO: &FIFOOrBool{
+					Enabled: aws.Bool(true),
+				},
+			},
+		},
+		"invalid input": {
+			manifest: []byte(`
+fifo: xyz`),
+			wantErr: errUnmarshalFIFO,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			v := testFIFO{
+				FIFO: &FIFOOrBool{},
+			}
+
+			// WHEN
+			err := yaml.Unmarshal(tc.manifest, &v)
+			// THEN
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.want.FIFO.Enabled, v.FIFO.Enabled)
+				require.Equal(t, tc.want.FIFO.FIFO.HighThroughput, v.FIFO.FIFO.HighThroughput)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
 		})
 	}
 }
