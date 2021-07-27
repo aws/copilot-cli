@@ -30,6 +30,8 @@ EventsQueue:
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetterQueue:
   Type: AWS::SQS::Queue
+  Properties:
+    MessageRetentionPeriod: 1209600 # 14 days
 
 DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
@@ -41,14 +43,13 @@ DeadLetterPolicy:
         - Sid: Allow-TaskRole-Subscribe
           Effect: Allow
           Principal:
-            Service: sns.amazonaws.com
+            AWS:
+              - !Ref TaskRole
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
-          Resource: !GetAtt EventsQueue.Arn
-          Condition:
-            ArnEquals:
-              aws:SourceArn: !Ref 'TaskRole'
+            - sqs:DeleteMessageBatch
+          Resource: !GetAtt DeadLetterQueue.Arn
 {{- end}}{{- end}}
 
 QueuePolicy:
@@ -61,14 +62,13 @@ QueuePolicy:
         - Sid: Allow-TaskRole-Subscribe
           Effect: Allow
           Principal:
-            Service: sns.amazonaws.com
+            AWS:
+              - !Ref TaskRole
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
+            - sqs:DeleteMessageBatch
           Resource: !GetAtt EventsQueue.Arn
-          Condition:
-            ArnEquals:
-              aws:SourceArn: !Ref 'TaskRole'
         {{- range $topic := .Subscribe.Topics}}
         {{- if not $topic.Queue}}
         - Effect: Allow
@@ -79,7 +79,7 @@ QueuePolicy:
           Resource: !GetAtt EventsQueue.Arn
           Condition:
             ArnEquals:
-              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{logicalIDSafe $topic.Service}}-{{logicalIDSafe $topic.Name}}']]
+              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
         {{- end}}
         {{- end}}
 
@@ -87,7 +87,7 @@ QueuePolicy:
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}SNSTopicSubscription:
   Type: AWS::SNS::Subscription
   Properties:
-    TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{logicalIDSafe $topic.Service}}-{{logicalIDSafe $topic.Name}}']]
+    TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
     Protocol: 'sqs'
     {{- if $topic.Queue}}
     Endpoint: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
@@ -125,6 +125,8 @@ QueuePolicy:
 {{- if $topic.Queue.DeadLetter}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
   Type: AWS::SQS::Queue
+  Properties:
+    MessageRetentionPeriod: 1209600 # 14 days
 
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
@@ -136,14 +138,13 @@ QueuePolicy:
         - Sid: Allow-TaskRole-Subscribe
           Effect: Allow
           Principal:
-            Service: sns.amazonaws.com
+            AWS:
+              - !Ref TaskRole
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
-          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
-          Condition:
-            ArnEquals:
-              aws:SourceArn: !Ref 'TaskRole'
+            - sqs:DeleteMessageBatch
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
 {{- end}}
 
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}QueuePolicy:
@@ -156,14 +157,13 @@ QueuePolicy:
         - Sid: Allow-TaskRole-Subscribe
           Effect: Allow
           Principal:
-            Service: sns.amazonaws.com
+            AWS:
+              - !Ref TaskRole
           Action: 
             - sqs:GetMessage
             - sqs:DeleteMessage
+            - sqs:DeleteMessageBatch
           Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
-          Condition:
-            ArnEquals:
-              aws:SourceArn: !Ref 'TaskRole'
         - Effect: Allow
           Principal:
             Service: sns.amazonaws.com
@@ -172,5 +172,5 @@ QueuePolicy:
           Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
           Condition:
             ArnEquals:
-              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{logicalIDSafe $topic.Service}}-{{logicalIDSafe $topic.Name}}']]
+              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
 {{- end}}{{- end}}{{- end}}
