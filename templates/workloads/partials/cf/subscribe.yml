@@ -40,15 +40,13 @@ DeadLetterPolicy:
     PolicyDocument:
       Version: "2012-10-17"
       Statement:
-        - Sid: Allow-TaskRole-Subscribe
-          Effect: Allow
+        - Effect: Allow
           Principal:
-            AWS:
-              - !Ref TaskRole
+            AWS: 
+              - !GetAtt TaskRole.Arn
           Action: 
-            - sqs:GetMessage
+            - sqs:ReceiveMessage
             - sqs:DeleteMessage
-            - sqs:DeleteMessageBatch
           Resource: !GetAtt DeadLetterQueue.Arn
 {{- end}}{{- end}}
 
@@ -59,15 +57,13 @@ QueuePolicy:
     PolicyDocument:
       Version: '2012-10-17'
       Statement:
-        - Sid: Allow-TaskRole-Subscribe
-          Effect: Allow
+        - Effect: Allow
           Principal:
-            AWS:
-              - !Ref TaskRole
+            AWS: 
+              - !GetAtt TaskRole.Arn
           Action: 
-            - sqs:GetMessage
+            - sqs:ReceiveMessage
             - sqs:DeleteMessage
-            - sqs:DeleteMessageBatch
           Resource: !GetAtt EventsQueue.Arn
         {{- range $topic := .Subscribe.Topics}}
         {{- if not $topic.Queue}}
@@ -135,15 +131,13 @@ QueuePolicy:
     PolicyDocument:
       Version: "2012-10-17"
       Statement:
-        - Sid: Allow-TaskRole-Subscribe
-          Effect: Allow
+        - Effect: Allow
           Principal:
-            AWS:
-              - !Ref TaskRole
+            AWS: 
+              - !GetAtt TaskRole.Arn
           Action: 
-            - sqs:GetMessage
+            - sqs:ReceiveMessage
             - sqs:DeleteMessage
-            - sqs:DeleteMessageBatch
           Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
 {{- end}}
 
@@ -154,23 +148,12 @@ QueuePolicy:
     PolicyDocument:
       Version: '2012-10-17'
       Statement:
-        - Sid: Allow-TaskRole-Subscribe
-          Effect: Allow
-          Principal:
-            AWS:
-              - !Ref TaskRole
-          Action: 
-            - sqs:GetMessage
-            - sqs:DeleteMessage
-            - sqs:DeleteMessageBatch
-          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
         - Effect: Allow
           Principal:
-            Service: sns.amazonaws.com
+            AWS: 
+              - !GetAtt TaskRole.Arn
           Action: 
-            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
           Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
-          Condition:
-            ArnEquals:
-              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
 {{- end}}{{- end}}{{- end}}
