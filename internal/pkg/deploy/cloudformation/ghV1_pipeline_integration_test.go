@@ -75,13 +75,15 @@ func TestGHv1PipelineCreation(t *testing.T) {
 		var appBucketName string
 
 		environmentToDeploy := deploy.CreateEnvironmentInput{
-			Name:                     randStringBytes(10),
-			AppName:                  app.Name,
-			ToolsAccountPrincipalARN: envCallerInfo.RootUserARN,
-			Version:                  deploy.LatestEnvTemplateVersion,
+			Name: randStringBytes(10),
+			App: deploy.AppInformation{
+				Name:                app.Name,
+				AccountPrincipalARN: envCallerInfo.RootUserARN,
+			},
+			Version: deploy.LatestEnvTemplateVersion,
 		}
 		envStackName := fmt.Sprintf("%s-%s",
-			environmentToDeploy.AppName,
+			environmentToDeploy.App.Name,
 			environmentToDeploy.Name)
 
 		// Make sure we delete the stacks after the test is done
