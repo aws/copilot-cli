@@ -282,3 +282,41 @@ func TestGenerateSNSJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateQueueURIJSON(t *testing.T) {
+	testCases := map[string]struct {
+		in     *[]TopicSubscription
+		wanted string
+	}{
+		"JSON should render correctly": {
+			in: &[]TopicSubscription{
+				{
+					Name:    aws.String("tests"),
+					Service: aws.String("bestSvc"),
+					Queue: &SQSQueue{
+						Delay: aws.Int64(5),
+					},
+				},
+			},
+			wanted: `{"EventsQueue":"${mainURL}","bestSvc-testsEventsQueue":"${bestSvc-testsURL}"}`,
+		},
+		"Topics with no names show empty but main queue still populates": {
+			in: &[]TopicSubscription{
+				{
+					Service: aws.String("bestSvc"),
+				},
+			},
+			wanted: `{"EventsQueue":"${mainURL}"}`,
+		},
+		"nil list of arguments should render with main queue": {
+			in:     &[]TopicSubscription{},
+			wanted: `{"EventsQueue":"${mainURL}"}`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, generateQueueURIJSON(tc.in))
+		})
+	}
+}
