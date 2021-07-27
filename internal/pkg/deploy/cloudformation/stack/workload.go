@@ -43,15 +43,15 @@ const (
 
 // Parameter logical IDs for workloads on App Runner.
 const (
-	WorkloadImageRepositoryType                   = "ImageRepositoryType"
-	WorkloadInstanceCPUParamKey                   = "InstanceCPU"
-	WorkloadInstanceMemoryParamKey                = "InstanceMemory"
-	WorkloadInstanceRoleParamKey                  = "InstanceRole"
-	WorkloadHealthCheckPathParamKey               = "HealthCheckPath"
-	WorkloadHealthCheckIntervalParamKey           = "HealthCheckInterval"
-	WorkloadHealthCheckTimeoutParamKey            = "HealthCheckTimeout"
-	WorkloadHealthCheckHealthyThresholdParamKey   = "HealthCheckHealthyThreshold"
-	WorkloadHealthCheckUnhealthyThresholdParamKey = "HealthCheckUnhealthyThreshold"
+	RDWkldImageRepositoryType                   = "ImageRepositoryType"
+	RDWkldInstanceCPUParamKey                   = "InstanceCPU"
+	RDWkldInstanceMemoryParamKey                = "InstanceMemory"
+	RDWkldInstanceRoleParamKey                  = "InstanceRole"
+	RDWkldHealthCheckPathParamKey               = "HealthCheckPath"
+	RDWkldHealthCheckIntervalParamKey           = "HealthCheckInterval"
+	RDWkldHealthCheckTimeoutParamKey            = "HealthCheckTimeout"
+	RDWkldHealthCheckHealthyThresholdParamKey   = "HealthCheckHealthyThreshold"
+	RDWkldHealthCheckUnhealthyThresholdParamKey = "HealthCheckUnhealthyThreshold"
 )
 
 // Matches alphanumeric characters and -._
@@ -72,6 +72,8 @@ type RuntimeConfig struct {
 	AddonsTemplateURL        string            // Optional. S3 object URL for the addons template.
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources in the workload stack.
 	ServiceDiscoveryEndpoint string            // Endpoint for the service discovery namespace in the environment.
+	AccountID                string            // Account ID for constructing ARNs
+	Region                   string            // Region for constructing ARNs
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
@@ -193,7 +195,7 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	stack, err := w.addons.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
-		if !errors.As(err, &notFoundErr){
+		if !errors.As(err, &notFoundErr) {
 			return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
 		}
 		return nil, nil // No addons found, so there are no outputs and error.
@@ -315,7 +317,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 
 	appRunnerParameters := []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(WorkloadImageRepositoryType),
+			ParameterKey:   aws.String(RDWkldImageRepositoryType),
 			ParameterValue: aws.String(imageRepositoryType),
 		},
 		{
@@ -323,11 +325,11 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(strconv.Itoa(int(*w.imageConfig.Port))),
 		},
 		{
-			ParameterKey:   aws.String(WorkloadInstanceCPUParamKey),
+			ParameterKey:   aws.String(RDWkldInstanceCPUParamKey),
 			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.CPU)),
 		},
 		{
-			ParameterKey:   aws.String(WorkloadInstanceMemoryParamKey),
+			ParameterKey:   aws.String(RDWkldInstanceMemoryParamKey),
 			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.Memory)),
 		},
 	}
@@ -335,7 +337,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	// Optional HealthCheckPath parameter
 	if w.healthCheckConfig.Path() != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(WorkloadHealthCheckPathParamKey),
+			ParameterKey:   aws.String(RDWkldHealthCheckPathParamKey),
 			ParameterValue: aws.String(*w.healthCheckConfig.Path()),
 		})
 	}
@@ -343,7 +345,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	// Optional HealthCheckInterval parameter
 	if w.healthCheckConfig.HealthCheckArgs.Interval != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(WorkloadHealthCheckIntervalParamKey),
+			ParameterKey:   aws.String(RDWkldHealthCheckIntervalParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Interval.Seconds()))),
 		})
 	}
@@ -351,7 +353,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	// Optional HealthCheckTimeout parameter
 	if w.healthCheckConfig.HealthCheckArgs.Timeout != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(WorkloadHealthCheckTimeoutParamKey),
+			ParameterKey:   aws.String(RDWkldHealthCheckTimeoutParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Timeout.Seconds()))),
 		})
 	}
@@ -359,7 +361,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	// Optional HealthCheckHealthyThreshold parameter
 	if w.healthCheckConfig.HealthCheckArgs.HealthyThreshold != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(WorkloadHealthCheckHealthyThresholdParamKey),
+			ParameterKey:   aws.String(RDWkldHealthCheckHealthyThresholdParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.HealthyThreshold))),
 		})
 	}
@@ -367,7 +369,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	// Optional HealthCheckUnhealthyThreshold parameter
 	if w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(WorkloadHealthCheckUnhealthyThresholdParamKey),
+			ParameterKey:   aws.String(RDWkldHealthCheckUnhealthyThresholdParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold))),
 		})
 	}

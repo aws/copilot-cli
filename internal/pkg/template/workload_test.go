@@ -52,6 +52,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/partials/cf/image-overrides.yml", "image-overrides")
 				mockBox.AddString("workloads/partials/cf/instancerole.yml", "instancerole")
 				mockBox.AddString("workloads/partials/cf/accessrole.yml", "accessrole")
+				mockBox.AddString("workloads/partials/cf/publish.yml", "publish")
 
 				t.box = mockBox
 			},
@@ -78,6 +79,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   image-overrides
   instancerole
   accessrole
+  publish
 `,
 		},
 	}

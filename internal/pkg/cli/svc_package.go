@@ -125,7 +125,12 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				}
 			}
 		case *manifest.RequestDrivenWebService:
-			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, app.Name, rc)
+			appInfo := deploy.AppInformation{
+				Name:                env.App,
+				DNSName:             app.Domain,
+				AccountPrincipalARN: app.AccountID,
+			}
+			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
 			}
@@ -303,6 +308,8 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	rc := stack.RuntimeConfig{
 		AdditionalTags:           app.Tags,
 		ServiceDiscoveryEndpoint: endpoint,
+		AccountID:                app.AccountID,
+		Region:                   env.Region,
 	}
 
 	if imgNeedsBuild {

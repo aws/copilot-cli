@@ -110,7 +110,7 @@ func TestS3_MarshalBinary(t *testing.T) {
 
 func TestRDS_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		engine       string
+		engine           string
 		mockDependencies func(ctrl *gomock.Controller, r *RDS)
 
 		wantedBinary []byte

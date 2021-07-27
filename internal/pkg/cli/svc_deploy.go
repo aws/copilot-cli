@@ -410,6 +410,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
+			AccountID:                o.targetApp.AccountID,
+			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
@@ -433,6 +435,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			Digest:   o.imageDigest,
 		},
 		ServiceDiscoveryEndpoint: endpoint,
+		AccountID:                o.targetApp.AccountID,
+		Region:                   o.targetEnvironment.Region,
 	}, nil
 }
 
@@ -461,7 +465,12 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
-		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+		appInfo := deploy.AppInformation{
+			Name:                o.targetEnvironment.App,
+			DNSName:             o.targetApp.Domain,
+			AccountPrincipalARN: o.targetApp.AccountID,
+		}
+		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:

@@ -1,0 +1,35 @@
+{{- if .Publish}}
+{{- range $topic := .Publish.Topics}}
+{{logicalIDSafe $topic.Name}}SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+
+{{- if $topic.AllowedWorkers}}
+{{logicalIDSafe $topic.Name}}SNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
+    Properties:
+      Topics: 
+        - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sqs.amazonaws.com
+            Action: 
+              - sns:Subscribe
+            Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
+            Condition:
+              StringEquals:
+                'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
+                'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              ForAnyValue:StringEquals:
+                'sqs:ResourceTag/copilot-service': 
+                {{- range $worker := $topic.AllowedWorkers}}
+                  - '{{$worker}}'
+                {{- end}}
+  {{- end}}
+{{- end}}
+{{- end}}

@@ -90,5 +90,17 @@ TaskRole:
                     fsid: !GetAtt EnvControllerAction.ManagedFileSystemID
       {{- end}}
       {{- end -}}
+      {{- if .Publish}}{{- if .Publish.Topics}}
+      - PolicyName: 'Publish2SNS' 
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action: 'sns:Publish'
+              Resource:
+              {{- range $topic := .Publish.Topics}}
+                - !Ref {{$topic.Name}}SNSTopic
+              {{- end}}
+      {{- end}}{{- end}}
 
 

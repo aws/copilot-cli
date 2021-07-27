@@ -4,8 +4,10 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -501,19 +503,19 @@ func TestValidateImageDependsOn(t *testing.T) {
 
 func Test_validatePubSubTopicName(t *testing.T) {
 	testCases := map[string]struct {
-		inName *string
+		inName string
 
 		wantErr error
 	}{
 		"valid topic name": {
-			inName: aws.String("a-Perfectly_V4l1dString"),
+			inName: "a-Perfectly_V4l1dString",
 		},
 		"error when no topic name": {
-			inName:  nil,
+			inName:  "",
 			wantErr: errMissingPublishTopicField,
 		},
 		"error when invalid topic name": {
-			inName:  aws.String("OHNO~/`...,"),
+			inName:  "OHNO~/`...,",
 			wantErr: errInvalidPubSubTopicName,
 		},
 	}
@@ -541,21 +543,151 @@ func TestValidateWorkerName(t *testing.T) {
 		},
 		"empty name": {
 			inName:  []string{""},
-			wantErr: fmt.Errorf("worker name `` is invalid: %s", errInvalidName),
+			wantErr: fmt.Errorf("worker name `` is invalid: %s", errInvalidSvcName),
 		},
 		"contains spaces": {
 			inName:  []string{"a re@!!y b#d n&me"},
-			wantErr: fmt.Errorf("worker name `a re@!!y b#d n&me` is invalid: %s", errNameBadFormat),
+			wantErr: fmt.Errorf("worker name `a re@!!y b#d n&me` is invalid: %s", errSvcNameBadFormat),
 		},
 		"too long": {
 			inName:  []string{"this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long"},
-			wantErr: fmt.Errorf("worker name `this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long` is invalid: %s", errNameTooLong),
+			wantErr: fmt.Errorf("worker name `this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long` is invalid: %s", errSvcNameTooLong),
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := validateWorkerNames(tc.inName)
+
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func TestValidateTopicSubscription(t *testing.T) {
+	app := "app"
+	env := "env"
+	testCases := map[string]struct {
+		inTS          manifest.TopicSubscription
+		inValidTopics []string
+
+		wantErr error
+	}{
+		"good case": {
+			inTS: manifest.TopicSubscription{
+				Name:    "name2",
+				Service: "svc",
+			},
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       nil,
+		},
+		"empty name": {
+			inTS: manifest.TopicSubscription{
+				Service: "svc",
+			},
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       errMissingPublishTopicField,
+		},
+		"empty svc name": {
+			inTS: manifest.TopicSubscription{
+				Name: "theName",
+			},
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       errInvalidSvcName,
+		},
+		"topic not in list of valid topics": {
+			inTS: manifest.TopicSubscription{
+				Name:    "badName",
+				Service: "svc",
+			},
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       errTopicSubscriptionNotAllowed,
+		},
+		"topic in list of valid topics but one cannot be parsed": {
+			inTS: manifest.TopicSubscription{
+				Name:    "name2",
+				Service: "svc",
+			},
+			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
+			wantErr:       nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateTopicSubscription(tc.inTS, tc.inValidTopics, app, env)
+
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func TestValidateTime(t *testing.T) {
+	testCases := map[string]struct {
+		inTime    time.Duration
+		inFloor   time.Duration
+		inCeiling time.Duration
+
+		wantErr error
+	}{
+		"good case": {
+			inTime:    500 * time.Second,
+			inFloor:   0 * time.Second,
+			inCeiling: 600 * time.Second,
+			wantErr:   nil,
+		},
+		"bad time": {
+			inTime:    500 * time.Hour,
+			inFloor:   0 * time.Second,
+			inCeiling: 600 * time.Second,
+			wantErr:   errors.New("must be between 0s and 10m0s"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateTime(tc.inTime, tc.inFloor, tc.inCeiling)
+
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func TestValidateDeadLetter(t *testing.T) {
+	testCases := map[string]struct {
+		inDL *manifest.DeadLetterQueue
+
+		wantErr error
+	}{
+		"good case": {
+			inDL: &manifest.DeadLetterQueue{
+				Tries: aws.Uint16(35),
+			},
+			wantErr: nil,
+		},
+		"wrong number of tries": {
+			inDL: &manifest.DeadLetterQueue{
+				Tries: aws.Uint16(9999),
+			},
+			wantErr: errDeadLetterQueueTries,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateDeadLetter(tc.inDL)
 
 			if tc.wantErr == nil {
 				require.NoError(t, err)

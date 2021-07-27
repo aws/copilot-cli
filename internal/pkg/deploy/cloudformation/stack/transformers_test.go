@@ -547,8 +547,8 @@ func Test_convertAutoscaling(t *testing.T) {
 
 func Test_convertHTTPHealthCheck(t *testing.T) {
 	// These are used by reference to represent the output of the manifest.durationp function.
-	duration15Seconds := time.Duration(15 * time.Second)
-	duration60Seconds := time.Duration(60 * time.Second)
+	duration15Seconds := 15 * time.Second
+	duration60Seconds := 60 * time.Second
 	testCases := map[string]struct {
 		inputPath               *string
 		inputSuccessCodes       *string
@@ -1459,6 +1459,12 @@ func Test_convertImageDependsOn(t *testing.T) {
 }
 
 func Test_convertPublish(t *testing.T) {
+	accountId := "123456789123"
+	partition := "aws"
+	region := "us-west-2"
+	app := "testapp"
+	env := "testenv"
+	svc := "hello"
 	testCases := map[string]struct {
 		inPublish *manifest.PublishConfig
 
@@ -1486,9 +1492,15 @@ func Test_convertPublish(t *testing.T) {
 				},
 			},
 			wanted: &template.PublishOpts{
-				Topics: []*template.Topics{
+				Topics: []*template.Topic{
 					{
-						Name: aws.String("topic1"),
+						Name:      aws.String("topic1"),
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
 					},
 				},
 			},
@@ -1503,10 +1515,16 @@ func Test_convertPublish(t *testing.T) {
 				},
 			},
 			wanted: &template.PublishOpts{
-				Topics: []*template.Topics{
+				Topics: []*template.Topic{
 					{
 						Name:           aws.String("topic1"),
 						AllowedWorkers: []string{"worker1"},
+						AccountID:      accountId,
+						Partition:      partition,
+						Region:         region,
+						App:            app,
+						Env:            env,
+						Svc:            svc,
 					},
 				},
 			},
@@ -1520,7 +1538,7 @@ func Test_convertPublish(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errNameBadFormat),
+			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errSvcNameBadFormat),
 		},
 		"invalid topic name": {
 			inPublish: &manifest.PublishConfig{
@@ -1536,12 +1554,229 @@ func Test_convertPublish(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertPublish(tc.inPublish)
+			got, err := convertPublish(tc.inPublish, accountId, region, app, env, svc)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Equal(t, got, tc.wanted)
 			}
+		})
+	}
+}
+
+func Test_convertSubscribe(t *testing.T) {
+	validTopics := []string{"arn:aws:sns:us-west-2:123456789123:app-env-svc-name", "arn:aws:sns:us-west-2:123456789123:app-env-svc-name2"}
+	accountId := "123456789123"
+	region := "us-west-2"
+	app := "app"
+	env := "env"
+	svc := "svc"
+	duration111Seconds := 111 * time.Second
+	duration5Days := 120 * time.Hour
+	testCases := map[string]struct {
+		inSubscribe *manifest.SubscribeConfig
+
+		wanted      *template.SubscribeOpts
+		wantedError error
+	}{
+		"empty subscription": {
+			inSubscribe: &manifest.SubscribeConfig{},
+			wanted:      nil,
+		},
+		"subscription with empty topic subscriptions": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPublishTopicField),
+		},
+		"valid subscribe": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+				Queue: &manifest.SQSQueue{
+					Retention: &duration111Seconds,
+					Delay:     &duration111Seconds,
+					Timeout:   &duration111Seconds,
+					DeadLetter: &manifest.DeadLetterQueue{
+						Tries: aws.Uint16(35),
+					},
+					FIFO: &manifest.FIFOOrBool{
+						Enabled: aws.Bool(true),
+						FIFO: manifest.FIFOQueue{
+							HighThroughput: aws.Bool(false),
+						},
+					},
+				},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+				Queue: &template.SQSQueue{
+					Retention: aws.Int64(111),
+					Delay:     aws.Int64(111),
+					Timeout:   aws.Int64(111),
+					DeadLetter: &template.DeadLetterQueue{
+						Tries: aws.Uint16(35),
+					},
+					FIFO: &template.FIFOQueue{
+						HighThroughput: false,
+					},
+				},
+			},
+		},
+		"valid subscribe with minimal queue": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+				Queue: &manifest.SQSQueue{},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+				Queue: &template.SQSQueue{},
+			},
+		},
+		"invalid topic name": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "t@p!c1~",
+						Service: "service1",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "t@p!c1~": %w`, errInvalidPubSubTopicName),
+		},
+		"invalid service name": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "topic1",
+						Service: "s#rv!ce1~",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errSvcNameBadFormat),
+		},
+		"topic not allowed": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "topic1",
+						Service: "svc",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errTopicSubscriptionNotAllowed),
+		},
+		"sneaky topic not allowed": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "sneakytopic",
+						Service: "svc-name",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "sneakytopic": %w`, errTopicSubscriptionNotAllowed),
+		},
+		"subscribe queue delay invalid": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+				Queue: &manifest.SQSQueue{
+					Delay: &duration5Days,
+				},
+			},
+			wantedError: fmt.Errorf("`delay` must be between 0s and 15m0s"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertSubscribe(tc.inSubscribe, validTopics, accountId, region, app, env, svc)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, tc.wanted, got)
+			}
+		})
+	}
+}
+
+func Test_convertFIFO(t *testing.T) {
+	testCases := map[string]struct {
+		inFIFO *manifest.FIFOOrBool
+
+		wanted      *template.FIFOQueue
+		wantedError error
+	}{
+		"empty FIFO": {
+			inFIFO: &manifest.FIFOOrBool{},
+			wanted: nil,
+		},
+		"FIFO with enabled false": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(false),
+			},
+			wanted: nil,
+		},
+		"FIFO with enabled true and no high throughput": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: false,
+			},
+		},
+		"FIFO with enabled true and high throughput false": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+				FIFO: manifest.FIFOQueue{
+					HighThroughput: aws.Bool(false),
+				},
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: false,
+			},
+		},
+		"FIFO with enabled true and high throughput true": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+				FIFO: manifest.FIFOQueue{
+					HighThroughput: aws.Bool(true),
+				},
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: true,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := convertFIFO(tc.inFIFO)
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }
