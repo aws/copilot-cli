@@ -622,13 +622,14 @@ func newUploadCustomResourcesOpts(opts *deploySvcOpts) *uploadCustomResourcesOpt
 }
 
 func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {
-	if o.appEnvResources == nil {
-		resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-		if err != nil {
-			return fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
-		}
-		o.appEnvResources = resources
+	if o.appEnvResources != nil {
+		return nil
 	}
+	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
+	}
+	o.appEnvResources = resources
 	return nil
 }
 
