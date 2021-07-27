@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -94,8 +93,7 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	os           string
-	arch         string
+	platform     *string
 
 	// Cache variables
 	df dockerfileParser
@@ -223,10 +221,11 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	o.os, o.arch, err = dockerPlatform(o.dockerEngine, o.image)
+	platform, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
-		return err
+		return fmt.Errorf("get/redirect docker engine platform: %w", err)
 	}
+	o.platform = platform
 
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -235,10 +234,7 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform: &manifest.PlatformConfig{
-				OS:   o.os,
-				Arch: o.arch,
-			},
+			Platform:       o.platform,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -430,21 +426,6 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 		Retries:     &hc.Retries,
 		Command:     hc.Cmd,
 	}, nil
-}
-
-func dockerPlatform(engine dockerEngine, image string) (os, arch string, err error) {
-	os, arch = runtime.GOOS, runtime.GOARCH
-	if image == "" {
-		os, arch, err = engine.GetPlatform()
-		if err != nil {
-			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
-		}
-	}
-	// Until we target X86_64 for ARM architectures, log a warning.
-	if arch == exec.ArmArch || arch == exec.Arm64Arch {
-		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot deploy`")
-	}
-	return os, arch, nil
 }
 
 func svcTypePromptOpts() []prompt.Option {

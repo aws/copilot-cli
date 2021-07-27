@@ -133,6 +133,11 @@ Amount of memory in MiB reserved for each instance of your service. See the [AWS
 
 <div class="separator"></div>
 
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+
+<div class="separator"></div>
+
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
 
