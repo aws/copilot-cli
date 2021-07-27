@@ -99,7 +99,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 
-	var region, bucket, dnsDelegationRole, dnsName *string
+	var layerARN, bucket, dnsDelegationRole, dnsName *string
 	var urls map[string]*string
 	if s.manifest.Alias != nil {
 		bucket, urls, err = parseS3URLs(s.customResourceS3URL)
@@ -107,7 +107,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 			return "", err
 		}
 		dnsDelegationRole, dnsName = convertAppInformation(s.app)
-		region = awsSDKLayerForRegion[s.rc.Region]
+		layerARN = awsSDKLayerForRegion[s.rc.Region]
 	}
 
 	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app.Name, s.env, s.name)
@@ -124,7 +124,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		Alias:                s.manifest.Alias,
 		ScriptBucketName:     bucket,
 		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
-		AWSSDKLayer:          region,
+		AWSSDKLayer:          layerARN,
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,
 
