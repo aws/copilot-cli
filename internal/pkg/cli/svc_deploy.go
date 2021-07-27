@@ -515,7 +515,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 			return nil, err
 		}
-		if err = validateAppVersion(o.targetApp, appVersionGetter); err != nil {
+		if err = validateAppVersion(o.targetApp.Name, appVersionGetter); err != nil {
 			logAppVersionOutdatedError(o.name)
 			return nil, err
 		}
@@ -554,7 +554,7 @@ func validateAlias(svcName, alias string, app *config.Application, envName strin
 	if alias == "" {
 		return nil
 	}
-	if err := validateAppVersion(app, appVersionGetter); err != nil {
+	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
 		logAppVersionOutdatedError(svcName)
 		return err
 	}
@@ -588,10 +588,10 @@ func validateAlias(svcName, alias string, app *config.Application, envName strin
 	return fmt.Errorf("alias is not supported in hosted zones not managed by Copilot")
 }
 
-func validateAppVersion(app *config.Application, appVersionGetter versionGetter) error {
+func validateAppVersion(appName string, appVersionGetter versionGetter) error {
 	appVersion, err := appVersionGetter.Version()
 	if err != nil {
-		return fmt.Errorf("get version for app %s: %w", app.Name, err)
+		return fmt.Errorf("get version for app %s: %w", appName, err)
 	}
 	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 	if diff < 0 {
