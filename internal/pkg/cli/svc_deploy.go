@@ -116,18 +116,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
 	}
-	opts.uploadOpts = &uploadCustomResourcesOpts{
-		uploader: template.New(),
-		newS3Uploader: func() (Uploader, error) {
-			envRegion := opts.targetEnvironment.Region
-			sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
-			if err != nil {
-				return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
-			}
-			s3Client := s3.New(sess)
-			return s3Client, nil
-		},
-	}
+	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
 }
 
@@ -615,6 +604,21 @@ func logAppVersionOutdatedError(name string) {
 	log.Errorf(`Cannot deploy service %s because the application version is incompatible.
 To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
 `, name, color.HighlightCode("copilot app upgrade"))
+}
+
+func newUploadCustomResourcesOpts(opts *deploySvcOpts) *uploadCustomResourcesOpts {
+	return &uploadCustomResourcesOpts{
+		uploader: template.New(),
+		newS3Uploader: func() (Uploader, error) {
+			envRegion := opts.targetEnvironment.Region
+			sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
+			if err != nil {
+				return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+			}
+			s3Client := s3.New(sess)
+			return s3Client, nil
+		},
+	}
 }
 
 func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {
