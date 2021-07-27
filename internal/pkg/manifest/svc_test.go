@@ -92,8 +92,9 @@ environments:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(512),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(512),
+							Memory:   aws.Int(1024),
+							Platform: nil,
 							Count: Count{
 								Value: aws.Int(1),
 							},
@@ -217,8 +218,9 @@ secrets:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(1024),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(1024),
+							Memory:   aws.Int(1024),
+							Platform: nil,
 							Count: Count{
 								Value: aws.Int(1),
 							},
