@@ -664,7 +664,6 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	}, nil
 }
 
-//parseS3URLs(nameToS3URL map[string]string)
 func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
 	if len(nameToS3URL) == 0 {
 		return nil, nil, nil

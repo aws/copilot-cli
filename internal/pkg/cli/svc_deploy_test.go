@@ -796,34 +796,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 
 			wantErr: fmt.Errorf("get application mockApp resources from region us-west-2: some error"),
 		},
-		"fail to upload layer": {
-			inAlias: "v1.mockDomain",
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
-			},
-			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
-				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
-				}, "us-west-2").Return(&stack.AppRegionalResources{
-					S3Bucket: "mockBucket",
-				}, nil)
-				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceLayers(gomock.Any()).Return(nil, errors.New("some error"))
-			},
-
-			wantErr: fmt.Errorf("upload custom resource layer: some error"),
-		},
 		"fail to upload custom resource scripts": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
@@ -846,9 +818,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 					Domain: "mockDomain",
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
-				}, nil)
-				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceLayers(gomock.Any()).Return(map[string]string{
-					"mockResource1": "mockURL1",
 				}, nil)
 				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
 			},
@@ -877,9 +846,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 					Domain: "mockDomain",
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
-				}, nil)
-				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceLayers(gomock.Any()).Return(map[string]string{
-					"mockResource1": "mockURL1",
 				}, nil)
 				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(map[string]string{
 					"mockResource2": "mockURL2",
