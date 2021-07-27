@@ -464,27 +464,18 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 }
 
 func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
-	log.Infoln("Uploading custom resources for associating custom domain with your app runner service...")
 	s3Client, err := o.newS3Uploader()
 	if err != nil {
 		return nil, err
 	}
 
-	layerURLS, err := o.uploader.UploadRequestDrivenWebServiceLayers(func(key string, file s3.NamedBinary) (string, error) {
-		return s3Client.Upload(appEnvResources.S3Bucket, key, file)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resource layer: %w", err)
-	}
-
-	customResourcesURLS, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
+	urls, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
 	}
 
-	urls := mergeMaps(layerURLS, customResourcesURLS)
 	return urls, nil
 }
 

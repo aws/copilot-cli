@@ -121,20 +121,7 @@ Resources:
           Value: {{$value}}{{end}}{{end}}
 
 {{include "addons" . | indent 2}}
-
-{{- if .Alias}}
-  CustomDomainFunctionAWSSDKLayer:
-    Type: AWS::Lambda::LayerVersion
-    Properties:
-      CompatibleRuntimes:
-        - nodejs14.x
-      Content:
-        S3Bucket: {{ .ScriptBucketName }}
-        S3Key: {{ .AWSSDKLayer }}
-      Description: "The latest aws-sdk for the custom domain function to use. "
-      LayerName: custom-domain-aws-sdk
-      LicenseInfo: Apache-2.0
-
+{{if .Alias}}
   CustomDomainFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -147,7 +134,7 @@ Resources:
       Role: !GetAtt CustomResourceRole.Arn
       Runtime: nodejs14.x
       Layers:
-        - !Ref CustomDomainFunctionAWSSDKLayer
+        - {{ .AWSSDKLayer }}
 
   CustomDomainAction:
       Metadata:
