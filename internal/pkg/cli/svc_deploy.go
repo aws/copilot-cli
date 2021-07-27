@@ -336,7 +336,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("%s does not have required method BuildArgs()", name)
+		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and TaskPlatform()", name)
 	}
 	var tags []string
 	if imageTag != "" {
