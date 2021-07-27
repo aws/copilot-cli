@@ -29,6 +29,7 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
+	Publish                           *PublishConfig          `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {

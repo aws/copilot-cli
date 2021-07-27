@@ -331,12 +331,12 @@ type ParseRequestDrivenWebServiceInput struct {
 	Publish             *PublishOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
-	ScriptBucketName     string
-	CustomDomainLambda   string
-	AWSSDKLayer          string
-	Alias                string
-	AppDNSDelegationRole string
-	AppDNSName           string
+	Alias                *string
+	ScriptBucketName     *string
+	CustomDomainLambda   *string
+	AWSSDKLayer          *string
+	AppDNSDelegationRole *string
+	AppDNSName           *string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template

@@ -10,6 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -760,4 +764,36 @@ func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, 
 	return &template.DeadLetterQueue{
 		Tries: d.Tries,
 	}, nil
+}
+
+//parseS3URLs(nameToS3URL map[string]string)
+func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
+	if len(nameToS3URL) == 0 {
+		return nil, nil, nil
+	}
+
+	s3ObjectKeys = make(map[string]*string)
+	for fname, s3url := range nameToS3URL {
+		bucketName, key, err := s3.ParseURL(s3url)
+		if err != nil {
+			return nil, nil, err
+		}
+		s3ObjectKeys[fname] = &key
+		bucket = &bucketName
+	}
+	return
+}
+
+func convertAppInformation(app deploy.AppInformation) (delegationRole *string, dnsName *string) {
+	role := app.DNSDelegationRole()
+	if role != "" {
+		delegationRole = &role
+	}
+
+	dns := app.DNSName
+	if dns != "" {
+		dnsName = &dns
+	}
+
+	return
 }

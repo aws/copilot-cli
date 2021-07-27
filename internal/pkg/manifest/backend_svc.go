@@ -38,6 +38,7 @@ type BackendServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       *NetworkConfig            `yaml:"network"`
+	Publish       *PublishConfig            `yaml:"publish"`
 }
 
 // NewBackendService applies the props to a default backend service configuration with
