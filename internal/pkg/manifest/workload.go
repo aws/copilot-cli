@@ -445,7 +445,7 @@ type SidecarConfig struct {
 type TaskConfig struct {
 	CPU            *int              `yaml:"cpu"`
 	Memory         *int              `yaml:"memory"`
-	Platform       string            `yaml:"platform,omitempty"`
+	Platform       *string           `yaml:"platform,omitempty"`
 	Count          Count             `yaml:"count"`
 	ExecuteCommand ExecuteCommand    `yaml:"exec"`
 	Variables      map[string]string `yaml:"variables"`

@@ -142,9 +142,9 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 }
 
 // TaskPlatform returns the os/arch for the service.
-func (t *TaskConfig) TaskPlatform() (string, error) {
+func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if err := exec.ValidatePlatform(t.Platform); err != nil {
-		return "", fmt.Errorf("validate platform: %w", err)
+		return nil, fmt.Errorf("validate platform: %w", err)
 	}
 	return t.Platform, nil
 }

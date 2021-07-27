@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/spf13/afero"
 
 	"github.com/golang/mock/gomock"
@@ -362,15 +364,15 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 
 func TestDockerCommand_ValidatePlatform(t *testing.T) {
 	tests := map[string]struct {
-		inPlatform string
+		inPlatform *string
 		wantedErr  error
 	}{
 		"return nil for empty string": {
-			inPlatform: "",
+			inPlatform: nil,
 			wantedErr:  nil,
 		},
 		"return error for invalid platform (with singular case grammar)": {
-			inPlatform: "linus/art46",
+			inPlatform: aws.String("linus/art46"),
 			wantedErr:  errors.New("platform linus/art46 is invalid; the valid platform is: linux/amd64"),
 		},
 	}
@@ -394,17 +396,17 @@ func TestDockerCommand_RedirectPlatform(t *testing.T) {
 	tests := map[string]struct {
 		inImage        string
 		setupMocks     func(controller *gomock.Controller)
-		wantedPlatform string
+		wantedPlatform *string
 
 		wantedErr error
 	}{
-		"does not try to detect OS/arch; returns empty string if image passed in": {
+		"does not try to detect OS/arch; returns nil if image passed in": {
 			inImage: "preexistingImage",
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Times(0)
 			},
-			wantedPlatform: "",
+			wantedPlatform: nil,
 			wantedErr:      nil,
 		},
 		"error running 'docker version'": {
@@ -413,10 +415,10 @@ func TestDockerCommand_RedirectPlatform(t *testing.T) {
 				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, gomock.Any()).Return(mockError)
 			},
-			wantedPlatform: "",
+			wantedPlatform: nil,
 			wantedErr:      fmt.Errorf("get os/arch from docker: run docker version: some error"),
 		},
-		"successfully returns empty string if detects default platform": {
+		"successfully returns nil if detects default platform": {
 			inImage: "",
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = NewMockrunner(controller)
@@ -427,7 +429,7 @@ func TestDockerCommand_RedirectPlatform(t *testing.T) {
 						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Components\":[{\"Name\":\"Engine\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"linux\",\"Arch\":\"amd64\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
 					}).Return(nil)
 			},
-			wantedPlatform: "",
+			wantedPlatform: nil,
 			wantedErr:      nil,
 		},
 		"successfully redirects non-amd arch to 'linux/amd64'": {
@@ -441,7 +443,7 @@ func TestDockerCommand_RedirectPlatform(t *testing.T) {
 						_, _ = cmd.Stdout.Write([]byte("{\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Components\":[{\"Name\":\"Engine\",\"Version\":\"20.10.6\",\"Details\":{\"ApiVersion\":\"1.41\",\"Arch\":\"amd64\",\"BuildTime\":\"Fri Apr  9 22:44:56 2021\",\"Experimental\":\"false\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"KernelVersion\":\"5.10.25-linuxkit\",\"MinAPIVersion\":\"1.12\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"1.4.4\",\"Details\":{\"GitCommit\":\"05f951a3781f4f2c1911b05e61c16e\"}},{\"Name\":\"runc\",\"Version\":\"1.0.0-rc93\",\"Details\":{\"GitCommit\":\"12644e614e25b05da6fd00cfe1903fdec\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"Version\":\"20.10.6\",\"ApiVersion\":\"1.41\",\"MinAPIVersion\":\"1.12\",\"GitCommit\":\"8728dd2\",\"GoVersion\":\"go1.13.15\",\"Os\":\"linus\",\"Arch\":\"archer\",\"KernelVersion\":\"5.10.25-linuxkit\",\"BuildTime\":\"2021-04-09T22:44:56.000000000+00:00\"}\n"))
 					}).Return(nil)
 			},
-			wantedPlatform: "linux/amd64",
+			wantedPlatform: aws.String("linux/amd64"),
 			wantedErr:      nil,
 		},
 	}
@@ -457,7 +459,7 @@ func TestDockerCommand_RedirectPlatform(t *testing.T) {
 			platform, err := s.RedirectPlatform(tc.inImage)
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
-				if tc.wantedPlatform != "" {
+				if tc.wantedPlatform != nil {
 					require.Equal(t, tc.wantedPlatform, platform)
 				}
 			} else {

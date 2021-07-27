@@ -93,7 +93,7 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     string
+	platform     *string
 
 	// Cache variables
 	df dockerfileParser

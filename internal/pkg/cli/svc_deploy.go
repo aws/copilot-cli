@@ -332,7 +332,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, erro
 func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*exec.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-		TaskPlatform() (string, error)
+		TaskPlatform() (*string, error)
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {

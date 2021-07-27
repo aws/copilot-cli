@@ -15,6 +15,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -44,7 +46,7 @@ type BuildArguments struct {
 	Context    string            // Optional. Build context directory to pass to `docker build`.
 	Target     string            // Optional. The target build stage to pass to `docker build`.
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
-	Platform   string            // Optional. OS/Arch to pass to `docker build`.
+	Platform   *string           // Optional. OS/Arch to pass to `docker build`.
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 }
 
@@ -93,8 +95,8 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 	}
 
 	// Add platform option.
-	if in.Platform != "" {
-		args = append(args, "--platform", in.Platform)
+	if in.Platform != nil {
+		args = append(args, "--platform", aws.StringValue(in.Platform))
 	}
 
 	// Add the "args:" override section from manifest to the docker build call.
@@ -111,7 +113,7 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
 	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
-	if in.Platform != "" {
+	if in.Platform != nil {
 		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
 	}
 	if err := c.Run("docker", args); err != nil {
@@ -252,31 +254,31 @@ func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 }
 
 // ValidatePlatform checks if the entered string is a Docker-buildable platform.
-func ValidatePlatform(platform string) error {
-	if platform == "" {
+func ValidatePlatform(platform *string) error {
+	if platform == nil {
 		return nil
 	}
-	if platform != dockerBuildPlatform(LinuxOS, Amd64Arch) {
-		return fmt.Errorf("platform %s is invalid; %s: %s", platform, english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
+	if aws.StringValue(platform) != dockerBuildPlatform(LinuxOS, Amd64Arch) {
+		return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 	}
 	return nil
 }
 
-func (c DockerCommand) RedirectPlatform(image string) (string, error) {
+func (c DockerCommand) RedirectPlatform(image string) (*string, error) {
 	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
 	if image != "" {
-		return "", nil
+		return nil, nil
 	}
 	_, arch, err := c.getPlatform()
 	if err != nil {
-		return "", fmt.Errorf("get os/arch from docker: %w", err)
+		return nil, fmt.Errorf("get os/arch from docker: %w", err)
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != Amd64Arch {
 		log.Warningf(`Architecture type %s is currently unsupported. Setting platform %s instead.\nSee 'platform' field in your manifest.\n`, arch, dockerBuildPlatform(LinuxOS, Amd64Arch))
-		return dockerBuildPlatform(LinuxOS, Amd64Arch), nil
+		return aws.String(dockerBuildPlatform(LinuxOS, Amd64Arch)), nil
 	}
-	return "", nil
+	return nil, nil
 }
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {

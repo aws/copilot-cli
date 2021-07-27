@@ -63,7 +63,7 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     string
+	platform     *string
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser

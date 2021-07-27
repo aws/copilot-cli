@@ -43,9 +43,9 @@ type RequestDrivenWebServiceProps struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU      *int   `yaml:"cpu"`
-	Memory   *int   `yaml:"memory"`
-	Platform string `yaml:"platform,omitempty"`
+	CPU      *int    `yaml:"cpu"`
+	Memory   *int    `yaml:"memory"`
+	Platform *string `yaml:"platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
