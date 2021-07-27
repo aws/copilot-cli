@@ -6078,20 +6078,19 @@ func (mr *MockdockerEngineMockRecorder) CheckDockerEngineRunning() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngine)(nil).CheckDockerEngineRunning))
 }
 
-// GetPlatform mocks base method.
-func (m *MockdockerEngine) GetPlatform() (string, string, error) {
+// RedirectPlatform mocks base method.
+func (m *MockdockerEngine) RedirectPlatform(arg0 string) (*string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlatform")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret := m.ctrl.Call(m, "RedirectPlatform", arg0)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// GetPlatform indicates an expected call of GetPlatform.
-func (mr *MockdockerEngineMockRecorder) GetPlatform() *gomock.Call {
+// RedirectPlatform indicates an expected call of RedirectPlatform.
+func (mr *MockdockerEngineMockRecorder) RedirectPlatform(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatform", reflect.TypeOf((*MockdockerEngine)(nil).GetPlatform))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedirectPlatform", reflect.TypeOf((*MockdockerEngine)(nil).RedirectPlatform), arg0)
 }
 
 // Mockcodestar is a mock of codestar interface.
