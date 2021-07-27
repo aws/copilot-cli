@@ -1634,6 +1634,26 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
+		"valid subscribe with minimal queue": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+				Queue: &manifest.SQSQueue{},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+				Queue: &template.SQSQueue{},
+			},
+		},
 		"invalid topic name": {
 			inSubscribe: &manifest.SubscribeConfig{
 				Topics: &[]manifest.TopicSubscription{
