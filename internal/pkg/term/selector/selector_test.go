@@ -29,6 +29,91 @@ type deploySelectMocks struct {
 	prompt    *mocks.MockPrompter
 }
 
+func TestDeploySelect_Topics(t *testing.T) {
+	const (
+		testApp = "mockApp"
+		testEnv = "mockEnv"
+	)
+	mockTopic := deploy.Topic{
+		ARN:  "arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders",
+		App:  testApp,
+		Env:  testEnv,
+		Wkld: "mockWkld",
+	}
+	testCases := map[string]struct {
+		setupMocks func(mocks deploySelectMocks)
+
+		wantErr    error
+		wantTopics []string
+	}{
+		"return error if fail to retrieve topics from deploy": {
+			setupMocks: func(m deploySelectMocks) {
+				m.deploySvc.
+					EXPECT().
+					ListDeployedSNSTopics(testApp, testEnv).
+					Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("list SNS topics: some error"),
+		},
+		"return error if fail to select topics": {
+			setupMocks: func(m deploySelectMocks) {
+				m.deploySvc.
+					EXPECT().
+					ListDeployedSNSTopics(testApp, testEnv).
+					Return([]deploy.Topic{mockTopic}, nil)
+				m.prompt.
+					EXPECT().
+					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}).
+					Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("select SNS topics: some error"),
+		},
+		"success": {
+			setupMocks: func(m deploySelectMocks) {
+				m.deploySvc.
+					EXPECT().
+					ListDeployedSNSTopics(testApp, testEnv).
+					Return([]deploy.Topic{mockTopic}, nil)
+				m.prompt.
+					EXPECT().
+					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}).
+					Return([]string{"orders (mockWkld)"}, nil)
+			},
+			wantTopics: []string{mockTopic.ARN},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockdeploySvc := mocks.NewMockDeployStoreClient(ctrl)
+			mockconfigSvc := mocks.NewMockConfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := deploySelectMocks{
+				deploySvc: mockdeploySvc,
+				configSvc: mockconfigSvc,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := DeploySelect{
+				Select: &Select{
+					config: mockconfigSvc,
+					prompt: mockprompt,
+				},
+				deployStoreSvc: mockdeploySvc,
+			}
+			topics, err := sel.Topics("Select a deployed topic", "Help text", testApp, testEnv)
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.wantTopics, topics)
+			}
+		})
+	}
+}
+
 func TestDeploySelect_Service(t *testing.T) {
 	const testApp = "mockApp"
 	testCases := map[string]struct {

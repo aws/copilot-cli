@@ -1009,27 +1009,42 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 	return outServices, nil
 }
 
+// Topics asks the user to select from all Copilot-managed SNS topics and returns the ARNs
+// of those topics.
 func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
 
 	topics, err := s.deployStoreSvc.ListDeployedSNSTopics(app, env)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list SNS topics: %w", err)
 	}
 	if len(topics) == 0 {
-		log.Infof("No currently deployed services in environment %s.", env)
+		return nil, nil
 	}
+	// Create the list of options and the map from option to full topic specification.
 	var topicSlugs []string
+	topicMap := make(map[string]*deploy.Topic)
 	for _, t := range topics {
 		n, err := t.Name()
 		if err != nil {
 			continue
 		}
-		topicSlugs = append(topicSlugs, fmt.Sprintf(fmtTopicSlug, n, t.Wkld))
+		// A slug is the human string printed out as an option.
+		// In this case, it's "orders (api)" to denote the "orders"
+		// topic published by the "api" service.
+		slug := fmt.Sprintf(fmtTopicSlug, n, t.Wkld)
+		topicSlugs = append(topicSlugs, slug)
+		topicMap[slug] = &t
 	}
 
 	selectedTopics, err := s.prompt.MultiSelect(prompt, help, topicSlugs)
 	if err != nil {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
 	}
-	return selectedTopics, nil
+
+	// Get the ARNs from the topic slugs again.
+	var topicARNs []string
+	for _, t := range selectedTopics {
+		topicARNs = append(topicARNs, topicMap[t].ARN)
+	}
+	return topicARNs, nil
 }
