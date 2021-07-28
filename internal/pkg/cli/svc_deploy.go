@@ -353,7 +353,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
-		Platform:   platform,
+		Platform:   aws.StringValue(platform),
 		Tags:       tags,
 	}, nil
 }
