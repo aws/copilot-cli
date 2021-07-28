@@ -711,6 +711,9 @@ func (o *deploySvcOpts) showSvcURI() error {
 			msg = fmt.Sprintf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 		}
 		log.Success(msg)
+	case manifest.RequestDrivenWebServiceType:
+		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
+		log.Infof("If you are using an alias, the validation process can take more than 15 minutes. Please visit %s to check the validation status.\n", color.Emphasize("https://console.aws.amazon.com/apprunner/home"))
 	default:
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}
