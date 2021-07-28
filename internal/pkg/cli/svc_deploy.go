@@ -521,8 +521,8 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 			return nil, err
 		}
-		if err = validateAppVersion(o.targetApp.Name, appVersionGetter); err != nil {
-			logAppVersionOutdatedError(o.name)
+
+		if err = validateRDSvcAlias(o.name, aws.StringValue(t.Alias), o.envName, o.targetApp, appVersionGetter); err != nil {
 			return nil, err
 		}
 
@@ -594,7 +594,32 @@ func validateAlias(svcName, alias string, app *config.Application, envName strin
 	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
 }
 
-func validateRDSvcAlias(svcName, alias string, app *config.Application, appVersionGetter versionGetter) error {
+func checkUnsupportedAlias(alias, envName string, app *config.Application) error {
+	var regEnvHostedZone, regAppHostedZone *regexp.Regexp
+	var err error
+	if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
+		return err
+	}
+	if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
+		return err
+	}
+
+	if regEnvHostedZone.MatchString(alias) {
+		return errors.New("environment-level alias is not supported yet")
+	}
+
+	if regAppHostedZone.MatchString(alias) {
+		return errors.New("application-level alias is not supported yet")
+	}
+
+	if alias == app.Domain {
+		return errors.New("root domain alias is not supported yet")
+	}
+
+	return nil
+}
+
+func validateRDSvcAlias(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {
 	if alias == "" {
 		return nil
 	}
@@ -603,6 +628,12 @@ func validateRDSvcAlias(svcName, alias string, app *config.Application, appVersi
 		return err
 	}
 	// Alias should be within root hosted zone.
+	var aliasInvalidLog = fmt.Sprintf("%s should match the pattern <subdomain>.%s, where <subdomain> does not collide with your application name or any environment name\n", color.HighlightCode("http.alias"), app.Domain)
+	if err := checkUnsupportedAlias(alias, envName, app); err != nil {
+		log.Errorf(aliasInvalidLog)
+		return err
+	}
+
 	regRootHostedZone, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)%s`, app.Domain))
 	if err != nil {
 		return err
@@ -612,7 +643,7 @@ func validateRDSvcAlias(svcName, alias string, app *config.Application, appVersi
 		return nil
 	}
 
-	log.Errorf(`%s should match the pattern <subdomain>.%s`, color.HighlightCode("http.alias"), app.Domain)
+	log.Errorf(aliasInvalidLog)
 	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
 }
 
