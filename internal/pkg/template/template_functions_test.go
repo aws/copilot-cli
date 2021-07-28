@@ -285,11 +285,11 @@ func TestGenerateSNSJSON(t *testing.T) {
 
 func TestGenerateQueueURIJSON(t *testing.T) {
 	testCases := map[string]struct {
-		in     *[]TopicSubscription
+		in     []*TopicSubscription
 		wanted string
 	}{
 		"JSON should render correctly": {
-			in: &[]TopicSubscription{
+			in: []*TopicSubscription{
 				{
 					Name:    aws.String("tests"),
 					Service: aws.String("bestSvc"),
@@ -301,7 +301,7 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 			wanted: `{"EventsQueue":"${mainURL}","bestSvc-testsEventsQueue":"${bestSvc-testsURL}"}`,
 		},
 		"Topics with no names show empty but main queue still populates": {
-			in: &[]TopicSubscription{
+			in: []*TopicSubscription{
 				{
 					Service: aws.String("bestSvc"),
 				},
@@ -309,7 +309,7 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 			wanted: `{"EventsQueue":"${mainURL}"}`,
 		},
 		"nil list of arguments should render with main queue": {
-			in:     &[]TopicSubscription{},
+			in:     []*TopicSubscription{},
 			wanted: `{"EventsQueue":"${mainURL}"}`,
 		},
 	}
