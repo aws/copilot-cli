@@ -169,8 +169,11 @@ func generateQueueURIJSON(ts []*TopicSubscription) string {
 		if sub.Name == nil || sub.Service == nil || sub.Queue == nil {
 			continue
 		}
+		svc := StripNonAlphaNumFunc(aws.StringValue(sub.Service))
+		topicName := StripNonAlphaNumFunc(aws.StringValue(sub.Name))
+
 		subName := fmt.Sprintf("%s-%sEventsQueue", aws.StringValue(sub.Service), aws.StringValue(sub.Name))
-		urlMap[subName] = fmt.Sprintf("${%s-%sURL}", aws.StringValue(sub.Service), aws.StringValue(sub.Name))
+		urlMap[subName] = fmt.Sprintf("${%s%sURL}", svc, topicName)
 	}
 
 	out, ok := getJSONMap(urlMap)

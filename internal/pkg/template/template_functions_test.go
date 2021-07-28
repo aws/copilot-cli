@@ -298,7 +298,19 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 					},
 				},
 			},
-			wanted: `{"EventsQueue":"${mainURL}","bestSvc-testsEventsQueue":"${bestSvc-testsURL}"}`,
+			wanted: `{"EventsQueue":"${mainURL}","bestSvc-testsEventsQueue":"${bestSvctestsURL}"}`,
+		},
+		"only alphanumeric characters are used in var": {
+			in: []*TopicSubscription{
+				{
+					Name:    aws.String("tests"),
+					Service: aws.String("best-Svc"),
+					Queue: &SQSQueue{
+						Delay: aws.Int64(5),
+					},
+				},
+			},
+			wanted: `{"EventsQueue":"${mainURL}","best-Svc-testsEventsQueue":"${bestSvctestsURL}"}`,
 		},
 		"Topics with no names show empty but main queue still populates": {
 			in: []*TopicSubscription{
