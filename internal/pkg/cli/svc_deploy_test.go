@@ -688,7 +688,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
 				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
+			wantErr: fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot"),
 		},
 		"success": {
 			inAlias: "v1.mockDomain",
