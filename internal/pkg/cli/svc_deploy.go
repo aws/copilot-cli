@@ -169,7 +169,6 @@ func (o *deploySvcOpts) Execute() error {
 		return fmt.Errorf("get service configuration: %w", err)
 	}
 	o.targetSvc = svc
-
 	if err := o.configureClients(); err != nil {
 		return err
 	}
@@ -329,6 +328,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
+
 	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
 	if err != nil {
 		return fmt.Errorf("build and push image: %w", err)
@@ -349,22 +349,28 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, erro
 func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*exec.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+		TaskPlatform() (*string, error)
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("%s does not have required method BuildArgs()", name)
+		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and TaskPlatform()", name)
 	}
 	var tags []string
 	if imageTag != "" {
 		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
+	platform, err := mf.TaskPlatform()
+	if err != nil {
+		return nil, fmt.Errorf("get platform for service: %w", err)
+	}
 	return &exec.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
+		Platform:   aws.StringValue(platform),
 		Tags:       tags,
 	}, nil
 }
