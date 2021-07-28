@@ -22,6 +22,12 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
       LOG_LEVEL: info
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
+      
+    # You can override any of the values defined above by environment.
+    environments:
+      prod:
+        cpu: 2048               # Larger CPU value for prod environment 
+        memory: 4096
     ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
@@ -141,6 +147,12 @@ Number of CPU units for the task. See the [Amazon ECS docs](https://docs.aws.ama
 
 <a id="memory" href="#memory" class="field">`memory`</a> <span class="type">Integer</span>  
 Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html) for valid memory values.
+
+<div class="separator"></div>
+
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+
 
 <div class="separator"></div>
 

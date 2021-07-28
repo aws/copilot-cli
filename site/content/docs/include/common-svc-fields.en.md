@@ -33,6 +33,11 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 
 <div class="separator"></div>
 
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+
+<div class="separator"></div>
+
 <a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
 If you specify a number:
 ```yaml
@@ -236,4 +241,4 @@ Optional. The full config file path in your custom Fluent Bit image.
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our 'prod' environment, and 2 copies using Fargate Spot capacity in our 'staging' environment.

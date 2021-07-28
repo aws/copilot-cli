@@ -43,9 +43,7 @@ const (
 
 // Constants for ARN options.
 const (
-	snsArnPattern     = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
-	AWSPartition      = "aws"
-	AWSChinaPartition = "aws-cn"
+	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
 )
 
 var (
@@ -238,12 +236,33 @@ type Topic struct {
 // SubscribeOpts holds configuration needed if the service has subscriptions.
 type SubscribeOpts struct {
 	Topics []*TopicSubscription
+	Queue  *SQSQueue
 }
 
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
 	Name    *string
 	Service *string
+	Queue   *SQSQueue
+}
+
+// SQSQueue holds information needed to render a SQS Queue in a container definition.
+type SQSQueue struct {
+	Retention  *int64
+	Delay      *int64
+	Timeout    *int64
+	DeadLetter *DeadLetterQueue
+	FIFO       *FIFOQueue
+}
+
+// DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
+type DeadLetterQueue struct {
+	Tries *uint16
+}
+
+// FIFOQueue holds information needed to specify a SQS Queue as FIFO in a container definition.
+type FIFOQueue struct {
+	HighThroughput bool
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.
@@ -313,12 +332,12 @@ type ParseRequestDrivenWebServiceInput struct {
 	Publish             *PublishOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
-	ScriptBucketName     string
-	CustomDomainLambda   string
-	AWSSDKLayer          string
-	Alias                string
-	AppDNSDelegationRole string
-	AppDNSName           string
+	Alias                *string
+	ScriptBucketName     *string
+	CustomDomainLambda   *string
+	AWSSDKLayer          *string
+	AppDNSDelegationRole *string
+	AppDNSName           *string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -441,7 +460,7 @@ func envControllerParameters(o WorkloadOpts) []string {
 	return parameters
 }
 
-// ARN determines the arn for a topic using the SNSTopic arn start and the name of the topic
+// ARN determines the arn for a topic using the SNSTopic name and account information
 func (t Topic) ARN() string {
-	return fmt.Sprintf(snsArnPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
+	return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }
