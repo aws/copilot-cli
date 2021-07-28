@@ -37,6 +37,7 @@ type RequestDrivenWebServiceConfig struct {
 
 type RequestDrivenWebServiceHttpConfig struct {
 	HealthCheckConfiguration HealthCheckArgsOrString `yaml:"healthcheck"`
+	Alias                    *string                 `yaml:"alias"`
 }
 
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.

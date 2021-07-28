@@ -14,6 +14,30 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
+var awsSDKLayerForRegion = map[string]*string{
+	"ap-northeast-1": aws.String("arn:aws:lambda:ap-northeast-1:249908578461:layer:AWSLambda-Node-AWS-SDK:15"),
+	"us-east-1":      aws.String("arn:aws:lambda:us-east-1:668099181075:layer:AWSLambda-Node-AWS-SDK:15"),
+	"ap-southeast-1": aws.String("arn:aws:lambda:ap-southeast-1:468957933125:layer:AWSLambda-Node-AWS-SDK:14"),
+	"eu-west-1":      aws.String("arn:aws:lambda:eu-west-1:399891621064:layer:AWSLambda-Node-AWS-SDK:14"),
+	"us-west-1":      aws.String("arn:aws:lambda:us-west-1:325793726646:layer:AWSLambda-Node-AWS-SDK:15"),
+	"ap-northeast-2": aws.String("arn:aws:lambda:ap-northeast-2:296580773974:layer:AWSLambda-Node-AWS-SDK:14"),
+	"ap-south-1":     aws.String("arn:aws:lambda:ap-south-1:631267018583:layer:AWSLambda-Node-AWS-SDK:14"),
+	"ap-southeast-2": aws.String("arn:aws:lambda:ap-southeast-2:817496625479:layer:AWSLambda-Node-AWS-SDK:14"),
+	"ca-central-1":   aws.String("arn:aws:lambda:ca-central-1:778625758767:layer:AWSLambda-Node-AWS-SDK:14"),
+	"eu-central-1":   aws.String("arn:aws:lambda:eu-central-1:292169987271:layer:AWSLambda-Node-AWS-SDK:14"),
+	"eu-west-2":      aws.String("arn:aws:lambda:eu-west-2:142628438157:layer:AWSLambda-Node-AWS-SDK:14"),
+	"sa-east-1":      aws.String("arn:aws:lambda:sa-east-1:640010853179:layer:AWSLambda-Node-AWS-SDK:14"),
+	"us-east-2":      aws.String("arn:aws:lambda:us-east-2:259788987135:layer:AWSLambda-Node-AWS-SDK:14"),
+	"us-west-2":      aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
+	"af-south-1":     aws.String("arn:aws:lambda:af-south-1:392341123054:layer:AWSLambda-Node-AWS-SDK:7"),
+	"ap-east-1":      aws.String("arn:aws:lambda:ap-east-1:118857876118:layer:AWSLambda-Node-AWS-SDK:14"),
+	"ap-northeast-3": aws.String("arn:aws:lambda:ap-northeast-3:961244031340:layer:AWSLambda-Node-AWS-SDK:14"),
+	"eu-north-1":     aws.String("arn:aws:lambda:eu-north-1:642425348156:layer:AWSLambda-Node-AWS-SDK:14"),
+	"eu-south-1":     aws.String("arn:aws:lambda:eu-south-1:426215560912:layer:AWSLambda-Node-AWS-SDK:7"),
+	"eu-west-3":      aws.String("arn:aws:lambda:eu-west-3:959311844005:layer:AWSLambda-Node-AWS-SDK:14"),
+	"me-south-1":     aws.String("arn:aws:lambda:me-south-1:507411403535:layer:AWSLambda-Node-AWS-SDK:10"),
+}
+
 type requestDrivenWebSvcReadParser interface {
 	template.ReadParser
 	ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput) (*template.Content, error)
@@ -75,12 +99,16 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 
-	bucket, urls, err := parseS3URLs(s.customResourceS3URL)
-	if err != nil {
-		return "", err
+	var layerARN, bucket, dnsDelegationRole, dnsName *string
+	var urls map[string]*string
+	if s.manifest.Alias != nil {
+		bucket, urls, err = parseS3URLs(s.customResourceS3URL)
+		if err != nil {
+			return "", err
+		}
+		dnsDelegationRole, dnsName = convertAppInformation(s.app)
+		layerARN = awsSDKLayerForRegion[s.rc.Region]
 	}
-
-	dnsDelegationRole, dnsName := convertAppInformation(s.app)
 
 	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app.Name, s.env, s.name)
 	if err != nil {
@@ -93,9 +121,10 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
 
+		Alias:                s.manifest.Alias,
 		ScriptBucketName:     bucket,
 		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
-		AWSSDKLayer:          urls[template.AWSSDKLayerFileName],
+		AWSSDKLayer:          layerARN,
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,
 

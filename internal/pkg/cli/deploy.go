@@ -76,7 +76,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					sessProvider: sessions.NewProvider(),
 				}
 			case contains(workloadType, manifest.ServiceTypes):
-				o.deployWkld = &deploySvcOpts{
+				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
 					store:        o.store,
@@ -91,6 +91,8 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 						return describe.NewAppDescriber(appName)
 					},
 				}
+				opts.uploadOpts = newUploadCustomResourcesOpts(opts)
+				o.deployWkld = opts
 			}
 		},
 	}, nil
