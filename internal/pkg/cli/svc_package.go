@@ -147,6 +147,10 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				break
 			}
 
+			if err = validateRDSvcAlias(opts.name, aws.StringValue(t.Alias), env.Name, app, appVersionGetter); err != nil {
+				return nil, err
+			}
+
 			resources, err := opts.appCFN.GetAppResourcesByRegion(app, env.Region)
 			if err != nil {
 				return nil, fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
