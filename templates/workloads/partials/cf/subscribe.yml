@@ -207,4 +207,13 @@ QueuePolicy:
             - sqs:ReceiveMessage
             - sqs:DeleteMessage
           Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
+        - Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:SendMessage
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
 {{- end}}{{- end}}{{- end}}
