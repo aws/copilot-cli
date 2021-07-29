@@ -83,6 +83,7 @@ type deploySvcOpts struct {
 	imageDigest       string
 	buildRequired     bool
 	appEnvResources   *stack.AppRegionalResources
+	rdSvcAlias        string
 
 	uploadOpts *uploadCustomResourcesOpts
 }
@@ -491,7 +492,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 				return nil, err
 			}
-			if err = validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
+			if err = validateAliasAndAppVersion(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
@@ -514,6 +515,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			break
 		}
 
+		o.rdSvcAlias = aws.StringValue(t.Alias)
 		var (
 			urls             map[string]string
 			appVersionGetter versionGetter
@@ -521,8 +523,8 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 			return nil, err
 		}
-		if err = validateAppVersion(o.targetApp.Name, appVersionGetter); err != nil {
-			logAppVersionOutdatedError(o.name)
+
+		if err = validateRDSvcAliasAndAppVersion(o.name, aws.StringValue(t.Alias), o.envName, o.targetApp, appVersionGetter); err != nil {
 			return nil, err
 		}
 
@@ -556,7 +558,7 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func validateAlias(svcName, alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
+func validateAliasAndAppVersion(svcName, alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
 	if alias == "" {
 		return nil
 	}
@@ -591,7 +593,66 @@ func validateAlias(svcName, alias string, app *config.Application, envName strin
 `, color.HighlightCode("http.alias"), envName, app.Name, app.Domain, envName,
 		app.Name, app.Domain, app.Name, app.Domain, app.Name,
 		app.Domain, app.Domain, app.Domain)
-	return fmt.Errorf("alias is not supported in hosted zones not managed by Copilot")
+	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
+}
+
+func checkUnsupportedAlias(alias, envName string, app *config.Application) error {
+	var regEnvHostedZone, regAppHostedZone *regexp.Regexp
+	var err error
+	// Example: subdomain.env.app.domain, env.app.domain
+	if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
+		return err
+	}
+
+	// Example: subdomain.app.domain, app.domain
+	if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
+		return err
+	}
+
+	if regEnvHostedZone.MatchString(alias) {
+		return fmt.Errorf("%s is an environment-level alias, which is not supported yet", alias)
+	}
+
+	if regAppHostedZone.MatchString(alias) {
+		return fmt.Errorf("%s is an application-level alias, which is not supported yet", alias)
+	}
+
+	if alias == app.Domain {
+		return fmt.Errorf("%s is a root domain alias, which is not supported yet", alias)
+	}
+
+	return nil
+}
+
+func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {
+	if alias == "" {
+		return nil
+	}
+	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
+		logAppVersionOutdatedError(svcName)
+		return err
+	}
+	// Alias should be within root hosted zone.
+	aliasInvalidLog := fmt.Sprintf(`%s of %s field should match the pattern <subdomain>.%s 
+Where <subdomain> cannot be the application name.
+`, color.HighlightUserInput(alias), color.HighlightCode("http.alias"), app.Domain)
+	if err := checkUnsupportedAlias(alias, envName, app); err != nil {
+		log.Errorf(aliasInvalidLog)
+		return err
+	}
+
+	// Example: subdomain.domain
+	regRootHostedZone, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)%s`, app.Domain))
+	if err != nil {
+		return err
+	}
+
+	if regRootHostedZone.MatchString(alias) {
+		return nil
+	}
+
+	log.Errorf(aliasInvalidLog)
+	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
 }
 
 func validateAppVersion(appName string, appVersionGetter versionGetter) error {
@@ -689,6 +750,13 @@ func (o *deploySvcOpts) showSvcURI() error {
 			msg = fmt.Sprintf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 		}
 		log.Success(msg)
+	case manifest.RequestDrivenWebServiceType:
+		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
+		if o.rdSvcAlias != "" {
+			log.Infof(`The validation process for https://%s can take more than 15 minutes.
+Please visit %s to check the validation status.
+`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))
+		}
 	default:
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}

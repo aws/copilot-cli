@@ -688,7 +688,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
 				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
+			wantErr: fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot"),
 		},
 		"success": {
 			inAlias: "v1.mockDomain",
@@ -836,6 +836,90 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 
 			wantErr: fmt.Errorf("get application mockApp resources from region us-west-2: some error"),
+		},
+		"invalid alias with unknown domain": {
+			inAlias: "v1.someRandomDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot"),
+		},
+		"invalid environment level alias": {
+			inAlias: "mockEnv.mockApp.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("mockEnv.mockApp.mockDomain is an environment-level alias, which is not supported yet"),
+		},
+		"invalid application level alias": {
+			inAlias: "someSub.mockApp.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("someSub.mockApp.mockDomain is an application-level alias, which is not supported yet"),
+		},
+		"invalid root level alias": {
+			inAlias: "mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("mockDomain is a root domain alias, which is not supported yet"),
 		},
 		"fail to upload custom resource scripts": {
 			inAlias: "v1.mockDomain",
