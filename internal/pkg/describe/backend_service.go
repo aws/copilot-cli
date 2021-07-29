@@ -75,7 +75,6 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		}
 		describer.envDescriber[env] = envDescr
 		return nil
-		return nil
 	}
 	return describer, nil
 }
@@ -129,8 +128,9 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		port := blankContainerPort
 		if svcParams[cfnstack.LBWebServiceContainerPortParamKey] != cfnstack.NoExposedContainerPort {
 			endpoint, err := d.envDescriber[env].ServiceDiscoveryEndpoint()
+			// This error is descriptive and doesn't need to be wrapped.
 			if err != nil {
-				return nil, fmt.Errorf("get service discovery endpoint for environment %s: %w", env, err)
+				return nil, err
 			}
 			port = svcParams[cfnstack.LBWebServiceContainerPortParamKey]
 			services = appendServiceDiscovery(services, serviceDiscovery{
