@@ -492,7 +492,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 				return nil, err
 			}
-			if err = validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
+			if err = validateAliasAndAppVersion(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
@@ -524,7 +524,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			return nil, err
 		}
 
-		if err = validateRDSvcAlias(o.name, aws.StringValue(t.Alias), o.envName, o.targetApp, appVersionGetter); err != nil {
+		if err = validateRDSvcAliasAndAppVersion(o.name, aws.StringValue(t.Alias), o.envName, o.targetApp, appVersionGetter); err != nil {
 			return nil, err
 		}
 
@@ -558,7 +558,7 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func validateAlias(svcName, alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
+func validateAliasAndAppVersion(svcName, alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
 	if alias == "" {
 		return nil
 	}
@@ -599,9 +599,12 @@ func validateAlias(svcName, alias string, app *config.Application, envName strin
 func checkUnsupportedAlias(alias, envName string, app *config.Application) error {
 	var regEnvHostedZone, regAppHostedZone *regexp.Regexp
 	var err error
+	// Example: subdomain.env.app.domain, env.app.domain
 	if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
 		return err
 	}
+
+	// Example: subdomain.app.domain, app.domain
 	if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
 		return err
 	}
@@ -621,7 +624,7 @@ func checkUnsupportedAlias(alias, envName string, app *config.Application) error
 	return nil
 }
 
-func validateRDSvcAlias(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {
+func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {
 	if alias == "" {
 		return nil
 	}
@@ -638,6 +641,7 @@ Where <subdomain> cannot be the application name.
 		return err
 	}
 
+	// Example: subdomain.domain
 	regRootHostedZone, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)%s`, app.Domain))
 	if err != nil {
 		return err
