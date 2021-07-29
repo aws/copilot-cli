@@ -5,7 +5,10 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -137,6 +140,14 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
+}
+
+// TaskPlatform returns the os/arch for the service.
+func (t *TaskConfig) TaskPlatform() (*string, error) {
+	if err := exec.ValidatePlatform(t.Platform); err != nil {
+		return nil, fmt.Errorf("validate platform: %w", err)
+	}
+	return t.Platform, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

@@ -53,6 +53,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/partials/cf/instancerole.yml", "instancerole")
 				mockBox.AddString("workloads/partials/cf/accessrole.yml", "accessrole")
 				mockBox.AddString("workloads/partials/cf/publish.yml", "publish")
+				mockBox.AddString("workloads/partials/cf/subscribe.yml", "subscribe")
 
 				t.box = mockBox
 			},
@@ -80,6 +81,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   instancerole
   accessrole
   publish
+  subscribe
 `,
 		},
 	}
