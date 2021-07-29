@@ -83,6 +83,7 @@ type deploySvcOpts struct {
 	imageDigest       string
 	buildRequired     bool
 	appEnvResources   *stack.AppRegionalResources
+	rdSvcAlias        string
 
 	uploadOpts *uploadCustomResourcesOpts
 }
@@ -514,6 +515,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			break
 		}
 
+		o.rdSvcAlias = aws.StringValue(t.Alias)
 		var (
 			urls             map[string]string
 			appVersionGetter versionGetter
@@ -628,7 +630,9 @@ func validateRDSvcAlias(svcName, alias, envName string, app *config.Application,
 		return err
 	}
 	// Alias should be within root hosted zone.
-	var aliasInvalidLog = fmt.Sprintf("%s should match the pattern <subdomain>.%s, where <subdomain> does not collide with your application name or any environment name\n", color.HighlightCode("http.alias"), app.Domain)
+	aliasInvalidLog := fmt.Sprintf(`%s should match the pattern <subdomain>.%s 
+Where <subdomain> cannot be the application name.
+`, color.HighlightCode("http.alias"), app.Domain)
 	if err := checkUnsupportedAlias(alias, envName, app); err != nil {
 		log.Errorf(aliasInvalidLog)
 		return err
@@ -744,7 +748,11 @@ func (o *deploySvcOpts) showSvcURI() error {
 		log.Success(msg)
 	case manifest.RequestDrivenWebServiceType:
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
-		log.Infof("If you are using an alias, the validation process can take more than 15 minutes. Please visit %s to check the validation status.\n", color.Emphasize("https://console.aws.amazon.com/apprunner/home"))
+		if o.rdSvcAlias != "" {
+			log.Infof(`The validation process for https://%s can take more than 15 minutes.
+Please visit %s to check the validation status.
+`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))
+		}
 	default:
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}
