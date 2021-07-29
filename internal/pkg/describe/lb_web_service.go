@@ -28,6 +28,8 @@ const (
 	envOutputSubdomain                 = "EnvironmentSubdomain"
 )
 
+var fmtSvcDiscoveryEndpointWithPort = "%s.%s:%s" // Format string of the form {svc}.{endpoint}:{port}
+
 // LBWebServiceURI represents the unique identifier to access a load balanced web service.
 type LBWebServiceURI struct {
 	HTTPS    bool
@@ -52,17 +54,17 @@ func (u *LBWebServiceURI) String() string {
 }
 
 type serviceDiscovery struct {
-	Service string
-	App     string
-	Env     string
-	Port    string
+	Service  string
+	Endpoint string
+	Port     string
 }
 
 func (s *serviceDiscovery) String() string {
-	return fmt.Sprintf("%s.%s.%s.local:%s", s.Service, s.Env, s.App, s.Port)
+	return fmt.Sprintf(fmtSvcDiscoveryEndpointWithPort, s.Service, s.Endpoint, s.Port)
 }
 
 type envDescriber interface {
+	ServiceDiscoveryEndpoint() (string, error)
 	Params() (map[string]string, error)
 	Outputs() (map[string]string, error)
 }
@@ -161,11 +163,14 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: d.svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
+		endpoint, err := d.envDescriber[env].ServiceDiscoveryEndpoint()
+		if err != nil {
+			return nil, err
+		}
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
-			Service: d.svc,
-			Port:    d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
-			Env:     env,
-			App:     d.app,
+			Service:  d.svc,
+			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
+			Endpoint: endpoint,
 		}, env)
 		webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
 		if err != nil {

@@ -15,6 +15,7 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
         unhealthy_threshold: 5
         interval: 10s
         timeout: 5s
+      alias: web.example.com
 
     # Configuration for your containers and service.
     image:
@@ -79,6 +80,9 @@ The approximate amount of time, in seconds, between health checks of an individu
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 The amount of time, in seconds, during which no response from a target means a failed health check. The default is 2s. Range 1s-20s.
+
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>
+HTTPS custom domain for your service.
 
 <div class="separator"></div>
 
