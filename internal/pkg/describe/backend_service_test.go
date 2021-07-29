@@ -328,7 +328,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					"prod":    mockEnvDescriber,
 					"mockEnv": mockEnvDescriber,
 				},
-				initDescriber: func(string) error { return nil },
+				initDescribers: func(string) error { return nil },
 			}
 
 			// WHEN

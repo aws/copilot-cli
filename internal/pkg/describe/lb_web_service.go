@@ -163,15 +163,14 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: d.svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		envEndpoint, err := d.envDescriber[env].ServiceDiscoveryEndpoint()
-		// This error is descriptive and doesn't need to be wrapped.
+		endpoint, err := d.envDescriber[env].ServiceDiscoveryEndpoint()
 		if err != nil {
 			return nil, err
 		}
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service:  d.svc,
 			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
-			Endpoint: envEndpoint,
+			Endpoint: endpoint,
 		}, env)
 		webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
 		if err != nil {

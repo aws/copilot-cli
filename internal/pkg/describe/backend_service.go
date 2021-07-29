@@ -28,10 +28,10 @@ type BackendServiceDescriber struct {
 	svc             string
 	enableResources bool
 
-	store         DeployedEnvServicesLister
-	svcDescriber  map[string]ecsSvcDescriber
-	envDescriber  map[string]envDescriber
-	initDescriber func(string) error
+	store          DeployedEnvServicesLister
+	svcDescriber   map[string]ecsSvcDescriber
+	envDescriber   map[string]envDescriber
+	initDescribers func(string) error
 }
 
 // NewBackendServiceConfig contains fields that initiates BackendServiceDescriber struct.
@@ -51,7 +51,7 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		svcDescriber:    make(map[string]ecsSvcDescriber),
 		envDescriber:    make(map[string]envDescriber),
 	}
-	describer.initDescriber = func(env string) error {
+	describer.initDescribers = func(env string) error {
 		if _, ok := describer.svcDescriber[env]; ok {
 			return nil
 		}
@@ -82,7 +82,7 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 // URI returns the service discovery namespace and is used to make
 // BackendServiceDescriber have the same signature as WebServiceDescriber.
 func (d *BackendServiceDescriber) URI(envName string) (string, error) {
-	if err := d.initDescriber(envName); err != nil {
+	if err := d.initDescribers(envName); err != nil {
 		return "", err
 	}
 	svcStackParams, err := d.svcDescriber[envName].Params()
@@ -93,14 +93,14 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if port == cfnstack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
 	}
-	envEndpoint, err := d.envDescriber[envName].ServiceDiscoveryEndpoint()
+	endpoint, err := d.envDescriber[envName].ServiceDiscoveryEndpoint()
 	if err != nil {
 		return "nil", fmt.Errorf("retrieve service discovery endpoint for environment %s: %w", envName, err)
 	}
 	s := serviceDiscovery{
 		Service:  d.svc,
 		Port:     port,
-		Endpoint: envEndpoint,
+		Endpoint: endpoint,
 	}
 	return s.String(), nil
 }
@@ -117,7 +117,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
-		err := d.initDescriber(env)
+		err := d.initDescribers(env)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		port := blankContainerPort
 		if svcParams[cfnstack.LBWebServiceContainerPortParamKey] != cfnstack.NoExposedContainerPort {
 			endpoint, err := d.envDescriber[env].ServiceDiscoveryEndpoint()
-			// This error is descriptive and doesn't need to be wrapped.
 			if err != nil {
 				return nil, err
 			}
@@ -163,7 +162,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {
 		for _, env := range environments {
-			err := d.initDescriber(env)
+			err := d.initDescribers(env)
 			if err != nil {
 				return nil, err
 			}
