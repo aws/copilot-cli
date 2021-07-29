@@ -32,6 +32,9 @@ image:
 cpu: {{.InstanceConfig.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.InstanceConfig.Memory}}
+{{- if .InstanceConfig.Platform}}
+platform: {{.InstanceConfig.Platform}}   # See https://aws.github.io/copilot-cli/docs/manifest/rd-web-service/#platform
+{{- end}}
 
 # Optional fields for more advanced use-cases.
 #
