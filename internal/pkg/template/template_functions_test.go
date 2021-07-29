@@ -285,32 +285,23 @@ func TestGenerateSNSJSON(t *testing.T) {
 
 func TestGenerateQueueURIJSON(t *testing.T) {
 	testCases := map[string]struct {
-		in     []*TopicSubscription
-		wanted string
+		in               []*TopicSubscription
+		wanted           string
+		wantedSubstring  string
+		wantedSubstring2 string
 	}{
 		"JSON should render correctly": {
 			in: []*TopicSubscription{
 				{
 					Name:    aws.String("tests"),
-					Service: aws.String("bestSvc"),
+					Service: aws.String("bestsvc"),
 					Queue: &SQSQueue{
 						Delay: aws.Int64(5),
 					},
 				},
 			},
-			wanted: `{"EventsQueue":"${mainURL}","bestSvc-testsEventsQueue":"${bestSvctestsURL}"}`,
-		},
-		"only alphanumeric characters are used in var": {
-			in: []*TopicSubscription{
-				{
-					Name:    aws.String("tests"),
-					Service: aws.String("best-Svc"),
-					Queue: &SQSQueue{
-						Delay: aws.Int64(5),
-					},
-				},
-			},
-			wanted: `{"EventsQueue":"${mainURL}","best-Svc-testsEventsQueue":"${bestSvctestsURL}"}`,
+			wantedSubstring:  `"eventsQueue":"${mainURL}"`,
+			wantedSubstring2: `"bestsvcTestsEventsQueue":"${bestsvctestsURL}"`,
 		},
 		"Topics with no names show empty but main queue still populates": {
 			in: []*TopicSubscription{
@@ -318,17 +309,22 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 					Service: aws.String("bestSvc"),
 				},
 			},
-			wanted: `{"EventsQueue":"${mainURL}"}`,
+			wanted: `{"eventsQueue":"${mainURL}"}`,
 		},
 		"nil list of arguments should render with main queue": {
 			in:     []*TopicSubscription{},
-			wanted: `{"EventsQueue":"${mainURL}"}`,
+			wanted: `{"eventsQueue":"${mainURL}"}`,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, generateQueueURIJSON(tc.in))
+			if tc.wanted != "" {
+				require.Equal(t, generateQueueURIJSON(tc.in), tc.wanted)
+			} else {
+				require.Contains(t, generateQueueURIJSON(tc.in), tc.wantedSubstring)
+				require.Contains(t, generateQueueURIJSON(tc.in), tc.wantedSubstring2)
+			}
 		})
 	}
 }

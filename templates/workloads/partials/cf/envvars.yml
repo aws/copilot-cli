@@ -28,9 +28,9 @@ Environment:
   Value: !Sub
     - '{{jsonQueueURIs .Subscribe.Topics}}'
     - mainURL: !Ref EventsQueue
-    {{- range $topic := .Subscribe.Topics}}{{- if $topic.Queue}}{{- if $topic.Service}}{{- if $topic.Name}}
+    {{- range $topic := .Subscribe.Topics}}{{- if and $topic.Queue $topic.Service $topic.Name}}
       {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}URL: !Ref {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue
-    {{- end}}{{- end}}{{- end}}{{- end}}
+    {{- end}}{{- end}}
 {{- end}}{{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
 - Name: COPILOT_LB_DNS
