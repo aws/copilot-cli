@@ -62,6 +62,13 @@ http:
 
 Likewise, your application should have been associated with the domain (e.g. `example.aws`) in order for your Request-Driven Web Service to use it.
 
+!!!info
+    For now, we support only 1-level subdomain such as `web.example.aws`. 
+    
+    Environment-level domains (e.g. `web.${envName}.${appName}.example.aws`), application-level domains (e.g. `web.${appName}.example.aws`),
+    or root domains (i.e. `example.aws`) are not supported yet. This also means that your subdomain shouldn't collide with your application name.
+
 Under the hood, Copilot:
+
 * associates the domain with your app runner service
 * creates the domain record as well as the validation records in your root domain's hosted zone
