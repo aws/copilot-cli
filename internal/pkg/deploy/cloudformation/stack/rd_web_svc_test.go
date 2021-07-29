@@ -213,6 +213,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebServiceWithAlias(t *testing.
 func TestRequestDrivenWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
 		inCustomResourceURLs map[string]string
+		inManifest           func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService
 		mockDependencies     func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
 		wantedTemplate       string
 		wantedError          error
@@ -226,7 +227,11 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")), // TODO
 		},
-		"should be able to parse custom resource URLs": {
+		"should be able to parse custom resource URLs when alias is enabled": {
+			inManifest: func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				manifest.Alias = aws.String("convex.domain.com")
+				return manifest
+			},
 			inCustomResourceURLs: map[string]string{
 				template.AppRunnerCustomDomainLambdaFileName: "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
 				template.AWSSDKLayerFileName:                 "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
@@ -234,14 +239,15 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
-				mockBucket, mockCustomDomainLambda, mockAWSSDKLayer := "mockbucket", "mockURL1", "mockURL2"
+				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 					Variables:          c.manifest.Variables,
 					Tags:               c.manifest.Tags,
 					EnableHealthCheck:  true,
+					Alias:              aws.String("convex.domain.com"),
 					ScriptBucketName:   &mockBucket,
 					CustomDomainLambda: &mockCustomDomainLambda,
-					AWSSDKLayer:        &mockAWSSDKLayer,
+					AWSSDKLayer:        aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.wkld.addons = addons
@@ -302,10 +308,13 @@ Outputs:
 			},
 			wantedError: errors.New("parsing error"),
 		},
-		"should return error if a custom resource url cannot be parsed": {
+		"should return error if a custom resource url cannot be parsed when alias is enabled": {
+			inManifest: func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				manifest.Alias = aws.String("convex.domain.com")
+				return manifest
+			},
 			inCustomResourceURLs: map[string]string{
 				template.AppRunnerCustomDomainLambdaFileName: "such-a-weird-url",
-				template.AWSSDKLayerFileName:                 "such-a-weird-url",
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
@@ -322,6 +331,11 @@ Outputs:
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+
+			mft := *testRDWebServiceManifest
+			if tc.inManifest != nil {
+				mft = tc.inManifest(mft)
+			}
 			conf := &RequestDrivenWebService{
 				appRunnerWkld: &appRunnerWkld{
 					wkld: &wkld{
@@ -337,9 +351,9 @@ Outputs:
 							Region:    "us-west-2",
 						},
 					},
-					healthCheckConfig: testRDWebServiceManifest.HealthCheckConfiguration,
+					healthCheckConfig: mft.HealthCheckConfiguration,
 				},
-				manifest:            testRDWebServiceManifest,
+				manifest:            &mft,
 				customResourceS3URL: tc.inCustomResourceURLs,
 			}
 			tc.mockDependencies(t, ctrl, conf)

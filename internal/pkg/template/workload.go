@@ -73,6 +73,7 @@ var (
 		"instancerole",
 		"accessrole",
 		"publish",
+		"subscribe",
 	}
 )
 

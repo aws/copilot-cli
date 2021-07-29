@@ -1,5 +1,6 @@
 # Domain
 
+## Load Balanced Web Service
 As mentioned in the [Application Guide](../concepts/applications.en.md#additional-app-configurations), you can configure the domain name of your app when running `copilot app init`. After deploying your [Load Balanced Web Services](../concepts/services.en.md#load-balanced-web-service), you should be able to access them publicly via
 
 ```
@@ -48,3 +49,26 @@ Under the hood, Copilot
 ## What does it look like?
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+## Request-Driven Web Service
+You can also add a [custom domain](https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html) for your request-driven web service. 
+Similar to Load Balanced Web Service, you can do so by modifying the [`alias`](../manifest/rd-web-service.en.md#http-alias) field in your manifest:
+```yaml
+# in copilot/{service name}/manifest.yml
+http:
+  path: '/'
+  alias: web.example.aws
+```
+
+Likewise, your application should have been associated with the domain (e.g. `example.aws`) in order for your Request-Driven Web Service to use it.
+
+!!!info
+    For now, we support only 1-level subdomain such as `web.example.aws`. 
+    
+    Environment-level domains (e.g. `web.${envName}.${appName}.example.aws`), application-level domains (e.g. `web.${appName}.example.aws`),
+    or root domains (i.e. `example.aws`) are not supported yet. This also means that your subdomain shouldn't collide with your application name.
+
+Under the hood, Copilot:
+
+* associates the domain with your app runner service
+* creates the domain record as well as the validation records in your root domain's hosted zone
