@@ -877,7 +877,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				}, nil)
 			},
 
-			wantErr: fmt.Errorf("environment-level alias is not supported yet"),
+			wantErr: fmt.Errorf("mockEnv.mockApp.mockDomain is an environment-level alias, which is not supported yet"),
 		},
 		"invalid application level alias": {
 			inAlias: "someSub.mockApp.mockDomain",
@@ -898,7 +898,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				}, nil)
 			},
 
-			wantErr: fmt.Errorf("application-level alias is not supported yet"),
+			wantErr: fmt.Errorf("someSub.mockApp.mockDomain is an application-level alias, which is not supported yet"),
 		},
 		"invalid root level alias": {
 			inAlias: "mockDomain",
@@ -919,7 +919,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				}, nil)
 			},
 
-			wantErr: fmt.Errorf("root domain alias is not supported yet"),
+			wantErr: fmt.Errorf("mockDomain is a root domain alias, which is not supported yet"),
 		},
 		"fail to upload custom resource scripts": {
 			inAlias: "v1.mockDomain",

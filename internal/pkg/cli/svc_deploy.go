@@ -610,15 +610,15 @@ func checkUnsupportedAlias(alias, envName string, app *config.Application) error
 	}
 
 	if regEnvHostedZone.MatchString(alias) {
-		return errors.New("environment-level alias is not supported yet")
+		return fmt.Errorf("%s is an environment-level alias, which is not supported yet", alias)
 	}
 
 	if regAppHostedZone.MatchString(alias) {
-		return errors.New("application-level alias is not supported yet")
+		return fmt.Errorf("%s is an application-level alias, which is not supported yet", alias)
 	}
 
 	if alias == app.Domain {
-		return errors.New("root domain alias is not supported yet")
+		return fmt.Errorf("%s is a root domain alias, which is not supported yet", alias)
 	}
 
 	return nil
@@ -633,9 +633,9 @@ func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config
 		return err
 	}
 	// Alias should be within root hosted zone.
-	aliasInvalidLog := fmt.Sprintf(`%s should match the pattern <subdomain>.%s 
+	aliasInvalidLog := fmt.Sprintf(`%s of %s field should match the pattern <subdomain>.%s 
 Where <subdomain> cannot be the application name.
-`, color.HighlightCode("http.alias"), app.Domain)
+`, color.HighlightUserInput(alias), color.HighlightCode("http.alias"), app.Domain)
 	if err := checkUnsupportedAlias(alias, envName, app); err != nil {
 		log.Errorf(aliasInvalidLog)
 		return err
