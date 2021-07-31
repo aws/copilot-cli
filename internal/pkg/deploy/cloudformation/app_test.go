@@ -17,8 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/templates"
-	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -100,7 +98,6 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			cf := CloudFormation{
 				cfnClient:   tc.mockStack(ctrl),
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         templates.Box(),
 				region:      tc.region,
 			}
 
@@ -343,7 +340,6 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 			defer ctrl.Finish()
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         templates.Box(),
 				region:      "us-west-2",
 			}
 			got := cf.AddEnvToApp(&AddEnvToAppOpts{
@@ -411,7 +407,6 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 			defer ctrl.Finish()
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         templates.Box(),
 			}
 			getRegionFromClient = tc.getRegionFromClient
 
@@ -512,7 +507,6 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 			defer ctrl.Finish()
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         templates.Box(),
 				region:      "us-west-2",
 			}
 
@@ -571,7 +565,6 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 			defer ctrl.Finish()
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         templates.Box(),
 				region:      "us-west-2",
 			}
 
@@ -662,7 +655,6 @@ func TestCloudFormation_GetRegionalAppResources(t *testing.T) {
 					return tc.createRegionalMockClient(ctrl)
 				},
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         packd.NewMemoryBox(),
 			}
 
 			// WHEN
@@ -748,7 +740,6 @@ func TestCloudFormation_GetAppResourcesByRegion(t *testing.T) {
 					return tc.createRegionalMockClient(ctrl)
 				},
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         packd.NewMemoryBox(),
 			}
 
 			// WHEN
@@ -844,7 +835,6 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 			defer ctrl.Finish()
 			cf := CloudFormation{
 				cfnClient: tc.createMock(ctrl),
-				box:       templates.Box(),
 			}
 
 			// WHEN
