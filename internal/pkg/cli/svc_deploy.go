@@ -11,10 +11,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"golang.org/x/mod/semver"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -23,6 +25,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -46,6 +49,11 @@ type deployWkldVars struct {
 	resourceTags map[string]string
 }
 
+type uploadCustomResourcesOpts struct {
+	uploader      customResourcesUploader
+	newS3Uploader func() (Uploader, error)
+}
+
 type deploySvcOpts struct {
 	deployWkldVars
 
@@ -62,6 +70,7 @@ type deploySvcOpts struct {
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
 	endpointGetter      endpointGetter
+	identity            identityService
 
 	spinner progress
 	sel     wsSelector
@@ -73,6 +82,10 @@ type deploySvcOpts struct {
 	targetSvc         *config.Workload
 	imageDigest       string
 	buildRequired     bool
+	appEnvResources   *stack.AppRegionalResources
+	rdSvcAlias        string
+
+	uploadOpts *uploadCustomResourcesOpts
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -85,7 +98,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
-	return &deploySvcOpts{
+	opts := &deploySvcOpts{
 		deployWkldVars: vars,
 
 		store:     store,
@@ -103,7 +116,9 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
-	}, nil
+	}
+	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
+	return opts, err
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -175,7 +190,6 @@ func (o *deploySvcOpts) Execute() error {
 	if err := o.deploySvc(addonsURL); err != nil {
 		return err
 	}
-
 	return o.showSvcURI()
 }
 
@@ -249,7 +263,7 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("assuming environment manager role: %w", err)
 	}
 
-	// ECR client against tools account profile AND target environment region
+	// ECR client against tools account profile AND target environment region.
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
 	registry := ecr.New(defaultSessEnvRegion)
 	o.imageBuilderPusher, err = repository.New(repoName, registry)
@@ -259,7 +273,7 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
-	// CF client against env account profile AND target environment region
+	// CF client against env account profile AND target environment region.
 	o.svcCFN = cloudformation.New(envSession)
 
 	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -276,7 +290,7 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.addons = addonsSvc
 
-	// client to retrieve an application's resources created with CloudFormation
+	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
@@ -291,6 +305,10 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("new env upgrade command: %v", err)
 	}
 	o.envUpgradeCmd = cmd
+
+	// client to retrieve caller identity.
+	id := identity.New(defaultSess)
+	o.identity = id
 	return nil
 }
 
@@ -371,15 +389,15 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 		}
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return "", fmt.Errorf("get app resources: %w", err)
+
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return "", err
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
+		return "", fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}
 	return url, nil
 }
@@ -414,11 +432,12 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
+
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return nil, err
 	}
-	repoURL, ok := resources.RepositoryURLs[o.name]
+
+	repoURL, ok := o.appEnvResources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
 			wlName:       o.name,
@@ -440,6 +459,22 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	}, nil
 }
 
+func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
+	s3Client, err := o.newS3Uploader()
+	if err != nil {
+		return nil, err
+	}
+
+	urls, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
+	}
+
+	return urls, nil
+}
+
 func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
@@ -457,7 +492,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 				return nil, err
 			}
-			if err = validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
+			if err = validateAliasAndAppVersion(aws.StringValue(t.Name), aws.StringValue(t.Alias), o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
@@ -465,12 +500,41 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
+		var caller identity.Caller
+		caller, err = o.identity.Get()
+		if err != nil {
+			return nil, fmt.Errorf("get identity: %w", err)
+		}
 		appInfo := deploy.AppInformation{
 			Name:                o.targetEnvironment.App,
 			DNSName:             o.targetApp.Domain,
-			AccountPrincipalARN: o.targetApp.AccountID,
+			AccountPrincipalARN: caller.RootUserARN,
 		}
-		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
+		if t.Alias == nil {
+			conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, appInfo, *rc)
+			break
+		}
+
+		o.rdSvcAlias = aws.StringValue(t.Alias)
+		var (
+			urls             map[string]string
+			appVersionGetter versionGetter
+		)
+		if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
+			return nil, err
+		}
+
+		if err = validateRDSvcAliasAndAppVersion(o.name, aws.StringValue(t.Alias), o.envName, o.targetApp, appVersionGetter); err != nil {
+			return nil, err
+		}
+
+		if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
+			return nil, err
+		}
+		if urls, err = uploadCustomResources(o.uploadOpts, o.appEnvResources); err != nil {
+			return nil, err
+		}
+		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
@@ -494,15 +558,12 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func validateAlias(svcName, alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
+func validateAliasAndAppVersion(svcName, alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
 	if alias == "" {
 		return nil
 	}
-	if err := validateAppVersion(alias, app, appVersionGetter); err != nil {
-		log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
-`, svcName,
-			color.HighlightCode("copilot app upgrade"))
+	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
+		logAppVersionOutdatedError(svcName)
 		return err
 	}
 	// Alias should be within either env, app, or root hosted zone.
@@ -532,18 +593,110 @@ To upgrade the application, please run %s first (see https://aws.github.io/copil
 `, color.HighlightCode("http.alias"), envName, app.Name, app.Domain, envName,
 		app.Name, app.Domain, app.Name, app.Domain, app.Name,
 		app.Domain, app.Domain, app.Domain)
-	return fmt.Errorf("alias is not supported in hosted zones not managed by Copilot")
+	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
 }
 
-func validateAppVersion(alias string, app *config.Application, appVersionGetter versionGetter) error {
+func checkUnsupportedAlias(alias, envName string, app *config.Application) error {
+	var regEnvHostedZone, regAppHostedZone *regexp.Regexp
+	var err error
+	// Example: subdomain.env.app.domain, env.app.domain
+	if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
+		return err
+	}
+
+	// Example: subdomain.app.domain, app.domain
+	if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
+		return err
+	}
+
+	if regEnvHostedZone.MatchString(alias) {
+		return fmt.Errorf("%s is an environment-level alias, which is not supported yet", alias)
+	}
+
+	if regAppHostedZone.MatchString(alias) {
+		return fmt.Errorf("%s is an application-level alias, which is not supported yet", alias)
+	}
+
+	if alias == app.Domain {
+		return fmt.Errorf("%s is a root domain alias, which is not supported yet", alias)
+	}
+
+	return nil
+}
+
+func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {
+	if alias == "" {
+		return nil
+	}
+	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
+		logAppVersionOutdatedError(svcName)
+		return err
+	}
+	// Alias should be within root hosted zone.
+	aliasInvalidLog := fmt.Sprintf(`%s of %s field should match the pattern <subdomain>.%s 
+Where <subdomain> cannot be the application name.
+`, color.HighlightUserInput(alias), color.HighlightCode("http.alias"), app.Domain)
+	if err := checkUnsupportedAlias(alias, envName, app); err != nil {
+		log.Errorf(aliasInvalidLog)
+		return err
+	}
+
+	// Example: subdomain.domain
+	regRootHostedZone, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)%s`, app.Domain))
+	if err != nil {
+		return err
+	}
+
+	if regRootHostedZone.MatchString(alias) {
+		return nil
+	}
+
+	log.Errorf(aliasInvalidLog)
+	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
+}
+
+func validateAppVersion(appName string, appVersionGetter versionGetter) error {
 	appVersion, err := appVersionGetter.Version()
 	if err != nil {
-		return fmt.Errorf("get version for app %s: %w", app.Name, err)
+		return fmt.Errorf("get version for app %s: %w", appName, err)
 	}
 	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 	if diff < 0 {
 		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
 	}
+	return nil
+}
+
+func logAppVersionOutdatedError(name string) {
+	log.Errorf(`Cannot deploy service %s because the application version is incompatible.
+To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
+`, name, color.HighlightCode("copilot app upgrade"))
+}
+
+func newUploadCustomResourcesOpts(opts *deploySvcOpts) *uploadCustomResourcesOpts {
+	return &uploadCustomResourcesOpts{
+		uploader: template.New(),
+		newS3Uploader: func() (Uploader, error) {
+			envRegion := opts.targetEnvironment.Region
+			sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
+			if err != nil {
+				return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+			}
+			s3Client := s3.New(sess)
+			return s3Client, nil
+		},
+	}
+}
+
+func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {
+	if o.appEnvResources != nil {
+		return nil
+	}
+	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
+	}
+	o.appEnvResources = resources
 	return nil
 }
 
@@ -597,6 +750,13 @@ func (o *deploySvcOpts) showSvcURI() error {
 			msg = fmt.Sprintf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 		}
 		log.Success(msg)
+	case manifest.RequestDrivenWebServiceType:
+		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
+		if o.rdSvcAlias != "" {
+			log.Infof(`The validation process for https://%s can take more than 15 minutes.
+Please visit %s to check the validation status.
+`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))
+		}
 	default:
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}

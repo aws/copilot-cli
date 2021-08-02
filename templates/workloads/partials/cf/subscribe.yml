@@ -47,6 +47,15 @@ EventsKMSKey:
             - "kms:ReEncrypt*"
             - "kms:GenerateDataKey*"
           Resource: '*'
+        - Sid: "Allow task role encrypt/decrypt"
+          Effect: "Allow"
+          Principal:
+            AWS:
+              - !GetAtt TaskRole.Arn
+          Action:
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+          Resource: '*'
 
 EventsQueue:
   Type: AWS::SQS::Queue
