@@ -12,8 +12,7 @@ const (
 type nodeValueType int
 
 const (
-	endNodeType nodeValueType = iota + 1
-	seqType
+	seqType nodeValueType = iota + 1
 	mapType
 )
 
@@ -33,14 +32,19 @@ type Rule struct {
 }
 
 type ruleNode struct {
-	name         string
-	valueType    nodeValueType
-	seqValue     nodeSeqValue
-	endNodeValue *yaml.Node
-	next         *ruleNode
+	valueType nodeValueType
+	mapVal    mapNode
+	seqVal    seqNode
+	endVal    *yaml.Node
+	next      *ruleNode
 }
 
-type nodeSeqValue struct {
+type mapNode struct {
+	key string
+}
+
+type seqNode struct {
+	key          string
 	index        int
 	appendToLast bool
 }

@@ -70,6 +70,7 @@ Resources:
             NetworkMode: awsvpc
             RequiresCompatibilities:
                 - FARGATE
+                - EC2
             Cpu: !Ref TaskCPU
             Memory: !Ref TaskMemory
             ExecutionRoleArn: !Ref ExecutionRole
@@ -110,21 +111,36 @@ Resources:
 
 func newTaskDefPropertyNode(nextNode *ruleNode) *ruleNode {
 	end := &ruleNode{
-		name:      "Properties",
+		mapVal:    mapNode{key: "Properties"},
 		valueType: mapType,
 		next:      nextNode,
 	}
 	taskDefNode := &ruleNode{
-		name:      "TaskDefinition",
+		mapVal:    mapNode{key: "TaskDefinition"},
 		valueType: mapType,
 		next:      end,
 	}
 	head := &ruleNode{
-		name:      "Resources",
+		mapVal:    mapNode{key: "Resources"},
 		valueType: mapType,
 		next:      taskDefNode,
 	}
 	return head
+}
+
+func addRequiresCompatibilities() *ruleNode {
+	var node yaml.Node
+	_ = yaml.Unmarshal([]byte(`RequiresCompatibilities[-]: EC2`), &node)
+
+	node1 := &ruleNode{
+		valueType: seqType,
+		seqVal: seqNode{
+			key:          "RequiresCompatibilities",
+			appendToLast: true,
+		},
+		endVal: node.Content[0].Content[1],
+	}
+	return newTaskDefPropertyNode(node1)
 }
 
 func addLinuxParametersCapabilities() *ruleNode {
@@ -132,12 +148,12 @@ func addLinuxParametersCapabilities() *ruleNode {
 	_ = yaml.Unmarshal([]byte(`ContainerDefinitions[0].LinuxParameters.Capabilities.Add: ["AUDIT_CONTROL", "AUDIT_WRITE"]`), &node)
 
 	node2 := &ruleNode{
-		name:         "Add",
-		valueType:    endNodeType,
-		endNodeValue: node.Content[0].Content[1],
+		mapVal:    mapNode{key: "Add"},
+		valueType: mapType,
+		endVal:    node.Content[0].Content[1],
 	}
 	node1 := &ruleNode{
-		name:      "Capabilities",
+		mapVal:    mapNode{key: "Capabilities"},
 		valueType: mapType,
 		next:      node2,
 	}
@@ -146,16 +162,16 @@ func addLinuxParametersCapabilities() *ruleNode {
 
 func addLinuxParametersCapabilitiesInitProcessEnabled() *ruleNode {
 	node2 := &ruleNode{
-		name:      "InitProcessEnabled",
-		valueType: endNodeType,
-		endNodeValue: &yaml.Node{
+		mapVal:    mapNode{key: "InitProcessEnabled"},
+		valueType: mapType,
+		endVal: &yaml.Node{
 			Kind:  8,
 			Tag:   nodeTagBool,
 			Value: "true",
 		},
 	}
 	node1 := &ruleNode{
-		name:      "Capabilities",
+		mapVal:    mapNode{key: "Capabilities"},
 		valueType: mapType,
 		next:      node2,
 	}
@@ -164,94 +180,102 @@ func addLinuxParametersCapabilitiesInitProcessEnabled() *ruleNode {
 
 func newLinuxParameters(nextNode *ruleNode) *ruleNode {
 	node2 := &ruleNode{
-		name:      "LinuxParameters",
+		mapVal:    mapNode{key: "LinuxParameters"},
 		valueType: mapType,
 		next:      nextNode,
 	}
 	node1 := &ruleNode{
-		name:      "ContainerDefinitions",
 		valueType: seqType,
-		seqValue:  nodeSeqValue{index: 0},
-		next:      node2,
+		seqVal: seqNode{
+			key:   "ContainerDefinitions",
+			index: 0,
+		},
+		next: node2,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
 func addUlimits() *ruleNode {
 	var node yaml.Node
-	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].Ulimit[0].Hardlimit: !Ref ParamName"), &node)
+	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName"), &node)
 
 	node3 := &ruleNode{
-		name:         "HardLimit",
-		valueType:    endNodeType,
-		endNodeValue: node.Content[0].Content[1],
+		mapVal:    mapNode{key: "HardLimit"},
+		valueType: mapType,
+		endVal:    node.Content[0].Content[1],
 	}
 	node2 := &ruleNode{
-		name:      "Ulimits",
-		valueType: seqType,
-		seqValue: nodeSeqValue{
+		seqVal: seqNode{
+			key:          "Ulimits",
 			appendToLast: true,
 		},
-		next: node3,
+		valueType: seqType,
+		next:      node3,
 	}
 	node1 := &ruleNode{
-		name:      "ContainerDefinitions",
 		valueType: seqType,
-		seqValue:  nodeSeqValue{index: 0},
-		next:      node2,
+		seqVal: seqNode{
+			key:   "ContainerDefinitions",
+			index: 0,
+		},
+		next: node2,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
 func exposeExtraPort() *ruleNode {
 	node3 := &ruleNode{
-		name:      "ContainerPort",
-		valueType: endNodeType,
-		endNodeValue: &yaml.Node{
+		mapVal:    mapNode{key: "ContainerPort"},
+		valueType: mapType,
+		endVal: &yaml.Node{
 			Kind:  8,
 			Tag:   nodeTagInt,
 			Value: "5000",
 		},
 	}
 	node2 := &ruleNode{
-		name:      "PortMappings",
 		valueType: seqType,
-		seqValue: nodeSeqValue{
+		seqVal: seqNode{
+			key:          "PortMappings",
 			appendToLast: true,
 		},
 		next: node3,
 	}
 	node1 := &ruleNode{
-		name:      "ContainerDefinitions",
 		valueType: seqType,
-		seqValue:  nodeSeqValue{index: 0},
-		next:      node2,
+		seqVal: seqNode{
+			key:   "ContainerDefinitions",
+			index: 0,
+		},
+		next: node2,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
 func referBadSeqIndex() *ruleNode {
 	var node yaml.Node
-	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].PortMappings[2].ContainerPort: 5000"), &node)
+	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].PortMappings[1].ContainerPort: 5000"), &node)
 
 	node3 := &ruleNode{
-		name:         "ContainerPort",
-		valueType:    endNodeType,
-		endNodeValue: node.Content[0].Content[1],
+		mapVal:    mapNode{key: "ContainerPort"},
+		valueType: mapType,
+		endVal:    node.Content[0].Content[1],
 	}
 	node2 := &ruleNode{
-		name:      "PortMappings",
 		valueType: seqType,
-		seqValue: nodeSeqValue{
+		seqVal: seqNode{
+			key:   "PortMappings",
 			index: 1,
 		},
 		next: node3,
 	}
 	node1 := &ruleNode{
-		name:      "ContainerDefinitions",
 		valueType: seqType,
-		seqValue:  nodeSeqValue{index: 0},
-		next:      node2,
+		seqVal: seqNode{
+			key:   "ContainerDefinitions",
+			index: 0,
+		},
+		next: node2,
 	}
 	return newTaskDefPropertyNode(node1)
 }
@@ -284,6 +308,7 @@ func Test_applyRulesToCFNTemplate(t *testing.T) {
 				exposeExtraPort(),
 				addLinuxParametersCapabilities(),
 				addLinuxParametersCapabilitiesInitProcessEnabled(),
+				addRequiresCompatibilities(),
 			},
 			wantedContent: overridenTestContent,
 		},
