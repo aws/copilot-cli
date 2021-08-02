@@ -1,0 +1,44 @@
+# The manifest for the "dog-worker" service.
+# Read the full specification for the "Worker Service" type at:
+# https://aws.github.io/copilot-cli/docs/manifest/worker-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: dogworker
+type: Worker Service
+
+# Configuration for your containers and service.
+image:
+  # Docker build arguments.
+  build: ./Dockerfile
+
+cpu: 256       # Number of CPU units for the task.
+memory: 512    # Amount of memory in MiB used by the task.
+count: 1       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
+
+subscribe:
+  queue:
+    delay: 1s
+    dead_letter:
+          tries: 5
+  topics:
+    - name: givesdogs
+      service: dogsvc
+    - name: giveshuskies
+      service: dogsvc
+      queue:
+        timeout: 1s
+
+# Optional fields for more advanced use-cases.
+#
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.
+
