@@ -164,6 +164,63 @@ func TestS3_ZipAndUpload(t *testing.T) {
 	}
 }
 
+func TestS3_Upload(t *testing.T) {
+	testCases := map[string]struct {
+		mockS3ManagerClient func(m *mocks.Mocks3ManagerAPI)
+
+		wantedURL string
+		wantError error
+	}{
+		"return error if upload fails": {
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
+				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
+					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
+					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
+				}).Return(nil, errors.New("some error"))
+			},
+			wantError: fmt.Errorf("upload mockFileName to bucket mockBucket: some error"),
+		},
+		"should upload to the s3 bucket": {
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
+				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
+					b, err := ioutil.ReadAll(in.Body)
+					require.NoError(t, err)
+					require.Equal(t, string(b), "bar")
+					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
+					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
+				}).Return(&s3manager.UploadOutput{
+					Location: "mockURL",
+				}, nil)
+			},
+			wantedURL: "mockURL",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockS3ManagerClient := mocks.NewMocks3ManagerAPI(ctrl)
+			tc.mockS3ManagerClient(mockS3ManagerClient)
+
+			service := S3{
+				s3Manager: mockS3ManagerClient,
+			}
+
+			gotURL, gotErr := service.Upload("mockBucket", "mockFileName", namedBinary{})
+
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantError.Error())
+			} else {
+				require.Equal(t, gotErr, nil)
+				require.Equal(t, gotURL, tc.wantedURL)
+			}
+		})
+	}
+}
+
 type namedBinary struct{}
 
 func (n namedBinary) Name() string { return "foo" }

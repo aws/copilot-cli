@@ -445,6 +445,7 @@ type SidecarConfig struct {
 type TaskConfig struct {
 	CPU            *int              `yaml:"cpu"`
 	Memory         *int              `yaml:"memory"`
+	Platform       *string           `yaml:"platform,omitempty"`
 	Count          Count             `yaml:"count"`
 	ExecuteCommand ExecuteCommand    `yaml:"exec"`
 	Variables      map[string]string `yaml:"variables"`
@@ -466,12 +467,6 @@ type Topic struct {
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
 	VPC *vpcConfig `yaml:"vpc"`
-}
-
-// PlatformConfig represents operating system and architecture specifications.
-type PlatformConfig struct {
-	OS   string `yaml:"os"`
-	Arch string `yaml:"architecture"`
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.

@@ -15,6 +15,7 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
         unhealthy_threshold: 5
         interval: 10s
         timeout: 5s
+      alias: web.example.com
 
     # Configuration for your containers and service.
     image:
@@ -80,6 +81,9 @@ The approximate amount of time, in seconds, between health checks of an individu
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 The amount of time, in seconds, during which no response from a target means a failed health check. The default is 2s. Range 1s-20s.
 
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
+Assign a friendly domain name to your request-driven web services. To learn more see [`developing/domain`](../developing/domain.en.md##request-driven-web-service).
+
 <div class="separator"></div>
 
 <a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
@@ -133,11 +137,16 @@ Amount of memory in MiB reserved for each instance of your service. See the [AWS
 
 <div class="separator"></div>
 
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+
+<div class="separator"></div>
+
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
 
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the `LOG_LEVEL` environment variable in our 'test' environment.
 

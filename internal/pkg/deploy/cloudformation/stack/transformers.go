@@ -10,6 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -39,6 +43,16 @@ const (
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
 	capacityProviderFargate     = "FARGATE"
+)
+
+// Time interval options.
+const (
+	retentionMinValueSeconds = 0
+	retentionMaxValueSeconds = 1209600
+	delayMinValueSeconds     = 0
+	delayMaxValueSeconds     = 900
+	timeoutMinValueSeconds   = 0
+	timeoutMaxValueSeconds   = 43200
 )
 
 var (
@@ -630,26 +644,40 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	}, nil
 }
 
-func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string) (*template.SubscribeOpts, error) {
+func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
 	if s == nil || s.Topics == nil {
 		return nil, nil
 	}
 
+	sqsEndpoint, err := endpoints.DefaultResolver().EndpointFor(endpoints.SqsServiceID, region)
+	if err != nil {
+		return nil, err
+	}
+
 	var subscriptions template.SubscribeOpts
 	for _, sb := range *s.Topics {
-		ts, err := convertTopicSubscription(sb, validTopicARNs)
+		ts, err := convertTopicSubscription(sb, validTopicARNs, sqsEndpoint.URL, accountID, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
 
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
+	queue, err := convertQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+	subscriptions.Queue = queue
 
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string) (*template.TopicSubscription, error) {
-	err := validateTopicSubscription(t, validTopicARNs)
+func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
+	err := validateTopicSubscription(t, validTopicARNs, app, env)
+	if err != nil {
+		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+	}
+	queue, err := convertQueue(t.Queue, url, accountID, app, env, svc)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -657,5 +685,114 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	return &template.TopicSubscription{
 		Name:    aws.String(t.Name),
 		Service: aws.String(t.Service),
+		Queue:   queue,
 	}, nil
+}
+
+func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
+	if q == nil {
+		return nil, nil
+	}
+	retention, err := convertRetention(q.Retention)
+	if err != nil {
+		return nil, fmt.Errorf(" `retention` %w", err)
+	}
+	delay, err := convertDelay(q.Delay)
+	if err != nil {
+		return nil, fmt.Errorf("`delay` %w", err)
+	}
+	timeout, err := convertTimeout(q.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("`timeout` %w", err)
+	}
+	deadletter, err := convertDeadLetter(q.DeadLetter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &template.SQSQueue{
+		Retention:  retention,
+		Delay:      delay,
+		Timeout:    timeout,
+		DeadLetter: deadletter,
+		FIFO:       convertFIFO(q.FIFO),
+	}, nil
+}
+
+func convertTime(t *time.Duration, floor, ceiling time.Duration) (*int64, error) {
+	if t == nil {
+		return nil, nil
+	}
+
+	if err := validateTime(*t, floor, ceiling); err != nil {
+		return nil, err
+	}
+
+	return aws.Int64(int64(t.Seconds())), nil
+}
+
+func convertRetention(t *time.Duration) (*int64, error) {
+	return convertTime(t, retentionMinValueSeconds*time.Second, retentionMaxValueSeconds*time.Second)
+}
+
+func convertDelay(t *time.Duration) (*int64, error) {
+	return convertTime(t, delayMinValueSeconds*time.Second, delayMaxValueSeconds*time.Second)
+}
+
+func convertTimeout(t *time.Duration) (*int64, error) {
+	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
+}
+
+func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
+	if f == nil || !aws.BoolValue(f.Enabled) {
+		return nil
+	}
+
+	return &template.FIFOQueue{
+		HighThroughput: aws.BoolValue(f.FIFO.HighThroughput),
+	}
+}
+
+func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
+	if d == nil {
+		return nil, nil
+	}
+	if err := validateDeadLetter(d); err != nil {
+		return nil, err
+	}
+
+	return &template.DeadLetterQueue{
+		Tries: d.Tries,
+	}, nil
+}
+
+func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
+	if len(nameToS3URL) == 0 {
+		return nil, nil, nil
+	}
+
+	s3ObjectKeys = make(map[string]*string)
+	for fname, s3url := range nameToS3URL {
+		bucketName, key, err := s3.ParseURL(s3url)
+		if err != nil {
+			return nil, nil, err
+		}
+		s3ObjectKeys[fname] = &key
+		bucket = &bucketName
+	}
+	return
+}
+
+func convertAppInformation(app deploy.AppInformation) (delegationRole *string, dnsName *string) {
+	role := app.DNSDelegationRole()
+	if role != "" {
+		delegationRole = &role
+	}
+
+	dns := app.DNSName
+	if dns != "" {
+		dnsName = &dns
+	}
+
+	return
 }
