@@ -1012,7 +1012,6 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 // Topics asks the user to select from all Copilot-managed SNS topics and returns the ARNs
 // of those topics.
 func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
-
 	topics, err := s.deployStoreSvc.ListDeployedSNSTopics(app, env)
 	if err != nil {
 		return nil, fmt.Errorf("list SNS topics: %w", err)
