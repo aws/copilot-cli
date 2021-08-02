@@ -20,7 +20,7 @@ subscribe:
   queue:
     delay: 1s
     dead_letter:
-          tries: 5
+      tries: 5
   topics:
     - name: givesdogs
       service: dogsvc
