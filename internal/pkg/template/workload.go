@@ -421,6 +421,7 @@ func withSvcParsingFuncs() ParseOption {
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
 			"jsonSNSTopics":       generateSNSJSON,
+			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
 			"logicalIDSafe":       StripNonAlphaNumFunc,
 		})

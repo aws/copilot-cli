@@ -46,7 +46,7 @@ type BuildArguments struct {
 	Context    string            // Optional. Build context directory to pass to `docker build`.
 	Target     string            // Optional. The target build stage to pass to `docker build`.
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
-	Platform   *string           // Optional. OS/Arch to pass to `docker build`.
+	Platform   string            // Optional. OS/Arch to pass to `docker build`.
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 }
 
@@ -95,8 +95,8 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 	}
 
 	// Add platform option.
-	if in.Platform != nil {
-		args = append(args, "--platform", aws.StringValue(in.Platform))
+	if in.Platform != "" {
+		args = append(args, "--platform", in.Platform)
 	}
 
 	// Add the "args:" override section from manifest to the docker build call.
@@ -113,7 +113,7 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
 	// If host platform is not linux/amd64, show the user how the container image is being built; if the build fails (if their docker server doesn't have multi-platform-- and therefore `--platform` capability, for instance) they may see why.
-	if in.Platform != nil {
+	if in.Platform != "" {
 		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
 	}
 	if err := c.Run("docker", args); err != nil {
