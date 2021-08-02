@@ -47,7 +47,7 @@ EventsKMSKey:
             - "kms:ReEncrypt*"
             - "kms:GenerateDataKey*"
           Resource: '*'
-        - Sid: "Allow Role Encrypt/Decrypt"
+        - Sid: "Allow task role encrypt/decrypt"
           Effect: "Allow"
           Principal:
             AWS:

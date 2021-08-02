@@ -28,7 +28,7 @@ type WorkerService struct {
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
-func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig, at []string) (*WorkerService, error) {
+func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig, allowedTopics []string) (*WorkerService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -48,7 +48,7 @@ func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeCo
 			tc: mft.TaskConfig,
 		},
 		manifest:      mft,
-		allowedTopics: at,
+		allowedTopics: allowedTopics,
 
 		parser: parser,
 	}, nil
@@ -113,27 +113,28 @@ func (s *WorkerService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
-		Variables:            s.manifest.WorkerServiceConfig.Variables,
-		Secrets:              s.manifest.WorkerServiceConfig.Secrets,
-		NestedStack:          outputs,
-		Sidecars:             sidecars,
-		Autoscaling:          autoscaling,
-		CapacityProviders:    capacityProviders,
-		DesiredCountOnSpot:   desiredCountOnSpot,
-		ExecuteCommand:       convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:         manifest.WorkerServiceType,
-		HealthCheck:          s.manifest.WorkerServiceConfig.ImageConfig.HealthCheckOpts(),
-		LogConfig:            convertLogging(s.manifest.Logging),
-		DockerLabels:         s.manifest.ImageConfig.DockerLabels,
-		DesiredCountLambda:   desiredCountLambda.String(),
-		EnvControllerLambda:  envControllerLambda.String(),
-		Storage:              storage,
-		Network:              convertNetworkConfig(s.manifest.Network),
-		EntryPoint:           entrypoint,
-		Command:              command,
-		DependsOn:            dependencies,
-		CredentialsParameter: aws.StringValue(s.manifest.ImageConfig.Credentials),
-		Subscribe:            subscribe,
+		Variables:                s.manifest.WorkerServiceConfig.Variables,
+		Secrets:                  s.manifest.WorkerServiceConfig.Secrets,
+		NestedStack:              outputs,
+		Sidecars:                 sidecars,
+		Autoscaling:              autoscaling,
+		CapacityProviders:        capacityProviders,
+		DesiredCountOnSpot:       desiredCountOnSpot,
+		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:             manifest.WorkerServiceType,
+		HealthCheck:              s.manifest.WorkerServiceConfig.ImageConfig.HealthCheckOpts(),
+		LogConfig:                convertLogging(s.manifest.Logging),
+		DockerLabels:             s.manifest.ImageConfig.DockerLabels,
+		DesiredCountLambda:       desiredCountLambda.String(),
+		EnvControllerLambda:      envControllerLambda.String(),
+		Storage:                  storage,
+		Network:                  convertNetworkConfig(s.manifest.Network),
+		EntryPoint:               entrypoint,
+		Command:                  command,
+		DependsOn:                dependencies,
+		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
+		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
+		Subscribe:                subscribe,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)
