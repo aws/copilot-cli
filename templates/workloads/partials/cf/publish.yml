@@ -4,6 +4,7 @@
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub '${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+      KmsMasterKeyId: 'alias/aws/sns'
 
 {{- if $topic.AllowedWorkers}}
 {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
