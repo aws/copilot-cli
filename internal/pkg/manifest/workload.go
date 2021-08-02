@@ -38,12 +38,13 @@ var (
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	// Error definitions.
-	errUnmarshalBuildOpts  = errors.New("cannot unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts  = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalRangeOpts  = errors.New(`cannot unmarshal "range" field`)
-	errUnmarshalExec       = errors.New("cannot unmarshal exec field into boolean or exec configuration")
-	errUnmarshalEntryPoint = errors.New("cannot unmarshal entrypoint into string or slice of strings")
-	errUnmarshalCommand    = errors.New("cannot unmarshal command into string or slice of strings")
+	errUnmarshalBuildOpts    = errors.New("cannot unmarshal build field into string or compose-style map")
+	errUnmarshalPlatformOpts = errors.New("cannot unmarshal platform field into string or compose-style map")
+	errUnmarshalCountOpts    = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalRangeOpts    = errors.New(`cannot unmarshal "range" field`)
+	errUnmarshalExec         = errors.New("cannot unmarshal exec field into boolean or exec configuration")
+	errUnmarshalEntryPoint   = errors.New("cannot unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand      = errors.New("cannot unmarshal command into string or slice of strings")
 
 	errInvalidRangeOpts     = errors.New(`cannot specify both "range" and "min"/"max"`)
 	errInvalidAdvancedCount = errors.New(`cannot specify both "spot" and autoscaling fields`)
@@ -443,14 +444,14 @@ type SidecarConfig struct {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU            *int              `yaml:"cpu"`
-	Memory         *int              `yaml:"memory"`
-	Platform       *string           `yaml:"platform,omitempty"`
-	Count          Count             `yaml:"count"`
-	ExecuteCommand ExecuteCommand    `yaml:"exec"`
-	Variables      map[string]string `yaml:"variables"`
-	Secrets        map[string]string `yaml:"secrets"`
-	Storage        *Storage          `yaml:"storage"`
+	CPU            *int                  `yaml:"cpu"`
+	Memory         *int                  `yaml:"memory"`
+	Platform       *PlatformArgsOrString `yaml:"platform,omitempty"`
+	Count          Count                 `yaml:"count"`
+	ExecuteCommand ExecuteCommand        `yaml:"exec"`
+	Variables      map[string]string     `yaml:"variables"`
+	Secrets        map[string]string     `yaml:"secrets"`
+	Storage        *Storage              `yaml:"storage"`
 }
 
 // PublishConfig represents the configurable options for setting up publishers.
@@ -622,6 +623,58 @@ func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
 		return nil
 	}
 	return i.HealthCheck.healthCheckOpts()
+}
+
+// PlatformArgsOrString is a custom type which supports unmarshaling yaml which
+// can either be of type string or type PlatformArgs.
+type PlatformArgsOrString struct {
+	PlatformString *string
+	PlatformArgs   PlatformArgs
+}
+
+func (p *PlatformArgsOrString) isEmpty() bool {
+	if aws.StringValue(p.PlatformString) == "" && p.PlatformArgs.isEmpty() {
+		return true
+	}
+	return false
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the PlatformArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&p.PlatformArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !p.PlatformArgs.isEmpty() {
+		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
+		p.PlatformString = nil
+		return nil
+	}
+
+	if err := unmarshal(&p.PlatformString); err != nil {
+		return errUnmarshalPlatformOpts
+	}
+	return nil
+}
+
+// PlatformArgs represents the specifics of a target OS.
+type PlatformArgs struct {
+	OSFamily *string `yaml:"osfamily,omitempty"`
+	Arch     *string `yaml:"architecture,omitempty"`
+}
+
+func (p *PlatformArgs) isEmpty() bool {
+	if p.OSFamily == nil && p.Arch == nil {
+		return true
+	}
+	return false
 }
 
 func requiresBuild(image Image) (bool, error) {

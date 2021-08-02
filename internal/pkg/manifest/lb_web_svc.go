@@ -142,12 +142,15 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the os/arch for the service.
+// TaskPlatform returns the platform for the service.
 func (t *TaskConfig) TaskPlatform() (*string, error) {
-	if err := exec.ValidatePlatform(t.Platform); err != nil {
+	if t.Platform == nil {
+		return nil, nil
+	}
+	if err := exec.ValidatePlatform(t.Platform.PlatformString); err != nil {
 		return nil, fmt.Errorf("validate platform: %w", err)
 	}
-	return t.Platform, nil
+	return t.Platform.PlatformString, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

@@ -48,9 +48,9 @@ type RequestDrivenWebServiceProps struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU      *int    `yaml:"cpu"`
-	Memory   *int    `yaml:"memory"`
-	Platform *string `yaml:"platform,omitempty"`
+	CPU      *int                 `yaml:"cpu"`
+	Memory   *int                 `yaml:"memory"`
+	Platform PlatformArgsOrString `yaml:"platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -97,10 +97,10 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 
 // TaskPlatform returns the os/arch for the service.
 func (c *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if err := exec.ValidatePlatform(c.RequestDrivenWebServiceConfig.InstanceConfig.Platform); err != nil {
+	if err := exec.ValidatePlatform(c.RequestDrivenWebServiceConfig.InstanceConfig.Platform.PlatformString); err != nil {
 		return nil, fmt.Errorf("validate platform: %w", err)
 	}
-	return c.RequestDrivenWebServiceConfig.InstanceConfig.Platform, nil
+	return c.RequestDrivenWebServiceConfig.InstanceConfig.Platform.PlatformString, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
