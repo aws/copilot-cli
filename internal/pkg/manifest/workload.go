@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+
 	"github.com/imdario/mergo"
 
 	"github.com/google/shlex"
@@ -653,13 +655,21 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 	}
 
 	if !p.PlatformArgs.isEmpty() {
+		if err := exec.ValidateOS(p.PlatformArgs.OSFamily); err != nil {
+			return fmt.Errorf("validate OS: %w", err)
+		}
+		if err := exec.ValidateArch(p.PlatformArgs.Arch); err != nil {
+			return fmt.Errorf("validate arch: %w", err)
+		}
 		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
 		p.PlatformString = nil
 		return nil
 	}
-
 	if err := unmarshal(&p.PlatformString); err != nil {
 		return errUnmarshalPlatformOpts
+	}
+	if err := exec.ValidatePlatform(p.PlatformString); err != nil {
+		return fmt.Errorf("validate platform: %w", err)
 	}
 	return nil
 }

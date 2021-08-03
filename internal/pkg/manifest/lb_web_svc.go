@@ -5,10 +5,7 @@ package manifest
 
 import (
 	"errors"
-	"fmt"
 	"time"
-
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -146,9 +143,6 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform == nil {
 		return nil, nil
-	}
-	if err := exec.ValidatePlatform(t.Platform.PlatformString); err != nil {
-		return nil, fmt.Errorf("validate platform: %w", err)
 	}
 	return t.Platform.PlatformString, nil
 }

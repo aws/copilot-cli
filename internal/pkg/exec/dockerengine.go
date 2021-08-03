@@ -68,6 +68,12 @@ const (
 var validPlatforms = []string{
 	dockerBuildPlatform(LinuxOS, Amd64Arch),
 }
+var validOperatingSystems = []string{
+	LinuxOS,
+}
+var validArchitectures = []string{
+	Amd64Arch,
+}
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c DockerCommand) Build(in *BuildArguments) error {
@@ -260,6 +266,28 @@ func ValidatePlatform(platform *string) error {
 	}
 	if aws.StringValue(platform) != dockerBuildPlatform(LinuxOS, Amd64Arch) {
 		return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
+	}
+	return nil
+}
+
+// ValidateOS checks if the entered string is a Docker-buildable operating system.
+func ValidateOS(os *string) error {
+	if os == nil {
+		return nil
+	}
+	if aws.StringValue(os) != LinuxOS {
+		return fmt.Errorf("OS %s is invalid; %s: %s", aws.StringValue(os), english.PluralWord(len(validOperatingSystems), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOperatingSystems, "and"))
+	}
+	return nil
+}
+
+// ValidateArch checks if the entered string is a Docker-buildable architecture.
+func ValidateArch(arch *string) error {
+	if arch == nil {
+		return nil
+	}
+	if aws.StringValue(arch) != Amd64Arch {
+		return fmt.Errorf("architecture %s is invalid; %s: %s", aws.StringValue(arch), english.PluralWord(len(validArchitectures), "the valid architecture is", "valid architectures are"), english.WordSeries(validArchitectures, "and"))
 	}
 	return nil
 }
