@@ -583,7 +583,7 @@ func validateLBSvcAliasAndAppVersion(svcName string, aliases *manifest.Alias, ap
 		if regRootHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain)); err != nil {
 			return err
 		}
-		validAlias := false
+		var validAlias bool
 		for _, re := range []*regexp.Regexp{regEnvHostedZone, regAppHostedZone, regRootHostedZone} {
 			if re.MatchString(alias) {
 				validAlias = true
