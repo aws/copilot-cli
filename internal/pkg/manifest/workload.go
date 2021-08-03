@@ -674,10 +674,7 @@ type PlatformArgs struct {
 }
 
 func (p *PlatformArgs) isEmpty() bool {
-	if p.OSFamily == nil && p.Arch == nil {
-		return true
-	}
-	return false
+	return p.OSFamily == nil && p.Arch == nil
 }
 
 func requiresBuild(image Image) (bool, error) {
