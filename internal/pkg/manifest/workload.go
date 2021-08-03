@@ -634,13 +634,6 @@ type PlatformArgsOrString struct {
 	PlatformArgs   PlatformArgs
 }
 
-func (p *PlatformArgsOrString) isEmpty() bool {
-	if aws.StringValue(p.PlatformString) == "" && p.PlatformArgs.isEmpty() {
-		return true
-	}
-	return false
-}
-
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the PlatformArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
