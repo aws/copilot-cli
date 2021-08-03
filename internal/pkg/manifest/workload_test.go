@@ -356,7 +356,7 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
-		"Error if unmarshalable": {
+		"error if unmarshalable": {
 			inContent: []byte(`platform:
   ohess: linus
   archie: leg64`),
