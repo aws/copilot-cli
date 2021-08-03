@@ -125,8 +125,11 @@ batch:
 phases:
   install:
     runtime-versions:
-      golang: 1.15
       nodejs: 12
+    commands:
+      - 'cd $HOME/.goenv && git pull --ff-only && cd -'
+      - 'goenv install 1.16.6'
+      - 'goenv global 1.16.6'
   pre_build:
     commands:
        - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_TOKEN}

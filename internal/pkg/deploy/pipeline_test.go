@@ -152,8 +152,8 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 	const defaultImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 
 	testCases := map[string]struct {
-		mfBuild             *manifest.Build
-		expectedBuild       *Build
+		mfBuild       *manifest.Build
+		expectedBuild *Build
 	}{
 		"set default image if not be specified in manifest": {
 			mfBuild: nil,

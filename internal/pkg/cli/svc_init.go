@@ -85,14 +85,15 @@ type initSvcOpts struct {
 	initSvcVars
 
 	// Interfaces to interact with dependencies.
-	fs                    afero.Fs
-	init                  svcInitializer
-	prompt                prompter
-	dockerEngineValidator dockerEngineValidator
-	sel                   dockerfileSelector
+	fs           afero.Fs
+	init         svcInitializer
+	prompt       prompter
+	dockerEngine dockerEngine
+	sel          dockerfileSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
+	platform     *string
 
 	// Cache variables
 	df dockerfileParser
@@ -130,11 +131,11 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	opts := &initSvcOpts{
 		initSvcVars: vars,
 
-		fs:                    fs,
-		init:                  initSvc,
-		prompt:                prompter,
-		sel:                   sel,
-		dockerEngineValidator: exec.NewDockerCommand(),
+		fs:           fs,
+		init:         initSvc,
+		prompt:       prompter,
+		sel:          sel,
+		dockerEngine: exec.NewDockerCommand(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -220,6 +221,12 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
+	platform, err := o.dockerEngine.RedirectPlatform(o.image)
+	if err != nil {
+		return fmt.Errorf("get/redirect docker engine platform: %w", err)
+	}
+	o.platform = platform
+
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -227,6 +234,7 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
+			Platform:       o.platform,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -317,7 +325,7 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
 	}
-	if err = o.dockerEngineValidator.CheckDockerEngineRunning(); err != nil {
+	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
 		var errDaemon *exec.ErrDockerDaemonNotResponsive
 		switch {
 		case errors.Is(err, exec.ErrDockerCommandNotFound):

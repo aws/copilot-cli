@@ -66,6 +66,7 @@ type WorkloadProps struct {
 	Name           string
 	DockerfilePath string
 	Image          string
+	Platform       *string
 }
 
 // JobProps contains the information needed to represent a Job.

@@ -57,7 +57,7 @@ func TestDeleteTaskOpts_Validate(t *testing.T) {
 		"with all flags": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			inName: "oneoff",
+			inName:    "oneoff",
 			setupMocks: func(m validateMocks) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
@@ -69,8 +69,8 @@ func TestDeleteTaskOpts_Validate(t *testing.T) {
 		"task does not exist": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			inName: "oneoff",
-			want: errors.New("get task: some error"),
+			inName:    "oneoff",
+			want:      errors.New("get task: some error"),
 			setupMocks: func(m validateMocks) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
@@ -81,10 +81,10 @@ func TestDeleteTaskOpts_Validate(t *testing.T) {
 		"with default cluster flag set": {
 			inDefaultCluster: true,
 			inName:           "oneoff",
-			setupMocks:       func(m validateMocks) {
+			setupMocks: func(m validateMocks) {
 				m.cfn.EXPECT().GetTaskStack("oneoff")
 			},
-			want:             nil,
+			want: nil,
 		},
 		"with default cluster and env flag": {
 			inDefaultCluster: true,
@@ -112,7 +112,7 @@ func TestDeleteTaskOpts_Validate(t *testing.T) {
 
 			mocks := validateMocks{
 				store: mockstore,
-				cfn: mocktaskStackManager,
+				cfn:   mocktaskStackManager,
 			}
 
 			tc.setupMocks(mocks)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
@@ -27,6 +28,7 @@ const (
 	lbWebSvcTplName     = "lb-web"
 	rdWebSvcTplName     = "rd-web"
 	backendSvcTplName   = "backend"
+	workerSvcTplName    = "worker"
 	scheduledJobTplName = "scheduled-job"
 )
 
@@ -37,6 +39,11 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
+)
+
+// Constants for ARN options.
+const (
+	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
 )
 
 var (
@@ -65,6 +72,8 @@ var (
 		"image-overrides",
 		"instancerole",
 		"accessrole",
+		"publish",
+		"subscribe",
 	}
 )
 
@@ -91,6 +100,8 @@ type SidecarOpts struct {
 	MountPoints  []*MountPoint
 	DockerLabels map[string]string
 	DependsOn    map[string]string
+	EntryPoint   []string
+	Command      []string
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -159,12 +170,14 @@ type LogConfigOpts struct {
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
-	HealthCheckPath    string
-	SuccessCodes       string
-	HealthyThreshold   *int64
-	UnhealthyThreshold *int64
-	Interval           *int64
-	Timeout            *int64
+	HealthCheckPath     string
+	SuccessCodes        string
+	HealthyThreshold    *int64
+	UnhealthyThreshold  *int64
+	Interval            *int64
+	Timeout             *int64
+	DeregistrationDelay *int64
+	GracePeriod         *int64
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -202,6 +215,56 @@ type StateMachineOpts struct {
 	Retries *int
 }
 
+// PublishOpts holds configuration needed if the service has publishers.
+type PublishOpts struct {
+	Topics []*Topic
+}
+
+// Topics holds information needed to render a SNSTopic in a container definition.
+type Topic struct {
+	Name           *string
+	AllowedWorkers []string
+
+	Region    string
+	Partition string
+	AccountID string
+	App       string
+	Env       string
+	Svc       string
+}
+
+// SubscribeOpts holds configuration needed if the service has subscriptions.
+type SubscribeOpts struct {
+	Topics []*TopicSubscription
+	Queue  *SQSQueue
+}
+
+// TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
+type TopicSubscription struct {
+	Name    *string
+	Service *string
+	Queue   *SQSQueue
+}
+
+// SQSQueue holds information needed to render a SQS Queue in a container definition.
+type SQSQueue struct {
+	Retention  *int64
+	Delay      *int64
+	Timeout    *int64
+	DeadLetter *DeadLetterQueue
+	FIFO       *FIFOQueue
+}
+
+// DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
+type DeadLetterQueue struct {
+	Tries *uint16
+}
+
+// FIFOQueue holds information needed to specify a SQS Queue as FIFO in a container definition.
+type FIFOQueue struct {
+	HighThroughput bool
+}
+
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
 	AssignPublicIP string
@@ -219,37 +282,44 @@ func defaultNetworkOpts() *NetworkOpts {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables          map[string]string
-	Secrets            map[string]string
-	Aliases            []string
-	Tags               map[string]string        // Used by App Runner workloads to tag App Runner service resources
-	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars           []*SidecarOpts
-	LogConfig          *LogConfigOpts
-	Autoscaling        *AutoscalingOpts
-	CapacityProviders  []*CapacityProviderStrategy
-	DesiredCountOnSpot *int
-	Storage            *StorageOpts
-	Network            *NetworkOpts
-	ExecuteCommand     *ExecuteCommandOpts
-	EntryPoint         []string
-	Command            []string
-	DomainAlias        string
-	DockerLabels       map[string]string
-	DependsOn          map[string]string
+	Variables                map[string]string
+	Secrets                  map[string]string
+	Aliases                  []string
+	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
+	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars                 []*SidecarOpts
+	LogConfig                *LogConfigOpts
+	Autoscaling              *AutoscalingOpts
+	CapacityProviders        []*CapacityProviderStrategy
+	DesiredCountOnSpot       *int
+	Storage                  *StorageOpts
+	Network                  *NetworkOpts
+	ExecuteCommand           *ExecuteCommandOpts
+	EntryPoint               []string
+	Command                  []string
+	DomainAlias              string
+	DockerLabels             map[string]string
+	DependsOn                map[string]string
+	Publish                  *PublishOpts
+	ServiceDiscoveryEndpoint string
 
 	// Additional options for service templates.
-	WorkloadType        string
-	HealthCheck         *ecs.HealthCheck
-	HTTPHealthCheck     HTTPHealthCheckOpts
-	AllowedSourceIps    []string
-	RulePriorityLambda  string
-	DesiredCountLambda  string
-	EnvControllerLambda string
+	WorkloadType         string
+	HealthCheck          *ecs.HealthCheck
+	HTTPHealthCheck      HTTPHealthCheckOpts
+	DeregistrationDelay  *int64
+	AllowedSourceIps     []string
+	RulePriorityLambda   string
+	DesiredCountLambda   string
+	EnvControllerLambda  string
+	CredentialsParameter string
 
 	// Additional options for job templates.
 	ScheduleExpression string
 	StateMachine       *StateMachineOpts
+
+	// Additional options for worker service templates.
+	Subscribe *SubscribeOpts
 }
 
 // ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
@@ -259,6 +329,15 @@ type ParseRequestDrivenWebServiceInput struct {
 	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	EnableHealthCheck   bool
 	EnvControllerLambda string
+	Publish             *PublishOpts
+
+	// Input needed for the custom resource that adds a custom domain to the service.
+	Alias                *string
+	ScriptBucketName     *string
+	CustomDomainLambda   *string
+	AWSSDKLayer          *string
+	AppDNSDelegationRole *string
+	AppDNSName           *string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -282,6 +361,14 @@ func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
 		data.Network = defaultNetworkOpts()
 	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
+}
+
+// ParseWorkerService parses a worker service's CloudFormation template with the specified data object and returns its content.
+func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
+	return t.parseSvc(workerSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
@@ -333,7 +420,10 @@ func withSvcParsingFuncs() ParseOption {
 			"quoteSlice":          QuotePSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
+			"jsonSNSTopics":       generateSNSJSON,
+			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
+			"logicalIDSafe":       StripNonAlphaNumFunc,
 		})
 	}
 }
@@ -369,4 +459,9 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+// ARN determines the arn for a topic using the SNSTopic name and account information
+func (t Topic) ARN() string {
+	return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }

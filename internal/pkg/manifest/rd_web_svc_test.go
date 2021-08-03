@@ -196,7 +196,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				},
 			},
 		},
-		"should unmarshal healthcheck": {
+		"should unmarshal http configuration": {
 			inContent: []byte(
 				"http:\n" +
 					"  healthcheck:\n" +
@@ -204,7 +204,8 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 					"    healthy_threshold: 3\n" +
 					"    unhealthy_threshold: 5\n" +
 					"    interval: 10s\n" +
-					"    timeout: 5s\n",
+					"    timeout: 5s\n" +
+					"  alias: convex.domain.com",
 			),
 
 			wantedStruct: RequestDrivenWebService{
@@ -219,6 +220,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 								Timeout:            durationPointer(5 * time.Second),
 							},
 						},
+						Alias: aws.String("convex.domain.com"),
 					},
 				},
 			},
@@ -250,13 +252,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedStruct.Type, svc.Type)
-				require.Equal(t, tc.wantedStruct.Name, svc.Name)
-				require.Equal(t, tc.wantedStruct.HealthCheckConfiguration, svc.HealthCheckConfiguration)
-				require.Equal(t, tc.wantedStruct.ImageConfig, svc.ImageConfig)
-				require.Equal(t, tc.wantedStruct.Variables, svc.Variables)
-				require.Equal(t, tc.wantedStruct.InstanceConfig, svc.InstanceConfig)
-				require.Equal(t, tc.wantedStruct.Tags, svc.Tags)
+				require.Equal(t, tc.wantedStruct, svc)
 			}
 		})
 	}

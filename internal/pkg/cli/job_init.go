@@ -54,15 +54,16 @@ type initJobOpts struct {
 	initJobVars
 
 	// Interfaces to interact with dependencies.
-	fs                    afero.Fs
-	store                 store
-	init                  jobInitializer
-	prompt                prompter
-	sel                   initJobSelector
-	dockerEngineValidator dockerEngineValidator
+	fs           afero.Fs
+	store        store
+	init         jobInitializer
+	prompt       prompter
+	sel          initJobSelector
+	dockerEngine dockerEngine
 
 	// Outputs stored on successful actions.
 	manifestPath string
+	platform     *string
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -99,12 +100,12 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	return &initJobOpts{
 		initJobVars: vars,
 
-		fs:                    fs,
-		store:                 store,
-		init:                  jobInitter,
-		prompt:                prompter,
-		sel:                   sel,
-		dockerEngineValidator: exec.NewDockerCommand(),
+		fs:           fs,
+		store:        store,
+		init:         jobInitter,
+		prompt:       prompter,
+		sel:          sel,
+		dockerEngine: exec.NewDockerCommand(),
 		initParser: func(path string) dockerfileParser {
 			return exec.NewDockerfile(fs, path)
 		},
@@ -184,6 +185,13 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
+
+	platform, err := o.dockerEngine.RedirectPlatform(o.image)
+	if err != nil {
+		return err
+	}
+	o.platform = platform
+
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -191,6 +199,7 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
+			Platform:       o.platform,
 		},
 
 		Schedule:    o.schedule,
@@ -262,7 +271,7 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
 	}
-	if err = o.dockerEngineValidator.CheckDockerEngineRunning(); err != nil {
+	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
 		var errDaemon *exec.ErrDockerDaemonNotResponsive
 		switch {
 		case errors.Is(err, exec.ErrDockerCommandNotFound):

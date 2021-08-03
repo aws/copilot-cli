@@ -63,7 +63,7 @@ var _ = Describe("App With Domain", func() {
 			_, envInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "prod",
-				Profile: "default",
+				Profile: prodEnvironmentProfile,
 				Prod:    false,
 			})
 			Expect(envInitErr).NotTo(HaveOccurred())

@@ -72,6 +72,7 @@ type Workload struct {
 type Image struct {
 	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
 	Location     *string           `yaml:"location"`        // Use an existing image instead.
+	Credentials  *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
 	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
 }
@@ -211,8 +212,8 @@ func (i *Image) cacheFrom() []string {
 
 // ImageOverride holds fields that override Dockerfile image defaults.
 type ImageOverride struct {
-	EntryPoint *EntryPointOverride `yaml:"entrypoint"`
-	Command    *CommandOverride    `yaml:"command"`
+	EntryPoint *EntryPointOverride `yaml:"entrypoint"` // TODO: the type needs to be updated after we upgrade mergo
+	Command    *CommandOverride    `yaml:"command"`    // TODO: the type needs to be updated after we upgrade mergo
 }
 
 // EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
@@ -428,26 +429,39 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port         *string             `yaml:"port"`
-	Image        *string             `yaml:"image"`
-	Essential    *bool               `yaml:"essential"`
-	CredsParam   *string             `yaml:"credentialsParameter"`
-	Variables    map[string]string   `yaml:"variables"`
-	Secrets      map[string]string   `yaml:"secrets"`
-	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
-	DockerLabels map[string]string   `yaml:"labels"`
-	DependsOn    map[string]string   `yaml:"depends_on"`
+	Port          *string             `yaml:"port"`
+	Image         *string             `yaml:"image"`
+	Essential     *bool               `yaml:"essential"`
+	CredsParam    *string             `yaml:"credentialsParameter"`
+	Variables     map[string]string   `yaml:"variables"`
+	Secrets       map[string]string   `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint `yaml:"mount_points"`
+	DockerLabels  map[string]string   `yaml:"labels"`
+	DependsOn     map[string]string   `yaml:"depends_on"`
+	ImageOverride `yaml:",inline"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
 	CPU            *int              `yaml:"cpu"`
 	Memory         *int              `yaml:"memory"`
+	Platform       *string           `yaml:"platform,omitempty"`
 	Count          Count             `yaml:"count"`
 	ExecuteCommand ExecuteCommand    `yaml:"exec"`
 	Variables      map[string]string `yaml:"variables"`
 	Secrets        map[string]string `yaml:"secrets"`
 	Storage        *Storage          `yaml:"storage"`
+}
+
+// PublishConfig represents the configurable options for setting up publishers.
+type PublishConfig struct {
+	Topics []Topic `yaml:"topics"`
+}
+
+// Topic represents the configurable options for setting up a SNS Topic.
+type Topic struct {
+	Name           *string  `yaml:"name"`
+	AllowedWorkers []string `yaml:"allowed_workers"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
@@ -523,6 +537,12 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 		m := newDefaultBackendService()
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
+		}
+		return m, nil
+	case WorkerServiceType:
+		m := newDefaultWorkerService()
+		if err := yaml.Unmarshal(in, m); err != nil {
+			return nil, fmt.Errorf("unmarshal to worker service: %w", err)
 		}
 		return m, nil
 	case ScheduledJobType:

@@ -5,8 +5,10 @@ package manifest
 
 import (
 	"errors"
-	"path/filepath"
+	"fmt"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -19,7 +21,9 @@ const (
 
 // Default values for HTTPHealthCheck for a load balanced web service.
 const (
-	DefaultHealthCheckPath = "/"
+	DefaultHealthCheckPath                = "/"
+	DefaultHealthCheckDeregistrationDelay = 60
+	DefaultHealthCheckGracePeriod         = 60
 )
 
 var (
@@ -51,19 +55,21 @@ type LoadBalancedWebServiceConfig struct {
 	TaskConfig    `yaml:",inline"`
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Network       *NetworkConfig            `yaml:"network"`
+	Network       *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
+	Publish       *PublishConfig            `yaml:"publish"`
 }
 
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
-	Path        *string                 `yaml:"path"`
-	HealthCheck HealthCheckArgsOrString `yaml:"healthcheck"`
-	Stickiness  *bool                   `yaml:"stickiness"`
-	Alias       *string                 `yaml:"alias"`
+	Path                *string                 `yaml:"path"`
+	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
+	Stickiness          *bool                   `yaml:"stickiness"`
+	Alias               *string                 `yaml:"alias"`
+	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string  `yaml:"target_container"`
-	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
+	TargetContainer          *string   `yaml:"target_container"`
+	TargetContainerCamelCase *string   `yaml:"targetContainer"`    // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         *[]string `yaml:"allowed_source_ips"` // TODO: the type needs to be updated after we upgrade mergo
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -124,22 +130,24 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(lbWebSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
-		"dirName": tplDirName,
-	}))
+	content, err := s.parser.Parse(lbWebSvcManifestPath, *s)
 	if err != nil {
 		return nil, err
 	}
 	return content.Bytes(), nil
 }
 
-func tplDirName(s string) string {
-	return filepath.Dir(s)
-}
-
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
+}
+
+// TaskPlatform returns the os/arch for the service.
+func (t *TaskConfig) TaskPlatform() (*string, error) {
+	if err := exec.ValidatePlatform(t.Platform); err != nil {
+		return nil, fmt.Errorf("validate platform: %w", err)
+	}
+	return t.Platform, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

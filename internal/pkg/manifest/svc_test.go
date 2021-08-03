@@ -27,6 +27,7 @@ name: frontend
 type: "Load Balanced Web Service"
 image:
   location: foo/bar
+  credentials: some arn
   port: 80
 cpu: 512
 memory: 1024
@@ -79,7 +80,8 @@ environments:
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
-								Location: aws.String("foo/bar"),
+								Location:    aws.String("foo/bar"),
+								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
 						RoutingRule: RoutingRule{
@@ -90,8 +92,9 @@ environments:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(512),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(512),
+							Memory:   aws.Int(1024),
+							Platform: nil,
 							Count: Count{
 								Value: aws.Int(1),
 							},
@@ -215,8 +218,9 @@ secrets:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(1024),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(1024),
+							Memory:   aws.Int(1024),
+							Platform: nil,
 							Count: Count{
 								Value: aws.Int(1),
 							},

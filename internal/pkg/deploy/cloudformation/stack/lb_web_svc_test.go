@@ -196,7 +196,9 @@ Outputs:
 					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
+						GracePeriod:     aws.Int64(60),
 					},
+					DeregistrationDelay: aws.Int64(60),
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
@@ -232,7 +234,9 @@ Outputs:
 					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
+						GracePeriod:     aws.Int64(60),
 					},
+					DeregistrationDelay: aws.Int64(60),
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
@@ -294,6 +298,8 @@ Outputs:
 								RepoURL:  testImageRepoURL,
 								ImageTag: testImageTag,
 							},
+							AccountID: "0123456789012",
+							Region:    "us-west-2",
 						},
 					},
 				},
@@ -359,15 +365,14 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			Enable: aws.Bool(true),
 		},
 	}
-	testLBWebServiceManifestWithBadSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-		WorkloadProps: &manifest.WorkloadProps{
-			Name:       "frontend",
-			Dockerfile: "frontend/Dockerfile",
-		},
-		Path: "frontend",
-		Port: 80,
-	})
-	testLBWebServiceManifestWithBadSidecar.TargetContainer = aws.String("xray")
+	testLBWebServiceManifestWithBadSidecarName := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithBadSidecarName.TargetContainer = aws.String("xray")
+
+	testLBWebServiceManifestWithBadSidecarPort := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithBadSidecarPort.TargetContainer = aws.String("xray")
+	testLBWebServiceManifestWithBadSidecarPort.Sidecars = map[string]*manifest.SidecarConfig{
+		"xray": {},
+	}
 	expectedParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadAppNameParamKey),
@@ -554,9 +559,15 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 		"with bad sidecar container": {
 			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadSidecar,
+			manifest:     testLBWebServiceManifestWithBadSidecarName,
 
 			expectedErr: fmt.Errorf("target container xray doesn't exist"),
+		},
+		"with target sidecar container with empty port": {
+			httpsEnabled: true,
+			manifest:     testLBWebServiceManifestWithBadSidecarPort,
+
+			expectedErr: fmt.Errorf("target container xray doesn't expose any port"),
 		},
 		"with bad count": {
 			httpsEnabled: true,

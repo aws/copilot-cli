@@ -21,6 +21,8 @@ const (
 	RequestDrivenWebServiceType = "Request-Driven Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
+	// WorkerServiceType is a worker service that manages the consumption of messages.
+	WorkerServiceType = "Worker Service"
 )
 
 // ServiceTypes are the supported service manifest types.
@@ -234,10 +236,12 @@ type HTTPHealthCheckArgs struct {
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
 	Timeout            *time.Duration `yaml:"timeout"`
 	Interval           *time.Duration `yaml:"interval"`
+	GracePeriod        *time.Duration `yaml:"grace_period"`
 }
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
+	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
+		h.Interval == nil && h.Timeout == nil && h.GracePeriod == nil
 }
 
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which

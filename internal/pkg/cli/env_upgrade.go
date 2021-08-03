@@ -79,6 +79,9 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		sel:   selector.NewSelect(prompt.New(), store),
 		legacyEnvTemplater: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 			Version: deploy.LegacyEnvTemplateVersion,
+			App: deploy.AppInformation{
+				Name: vars.appName,
+			},
 		}),
 		prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		uploader: template.New(),
@@ -273,8 +276,10 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 	}
 
 	if err := upgrader.UpgradeEnvironment(&deploy.CreateEnvironmentInput{
-		Version:             toVersion,
-		AppName:             conf.App,
+		Version: toVersion,
+		App: deploy.AppInformation{
+			Name: conf.App,
+		},
 		Name:                conf.Name,
 		CustomResourcesURLs: customResourcesURLs,
 		ImportVPCConfig:     importedVPC,
@@ -298,8 +303,10 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 	}
 	if isDefaultEnv {
 		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-			Version:             toVersion,
-			AppName:             conf.App,
+			Version: toVersion,
+			App: deploy.AppInformation{
+				Name: conf.App,
+			},
 			Name:                conf.Name,
 			CustomResourcesURLs: customResourcesURLs,
 			CFNServiceRoleARN:   conf.ExecutionRoleARN,
@@ -342,8 +349,10 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironmentWithVPCOverrides(upgrader legac
 	fromVersion, toVersion string, albWorkloads []string) error {
 	if conf.CustomConfig != nil {
 		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-			Version:           toVersion,
-			AppName:           conf.App,
+			Version: toVersion,
+			App: deploy.AppInformation{
+				Name: conf.App,
+			},
 			Name:              conf.Name,
 			ImportVPCConfig:   conf.CustomConfig.ImportVPC,
 			AdjustVPCConfig:   conf.CustomConfig.VPCConfig,

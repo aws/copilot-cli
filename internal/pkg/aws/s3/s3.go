@@ -8,12 +8,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io"
 	"path"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -23,7 +24,7 @@ import (
 
 const (
 	artifactDirName = "manual"
-	notFound = "NotFound"
+	notFound        = "NotFound"
 )
 
 type s3ManagerAPI interface {
@@ -33,7 +34,7 @@ type s3ManagerAPI interface {
 type s3API interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
-	HeadBucket (input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
+	HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
 }
 
 // NamedBinary is a named binary to be uploaded.
@@ -44,6 +45,9 @@ type NamedBinary interface {
 
 // CompressAndUploadFunc is invoked to zip multiple template contents and upload them to an S3 bucket under the specified key.
 type CompressAndUploadFunc func(key string, objects ...NamedBinary) (url string, err error)
+
+// UploadFunc is invoked to upload an item to an S3 bucket under the specified key.
+type UploadFunc func(key string, file NamedBinary) (string, error)
 
 // S3 wraps an Amazon Simple Storage Service client.
 type S3 struct {
@@ -76,7 +80,7 @@ func (s *S3) PutArtifact(bucket, fileName string, data io.Reader) (string, error
 	return resp.Location, nil
 }
 
-// ZipAndUpload zips files and uploads zips all files and uploads the zipped file to an S3 bucket under the specified key.
+// ZipAndUpload zips all files and uploads the zipped file to an S3 bucket under the specified key.
 func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
@@ -93,15 +97,14 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 	if err := w.Close(); err != nil {
 		return "", err
 	}
-	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
-		Body:   buf,
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
-	}
-	return resp.Location, nil
+	return s.upload(bucket, key, buf)
+}
+
+// Upload uploads a file to an S3 bucket under the specified key.
+func (s *S3) Upload(bucket, key string, file NamedBinary) (string, error) {
+	buf := new(bytes.Buffer)
+	buf.Write(file.Content())
+	return s.upload(bucket, key, buf)
 }
 
 // EmptyBucket deletes all objects within the bucket.
@@ -110,8 +113,8 @@ func (s *S3) EmptyBucket(bucket string) error {
 	var err error
 
 	// Bucket is exists check to make sure the bucket exists before proceeding in emptying it
-	isExists, err:= s.isBucketExists(bucket)
-	if err!= nil {
+	isExists, err := s.isBucketExists(bucket)
+	if err != nil {
 		return fmt.Errorf("unable to determine the existance of bucket %s: %w", bucket, err)
 	}
 
@@ -190,4 +193,16 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
+	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
+		Body:   buf,
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
+	}
+	return resp.Location, nil
 }

@@ -4,7 +4,10 @@
 package manifest
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -29,10 +32,12 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
+	Publish                           *PublishConfig          `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {
 	HealthCheckConfiguration HealthCheckArgsOrString `yaml:"healthcheck"`
+	Alias                    *string                 `yaml:"alias"`
 }
 
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
@@ -43,8 +48,9 @@ type RequestDrivenWebServiceProps struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU    *int `yaml:"cpu"`
-	Memory *int `yaml:"memory"`
+	CPU      *int    `yaml:"cpu"`
+	Memory   *int    `yaml:"memory"`
+	Platform *string `yaml:"platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -77,9 +83,7 @@ func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(requestDrivenWebSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
-		"dirName": tplDirName,
-	}))
+	content, err := s.parser.Parse(requestDrivenWebSvcManifestPath, *s)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +93,14 @@ func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
+}
+
+// TaskPlatform returns the os/arch for the service.
+func (c *RequestDrivenWebService) TaskPlatform() (*string, error) {
+	if err := exec.ValidatePlatform(c.RequestDrivenWebServiceConfig.InstanceConfig.Platform); err != nil {
+		return nil, fmt.Errorf("validate platform: %w", err)
+	}
+	return c.RequestDrivenWebServiceConfig.InstanceConfig.Platform, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

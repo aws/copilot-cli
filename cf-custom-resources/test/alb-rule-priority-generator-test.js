@@ -9,6 +9,8 @@ describe("ALB Rule Priority Generator", () => {
   const albRulePriorityHandler = require("../lib/alb-rule-priority-generator");
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
+  const LogGroup = "/aws/lambda/testLambda";
+  const LogStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
 
@@ -18,6 +20,8 @@ describe("ALB Rule Priority Generator", () => {
 
   beforeEach(() => {
     albRulePriorityHandler.withDefaultResponseURL(ResponseURL);
+    albRulePriorityHandler.withDefaultLogGroup(LogGroup);
+    albRulePriorityHandler.withDefaultLogStream(LogStream);
     console.log = function () {};
   });
   afterEach(() => {
@@ -30,7 +34,8 @@ describe("ALB Rule Priority Generator", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type undefined"
+          body.Reason ===
+            "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -47,7 +52,8 @@ describe("ALB Rule Priority Generator", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type " + bogusType
+          body.Reason ===
+            "Unsupported request type bogus (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -93,12 +99,17 @@ describe("ALB Rule Priority Generator", () => {
     const requestType = "Update";
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return (
+          body.Status === "SUCCESS" &&
+          body.PhysicalResourceId === "mockPhysicalID"
+        );
       })
       .reply(200);
     return LambdaTester(albRulePriorityHandler.nextAvailableRulePriorityHandler)
       .event({
         RequestType: requestType,
+        LogicalResourceId: "mockID",
+        PhysicalResourceId: "mockPhysicalID",
       })
       .expectResolve(() => {
         sinon.assert.notCalled(describeRulesFake);
@@ -129,7 +140,11 @@ describe("ALB Rule Priority Generator", () => {
     AWS.mock("ELBv2", "describeRules", describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.Priority == 1;
+        return (
+          body.Status === "SUCCESS" &&
+          body.Data.Priority == 1 &&
+          body.PhysicalResourceId === "alb-rule-priority-mockID"
+        );
       })
       .reply(200);
 
@@ -140,6 +155,7 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
         },
+        LogicalResourceId: "mockID",
       })
       .expectResolve(() => {
         sinon.assert.calledWith(

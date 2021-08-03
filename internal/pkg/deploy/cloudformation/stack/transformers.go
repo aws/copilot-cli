@@ -10,7 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -28,11 +33,6 @@ const (
 	defaultWritePermission = false
 )
 
-// Default value for Sidecar port.
-const (
-	defaultSidecarPort = "80"
-)
-
 // Min and Max values for task ephemeral storage in GiB.
 const (
 	ephemeralMinValueGiB = 21
@@ -43,6 +43,16 @@ const (
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
 	capacityProviderFargate     = "FARGATE"
+)
+
+// Time interval options.
+const (
+	retentionMinValueSeconds = 0
+	retentionMaxValueSeconds = 1209600
+	delayMinValueSeconds     = 0
+	delayMaxValueSeconds     = 900
+	timeoutMinValueSeconds   = 0
+	timeoutMaxValueSeconds   = 43200
 )
 
 var (
@@ -77,6 +87,17 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 		if err := validateSidecarDependsOn(*config, name, s); err != nil {
 			return nil, err
 		}
+
+		entrypoint, err := convertEntryPoint(config.EntryPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		command, err := convertCommand(config.Command)
+		if err != nil {
+			return nil, err
+		}
+
 		mp := convertSidecarMountPoints(config.MountPoints)
 
 		sidecars = append(sidecars, &template.SidecarOpts{
@@ -91,6 +112,8 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 			MountPoints:  mp,
 			DockerLabels: config.DockerLabels,
 			DependsOn:    config.DependsOn,
+			EntryPoint:   entrypoint,
+			Command:      command,
 		})
 	}
 	return sidecars, nil
@@ -130,8 +153,7 @@ func convertImageDependsOn(s convertSidecarOpts) (map[string]string, error) {
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
 func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	if s == nil {
-		// default port for sidecar container to be 80.
-		return aws.String(defaultSidecarPort), nil, nil
+		return nil, nil, nil
 	}
 	portProtocol := strings.Split(*s, "/")
 	switch len(portProtocol) {
@@ -262,6 +284,7 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
 		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
 		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
+		GracePeriod:        aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 	}
 	if hc.HealthCheckArgs.Path != nil {
 		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
@@ -276,6 +299,9 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	}
 	if hc.HealthCheckArgs.Timeout != nil {
 		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
+	}
+	if hc.HealthCheckArgs.GracePeriod != nil {
+		opts.GracePeriod = aws.Int64(int64(hc.HealthCheckArgs.GracePeriod.Seconds()))
 	}
 	return opts
 }
@@ -573,4 +599,200 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 		return nil, fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	return out, nil
+}
+
+func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
+	if p == nil || len(p.Topics) == 0 {
+		return nil, nil
+	}
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return nil, fmt.Errorf("find the partition for region %s", region)
+	}
+	var publishers template.PublishOpts
+	// convert the topics to template Topics
+	for _, topic := range p.Topics {
+		t, err := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
+		if err != nil {
+			return nil, err
+		}
+
+		publishers.Topics = append(publishers.Topics, t)
+	}
+
+	return &publishers, nil
+}
+
+func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc string) (*template.Topic, error) {
+	// topic should have a valid name and valid service worker names
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return nil, err
+	}
+	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
+		return nil, err
+	}
+
+	return &template.Topic{
+		Name:           t.Name,
+		AllowedWorkers: t.AllowedWorkers,
+		AccountID:      accountID,
+		Partition:      partition,
+		Region:         region,
+		App:            app,
+		Env:            env,
+		Svc:            svc,
+	}, nil
+}
+
+func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
+	if s == nil || s.Topics == nil {
+		return nil, nil
+	}
+
+	sqsEndpoint, err := endpoints.DefaultResolver().EndpointFor(endpoints.SqsServiceID, region)
+	if err != nil {
+		return nil, err
+	}
+
+	var subscriptions template.SubscribeOpts
+	for _, sb := range *s.Topics {
+		ts, err := convertTopicSubscription(sb, validTopicARNs, sqsEndpoint.URL, accountID, app, env, svc)
+		if err != nil {
+			return nil, err
+		}
+
+		subscriptions.Topics = append(subscriptions.Topics, ts)
+	}
+	queue, err := convertQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+	subscriptions.Queue = queue
+
+	return &subscriptions, nil
+}
+
+func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
+	err := validateTopicSubscription(t, validTopicARNs, app, env)
+	if err != nil {
+		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+	}
+	queue, err := convertQueue(t.Queue, url, accountID, app, env, svc)
+	if err != nil {
+		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+	}
+
+	return &template.TopicSubscription{
+		Name:    aws.String(t.Name),
+		Service: aws.String(t.Service),
+		Queue:   queue,
+	}, nil
+}
+
+func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
+	if q == nil {
+		return nil, nil
+	}
+	retention, err := convertRetention(q.Retention)
+	if err != nil {
+		return nil, fmt.Errorf(" `retention` %w", err)
+	}
+	delay, err := convertDelay(q.Delay)
+	if err != nil {
+		return nil, fmt.Errorf("`delay` %w", err)
+	}
+	timeout, err := convertTimeout(q.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("`timeout` %w", err)
+	}
+	deadletter, err := convertDeadLetter(q.DeadLetter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &template.SQSQueue{
+		Retention:  retention,
+		Delay:      delay,
+		Timeout:    timeout,
+		DeadLetter: deadletter,
+		FIFO:       convertFIFO(q.FIFO),
+	}, nil
+}
+
+func convertTime(t *time.Duration, floor, ceiling time.Duration) (*int64, error) {
+	if t == nil {
+		return nil, nil
+	}
+
+	if err := validateTime(*t, floor, ceiling); err != nil {
+		return nil, err
+	}
+
+	return aws.Int64(int64(t.Seconds())), nil
+}
+
+func convertRetention(t *time.Duration) (*int64, error) {
+	return convertTime(t, retentionMinValueSeconds*time.Second, retentionMaxValueSeconds*time.Second)
+}
+
+func convertDelay(t *time.Duration) (*int64, error) {
+	return convertTime(t, delayMinValueSeconds*time.Second, delayMaxValueSeconds*time.Second)
+}
+
+func convertTimeout(t *time.Duration) (*int64, error) {
+	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
+}
+
+func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
+	if f == nil || !aws.BoolValue(f.Enabled) {
+		return nil
+	}
+
+	return &template.FIFOQueue{
+		HighThroughput: aws.BoolValue(f.FIFO.HighThroughput),
+	}
+}
+
+func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
+	if d == nil {
+		return nil, nil
+	}
+	if err := validateDeadLetter(d); err != nil {
+		return nil, err
+	}
+
+	return &template.DeadLetterQueue{
+		Tries: d.Tries,
+	}, nil
+}
+
+func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
+	if len(nameToS3URL) == 0 {
+		return nil, nil, nil
+	}
+
+	s3ObjectKeys = make(map[string]*string)
+	for fname, s3url := range nameToS3URL {
+		bucketName, key, err := s3.ParseURL(s3url)
+		if err != nil {
+			return nil, nil, err
+		}
+		s3ObjectKeys[fname] = &key
+		bucket = &bucketName
+	}
+	return
+}
+
+func convertAppInformation(app deploy.AppInformation) (delegationRole *string, dnsName *string) {
+	role := app.DNSDelegationRole()
+	if role != "" {
+		delegationRole = &role
+	}
+
+	dns := app.DNSName
+	if dns != "" {
+		dnsName = &dns
+	}
+
+	return
 }

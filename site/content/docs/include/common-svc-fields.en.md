@@ -33,6 +33,11 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 
 <div class="separator"></div>
 
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+
+<div class="separator"></div>
+
 <a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
 If you specify a number:
 ```yaml
@@ -215,5 +220,25 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <div class="separator"></div>
 
+<a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
+The logging section contains log configuration parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
+
+<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
+Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
+
+<span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
+Optional. The configuration options to send to the FireLens log driver.
+
+<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
+Optional. Whether to include ECS metadata in logs. Defaults to `true`.
+
+<span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
+Optional. The secrets to pass to the log configuration.
+
+<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
+Optional. The full config file path in your custom Fluent Bit image.
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our 'prod' environment, and 2 copies using Fargate Spot capacity in our 'staging' environment.

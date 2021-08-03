@@ -38,16 +38,21 @@ const (
 	EnvParamAliasesKey               = "Aliases"
 
 	// Output keys.
-	EnvOutputVPCID               = "VpcId"
-	EnvOutputPublicSubnets       = "PublicSubnets"
-	EnvOutputPrivateSubnets      = "PrivateSubnets"
-	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
-	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
+	EnvOutputVPCID                   = "VpcId"
+	EnvOutputPublicSubnets           = "PublicSubnets"
+	EnvOutputPrivateSubnets          = "PrivateSubnets"
+	envOutputCFNExecutionRoleARN     = "CFNExecutionRoleARN"
+	envOutputManagerRoleKey          = "EnvironmentManagerRoleARN"
+	EnvParamServiceDiscoveryEndpoint = "ServiceDiscoveryEndpoint"
 
 	// Default parameter values
 	DefaultVPCCIDR            = "10.0.0.0/16"
 	DefaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
 	DefaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
+)
+
+var (
+	fmtServiceDiscoveryEndpoint = "%s.%s.local"
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -88,6 +93,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
+		AppName:                   e.in.App.Name,
 		DNSCertValidatorLambda:    dnsCertValidator,
 		DNSDelegationLambda:       dnsDelegation,
 		EnableLongARNFormatLambda: enableLongARN,
@@ -96,6 +102,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ImportVPC:                 e.in.ImportVPCConfig,
 		VPCConfig:                 vpcConf,
 		Version:                   e.in.Version,
+		LatestVersion:             deploy.LatestEnvTemplateVersion,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
 	}))
@@ -110,7 +117,7 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
-			ParameterValue: aws.String(e.in.AppName),
+			ParameterValue: aws.String(e.in.App.Name),
 		},
 		{
 			ParameterKey:   aws.String(envParamEnvNameKey),
@@ -118,15 +125,19 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-			ParameterValue: aws.String(e.in.ToolsAccountPrincipalARN),
+			ParameterValue: aws.String(e.in.App.AccountPrincipalARN),
 		},
 		{
 			ParameterKey:   aws.String(envParamAppDNSKey),
-			ParameterValue: aws.String(e.in.AppDNSName),
+			ParameterValue: aws.String(e.in.App.DNSName),
 		},
 		{
 			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
-			ParameterValue: aws.String(e.dnsDelegationRole()),
+			ParameterValue: aws.String(e.in.App.DNSDelegationRole()),
+		},
+		{
+			ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+			ParameterValue: aws.String(fmt.Sprintf(fmtServiceDiscoveryEndpoint, e.in.Name, e.in.App.Name)),
 		},
 	}, nil
 }
@@ -134,26 +145,14 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(e.in.AdditionalTags, map[string]string{
-		deploy.AppTagKey: e.in.AppName,
+		deploy.AppTagKey: e.in.App.Name,
 		deploy.EnvTagKey: e.in.Name,
 	})
 }
 
-func (e *EnvStackConfig) dnsDelegationRole() string {
-	if e.in.ToolsAccountPrincipalARN == "" || e.in.AppDNSName == "" {
-		return ""
-	}
-
-	appRole, err := arn.Parse(e.in.ToolsAccountPrincipalARN)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("arn:%s:iam::%s:role/%s", appRole.Partition, appRole.AccountID, dnsDelegationRoleName(e.in.AppName))
-}
-
 // StackName returns the name of the CloudFormation stack (based on the app and env names).
 func (e *EnvStackConfig) StackName() string {
-	return NameForEnv(e.in.AppName, e.in.Name)
+	return NameForEnv(e.in.App.Name, e.in.Name)
 }
 
 // ToEnv inspects an environment cloudformation stack and constructs an environment
@@ -171,7 +170,7 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 
 	return &config.Environment{
 		Name:             e.in.Name,
-		App:              e.in.AppName,
+		App:              e.in.App.Name,
 		Prod:             e.in.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,

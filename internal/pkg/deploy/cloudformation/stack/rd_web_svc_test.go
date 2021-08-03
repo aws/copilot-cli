@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -49,10 +51,11 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 
 func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 	type testInput struct {
-		mft *manifest.RequestDrivenWebService
-		env string
-		app string
-		rc  RuntimeConfig
+		mft     *manifest.RequestDrivenWebService
+		env     string
+		rc      RuntimeConfig
+		appInfo deploy.AppInformation
+		urls    map[string]string
 	}
 
 	testCases := map[string]struct {
@@ -66,8 +69,14 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			input: testInput{
 				mft: testRDWebServiceManifest,
 				env: testEnvName,
-				app: testAppName,
 				rc:  RuntimeConfig{},
+				appInfo: deploy.AppInformation{
+					Name: testAppName,
+				},
+				urls: map[string]string{
+					"custom-domain-app-runner": "mockURL1",
+					"aws-sdk-layer":            "mockURL2",
+				},
 			},
 
 			wantedStack: &RequestDrivenWebService{
@@ -83,6 +92,9 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 					imageConfig:    testRDWebServiceManifest.ImageConfig,
 				},
 				manifest: testRDWebServiceManifest,
+				app: deploy.AppInformation{
+					Name: testAppName,
+				},
 			},
 		},
 	}
@@ -95,7 +107,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			stack, err := NewRequestDrivenWebService(
 				tc.input.mft,
 				tc.input.env,
-				tc.input.app,
+				tc.input.appInfo,
 				tc.input.rc,
 			)
 
@@ -108,6 +120,90 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			require.Equal(t, tc.wantedStack.manifest, stack.manifest)
 			require.Equal(t, tc.wantedStack.instanceConfig, stack.instanceConfig)
 			require.Equal(t, tc.wantedStack.imageConfig, stack.imageConfig)
+			require.Equal(t, tc.wantedStack.customResourceS3URL, stack.customResourceS3URL)
+			require.NotNil(t, stack.addons)
+			require.NotNil(t, stack.parser)
+		})
+	}
+}
+
+func TestRequestDrivenWebService_NewRequestDrivenWebServiceWithAlias(t *testing.T) {
+	type testInput struct {
+		mft     *manifest.RequestDrivenWebService
+		env     string
+		rc      RuntimeConfig
+		appInfo deploy.AppInformation
+		urls    map[string]string
+	}
+
+	testCases := map[string]struct {
+		input            testInput
+		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
+
+		wantedStack *RequestDrivenWebService
+		wantedError error
+	}{
+		"should return RequestDrivenWebService": {
+			input: testInput{
+				mft: testRDWebServiceManifest,
+				env: testEnvName,
+				rc:  RuntimeConfig{},
+				appInfo: deploy.AppInformation{
+					Name: testAppName,
+				},
+				urls: map[string]string{
+					"custom-domain-app-runner": "mockURL1",
+					"aws-sdk-layer":            "mockURL2",
+				},
+			},
+
+			wantedStack: &RequestDrivenWebService{
+				appRunnerWkld: &appRunnerWkld{
+					wkld: &wkld{
+						name:  aws.StringValue(testRDWebServiceManifest.Name),
+						env:   testEnvName,
+						app:   testAppName,
+						rc:    RuntimeConfig{},
+						image: testRDWebServiceManifest.ImageConfig,
+					},
+					instanceConfig: testRDWebServiceManifest.InstanceConfig,
+					imageConfig:    testRDWebServiceManifest.ImageConfig,
+				},
+				manifest: testRDWebServiceManifest,
+				app: deploy.AppInformation{
+					Name: testAppName,
+				},
+				customResourceS3URL: map[string]string{
+					"custom-domain-app-runner": "mockURL1",
+					"aws-sdk-layer":            "mockURL2",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			stack, err := NewRequestDrivenWebServiceWithAlias(
+				tc.input.mft,
+				tc.input.env,
+				tc.input.appInfo,
+				tc.input.rc,
+				tc.input.urls,
+			)
+
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedStack.name, stack.name)
+			require.Equal(t, tc.wantedStack.env, stack.env)
+			require.Equal(t, tc.wantedStack.app, stack.app)
+			require.Equal(t, tc.wantedStack.rc, stack.rc)
+			require.Equal(t, tc.wantedStack.image, stack.image)
+			require.Equal(t, tc.wantedStack.manifest, stack.manifest)
+			require.Equal(t, tc.wantedStack.instanceConfig, stack.instanceConfig)
+			require.Equal(t, tc.wantedStack.imageConfig, stack.imageConfig)
+			require.Equal(t, tc.wantedStack.customResourceS3URL, stack.customResourceS3URL)
 			require.NotNil(t, stack.addons)
 			require.NotNil(t, stack.parser)
 		})
@@ -116,9 +212,11 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 
 func TestRequestDrivenWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
-		wantedTemplate   string
-		wantedError      error
+		inCustomResourceURLs map[string]string
+		inManifest           func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService
+		mockDependencies     func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
+		wantedTemplate       string
+		wantedError          error
 	}{
 		"should throw an error if addons template cannot be parsed": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
@@ -128,6 +226,33 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				c.wkld.addons = addons
 			},
 			wantedError: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")), // TODO
+		},
+		"should be able to parse custom resource URLs when alias is enabled": {
+			inManifest: func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				manifest.Alias = aws.String("convex.domain.com")
+				return manifest
+			},
+			inCustomResourceURLs: map[string]string{
+				template.AppRunnerCustomDomainLambdaFileName: "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
+				template.AWSSDKLayerFileName:                 "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
+			},
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
+				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
+				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
+				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+					Variables:          c.manifest.Variables,
+					Tags:               c.manifest.Tags,
+					EnableHealthCheck:  true,
+					Alias:              aws.String("convex.domain.com"),
+					ScriptBucketName:   &mockBucket,
+					CustomDomainLambda: &mockCustomDomainLambda,
+					AWSSDKLayer:        aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				c.parser = mockParser
+				c.wkld.addons = addons
+			},
+			wantedTemplate: "template",
 		},
 		"should parse template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
@@ -183,6 +308,22 @@ Outputs:
 			},
 			wantedError: errors.New("parsing error"),
 		},
+		"should return error if a custom resource url cannot be parsed when alias is enabled": {
+			inManifest: func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				manifest.Alias = aws.String("convex.domain.com")
+				return manifest
+			},
+			inCustomResourceURLs: map[string]string{
+				template.AppRunnerCustomDomainLambdaFileName: "such-a-weird-url",
+			},
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
+				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
+				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				c.parser = mockParser
+				c.wkld.addons = addons
+			},
+			wantedError: errors.New("cannot parse S3 URL such-a-weird-url into bucket name and key"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -190,6 +331,11 @@ Outputs:
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+
+			mft := *testRDWebServiceManifest
+			if tc.inManifest != nil {
+				mft = tc.inManifest(mft)
+			}
 			conf := &RequestDrivenWebService{
 				appRunnerWkld: &appRunnerWkld{
 					wkld: &wkld{
@@ -201,11 +347,14 @@ Outputs:
 								RepoURL:  testImageRepoURL,
 								ImageTag: testImageTag,
 							},
+							AccountID: "0123456789012",
+							Region:    "us-west-2",
 						},
 					},
-					healthCheckConfig: testRDWebServiceManifest.HealthCheckConfiguration,
+					healthCheckConfig: mft.HealthCheckConfiguration,
 				},
-				manifest: testRDWebServiceManifest,
+				manifest:            &mft,
+				customResourceS3URL: tc.inCustomResourceURLs,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 

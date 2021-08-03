@@ -115,6 +115,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
+	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	if err != nil {
+		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
+	}
 
 	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
 	if err != nil {
@@ -151,30 +155,44 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			aliases = append(aliases, albAlias)
 		}
 	}
+
+	var deregistrationDelay *int64 = aws.Int64(60)
+	if s.manifest.RoutingRule.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
+	}
+
+	var allowedSourceIPs []string
+	if s.manifest.AllowedSourceIps != nil {
+		allowedSourceIPs = *s.manifest.AllowedSourceIps
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		Variables:           s.manifest.Variables,
-		Secrets:             s.manifest.Secrets,
-		Aliases:             aliases,
-		NestedStack:         outputs,
-		Sidecars:            sidecars,
-		LogConfig:           convertLogging(s.manifest.Logging),
-		DockerLabels:        s.manifest.ImageConfig.DockerLabels,
-		Autoscaling:         autoscaling,
-		CapacityProviders:   capacityProviders,
-		DesiredCountOnSpot:  desiredCountOnSpot,
-		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:        manifest.LoadBalancedWebServiceType,
-		HealthCheck:         s.manifest.ImageConfig.HealthCheckOpts(),
-		HTTPHealthCheck:     convertHTTPHealthCheck(&s.manifest.HealthCheck),
-		AllowedSourceIps:    s.manifest.AllowedSourceIps,
-		RulePriorityLambda:  rulePriorityLambda.String(),
-		DesiredCountLambda:  desiredCountLambda.String(),
-		EnvControllerLambda: envControllerLambda.String(),
-		Storage:             storage,
-		Network:             convertNetworkConfig(s.manifest.Network),
-		EntryPoint:          entrypoint,
-		Command:             command,
-		DependsOn:           dependencies,
+		Variables:                s.manifest.Variables,
+		Secrets:                  s.manifest.Secrets,
+		Aliases:                  aliases,
+		NestedStack:              outputs,
+		Sidecars:                 sidecars,
+		LogConfig:                convertLogging(s.manifest.Logging),
+		DockerLabels:             s.manifest.ImageConfig.DockerLabels,
+		Autoscaling:              autoscaling,
+		CapacityProviders:        capacityProviders,
+		DesiredCountOnSpot:       desiredCountOnSpot,
+		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:             manifest.LoadBalancedWebServiceType,
+		HealthCheck:              s.manifest.ImageConfig.HealthCheckOpts(),
+		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.HealthCheck),
+		DeregistrationDelay:      deregistrationDelay,
+		AllowedSourceIps:         allowedSourceIPs,
+		RulePriorityLambda:       rulePriorityLambda.String(),
+		DesiredCountLambda:       desiredCountLambda.String(),
+		EnvControllerLambda:      envControllerLambda.String(),
+		Storage:                  storage,
+		Network:                  convertNetworkConfig(s.manifest.Network),
+		EntryPoint:               entrypoint,
+		Command:                  command,
+		DependsOn:                dependencies,
+		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
+		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
+		Publish:                  publishers,
 	})
 	if err != nil {
 		return "", err
@@ -195,10 +213,13 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, 
 	if mftTargetContainer != nil {
 		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
 		if ok {
+			if sidecar.Port == nil {
+				return nil, nil, fmt.Errorf("target container %s doesn't expose any port", *mftTargetContainer)
+			}
 			targetContainer = mftTargetContainer
 			targetPort = sidecar.Port
 		} else {
-			return nil, nil, fmt.Errorf("target container %s doesn't exist", *s.manifest.TargetContainer)
+			return nil, nil, fmt.Errorf("target container %s doesn't exist", *mftTargetContainer)
 		}
 	}
 	return

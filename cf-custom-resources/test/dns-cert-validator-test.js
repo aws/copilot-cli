@@ -9,6 +9,8 @@ describe("DNS Validated Certificate Handler", () => {
   const handler = require("../lib/dns-cert-validator");
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
+  const LogGroup = "/aws/lambda/testLambda";
+  const LogStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
@@ -20,20 +22,25 @@ describe("DNS Validated Certificate Handler", () => {
   const testRootDNSRole = "mockRole";
   const testAliases = `{
     "frontend": ["v1.${testAppName}.${testDomainName}", "foobar.com"],
-    "backend": ["v2.${testDomainName}"]
+    "backend": ["v2.${testDomainName}", "${testEnvName}.${testAppName}.${testDomainName}"]
   }`;
   const testUpdatedAliases = `{
     "frontend": ["v1.${testAppName}.${testDomainName}"],
-    "backend": ["v2.${testDomainName}"]
+    "backend": ["v2.${testDomainName}", "${testEnvName}.${testAppName}.${testDomainName}"]
   }`;
-  const testSANs = ["*.test.myapp.example.com", "v1.myapp.example.com", "v2.example.com"];
+  const testSANs = [
+    "test.myapp.example.com",
+    "*.test.myapp.example.com",
+    "v1.myapp.example.com",
+    "v2.example.com",
+  ];
   const testCopilotTags = [
     { Key: "copilot-application", Value: testAppName },
     { Key: "copilot-environment", Value: testEnvName },
   ];
   const testCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-123456789012";
-    const testOtherCertificateArn =
+  const testOtherCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/1234-1234-123456789012-12345678-1234";
   const testRRName = "_3639ac514e785e898d2646601fa951d5.example.com";
   const testRRValue1 = "_x1.acm-validations.aws";
@@ -217,6 +224,8 @@ describe("DNS Validated Certificate Handler", () => {
 
   beforeEach(() => {
     handler.withDefaultResponseURL(ResponseURL);
+    handler.withDefaultLogGroup(LogGroup);
+    handler.withDefaultLogStream(LogStream);
     handler.withWaiter(function () {
       // Mock waiter is merely a self-fulfilling promise
       return {
@@ -243,7 +252,8 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type undefined"
+          body.Reason ===
+            "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -271,7 +281,10 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type " + bogusType
+          body.Reason ===
+            "Unsupported request type " +
+              bogusType +
+              " (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -354,7 +367,7 @@ describe("DNS Validated Certificate Handler", () => {
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
         },
-        OldResourceProperties: {}
+        OldResourceProperties: {},
       })
       .expectResolve(() => {
         sinon.assert.calledWith(
@@ -414,7 +427,9 @@ describe("DNS Validated Certificate Handler", () => {
   test("Update operation quits early if cert doesn't change", () => {
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return (
+          body.Status === "SUCCESS" && body.PhysicalResourceId === "mockCertArn"
+        );
       })
       .reply(200);
 
@@ -422,6 +437,7 @@ describe("DNS Validated Certificate Handler", () => {
       .event({
         RequestType: "Update",
         RequestId: testRequestId,
+        PhysicalResourceId: "mockCertArn",
         ResourceProperties: {
           AppName: testAppName,
           EnvName: testEnvName,
@@ -503,6 +519,7 @@ describe("DNS Validated Certificate Handler", () => {
           sinon.match({
             DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
             SubjectAlternativeNames: [
+              `${testEnvName}.${testAppName}.${testDomainName}`,
               `*.${testEnvName}.${testAppName}.${testDomainName}`,
             ],
             ValidationMethod: "DNS",
@@ -794,7 +811,7 @@ describe("DNS Validated Certificate Handler", () => {
       CertificateSummaryList: [
         {
           DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-          CertificateArn: testCertificateArn
+          CertificateArn: testCertificateArn,
         },
       ],
       NextToken: "some token",

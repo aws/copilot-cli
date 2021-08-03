@@ -11,15 +11,18 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -57,19 +60,21 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient     templater
-	initAddonsClient func(*packageSvcOpts) error // Overridden in tests.
-	ws               wsSvcReader
-	store            store
-	appCFN           appResourcesGetter
-	stackWriter      io.Writer
-	paramsWriter     io.Writer
-	addonsWriter     io.Writer
-	fs               afero.Fs
-	runner           runner
-	sel              wsSelector
-	prompt           prompter
-	stackSerializer  func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	addonsClient      templater
+	initAddonsClient  func(*packageSvcOpts) error // Overridden in tests.
+	ws                wsSvcReader
+	store             store
+	appCFN            appResourcesGetter
+	stackWriter       io.Writer
+	paramsWriter      io.Writer
+	addonsWriter      io.Writer
+	fs                afero.Fs
+	runner            runner
+	sel               wsSelector
+	prompt            prompter
+	identity          identityService
+	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	newEndpointGetter func(app, env string) (endpointGetter, error)
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -96,6 +101,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		runner:           exec.NewCmd(),
 		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:           prompter,
+		identity:         identity.New(sess),
 		stackWriter:      os.Stdout,
 		paramsWriter:     ioutil.Discard,
 		addonsWriter:     ioutil.Discard,
@@ -110,7 +116,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
-				if err := validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), app, env.Name, appVersionGetter); err != nil {
+				if err := validateAliasAndAppVersion(aws.StringValue(t.Name), aws.StringValue(t.Alias), app, env.Name, appVersionGetter); err != nil {
 					return nil, err
 				}
 				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)
@@ -124,7 +130,47 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				}
 			}
 		case *manifest.RequestDrivenWebService:
-			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, app.Name, rc)
+			caller, err := opts.identity.Get()
+			if err != nil {
+				return nil, fmt.Errorf("get identity: %w", err)
+			}
+			appInfo := deploy.AppInformation{
+				Name:                env.App,
+				DNSName:             app.Domain,
+				AccountPrincipalARN: caller.RootUserARN,
+			}
+			if t.Alias == nil {
+				serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc)
+				if err != nil {
+					return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
+				}
+				break
+			}
+
+			if err = validateRDSvcAliasAndAppVersion(opts.name, aws.StringValue(t.Alias), env.Name, app, appVersionGetter); err != nil {
+				return nil, err
+			}
+
+			resources, err := opts.appCFN.GetAppResourcesByRegion(app, env.Region)
+			if err != nil {
+				return nil, fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
+			}
+			urls, err := uploadCustomResources(&uploadCustomResourcesOpts{
+				uploader: template.New(),
+				newS3Uploader: func() (Uploader, error) {
+					envRegion := env.Region
+					sess, err := p.DefaultWithRegion(env.Region)
+					if err != nil {
+						return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+					}
+					s3Client := s3.New(sess)
+					return s3Client, nil
+				},
+			}, resources)
+			if err != nil {
+				return nil, err
+			}
+			serializer, err = stack.NewRequestDrivenWebServiceWithAlias(t, env.Name, appInfo, rc, urls)
 			if err != nil {
 				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
 			}
@@ -137,6 +183,17 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)
 		}
 		return serializer, nil
+	}
+	opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
+		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         app,
+			Env:         env,
+			ConfigStore: store,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("new env describer for environment %s in app %s: %v", env, app, err)
+		}
+		return d, nil
 	}
 	return opts, nil
 }
@@ -280,9 +337,21 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	rc := stack.RuntimeConfig{
-		AdditionalTags: app.Tags,
+	endpointGetter, err := o.newEndpointGetter(o.appName, o.envName)
+	if err != nil {
+		return nil, err
 	}
+	endpoint, err := endpointGetter.ServiceDiscoveryEndpoint()
+	if err != nil {
+		return nil, err
+	}
+	rc := stack.RuntimeConfig{
+		AdditionalTags:           app.Tags,
+		ServiceDiscoveryEndpoint: endpoint,
+		AccountID:                app.AccountID,
+		Region:                   env.Region,
+	}
+
 	if imgNeedsBuild {
 		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
 		if err != nil {

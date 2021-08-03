@@ -38,6 +38,7 @@ type BackendServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       *NetworkConfig            `yaml:"network"`
+	Publish       *PublishConfig            `yaml:"publish"`
 }
 
 // NewBackendService applies the props to a default backend service configuration with
@@ -60,7 +61,6 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	content, err := s.parser.Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
-		"dirName":    tplDirName,
 	}))
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (s *BackendService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
+// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory.
 func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)
 }

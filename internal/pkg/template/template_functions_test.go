@@ -237,3 +237,94 @@ func TestGenerateMountPointJSON(t *testing.T) {
 	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{}), "nil list of arguments should render ")
 	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{{SourceVolume: aws.String("fromEFS")}}), "empty paths should not get injected")
 }
+
+func TestGenerateSNSJSON(t *testing.T) {
+	testCases := map[string]struct {
+		in     []*Topic
+		wanted string
+	}{
+		"JSON should render correctly": {
+			in: []*Topic{
+				{
+					Name:      aws.String("tests"),
+					AccountID: "123456789012",
+					Region:    "us-west-2",
+					Partition: "aws",
+					App:       "appName",
+					Env:       "envName",
+					Svc:       "svcName",
+				},
+			},
+			wanted: `{"tests":"arn:aws:sns:us-west-2:123456789012:appName-envName-svcName-tests"}`,
+		},
+		"Topics with no names show empty": {
+			in: []*Topic{
+				{
+					AccountID: "123456789012",
+					Region:    "us-west-2",
+					Partition: "aws",
+					App:       "appName",
+					Env:       "envName",
+					Svc:       "svcName",
+				},
+			},
+			wanted: `{}`,
+		},
+		"nil list of arguments should render": {
+			in:     []*Topic{},
+			wanted: `{}`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, generateSNSJSON(tc.in))
+		})
+	}
+}
+
+func TestGenerateQueueURIJSON(t *testing.T) {
+	testCases := map[string]struct {
+		in               []*TopicSubscription
+		wanted           string
+		wantedSubstring  string
+		wantedSubstring2 string
+	}{
+		"JSON should render correctly": {
+			in: []*TopicSubscription{
+				{
+					Name:    aws.String("tests"),
+					Service: aws.String("bestsvc"),
+					Queue: &SQSQueue{
+						Delay: aws.Int64(5),
+					},
+				},
+			},
+			wantedSubstring:  `"eventsQueue":"${mainURL}"`,
+			wantedSubstring2: `"bestsvcTestsEventsQueue":"${bestsvctestsURL}"`,
+		},
+		"Topics with no names show empty but main queue still populates": {
+			in: []*TopicSubscription{
+				{
+					Service: aws.String("bestSvc"),
+				},
+			},
+			wanted: `{"eventsQueue":"${mainURL}"}`,
+		},
+		"nil list of arguments should render with main queue": {
+			in:     []*TopicSubscription{},
+			wanted: `{"eventsQueue":"${mainURL}"}`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.wanted != "" {
+				require.Equal(t, generateQueueURIJSON(tc.in), tc.wanted)
+			} else {
+				require.Contains(t, generateQueueURIJSON(tc.in), tc.wantedSubstring)
+				require.Contains(t, generateQueueURIJSON(tc.in), tc.wantedSubstring2)
+			}
+		})
+	}
+}

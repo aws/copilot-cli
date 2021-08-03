@@ -56,36 +56,36 @@ This won't create your pipeline, but it will create some local files that will b
 Just like your service has a simple manifest file, so does your pipeline. After you run `pipeline init`, two files are created: `pipeline.yml` and `buildspec.yml`, both in your `copilot/` directory. If you poke in, you'll see that the `pipeline.yml` looks something like this (for a service called "api-frontend" with two environments, "test" and "prod"):
 
 ```yaml
-# This YAML file defines the relationship and deployment ordering of your environments.
+# The manifest for the "pipeline-ecs-kudos-kohidave-demo-api-frontend" pipeline.
+# This YAML file defines your pipeline: the source repository it tracks and the order of the environments to deploy to.
+# For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
-# The name of the pipeline
+# The name of the pipeline.
 name: pipeline-ecs-kudos-kohidave-demo-api-frontend
 
-# The version of the schema used in this template
+# The version of the schema used in this template.
 version: 1
 
-# This section defines the source artifacts.
+# This section defines your source, changes to which trigger your pipeline.
 source:
   # The name of the provider that is used to store the source artifacts.
+  # (i.e. GitHub, Bitbucket, CodeCommit)
   provider: GitHub
-  # Additional properties that further specifies the exact location
-  # the artifacts should be sourced from. For example, the GitHub provider
-  # has the following properties: repository, branch.
+  # Additional properties that further specify the location of the artifacts.
   properties:
     branch: main
     repository: https://github.com/kohidave/demo-api-frontend
     # Optional: specify the name of an existing CodeStar Connections connection.
     # connection_name: a-connection
 
-# The deployment section defines the order the pipeline will deploy
-# to your environments.
+# This section defines the order of the environments your pipeline will deploy to.
 stages:
-    - # The name of the environment to deploy to.
+    - # The name of the environment.
       name: test
       test_commands:
         - make test
         - echo "woo! Tests passed"
-    - # The name of the environment to deploy to.
+    - # The name of the environment.
       name: prod
       # requires_approval: true
 ```

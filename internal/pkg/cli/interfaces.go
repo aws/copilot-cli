@@ -306,8 +306,15 @@ type zipAndUploader interface {
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
+type Uploader interface {
+	zipAndUploader
+	Upload(bucket, key string, file s3.NamedBinary) (string, error)
+}
+
 type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
+	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
+	UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {
@@ -406,6 +413,10 @@ type envDescriber interface {
 
 type versionGetter interface {
 	Version() (string, error)
+}
+
+type endpointGetter interface {
+	ServiceDiscoveryEndpoint() (string, error)
 }
 
 type envTemplater interface {
@@ -568,8 +579,9 @@ type runningTaskSelector interface {
 	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
 }
 
-type dockerEngineValidator interface {
+type dockerEngine interface {
 	CheckDockerEngineRunning() error
+	RedirectPlatform(string) (*string, error)
 }
 
 type codestar interface {

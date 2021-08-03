@@ -885,11 +885,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), &deploy.CreateEnvironmentInput{
-					Name:                     "test",
-					AppName:                  "phonetool",
-					ToolsAccountPrincipalARN: "some arn",
-					CustomResourcesURLs:      map[string]string{"mockCustomResource": "mockURL"},
-					Version:                  deploy.LatestEnvTemplateVersion,
+					Name: "test",
+					App: deploy.AppInformation{
+						Name:                "phonetool",
+						AccountPrincipalARN: "some arn",
+					},
+					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
+					Version:             deploy.LatestEnvTemplateVersion,
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",

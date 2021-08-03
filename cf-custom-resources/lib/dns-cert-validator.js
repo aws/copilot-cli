@@ -10,6 +10,8 @@ const defaultSleep = function (ms) {
 
 // These are used for test purposes only
 let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
 let waiter;
 let sleep = defaultSleep;
 let random = Math.random;
@@ -106,11 +108,12 @@ const requestCertificate = async function (
 ) {
   const crypto = require("crypto");
   const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
-  // For backward compatiblity.
-  const sansToUse = [`*.${certDomain}`];
+  // For backward compatiblity, and make sure the SANs we use are unique.
+  const uniqueSansToUse = new Set([certDomain, `*.${certDomain}`]);
   for (const alias of aliases) {
-    sansToUse.push(alias);
+    uniqueSansToUse.add(alias);
   }
+  const sansToUse = [...uniqueSansToUse];
   const reqCertResponse = await acm
     .requestCertificate({
       DomainName: certDomain,
@@ -136,8 +139,7 @@ const requestCertificate = async function (
 
   let options;
   let attempt;
-  // We need to count the domain name itself.
-  const expectedValidationOptionsNum = sansToUse.length + 1;
+  const expectedValidationOptionsNum = sansToUse.length;
   for (attempt = 0; attempt < maxAttempts; attempt++) {
     const { Certificate } = await acm
       .describeCertificate({
@@ -523,7 +525,7 @@ const clients = function (region, rootDnsRole) {
  */
 exports.certificateRequestHandler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  var physicalResourceId = event.PhysicalResourceId;
   var certificateArn;
   const props = event.ResourceProperties;
   const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
@@ -589,7 +591,6 @@ exports.certificateRequestHandler = async function (event, context) {
         responseData.Arn = physicalResourceId = certificateArn;
         break;
       case "Delete":
-        physicalResourceId = event.PhysicalResourceId;
         // If the resource didn't create correctly, the physical resource ID won't be the
         // certificate ARN, so don't try to delete it in that case.
         if (physicalResourceId.startsWith("arn:")) {
@@ -614,7 +615,9 @@ exports.certificateRequestHandler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}/${
+        defaultLogStream || context.logStreamName
+      })`
     );
   }
 };
@@ -662,4 +665,18 @@ exports.withRandom = function (r) {
  */
 exports.withMaxAttempts = function (ma) {
   maxAttempts = ma;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };

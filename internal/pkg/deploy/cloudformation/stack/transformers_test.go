@@ -21,23 +21,24 @@ func Test_convertSidecar(t *testing.T) {
 	mockCredsParam := aws.String("mockCredsParam")
 	circularDependencyErr := fmt.Errorf("circular container dependency chain includes the following containers: ")
 	testCases := map[string]struct {
-		inPort            string
+		inPort            *string
 		inEssential       bool
 		inLabels          map[string]string
 		inDependsOn       map[string]string
 		inImg             manifest.Image
+		inImageOverride   manifest.ImageOverride
 		circDepContainers []string
 
 		wanted    *template.SidecarOpts
 		wantedErr error
 	}{
 		"invalid port": {
-			inPort: "b/a/d/P/o/r/t",
+			inPort: aws.String("b/a/d/P/o/r/t"),
 
 			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
 		},
 		"good port without protocol": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
@@ -51,7 +52,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"good port with protocol": {
-			inPort:      "2000/udp",
+			inPort:      aws.String("2000/udp"),
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
@@ -66,7 +67,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"invalid container dependency due to circularly depending on itself": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"foo": "start",
@@ -75,7 +76,7 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: fmt.Errorf("container foo cannot depend on itself"),
 		},
 		"invalid container dependency due to circularly depending on another container": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "start",
@@ -89,7 +90,7 @@ func Test_convertSidecar(t *testing.T) {
 			circDepContainers: []string{"frontend", "foo"},
 		},
 		"invalid container dependency status": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "never",
@@ -97,7 +98,7 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: errInvalidDependsOnStatus,
 		},
 		"invalid essential container dependency status": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "complete",
@@ -105,7 +106,7 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: errEssentialContainerStatus,
 		},
 		"good essential container dependencies": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
 				"frontend": "start",
@@ -125,7 +126,6 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"good nonessential container dependencies": {
-			inPort:      "2000",
 			inEssential: false,
 			inDependsOn: map[string]string{
 				"frontend": "start",
@@ -133,7 +133,6 @@ func Test_convertSidecar(t *testing.T) {
 
 			wanted: &template.SidecarOpts{
 				Name:       aws.String("foo"),
-				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockMap,
@@ -145,7 +144,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"specify essential as false": {
-			inPort:      "2000",
+			inPort:      aws.String("2000"),
 			inEssential: false,
 			inLabels: map[string]string{
 				"com.amazonaws.ecs.copilot.sidecar.description": "wow",
@@ -164,19 +163,96 @@ func Test_convertSidecar(t *testing.T) {
 				},
 			},
 		},
+		"do not specify image override": {
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: nil,
+				Command:    nil,
+			},
+		},
+		"specify entrypoint as a string": {
+			inImageOverride: manifest.ImageOverride{
+				EntryPoint: &manifest.EntryPointOverride{String: aws.String("bin")},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: []string{"bin"},
+				Command:    nil,
+			},
+		},
+		"specify entrypoint as a string slice": {
+			inImageOverride: manifest.ImageOverride{
+				EntryPoint: &manifest.EntryPointOverride{StringSlice: []string{"bin", "arg"}},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: []string{"bin", "arg"},
+				Command:    nil,
+			},
+		},
+		"specify command as a string": {
+			inImageOverride: manifest.ImageOverride{
+				Command: &manifest.CommandOverride{String: aws.String("arg")},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: nil,
+				Command:    []string{"arg"},
+			},
+		},
+		"specify command as a string slice": {
+			inImageOverride: manifest.ImageOverride{
+				Command: &manifest.CommandOverride{StringSlice: []string{"arg1", "arg2"}},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				EntryPoint: nil,
+				Command:    []string{"arg1", "arg2"},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			sidecar := map[string]*manifest.SidecarConfig{
 				"foo": {
-					CredsParam:   mockCredsParam,
-					Image:        mockImage,
-					Secrets:      mockMap,
-					Variables:    mockMap,
-					Essential:    aws.Bool(tc.inEssential),
-					Port:         aws.String(tc.inPort),
-					DockerLabels: tc.inLabels,
-					DependsOn:    tc.inDependsOn,
+					CredsParam:    mockCredsParam,
+					Image:         mockImage,
+					Secrets:       mockMap,
+					Variables:     mockMap,
+					Essential:     aws.Bool(tc.inEssential),
+					Port:          tc.inPort,
+					DockerLabels:  tc.inLabels,
+					DependsOn:     tc.inDependsOn,
+					ImageOverride: tc.inImageOverride,
 				},
 			}
 			got, err := convertSidecar(convertSidecarOpts{
@@ -471,8 +547,8 @@ func Test_convertAutoscaling(t *testing.T) {
 
 func Test_convertHTTPHealthCheck(t *testing.T) {
 	// These are used by reference to represent the output of the manifest.durationp function.
-	duration15Seconds := time.Duration(15 * time.Second)
-	duration60Seconds := time.Duration(60 * time.Second)
+	duration15Seconds := 15 * time.Second
+	duration60Seconds := 60 * time.Second
 	testCases := map[string]struct {
 		inputPath               *string
 		inputSuccessCodes       *string
@@ -480,6 +556,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		inputUnhealthyThreshold *int64
 		inputInterval           *time.Duration
 		inputTimeout            *time.Duration
+		inputGracePeriod        *time.Duration
 
 		wantedOpts template.HTTPHealthCheckOpts
 	}{
@@ -490,9 +567,11 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"just HealthyThreshold": {
@@ -502,10 +581,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:  "/",
 				HealthyThreshold: aws.Int64(5),
+				GracePeriod:      aws.Int64(60),
 			},
 		},
 		"just UnhealthyThreshold": {
@@ -515,10 +596,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: aws.Int64(5),
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/",
 				UnhealthyThreshold: aws.Int64(5),
+				GracePeriod:        aws.Int64(60),
 			},
 		},
 		"just Interval": {
@@ -528,10 +611,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           &duration15Seconds,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Interval:        aws.Int64(15),
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"just Timeout": {
@@ -541,10 +626,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            &duration15Seconds,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Timeout:         aws.Int64(15),
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"just SuccessCodes": {
@@ -554,10 +641,12 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
+			inputGracePeriod:        nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				SuccessCodes:    "200,301",
+				GracePeriod:     aws.Int64(60),
 			},
 		},
 		"all values changed in manifest": {
@@ -567,6 +656,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputUnhealthyThreshold: aws.Int64(3),
 			inputInterval:           &duration60Seconds,
 			inputTimeout:            &duration60Seconds,
+			inputGracePeriod:        &duration15Seconds,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
@@ -575,6 +665,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
 				Timeout:            aws.Int64(60),
+				GracePeriod:        aws.Int64(15),
 			},
 		},
 	}
@@ -590,6 +681,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 					UnhealthyThreshold: tc.inputUnhealthyThreshold,
 					Timeout:            tc.inputTimeout,
 					Interval:           tc.inputInterval,
+					GracePeriod:        tc.inputGracePeriod,
 				},
 			}
 			// WHEN
@@ -1362,6 +1454,329 @@ func Test_convertImageDependsOn(t *testing.T) {
 			} else {
 				require.Equal(t, got, tc.wanted)
 			}
+		})
+	}
+}
+
+func Test_convertPublish(t *testing.T) {
+	accountId := "123456789123"
+	partition := "aws"
+	region := "us-west-2"
+	app := "testapp"
+	env := "testenv"
+	svc := "hello"
+	testCases := map[string]struct {
+		inPublish *manifest.PublishConfig
+
+		wanted      *template.PublishOpts
+		wantedError error
+	}{
+		"empty publish": {
+			inPublish: &manifest.PublishConfig{},
+			wanted:    nil,
+		},
+		"publish with no topic names": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{},
+				},
+			},
+			wantedError: errMissingPublishTopicField,
+		},
+		"publish with no workers": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name: aws.String("topic1"),
+					},
+				},
+			},
+			wanted: &template.PublishOpts{
+				Topics: []*template.Topic{
+					{
+						Name:      aws.String("topic1"),
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
+					},
+				},
+			},
+		},
+		"publish with workers": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name:           aws.String("topic1"),
+						AllowedWorkers: []string{"worker1"},
+					},
+				},
+			},
+			wanted: &template.PublishOpts{
+				Topics: []*template.Topic{
+					{
+						Name:           aws.String("topic1"),
+						AllowedWorkers: []string{"worker1"},
+						AccountID:      accountId,
+						Partition:      partition,
+						Region:         region,
+						App:            app,
+						Env:            env,
+						Svc:            svc,
+					},
+				},
+			},
+		},
+		"invalid worker name": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name:           aws.String("topic1"),
+						AllowedWorkers: []string{"worker1~~@#$"},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errSvcNameBadFormat),
+		},
+		"invalid topic name": {
+			inPublish: &manifest.PublishConfig{
+				Topics: []manifest.Topic{
+					{
+						Name:           aws.String("topic1~~@#$"),
+						AllowedWorkers: []string{"worker1"},
+					},
+				},
+			},
+			wantedError: errInvalidPubSubTopicName,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertPublish(tc.inPublish, accountId, region, app, env, svc)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}
+
+func Test_convertSubscribe(t *testing.T) {
+	validTopics := []string{"arn:aws:sns:us-west-2:123456789123:app-env-svc-name", "arn:aws:sns:us-west-2:123456789123:app-env-svc-name2"}
+	accountId := "123456789123"
+	region := "us-west-2"
+	app := "app"
+	env := "env"
+	svc := "svc"
+	duration111Seconds := 111 * time.Second
+	duration5Days := 120 * time.Hour
+	testCases := map[string]struct {
+		inSubscribe *manifest.SubscribeConfig
+
+		wanted      *template.SubscribeOpts
+		wantedError error
+	}{
+		"empty subscription": {
+			inSubscribe: &manifest.SubscribeConfig{},
+			wanted:      nil,
+		},
+		"subscription with empty topic subscriptions": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPublishTopicField),
+		},
+		"valid subscribe": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+				Queue: &manifest.SQSQueue{
+					Retention: &duration111Seconds,
+					Delay:     &duration111Seconds,
+					Timeout:   &duration111Seconds,
+					DeadLetter: &manifest.DeadLetterQueue{
+						Tries: aws.Uint16(35),
+					},
+					FIFO: &manifest.FIFOOrBool{
+						Enabled: aws.Bool(true),
+						FIFO: manifest.FIFOQueue{
+							HighThroughput: aws.Bool(false),
+						},
+					},
+				},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+				Queue: &template.SQSQueue{
+					Retention: aws.Int64(111),
+					Delay:     aws.Int64(111),
+					Timeout:   aws.Int64(111),
+					DeadLetter: &template.DeadLetterQueue{
+						Tries: aws.Uint16(35),
+					},
+					FIFO: &template.FIFOQueue{
+						HighThroughput: false,
+					},
+				},
+			},
+		},
+		"valid subscribe with minimal queue": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+				Queue: &manifest.SQSQueue{},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+				Queue: &template.SQSQueue{},
+			},
+		},
+		"invalid topic name": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "t@p!c1~",
+						Service: "service1",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "t@p!c1~": %w`, errInvalidPubSubTopicName),
+		},
+		"invalid service name": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "topic1",
+						Service: "s#rv!ce1~",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errSvcNameBadFormat),
+		},
+		"topic not allowed": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "topic1",
+						Service: "svc",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errTopicSubscriptionNotAllowed),
+		},
+		"sneaky topic not allowed": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "sneakytopic",
+						Service: "svc-name",
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`invalid topic subscription "sneakytopic": %w`, errTopicSubscriptionNotAllowed),
+		},
+		"subscribe queue delay invalid": {
+			inSubscribe: &manifest.SubscribeConfig{
+				Topics: &[]manifest.TopicSubscription{
+					{
+						Name:    "name",
+						Service: "svc",
+					},
+				},
+				Queue: &manifest.SQSQueue{
+					Delay: &duration5Days,
+				},
+			},
+			wantedError: fmt.Errorf("`delay` must be between 0s and 15m0s"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertSubscribe(tc.inSubscribe, validTopics, accountId, region, app, env, svc)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, tc.wanted, got)
+			}
+		})
+	}
+}
+
+func Test_convertFIFO(t *testing.T) {
+	testCases := map[string]struct {
+		inFIFO *manifest.FIFOOrBool
+
+		wanted      *template.FIFOQueue
+		wantedError error
+	}{
+		"empty FIFO": {
+			inFIFO: &manifest.FIFOOrBool{},
+			wanted: nil,
+		},
+		"FIFO with enabled false": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(false),
+			},
+			wanted: nil,
+		},
+		"FIFO with enabled true and no high throughput": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: false,
+			},
+		},
+		"FIFO with enabled true and high throughput false": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+				FIFO: manifest.FIFOQueue{
+					HighThroughput: aws.Bool(false),
+				},
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: false,
+			},
+		},
+		"FIFO with enabled true and high throughput true": {
+			inFIFO: &manifest.FIFOOrBool{
+				Enabled: aws.Bool(true),
+				FIFO: manifest.FIFOQueue{
+					HighThroughput: aws.Bool(true),
+				},
+			},
+			wanted: &template.FIFOQueue{
+				HighThroughput: true,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := convertFIFO(tc.inFIFO)
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

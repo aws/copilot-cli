@@ -74,6 +74,7 @@ type ECSDeploymentStreamer struct {
 	deploymentCreationTime time.Time
 
 	subscribers   []chan ECSService
+	once          sync.Once
 	done          chan struct{}
 	isDone        bool
 	pastEventIDs  map[string]bool
@@ -143,7 +144,12 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		deployments = append(deployments, rollingDeploy)
 		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
 			// The deployment is done, notify that there is no need for another Fetch call beyond this point.
-			close(s.done)
+			// In stream.Stream, it's possible that both the <-Done() event is available as well as another Fetch()
+			// call. In order to guarantee that we don't try to close the same stream multiple times, we wrap it with a
+			// sync.Once.
+			s.once.Do(func() {
+				close(s.done)
+			})
 		}
 	}
 	var failureMsgs []string

@@ -121,4 +121,63 @@ Resources:
           Value: {{$value}}{{end}}{{end}}
 
 {{include "addons" . | indent 2}}
+{{if .Alias}}
+  CustomDomainFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: {{ .ScriptBucketName }}
+        S3Key: {{ .CustomDomainLambda }}
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt CustomResourceRole.Arn
+      Runtime: nodejs14.x
+      Layers:
+        - {{ .AWSSDKLayer }}
 
+  CustomDomainAction:
+      Metadata:
+        'aws:copilot:description': 'Associate the domain with the service as well as upserting the domain record and validation records'
+      DependsOn: CustomDomainFunction
+      Type: Custom::CustomDomainFunction
+      Properties:
+        ServiceToken: !GetAtt CustomDomainFunction.Arn
+        ServiceARN: !GetAtt Service.ServiceArn
+        CustomDomain: {{ .Alias }}
+        AppDNSRole: {{ .AppDNSDelegationRole }}
+        AppDNSName: {{ .AppDNSName }}
+
+  CustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: "DNSandACMAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "apprunner:AssociateCustomDomain"
+                  - "apprunner:DisassociateCustomDomain"
+                  - "apprunner:DescribeCustomDomains"
+                  - "sts:AssumeRole"
+                  - "route53:ChangeResourceRecordSets"
+                  - "route53:ListHostedZonesByName"
+                Resource:
+                  - "*"
+{{- end }}
+{{include "publish" . | indent 2}}

@@ -6,6 +6,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -287,6 +288,89 @@ count: 1`), nil)
 					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
 					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
 					return mockStackSerializer, nil
+				}
+				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
+					mockendpointGetter := mocks.NewMockendpointGetter(ctrl)
+					mockendpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(fmt.Sprintf("%s.%s.local", env, app), nil)
+					return mockendpointGetter, nil
+				}
+			},
+
+			wantedStack:  "mystack",
+			wantedParams: "myparams",
+		},
+		"writes request-driven web service template with custom resource": {
+			inVars: packageSvcVars{
+				appName: "ecs-kudos",
+				name:    "api",
+				envName: "test",
+				tag:     "1234",
+			},
+			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
+				mockStore := mocks.NewMockstore(ctrl)
+				mockStore.EXPECT().
+					GetEnvironment("ecs-kudos", "test").
+					Return(&config.Environment{
+						App:       "ecs-kudos",
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "1111",
+					}, nil)
+				mockApp := &config.Application{
+					Name:      "ecs-kudos",
+					AccountID: "1112",
+					Tags: map[string]string{
+						"owner": "boss",
+					},
+				}
+				mockStore.EXPECT().
+					GetApplication("ecs-kudos").
+					Return(mockApp, nil)
+
+				mockWs := mocks.NewMockwsSvcReader(ctrl)
+				mockWs.EXPECT().
+					ReadServiceManifest("api").
+					Return([]byte(`name: api
+type: Request-Driven Web Service
+image:
+  build: ./Dockerfile
+  port: 80
+http:
+  alias: 'hunter.com'
+cpu: 256
+memory: 512
+count: 1`), nil)
+
+				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
+				mockCfn.EXPECT().
+					GetAppResourcesByRegion(mockApp, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						RepositoryURLs: map[string]string{
+							"api": "some url",
+						},
+					}, nil)
+
+				mockAddons := mocks.NewMocktemplater(ctrl)
+				mockAddons.EXPECT().Template().
+					Return("", &addon.ErrAddonsNotFound{})
+
+				opts.store = mockStore
+				opts.ws = mockWs
+				opts.appCFN = mockCfn
+				opts.initAddonsClient = func(opts *packageSvcOpts) error {
+					opts.addonsClient = mockAddons
+					return nil
+				}
+				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
+					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
+					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
+					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
+					return mockStackSerializer, nil
+				}
+				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
+					mockendpointGetter := mocks.NewMockendpointGetter(ctrl)
+					mockendpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(fmt.Sprintf("%s.%s.local", env, app), nil)
+					return mockendpointGetter, nil
 				}
 			},
 

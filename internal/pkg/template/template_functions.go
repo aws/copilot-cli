@@ -119,15 +119,81 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 		}
 		volumeMap[aws.StringValue(mp.SourceVolume)] = aws.StringValue(mp.ContainerPath)
 	}
-	// Check for empty maps
-	if len(volumeMap) == 0 {
+
+	out, ok := getJSONMap(volumeMap)
+	if !ok {
 		return "{}"
 	}
 
-	out, err := json.Marshal(volumeMap)
-	if err != nil {
-		return "{}"
-	}
 	return string(out)
 
+}
+
+// generatePublisherJSON turns a list of Topics objects into a JSON string:
+// `{"myTopic": "topicArn", "mySecondTopic": "secondTopicArn"}`
+// This function must be called on an array of correctly constructed Topic objects.
+func generateSNSJSON(topics []*Topic) string {
+	if topics == nil {
+		return ""
+	}
+	topicMap := make(map[string]string)
+
+	for _, topic := range topics {
+		// Topics with no name will not be included in the json
+		if topic.Name == nil {
+			continue
+		}
+		topicMap[aws.StringValue(topic.Name)] = topic.ARN()
+	}
+
+	out, ok := getJSONMap(topicMap)
+	if !ok {
+		return "{}"
+	}
+
+	return string(out)
+}
+
+// generateQueueURIJSON turns a list of Topic Subscription objects into a JSON string of their corresponding queues:
+// `{"eventsQueue": "${mainURL}", "svcTopicEventsQueue": "${svctopicURL}"}`
+// This function must be called on an array of correctly constructed Topic objects.
+func generateQueueURIJSON(ts []*TopicSubscription) string {
+	if ts == nil {
+		return ""
+	}
+	urlMap := make(map[string]string)
+	urlMap["eventsQueue"] = "${mainURL}"
+
+	for _, sub := range ts {
+		// TopicSubscriptions with no name, service, or queue will not be included in the json
+		if sub.Name == nil || sub.Service == nil || sub.Queue == nil {
+			continue
+		}
+		svc := StripNonAlphaNumFunc(aws.StringValue(sub.Service))
+		topicName := StripNonAlphaNumFunc(aws.StringValue(sub.Name))
+		subName := fmt.Sprintf("%s%sEventsQueue", svc, strings.Title(topicName))
+
+		urlMap[subName] = fmt.Sprintf("${%s%sURL}", svc, topicName)
+	}
+
+	out, ok := getJSONMap(urlMap)
+	if !ok {
+		return "{}"
+	}
+
+	return string(out)
+}
+
+func getJSONMap(inMap map[string]string) ([]byte, bool) {
+	// Check for empty maps
+	if len(inMap) == 0 {
+		return nil, false
+	}
+
+	out, err := json.Marshal(inMap)
+	if err != nil {
+		return nil, false
+	}
+
+	return out, true
 }

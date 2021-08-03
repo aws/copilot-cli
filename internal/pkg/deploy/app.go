@@ -5,6 +5,14 @@
 // This file defines application deployment resources.
 package deploy
 
+import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws/arn"
+)
+
+const appDNSDelegationRoleName = "DNSDelegationRole"
+
 // CreateAppInput holds the fields required to create an application stack set.
 type CreateAppInput struct {
 	Name                  string            // Name of the application that needs to be created.
@@ -20,7 +28,32 @@ const (
 	// LegacyAppTemplateVersion is the version associated with the application template before we started versioning.
 	LegacyAppTemplateVersion = "v0.0.0"
 	// LatestAppTemplateVersion is the latest version number available for application templates.
-	LatestAppTemplateVersion = "v1.0.1"
+	LatestAppTemplateVersion = "v1.0.2"
 	// AliasLeastAppTemplateVersion is the least version number available for HTTPS alias.
 	AliasLeastAppTemplateVersion = "v1.0.0"
 )
+
+// AppInformation holds information about the application that need to be propagated to the env stacks and workload stacks.
+type AppInformation struct {
+	AccountPrincipalARN string
+	DNSName             string
+	Name                string
+}
+
+// DNSDelegationRole returns the ARN of the app's DNS delegation role.
+func (a *AppInformation) DNSDelegationRole() string {
+	if a.AccountPrincipalARN == "" || a.DNSName == "" {
+		return ""
+	}
+
+	appRole, err := arn.Parse(a.AccountPrincipalARN)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("arn:%s:iam::%s:role/%s", appRole.Partition, appRole.AccountID, DNSDelegationRoleName(a.Name))
+}
+
+// DNSDelegationRoleName returns the DNSDelegation role name of the app.
+func DNSDelegationRoleName(appName string) string {
+	return fmt.Sprintf("%s-%s", appName, appDNSDelegationRoleName)
+}

@@ -6,8 +6,11 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
@@ -21,10 +24,12 @@ const (
 
 // Empty field errors.
 var (
-	errNoFSID          = errors.New("volume field `efs.id` cannot be empty")
-	errNoContainerPath = errors.New("`path` cannot be empty")
-	errNoSourceVolume  = errors.New("`source_volume` cannot be empty")
-	errEmptyEFSConfig  = errors.New("bad EFS configuration: `efs` cannot be empty")
+	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
+	errNoContainerPath          = errors.New("`path` cannot be empty")
+	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
+	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
+	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
+	errDeadLetterQueueTries     = fmt.Errorf("DeadLetter `tries` field cannot exceed %d", deadLetterTriesMaxValue)
 )
 
 // Conditional errors.
@@ -40,13 +45,32 @@ var (
 	errInvalidSidecarDependsOnStatus = fmt.Errorf("sidecar container dependency status must be one of < %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess)
 	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
+	errInvalidPubSubTopicName        = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
+	errInvalidSvcName                = errors.New("service names cannot be empty")
+	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
+	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	errTopicSubscriptionNotAllowed   = errors.New("topic not in list of topics available to subscribe to")
 )
 
-// Container dependency status options
+// Container dependency status options.
 var (
 	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	sidecarDependsOnValidStatuses   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
+)
+
+// Regex options.
+var (
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
+)
+
+// Options for SQS Queues.
+var (
+	resourceNameFormat      = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
+	deadLetterTriesMaxValue = 1000
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -391,4 +415,99 @@ func validateRootDirPath(input string) error {
 
 func validateContainerPath(input string) error {
 	return validatePath(input, maxDockerContainerPathLength)
+}
+
+// ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
+// SNS Topic intended for a publisher.
+func validatePubSubName(name string) error {
+	if len(name) == 0 {
+		return errMissingPublishTopicField
+	}
+
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(name) {
+		return errInvalidPubSubTopicName
+	}
+
+	return nil
+}
+
+func validateWorkerNames(names []string) error {
+	for _, name := range names {
+		err := validateSvcName(name)
+		if err != nil {
+			return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
+		}
+	}
+	return nil
+}
+
+func validateSvcName(name string) error {
+	if name == "" {
+		return errInvalidSvcName
+	}
+	if len(name) > 255 {
+		return errSvcNameTooLong
+	}
+	if !isCorrectSvcNameFormat(name) {
+		return errSvcNameBadFormat
+	}
+
+	return nil
+}
+
+func isCorrectSvcNameFormat(s string) bool {
+	if !awsNameRegexp.MatchString(s) {
+		return false
+	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(s)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(s)
+	return len(trailingMatch) == 0
+}
+
+func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []string, app, env string) error {
+	if err := validatePubSubName(ts.Name); err != nil {
+		return err
+	}
+
+	if err := validateSvcName(ts.Service); err != nil {
+		return err
+	}
+
+	// Check that the topic is included in the list of available topics
+	topicName := fmt.Sprintf(resourceNameFormat, app, env, ts.Service, ts.Name)
+	for _, topicARN := range validTopicARNs {
+		arn, err := arn.Parse(topicARN)
+		if err != nil {
+			continue
+		}
+		validTopicName := arn.Resource
+
+		if validTopicName == topicName {
+			return nil
+		}
+	}
+
+	return errTopicSubscriptionNotAllowed
+}
+
+func validateTime(t, floor, ceiling time.Duration) error {
+	if t < floor || t > ceiling {
+		return fmt.Errorf("must be between %v and %v", floor, ceiling)
+	}
+
+	return nil
+}
+
+func validateDeadLetter(dl *manifest.DeadLetterQueue) error {
+	if aws.Uint16Value(dl.Tries) > uint16(deadLetterTriesMaxValue) {
+		return errDeadLetterQueueTries
+	}
+	return nil
 }

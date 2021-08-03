@@ -81,7 +81,7 @@ Resources:
           - Name: COPILOT_APPLICATION_NAME
             Value: !Sub '${AppName}'
           - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
-            Value: !Sub '${AppName}.local'
+            Value: staging.my-app.local
           - Name: COPILOT_ENVIRONMENT_NAME
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
@@ -90,6 +90,8 @@ Resources:
             Value: "info"
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"persistence":"/etc/scratch"}'
+          - Name: COPILOT_SNS_TOPIC_ARNS
+            Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-staging-fe-givesdogs"}'
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           
@@ -179,6 +181,14 @@ Resources:
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                     'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: 'Publish2SNS' 
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource:
+                  - !Ref givesdogsSNSTopic
   DiscoveryService:
     Metadata:
       'aws:copilot:description': 'Service discovery for your services to communicate within the VPC'
@@ -216,7 +226,7 @@ Resources:
     Properties:
       Code:
         ZipFile: |
-          Abracadabra
+          mockEnvControllerZipFile
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -298,7 +308,7 @@ Resources:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       
       # This may need to be adjusted if the container takes a while to start up
-      HealthCheckGracePeriodSeconds: 60
+      HealthCheckGracePeriodSeconds: 30
       LoadBalancers:
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort
@@ -317,7 +327,7 @@ Resources:
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 60                  # Default is 300.
+          Value: 30
         - Key: stickiness.enabled
           Value: !Ref Stickiness
       TargetType: ip
@@ -330,7 +340,7 @@ Resources:
     Properties:
       Code:
         ZipFile: |
-          "use strict";const aws=require("aws-sdk"),priorityForRootRule="50000";let defaultResponseURL,report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const calculateNextRulePriority=async function(a){var b,c=new aws.ELBv2,d=[];do{const e=await c.describeRules({ListenerArn:a,Marker:b}).promise();d=d.concat(e.Rules),b=e.NextMarker}while(b);let e=1;if(0<d.length){const a=d.map(a=>"default"===a.Priority||a.Priority===priorityForRootRule?0:parseInt(a.Priority)),b=Math.max(...a);e=b+1}return e};exports.nextAvailableRulePriorityHandler=async function(a,b){var c,d,e={};try{switch(a.RequestType){case"Create":d=await calculateNextRulePriority(a.ResourceProperties.ListenerArn),e.Priority=d,c=`alb-rule-priority-${a.LogicalResourceId}`;break;case"Update":case"Delete":c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,e)}catch(d){console.log(`Caught error ${d}.`),await report(a,b,"FAILED",c,null,d.message)}},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
+          mockRulePriorityZipFile
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
@@ -502,6 +512,36 @@ Resources:
         Name: !Ref WorkloadName
       TemplateURL:
         !Ref AddonsTemplateURL
+
+  givesdogsSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${AWS::StackName}-givesdogs
+        KmsMasterKeyId: 'alias/aws/sns'
+    
+  givesdogsSNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      DependsOn: givesdogsSNSTopic
+      Properties:
+        Topics: 
+          - !Ref givesdogsSNSTopic
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: sqs.amazonaws.com
+              Action: 
+                - sns:Subscribe
+              Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
+              Condition:
+                StringEquals:
+                  'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                ForAnyValue:StringEquals:
+                  'sqs:ResourceTag/copilot-service':
+                      - 'takes-dogs'
+                      - 'takes-animals'
 
 Outputs:
   DiscoveryServiceARN:
