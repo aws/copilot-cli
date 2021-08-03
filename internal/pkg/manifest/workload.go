@@ -648,6 +648,9 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 	}
 
 	if !p.PlatformArgs.isEmpty() {
+		if !p.PlatformArgs.bothSpecifiedOrNil() {
+			return errors.New(`fields 'osfamily' and 'architecture' must either both be specified or both be empty. For more info, see your workload's manifest documentation at https://aws.github.io/copilot-cli/`)
+		}
 		if err := exec.ValidateOS(p.PlatformArgs.OSFamily); err != nil {
 			return fmt.Errorf("validate OS: %w", err)
 		}
@@ -675,6 +678,10 @@ type PlatformArgs struct {
 
 func (p *PlatformArgs) isEmpty() bool {
 	return p.OSFamily == nil && p.Arch == nil
+}
+
+func (p *PlatformArgs) bothSpecifiedOrNil() bool {
+	return (p.OSFamily == nil) == (p.Arch == nil)
 }
 
 func requiresBuild(image Image) (bool, error) {

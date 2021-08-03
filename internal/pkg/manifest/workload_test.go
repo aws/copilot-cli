@@ -305,13 +305,25 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 
 			wantedError: errors.New("validate platform: platform linus/mad64 is invalid; the valid platform is: linux/amd64"),
 		},
+		"returns error if only args.os specified": {
+			inContent: []byte(`platform:
+  osfamily: linux`),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty. For more info, see your workload's manifest documentation at https://aws.github.io/copilot-cli/"),
+		},
+		"returns error if only args.arch specified": {
+			inContent: []byte(`platform:
+  architecture: amd64`),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty. For more info, see your workload's manifest documentation at https://aws.github.io/copilot-cli/"),
+		},
 		"returns error if args.os invalid": {
 			inContent: []byte(`platform:
-  osfamily: OSFamilia`),
+  osfamily: OSFamilia
+  architecture: amd64`),
 			wantedError: errors.New("validate OS: OS OSFamilia is invalid; the valid operating system is: linux"),
 		},
 		"returns error if args.arch invalid": {
 			inContent: []byte(`platform:
+  osfamily: linux
   architecture: abc123`),
 			wantedError: errors.New("validate arch: architecture abc123 is invalid; the valid architecture is: amd64"),
 		},
@@ -322,29 +334,7 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 				PlatformString: aws.String("linux/amd64"),
 			},
 		},
-		"OS specified": {
-			inContent: []byte(`platform:
-  osfamily: linux`),
-			wantedStruct: PlatformArgsOrString{
-				PlatformString: nil,
-				PlatformArgs: PlatformArgs{
-					OSFamily: aws.String("linux"),
-					Arch:     nil,
-				},
-			},
-		},
-		"arch specified": {
-			inContent: []byte(`platform:
-  architecture: amd64`),
-			wantedStruct: PlatformArgsOrString{
-				PlatformString: nil,
-				PlatformArgs: PlatformArgs{
-					OSFamily: nil,
-					Arch:     aws.String("amd64"),
-				},
-			},
-		},
-		"both os/arch specified": {
+		"both os/arch specified with valid values": {
 			inContent: []byte(`platform:
   osfamily: linux
   architecture: amd64`),
