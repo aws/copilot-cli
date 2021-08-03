@@ -132,6 +132,8 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	return wklds, nil
 }
 
+// ListDeployedSNSTopics returrns a list of SNS topics deployed to the current environment and tagged with
+// Copilot identifiers.
 func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, error) {
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
@@ -157,12 +159,14 @@ func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, 
 		if _, ok := r.Tags[ServiceTagKey]; !ok {
 			continue
 		}
-		out = append(out, Topic{
-			ARN:  r.ARN,
-			App:  appName,
-			Env:  envName,
-			Wkld: r.Tags[ServiceTagKey],
-		})
+		t, err := NewTopic(r.ARN, appName, envName, r.Tags[ServiceTagKey])
+		// If there's an error parsing the topic ARN, don't include it in the list of topics.
+		// This includes times where the topic name does not match its tags, or the name
+		// is invalid.
+		if err != nil {
+			continue
+		}
+		out = append(out, *t)
 	}
 
 	return out, nil

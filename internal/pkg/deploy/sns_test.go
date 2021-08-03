@@ -19,59 +19,59 @@ const (
 func TestTopic_Name(t *testing.T) {
 
 	testCases := map[string]struct {
-		inputTopic Topic
+		inputARN  string
+		inputApp  string
+		inputEnv  string
+		inputWkld string
 
 		wanted      string
 		wantedError error
 	}{
 		"good arn": {
-			inputTopic: Topic{
-				ARN:  mockGoodARN,
-				App:  mockApp,
-				Env:  mockEnv,
-				Wkld: mockSvc,
-			},
-			wanted: "topic",
+			inputARN:  mockGoodARN,
+			inputApp:  mockApp,
+			inputEnv:  mockEnv,
+			inputWkld: mockSvc,
+			wanted:    "topic",
 		},
 		"bad arn format": {
-			inputTopic: Topic{
-				ARN: "badARN",
-			},
+			inputARN:    "bad arn",
 			wantedError: errInvalidARN,
 		},
 		"bad arn: for non-copilot topic": {
-			inputTopic: Topic{
-				ARN:  mockBadARN,
-				App:  mockApp,
-				Env:  mockEnv,
-				Wkld: mockSvc,
-			},
+			inputARN:  mockBadARN,
+			inputApp:  mockApp,
+			inputEnv:  mockEnv,
+			inputWkld: mockSvc,
+
 			wantedError: errInvalidTopicARN,
 		},
 		"bad arn: arn for non-sns service": {
-			inputTopic: Topic{
-				ARN: "arn:aws:s3:::bucketname",
-			},
+			inputARN:  "arn:aws:s3:::bucketname",
+			inputApp:  mockApp,
+			inputEnv:  mockEnv,
+			inputWkld: mockSvc,
+
 			wantedError: errInvalidARNService,
 		},
 		"bad arn: arn for copilot topic subscription": {
-			inputTopic: Topic{
-				ARN:  mockGoodARN + ":12345-abcde-12345-abcde",
-				App:  mockApp,
-				Env:  mockEnv,
-				Wkld: mockSvc,
-			},
+
+			inputARN:  mockGoodARN + ":12345-abcde-12345-abcde",
+			inputApp:  mockApp,
+			inputEnv:  mockEnv,
+			inputWkld: mockSvc,
+
 			wantedError: errInvalidARNService,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			name, err := tc.inputTopic.Name()
+			topic, err := NewTopic(tc.inputARN, tc.inputApp, tc.inputEnv, tc.inputWkld)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wanted, name)
+				require.Equal(t, tc.wanted, topic.Name())
 			}
 		})
 	}
@@ -79,29 +79,37 @@ func TestTopic_Name(t *testing.T) {
 
 func TestTopic_ID(t *testing.T) {
 	testCases := map[string]struct {
-		inputTopic Topic
+		inputARN  string
+		inputApp  string
+		inputEnv  string
+		inputWkld string
 
 		wanted      string
 		wantedError error
 	}{
 		"good arn": {
-			inputTopic: Topic{
-				ARN:  mockGoodARN,
-				App:  mockApp,
-				Env:  mockEnv,
-				Wkld: mockSvc,
-			},
-			wanted: "app-env-svc-topic",
+			inputARN:  mockGoodARN,
+			inputApp:  mockApp,
+			inputEnv:  mockEnv,
+			inputWkld: mockSvc,
+			wanted:    "app-env-svc-topic",
+		},
+		"rejects improperly constructed ARN": {
+			inputARN:    mockGoodARN,
+			inputApp:    mockApp,
+			inputEnv:    mockEnv,
+			inputWkld:   "not-the-right-svc",
+			wantedError: errInvalidTopicARN,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			name, err := tc.inputTopic.ID()
+			topic, err := NewTopic(tc.inputARN, tc.inputApp, tc.inputEnv, tc.inputWkld)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wanted, name)
+				require.Equal(t, tc.wanted, topic.ID())
 			}
 		})
 	}
