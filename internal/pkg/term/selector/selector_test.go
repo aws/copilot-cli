@@ -34,12 +34,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 		testApp = "mockApp"
 		testEnv = "mockEnv"
 	)
-	mockTopic := deploy.Topic{
-		ARN:  "arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders",
-		App:  testApp,
-		Env:  testEnv,
-		Wkld: "mockWkld",
-	}
+	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", testApp, testEnv, "mockWkld")
 	testCases := map[string]struct {
 		setupMocks func(mocks deploySelectMocks)
 
@@ -60,7 +55,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 				m.deploySvc.
 					EXPECT().
 					ListDeployedSNSTopics(testApp, testEnv).
-					Return([]deploy.Topic{mockTopic}, nil)
+					Return([]deploy.Topic{*mockTopic}, nil)
 				m.prompt.
 					EXPECT().
 					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}).
@@ -73,13 +68,13 @@ func TestDeploySelect_Topics(t *testing.T) {
 				m.deploySvc.
 					EXPECT().
 					ListDeployedSNSTopics(testApp, testEnv).
-					Return([]deploy.Topic{mockTopic}, nil)
+					Return([]deploy.Topic{*mockTopic}, nil)
 				m.prompt.
 					EXPECT().
 					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}).
 					Return([]string{"orders (mockWkld)"}, nil)
 			},
-			wantTopics: []string{mockTopic.ARN},
+			wantTopics: []string{mockTopic.ARN()},
 		},
 	}
 	for name, tc := range testCases {

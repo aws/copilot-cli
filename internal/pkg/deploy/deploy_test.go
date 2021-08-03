@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -598,16 +599,30 @@ func TestStore_ListDeployedSNSTopics(t *testing.T) {
 
 			wantedTopics: []Topic{
 				{
-					ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc1-topic",
-					App:  "mockApp",
-					Env:  "mockEnv",
-					Wkld: "mockSvc1",
+					awsARN: arn.ARN{
+						Partition: "aws",
+						Region:    "us-west-2",
+						Service:   "sns",
+						AccountID: "012345678912",
+						Resource:  "mockApp-mockEnv-mockSvc1-topic",
+					},
+					app:  "mockApp",
+					env:  "mockEnv",
+					wkld: "mockSvc1",
+					name: "topic",
 				},
 				{
-					ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc2-events",
-					App:  "mockApp",
-					Env:  "mockEnv",
-					Wkld: "mockSvc2",
+					awsARN: arn.ARN{
+						Partition: "aws",
+						Region:    "us-west-2",
+						Service:   "sns",
+						AccountID: "012345678912",
+						Resource:  "mockApp-mockEnv-mockSvc2-events",
+					},
+					app:  "mockApp",
+					env:  "mockEnv",
+					wkld: "mockSvc2",
+					name: "events",
 				},
 			},
 		},

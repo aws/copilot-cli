@@ -16,50 +16,81 @@ import (
 var errInvalidTopicARN = errors.New("ARN is not a Copilot SNS topic")
 var errInvalidARN = errors.New("invalid ARN format")
 var errInvalidARNService = errors.New("ARN is not an SNS topic")
+var errInvalidComponent = errors.New("Topic must be initialized with valid app, env, and workload")
 
+// Topic holds information about a Copilot SNS topic and its ARN, ID, and Name.
 type Topic struct {
-	ARN  string
-	App  string
-	Env  string
-	Wkld string
+	awsARN arn.ARN
+	app    string
+	env    string
+	wkld   string
+
+	name string
 }
 
-// Name returns the name of the given SNS topic, stripped of its "app-env-wkld" prefix.
-func (t Topic) Name() (string, error) {
-	parsedARN, err := t.parse()
-	if err != nil {
-		return "", err
+func NewTopic(inputARN string, app, env, wkld string) (*Topic, error) {
+	t := &Topic{
+		app:  app,
+		env:  env,
+		wkld: wkld,
 	}
-	prefix := fmt.Sprintf(fmtSNSTopicNamePrefix, t.App, t.Env, t.Wkld)
-	if strings.HasPrefix(parsedARN.Resource, prefix) {
-		return parsedARN.Resource[len(prefix):], nil
-	}
-	return "", errInvalidTopicARN
-}
-
-// ID returns the resource ID of the topic (the last element of the ARN).
-func (t Topic) ID() (string, error) {
-	parsedARN, err := t.parse()
-	if err != nil {
-		return "", err
-	}
-	return parsedARN.Resource, nil
-}
-
-// parse determines whether the given ARN is a Copilot-valid SNS topic ARN and returns the
-// parsed components of the ARN.
-func (t Topic) parse() (*arn.ARN, error) {
-	parsedARN, err := arn.Parse(string(t.ARN))
+	parsedARN, err := arn.Parse(inputARN)
 	if err != nil {
 		return nil, errInvalidARN
 	}
-
-	if parsedARN.Service != snsServiceName {
-		return nil, errInvalidARNService
+	t.awsARN = parsedARN
+	if err := t.validateAndExtractName(); err != nil {
+		return nil, err
 	}
 
-	if len(strings.Split(parsedARN.Resource, ":")) != 1 {
-		return nil, errInvalidARNService
+	return t, nil
+}
+
+// Name returns the name of the given SNS topic, stripped of its "app-env-wkld" prefix.
+func (t Topic) Name() string {
+	return t.name
+}
+
+// ID returns the resource ID of the topic (the last element of the ARN).
+func (t Topic) ID() string {
+	return t.awsARN.Resource
+}
+
+func (t Topic) ARN() string {
+	return t.awsARN.String()
+}
+
+func (t Topic) Workload() string {
+	return t.wkld
+}
+
+// validateAndExtractName determines whether the given ARN is a Copilot-valid SNS topic ARN and
+// returns the parsed components of the ARN.
+func (t *Topic) validateAndExtractName() error {
+	if len(t.wkld) == 0 || len(t.env) == 0 || len(t.app) == 0 {
+		return errInvalidComponent
 	}
-	return &parsedARN, nil
+
+	if t.awsARN.Service != snsServiceName {
+		return errInvalidARNService
+	}
+
+	// Should not include subscriptions to SNS topics.
+	if len(strings.Split(t.awsARN.Resource, ":")) != 1 {
+		return errInvalidARNService
+	}
+
+	// Check that the topic name has the correct app-env-workload prefix.
+	prefix := fmt.Sprintf(fmtSNSTopicNamePrefix, t.app, t.env, t.wkld)
+	if !strings.HasPrefix(t.awsARN.Resource, prefix) {
+		return errInvalidTopicARN
+	}
+	// Check that the topic name has a postfix AFTER that prefix.
+	if len(t.awsARN.Resource)-len(prefix) == 0 {
+		return errInvalidTopicARN
+	}
+
+	t.name = t.awsARN.Resource[len(prefix):]
+
+	return nil
 }
