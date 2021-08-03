@@ -1020,22 +1020,19 @@ func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
 		return nil, nil
 	}
 	// Create the list of options and the map from option to full topic specification.
-	var topicSlugs []string
-	topicMap := make(map[string]*deploy.Topic)
+	var topicDescriptions []string
+	topicMap := make(map[string]deploy.Topic)
 	for _, t := range topics {
-		n, err := t.Name()
-		if err != nil {
-			continue
-		}
+		n := t.Name()
 		// A slug is the human string printed out as an option.
 		// In this case, it's "orders (api)" to denote the "orders"
 		// topic published by the "api" service.
-		slug := fmt.Sprintf(fmtTopicSlug, n, t.Wkld)
-		topicSlugs = append(topicSlugs, slug)
-		topicMap[slug] = &t
+		slug := fmt.Sprintf(fmtTopicSlug, n, t.Workload())
+		topicDescriptions = append(topicDescriptions, slug)
+		topicMap[slug] = t
 	}
 
-	selectedTopics, err := s.prompt.MultiSelect(prompt, help, topicSlugs)
+	selectedTopics, err := s.prompt.MultiSelect(prompt, help, topicDescriptions)
 	if err != nil {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
 	}
@@ -1043,7 +1040,7 @@ func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
 	// Get the ARNs from the topic slugs again.
 	var topicARNs []string
 	for _, t := range selectedTopics {
-		topicARNs = append(topicARNs, topicMap[t].ARN)
+		topicARNs = append(topicARNs, topicMap[t].ARN())
 	}
 	return topicARNs, nil
 }
