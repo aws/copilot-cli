@@ -552,7 +552,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 		mockAddonsURL = "mockAddonsURL"
 	)
 	tests := map[string]struct {
-		inAliases      *manifest.AliasOverride
+		inAliases      *manifest.Alias
 		inApp          *config.Application
 		inEnvironment  *config.Environment
 		inBuildRequire bool
@@ -625,7 +625,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr:              fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
 		"fail to get app version": {
-			inAliases: &manifest.AliasOverride{String: aws.String("mockAlias")},
+			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -647,7 +647,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
-			inAliases: &manifest.AliasOverride{String: aws.String("mockAlias")},
+			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -669,7 +669,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
-			inAliases: &manifest.AliasOverride{String: aws.String("v1.v2.mockDomain")},
+			inAliases: &manifest.Alias{String: aws.String("v1.v2.mockDomain")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -691,7 +691,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"success": {
-			inAliases: &manifest.AliasOverride{
+			inAliases: &manifest.Alias{
 				StringSlice: []string{
 					"v1.mockDomain",
 					"mockDomain",

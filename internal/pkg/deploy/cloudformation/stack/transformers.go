@@ -578,7 +578,7 @@ func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts
 	return opts
 }
 
-func convertAlias(alias *manifest.AliasOverride) ([]string, error) {
+func convertAlias(alias *manifest.Alias) ([]string, error) {
 	if alias == nil {
 		return nil, nil
 	}

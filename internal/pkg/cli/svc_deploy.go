@@ -558,7 +558,7 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func validateLBSvcAliasAndAppVersion(svcName string, aliases *manifest.AliasOverride, app *config.Application, envName string, appVersionGetter versionGetter) error {
+func validateLBSvcAliasAndAppVersion(svcName string, aliases *manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
 	if aliases == nil {
 		return nil
 	}

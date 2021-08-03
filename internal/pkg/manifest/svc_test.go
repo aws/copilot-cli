@@ -88,7 +88,7 @@ environments:
 							}, Port: aws.Uint16(80)},
 						},
 						RoutingRule: RoutingRule{
-							Alias: &AliasOverride{
+							Alias: &Alias{
 								StringSlice: []string{
 									"foobar.com",
 									"v1.foobar.com",
