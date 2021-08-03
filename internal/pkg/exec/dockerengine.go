@@ -264,10 +264,12 @@ func ValidatePlatform(platform *string) error {
 	if platform == nil {
 		return nil
 	}
-	if aws.StringValue(platform) != dockerBuildPlatform(LinuxOS, Amd64Arch) {
-		return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
+	for _, validPlatform := range validPlatforms {
+		if aws.StringValue(platform) == validPlatform {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 }
 
 // ValidateOS checks if the entered string is a Docker-buildable operating system.
@@ -275,10 +277,12 @@ func ValidateOS(os *string) error {
 	if os == nil {
 		return nil
 	}
-	if aws.StringValue(os) != LinuxOS {
-		return fmt.Errorf("OS %s is invalid; %s: %s", aws.StringValue(os), english.PluralWord(len(validOperatingSystems), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOperatingSystems, "and"))
+	for _, validOS := range validOperatingSystems {
+		if aws.StringValue(os) == validOS {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("OS %s is invalid; %s: %s", aws.StringValue(os), english.PluralWord(len(validOperatingSystems), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOperatingSystems, "and"))
 }
 
 // ValidateArch checks if the entered string is a Docker-buildable architecture.
@@ -286,10 +290,12 @@ func ValidateArch(arch *string) error {
 	if arch == nil {
 		return nil
 	}
-	if aws.StringValue(arch) != Amd64Arch {
-		return fmt.Errorf("architecture %s is invalid; %s: %s", aws.StringValue(arch), english.PluralWord(len(validArchitectures), "the valid architecture is", "valid architectures are"), english.WordSeries(validArchitectures, "and"))
+	for _, validArch := range validArchitectures {
+		if aws.StringValue(arch) == validArch {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("architecture %s is invalid; %s: %s", aws.StringValue(arch), english.PluralWord(len(validArchitectures), "the valid architecture is", "valid architectures are"), english.WordSeries(validArchitectures, "and"))
 }
 
 func (c DockerCommand) RedirectPlatform(image string) (*string, error) {
