@@ -7,53 +7,50 @@ package template
 import (
 	"bytes"
 	"crypto/sha256"
+	"embed"
 	"fmt"
+	"io/fs"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/template/templates"
-	"github.com/gobuffalo/packd"
 )
 
+//go:embed templates
+var templateFS embed.FS
+
+// File names under "templates/".
 const (
+	DNSCertValidatorFileName            = "dns-cert-validator"
+	DNSDelegationFileName               = "dns-delegation"
+	EnableLongARNsFileName              = "enable-long-arns"
+	CustomDomainFileName                = "custom-domain"
+	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
+	AWSSDKLayerFileName                 = "aws-sdk-layer"
+
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
 	scriptDirName                  = "scripts"
 	layerDirName                   = "layers"
 )
 
-// Environment custom resource file names.
-const (
-	DNSCertValidatorFileName = "dns-cert-validator"
-	DNSDelegationFileName    = "dns-delegation"
-	EnableLongARNsFileName   = "enable-long-arns"
-	CustomDomainFileName     = "custom-domain"
+// Groups of files that belong to the same stack.
+var (
+	envCustomResourceFiles = []string{
+		DNSCertValidatorFileName,
+		DNSDelegationFileName,
+		EnableLongARNsFileName,
+		CustomDomainFileName,
+	}
+	rdWkldCustomResourceFiles = []string{
+		AppRunnerCustomDomainLambdaFileName,
+	}
+	rdWkldCustomResourceLayers = []string{
+		AWSSDKLayerFileName,
+	}
 )
-
-// AppRunnerCustomDomainLambdaFileName is the file name for app runner custom domaing lambda.
-const AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
-
-// AWSSDKLayerFileName is the file name for AWS-SDK lambda layer.
-const AWSSDKLayerFileName = "aws-sdk-layer"
-
-var box = templates.Box()
-
-var envCustomResourceFiles = []string{
-	DNSCertValidatorFileName,
-	DNSDelegationFileName,
-	EnableLongARNsFileName,
-	CustomDomainFileName,
-}
-
-var rdWkldCustomResourceFiles = []string{
-	AppRunnerCustomDomainLambdaFileName,
-}
-
-var rdWkldCustomResourceLayers = []string{
-	AWSSDKLayerFileName,
-}
 
 // Parser is the interface that wraps the Parse method.
 type Parser interface {
@@ -90,13 +87,13 @@ type fileToCompress struct {
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
 type Template struct {
-	box packd.Box
+	fs fs.ReadFileFS
 }
 
 // New returns a Template object that can be used to parse files under the "/templates/" directory.
 func New() *Template {
 	return &Template{
-		box: box,
+		fs: templateFS,
 	}
 }
 
@@ -241,11 +238,11 @@ func newTextTemplate(name string) *template.Template {
 }
 
 func (t *Template) read(path string) (string, error) {
-	s, err := t.box.FindString(path)
+	dat, err := t.fs.ReadFile(filepath.Join("templates", path))
 	if err != nil {
 		return "", fmt.Errorf("read template %s: %w", path, err)
 	}
-	return s, nil
+	return string(dat), nil
 }
 
 // parse reads the file at path and returns a parsed text/template object with the given name.
