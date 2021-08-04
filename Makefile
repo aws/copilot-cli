@@ -60,7 +60,7 @@ compile-darwin:
 test: run-unit-test custom-resource-tests
 
 .PHONY: custom-resource-tests
-custom-resource-tests:
+custom-resource-tests: tools
 	@echo "Running custom resource unit tests" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
 	npm test &&\
