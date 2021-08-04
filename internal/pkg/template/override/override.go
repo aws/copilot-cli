@@ -31,6 +31,21 @@ func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, erro
 	return output, nil
 }
 
+func parseRules(rules []Rule) ([]contentUpserter, error) {
+	var ruleNodes []contentUpserter
+	for _, r := range rules {
+		if err := r.validate(); err != nil {
+			return nil, err
+		}
+		node, err := r.parse()
+		if err != nil {
+			return nil, err
+		}
+		ruleNodes = append(ruleNodes, node)
+	}
+	return ruleNodes, nil
+}
+
 func unmarshalCFNYaml(temp []byte) (*yaml.Node, error) {
 	return nil, nil
 }

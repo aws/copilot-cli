@@ -21,6 +21,11 @@ const (
 	nodeTagMap  = "!!map"
 )
 
+type contentUpserter interface {
+	Upsert(content *yaml.Node) (*yaml.Node, error)
+	NextNode() contentUpserter
+}
+
 // Rule is the override rule override package uses.
 type Rule struct {
 	// PathSegment example: "ContainerDefinitions[0].Ulimits.HardLimit"
@@ -28,9 +33,12 @@ type Rule struct {
 	// Value       *yaml.Node
 }
 
-type contentUpserter interface {
-	Upsert(content *yaml.Node) (*yaml.Node, error)
-	NextNode() contentUpserter
+func (r Rule) validate() error {
+	return nil
+}
+
+func (r Rule) parse() (contentUpserter, error) {
+	return nil, nil
 }
 
 // upsertNode represents a node that needs to be upserted.
@@ -189,27 +197,4 @@ func (s *seqIdxUpsertNode) upsertValue(content *yaml.Node) error {
 	}
 	content.Content = append(content.Content, newValNode)
 	return nil
-}
-
-func parseRules(rules []Rule) ([]contentUpserter, error) {
-	var ruleNodes []contentUpserter
-	for _, r := range rules {
-		if err := r.validate(); err != nil {
-			return nil, err
-		}
-		node, err := r.parse()
-		if err != nil {
-			return nil, err
-		}
-		ruleNodes = append(ruleNodes, node)
-	}
-	return ruleNodes, nil
-}
-
-func (r Rule) validate() error {
-	return nil
-}
-
-func (r Rule) parse() (contentUpserter, error) {
-	return nil, nil
 }
