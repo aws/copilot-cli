@@ -109,180 +109,183 @@ Resources:
                         InitProcessEnabled: true
 `
 
-func newTaskDefPropertyNode(nextNode *ruleNode) *ruleNode {
-	end := &ruleNode{
-		mapVal:    mapNode{key: "Properties"},
-		valueType: mapType,
-		next:      nextNode,
+func newTaskDefPropertyNode(nextNode contentUpserter) contentUpserter {
+	end := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:  "Properties",
+			next: nextNode,
+		},
 	}
-	taskDefNode := &ruleNode{
-		mapVal:    mapNode{key: "TaskDefinition"},
-		valueType: mapType,
-		next:      end,
+	taskDefNode := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:  "TaskDefinition",
+			next: end,
+		},
 	}
-	head := &ruleNode{
-		mapVal:    mapNode{key: "Resources"},
-		valueType: mapType,
-		next:      taskDefNode,
+	head := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:  "Resources",
+			next: taskDefNode,
+		},
 	}
 	return head
 }
 
-func addRequiresCompatibilities() *ruleNode {
+func addRequiresCompatibilities() contentUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte(`RequiresCompatibilities[-]: EC2`), &node)
 
-	node1 := &ruleNode{
-		valueType: seqType,
-		seqVal: seqNode{
-			key:          "RequiresCompatibilities",
-			appendToLast: true,
+	node1 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:           "RequiresCompatibilities",
+			valueToInsert: node.Content[0].Content[1],
 		},
-		endVal: node.Content[0].Content[1],
+		appendToLast: true,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
-func addLinuxParametersCapabilities() *ruleNode {
+func addLinuxParametersCapabilities() contentUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte(`ContainerDefinitions[0].LinuxParameters.Capabilities.Add: ["AUDIT_CONTROL", "AUDIT_WRITE"]`), &node)
 
-	node2 := &ruleNode{
-		mapVal:    mapNode{key: "Add"},
-		valueType: mapType,
-		endVal:    node.Content[0].Content[1],
+	node2 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:           "Add",
+			valueToInsert: node.Content[0].Content[1],
+		},
 	}
-	node1 := &ruleNode{
-		mapVal:    mapNode{key: "Capabilities"},
-		valueType: mapType,
-		next:      node2,
+	node1 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:  "Capabilities",
+			next: node2,
+		},
 	}
 	return newLinuxParameters(node1)
 }
 
-func addLinuxParametersCapabilitiesInitProcessEnabled() *ruleNode {
-	node2 := &ruleNode{
-		mapVal:    mapNode{key: "InitProcessEnabled"},
-		valueType: mapType,
-		endVal: &yaml.Node{
-			Kind:  8,
-			Tag:   nodeTagBool,
-			Value: "true",
+func addLinuxParametersCapabilitiesInitProcessEnabled() contentUpserter {
+	node2 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key: "InitProcessEnabled",
+			valueToInsert: &yaml.Node{
+				Kind:  8,
+				Tag:   nodeTagBool,
+				Value: "true",
+			},
 		},
 	}
-	node1 := &ruleNode{
-		mapVal:    mapNode{key: "Capabilities"},
-		valueType: mapType,
-		next:      node2,
+	node1 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:  "Capabilities",
+			next: node2,
+		},
 	}
 	return newLinuxParameters(node1)
 }
 
-func newLinuxParameters(nextNode *ruleNode) *ruleNode {
-	node2 := &ruleNode{
-		mapVal:    mapNode{key: "LinuxParameters"},
-		valueType: mapType,
-		next:      nextNode,
-	}
-	node1 := &ruleNode{
-		valueType: seqType,
-		seqVal: seqNode{
-			key:   "ContainerDefinitions",
-			index: 0,
+func newLinuxParameters(nextNode contentUpserter) contentUpserter {
+	node2 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:  "LinuxParameters",
+			next: nextNode,
 		},
-		next: node2,
+	}
+	node1 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "ContainerDefinitions",
+			next: node2,
+		},
+		index: 0,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
-func addUlimits() *ruleNode {
+func addUlimits() contentUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName"), &node)
 
-	node3 := &ruleNode{
-		mapVal:    mapNode{key: "HardLimit"},
-		valueType: mapType,
-		endVal:    node.Content[0].Content[1],
-	}
-	node2 := &ruleNode{
-		seqVal: seqNode{
-			key:          "Ulimits",
-			appendToLast: true,
+	node3 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:           "HardLimit",
+			valueToInsert: node.Content[0].Content[1],
 		},
-		valueType: seqType,
-		next:      node3,
 	}
-	node1 := &ruleNode{
-		valueType: seqType,
-		seqVal: seqNode{
-			key:   "ContainerDefinitions",
-			index: 0,
+	node2 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "Ulimits",
+			next: node3,
 		},
-		next: node2,
+		appendToLast: true,
+	}
+	node1 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "ContainerDefinitions",
+			next: node2,
+		},
+		index: 0,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
-func exposeExtraPort() *ruleNode {
-	node3 := &ruleNode{
-		mapVal:    mapNode{key: "ContainerPort"},
-		valueType: mapType,
-		endVal: &yaml.Node{
-			Kind:  8,
-			Tag:   nodeTagInt,
-			Value: "5000",
+func exposeExtraPort() contentUpserter {
+	node3 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key: "ContainerPort",
+			valueToInsert: &yaml.Node{
+				Kind:  8,
+				Tag:   nodeTagInt,
+				Value: "5000",
+			},
 		},
 	}
-	node2 := &ruleNode{
-		valueType: seqType,
-		seqVal: seqNode{
-			key:          "PortMappings",
-			appendToLast: true,
+	node2 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "PortMappings",
+			next: node3,
 		},
-		next: node3,
+		appendToLast: true,
 	}
-	node1 := &ruleNode{
-		valueType: seqType,
-		seqVal: seqNode{
-			key:   "ContainerDefinitions",
-			index: 0,
+	node1 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "ContainerDefinitions",
+			next: node2,
 		},
-		next: node2,
+		index: 0,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
-func referBadSeqIndex() *ruleNode {
+func referBadSeqIndex() contentUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].PortMappings[1].ContainerPort: 5000"), &node)
 
-	node3 := &ruleNode{
-		mapVal:    mapNode{key: "ContainerPort"},
-		valueType: mapType,
-		endVal:    node.Content[0].Content[1],
-	}
-	node2 := &ruleNode{
-		valueType: seqType,
-		seqVal: seqNode{
-			key:   "PortMappings",
-			index: 1,
+	node3 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:           "ContainerPort",
+			valueToInsert: node.Content[0].Content[1],
 		},
-		next: node3,
 	}
-	node1 := &ruleNode{
-		valueType: seqType,
-		seqVal: seqNode{
-			key:   "ContainerDefinitions",
-			index: 0,
+	node2 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "PortMappings",
+			next: node3,
 		},
-		next: node2,
+		index: 1,
+	}
+	node1 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "ContainerDefinitions",
+			next: node2,
+		},
+		index: 0,
 	}
 	return newTaskDefPropertyNode(node1)
 }
 
 func Test_applyRulesToCFNTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		inRules   []*ruleNode
+		inRules   []contentUpserter
 		inContent string
 
 		wantedContent string
@@ -291,11 +294,11 @@ func Test_applyRulesToCFNTemplate(t *testing.T) {
 		"error when invalid CFN template": {
 			inContent: "",
 
-			wantedError: fmt.Errorf("cannot apply override rule on empty CloudFormation template"),
+			wantedError: fmt.Errorf("cannot apply override rule on empty YAML template"),
 		},
 		"error when referring to bad sequence index": {
 			inContent: testContent,
-			inRules: []*ruleNode{
+			inRules: []contentUpserter{
 				referBadSeqIndex(),
 			},
 
@@ -303,7 +306,7 @@ func Test_applyRulesToCFNTemplate(t *testing.T) {
 		},
 		"success": {
 			inContent: testContent,
-			inRules: []*ruleNode{
+			inRules: []contentUpserter{
 				addUlimits(),
 				exposeExtraPort(),
 				addLinuxParametersCapabilities(),
