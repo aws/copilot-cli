@@ -23,13 +23,13 @@ RELEASE_BUILD_LINKER_FLAGS=-s -w
 all: build
 
 .PHONY: build
-build: packr-build compile-local packr-clean
+build: package-custom-resources compile-local package-custom-resources-clean
 
 .PHONY: build-e2e
-build-e2e: packr-build compile-linux packr-clean
+build-e2e: package-custom-resources compile-linux package-custom-resources-clean
 
 .PHONY: release
-release: packr-build compile-darwin compile-linux compile-windows packr-clean
+release: package-custom-resources compile-darwin compile-linux compile-windows package-custom-resources-clean
 
 .PHONY: release-docker
 release-docker:
@@ -56,21 +56,8 @@ compile-linux:
 compile-darwin:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
-.PHONY: packr-build
-packr-build: tools package-custom-resources
-	@echo "Packaging static files" &&\
-	env -i PATH="$$PATH":${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
-	go generate ./...
-
-.PHONY: packr-clean
-packr-clean: tools package-custom-resources-clean
-	@echo "Cleaning up static files generated code" &&\
-	cd ${TEMPLATES_DIR} &&\
-	${GOBIN}/packr2 clean &&\
-	cd ${ROOT_SRC_DIR} \
-
 .PHONY: test
-test: packr-build run-unit-test custom-resource-tests packr-clean
+test: run-unit-test custom-resource-tests
 
 .PHONY: custom-resource-tests
 custom-resource-tests:
@@ -83,7 +70,7 @@ custom-resource-tests:
 # those minified assets into templates/custom-resources so that
 # they can be packed.
 .PHONY: package-custom-resources
-package-custom-resources:
+package-custom-resources: tools
 	@echo "Packaging custom resources to templates/custom-resources" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
 	npm run package &&\
@@ -105,7 +92,7 @@ generate-coverage: test
 	go tool cover -html=${COVERAGE}
 
 .PHONY: integ-test
-integ-test: packr-build run-integ-test packr-clean
+integ-test: package-custom-resources run-integ-test package-custom-resources-clean
 
 .PHONY: run-integ-test
 run-integ-test:
@@ -116,7 +103,7 @@ run-integ-test:
 	go test -race -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
 .PHONY: local-integ-test
-local-integ-test: packr-build run-local-integ-test packr-clean
+local-integ-test: package-custom-resources run-local-integ-test package-custom-resources-clean
 
 run-local-integ-test:
 	go test -race -count=1 -timeout=60m -tags=localintegration ${PACKAGES}
@@ -130,7 +117,6 @@ e2e: build-e2e
 
 .PHONY: tools
 tools:
-	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm ci
 
