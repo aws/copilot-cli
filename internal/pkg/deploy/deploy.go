@@ -132,7 +132,7 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	return wklds, nil
 }
 
-// ListDeployedSNSTopics returrns a list of SNS topics deployed to the current environment and tagged with
+// ListDeployedSNSTopics returns a list of SNS topics deployed to the current environment and tagged with
 // Copilot identifiers.
 func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, error) {
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
