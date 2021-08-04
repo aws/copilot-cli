@@ -37,7 +37,7 @@ const (
 
 	fmtCopilotTaskGroup = "copilot-%s"
 
-	fmtTopicSlug = "%s (%s)"
+	fmtTopicDescription = "%s (%s)"
 )
 
 const (
@@ -1027,7 +1027,7 @@ func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
 		// A slug is the human string printed out as an option.
 		// In this case, it's "orders (api)" to denote the "orders"
 		// topic published by the "api" service.
-		slug := fmt.Sprintf(fmtTopicSlug, n, t.Workload())
+		slug := fmt.Sprintf(fmtTopicDescription, n, t.Workload())
 		topicDescriptions = append(topicDescriptions, slug)
 		topicMap[slug] = t
 	}
