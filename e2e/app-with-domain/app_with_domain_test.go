@@ -163,7 +163,7 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			wantedURLs = map[string]string{
-				"test": "https://frontend.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://frontend.copilot-e2e-tests.ecs.aws.dev or https://copilot-e2e-tests.ecs.aws.dev",
 			}
 			// Validate route has the expected HTTPS endpoint.
 			route := svc.Routes[0]
@@ -172,15 +172,18 @@ var _ = Describe("App With Domain", func() {
 			// Make sure the response is OK.
 			var resp *http.Response
 			var fetchErr error
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(route.URL)
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
-			// HTTP should route to HTTPS.
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(strings.Replace(route.URL, "https", "http", 1))
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
+			urls := strings.Split(route.URL, " or ")
+			for _, url := range urls {
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(url)
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				// HTTP should route to HTTPS.
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+			}
 		})
 	})
 })
