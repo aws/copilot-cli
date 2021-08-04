@@ -28,6 +28,7 @@ type Topic struct {
 	name string
 }
 
+// NewTopic creates a new Topic struct, validating the ARN as a Copilot-managed SNS topic.
 func NewTopic(inputARN string, app, env, wkld string) (*Topic, error) {
 	t := &Topic{
 		app:  app,
@@ -51,15 +52,12 @@ func (t Topic) Name() string {
 	return t.name
 }
 
-// ID returns the resource ID of the topic (the last element of the ARN).
-func (t Topic) ID() string {
-	return t.awsARN.Resource
-}
-
+// ARN returns the full ARN of the SNS topic.
 func (t Topic) ARN() string {
 	return t.awsARN.String()
 }
 
+// Workload returns the svc or job the topic is associated with.
 func (t Topic) Workload() string {
 	return t.wkld
 }
