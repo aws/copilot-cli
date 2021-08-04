@@ -20,5 +20,6 @@ Which credentials would you like to use to create name? [profile default]
 デフォルト設定を選択すると、 Copilot は [AWS のベストプラクティス](https://aws.amazon.com/blogs/containers/amazon-ecs-availability-best-practices/)に従って 2 つのアベイラビリティゾーンにまたがった VPC と 2 つのパブリックサブネットおよびプライベートサブネットを作成します。多くのケースではこの設定はいいものですが、 Copilot は既存のリソースをインポートするときに柔軟に対応できます。例えば、インターネットに面していない 2 つのプライベートサブネットだけあってパブリックサブネットがない VPC をインポートすることができます(分離されたネットワークに関してもっと知りたい方は[こちら](https://github.com/aws/copilot-cli/discussions/2378)をご覧ください)。
 
 ## 制約
+* 既存のVPCをインポートする場合は、[VPC のセキュリティのベストプラクティス](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html)と、[Amazon VPC FAQ の「セキュリティとフィルタリング」のセクション](https://aws.amazon.com/vpc/faqs/#Security_and_Filtering)に準拠することをお勧めします。
 * プライベートホストゾーンをご利用の場合は、[こちら](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/hosted-zone-private-considerations.html#hosted-zone-private-considerations-vpc-settings)にあるように`enableDnsHostname` と `enableDnsSupport` を true に設定してください。
 * [プライベートサブネット](../include/common-svc-fields.ja.md#network-vpc-placement)にインターネットに面したワークロードをデプロイする場合は、 VPC に [NAT ゲートウェイ](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/vpc-nat-gateway.html)が必要です。
