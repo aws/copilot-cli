@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestTemplate_ParseSvc(t *testing.T) {
@@ -104,135 +105,134 @@ func TestTemplate_ParseSvc(t *testing.T) {
 	}
 }
 
-//
-//func TestHasSecrets(t *testing.T) {
-//	testCases := map[string]struct {
-//		in     WorkloadOpts
-//		wanted bool
-//	}{
-//		"nil secrets": {
-//			in:     WorkloadOpts{},
-//			wanted: false,
-//		},
-//		"no secrets": {
-//			in: WorkloadOpts{
-//				Secrets: map[string]string{},
-//			},
-//			wanted: false,
-//		},
-//		"service has secrets": {
-//			in: WorkloadOpts{
-//				Secrets: map[string]string{
-//					"hello": "world",
-//				},
-//			},
-//			wanted: true,
-//		},
-//		"nested has secrets": {
-//			in: WorkloadOpts{
-//				NestedStack: &WorkloadNestedStackOpts{
-//					SecretOutputs: []string{"MySecretArn"},
-//				},
-//			},
-//			wanted: true,
-//		},
-//	}
-//
-//	for name, tc := range testCases {
-//		t.Run(name, func(t *testing.T) {
-//			require.Equal(t, tc.wanted, hasSecrets(tc.in))
-//		})
-//	}
-//}
-//
-//func TestTemplate_ParseNetwork(t *testing.T) {
-//	type cfn struct {
-//		Resources struct {
-//			Service struct {
-//				Properties struct {
-//					NetworkConfiguration map[interface{}]interface{} `yaml:"NetworkConfiguration"`
-//				} `yaml:"Properties"`
-//			} `yaml:"Service"`
-//		} `yaml:"Resources"`
-//	}
-//
-//	testCases := map[string]struct {
-//		input *NetworkOpts
-//
-//		wantedNetworkConfig string
-//	}{
-//		"should render AWS VPC configuration for public subnets by default": {
-//			input: nil,
-//			wantedNetworkConfig: `
-//  AwsvpcConfiguration:
-//    AssignPublicIp: ENABLED
-//    Subnets:
-//      Fn::Split:
-//        - ','
-//        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-//    SecurityGroups:
-//      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-//`,
-//		},
-//		"should render AWS VPC configuration for private subnets": {
-//			input: &NetworkOpts{
-//				AssignPublicIP: "DISABLED",
-//				SubnetsType:    "PrivateSubnets",
-//			},
-//			wantedNetworkConfig: `
-//  AwsvpcConfiguration:
-//    AssignPublicIp: DISABLED
-//    Subnets:
-//      Fn::Split:
-//        - ','
-//        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-//    SecurityGroups:
-//      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-//`,
-//		},
-//		"should render AWS VPC configuration for private subnets with security groups": {
-//			input: &NetworkOpts{
-//				AssignPublicIP: "DISABLED",
-//				SubnetsType:    "PrivateSubnets",
-//				SecurityGroups: []string{
-//					"sg-1bcf1d5b",
-//					"sg-asdasdas",
-//				},
-//			},
-//			wantedNetworkConfig: `
-//  AwsvpcConfiguration:
-//    AssignPublicIp: DISABLED
-//    Subnets:
-//      Fn::Split:
-//        - ','
-//        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-//    SecurityGroups:
-//      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-//      - "sg-1bcf1d5b"
-//      - "sg-asdasdas"
-//`,
-//		},
-//	}
-//
-//	for name, tc := range testCases {
-//		t.Run(name, func(t *testing.T) {
-//			// GIVEN
-//			tpl := New()
-//			wanted := make(map[interface{}]interface{})
-//			err := yaml.Unmarshal([]byte(tc.wantedNetworkConfig), &wanted)
-//			require.NoError(t, err, "unmarshal wanted config")
-//
-//			// WHEN
-//			content, err := tpl.ParseLoadBalancedWebService(WorkloadOpts{
-//				Network: tc.input,
-//			})
-//
-//			// THEN
-//			require.NoError(t, err, "parse load balanced web service")
-//			var actual cfn
-//			err = yaml.Unmarshal(content.Bytes(), &actual)
-//			require.NoError(t, err, "unmarshal actual config")
-//			require.Equal(t, wanted, actual.Resources.Service.Properties.NetworkConfiguration)
-//		})
-//	}
-//}
+func TestHasSecrets(t *testing.T) {
+	testCases := map[string]struct {
+		in     WorkloadOpts
+		wanted bool
+	}{
+		"nil secrets": {
+			in:     WorkloadOpts{},
+			wanted: false,
+		},
+		"no secrets": {
+			in: WorkloadOpts{
+				Secrets: map[string]string{},
+			},
+			wanted: false,
+		},
+		"service has secrets": {
+			in: WorkloadOpts{
+				Secrets: map[string]string{
+					"hello": "world",
+				},
+			},
+			wanted: true,
+		},
+		"nested has secrets": {
+			in: WorkloadOpts{
+				NestedStack: &WorkloadNestedStackOpts{
+					SecretOutputs: []string{"MySecretArn"},
+				},
+			},
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, hasSecrets(tc.in))
+		})
+	}
+}
+
+func TestTemplate_ParseNetwork(t *testing.T) {
+	type cfn struct {
+		Resources struct {
+			Service struct {
+				Properties struct {
+					NetworkConfiguration map[interface{}]interface{} `yaml:"NetworkConfiguration"`
+				} `yaml:"Properties"`
+			} `yaml:"Service"`
+		} `yaml:"Resources"`
+	}
+
+	testCases := map[string]struct {
+		input *NetworkOpts
+
+		wantedNetworkConfig string
+	}{
+		"should render AWS VPC configuration for public subnets by default": {
+			input: nil,
+			wantedNetworkConfig: `
+ AwsvpcConfiguration:
+   AssignPublicIp: ENABLED
+   Subnets:
+     Fn::Split:
+       - ','
+       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+   SecurityGroups:
+     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+`,
+		},
+		"should render AWS VPC configuration for private subnets": {
+			input: &NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
+			},
+			wantedNetworkConfig: `
+ AwsvpcConfiguration:
+   AssignPublicIp: DISABLED
+   Subnets:
+     Fn::Split:
+       - ','
+       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+   SecurityGroups:
+     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+`,
+		},
+		"should render AWS VPC configuration for private subnets with security groups": {
+			input: &NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
+				SecurityGroups: []string{
+					"sg-1bcf1d5b",
+					"sg-asdasdas",
+				},
+			},
+			wantedNetworkConfig: `
+ AwsvpcConfiguration:
+   AssignPublicIp: DISABLED
+   Subnets:
+     Fn::Split:
+       - ','
+       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+   SecurityGroups:
+     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+     - "sg-1bcf1d5b"
+     - "sg-asdasdas"
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			tpl := New()
+			wanted := make(map[interface{}]interface{})
+			err := yaml.Unmarshal([]byte(tc.wantedNetworkConfig), &wanted)
+			require.NoError(t, err, "unmarshal wanted config")
+
+			// WHEN
+			content, err := tpl.ParseLoadBalancedWebService(WorkloadOpts{
+				Network: tc.input,
+			})
+
+			// THEN
+			require.NoError(t, err, "parse load balanced web service")
+			var actual cfn
+			err = yaml.Unmarshal(content.Bytes(), &actual)
+			require.NoError(t, err, "unmarshal actual config")
+			require.Equal(t, wanted, actual.Resources.Service.Properties.NetworkConfiguration)
+		})
+	}
+}
