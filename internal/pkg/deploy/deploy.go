@@ -148,10 +148,6 @@ func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, 
 		return nil, fmt.Errorf("get SNS topics for environment %s: %w", envName, err)
 	}
 
-	if len(topics) == 0 {
-		return nil, nil
-	}
-
 	var out []Topic
 	for _, r := range topics {
 		// TODO: if we add env-level SNS topics, remove this check.
