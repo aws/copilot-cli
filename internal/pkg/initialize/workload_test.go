@@ -444,6 +444,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		inAppName        string
 		inImage          string
 		inHealthCheck    *manifest.ContainerHealthCheck
+		inTopics         *[]manifest.TopicSubscription
 
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
@@ -714,6 +715,54 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
 			},
 		},
+		"topic subscriptions enabled": {
+			inSvcType:        manifest.WorkerServiceType,
+			inAppName:        "app",
+			inSvcName:        "worker",
+			inDockerfilePath: "worker/Dockerfile",
+			inSvcPort:        80,
+			inTopics: &[]manifest.TopicSubscription{
+				{
+					Name:    "theTopic",
+					Service: "publisher",
+				},
+			},
+
+			mockWriter: func(m *mocks.MockWorkspace) {
+				m.EXPECT().CopilotDirPath().Return("/worker", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
+					Do(func(m *manifest.WorkerService, _ string) {
+						require.Equal(t, *m.Workload.Type, manifest.WorkerServiceType)
+						require.Nil(t, m.ImageConfig.HealthCheck)
+					}).Return("/worker/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
+							Name: "worker",
+							App:  "app",
+							Type: manifest.WorkerServiceType,
+						}, app)
+					}).
+					Return(nil)
+
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "worker")
+			},
+			mockProg: func(m *mocks.MockProg) {
+				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "worker"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "worker"))
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -755,6 +804,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Type:           tc.inSvcType,
 					DockerfilePath: tc.inDockerfilePath,
 					Image:          tc.inImage,
+					Topics:         tc.inTopics,
 				},
 				Port:        tc.inSvcPort,
 				HealthCheck: tc.inHealthCheck,

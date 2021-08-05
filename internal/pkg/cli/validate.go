@@ -60,6 +60,11 @@ var (
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
+
+	// Topic subscription errors.
+	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
+	errInvalidPubSubTopicName   = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
+	errSubscribeBadFormat       = errors.New("value must be of the form <serviceName>:<topicName>")
 )
 
 const fmtErrValueBadSize = "value must be between %d and %d characters in length"
@@ -138,6 +143,11 @@ var (
 // SSM secret parameter name validation expression.
 // https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html#systemsmanager-PutParameter-request-Name
 var secretParameterNameRegExp = regexp.MustCompile("^[a-zA-Z0-9_.-]+$")
+
+var (
+	awsSNSTopicRegexp       = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`) // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	regexpMatchSubscription = regexp.MustCompile(`^(\S+):(\S+)`)     // Validates that an expression contains the format serviceName:topicName
+)
 
 const regexpFindAllMatches = -1
 
@@ -623,6 +633,69 @@ func validateLSIs(val interface{}) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func validateSubscribe(noSubscription bool, subscribeTags []string) error {
+	// --no-subscriptions and --subscribe are mutually exclusive.
+	if noSubscription && len(subscribeTags) != 0 {
+		return fmt.Errorf("validate subscribe configuration: cannot specify --%s and --%s options at once", noSubscriptionFlag, subscribeFlag)
+	}
+	if len(subscribeTags) != 0 {
+		if err := validateSubscriptions(subscribeTags); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateSubscriptions(val interface{}) error {
+	s, ok := val.([]string)
+	if !ok {
+		return errValueNotAStringSlice
+	}
+	for _, sub := range s {
+		err := validateSubscriptionKey(sub)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateSubscriptionKey(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	sub, err := subscriptionFromKey(s)
+	if err != nil {
+		return errSubscribeBadFormat
+	}
+	err = validatePubSubName(sub.Name)
+	if err != nil {
+		return fmt.Errorf("invalid topic subscription topic name `%s`: %w", sub.Name, err)
+	}
+	err = basicNameValidation(sub.Service)
+	if err != nil {
+		return fmt.Errorf("invalid topic subscription service name `%s`: %w", sub.Service, err)
+	}
+	return nil
+}
+
+// ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
+// SNS Topic intended for a publisher.
+func validatePubSubName(name string) error {
+	if len(name) == 0 {
+		return errMissingPublishTopicField
+	}
+
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(name) {
+		return errInvalidPubSubTopicName
+	}
+
 	return nil
 }
 

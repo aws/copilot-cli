@@ -1050,7 +1050,7 @@ func (s *DeploySelect) Topics(promptMsg, help, app, env string) ([]string, error
 		return nil, fmt.Errorf("select SNS topics: %w", err)
 	}
 
-	// Get the ARNs from the topic slugs again.
+	// Get the ARNs from the topic descriptions again.
 	var topicARNs []string
 	for _, t := range selectedTopics {
 		topicARNs = append(topicARNs, topicMap[t].ARN())

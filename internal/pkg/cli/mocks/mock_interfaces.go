@@ -25,6 +25,7 @@ import (
 	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
+	manifest "github.com/aws/copilot-cli/internal/pkg/manifest"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -5383,6 +5384,44 @@ func (m *MockdockerfileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, 
 func (mr *MockdockerfileSelectorMockRecorder) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockdockerfileSelector)(nil).Dockerfile), selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
+}
+
+// MocktopicSelector is a mock of topicSelector interface.
+type MocktopicSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MocktopicSelectorMockRecorder
+}
+
+// MocktopicSelectorMockRecorder is the mock recorder for MocktopicSelector.
+type MocktopicSelectorMockRecorder struct {
+	mock *MocktopicSelector
+}
+
+// NewMocktopicSelector creates a new mock instance.
+func NewMocktopicSelector(ctrl *gomock.Controller) *MocktopicSelector {
+	mock := &MocktopicSelector{ctrl: ctrl}
+	mock.recorder = &MocktopicSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktopicSelector) EXPECT() *MocktopicSelectorMockRecorder {
+	return m.recorder
+}
+
+// Topics mocks base method.
+func (m *MocktopicSelector) Topics(prompt, help, app string) ([]manifest.TopicSubscription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Topics", prompt, help, app)
+	ret0, _ := ret[0].([]manifest.TopicSubscription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Topics indicates an expected call of Topics.
+func (mr *MocktopicSelectorMockRecorder) Topics(prompt, help, app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Topics", reflect.TypeOf((*MocktopicSelector)(nil).Topics), prompt, help, app)
 }
 
 // Mockec2Selector is a mock of ec2Selector interface.
