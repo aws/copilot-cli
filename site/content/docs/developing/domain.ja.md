@@ -47,7 +47,7 @@ http:
 * エイリアス用でオプションの A レコードを作成しています。
 
 ## どのようなものなのか
-[![AWS Copilot CLI v1.8.0 Release Highlights](https://www.youtube.com/embed/Oyr-n59mVjI/0.jpg)](https://www.youtube.com/embed/Oyr-n59mVjI)
+[![AWS Copilot CLI v1.8.0 Release Highlights](https://img.youtube.com/vi/Oyr-n59mVjI/0.jpg)](https://www.youtube.com/embed/Oyr-n59mVjI)
 
 ## Request-Driven Web Service
 Request-Driven Web Service に[カスタムドメイン](https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html)を追加することもできます。Load Balanced Web Service と同様に、Manifest の [`alias`](../manifest/rd-web-service.en.md#http-alias) フィールドを変更することで追加できます。
