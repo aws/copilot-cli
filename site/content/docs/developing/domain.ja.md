@@ -46,13 +46,11 @@ http:
 * HTTPS リスナーと証明書を関連づけて HTTP のトラフィックを HTTPS にリダイレクトし
 * エイリアス用でオプションの A レコードを作成しています。
 
-## What does it look like?
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+## どのようなものなのか
+[![AWS Copilot CLI v1.8.0 Release Highlights](https://www.youtube.com/embed/Oyr-n59mVjI/0.jpg)](https://www.youtube.com/embed/Oyr-n59mVjI)
 
 ## Request-Driven Web Service
-You can also add a [custom domain](https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html) for your request-driven web service. 
-Similar to Load Balanced Web Service, you can do so by modifying the [`alias`](../manifest/rd-web-service.en.md#http-alias) field in your manifest:
+Request-Driven Web Service に[カスタムドメイン](https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html)を追加することもできます。Load Balanced Web Service と同様に、Manifest の [`alias`](../manifest/rd-web-service.en.md#http-alias) フィールドを変更することで追加できます。
 ```yaml
 # in copilot/{service name}/manifest.yml
 http:
@@ -60,15 +58,15 @@ http:
   alias: web.example.aws
 ```
 
-Likewise, your application should have been associated with the domain (e.g. `example.aws`) in order for your Request-Driven Web Service to use it.
+同様に、Request-Driven Web Service がドメインを使用するためには、Application がドメイン (例：example.aws) に関連付けられている必要があります。
 
 !!!info
-    For now, we support only 1-level subdomain such as `web.example.aws`. 
+    現時点では、`web.example.aws` のような 1 レベルのサブドメインのみをサポートしています。
     
     Environment-level domains (e.g. `web.${envName}.${appName}.example.aws`), application-level domains (e.g. `web.${appName}.example.aws`),
     or root domains (i.e. `example.aws`) are not supported yet. This also means that your subdomain shouldn't collide with your application name.
 
-Under the hood, Copilot:
+Copilot の中では・・・
 
-* associates the domain with your app runner service
-* creates the domain record as well as the validation records in your root domain's hosted zone
+* ドメインを app runner service に関連付けます。
+* root ドメインのホストゾーンにドメインレコードと検証レコードを作成します。
