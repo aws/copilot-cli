@@ -8,6 +8,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+/** How to add `ApplyEnv` unit test to a new manifest field:
+
+When writing tests for a field F (e.g. When writing `TestApplyEnv_Image`, where F would be the `image` field):
+	For each subfield f in F:
+		- If f has subfields || f is a composite type (e.g. `StringOrStringSlice`, `BuildStringOrArgs`) ->
+			1. Write a test case when f field is nil.
+			2. Write a test case when f field is non-nil.
+		- Otherwise, write three test cases for f ->
+			1. Write a test case when f field is nil.
+			2. Write a test case when f field is non-nil, and the referenced value is empty (e.g., it is "", {}, 0).
+			3. Write a test case when f field is non-nil, and the referenced value is NOT empty.
+
+	For each subfield f in F:
+		- If f is mutually exclusive with another subfield g of F (e.g. `image.location` and `image.build` are mutually exclusive) ->
+			1. Write a test case that make sure f is nil when g is non-nil
+			2. Write a test case that make sure g is nil when f is non-nil
+
+	For each subfield f in F:
+		- If f has subfields || if f is a composite field ->
+			Write another test group for this field (e.g. F is `image` and f is `image.build`, write another test functions named `TestApplyEnv_Image_Build`)
+*/
+
 func Test_ApplyEnv_Image(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
