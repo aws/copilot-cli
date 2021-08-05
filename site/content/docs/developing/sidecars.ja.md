@@ -41,6 +41,12 @@ sidecars:
       {label key} : <label value>
 ```
 
+{% include 'sidecar-config.en.md' %}
+
+<div class="separator"></div>
+
+## 実行例
+
 以下は Load Balanced Web Service の Manifest で [nginx](https://www.nginx.com/) サイドカーコンテナを指定する例です。
 
 ``` yaml
