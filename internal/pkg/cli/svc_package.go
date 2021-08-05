@@ -196,7 +196,9 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			}
 
 			serializer, err = stack.NewWorkerService(t, env.Name, app.Name, rc, ts)
-
+			if err != nil {
+				return nil, fmt.Errorf("init worker service stack serializer: %w", err)
+			}
 		default:
 			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)
 		}

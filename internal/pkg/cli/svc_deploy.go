@@ -556,7 +556,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		}
 
 		conf, err = stack.NewWorkerService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, ts)
-
+		if err != nil {
+			return nil, fmt.Errorf("init worker stack configuration: %s", err)
+		}
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
