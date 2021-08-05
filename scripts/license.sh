@@ -23,7 +23,7 @@ if [ $# != 1 ]; then
 fi
 
 fail=0
-for file in $(find -E $1 -regex '.*\.(go|js)'); do
+for file in $(find $1 -regextype 'posix-extended' -regex '.*\.(go|js)' -not -path '*node_modules*'); do
     case $file in
         $1/*/mocks/*)
             # Skip mocks
