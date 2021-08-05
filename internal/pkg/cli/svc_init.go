@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
@@ -59,12 +60,16 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
+
+	svcInitPublisherPrompt     = "Which publishers do you want to subscribe to?"
+	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic that the designated service publishes messages to. These messages can be consumed by the Worker Service.`
 )
 
 var serviceTypeHints = map[string]string{
 	manifest.RequestDrivenWebServiceType: "App Runner",
 	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
 	manifest.BackendServiceType:          "ECS on Fargate",
+	manifest.WorkerServiceType:           "Consumes Events",
 }
 
 type initWkldVars struct {
@@ -73,6 +78,8 @@ type initWkldVars struct {
 	name           string
 	dockerfilePath string
 	image          string
+	subscribeTags  []string
+	noSubscription bool
 }
 
 type initSvcVars struct {
@@ -90,10 +97,12 @@ type initSvcOpts struct {
 	prompt       prompter
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
+	topicSel     topicSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
 	platform     *string
+	topics       *[]manifest.TopicSubscription
 
 	// Cache variables
 	df dockerfileParser
@@ -120,6 +129,11 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	prompter := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
+	deployStore, err := deploy.NewStore(store)
+	if err != nil {
+		return nil, err
+	}
+	snsSel := selector.NewDeploySelect(prompter, store, deployStore)
 
 	initSvc := &initialize.WorkloadInitializer{
 		Store:    store,
@@ -135,6 +149,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		init:         initSvc,
 		prompt:       prompter,
 		sel:          sel,
+		topicSel:     snsSel,
 		dockerEngine: exec.NewDockerCommand(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
@@ -180,6 +195,9 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
+	if err := validateSubscribe(o.noSubscription, o.subscribeTags); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -203,6 +221,10 @@ func (o *initSvcOpts) Ask() error {
 	}
 
 	if err := o.askSvcPort(); err != nil {
+		return err
+	}
+
+	if err := o.askSvcPublishers(); err != nil {
 		return err
 	}
 
@@ -235,6 +257,7 @@ func (o *initSvcOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform:       o.platform,
+			Topics:         o.topics,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -265,6 +288,7 @@ func (o *initSvcOpts) askSvcType() error {
 		manifest.RequestDrivenWebServiceType,
 		manifest.LoadBalancedWebServiceType,
 		manifest.BackendServiceType,
+		manifest.WorkerServiceType,
 	)
 	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))
 
@@ -385,8 +409,8 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 			defaultPort = strconv.Itoa(int(ports[0]))
 		}
 	}
-	// Skip asking if it is a backend service.
-	if o.wkldType == manifest.BackendServiceType {
+	// Skip asking if it is a backend or worker service.
+	if o.wkldType == manifest.BackendServiceType || o.wkldType == manifest.WorkerServiceType {
 		return nil
 	}
 
@@ -409,6 +433,49 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	o.port = uint16(portUint)
 
 	return nil
+}
+
+func (o *initSvcOpts) askSvcPublishers() (err error) {
+	if o.wkldType != manifest.WorkerServiceType {
+		return nil
+	}
+	// publishers already specified by flags
+	if len(o.subscribeTags) > 0 {
+		var topicSubscriptions []manifest.TopicSubscription
+		for _, sub := range o.subscribeTags {
+			sub, err := subscriptionFromKey(sub)
+			if err != nil {
+				return err
+			}
+			topicSubscriptions = append(topicSubscriptions, sub)
+		}
+		o.topics = &topicSubscriptions
+		return nil
+	}
+
+	// if --no-subscriptions flag specified, no need to ask for publishers
+	if o.noSubscription {
+		return nil
+	}
+
+	topics, err := o.topicSel.Topics(svcInitPublisherPrompt, svcInitPublisherHelpPrompt, o.appName)
+	if err != nil {
+		return fmt.Errorf("select publisher: %w", err)
+	}
+	o.topics = &topics
+	return nil
+}
+
+// subscriptionFromKey parses the service and topic name out of keys specified in the form "service:topicName"
+func subscriptionFromKey(input string) (manifest.TopicSubscription, error) {
+	attrs := regexpMatchSubscription.FindStringSubmatch(input)
+	if len(attrs) == 0 {
+		return manifest.TopicSubscription{}, fmt.Errorf("parse subscription from key: %s", input)
+	}
+	return manifest.TopicSubscription{
+		Name:    attrs[2],
+		Service: attrs[1],
+	}, nil
 }
 
 func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, error) {
@@ -481,5 +548,8 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.subscribeTags, subscribeFlag, []string{}, subscribeFlagDescription)
+	cmd.Flags().BoolVar(&vars.noSubscription, noSubscriptionFlag, false, noSubscriptionFlagDescription)
+
 	return cmd
 }

@@ -51,6 +51,9 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
+	noSubscriptionFlag = "no-subscriptions"
+	subscribeFlag      = "subscribe"
+
 	storageTypeFlag              = "storage-type"
 	storagePartitionKeyFlag      = "partition-key"
 	storageSortKeyFlag           = "sort-key"
@@ -215,6 +218,9 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localJobFlagDescription          = "Only show jobs in the workspace."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "The port on which your service listens."
+
+	noSubscriptionFlagDescription = "Optional. Turn off selection for adding subscriptions for worker services."
+	subscribeFlagDescription      = "Optional. Publishers for worker services to subscribe to. Must be of format '<svcName>:<publisherName>"
 
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."

@@ -250,6 +250,88 @@ secrets:
 				require.Equal(t, wantedManifest, actualManifest)
 			},
 		},
+		"Worker Service": {
+			inContent: `
+name: dogcategorizer
+type: Worker Service
+image:
+  build: ./dogcategorizer/Dockerfile
+cpu: 1024
+memory: 1024
+exec: true     # Enable running commands in your container.
+count: 1
+
+subscribe:
+  queue:
+    delay: 15s
+    dead_letter:
+          tries: 5
+  topics:
+    - name: publisher1
+      service: testpubsvc
+    - name: publisher2
+      service: testpubjob
+      queue:
+        timeout: 15s`,
+			requireCorrectValues: func(t *testing.T, i interface{}) {
+				actualManifest, ok := i.(*WorkerService)
+				duration15Seconds := 15 * time.Second
+				require.True(t, ok)
+				wantedManifest := &WorkerService{
+					Workload: Workload{
+						Name: aws.String("dogcategorizer"),
+						Type: aws.String(WorkerServiceType),
+					},
+					WorkerServiceConfig: WorkerServiceConfig{
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("./dogcategorizer/Dockerfile"),
+								},
+							},
+						},
+						TaskConfig: TaskConfig{
+							CPU:      aws.Int(1024),
+							Memory:   aws.Int(1024),
+							Platform: nil,
+							Count: Count{
+								Value: aws.Int(1),
+							},
+							ExecuteCommand: ExecuteCommand{
+								Enable: aws.Bool(true),
+							},
+						},
+						Network: &NetworkConfig{
+							VPC: &vpcConfig{
+								Placement: stringP("public"),
+							},
+						},
+						Subscribe: &SubscribeConfig{
+							Topics: &[]TopicSubscription{
+								{
+									Name:    "publisher1",
+									Service: "testpubsvc",
+								},
+								{
+									Name:    "publisher2",
+									Service: "testpubjob",
+									Queue: &SQSQueue{
+										Timeout: &duration15Seconds,
+									},
+								},
+							},
+							Queue: &SQSQueue{
+								Delay: &duration15Seconds,
+								DeadLetter: &DeadLetterQueue{
+									Tries: aws.Uint16(5),
+								},
+							},
+						},
+					},
+				}
+				require.Equal(t, wantedManifest, actualManifest)
+			},
+		},
 		"invalid svc type": {
 			inContent: `
 name: CowSvc

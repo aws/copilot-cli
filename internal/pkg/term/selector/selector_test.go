@@ -39,10 +39,17 @@ func TestDeploySelect_Topics(t *testing.T) {
 		setupMocks func(mocks deploySelectMocks)
 
 		wantErr    error
-		wantTopics []string
+		wantTopics []manifest.TopicSubscription
 	}{
 		"return error if fail to retrieve topics from deploy": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
+					{
+						App:    testApp,
+						Name:   testEnv,
+						Region: "us-west-2",
+					},
+				}, nil)
 				m.deploySvc.
 					EXPECT().
 					ListDeployedSNSTopics(testApp, testEnv).
@@ -52,6 +59,13 @@ func TestDeploySelect_Topics(t *testing.T) {
 		},
 		"return error if fail to select topics": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
+					{
+						App:    testApp,
+						Name:   testEnv,
+						Region: "us-west-2",
+					},
+				}, nil)
 				m.deploySvc.
 					EXPECT().
 					ListDeployedSNSTopics(testApp, testEnv).
@@ -65,6 +79,13 @@ func TestDeploySelect_Topics(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
+					{
+						App:    testApp,
+						Name:   testEnv,
+						Region: "us-west-2",
+					},
+				}, nil)
 				m.deploySvc.
 					EXPECT().
 					ListDeployedSNSTopics(testApp, testEnv).
@@ -74,7 +95,12 @@ func TestDeploySelect_Topics(t *testing.T) {
 					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}).
 					Return([]string{"orders (mockWkld)"}, nil)
 			},
-			wantTopics: []string{mockTopic.ARN()},
+			wantTopics: []manifest.TopicSubscription{
+				{
+					Name:    "orders",
+					Service: "mockWkld",
+				},
+			},
 		},
 	}
 	for name, tc := range testCases {
@@ -99,7 +125,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
-			topics, err := sel.Topics("Select a deployed topic", "Help text", testApp, testEnv)
+			topics, err := sel.Topics("Select a deployed topic", "Help text", testApp)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {

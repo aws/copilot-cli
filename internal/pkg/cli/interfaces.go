@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -502,6 +503,10 @@ type cfTaskSelector interface {
 
 type dockerfileSelector interface {
 	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
+}
+
+type topicSelector interface {
+	Topics(prompt, help, app string) ([]manifest.TopicSubscription, error)
 }
 
 type ec2Selector interface {

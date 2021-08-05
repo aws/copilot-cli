@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -1009,12 +1010,21 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 	return outServices, nil
 }
 
-// Topics asks the user to select from all Copilot-managed SNS topics and returns the ARNs
-// of those topics.
-func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
-	topics, err := s.deployStoreSvc.ListDeployedSNSTopics(app, env)
+// Topics asks the user to select from all Copilot-managed SNS topics and returns the service
+// and name in format svc:name of those topics
+func (s *DeploySelect) Topics(prompt, help, app string) ([]manifest.TopicSubscription, error) {
+	envs, err := s.Select.config.ListEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("list SNS topics: %w", err)
+	}
+
+	var topics []deploy.Topic
+	for _, env := range envs {
+		envTopics, err := s.deployStoreSvc.ListDeployedSNSTopics(app, env.Name)
+		if err != nil {
+			return nil, fmt.Errorf("list SNS topics: %w", err)
+		}
+		topics = append(topics, envTopics...)
 	}
 	if len(topics) == 0 {
 		return nil, nil
@@ -1037,10 +1047,14 @@ func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
 	}
 
-	// Get the ARNs from the topic slugs again.
-	var topicARNs []string
+	// Get service name and topic name from workloads
+	finalTopics := []manifest.TopicSubscription{}
 	for _, t := range selectedTopics {
-		topicARNs = append(topicARNs, topicMap[t].ARN())
+		finalTopics = append(finalTopics, manifest.TopicSubscription{
+			Name:    topicMap[t].Name(),
+			Service: topicMap[t].Workload(),
+		})
 	}
-	return topicARNs, nil
+	log.Info("\n\n final topics selector ", finalTopics, "\n\n")
+	return finalTopics, nil
 }
