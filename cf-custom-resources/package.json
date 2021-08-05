@@ -13,7 +13,7 @@
     "lint": "eslint lib",
     "build+test+package": "npm run build+test",
     "build+test": "npm run build && npm test",
-    "package": "minify lib -d ../templates/custom-resources --builtIns false"
+    "package": "minify lib -d ../internal/pkg/template/templates/custom-resources --builtIns false"
   },
   "keywords": [],
   "author": {

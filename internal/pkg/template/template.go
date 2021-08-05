@@ -13,7 +13,7 @@ import (
 	"text/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/templates"
+	"github.com/aws/copilot-cli/internal/pkg/template/templates"
 	"github.com/gobuffalo/packd"
 )
 
