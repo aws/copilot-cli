@@ -30,7 +30,7 @@ When writing tests for a field F (e.g. When writing `TestApplyEnv_Image`, where 
 			Write another test group for this field (e.g. F is `image` and f is `image.build`, write another test functions named `TestApplyEnv_Image_Build`)
 */
 
-func Test_ApplyEnv_Image(t *testing.T) {
+func TestApplyEnv_Image(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
@@ -333,7 +333,7 @@ func Test_ApplyEnv_Image(t *testing.T) {
 	}
 }
 
-func Test_ApplyEnv_Image_Build(t *testing.T) {
+func TestApplyEnv_Image_Build(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
@@ -830,7 +830,7 @@ func Test_ApplyEnv_Image_Build(t *testing.T) {
 	}
 }
 
-func Test_ApplyEnv_Image_HealthCheck(t *testing.T) {
+func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
@@ -1094,7 +1094,7 @@ func Test_ApplyEnv_Image_HealthCheck(t *testing.T) {
 	}
 }
 
-func Test_ApplyEnv_Entrypoint(t *testing.T) {
+func TestApplyEnv_Entrypoint(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
@@ -1234,7 +1234,7 @@ func Test_ApplyEnv_Entrypoint(t *testing.T) {
 	}
 }
 
-func Test_ApplyEnv_Command(t *testing.T) {
+func TestApplyEnv_Command(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
@@ -1374,7 +1374,7 @@ func Test_ApplyEnv_Command(t *testing.T) {
 	}
 }
 
-func Test_ApplyEnv_Logging(t *testing.T) {
+func TestApplyEnv_Logging(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
@@ -1657,7 +1657,7 @@ func Test_ApplyEnv_Logging(t *testing.T) {
 	}
 }
 
-func Test_ApplyEnv_Network(t *testing.T) {
+func TestApplyEnv_Network(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
@@ -1721,7 +1721,7 @@ func Test_ApplyEnv_Network(t *testing.T) {
 	}
 }
 
-func Test_ApplyEnv_Network_VPC(t *testing.T) {
+func TestApplyEnv_Network_VPC(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
