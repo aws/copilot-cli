@@ -62,11 +62,11 @@ http:
 
 !!!info
     現時点では、`web.example.aws` のような 1 レベルのサブドメインのみをサポートしています。
-    
-    Environment-level domains (e.g. `web.${envName}.${appName}.example.aws`), application-level domains (e.g. `web.${appName}.example.aws`),
-    or root domains (i.e. `example.aws`) are not supported yet. This also means that your subdomain shouldn't collide with your application name.
+
+    Environment レベルのドメイン (例：`web.${envName}.${appName}.example.aws`) や、Application レベルのドメイン (例：`web.${appName}.example.aws`)、
+    Root ドメイン (例：`example.aws`) はまだサポートされていません。これは、サブドメインが Application 名と衝突してはいけないということでもあります。
 
 Copilot の中では・・・
 
 * ドメインを app runner service に関連付けます。
-* root ドメインのホストゾーンにドメインレコードと検証レコードを作成します。
+* Root ドメインのホストゾーンにドメインレコードと検証レコードを作成します。
