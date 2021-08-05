@@ -93,6 +93,16 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
+		case manifest.WorkerServiceType:
+			d, err = describe.NewWorkerServiceDescriber(describe.NewWorkerServiceConfig{
+				NewServiceConfig: describe.NewServiceConfig{
+					App:         opts.appName,
+					Svc:         opts.svcName,
+					ConfigStore: ssmStore,
+				},
+				DeployStore:     deployStore,
+				EnableResources: opts.shouldOutputResources,
+			})
 		default:
 			return fmt.Errorf("invalid service type %s", svc.Type)
 		}
