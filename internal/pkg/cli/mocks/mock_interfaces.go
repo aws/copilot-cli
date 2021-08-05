@@ -1214,6 +1214,21 @@ func (mr *MockdeployedEnvironmentListerMockRecorder) IsServiceDeployed(appName, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceDeployed", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).IsServiceDeployed), appName, envName, svcName)
 }
 
+// ListDeployedSNSTopics mocks base method.
+func (m *MockdeployedEnvironmentLister) ListDeployedSNSTopics(appName, envName string) ([]deploy.Topic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedSNSTopics", appName, envName)
+	ret0, _ := ret[0].([]deploy.Topic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedSNSTopics indicates an expected call of ListDeployedSNSTopics.
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedSNSTopics(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedSNSTopics", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedSNSTopics), appName, envName)
+}
+
 // ListDeployedServices mocks base method.
 func (m *MockdeployedEnvironmentLister) ListDeployedServices(appName, envName string) ([]string, error) {
 	m.ctrl.T.Helper()
