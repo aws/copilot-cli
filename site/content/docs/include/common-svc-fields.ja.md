@@ -228,22 +228,22 @@ EFS に関連する認可設定を指定します。
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-The logging section contains log configuration parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
+logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
-Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
+任意項目。使用する Fluent Bit のイメージ。デフォルト値は `amazon/aws-for-fluent-bit:latest`。
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
-Optional. The configuration options to send to the FireLens log driver.
+任意項目。Firelens ログドライバーにログを送信するときの設定。
 
 <span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
-Optional. Whether to include ECS metadata in logs. Defaults to `true`.
+任意項目。ログに ECS メタデータを含むかどうか。デフォルトは `true`。
 
 <span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
-Optional. The secrets to pass to the log configuration.
+任意項目。ログの設定に渡す秘密情報です。
 
 <span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
-Optional. The full config file path in your custom Fluent Bit image.
+任意項目。カスタムの Fluent Bit イメージ内の設定ファイルのフルパス。
 
 <div class="separator"></div>
 
