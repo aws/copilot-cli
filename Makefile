@@ -3,9 +3,11 @@
 
 BINARY_NAME=copilot
 PACKAGES=./internal...
-SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
-BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
-GOBIN=${PWD}/bin/tools
+ROOT_SRC_DIR=${PWD}
+SOURCE_CUSTOM_RESOURCES=${ROOT_SRC_DIR}/cf-custom-resources
+TEMPLATES_DIR=${ROOT_SRC_DIR}/internal/pkg/template/templates
+BUILT_CUSTOM_RESOURCES=${TEMPLATES_DIR}/custom-resources
+GOBIN=${ROOT_SRC_DIR}/bin/tools
 COVERAGE=coverage.out
 
 DESTINATION=./bin/local/${BINARY_NAME}
@@ -63,9 +65,9 @@ packr-build: tools package-custom-resources
 .PHONY: packr-clean
 packr-clean: tools package-custom-resources-clean
 	@echo "Cleaning up static files generated code" &&\
-	cd templates &&\
+	cd ${TEMPLATES_DIR} &&\
 	${GOBIN}/packr2 clean &&\
-	cd ..\
+	cd ${ROOT_SRC_DIR} \
 
 .PHONY: test
 test: packr-build run-unit-test custom-resource-tests packr-clean
@@ -75,7 +77,7 @@ custom-resource-tests:
 	@echo "Running custom resource unit tests" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
 	npm test &&\
-	cd ..
+	cd ${ROOT_SRC_DIR}
 
 # Minifies the resources in cf-custom-resources/lib and copies
 # those minified assets into templates/custom-resources so that
@@ -85,7 +87,7 @@ package-custom-resources:
 	@echo "Packaging custom resources to templates/custom-resources" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
 	npm run package &&\
-	cd ..
+	cd ${ROOT_SRC_DIR}
 
 # We only need the minified custom resources during building. After
 # they're packed, we can remove them.
