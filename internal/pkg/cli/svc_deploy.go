@@ -82,6 +82,7 @@ type deploySvcOpts struct {
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
 	endpointGetter      endpointGetter
+	snsTopicGetter      deployedEnvironmentLister
 	identity            identityService
 
 	spinner progress
@@ -101,10 +102,16 @@ type deploySvcOpts struct {
 	uploadOpts *uploadCustomResourcesOpts
 }
 
+var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
+
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
+	}
+	deployStore, err := deploy.NewStore(store)
+	if err != nil {
+		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
 	ws, err := workspace.New()
 	if err != nil {
@@ -127,8 +134,9 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 			}
 			return d, nil
 		},
-		cmd:          exec.NewCmd(),
-		sessProvider: sessions.NewProvider(),
+		cmd:            exec.NewCmd(),
+		sessProvider:   sessions.NewProvider(),
+		snsTopicGetter: deployStore,
 	}
 	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
@@ -560,6 +568,18 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+	case *manifest.WorkerService:
+		topics, err := o.snsTopicGetter.ListDeployedSNSTopics(o.appName, o.envName)
+		if err != nil {
+			return nil, err
+		}
+		ts := []string{}
+		for _, topic := range topics {
+			ts = append(ts, topic.ARN())
+		}
+
+		conf, err = stack.NewWorkerService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, ts)
+
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -786,6 +806,19 @@ func (o *deploySvcOpts) showSvcURI() error {
 			Svc:         o.name,
 			ConfigStore: o.store,
 		})
+	case manifest.WorkerServiceType:
+		queueNames, err := o.buildWorkerQueueNames()
+		if err != nil {
+			return err
+		}
+		retrieveEnvVarCode := fmt.Sprintf("const {eventsQueue%s} = JSON.parse(process.env.COPILOT_QUEUE_URIS)", queueNames)
+		actionRetrieveEnvVar := fmt.Sprintf(
+			`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URIS".
+	For example, in JavaScript you can write %s.`,
+			o.name,
+			color.HighlightCode(retrieveEnvVarCode))
+		log.Successf("Deployed %s.\n\n%s\n", color.HighlightUserInput(o.name), actionRetrieveEnvVar)
+		return nil
 	default:
 		err = errors.New("unexpected service type")
 	}
@@ -815,6 +848,29 @@ Please visit %s to check the validation status.
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}
 	return nil
+}
+
+// StripNonAlphaNumFunc strips non-alphanumeric characters from an input string.
+func StripNonAlphaNumFunc(s string) string {
+	return nonAlphaNum.ReplaceAllString(s, "")
+}
+
+func (o *deploySvcOpts) buildWorkerQueueNames() (string, error) {
+	topics, err := o.snsTopicGetter.ListDeployedSNSTopics(o.appName, o.envName)
+	if err != nil {
+		return "", err
+	}
+	var queueNames string
+	for _, topic := range topics {
+		name := topic.Name()
+		topicSvc := StripNonAlphaNumFunc(topic.Workload())
+		topicName := StripNonAlphaNumFunc(name)
+		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
+
+		queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
+	}
+
+	return queueNames, nil
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
