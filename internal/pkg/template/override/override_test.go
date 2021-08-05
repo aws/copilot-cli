@@ -109,7 +109,7 @@ Resources:
                         InitProcessEnabled: true
 `
 
-func newTaskDefPropertyNode(nextNode contentUpserter) contentUpserter {
+func newTaskDefPropertyNode(nextNode nodeUpserter) nodeUpserter {
 	end := &mapUpsertNode{
 		upsertNode: upsertNode{
 			key:  "Properties",
@@ -131,7 +131,7 @@ func newTaskDefPropertyNode(nextNode contentUpserter) contentUpserter {
 	return head
 }
 
-func addRequiresCompatibilities() contentUpserter {
+func addRequiresCompatibilities() nodeUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte(`RequiresCompatibilities[-]: EC2`), &node)
 
@@ -145,7 +145,7 @@ func addRequiresCompatibilities() contentUpserter {
 	return newTaskDefPropertyNode(node1)
 }
 
-func addLinuxParametersCapabilities() contentUpserter {
+func addLinuxParametersCapabilities() nodeUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte(`ContainerDefinitions[0].LinuxParameters.Capabilities.Add: ["AUDIT_CONTROL", "AUDIT_WRITE"]`), &node)
 
@@ -164,7 +164,7 @@ func addLinuxParametersCapabilities() contentUpserter {
 	return newLinuxParameters(node1)
 }
 
-func addLinuxParametersCapabilitiesInitProcessEnabled() contentUpserter {
+func addLinuxParametersCapabilitiesInitProcessEnabled() nodeUpserter {
 	node2 := &mapUpsertNode{
 		upsertNode: upsertNode{
 			key: "InitProcessEnabled",
@@ -184,7 +184,7 @@ func addLinuxParametersCapabilitiesInitProcessEnabled() contentUpserter {
 	return newLinuxParameters(node1)
 }
 
-func newLinuxParameters(nextNode contentUpserter) contentUpserter {
+func newLinuxParameters(nextNode nodeUpserter) nodeUpserter {
 	node2 := &mapUpsertNode{
 		upsertNode: upsertNode{
 			key:  "LinuxParameters",
@@ -201,7 +201,7 @@ func newLinuxParameters(nextNode contentUpserter) contentUpserter {
 	return newTaskDefPropertyNode(node1)
 }
 
-func addUlimits() contentUpserter {
+func addUlimits() nodeUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName"), &node)
 
@@ -228,7 +228,7 @@ func addUlimits() contentUpserter {
 	return newTaskDefPropertyNode(node1)
 }
 
-func exposeExtraPort() contentUpserter {
+func exposeExtraPort() nodeUpserter {
 	node3 := &mapUpsertNode{
 		upsertNode: upsertNode{
 			key: "ContainerPort",
@@ -256,7 +256,7 @@ func exposeExtraPort() contentUpserter {
 	return newTaskDefPropertyNode(node1)
 }
 
-func referBadSeqIndex() contentUpserter {
+func referBadSeqIndex() nodeUpserter {
 	var node yaml.Node
 	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].PortMappings[1].ContainerPort: 5000"), &node)
 
@@ -283,9 +283,36 @@ func referBadSeqIndex() contentUpserter {
 	return newTaskDefPropertyNode(node1)
 }
 
-func Test_applyRulesToCFNTemplate(t *testing.T) {
+func referBadSeqIndexWithNoKey() nodeUpserter {
+	var node yaml.Node
+	_ = yaml.Unmarshal([]byte("ContainerDefinitions[0].VolumesFrom[1].SourceContainer: foo"), &node)
+
+	node3 := &mapUpsertNode{
+		upsertNode: upsertNode{
+			key:           "SourceContainer",
+			valueToInsert: node.Content[0].Content[1],
+		},
+	}
+	node2 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "VolumesFrom",
+			next: node3,
+		},
+		index: 1,
+	}
+	node1 := &seqIdxUpsertNode{
+		upsertNode: upsertNode{
+			key:  "ContainerDefinitions",
+			next: node2,
+		},
+		index: 0,
+	}
+	return newTaskDefPropertyNode(node1)
+}
+
+func Test_applyRules(t *testing.T) {
 	testCases := map[string]struct {
-		inRules   []contentUpserter
+		inRules   []nodeUpserter
 		inContent string
 
 		wantedContent string
@@ -298,15 +325,23 @@ func Test_applyRulesToCFNTemplate(t *testing.T) {
 		},
 		"error when referring to bad sequence index": {
 			inContent: testContent,
-			inRules: []contentUpserter{
+			inRules: []nodeUpserter{
 				referBadSeqIndex(),
 			},
 
 			wantedError: fmt.Errorf("cannot specify PortMappings[1] because the current length is 1. Use [%s] to append to the sequence instead", seqAppendToLastSymbol),
 		},
+		"error when referring to bad sequence index when sequence key doesn't exist": {
+			inContent: testContent,
+			inRules: []nodeUpserter{
+				referBadSeqIndexWithNoKey(),
+			},
+
+			wantedError: fmt.Errorf("cannot specify VolumesFrom[1] because VolumesFrom does not exist. Use VolumesFrom[%s] to append to the sequence instead", seqAppendToLastSymbol),
+		},
 		"success": {
 			inContent: testContent,
-			inRules: []contentUpserter{
+			inRules: []nodeUpserter{
 				addUlimits(),
 				exposeExtraPort(),
 				addLinuxParametersCapabilities(),
@@ -325,7 +360,7 @@ func Test_applyRulesToCFNTemplate(t *testing.T) {
 			require.NoError(t, unmarshalErr)
 
 			// WHEN
-			err := applyRulesToCFNTemplate(tc.inRules, &node)
+			err := applyRules(tc.inRules, &node)
 			out, marshalErr := yaml.Marshal(&node)
 			require.NoError(t, marshalErr)
 

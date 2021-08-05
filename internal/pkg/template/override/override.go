@@ -21,7 +21,7 @@ func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	if err := applyRulesToCFNTemplate(ruleNodes, content); err != nil {
+	if err := applyRules(ruleNodes, content); err != nil {
 		return nil, err
 	}
 	output, err := marshalCFNYaml(content)
@@ -31,8 +31,8 @@ func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, erro
 	return output, nil
 }
 
-func parseRules(rules []Rule) ([]contentUpserter, error) {
-	var ruleNodes []contentUpserter
+func parseRules(rules []Rule) ([]nodeUpserter, error) {
+	var ruleNodes []nodeUpserter
 	for _, r := range rules {
 		if err := r.validate(); err != nil {
 			return nil, err
@@ -54,13 +54,13 @@ func marshalCFNYaml(content *yaml.Node) ([]byte, error) {
 	return nil, nil
 }
 
-func applyRulesToCFNTemplate(rules []contentUpserter, content *yaml.Node) error {
+func applyRules(rules []nodeUpserter, content *yaml.Node) error {
 	contentNode, err := getTemplateDocument(content)
 	if err != nil {
 		return err
 	}
 	for _, rule := range rules {
-		if err := applyRuleToCFNTemplate(rule, contentNode); err != nil {
+		if err := applyRule(rule, contentNode); err != nil {
 			return err
 		}
 	}
@@ -75,7 +75,7 @@ func getTemplateDocument(content *yaml.Node) (*yaml.Node, error) {
 	return nil, fmt.Errorf("cannot apply override rule on empty YAML template")
 }
 
-func applyRuleToCFNTemplate(ruleSegment contentUpserter, content *yaml.Node) error {
+func applyRule(ruleSegment nodeUpserter, content *yaml.Node) error {
 	if ruleSegment == nil || content == nil {
 		return nil
 	}
@@ -85,11 +85,11 @@ func applyRuleToCFNTemplate(ruleSegment contentUpserter, content *yaml.Node) err
 		if nextContentNode, err = ruleSegment.Upsert(content); err != nil {
 			return err
 		}
-		if ruleSegment.NextNode() == nil {
+		if ruleSegment.Next() == nil {
 			break
 		}
 		content = nextContentNode
-		ruleSegment = ruleSegment.NextNode()
+		ruleSegment = ruleSegment.Next()
 	}
 	return nil
 }
