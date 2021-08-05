@@ -34,6 +34,11 @@ command: ["ps", "au"]
 
 <div class="separator"></div>
 
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+
+<div class="separator"></div>
+
 <a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
 数値を指定する例。
 
@@ -64,7 +69,7 @@ count:
 ```
 
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>  
-最小と最大を範囲指定することで Service が保つべきタスク数を指定できます。
+メトリクスに指定した値に基づいて、Service が保つべきタスク数の最小と最大を範囲指定できます。
 
 ```yaml
 count:
@@ -222,5 +227,25 @@ EFS に関連する認可設定を指定します。
 
 <div class="separator"></div>
 
+<a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
+The logging section contains log configuration parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
+
+<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
+Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
+
+<span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
+Optional. The configuration options to send to the FireLens log driver.
+
+<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
+Optional. Whether to include ECS metadata in logs. Defaults to `true`.
+
+<span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
+Optional. The secrets to pass to the log configuration.
+
+<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
+Optional. The full config file path in your custom Fluent Bit image.
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-`environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで prod Environment で実行されるタスク数を２に設定しています。
+`environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで 'prod' Environment で実行されるタスク数を ２ に設定し、'staging' Environment で実行される Fargate Spot capacity によってコピーする数を ２ に設定します。
