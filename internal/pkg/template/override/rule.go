@@ -5,6 +5,8 @@ package override
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -12,6 +14,7 @@ import (
 const (
 	// seqAppendToLastSymbol is the symbol used to add a node to the tail of a list.
 	seqAppendToLastSymbol = "-"
+	pathSegmentSeparator  = "."
 )
 
 // Subset of YAML tag values: http://yaml.org/type/
@@ -24,6 +27,12 @@ const (
 	nodeTagMap  = "!!map"
 )
 
+var (
+	// pathSegmentRegexp checks for map key or single sequence reference.
+	// For example: ContainerDefinitions[0], PortMapping[-], or Ulimits.
+	pathSegmentRegexp = regexp.MustCompile(fmt.Sprintf(`^[a-zA-Z0-9_-]+(\[(\d+|%s)\])?$`, seqAppendToLastSymbol))
+)
+
 // nodeUpserter is the interface to insert or update a series of nodes to a YAML file.
 type nodeUpserter interface {
 	Upsert(content *yaml.Node) (*yaml.Node, error)
@@ -32,12 +41,21 @@ type nodeUpserter interface {
 
 // Rule is the override rule override package uses.
 type Rule struct {
-	// PathSegment example: "ContainerDefinitions[0].Ulimits.HardLimit"
-	// PathSegment string
-	// Value       *yaml.Node
+	Path  string // example: "ContainerDefinitions[0].Ulimits[-].HardLimit"
+	Value *yaml.Node
 }
 
 func (r Rule) validate() error {
+	if r.Path == "" {
+		return fmt.Errorf("rule path is empty")
+	}
+	pathSegments := strings.Split(r.Path, pathSegmentSeparator)
+	for _, pathSegment := range pathSegments {
+		if !pathSegmentRegexp.MatchString(pathSegment) {
+			return fmt.Errorf(`unrecognized path segment pattern %s. Valid path segment examples are "xyz[0]", "xyz[%s]" or "xyz"`,
+				pathSegment, seqAppendToLastSymbol)
+		}
+	}
 	return nil
 }
 
