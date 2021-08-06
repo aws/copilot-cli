@@ -39,7 +39,7 @@ type CredsSelect struct {
 }
 
 // Creds prompts users to choose either use temporary credentials or choose from one of their existing AWS named profiles.
-func (s *CredsSelect) Creds(prompt, help string) (*session.Session, error) {
+func (s *CredsSelect) Creds(msg, help string) (*session.Session, error) {
 	profileFrom := make(map[string]string)
 	options := []string{tempCredsOption}
 	for _, name := range s.Profile.Names() {
@@ -49,9 +49,10 @@ func (s *CredsSelect) Creds(prompt, help string) (*session.Session, error) {
 	}
 
 	selected, err := s.Prompt.SelectOne(
-		prompt,
+		msg,
 		help,
-		options)
+		options,
+		prompt.WithFinalMessage("Credential source:"))
 	if err != nil {
 		return nil, fmt.Errorf("select credential source: %w", err)
 	}
@@ -69,15 +70,15 @@ func (s *CredsSelect) Creds(prompt, help string) (*session.Session, error) {
 func (s *CredsSelect) askTempCreds() (*session.Session, error) {
 	defaultAccessKey, defaultSecretAccessKey, defaultSessToken := defaultCreds(s.Session)
 
-	accessKeyID, err := s.askWithMaskedDefault(accessKeyIDPrompt, defaultAccessKey, prompt.RequireNonEmpty)
+	accessKeyID, err := s.askWithMaskedDefault(accessKeyIDPrompt, defaultAccessKey, prompt.RequireNonEmpty, prompt.WithFinalMessage("AWS Access Key ID:"))
 	if err != nil {
 		return nil, fmt.Errorf("get access key id: %w", err)
 	}
-	secretAccessKey, err := s.askWithMaskedDefault(secretAccessKeyPrompt, defaultSecretAccessKey, prompt.RequireNonEmpty)
+	secretAccessKey, err := s.askWithMaskedDefault(secretAccessKeyPrompt, defaultSecretAccessKey, prompt.RequireNonEmpty, prompt.WithFinalMessage("AWS Secret Access Key:"))
 	if err != nil {
 		return nil, fmt.Errorf("get secret access key: %w", err)
 	}
-	sessionToken, err := s.askWithMaskedDefault(sessionTokenPrompt, defaultSessToken, nil)
+	sessionToken, err := s.askWithMaskedDefault(sessionTokenPrompt, defaultSessToken, nil, prompt.WithFinalMessage("AWS Session Token:"))
 	if err != nil {
 		return nil, fmt.Errorf("get session token: %w", err)
 	}
@@ -89,8 +90,8 @@ func (s *CredsSelect) askTempCreds() (*session.Session, error) {
 	return sess, nil
 }
 
-func (s *CredsSelect) askWithMaskedDefault(msg, defaultValue string, f prompt.ValidatorFunc) (string, error) {
-	accessKeyId, err := s.Prompt.Get(msg, "", f, prompt.WithDefaultInput(mask(defaultValue)))
+func (s *CredsSelect) askWithMaskedDefault(msg, defaultValue string, f prompt.ValidatorFunc, opts ...prompt.PromptConfig) (string, error) {
+	accessKeyId, err := s.Prompt.Get(msg, "", f, append([]prompt.PromptConfig{prompt.WithDefaultInput(mask(defaultValue))}, opts...)...)
 	if err != nil {
 		return "", err
 	}

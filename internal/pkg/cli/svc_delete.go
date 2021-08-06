@@ -138,7 +138,7 @@ func (o *deleteSvcOpts) Ask() error {
 	deleteConfirmed, err := o.prompt.Confirm(
 		deletePrompt,
 		deleteConfirmHelp,
-		prompt.WithFinalMessage("Confirm:"))
+		prompt.WithConfirmFinalMessage())
 
 	if err != nil {
 		return fmt.Errorf("svc delete confirmation prompt: %w", err)

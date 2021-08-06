@@ -127,7 +127,7 @@ func (o *deleteEnvOpts) Ask() error {
 	if o.skipConfirmation {
 		return nil
 	}
-	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.name, o.appName), "")
+	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.name, o.appName), "", prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("confirm to delete environment %s: %w", o.name, err)
 	}

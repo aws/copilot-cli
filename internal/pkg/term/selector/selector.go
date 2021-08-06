@@ -769,7 +769,7 @@ func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) p
 }
 
 // Application fetches all the apps in an account/region and prompts the user to select one.
-func (s *Select) Application(prompt, help string, additionalOpts ...string) (string, error) {
+func (s *Select) Application(msg, help string, additionalOpts ...string) (string, error) {
 	appNames, err := s.retrieveApps()
 	if err != nil {
 		return "", err
@@ -787,7 +787,7 @@ func (s *Select) Application(prompt, help string, additionalOpts ...string) (str
 		return appNames[0], nil
 	}
 
-	app, err := s.prompt.SelectOne(prompt, help, appNames)
+	app, err := s.prompt.SelectOne(msg, help, appNames)
 	if err != nil {
 		return "", fmt.Errorf("select application: %w", err)
 	}
