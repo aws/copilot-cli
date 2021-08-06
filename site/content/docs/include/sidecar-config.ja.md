@@ -18,10 +18,10 @@
 サービスレベルで指定する EFS ボリュームのマウントパス。(任意項目)
 
 <span class="parent-field">mount_points.</span><a id="mount-points-source-volume" href="#mount-points-source-volume" class="field">`source_volume`</a> <span class="type">String</span>  
-サイドカーからマウントするときのソースボリューム。(任意項目)
+サイドカーからマウントするときのソースボリューム。(必須項目)
 
 <span class="parent-field">mount_points.</span><a id="mount-points-path" href="#mount-points-path" class="field">`path`</a> <span class="type">String</span>  
-サイドカーからボリュームをマウントするときのパス。(任意項目)
+サイドカーからボリュームをマウントするときのパス。(必須項目)
 
 <span class="parent-field">mount_points.</span><a id="mount-points-read-only" href="#mount-points-read-only" class="field">`read_only`</a> <span class="type">Boolean</span>  
 サイドカーにボリュームに対する読み込みのみを許可するかどうか。(デフォルトでは true)
@@ -33,9 +33,9 @@
 このコンテナに適用するコンテナの依存関係。(任意項目)
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
-サイドカーのデフォルトのエントリーポイントをオーバーライドします。
+サイドカーのデフォルトのエントリポイントをオーバーライドします。
 ```yaml
-# 文字列バージョン
+# 文字列で指定する場合
 entrypoint: "/bin/entrypoint --p1 --p2"
 # 別の方法として、文字列配列の場合
 entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
@@ -45,7 +45,7 @@ entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
 サイドカーのデフォルトコマンドを上書きします。
 
 ```yaml
-# 文字列バージョン
+# 文字列で指定する場合
 command: ps au
 # 別の方法として、文字列配列の場合
 command: ["ps", "au"]
