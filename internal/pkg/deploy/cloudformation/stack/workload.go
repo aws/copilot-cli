@@ -312,7 +312,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
 	if err != nil {
-		return nil, fmt.Errorf("determining image repository type: %w", err)
+		return nil, fmt.Errorf("determine image repository type: %w", err)
 	}
 
 	if w.imageConfig.Port == nil {
