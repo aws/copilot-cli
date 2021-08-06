@@ -47,7 +47,7 @@ unhealthy なターゲットを healthy とみなすために必要な、連続�
 コンテナ起動時にターゲットグループのヘルスチェックが失敗した場合の、それを無視する時間を指定します。デフォルトは 60 秒です。これは、healthy であることを担保しながら着信を待機するまでに時間がかかるコンテナのデプロイ時の問題を修正したり、迅速な起動が保証されているコンテナのデプロイを高速化したりするのに役立ちます。
 
 <span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
-登録解除時にターゲットが接続の解除を待つ時間を指定します。デフォルトでは 60 秒です。この値を大きくすると、ターゲットが graceful に接続を解除する時間が長くなり、新しいデプロイに必要な時間が長くなります。範囲は 0 〜 3600 です。
+登録解除時にターゲットがクライアントとの接続を閉じるのを待つ時間を指定します。デフォルトでは 60 秒です。この値を大きくするとターゲットが安全に接続を閉じるための時間を確保できますが、新バージョンのデプロイに必要となる時間が長くなります。範囲は 0 〜 3600 です。
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサからのリクエストを受け取れます。
