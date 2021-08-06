@@ -2,6 +2,10 @@ Having an automated release process is one of the most important parts of softwa
 
 In this section, we'll talk about using Copilot to set up a CodePipeline that automatically builds your service code when you push to your GitHub, Bitbucket or AWS CodeCommit repository, deploys to your environments, and runs automated testing.
 
+!!! Attention
+    AWS CodePipeline is not supported for services with Windows as the OS Family.
+    CodePipeline uses Linux-based AWS CodeBuild for the 'build' stage, so for now, Copilot pipelines cannot build Windows containers.
+
 ## Why?
 
 We won't get too philosophical about releasing software, but what's the point of having a release pipeline? With `copilot deploy` you can deploy your service directly from your computer to ECS, so why add a middleman? That's a great question. For some apps, manually using `deploy` is enough, but as your release process gets more complicated (as you add more environments or add automated testing, for example) you want to offload the boring work of repeatedly orchestrating that process to a service. With two services, each having two environments (test and production, say), running integration tests after you deploy to your test environment becomes surprisingly cumbersome to do by hand.
