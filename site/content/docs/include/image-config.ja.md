@@ -44,7 +44,7 @@ Dockerfile からコンテナイメージをビルドする代わりに、既存
 コンテナに付与したい [Docker ラベル](https://docs.docker.com/config/labels-custom-metadata/)を key/value の Map で指定できます。これは任意設定項目です。
 
 <span class="parent-field">image.</span><a id="image-depends-on" href="#image-depends-on" class="field">`depends_on`</a> <span class="type">Map</span>  
-コンテナに追加する [Container Dependencies](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDependency.html) の任意のキー値マップ。マップのキーはコンテナ名で、値は依存関係を表す値 (依存条件) として `start`、`healthy`、`complete`、`success` のいずれかを指定できます。なお、Essential コンテナに `complete` や `success` の依存条件を指定することはできません。
+コンテナに追加する [Container Dependencies](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDependency.html) の任意の key/value の Map。Map の key はコンテナ名で、value は依存関係を表す値 (依存条件) として `start`、`healthy`、`complete`、`success` のいずれかを指定できます。なお、Essential コンテナに `complete` や `success` の依存条件を指定することはできません。
 
 !!! note
     サイドカーのコンテナヘルスチェックは、現在 Copilot ではサポートされていません。つまり、`healthy` はサイドカーの有効な依存条件ではありません。
