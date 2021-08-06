@@ -46,16 +46,16 @@ var (
 	validArchitectures    = []string{exec.Amd64Arch}
 
 	// Error definitions.
-	errUnmarshalBuildOpts    = errors.New("cannot unmarshal build field into string or compose-style map")
-	errUnmarshalPlatformOpts = errors.New("cannot unmarshal platform field into string or compose-style map")
-	errUnmarshalCountOpts    = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalRangeOpts    = errors.New(`cannot unmarshal "range" field`)
-	errUnmarshalExec         = errors.New("cannot unmarshal exec field into boolean or exec configuration")
-	errUnmarshalEntryPoint   = errors.New("cannot unmarshal entrypoint into string or slice of strings")
-	errUnmarshalCommand      = errors.New("cannot unmarshal command into string or slice of strings")
+	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
+	errUnmarshalPlatformOpts = errors.New("unable to unmarshal platform field into string or compose-style map")
+	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
+	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
+	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
 
-	errInvalidRangeOpts     = errors.New(`cannot specify both "range" and "min"/"max"`)
-	errInvalidAdvancedCount = errors.New(`cannot specify both "spot" and autoscaling fields`)
+	errInvalidRangeOpts     = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
+	errInvalidAdvancedCount = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
 	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
