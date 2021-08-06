@@ -46,7 +46,7 @@ http:
 * HTTPS リスナーと証明書を関連づけて HTTP のトラフィックを HTTPS にリダイレクトし
 * エイリアス用でオプションの A レコードを作成しています。
 
-## どのようなものなのか
+## デモ
 [![AWS Copilot CLI v1.8.0 Release Highlights](https://img.youtube.com/vi/Oyr-n59mVjI/0.jpg)](https://www.youtube.com/embed/Oyr-n59mVjI)
 
 ## Request-Driven Web Service
