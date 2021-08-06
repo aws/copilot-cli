@@ -15,6 +15,7 @@
         unhealthy_threshold: 5
         interval: 10s
         timeout: 5s
+      alias: web.example.com
 
     # コンテナと Service の構成
     image:
@@ -66,6 +67,9 @@ http:
     timeout: 10s
 ```
 
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-path" href="#http-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
+ヘルスチェック送信先。
+
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
 unhealthy なターゲットを healthy とみなすために必要な、連続したヘルスチェックの成功回数を指定します。デフォルト値は 3 で、設定可能な範囲は、1 〜 20 です。
 
@@ -77,6 +81,9 @@ unhealthy なターゲットを healthy とみなすために必要な、連続�
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 ターゲットからの応答がない場合、ヘルスチェックが失敗したとみなすまでの時間を秒単位で指定します。デフォルト値は 2 秒で、設定可能な範囲は、1 〜 20 です。
+
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
+Request-Driven Web Service には、フレンドリーなドメイン名を割り当ててください。詳しくは [developing/domain](../developing/domain.en.md##request-driven-web-service) をご覧ください。
 
 <div class="separator"></div>
 
@@ -128,6 +135,11 @@ Service のインスタンスに割り当てる CPU ユニット数。指定可�
 
 <a id="memory" href="#memory" class="field">`memory`</a> <span class="type">Integer</span>  
 タスクに割り当てるメモリ量（MiB）。指定可能な値については [AWS App Runner ドキュメント](https://docs.aws.amazon.com/ja_jp/apprunner/latest/api/API_InstanceConfiguration.html#apprunner-Type-InstanceConfiguration-Memory)をご覧ください。
+
+<div class="separator"></div>
+
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
 
 <div class="separator"></div>
 
