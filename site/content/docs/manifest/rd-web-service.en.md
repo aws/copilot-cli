@@ -81,8 +81,8 @@ The approximate amount of time, in seconds, between health checks of an individu
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 The amount of time, in seconds, during which no response from a target means a failed health check. The default is 2s. Range 1s-20s.
 
-<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>
-HTTPS custom domain for your service.
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
+Assign a friendly domain name to your request-driven web services. To learn more see [`developing/domain`](../developing/domain.en.md##request-driven-web-service).
 
 <div class="separator"></div>
 
