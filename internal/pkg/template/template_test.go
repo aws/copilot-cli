@@ -6,39 +6,52 @@ package template
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 )
 
+// mockReadFileFS implements the fs.ReadFileFS interface.
+type mockReadFileFS struct {
+	fs map[string][]byte
+}
+
+func (m *mockReadFileFS) ReadFile(name string) ([]byte, error) {
+	dat, ok := m.fs[name]
+	if !ok {
+		return nil, &fs.PathError{
+			Op:   "open",
+			Path: name,
+			Err:  fs.ErrNotExist,
+		}
+	}
+	return dat, nil
+}
+
+func (m *mockReadFileFS) Open(name string) (fs.File, error) {
+	return nil, errors.New("open should not be called")
+}
+
 func TestTemplate_Read(t *testing.T) {
 	testCases := map[string]struct {
-		inPath           string
-		mockDependencies func(t *Template)
+		inPath string
+		fs     map[string][]byte
 
 		wantedContent string
 		wantedErr     error
 	}{
 		"template does not exist": {
-			inPath: "/fake/manifest.yml",
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				t.box = mockBox
-			},
-
+			inPath:    "/fake/manifest.yml",
 			wantedErr: errors.New("read template /fake/manifest.yml"),
 		},
 		"returns content": {
 			inPath: "/fake/manifest.yml",
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("/fake/manifest.yml", "hello")
-				t.box = mockBox
+			fs: map[string][]byte{
+				"templates/fake/manifest.yml": []byte("hello"),
 			},
-
 			wantedContent: "hello",
 		},
 	}
@@ -46,8 +59,9 @@ func TestTemplate_Read(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			tpl := &Template{}
-			tc.mockDependencies(tpl)
+			tpl := &Template{
+				fs: &mockReadFileFS{tc.fs},
+			}
 
 			// WHEN
 			c, err := tpl.Read(tc.inPath)
@@ -63,34 +77,33 @@ func TestTemplate_Read(t *testing.T) {
 
 func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(t *Template)
+		fs func() map[string][]byte
 
 		wantedErr error
 	}{
 		"success": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
 				for _, file := range envCustomResourceFiles {
-					mockBox.AddString(fmt.Sprintf("custom-resources/%s.js", file), "hello")
+					m[fmt.Sprintf("templates/custom-resources/%s.js", file)] = []byte("hello")
 				}
-				t.box = mockBox
+				return m
 			},
 		},
 		"errors if env custom resource file doesn't exist": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("badFile", "hello")
-				t.box = mockBox
+			fs: func() map[string][]byte {
+				return nil
 			},
-			wantedErr: fmt.Errorf("read template custom-resources/dns-cert-validator.js: file does not exist"),
+			wantedErr: fmt.Errorf("read template custom-resources/dns-cert-validator.js: open templates/custom-resources/dns-cert-validator.js: file does not exist"),
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			tpl := &Template{}
-			tc.mockDependencies(tpl)
+			tpl := &Template{
+				fs: &mockReadFileFS{tc.fs()},
+			}
 			mockUploader := s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
 				require.Contains(t, key, "scripts")
 				require.Contains(t, key, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
@@ -113,19 +126,19 @@ func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
 func TestTemplate_UploadRequestDrivenWebServiceCustomResources(t *testing.T) {
 	mockContent := "hello"
 	testCases := map[string]struct {
-		mockDependencies func(t *Template)
-		mockUploader     s3.CompressAndUploadFunc
+		fs           func() map[string][]byte
+		mockUploader s3.CompressAndUploadFunc
 
 		wantedErr  error
 		wantedURLs map[string]string
 	}{
 		"success": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
 				for _, file := range rdWkldCustomResourceFiles {
-					mockBox.AddString(fmt.Sprintf("custom-resources/%s.js", file), mockContent)
+					m[fmt.Sprintf("templates/custom-resources/%s.js", file)] = []byte(mockContent)
 				}
-				t.box = mockBox
+				return m
 			},
 			mockUploader: s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
 				require.Contains(t, key, "scripts")
@@ -140,20 +153,18 @@ func TestTemplate_UploadRequestDrivenWebServiceCustomResources(t *testing.T) {
 			},
 		},
 		"errors if rd web service custom resource file doesn't exist": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("badFile", "hello")
-				t.box = mockBox
+			fs: func() map[string][]byte {
+				return nil
 			},
-			wantedErr: fmt.Errorf("read template custom-resources/custom-domain-app-runner.js: file does not exist"),
+			wantedErr: fmt.Errorf("read template custom-resources/custom-domain-app-runner.js: open templates/custom-resources/custom-domain-app-runner.js: file does not exist"),
 		},
 		"fail to upload": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
 				for _, file := range rdWkldCustomResourceFiles {
-					mockBox.AddString(fmt.Sprintf("custom-resources/%s.js", file), mockContent)
+					m[fmt.Sprintf("templates/custom-resources/%s.js", file)] = []byte(mockContent)
 				}
-				t.box = mockBox
+				return m
 			},
 			mockUploader: s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
 				require.Contains(t, key, "scripts")
@@ -174,8 +185,9 @@ func TestTemplate_UploadRequestDrivenWebServiceCustomResources(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			tpl := &Template{}
-			tc.mockDependencies(tpl)
+			tpl := &Template{
+				fs: &mockReadFileFS{tc.fs()},
+			}
 
 			// WHEN
 			gotURLs, err := tpl.UploadRequestDrivenWebServiceCustomResources(tc.mockUploader)
@@ -194,19 +206,19 @@ func TestTemplate_UploadRequestDrivenWebServiceCustomResources(t *testing.T) {
 func TestTemplate_UploadRequestDrivenWebServiceLayers(t *testing.T) {
 	mockContent := "hello"
 	testCases := map[string]struct {
-		mockDependencies func(t *Template)
-		mockUploader     s3.UploadFunc
+		fs           func() map[string][]byte
+		mockUploader s3.UploadFunc
 
 		wantedURLs map[string]string
 		wantedErr  error
 	}{
 		"success": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
 				for _, file := range rdWkldCustomResourceLayers {
-					mockBox.AddString(fmt.Sprintf("custom-resources/%s.zip", file), mockContent)
+					m[fmt.Sprintf("templates/custom-resources/%s.zip", file)] = []byte(mockContent)
 				}
-				t.box = mockBox
+				return m
 			},
 			mockUploader: s3.UploadFunc(func(key string, file s3.NamedBinary) (string, error) {
 				require.Contains(t, key, "layers")
@@ -219,20 +231,18 @@ func TestTemplate_UploadRequestDrivenWebServiceLayers(t *testing.T) {
 			},
 		},
 		"errors if rd web service custom layer file doesn't exist": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("badFile", "hello")
-				t.box = mockBox
+			fs: func() map[string][]byte {
+				return nil
 			},
-			wantedErr: fmt.Errorf("read template custom-resources/aws-sdk-layer.zip: file does not exist"),
+			wantedErr: fmt.Errorf("read template custom-resources/aws-sdk-layer.zip: open templates/custom-resources/aws-sdk-layer.zip: file does not exist"),
 		},
 		"fail to upload": {
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
 				for _, file := range rdWkldCustomResourceLayers {
-					mockBox.AddString(fmt.Sprintf("custom-resources/%s.zip", file), mockContent)
+					m[fmt.Sprintf("templates/custom-resources/%s.zip", file)] = []byte(mockContent)
 				}
-				t.box = mockBox
+				return m
 			},
 			mockUploader: s3.UploadFunc(func(key string, file s3.NamedBinary) (string, error) {
 				require.Contains(t, key, "layers")
@@ -251,8 +261,9 @@ func TestTemplate_UploadRequestDrivenWebServiceLayers(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			tpl := &Template{}
-			tc.mockDependencies(tpl)
+			tpl := &Template{
+				fs: &mockReadFileFS{tc.fs()},
+			}
 
 			// WHEN
 			gotURLs, err := tpl.UploadRequestDrivenWebServiceLayers(tc.mockUploader)
@@ -270,28 +281,22 @@ func TestTemplate_UploadRequestDrivenWebServiceLayers(t *testing.T) {
 
 func TestTemplate_Parse(t *testing.T) {
 	testCases := map[string]struct {
-		inPath           string
-		inData           interface{}
-		mockDependencies func(t *Template)
+		inPath string
+		inData interface{}
+		fs     map[string][]byte
 
 		wantedContent string
 		wantedErr     error
 	}{
 		"template does not exist": {
 			inPath: "/fake/manifest.yml",
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				t.box = mockBox
-			},
 
 			wantedErr: errors.New("read template /fake/manifest.yml"),
 		},
 		"template cannot be parsed": {
 			inPath: "/fake/manifest.yml",
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("/fake/manifest.yml", `{{}}`)
-				t.box = mockBox
+			fs: map[string][]byte{
+				"templates/fake/manifest.yml": []byte(`{{}}`),
 			},
 
 			wantedErr: errors.New("parse template /fake/manifest.yml"),
@@ -299,10 +304,8 @@ func TestTemplate_Parse(t *testing.T) {
 		"template cannot be executed": {
 			inPath: "/fake/manifest.yml",
 			inData: struct{}{},
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("/fake/manifest.yml", `{{.Name}}`)
-				t.box = mockBox
+			fs: map[string][]byte{
+				"templates/fake/manifest.yml": []byte(`{{.Name}}`),
 			},
 
 			wantedErr: fmt.Errorf("execute template %s with data %v", "/fake/manifest.yml", struct{}{}),
@@ -314,12 +317,9 @@ func TestTemplate_Parse(t *testing.T) {
 			}{
 				Name: "webhook",
 			},
-			mockDependencies: func(t *Template) {
-				mockBox := packd.NewMemoryBox()
-				mockBox.AddString("/fake/manifest.yml", `{{.Name}}`)
-				t.box = mockBox
+			fs: map[string][]byte{
+				"templates/fake/manifest.yml": []byte(`{{.Name}}`),
 			},
-
 			wantedContent: "webhook",
 		},
 	}
@@ -327,8 +327,9 @@ func TestTemplate_Parse(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			tpl := &Template{}
-			tc.mockDependencies(tpl)
+			tpl := &Template{
+				fs: &mockReadFileFS{tc.fs},
+			}
 
 			// WHEN
 			c, err := tpl.Parse(tc.inPath, tc.inData)
