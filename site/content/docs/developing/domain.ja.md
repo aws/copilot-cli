@@ -58,15 +58,15 @@ http:
   alias: web.example.aws
 ```
 
-同様に、Request-Driven Web Service がドメインを使用するためには、Application がドメイン (例：example.aws) に関連付けられている必要があります。
+Load Balanced Web Service 同様、Request-Driven Web Service がドメインを使用するためには Application がドメイン (例：example.aws) と関連付けられている必要があります。
 
 !!!info
     現時点では、`web.example.aws` のような 1 レベルのサブドメインのみをサポートしています。
 
     Environment レベルのドメイン (例：`web.${envName}.${appName}.example.aws`) や、Application レベルのドメイン (例：`web.${appName}.example.aws`)、
-    Root ドメイン (例：`example.aws`) はまだサポートされていません。これは、サブドメインが Application 名と衝突してはいけないということでもあります。
+    ルートドメイン (例：`example.aws`) はまだサポートされていません。これは、サブドメインが Application 名と衝突してはいけないということでもあります。
 
-Copilot の中では・・・
+Copilot は内部的には以下のような処理を行なっています。
 
 * ドメインを app runner service に関連付けます。
-* Root ドメインのホストゾーンにドメインレコードと検証レコードを作成します。
+* ルートドメインのホストゾーンにドメインレコードと検証レコードを作成します。
