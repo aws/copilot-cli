@@ -228,13 +228,13 @@ EFS に関連する認可設定を指定します。
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
+logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
 任意項目。使用する Fluent Bit のイメージ。デフォルト値は `amazon/aws-for-fluent-bit:latest`。
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
-任意項目。Firelens ログドライバーにログを送信するときの設定。
+任意項目。FireLens ログドライバーにログを送信するときの設定。
 
 <span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
 任意項目。ログに ECS メタデータを含むかどうか。デフォルトは `true`。
@@ -248,4 +248,4 @@ logging セクションには、コンテナの [FireLens](https://docs.aws.amaz
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-`environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで 'prod' Environment で実行されるタスク数を ２ に設定し、'staging' Environment で実行される Fargate Spot capacity によってコピーする数を ２ に設定します。
+`environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで 'prod' Environment で実行されるタスク数を ２ に設定し、'staging' Environment で実行される Fargate Spot capacity によるタスク数を ２ に設定します。
