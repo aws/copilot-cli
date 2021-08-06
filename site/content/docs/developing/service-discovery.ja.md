@@ -37,9 +37,9 @@ endpoint := fmt.Sprintf("http://api.%s/some-request", os.Getenv("COPILOT_SERVICE
 
 `front-end` Service がリクエストを送信するとき `api.test.kudos.local` というエンドポイントはプライベート IP アドレスに変換され VPC のなかでプライベートにルーティングされます。
 
-## レガシー環境とサービス検出
+## レガシー Environment とサービス検出
 
-Copilot v1.9.0 より前のバージョンでは、サービス検出の Namespace は、Environment を含めずに _{app name}.local_ という形式を使用していました。このため、同じ VPC に複数の Environment をデプロイすることができませんでした。Copilot v1.9.0 以降で作成された Environment は、他の Environment と VPC を共有することができます。
+Copilot v1.9.0 より前のバージョンでは、サービス検出の名前空間は、Environment を含めずに _{app name}.local_ という形式を使用していました。このため、同じ VPC に複数の Environment をデプロイすることができませんでした。Copilot v1.9.0 以降で作成された Environment は、他の Environment と VPC を共有することができます。
 
-Environment がアップグレードされると、Copilot は Environment が作成されたときのサービス検出の Namespace に従います。つまりその Service が到達可能なエンドポイントは変更されないということです。Copilot v1.9.0 以降で作成された新しい Environment は、サービスの検出に _{env name}.{app name}.local_ という書式を使用し、古い Environment と VPC を共有できます。
+Environment がアップグレードされると、Copilot は Environment が作成されたときのサービス検出の名前空間に従います。つまりその Service が到達可能なエンドポイントは変更されないということです。Copilot v1.9.0 以降で作成された新しい Environment は、サービスの検出に _{env name}.{app name}.local_ という書式を使用し、古い Environment と VPC を共有できます。
 
