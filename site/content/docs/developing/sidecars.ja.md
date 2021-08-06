@@ -39,9 +39,12 @@ sidecars:
     # コンテナに付与する Docker ラベル (オプション)
     labels:
       {label key} : <label value>
+    # このコンテナに適用するコンテナの依存関係 (オプション)
+    depends_on:
+      {container name}: <condition>
 ```
 
-{% include 'sidecar-config.en.md' %}
+{% include 'sidecar-config.ja.md' %}
 
 <div class="separator"></div>
 
