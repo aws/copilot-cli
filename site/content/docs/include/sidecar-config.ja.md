@@ -3,7 +3,7 @@
 コンテナの公開するポート番号。(任意項目)
 
 <a id="image" href="#image" class="field">`image`</a> <span class="type">String</span>  
-サイドカーコンテナのイメージ URL。(任意項目)
+サイドカーコンテナのイメージ URL。(必須項目)
 
 <a id="credentialsParameter" href="#credentialsParameter" class="field">`credentialsParameter`</a> <span class="type">String</span>  
 プライベートレジストリの認証情報を保存している秘密情報の ARN。(任意項目)
