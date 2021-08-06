@@ -48,7 +48,7 @@ Service のアーキテクチャタイプ。 [Load Balanced Web Service](../conc
 <div class="separator"></div>
 
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
-http セクションは Service と AWS App Runner のマネージドロードバランサの連携に関するパラメーターを含みます。
+http セクションは、マネージドロードバランサの連携に関するパラメーターを含みます。
 
 <span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
 文字列を指定した場合、Copilot は、ターゲットグループからのヘルスチェックリクエストを処理するためにコンテナが公開しているパスと解釈します。デフォルトは "/" です。
@@ -83,7 +83,7 @@ unhealthy なターゲットを healthy とみなすために必要な、連続�
 ターゲットからの応答がない場合、ヘルスチェックが失敗したとみなすまでの時間を秒単位で指定します。デフォルト値は 2 秒で、設定可能な範囲は、1 〜 20 です。
 
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
-Request-Driven Web Service には、フレンドリーなドメイン名を割り当ててください。詳しくは [developing/domain](../developing/domain.en.md##request-driven-web-service) をご覧ください。
+Request-Driven Web Service にフレンドリーなドメイン名を割り当てます。詳しくは [developing/domain](../developing/domain.ja.md##request-driven-web-service) をご覧ください。
 
 <div class="separator"></div>
 
