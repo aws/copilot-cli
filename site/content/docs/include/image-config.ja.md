@@ -35,7 +35,7 @@ Dockerfile からコンテナイメージをビルドする代わりに、既存
 `location` フィールドの制約を含む指定方法は Amazon ECS タスク定義の [`image` パラメータ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image)のそれに従います。
 
 <span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">String</span>  
-プライベートリポジトリの認証情報の ARN。`credentials` フィールドは、Amazon ECS タスク定義の [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) と同じです。これは任意設定項目です。
+任意項目です。プライベートリポジトリの認証情報の ARN。`credentials` フィールドは、Amazon ECS タスク定義の [`credentialsParameter`](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/private-auth.html) と同じです。
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 公開するポート番号。Dockerfile 内に `EXPOSE` インストラクションが記述されている場合、Copilot はそれをパースした値をここに挿入します。  
@@ -44,7 +44,7 @@ Dockerfile からコンテナイメージをビルドする代わりに、既存
 コンテナに付与したい [Docker ラベル](https://docs.docker.com/config/labels-custom-metadata/)を key/value の Map で指定できます。これは任意設定項目です。
 
 <span class="parent-field">image.</span><a id="image-depends-on" href="#image-depends-on" class="field">`depends_on`</a> <span class="type">Map</span>  
-コンテナに追加する [Container Dependencies](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDependency.html) の任意の key/value の Map。Map の key はコンテナ名で、value は依存関係を表す値 (依存条件) として `start`、`healthy`、`complete`、`success` のいずれかを指定できます。なお、Essential コンテナに `complete` や `success` の依存条件を指定することはできません。
+任意項目。コンテナに追加する [Container Dependencies](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/APIReference/API_ContainerDependency.html) の任意の key/value の Map。Map の key はコンテナ名で、value は依存関係を表す値 (依存条件) として `start`、`healthy`、`complete`、`success` のいずれかを指定できます。なお、必須コンテナに `complete` や `success` の依存条件を指定することはできません。
 
 !!! note
     サイドカーのコンテナヘルスチェックは、現在 Copilot ではサポートされていません。つまり、`healthy` はサイドカーの有効な依存条件ではありません。
