@@ -13,7 +13,7 @@ ${SvcName}.${EnvName}.${AppName}.${DomainName}
 https://kudo.test.coolapp.example.aws
 ```
 
-現在、エイリアスは Application 作成時に指定したドメインの下でのみ使用できます。[サブドメインの責任の Route 53 への委任](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain)により、指定したエイリアスは、以下の 3 つのホストゾーンのいずれかでなければなりません。
+現在、エイリアスは Application 作成時に指定したドメインの下でのみ使用できます。[サブドメインの責任の Route 53 への委任](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain)により、指定したエイリアスは、以下の 3 つのホストゾーンのいずれかでなければなりません。
 
 - root: `${DomainName}`
 - app: `${AppName}.${DomainName}`
