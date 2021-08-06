@@ -918,7 +918,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -939,7 +939,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -968,7 +968,8 @@ func TestConfigSelect_Service(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a service"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"service1", "service2"})).
+						gomock.Eq([]string{"service1", "service2"}),
+						gomock.Any()).
 					Return("service2", nil).
 					Times(1)
 			},
@@ -994,7 +995,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},

@@ -656,7 +656,7 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 }
 
 // Service fetches all services in an app and prompts the user to select one.
-func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
+func (s *ConfigSelect) Service(msg, help, app string) (string, error) {
 	services, err := s.retrieveServices(app)
 	if err != nil {
 		return "", err
@@ -671,7 +671,7 @@ func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
 		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(services[0]))
 		return services[0], nil
 	}
-	selectedSvcName, err := s.prompt.SelectOne(prompt, help, services)
+	selectedSvcName, err := s.prompt.SelectOne(msg, help, services, prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return "", fmt.Errorf("select service: %w", err)
 	}
