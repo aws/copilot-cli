@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/imdario/mergo"
@@ -38,6 +40,10 @@ var (
 
 	// All placement options.
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
+
+	validPlatforms        = []string{exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch)}
+	validOperatingSystems = []string{exec.LinuxOS}
+	validArchitectures    = []string{exec.Amd64Arch}
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("cannot unmarshal build field into string or compose-style map")
@@ -651,10 +657,10 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 		if !p.PlatformArgs.bothOrNeitherSpecified() {
 			return errors.New(`fields 'osfamily' and 'architecture' must either both be specified or both be empty. For more info, see your workload's manifest documentation at https://aws.github.io/copilot-cli/`)
 		}
-		if err := exec.ValidateOS(p.PlatformArgs.OSFamily); err != nil {
+		if err := validateOS(p.PlatformArgs.OSFamily); err != nil {
 			return fmt.Errorf("validate OS: %w", err)
 		}
-		if err := exec.ValidateArch(p.PlatformArgs.Arch); err != nil {
+		if err := validateArch(p.PlatformArgs.Arch); err != nil {
 			return fmt.Errorf("validate arch: %w", err)
 		}
 		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
@@ -664,7 +670,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 	if err := unmarshal(&p.PlatformString); err != nil {
 		return errUnmarshalPlatformOpts
 	}
-	if err := exec.ValidatePlatform(p.PlatformString); err != nil {
+	if err := validatePlatform(p.PlatformString); err != nil {
 		return fmt.Errorf("validate platform: %w", err)
 	}
 	return nil
@@ -682,6 +688,42 @@ func (p *PlatformArgs) isEmpty() bool {
 
 func (p *PlatformArgs) bothOrNeitherSpecified() bool {
 	return (p.OSFamily == nil) == (p.Arch == nil)
+}
+
+func validatePlatform(platform *string) error {
+	if platform == nil {
+		return nil
+	}
+	for _, validPlatform := range validPlatforms {
+		if aws.StringValue(platform) == validPlatform {
+			return nil
+		}
+	}
+	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
+}
+
+func validateOS(os *string) error {
+	if os == nil {
+		return nil
+	}
+	for _, validOS := range validOperatingSystems {
+		if aws.StringValue(os) == validOS {
+			return nil
+		}
+	}
+	return fmt.Errorf("OS %s is invalid; %s: %s", aws.StringValue(os), english.PluralWord(len(validOperatingSystems), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOperatingSystems, "and"))
+}
+
+func validateArch(arch *string) error {
+	if arch == nil {
+		return nil
+	}
+	for _, validArch := range validArchitectures {
+		if aws.StringValue(arch) == validArch {
+			return nil
+		}
+	}
+	return fmt.Errorf("architecture %s is invalid; %s: %s", aws.StringValue(arch), english.PluralWord(len(validArchitectures), "the valid architecture is", "valid architectures are"), english.WordSeries(validArchitectures, "and"))
 }
 
 func requiresBuild(image Image) (bool, error) {

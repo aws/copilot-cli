@@ -4,10 +4,7 @@
 package manifest
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -93,14 +90,6 @@ func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
-}
-
-// TaskPlatform returns the os/arch for the service.
-func (c *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if err := exec.ValidatePlatform(c.RequestDrivenWebServiceConfig.InstanceConfig.Platform.PlatformString); err != nil {
-		return nil, fmt.Errorf("validate platform: %w", err)
-	}
-	return c.RequestDrivenWebServiceConfig.InstanceConfig.Platform.PlatformString, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

@@ -362,33 +362,6 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 	}
 }
 
-func TestDockerCommand_ValidatePlatform(t *testing.T) {
-	tests := map[string]struct {
-		inPlatform *string
-		wantedErr  error
-	}{
-		"return nil for empty string": {
-			inPlatform: nil,
-			wantedErr:  nil,
-		},
-		"return error for invalid platform (with singular case grammar)": {
-			inPlatform: aws.String("linus/art46"),
-			wantedErr:  errors.New("platform linus/art46 is invalid; the valid platform is: linux/amd64"),
-		},
-	}
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			err := ValidatePlatform(tc.inPlatform)
-			if tc.wantedErr == nil {
-				require.NoError(t, err)
-			} else {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			}
-		})
-	}
-}
-
 func TestDockerCommand_RedirectPlatform(t *testing.T) {
 	mockError := errors.New("some error")
 	var mockRunner *Mockrunner
