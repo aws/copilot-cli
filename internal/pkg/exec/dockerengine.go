@@ -258,7 +258,6 @@ func (c DockerCommand) RedirectPlatform(image string) (*string, error) {
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != Amd64Arch {
-		log.Warningf(`Architecture type %s is currently unsupported. Setting platform %s instead.\nSee 'platform' field in your manifest.\n`, arch, DockerBuildPlatform(LinuxOS, Amd64Arch))
 		return aws.String(DockerBuildPlatform(LinuxOS, Amd64Arch)), nil
 	}
 	return nil, nil
