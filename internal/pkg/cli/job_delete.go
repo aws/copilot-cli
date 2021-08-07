@@ -145,7 +145,8 @@ func (o *deleteJobOpts) Ask() error {
 
 	deleteConfirmed, err := o.prompt.Confirm(
 		deletePrompt,
-		deleteConfirmHelp)
+		deleteConfirmHelp,
+		prompt.WithConfirmFinalMessage())
 
 	if err != nil {
 		return fmt.Errorf("job delete confirmation prompt: %w", err)
