@@ -62,3 +62,18 @@ func (mr *MockenvDescriberMockRecorder) Params() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockenvDescriber)(nil).Params))
 }
+
+// ServiceDiscoveryEndpoint mocks base method.
+func (m *MockenvDescriber) ServiceDiscoveryEndpoint() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceDiscoveryEndpoint")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceDiscoveryEndpoint indicates an expected call of ServiceDiscoveryEndpoint.
+func (mr *MockenvDescriberMockRecorder) ServiceDiscoveryEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDiscoveryEndpoint", reflect.TypeOf((*MockenvDescriber)(nil).ServiceDiscoveryEndpoint))
+}

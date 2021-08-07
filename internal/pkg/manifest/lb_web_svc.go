@@ -61,7 +61,7 @@ type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness          *bool                   `yaml:"stickiness"`
-	Alias               *string                 `yaml:"alias"`
+	Alias               *Alias                  `yaml:"alias"`
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer          *string   `yaml:"target_container"`
@@ -75,6 +75,29 @@ type LoadBalancedWebServiceProps struct {
 	Path        string
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+}
+
+// Alias is a custom type which supports unmarshaling "http.alias" yaml which
+// can either be of type string or type slice of string.
+type Alias stringSliceOrString
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (e *Alias) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
+		return errUnmarshalEntryPoint
+	}
+	return nil
+}
+
+// ToStringSlice converts an Alias to a slice of string using shell-style rules.
+func (e *Alias) ToStringSlice() ([]string, error) {
+	out, err := toStringSlice((*stringSliceOrString)(e))
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,

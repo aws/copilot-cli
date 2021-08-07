@@ -1,18 +1,19 @@
-# This YAML file defines the relationship and deployment ordering of your environments.
+# The manifest for the "{{.Name}}" pipeline.
+# This YAML file defines your pipeline: the source repository it tracks and the order of the environments to deploy to.
+# For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
-# The name of the pipeline
+# The name of the pipeline.
 name: {{.Name}}
 
-# The version of the schema used in this template
+# The version of the schema used in this template.
 version: {{.Version}}
 
-# This section defines the source artifacts.
+# This section defines your source, changes to which trigger your pipeline.
 source:
   # The name of the provider that is used to store the source artifacts.
+  # (i.e. GitHub, Bitbucket, CodeCommit)
   provider: {{.Source.ProviderName}}
-  # Additional properties that further specifies the exact location
-  # the artifacts should be sourced from. For example, the GitHub provider
-  # has the following properties: repository, branch.
+  # Additional properties that further specify the location of the artifacts.
   properties:{{range $key, $value := .Source.Properties}}
     {{$key}}: {{$value}}{{end}}
     {{- if .Source.IsCodeStarConnection}}
@@ -20,10 +21,9 @@ source:
     # connection_name: a-connection
     {{- end}}
 {{$length := len .Stages}}{{if gt $length 0}}
-# The deployment section defines the order the pipeline will deploy
-# to your environments.
+# This section defines the order of the environments your pipeline will deploy to.
 stages:{{range .Stages}}
-    - # The name of the environment to deploy to.
+    - # The name of the environment.
       name: {{.Name}}
       # Optional: flag for manual approval action before deployment.
       {{if not .RequiresApproval }}# {{end}}requires_approval: true
