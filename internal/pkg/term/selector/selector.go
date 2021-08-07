@@ -787,7 +787,7 @@ func (s *Select) Application(msg, help string, additionalOpts ...string) (string
 		return appNames[0], nil
 	}
 
-	app, err := s.prompt.SelectOne(msg, help, appNames)
+	app, err := s.prompt.SelectOne(msg, help, appNames, prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return "", fmt.Errorf("select application: %w", err)
 	}

@@ -1557,7 +1557,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1576,7 +1576,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1601,7 +1601,8 @@ func TestSelect_Application(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select an app"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"app1", "app2"})).
+						gomock.Eq([]string{"app1", "app2"}),
+						gomock.Any()).
 					Return("app2", nil).
 					Times(1)
 			},
@@ -1623,7 +1624,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"app1", "app2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"app1", "app2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
