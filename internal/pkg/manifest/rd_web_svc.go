@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -47,9 +45,9 @@ type RequestDrivenWebServiceProps struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU      *int    `yaml:"cpu"`
-	Memory   *int    `yaml:"memory"`
-	Platform *string `yaml:"platform,omitempty"`
+	CPU      *int                  `yaml:"cpu"`
+	Memory   *int                  `yaml:"memory"`
+	Platform *PlatformArgsOrString `yaml:"platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -94,12 +92,12 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the os/arch for the service.
+// TaskPlatform returns the platform for the service.
 func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if err := validatePlatform(s.RequestDrivenWebServiceConfig.InstanceConfig.Platform); err != nil {
-		return nil, fmt.Errorf("validate platform: %w", err)
+	if s.InstanceConfig.Platform == nil {
+		return nil, nil
 	}
-	return s.RequestDrivenWebServiceConfig.InstanceConfig.Platform, nil
+	return s.InstanceConfig.Platform.PlatformString, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

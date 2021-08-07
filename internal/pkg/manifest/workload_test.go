@@ -308,12 +308,12 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 		"returns error if only args.os specified": {
 			inContent: []byte(`platform:
   osfamily: linux`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty. For more info, see your workload's manifest documentation at https://aws.github.io/copilot-cli/"),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
 		},
 		"returns error if only args.arch specified": {
 			inContent: []byte(`platform:
   architecture: amd64`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty. For more info, see your workload's manifest documentation at https://aws.github.io/copilot-cli/"),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
 		},
 		"returns error if args.os invalid": {
 			inContent: []byte(`platform:
