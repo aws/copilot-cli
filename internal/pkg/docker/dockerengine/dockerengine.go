@@ -35,23 +35,23 @@ const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
 )
 
-// Engine represents docker commands that can be run.
-type Engine struct {
+// CmdClient represents the docker client to interact with the server via external commands.
+type CmdClient struct {
 	runner Cmd
 	// Override in unit tests.
 	buf      *bytes.Buffer
 	homePath string
 }
 
-// New returns Engine to make requests against the Docker daemon via external commands.
-func New(cmd Cmd) Engine {
-	return Engine{
+// New returns CmdClient to make requests against the Docker daemon via external commands.
+func New(cmd Cmd) CmdClient {
+	return CmdClient{
 		runner:   cmd,
 		homePath: userHomeDirectory(),
 	}
 }
 
-// BuildArguments holds the arguments we can pass in as flags while building a container.
+// BuildArguments holds the arguments that can be passed while building a container.
 type BuildArguments struct {
 	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
 	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
@@ -69,7 +69,7 @@ type dockerConfig struct {
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
-func (e Engine) Build(in *BuildArguments) error {
+func (c CmdClient) Build(in *BuildArguments) error {
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)
@@ -115,7 +115,7 @@ func (e Engine) Build(in *BuildArguments) error {
 	if in.Platform != "" {
 		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
 	}
-	if err := e.runner.Run("docker", args); err != nil {
+	if err := c.runner.Run("docker", args); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 
@@ -123,8 +123,8 @@ func (e Engine) Build(in *BuildArguments) error {
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
-func (e Engine) Login(uri, username, password string) error {
-	err := e.runner.Run("docker",
+func (c CmdClient) Login(uri, username, password string) error {
+	err := c.runner.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
 		exec.Stdin(strings.NewReader(password)))
 
@@ -136,19 +136,19 @@ func (e Engine) Login(uri, username, password string) error {
 }
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
-func (e Engine) Push(uri string, tags ...string) (digest string, err error) {
+func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	images := []string{uri}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
 	}
 
 	for _, img := range images {
-		if err := e.runner.Run("docker", []string{"push", img}); err != nil {
+		if err := c.runner.Run("docker", []string{"push", img}); err != nil {
 			return "", fmt.Errorf("docker push %s: %w", img, err)
 		}
 	}
 	buf := new(strings.Builder)
-	if err := e.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
@@ -160,12 +160,12 @@ func (e Engine) Push(uri string, tags ...string) (digest string, err error) {
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
-func (e Engine) CheckDockerEngineRunning() error {
+func (c CmdClient) CheckDockerEngineRunning() error {
 	if _, err := osexec.LookPath("docker"); err != nil {
 		return ErrDockerCommandNotFound
 	}
 	buf := &bytes.Buffer{}
-	err := e.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, exec.Stdout(buf))
+	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, exec.Stdout(buf))
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
@@ -188,12 +188,12 @@ func (e Engine) CheckDockerEngineRunning() error {
 }
 
 // getPlatform will run the `docker version` command to get the OS/Arch.
-func (e Engine) getPlatform() (os, arch string, err error) {
+func (c CmdClient) getPlatform() (os, arch string, err error) {
 	if _, err := osexec.LookPath("docker"); err != nil {
 		return "", "", ErrDockerCommandNotFound
 	}
 	buf := &bytes.Buffer{}
-	err = e.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, exec.Stdout(buf))
+	err = c.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, exec.Stdout(buf))
 	if err != nil {
 		return "", "", fmt.Errorf("run docker version: %w", err)
 	}
@@ -223,17 +223,17 @@ func imageName(uri, tag string) string {
 }
 
 // IsEcrCredentialHelperEnabled return true if ecr-login is enabled either globally or registry level
-func (e Engine) IsEcrCredentialHelperEnabled(uri string) bool {
+func (c CmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
 	// Make sure the program is able to obtain the home directory
 	splits := strings.Split(uri, "/")
-	if e.homePath == "" || len(splits) == 0 {
+	if c.homePath == "" || len(splits) == 0 {
 		return false
 	}
 
 	// Look into the default locations
 	pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
 	for _, path := range pathsToTry {
-		content, err := ioutil.ReadFile(filepath.Join(e.homePath, path))
+		content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
 		if err != nil {
 			// if we can't read the file keep going
 			continue
@@ -252,12 +252,13 @@ func (e Engine) IsEcrCredentialHelperEnabled(uri string) bool {
 	return false
 }
 
-func (e Engine) RedirectPlatform(image string) (*string, error) {
-	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Engine image.
+// RedirectPlatform returns an alternative platform to use while building the image if it's not supported by AWS services.
+func (c CmdClient) RedirectPlatform(image string) (*string, error) {
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
 	if image != "" {
 		return nil, nil
 	}
-	_, arch, err := e.getPlatform()
+	_, arch, err := c.getPlatform()
 	if err != nil {
 		return nil, fmt.Errorf("get os/arch from docker: %w", err)
 	}
