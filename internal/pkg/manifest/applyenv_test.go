@@ -31,6 +31,15 @@ When writing tests for a field F (e.g. When writing `TestApplyEnv_Image`, where 
 	For each subfield f in F:
 		- If f has subfields || if f is a composite field ->
 			Write another test group for this field (e.g. F is `image` and f is `image.build`, write another test functions named `TestApplyEnv_Image_Build`)
+
+Expected Behaviors:
+	- Slice type: append-only.
+		Take `security_groups` (which takes []string) as an example. If original is `[]string{1, 2}`, and environment override
+		is `[]string{3}`, the result should be `[]string{1, 2, 3}`.
+	- Exception: StringSlice in composite type should be overridden, not appended.
+		Take `entrypoint` (which takes []string or string) as an example. If original is `[]string{1,2}`, and override
+		is `[]string{3}`, the result should be `[]string{3}`.
+	- Map: override value of existing keys, append non-existing keys.
 */
 
 func TestApplyEnv_Image(t *testing.T) {
