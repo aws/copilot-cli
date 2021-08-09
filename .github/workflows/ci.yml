@@ -25,14 +25,14 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Generate static files
-        run: make packr-build
+      - name: Package custom resources
+        run: make package-custom-resources
 
       - name: Build binaries
         run: make ${{matrix.command}}
 
       - name: Cleanup
-        run: make packr-clean
+        run: make package-custom-resources-clean
 
   test:
     runs-on: ubuntu-latest
