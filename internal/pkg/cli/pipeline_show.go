@@ -163,7 +163,10 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 	// select from list of deployed pipelines
 	pipelineName, err = o.prompt.SelectOne(
-		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.appName)), pipelineShowPipelineNameHelpPrompt, pipelineNames,
+		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.appName)),
+		pipelineShowPipelineNameHelpPrompt,
+		pipelineNames,
+		prompt.WithFinalMessage("Pipeline:"),
 	)
 	if err != nil {
 		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
