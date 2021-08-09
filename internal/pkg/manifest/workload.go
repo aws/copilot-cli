@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dustin/go-humanize/english"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
-	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/imdario/mergo"
 
@@ -41,9 +41,9 @@ var (
 	// All placement options.
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
-	validPlatforms        = []string{exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch)}
-	validOperatingSystems = []string{exec.LinuxOS}
-	validArchitectures    = []string{exec.Amd64Arch}
+	validPlatforms        = []string{dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch)}
+	validOperatingSystems = []string{dockerengine.LinuxOS}
+	validArchitectures    = []string{dockerengine.Amd64Arch}
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")

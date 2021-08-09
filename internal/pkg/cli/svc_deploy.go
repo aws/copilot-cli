@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -330,7 +332,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 		return err
 	}
 
-	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
+	digest, err := o.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
 	if err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
@@ -339,7 +341,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	return nil
 }
 
-func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, error) {
+func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
@@ -347,7 +349,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, erro
 	return buildArgs(o.name, o.imageTag, copilotDir, svc)
 }
 
-func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*exec.BuildArguments, error) {
+func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 		TaskPlatform() (*string, error)
@@ -365,7 +367,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	if err != nil {
 		return nil, fmt.Errorf("get platform for service: %w", err)
 	}
-	return &exec.BuildArguments{
+	return &dockerengine.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
