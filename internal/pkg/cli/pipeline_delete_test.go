@@ -139,6 +139,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(pipelineDeleteConfirmPrompt, testPipelineName, testAppName),
 					pipelineDeleteConfirmHelp,
+					gomock.Any(),
 				).Times(1).Return(true, nil)
 			},
 			wantedError: nil,

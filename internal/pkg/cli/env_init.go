@@ -359,7 +359,7 @@ func (o *initEnvOpts) askEnvName() error {
 		return nil
 	}
 
-	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
+	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, prompt.WithFinalMessage("Environment name:"))
 	if err != nil {
 		return fmt.Errorf("get environment name: %w", err)
 	}
@@ -398,7 +398,7 @@ func (o *initEnvOpts) askEnvRegion() error {
 		region = o.region
 	}
 	if region == "" {
-		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption))
+		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption), prompt.WithFinalMessage("Region:"))
 		if err != nil {
 			return fmt.Errorf("get environment region: %w", err)
 		}
@@ -420,7 +420,8 @@ func (o *initEnvOpts) askCustomizedResources() error {
 	}
 	adjustOrImport, err := o.prompt.SelectOne(
 		envInitDefaultEnvConfirmPrompt, "",
-		envInitCustomizedEnvTypes)
+		envInitCustomizedEnvTypes,
+		prompt.WithFinalMessage("Default environment configuration?"))
 	if err != nil {
 		return fmt.Errorf("select adjusting or importing resources: %w", err)
 	}
@@ -503,7 +504,7 @@ If you proceed without at least two public subnets, you will not be able to depl
 func (o *initEnvOpts) askAdjustResources() error {
 	if o.adjustVPC.CIDR.String() == emptyIPNet.String() {
 		vpcCIDRString, err := o.prompt.Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, validateCIDR,
-			prompt.WithDefaultInput(stack.DefaultVPCCIDR))
+			prompt.WithDefaultInput(stack.DefaultVPCCIDR), prompt.WithFinalMessage("VPC CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get VPC CIDR: %w", err)
 		}
@@ -515,7 +516,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 	}
 	if o.adjustVPC.PublicSubnetCIDRs == nil {
 		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, validateCIDRSlice,
-			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs))
+			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs), prompt.WithFinalMessage("Public subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get public subnet CIDRs: %w", err)
 		}
@@ -523,7 +524,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 	}
 	if o.adjustVPC.PrivateSubnetCIDRs == nil {
 		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, validateCIDRSlice,
-			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs))
+			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs), prompt.WithFinalMessage("Private subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
 		}
