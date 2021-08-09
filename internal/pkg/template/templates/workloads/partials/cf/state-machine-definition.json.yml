@@ -13,7 +13,12 @@
       "Resource": "arn:${Partition}:states:::ecs:runTask.sync",
       "Parameters": {
         "LaunchType": "FARGATE",
-        "PlatformVersion": "1.4.0",
+        "PlatformVersion":
+          {{- if eq .Platform.OS "WINDOWS_SERVER_2019_CORE" "WINDOWS_SERVER_2019_FULL"}}
+            "1.0.0",
+          {{- else}}
+            "1.4.0",
+          {{- end}}
         "Cluster": "${Cluster}",
         "TaskDefinition": "${TaskDefinition}",
         "PropagateTags": "TASK_DEFINITION",
