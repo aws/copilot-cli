@@ -272,10 +272,9 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithBadPlatform, nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 				)
 			},
-			wantErr: fmt.Errorf("get platform for service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
+			wantErr: fmt.Errorf("unmarshal service serviceA manifest: unmarshal to load balanced web service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
 		},
 		"success with valid platform": {
 			inputSvc: "serviceA",

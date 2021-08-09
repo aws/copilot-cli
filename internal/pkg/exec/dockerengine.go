@@ -17,8 +17,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/dustin/go-humanize/english"
-
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
@@ -64,10 +62,6 @@ const (
 	LinuxOS   = "linux"
 	Amd64Arch = "amd64"
 )
-
-var validPlatforms = []string{
-	dockerBuildPlatform(LinuxOS, Amd64Arch),
-}
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c DockerCommand) Build(in *BuildArguments) error {
@@ -212,7 +206,7 @@ func (c DockerCommand) getPlatform() (os, arch string, err error) {
 	return platform.OS, platform.Arch, nil
 }
 
-func dockerBuildPlatform(os, arch string) string {
+func DockerBuildPlatform(os, arch string) string {
 	return fmt.Sprintf("%s/%s", os, arch)
 }
 
@@ -253,17 +247,6 @@ func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 	return false
 }
 
-// ValidatePlatform checks if the entered string is a Docker-buildable platform.
-func ValidatePlatform(platform *string) error {
-	if platform == nil {
-		return nil
-	}
-	if aws.StringValue(platform) != dockerBuildPlatform(LinuxOS, Amd64Arch) {
-		return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
-	}
-	return nil
-}
-
 func (c DockerCommand) RedirectPlatform(image string) (*string, error) {
 	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
 	if image != "" {
@@ -275,8 +258,7 @@ func (c DockerCommand) RedirectPlatform(image string) (*string, error) {
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != Amd64Arch {
-		log.Warningf(`Architecture type %s is currently unsupported. Setting platform %s instead.\nSee 'platform' field in your manifest.\n`, arch, dockerBuildPlatform(LinuxOS, Amd64Arch))
-		return aws.String(dockerBuildPlatform(LinuxOS, Amd64Arch)), nil
+		return aws.String(DockerBuildPlatform(LinuxOS, Amd64Arch)), nil
 	}
 	return nil, nil
 }
