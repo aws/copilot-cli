@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -135,7 +137,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		init:         initSvc,
 		prompt:       prompter,
 		sel:          sel,
-		dockerEngine: exec.NewDockerCommand(),
+		dockerEngine: dockerengine.New(exec.NewCmd()),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -227,7 +229,7 @@ func (o *initSvcOpts) Execute() error {
 	}
 	o.platform = platform
 	if o.platform != nil {
-		log.Warningf(`Your architecture type is currently unsupported. Setting platform %s instead.\n`, exec.DockerBuildPlatform(exec.LinuxOS, exec.Amd64Arch))
+		log.Warningf(`Your architecture type is currently unsupported. Setting platform %s instead.\n`, dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
 	}
 	if o.wkldType != manifest.RequestDrivenWebServiceType {
 		log.Warning("See 'platform' field in your manifest.\n")
@@ -332,9 +334,9 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 		return true, nil
 	}
 	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
-		var errDaemon *exec.ErrDockerDaemonNotResponsive
+		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
 		switch {
-		case errors.Is(err, exec.ErrDockerCommandNotFound):
+		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
 			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
 			return false, nil
 		case errors.As(err, &errDaemon):

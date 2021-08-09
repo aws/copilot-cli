@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -686,7 +688,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if _, err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
+	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
 		Context:    filepath.Dir(o.dockerfilePath),
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
