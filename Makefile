@@ -3,9 +3,11 @@
 
 BINARY_NAME=copilot
 PACKAGES=./internal...
-SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
-BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
-GOBIN=${PWD}/bin/tools
+ROOT_SRC_DIR=${PWD}
+SOURCE_CUSTOM_RESOURCES=${ROOT_SRC_DIR}/cf-custom-resources
+TEMPLATES_DIR=${ROOT_SRC_DIR}/internal/pkg/template/templates
+BUILT_CUSTOM_RESOURCES=${TEMPLATES_DIR}/custom-resources
+GOBIN=${ROOT_SRC_DIR}/bin/tools
 COVERAGE=coverage.out
 
 DESTINATION=./bin/local/${BINARY_NAME}
@@ -21,13 +23,13 @@ RELEASE_BUILD_LINKER_FLAGS=-s -w
 all: build
 
 .PHONY: build
-build: packr-build compile-local packr-clean
+build: package-custom-resources compile-local package-custom-resources-clean
 
 .PHONY: build-e2e
-build-e2e: packr-build compile-linux packr-clean
+build-e2e: package-custom-resources compile-linux package-custom-resources-clean
 
 .PHONY: release
-release: packr-build compile-darwin compile-linux compile-windows packr-clean
+release: package-custom-resources compile-darwin compile-linux compile-windows package-custom-resources-clean
 
 .PHONY: release-docker
 release-docker:
@@ -54,38 +56,25 @@ compile-linux:
 compile-darwin:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
-.PHONY: packr-build
-packr-build: tools package-custom-resources
-	@echo "Packaging static files" &&\
-	env -i PATH="$$PATH":${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
-	go generate ./...
-
-.PHONY: packr-clean
-packr-clean: tools package-custom-resources-clean
-	@echo "Cleaning up static files generated code" &&\
-	cd templates &&\
-	${GOBIN}/packr2 clean &&\
-	cd ..\
-
 .PHONY: test
-test: packr-build run-unit-test custom-resource-tests packr-clean
+test: run-unit-test custom-resource-tests
 
 .PHONY: custom-resource-tests
-custom-resource-tests:
+custom-resource-tests: tools
 	@echo "Running custom resource unit tests" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
 	npm test &&\
-	cd ..
+	cd ${ROOT_SRC_DIR}
 
 # Minifies the resources in cf-custom-resources/lib and copies
 # those minified assets into templates/custom-resources so that
 # they can be packed.
 .PHONY: package-custom-resources
-package-custom-resources:
+package-custom-resources: tools
 	@echo "Packaging custom resources to templates/custom-resources" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
 	npm run package &&\
-	cd ..
+	cd ${ROOT_SRC_DIR}
 
 # We only need the minified custom resources during building. After
 # they're packed, we can remove them.
@@ -103,7 +92,7 @@ generate-coverage: test
 	go tool cover -html=${COVERAGE}
 
 .PHONY: integ-test
-integ-test: packr-build run-integ-test packr-clean
+integ-test: package-custom-resources run-integ-test package-custom-resources-clean
 
 .PHONY: run-integ-test
 run-integ-test:
@@ -114,7 +103,7 @@ run-integ-test:
 	go test -race -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
 .PHONY: local-integ-test
-local-integ-test: packr-build run-local-integ-test packr-clean
+local-integ-test: package-custom-resources run-local-integ-test package-custom-resources-clean
 
 run-local-integ-test:
 	go test -race -count=1 -timeout=60m -tags=localintegration ${PACKAGES}
@@ -128,7 +117,6 @@ e2e: build-e2e
 
 .PHONY: tools
 tools:
-	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm ci
 
@@ -183,6 +171,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/aws/apprunner/apprunner.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/elbv2/mocks/mock_elbv2.go -source=./internal/pkg/aws/elbv2/elbv2.go
 	${GOBIN}/mockgen -package=exec -source=./internal/pkg/exec/exec.go -destination=./internal/pkg/exec/mock_exec.go
+	${GOBIN}/mockgen -package=dockerengine -source=./internal/pkg/docker/dockerengine/dockerengine.go -destination=./internal/pkg/docker/dockerengine/mock_dockerengine.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/mocks/mock_deploy.go -source=./internal/pkg/deploy/deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_env.go -source=./internal/pkg/deploy/cloudformation/stack/env.go

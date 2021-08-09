@@ -319,7 +319,7 @@ type WorkloadOpts struct {
 	StateMachine       *StateMachineOpts
 
 	// Additional options for worker service templates.
-	Subscribe SubscribeOpts
+	Subscribe *SubscribeOpts
 }
 
 // ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.

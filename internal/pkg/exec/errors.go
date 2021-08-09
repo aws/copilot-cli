@@ -4,7 +4,6 @@
 package exec
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -41,16 +40,4 @@ type ErrOutdatedSSMPlugin struct {
 
 func (e ErrOutdatedSSMPlugin) Error() string {
 	return "Session Manager plugin is not up-to-date"
-}
-
-// ErrDockerCommandNotFound means the docker command is not found.
-var ErrDockerCommandNotFound = errors.New("docker: command not found")
-
-// ErrDockerDaemonNotResponsive means the docker daemon is not responsive.
-type ErrDockerDaemonNotResponsive struct {
-	msg string
-}
-
-func (e ErrDockerDaemonNotResponsive) Error() string {
-	return fmt.Sprintf("docker daemon is not responsive: %s", e.msg)
 }

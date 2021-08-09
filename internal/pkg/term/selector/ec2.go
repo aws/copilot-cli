@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 )
 
@@ -39,7 +41,7 @@ func NewEC2Select(prompt Prompter, ec2Client VPCSubnetLister) *EC2Select {
 }
 
 // VPC has the user select an available VPC.
-func (s *EC2Select) VPC(prompt, help string) (string, error) {
+func (s *EC2Select) VPC(msg, help string) (string, error) {
 	vpcs, err := s.ec2Svc.ListVPCs()
 	if err != nil {
 		return "", fmt.Errorf("list VPC ID: %w", err)
@@ -53,8 +55,9 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 		options = append(options, stringifiedVPC)
 	}
 	vpc, err := s.prompt.SelectOne(
-		prompt, help,
-		options)
+		msg, help,
+		options,
+		prompt.WithFinalMessage("VPC:"))
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
@@ -66,32 +69,32 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 }
 
 // PublicSubnets has the user multiselect public subnets given the VPC ID.
-func (s *EC2Select) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
-	return s.selectPublicSubnets(prompt, help, vpcID)
+func (s *EC2Select) PublicSubnets(msg, help, vpcID string) ([]string, error) {
+	return s.selectPublicSubnets(msg, help, vpcID)
 }
 
 // PrivateSubnets has the user multiselect private subnets given the VPC ID.
-func (s *EC2Select) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
-	return s.selectPrivateSubnets(prompt, help, vpcID)
+func (s *EC2Select) PrivateSubnets(msg, help, vpcID string) ([]string, error) {
+	return s.selectPrivateSubnets(msg, help, vpcID)
 }
 
-func (s *EC2Select) selectPublicSubnets(prompt, help string, vpcID string) ([]string, error) {
+func (s *EC2Select) selectPublicSubnets(msg, help string, vpcID string) ([]string, error) {
 	allSubnets, err := s.ec2Svc.ListVPCSubnets(vpcID)
 	if err != nil {
 		return nil, fmt.Errorf("list subnets for VPC %s: %w", vpcID, err)
 	}
-	return s.selectSubnets(prompt, help, allSubnets.Public)
+	return s.selectSubnets(msg, help, allSubnets.Public, prompt.WithFinalMessage("Public subnets:"))
 }
 
-func (s *EC2Select) selectPrivateSubnets(prompt, help string, vpcID string) ([]string, error) {
+func (s *EC2Select) selectPrivateSubnets(msg, help string, vpcID string) ([]string, error) {
 	allSubnets, err := s.ec2Svc.ListVPCSubnets(vpcID)
 	if err != nil {
 		return nil, fmt.Errorf("list subnets for VPC %s: %w", vpcID, err)
 	}
-	return s.selectSubnets(prompt, help, allSubnets.Private)
+	return s.selectSubnets(msg, help, allSubnets.Private, prompt.WithFinalMessage("Private subnets:"))
 }
 
-func (s *EC2Select) selectSubnets(prompt, help string, subnets []ec2.Subnet) ([]string, error) {
+func (s *EC2Select) selectSubnets(msg, help string, subnets []ec2.Subnet, opts ...prompt.PromptConfig) ([]string, error) {
 	if len(subnets) == 0 {
 		return nil, ErrSubnetsNotFound
 	}
@@ -101,8 +104,9 @@ func (s *EC2Select) selectSubnets(prompt, help string, subnets []ec2.Subnet) ([]
 		options = append(options, stringifiedSubnet)
 	}
 	selectedSubnets, err := s.prompt.MultiSelect(
-		prompt, help,
-		options)
+		msg, help,
+		options,
+		opts...)
 	if err != nil {
 		return nil, err
 	}

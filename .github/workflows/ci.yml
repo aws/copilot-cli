@@ -15,7 +15,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15
+          go-version: 1.16
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -25,14 +25,14 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Generate static files
-        run: make packr-build
+      - name: Package custom resources
+        run: make package-custom-resources
 
       - name: Build binaries
         run: make ${{matrix.command}}
 
       - name: Cleanup
-        run: make packr-clean
+        run: make package-custom-resources-clean
 
   test:
     runs-on: ubuntu-latest
@@ -40,7 +40,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15
+          go-version: 1.16
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -59,7 +59,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15
+          go-version: 1.16
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -78,7 +78,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15
+          go-version: 1.16
 
       - name: Check out code
         uses: actions/checkout@v2
@@ -95,7 +95,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15
+          go-version: 1.16
 
       - name: Check out code
         uses: actions/checkout@v2
