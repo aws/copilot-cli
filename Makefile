@@ -171,6 +171,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/aws/apprunner/apprunner.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/elbv2/mocks/mock_elbv2.go -source=./internal/pkg/aws/elbv2/elbv2.go
 	${GOBIN}/mockgen -package=exec -source=./internal/pkg/exec/exec.go -destination=./internal/pkg/exec/mock_exec.go
+	${GOBIN}/mockgen -package=dockerengine -source=./internal/pkg/docker/dockerengine/dockerengine.go -destination=./internal/pkg/docker/dockerengine/mocks.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/mocks/mock_deploy.go -source=./internal/pkg/deploy/deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_env.go -source=./internal/pkg/deploy/cloudformation/stack/env.go
