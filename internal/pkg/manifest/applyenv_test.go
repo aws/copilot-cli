@@ -33,11 +33,8 @@ When writing tests for a field F (e.g. When writing `TestApplyEnv_Image`, where 
 			Write another test group for this field (e.g. F is `image` and f is `image.build`, write another test functions named `TestApplyEnv_Image_Build`)
 
 Expected Behaviors:
-	- Slice type: append-only.
+	- Slice type: override-only.
 		Take `security_groups` (which takes []string) as an example. If original is `[]string{1, 2}`, and environment override
-		is `[]string{3}`, the result should be `[]string{1, 2, 3}`.
-	- Exception: StringSlice in composite type should be overridden, not appended.
-		Take `entrypoint` (which takes []string or string) as an example. If original is `[]string{1,2}`, and override
 		is `[]string{3}`, the result should be `[]string{3}`.
 	- Map: override value of existing keys, append non-existing keys.
 */
@@ -758,50 +755,50 @@ func TestApplyEnv_Image_Build(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED_TEST: cacheFrom appended": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache"},
-		//			},
-		//		}
-		//		svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"Append", "Test"},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildString: nil,
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache", "Append", "Test"},
-		//			},
-		//		}
-		//	},
-		//},
-		//"FAILED_TEST: cacheFrom not overridden by zero slice": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache"},
-		//			},
-		//		}
-		//		svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildString: nil,
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache"},
-		//			},
-		//		}
-		//	},
-		//},
+		"cacheFrom overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "Cache"},
+					},
+				}
+				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "CacheTest", "Test"},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildString: nil,
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "CacheTest", "Test"},
+					},
+				}
+			},
+		},
+		"cacheFrom overridden by zero slice": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "Cache"},
+					},
+				}
+				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildString: nil,
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{},
+					},
+				}
+			},
+		},
 		"cacheFrom not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.Build = BuildArgsOrString{
@@ -847,36 +844,36 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		//"FAILED TEST: command appended": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command"},
-		//		}
-		//		svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"append", "test"},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command", "append", "test"},
-		//		}
-		//	},
-		//},
-		//"FAILED TEST: command cacheFrom not overridden by zero slice": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command"},
-		//		}
-		//		svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command"},
-		//		}
-		//	},
-		//},
+		"command appended": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command"},
+				}
+				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command_test", "test"},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command_test", "test"},
+				}
+			},
+		},
+		"command overridden by zero slice": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command"},
+				}
+				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{},
+				}
+			},
+		},
 		//"FAILED TEST: command not overridden": {
 		//	inSvc: func(svc *LoadBalancedWebService) {
 		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
@@ -1199,7 +1196,7 @@ func TestApplyEnv_Entrypoint(t *testing.T) {
 				}
 			},
 		},
-		"string slice explicitly overridden by empty value": {
+		"string slice explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.EntryPoint = &EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint"},
@@ -1339,18 +1336,18 @@ func TestApplyEnv_Command(t *testing.T) {
 				}
 			},
 		},
-		"string slice explicitly overridden by empty value": {
+		"string slice explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Command = &CommandOverride{
 					StringSlice: []string{"mock", "command"},
 				}
 				svc.Environments["test"].Command = &CommandOverride{
-					StringSlice: []string{""},
+					StringSlice: []string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.Command = &CommandOverride{
-					StringSlice: []string{""},
+					StringSlice: []string{},
 				}
 			},
 		},
@@ -1799,48 +1796,48 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED TEST: security_groups appended": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group"},
-		//			},
-		//		}
-		//		svc.Environments["test"].Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"append", "test"},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group", "append", "test"},
-		//			},
-		//		}
-		//	},
-		//},
-		//"FAILED TEST: security_groups not overridden by zero slice": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group"},
-		//			},
-		//		}
-		//		svc.Environments["test"].Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group"},
-		//			},
-		//		}
-		//	},
-		//},
+		"security_groups overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group"},
+					},
+				}
+				svc.Environments["test"].Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group_test", "test"},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group_test", "test"},
+					},
+				}
+			},
+		},
+		"security_groups overridden by zero slice": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group"},
+					},
+				}
+				svc.Environments["test"].Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{},
+					},
+				}
+			},
+		},
 		//"FAILED TEST: security_groups not overridden": {
 		//	inSvc: func(svc *LoadBalancedWebService) {
 		//		svc.Network = &NetworkConfig{
