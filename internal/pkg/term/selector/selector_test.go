@@ -105,7 +105,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}).
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}, gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("select deployed services for application %s: some error", testApp),
@@ -128,7 +128,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}).
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}, gomock.Any()).
 					Return("mockSvc1 (test)", nil)
 			},
 			wantEnv: "test",
@@ -225,7 +225,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test1)", "mockSvc2 (test1)"}).
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test1)", "mockSvc2 (test1)"}, gomock.Any()).
 					Return("mockSvc1 (test1)", nil)
 			},
 			wantEnv: "test1",
@@ -918,7 +918,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -939,7 +939,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -968,7 +968,8 @@ func TestConfigSelect_Service(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a service"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"service1", "service2"})).
+						gomock.Eq([]string{"service1", "service2"}),
+						gomock.Any()).
 					Return("service2", nil).
 					Times(1)
 			},
@@ -994,7 +995,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1048,7 +1049,7 @@ func TestConfigSelect_Job(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1069,7 +1070,7 @@ func TestConfigSelect_Job(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1098,7 +1099,8 @@ func TestConfigSelect_Job(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a job"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"job1", "job2"})).
+						gomock.Eq([]string{"job1", "job2"}),
+						gomock.Any()).
 					Return("job2", nil).
 					Times(1)
 			},
@@ -1124,7 +1126,7 @@ func TestConfigSelect_Job(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"job1", "job2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"job1", "job2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1187,7 +1189,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1207,7 +1209,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1234,7 +1236,8 @@ func TestSelect_Environment(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select an environment"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"env1", "env2"})).
+						gomock.Eq([]string{"env1", "env2"}),
+						gomock.Any()).
 					Return("env2", nil).
 					Times(1)
 			},
@@ -1258,7 +1261,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1274,7 +1277,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
 
@@ -1290,7 +1293,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), []string{additionalOpt1, additionalOpt2}).
+					SelectOne(gomock.Any(), gomock.Any(), []string{additionalOpt1, additionalOpt2}, gomock.Any()).
 					Times(1).
 					Return(additionalOpt2, nil)
 			},
@@ -1556,7 +1559,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1575,7 +1578,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1600,7 +1603,8 @@ func TestSelect_Application(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select an app"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"app1", "app2"})).
+						gomock.Eq([]string{"app1", "app2"}),
+						gomock.Any()).
 					Return("app2", nil).
 					Times(1)
 			},
@@ -1622,7 +1626,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"app1", "app2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"app1", "app2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1970,6 +1974,7 @@ func TestSelect_CFTask(t *testing.T) {
 						"abc",
 						"db-migrate",
 					},
+					gomock.Any(),
 				).Return("abc", nil)
 			},
 			wantedErr:  nil,
@@ -2008,6 +2013,7 @@ func TestSelect_CFTask(t *testing.T) {
 						"oneoff",
 						"db-migrate",
 					},
+					gomock.Any(),
 				).Return("db-migrate", nil)
 			},
 			wantedErr:  nil,
@@ -2137,7 +2143,7 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
 					"4082490e (sample-fargate:2)",
 					"0aa1ba8d (sample-fargate:3)",
-				}).Return("", mockErr)
+				}, gomock.Any()).Return("", mockErr)
 			},
 			wantErr: fmt.Errorf("select running task: some error"),
 		},
@@ -2169,7 +2175,7 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
 					"4082490e (sample-fargate:2)",
 					"0aa1ba8d (sample-fargate:3)",
-				}).Return("0aa1ba8d (sample-fargate:3)", nil)
+				}, gomock.Any()).Return("0aa1ba8d (sample-fargate:3)", nil)
 			},
 			wantTask: mockTask2,
 		},

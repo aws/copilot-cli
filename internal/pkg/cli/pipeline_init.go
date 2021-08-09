@@ -344,6 +344,7 @@ func (o *initPipelineOpts) selectURL() error {
 		pipelineSelectURLPrompt,
 		pipelineSelectURLHelpPrompt,
 		urls,
+		prompt.WithFinalMessage("Repository URL:"),
 	)
 	if err != nil {
 		return fmt.Errorf("select URL: %w", err)

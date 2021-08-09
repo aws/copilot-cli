@@ -139,7 +139,7 @@ func (o *svcPauseOpts) Ask() error {
 		return nil
 	}
 
-	pauseConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtSvcPauseConfirmPrompt, color.HighlightUserInput(o.svcName)), "")
+	pauseConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtSvcPauseConfirmPrompt, color.HighlightUserInput(o.svcName)), "", prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("svc pause confirmation prompt: %w", err)
 	}
