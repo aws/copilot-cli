@@ -42,8 +42,6 @@ const (
 
 	// RuntimePlatform configuration.
 	linuxOS = "LINUX"
-	// windowsCoreOS = "WINDOWS_SERVER_2019_CORE"
-	// windowsFullOS = "WINDOWS_SERVER_2019_FULL"
 	x86Arch = "X86_64"
 )
 
