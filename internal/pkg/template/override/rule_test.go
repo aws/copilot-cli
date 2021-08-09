@@ -33,7 +33,7 @@ func Test_parseRules(t *testing.T) {
 				},
 			},
 
-			wantedError: fmt.Errorf("unrecognized path segment pattern ContainerDefinition[0][0]. Valid path segment examples are \"xyz[0]\", \"xyz[-]\" or \"xyz\""),
+			wantedError: fmt.Errorf("invalid override path segment \"ContainerDefinition[0][0]\": segments must be of the form \"array[0]\", \"array[-]\" or \"key\""),
 		},
 		"error when invalid rule path with bad sequence index": {
 			inRules: []Rule{
@@ -42,7 +42,7 @@ func Test_parseRules(t *testing.T) {
 				},
 			},
 
-			wantedError: fmt.Errorf("unrecognized path segment pattern ContainerDefinition[0-]. Valid path segment examples are \"xyz[0]\", \"xyz[-]\" or \"xyz\""),
+			wantedError: fmt.Errorf("invalid override path segment \"ContainerDefinition[0-]\": segments must be of the form \"array[0]\", \"array[-]\" or \"key\""),
 		},
 		"success": {
 			inRules: []Rule{

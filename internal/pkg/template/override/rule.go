@@ -52,7 +52,7 @@ func (r Rule) validate() error {
 	pathSegments := strings.Split(r.Path, pathSegmentSeparator)
 	for _, pathSegment := range pathSegments {
 		if !pathSegmentRegexp.MatchString(pathSegment) {
-			return fmt.Errorf(`unrecognized path segment pattern %s. Valid path segment examples are "xyz[0]", "xyz[%s]" or "xyz"`,
+			return fmt.Errorf(`invalid override path segment "%s": segments must be of the form "array[0]", "array[%s]" or "key"`,
 				pathSegment, seqAppendToLastSymbol)
 		}
 	}
