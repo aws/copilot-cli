@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 
@@ -258,7 +260,7 @@ func (o *deployJobOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
+	digest, err := o.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
 	if err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
@@ -267,7 +269,7 @@ func (o *deployJobOpts) configureContainerImage() error {
 	return nil
 }
 
-func (o *deployJobOpts) dfBuildArgs(job interface{}) (*exec.BuildArguments, error) {
+func (o *deployJobOpts) dfBuildArgs(job interface{}) (*dockerengine.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)

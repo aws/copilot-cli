@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -105,7 +107,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		init:         jobInitter,
 		prompt:       prompter,
 		sel:          sel,
-		dockerEngine: exec.NewDockerCommand(),
+		dockerEngine: dockerengine.New(exec.NewCmd()),
 		initParser: func(path string) dockerfileParser {
 			return exec.NewDockerfile(fs, path)
 		},
@@ -272,9 +274,9 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 		return true, nil
 	}
 	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
-		var errDaemon *exec.ErrDockerDaemonNotResponsive
+		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
 		switch {
-		case errors.Is(err, exec.ErrDockerCommandNotFound):
+		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
 			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
 			return false, nil
 		case errors.As(err, &errDaemon):
