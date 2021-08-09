@@ -278,7 +278,7 @@ Resources:
 {{- if .Aliases }}
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: {{ .Aliases }}
+            Values: {{ fmtSlice .Aliases }}
 {{- else }}
         - Field: 'host-header'
           HostHeaderConfig:
@@ -321,7 +321,7 @@ Resources:
 {{- if .Aliases }}
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: {{ .Aliases }}
+            Values: {{ fmtSlice .Aliases }}
 {{- else }}
         - Field: 'host-header'
           HostHeaderConfig:

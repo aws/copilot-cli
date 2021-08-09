@@ -286,6 +286,97 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	}
 }
 
+func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct PlatformArgsOrString
+		wantedError  error
+	}{
+		"returns error if both string and args specified": {
+			inContent: []byte(`platform: linux/amd64
+  osfamily: linux
+  architecture: amd64`),
+
+			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
+		},
+		"returns error if platform string invalid": {
+			inContent: []byte(`platform: linus/mad64`),
+
+			wantedError: errors.New("validate platform: platform linus/mad64 is invalid; the valid platform is: linux/amd64"),
+		},
+		"returns error if only args.os specified": {
+			inContent: []byte(`platform:
+  osfamily: linux`),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
+		},
+		"returns error if only args.arch specified": {
+			inContent: []byte(`platform:
+  architecture: amd64`),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
+		},
+		"returns error if args.os invalid": {
+			inContent: []byte(`platform:
+  osfamily: OSFamilia
+  architecture: amd64`),
+			wantedError: errors.New("validate OS: OS OSFamilia is invalid; the valid operating system is: linux"),
+		},
+		"returns error if args.arch invalid": {
+			inContent: []byte(`platform:
+  osfamily: linux
+  architecture: abc123`),
+			wantedError: errors.New("validate arch: architecture abc123 is invalid; the valid architecture is: amd64"),
+		},
+		"platform string": {
+			inContent: []byte(`platform: linux/amd64`),
+
+			wantedStruct: PlatformArgsOrString{
+				PlatformString: aws.String("linux/amd64"),
+			},
+		},
+		"both os/arch specified with valid values": {
+			inContent: []byte(`platform:
+  osfamily: linux
+  architecture: amd64`),
+			wantedStruct: PlatformArgsOrString{
+				PlatformString: nil,
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("linux"),
+					Arch:     aws.String("amd64"),
+				},
+			},
+		},
+		"error if unmarshalable": {
+			inContent: []byte(`platform:
+  ohess: linus
+  archie: leg64`),
+			wantedError: errUnmarshalPlatformOpts,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			p := TaskConfig{
+				Platform: &PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
+				},
+			}
+			err := yaml.Unmarshal(tc.inContent, &p)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.PlatformString, p.Platform.PlatformString)
+				require.Equal(t, tc.wantedStruct.PlatformArgs.OSFamily, p.Platform.PlatformArgs.OSFamily)
+				require.Equal(t, tc.wantedStruct.PlatformArgs.Arch, p.Platform.PlatformArgs.Arch)
+			}
+		})
+	}
+}
+
 func TestExec_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte

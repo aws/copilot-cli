@@ -12,8 +12,11 @@ env:
 phases:
   install:
     runtime-versions:
-      golang: 1.15
       nodejs: 12
+    commands:
+      - 'cd $HOME/.goenv && git pull --ff-only && cd -'
+      - 'goenv install 1.16.6'
+      - 'goenv global 1.16.6'
   build:
     commands:
       - echo `git rev-parse HEAD` # Do not delete; for pipeline logging purposes

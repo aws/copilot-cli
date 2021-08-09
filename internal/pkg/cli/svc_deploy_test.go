@@ -272,10 +272,9 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithBadPlatform, nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 				)
 			},
-			wantErr: fmt.Errorf("get platform for service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
+			wantErr: fmt.Errorf("unmarshal service serviceA manifest: unmarshal to load balanced web service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
 		},
 		"success with valid platform": {
 			inputSvc: "serviceA",
@@ -552,7 +551,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 		mockAddonsURL = "mockAddonsURL"
 	)
 	tests := map[string]struct {
-		inAlias        string
+		inAliases      *manifest.Alias
 		inApp          *config.Application
 		inEnvironment  *config.Environment
 		inBuildRequire bool
@@ -625,7 +624,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr:              fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
 		"fail to get app version": {
-			inAlias: "mockAlias",
+			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -647,7 +646,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
-			inAlias: "mockAlias",
+			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -669,7 +668,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
-			inAlias: "v1.v2.mockDomain",
+			inAliases: &manifest.Alias{String: aws.String("v1.v2.mockDomain")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -688,10 +687,15 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
 				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
+			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"success": {
-			inAlias: "v1.mockDomain",
+			inAliases: &manifest.Alias{
+				StringSlice: []string{
+					"v1.mockDomain",
+					"mockDomain",
+				},
+			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -749,7 +753,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 						},
 						LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
 							RoutingRule: manifest.RoutingRule{
-								Alias: aws.String(tc.inAlias),
+								Alias: tc.inAliases,
 							},
 						},
 					}, nil
@@ -836,6 +840,90 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 
 			wantErr: fmt.Errorf("get application mockApp resources from region us-west-2: some error"),
+		},
+		"invalid alias with unknown domain": {
+			inAlias: "v1.someRandomDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot"),
+		},
+		"invalid environment level alias": {
+			inAlias: "mockEnv.mockApp.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("mockEnv.mockApp.mockDomain is an environment-level alias, which is not supported yet"),
+		},
+		"invalid application level alias": {
+			inAlias: "someSub.mockApp.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("someSub.mockApp.mockDomain is an application-level alias, which is not supported yet"),
+		},
+		"invalid root level alias": {
+			inAlias: "mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+			},
+
+			wantErr: fmt.Errorf("mockDomain is a root domain alias, which is not supported yet"),
 		},
 		"fail to upload custom resource scripts": {
 			inAlias: "v1.mockDomain",
