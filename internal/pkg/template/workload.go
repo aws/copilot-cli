@@ -6,6 +6,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -39,6 +40,10 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
+
+	// RuntimePlatform configuration.
+	linuxOS = "LINUX"
+	x86Arch = "X86_64"
 )
 
 // Constants for ARN options.
@@ -279,6 +284,12 @@ func defaultNetworkOpts() *NetworkOpts {
 	}
 }
 
+// RuntimePlatformOpts holds configuration needed for Platform configuration.
+type RuntimePlatformOpts struct {
+	OS   string
+	Arch string
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -295,6 +306,7 @@ type WorkloadOpts struct {
 	Storage                  *StorageOpts
 	Network                  *NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
+	Platform                 RuntimePlatformOpts
 	EntryPoint               []string
 	Command                  []string
 	DomainAlias              string
@@ -330,6 +342,7 @@ type ParseRequestDrivenWebServiceInput struct {
 	EnableHealthCheck   bool
 	EnvControllerLambda string
 	Publish             *PublishOpts
+	Platform            RuntimePlatformOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
@@ -409,6 +422,13 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 		return nil, fmt.Errorf("execute template %s with data %v: %w", name, data, err)
 	}
 	return &Content{buf}, nil
+}
+
+func (p RuntimePlatformOpts) Version() string {
+	if strings.HasPrefix(p.OS, "WINDOWS_SERVER") {
+		return "1.0.0"
+	}
+	return "1.4.0"
 }
 
 func withSvcParsingFuncs() ParseOption {
