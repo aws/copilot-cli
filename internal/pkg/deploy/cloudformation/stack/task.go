@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -16,8 +17,6 @@ import (
 )
 
 const (
-	taskTemplatePath = "task/cf.yml"
-
 	taskNameParamKey         = "TaskName"
 	taskCPUParamKey          = "TaskCPU"
 	taskMemoryParamKey       = "TaskMemory"
@@ -30,6 +29,10 @@ const (
 	taskEntryPointParamKey     = "EntryPoint"
 
 	taskLogRetentionInDays = "1"
+)
+
+var (
+	taskTemplatePath = filepath.Join("task", "cf.yml")
 )
 
 type taskStackConfig struct {

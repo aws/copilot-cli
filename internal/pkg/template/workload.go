@@ -6,6 +6,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -16,10 +17,6 @@ import (
 
 // Constants for template paths.
 const (
-	// Paths of workload cloudformation templates under templates/workloads/.
-	fmtWkldCFTemplatePath         = "workloads/%s/%s/cf.yml"
-	fmtWkldPartialsCFTemplatePath = "workloads/partials/cf/%s.yml"
-
 	// Directories under templates/workloads/.
 	servicesDirName = "services"
 	jobDirName      = "jobs"
@@ -54,6 +51,10 @@ const (
 )
 
 var (
+	// Paths of workload cloudformation templates under templates/workloads/.
+	fmtWkldCFTemplatePath         = filepath.Join("workloads", "%s", "%s", "cf.yml")
+	fmtWkldPartialsCFTemplatePath = filepath.Join("workloads", "partials", "cf", "%s.yml")
+
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
 		"loggroup",
