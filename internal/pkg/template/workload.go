@@ -6,6 +6,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -421,6 +422,13 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 		return nil, fmt.Errorf("execute template %s with data %v: %w", name, data, err)
 	}
 	return &Content{buf}, nil
+}
+
+func (p RuntimePlatformOpts) Version() string {
+	if strings.HasPrefix(p.OS, "WINDOWS_SERVER") {
+		return "1.0.0"
+	}
+	return "1.4.0"
 }
 
 func withSvcParsingFuncs() ParseOption {
