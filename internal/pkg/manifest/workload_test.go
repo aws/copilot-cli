@@ -303,29 +303,29 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 		"returns error if platform string invalid": {
 			inContent: []byte(`platform: linus/mad64`),
 
-			wantedError: errors.New("validate platform: platform linus/mad64 is invalid; the valid platform is: linux/amd64"),
+			wantedError: errors.New("validate platform: platform linus/mad64 is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
 		},
 		"returns error if only args.os specified": {
 			inContent: []byte(`platform:
   osfamily: linux`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty"),
 		},
 		"returns error if only args.arch specified": {
 			inContent: []byte(`platform:
   architecture: amd64`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
+			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty"),
 		},
 		"returns error if args.os invalid": {
 			inContent: []byte(`platform:
   osfamily: OSFamilia
   architecture: amd64`),
-			wantedError: errors.New("validate OS: OS OSFamilia is invalid; the valid operating system is: linux"),
+			wantedError: errors.New("platform pair ('OSFamilia', 'amd64') is invalid: osfamily and architecture must be one of ('linux', 'amd64'), ('linux', 'x86_64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_full', 'x86_64')"),
 		},
 		"returns error if args.arch invalid": {
 			inContent: []byte(`platform:
   osfamily: linux
   architecture: abc123`),
-			wantedError: errors.New("validate arch: architecture abc123 is invalid; the valid architecture is: amd64"),
+			wantedError: errors.New("platform pair ('linux', 'abc123') is invalid: osfamily and architecture must be one of ('linux', 'amd64'), ('linux', 'x86_64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_full', 'x86_64')"),
 		},
 		"platform string": {
 			inContent: []byte(`platform: linux/amd64`),
@@ -373,6 +373,64 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.PlatformArgs.OSFamily, p.Platform.PlatformArgs.OSFamily)
 				require.Equal(t, tc.wantedStruct.PlatformArgs.Arch, p.Platform.PlatformArgs.Arch)
 			}
+		})
+	}
+}
+
+func TestPlatformArgsOrString_OS(t *testing.T) {
+	testCases := map[string]struct {
+		in     *PlatformArgsOrString
+		wanted string
+	}{
+		"should return os when platform is of string format 'os/arch'": {
+			in: &PlatformArgsOrString{
+				PlatformString: aws.String("linux/amd64"),
+			},
+			wanted: "linux",
+		},
+		"should return OS when platform is a map": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_core",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.OS())
+		})
+	}
+}
+
+func TestPlatformArgsOrString_Arch(t *testing.T) {
+	testCases := map[string]struct {
+		in     *PlatformArgsOrString
+		wanted string
+	}{
+		"should return arch when platform is of string format 'os/arch'": {
+			in: &PlatformArgsOrString{
+				PlatformString: aws.String("linux/arm"),
+			},
+			wanted: "arm",
+		},
+		"should return arch when platform is a map": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "x86_64",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.Arch())
 		})
 	}
 }

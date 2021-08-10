@@ -27,8 +27,11 @@ type Cmd interface {
 
 // Operating systems and architectures supported by docker.
 const (
-	LinuxOS   = "linux"
-	Amd64Arch = "amd64"
+	OSLinux   = "linux"
+	OSWindows = "windows"
+
+	ArchAMD64 = "amd64"
+	ArchX86   = "x86_64"
 )
 
 const (
@@ -263,8 +266,8 @@ func (c CmdClient) RedirectPlatform(image string) (*string, error) {
 		return nil, fmt.Errorf("get os/arch from docker: %w", err)
 	}
 	// Log a message informing non-default arch users of platform for build.
-	if arch != Amd64Arch {
-		return aws.String(DockerBuildPlatform(LinuxOS, Amd64Arch)), nil
+	if arch != ArchAMD64 {
+		return aws.String(DockerBuildPlatform(OSLinux, ArchAMD64)), nil
 	}
 	return nil, nil
 }
