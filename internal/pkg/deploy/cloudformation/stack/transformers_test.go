@@ -1780,3 +1780,48 @@ func Test_convertFIFO(t *testing.T) {
 		})
 	}
 }
+
+func Test_convertPlatform(t *testing.T) {
+	testCases := map[string]struct {
+		in  *manifest.PlatformArgsOrString
+		out template.RuntimePlatformOpts
+	}{
+		"should return empty struct if user did not set a platform field in the manifest": {},
+		"should return windows server 2019 full and x86_64 when advanced config specifies full": {
+			in: &manifest.PlatformArgsOrString{
+				PlatformArgs: manifest.PlatformArgs{
+					OSFamily: aws.String(manifest.OSWindowsServer2019Full),
+					Arch:     aws.String(manifest.ArchX86),
+				},
+			},
+			out: template.RuntimePlatformOpts{
+				OS:   template.OSWindowsServerFull,
+				Arch: template.ArchX86,
+			},
+		},
+		"should return windows server core and x86_64 when platform is 'windows/x86_64'": {
+			in: &manifest.PlatformArgsOrString{
+				PlatformString: aws.String("windows/x86_64"),
+			},
+			out: template.RuntimePlatformOpts{
+				OS:   template.OSWindowsServerCore,
+				Arch: template.ArchX86,
+			},
+		},
+		"should return linux and x86_64 when platform is 'linux/amd64'": {
+			in: &manifest.PlatformArgsOrString{
+				PlatformString: aws.String("linux/amd64"),
+			},
+			out: template.RuntimePlatformOpts{
+				OS:   template.OSLinux,
+				Arch: template.ArchX86,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.out, convertPlatform(tc.in))
+		})
+	}
+}
