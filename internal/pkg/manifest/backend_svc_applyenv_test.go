@@ -187,21 +187,6 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"platform explicitly overridden by zero value": {
-			inSvc: func(svc *BackendService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mock platform"),
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformString: aws.String(""),
-				}
-			},
-			wanted: func(svc *BackendService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String(""),
-				}
-			},
-		},
 		"platform not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Platform = &PlatformArgsOrString{
@@ -469,7 +454,6 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				svc.Logging = &Logging{
 					Image: aws.String("mockImage"),
 				}
-				svc.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(svc *BackendService) {
 				svc.Logging = &Logging{
