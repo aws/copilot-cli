@@ -295,7 +295,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 		//		}
 		//	},
 		//},
-		//"FAILED_TEST: composite fields: args is overridden if str9jg is not nil": {
+		//"FAILED_TEST: composite fields: args is overridden if string is not nil": {
 		//	inSvc: func(svc *LoadBalancedWebService) {
 		//		svc.HealthCheck = HealthCheckArgsOrString{
 		//			HealthCheckArgs: HTTPHealthCheckArgs{
