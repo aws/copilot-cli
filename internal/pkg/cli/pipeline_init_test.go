@@ -199,7 +199,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
@@ -233,7 +233,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitSSHURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitSSHURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().Default().Return(&session.Session{
@@ -287,7 +287,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
@@ -319,7 +319,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return("https://bitbub.com/badGoose/chaOS", nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("https://bitbub.com/badGoose/chaOS", nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
@@ -349,7 +349,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), []string{githubReallyBadURL}).Return(githubReallyBadURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), []string{githubReallyBadURL}, gomock.Any()).Return(githubReallyBadURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
@@ -382,7 +382,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitBadURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
@@ -410,7 +410,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitBadRegion, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadRegion, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
@@ -441,7 +441,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().Default().Return(nil, errors.New("some error"))
@@ -471,7 +471,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().Default().Return(&session.Session{

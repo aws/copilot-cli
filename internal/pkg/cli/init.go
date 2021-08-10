@@ -7,6 +7,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -180,6 +182,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sessProvider: sessProvider,
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	cmd := exec.NewCmd()
 	return &initOpts{
 		initVars:     vars,
 		ShouldDeploy: vars.shouldDeploy,
@@ -218,7 +221,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					init:         wlInitializer,
 					sel:          sel,
 					prompt:       prompt,
-					dockerEngine: exec.NewDockerCommand(),
+					dockerEngine: dockerengine.New(cmd),
 					initParser: func(s string) dockerfileParser {
 						return exec.NewDockerfile(fs, s)
 					},
@@ -238,7 +241,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					init:         wlInitializer,
 					sel:          sel,
 					prompt:       prompt,
-					dockerEngine: exec.NewDockerCommand(),
+					dockerEngine: dockerengine.New(cmd),
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {

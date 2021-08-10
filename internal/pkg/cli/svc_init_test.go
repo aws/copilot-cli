@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
@@ -242,7 +243,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(exec.ErrDockerCommandNotFound)
+				m.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
 			},
 			wantedErr: nil,
 		},
@@ -258,7 +259,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerDaemonNotResponsive{})
+				m.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
 			},
 			wantedErr: nil,
 		},

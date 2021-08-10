@@ -62,5 +62,13 @@ http:
   allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
 ```
 
-<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings</span>  
 HTTPS domain alias of your service.
+```yaml
+# String version.
+http:
+  alias: example.com
+# Alteratively, as an array of strings.
+http:
+  alias: ["example.com", "v1.example.com"]
+```
