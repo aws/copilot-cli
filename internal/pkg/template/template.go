@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
-	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -238,7 +237,7 @@ func newTextTemplate(name string) *template.Template {
 }
 
 func (t *Template) read(path string) (string, error) {
-	dat, err := t.fs.ReadFile(filepath.Join("templates", path))
+	dat, err := t.fs.ReadFile(fmt.Sprintf("templates/%s", path)) // We need to use "/" even on Windows with go:embed.
 	if err != nil {
 		return "", fmt.Errorf("read template %s: %w", path, err)
 	}
