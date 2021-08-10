@@ -289,13 +289,6 @@ type RuntimePlatformOpts struct {
 	Arch string
 }
 
-func defaultRuntimePlatformOpts() *RuntimePlatformOpts {
-	return &RuntimePlatformOpts{
-		OS:   linuxOS,
-		Arch: x86Arch,
-	}
-}
-
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -312,7 +305,7 @@ type WorkloadOpts struct {
 	Storage                  *StorageOpts
 	Network                  *NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
-	Platform                 *RuntimePlatformOpts
+	Platform                 RuntimePlatformOpts
 	EntryPoint               []string
 	Command                  []string
 	DomainAlias              string
@@ -348,7 +341,7 @@ type ParseRequestDrivenWebServiceInput struct {
 	EnableHealthCheck   bool
 	EnvControllerLambda string
 	Publish             *PublishOpts
-	Platform            *RuntimePlatformOpts
+	Platform            RuntimePlatformOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
@@ -365,18 +358,12 @@ func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, err
 	if data.Network == nil {
 		data.Network = defaultNetworkOpts()
 	}
-	if data.Platform == nil {
-		data.Platform = defaultRuntimePlatformOpts()
-	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseRequestDrivenWebService parses a request-driven web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseRequestDrivenWebService(data ParseRequestDrivenWebServiceInput) (*Content, error) {
-	if data.Platform == nil {
-		data.Platform = defaultRuntimePlatformOpts()
-	}
 	return t.parseSvc(rdWebSvcTplName, data, withSvcParsingFuncs())
 }
 
@@ -384,9 +371,6 @@ func (t *Template) ParseRequestDrivenWebService(data ParseRequestDrivenWebServic
 func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
 	if data.Network == nil {
 		data.Network = defaultNetworkOpts()
-	}
-	if data.Platform == nil {
-		data.Platform = defaultRuntimePlatformOpts()
 	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
 }
@@ -396,9 +380,6 @@ func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
 	if data.Network == nil {
 		data.Network = defaultNetworkOpts()
 	}
-	if data.Platform == nil {
-		data.Platform = defaultRuntimePlatformOpts()
-	}
 	return t.parseSvc(workerSvcTplName, data, withSvcParsingFuncs())
 }
 
@@ -406,9 +387,6 @@ func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
 func (t *Template) ParseScheduledJob(data WorkloadOpts) (*Content, error) {
 	if data.Network == nil {
 		data.Network = defaultNetworkOpts()
-	}
-	if data.Platform == nil {
-		data.Platform = defaultRuntimePlatformOpts()
 	}
 	return t.parseJob(scheduledJobTplName, data, withSvcParsingFuncs())
 }
