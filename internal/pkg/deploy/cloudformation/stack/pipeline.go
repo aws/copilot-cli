@@ -4,16 +4,14 @@
 package stack
 
 import (
-	"path/filepath"
-
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
-var (
-	pipelineCfnTemplatePath = filepath.Join("cicd", "pipeline_cfn.yml")
+const (
+	pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
 )
 
 type pipelineStackConfig struct {

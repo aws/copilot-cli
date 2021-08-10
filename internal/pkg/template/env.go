@@ -6,15 +6,16 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 )
 
-var (
-	envCFTemplatePath       = filepath.Join("environment", "cf.yml")
-	fmtEnvCFSubTemplatePath = filepath.Join("environment", "partials", "%s.yml")
+const (
+	envCFTemplatePath       = "environment/cf.yml"
+	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
+)
 
+var (
 	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
 		"cfn-execution-role",

@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -49,6 +48,8 @@ type AppRegionalResources struct {
 }
 
 const (
+	appTemplatePath               = "app/app.yml"
+	appResourcesTemplatePath      = "app/cf.yml"
 	appAdminRoleParamName         = "AdminRoleName"
 	appExecutionRoleParamName     = "ExecutionRoleName"
 	appDNSDelegationRoleParamName = "DNSDelegationRoleName"
@@ -62,12 +63,6 @@ const (
 
 	// arn:${partition}:iam::${account}:role/${roleName}
 	fmtStackSetAdminRoleARN = "arn:%s:iam::%s:role/%s"
-)
-
-// Application template paths.
-var (
-	appTemplatePath          = filepath.Join("app", "app.yml")
-	appResourcesTemplatePath = filepath.Join("app", "cf.yml")
 )
 
 var cfTemplateFunctions = map[string]interface{}{
