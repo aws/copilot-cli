@@ -6,6 +6,7 @@
 package stack_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -26,6 +27,8 @@ const (
 	workerManifestPath = "worker-manifest.yml"
 	workerStackPath    = "worker-test.stack.yml"
 	workerParamsPath   = "worker-test.params.json"
+
+	subscriptionTestEnvName = "subscriptiontest"
 )
 
 func TestWorkerService_Template(t *testing.T) {
@@ -88,5 +91,25 @@ func TestWorkerService_Template(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, string(wantedCFNParamsBytes), actualParams)
+	})
+
+	t.Run("invalid topic subscription should be rejected", func(t *testing.T) {
+		path := filepath.Join("testdata", "workloads", workerManifestPath)
+		manifestBytes, err := ioutil.ReadFile(path)
+		require.NoError(t, err)
+		mft, err := manifest.UnmarshalWorkload(manifestBytes)
+		require.NoError(t, err)
+		envMft, err := mft.ApplyEnv(subscriptionTestEnvName)
+		require.NoError(t, err)
+		v, ok := envMft.(*manifest.WorkerService)
+		require.True(t, ok)
+		badSubSerializer, err := stack.NewWorkerService(v, subscriptionTestEnvName, appName, stack.RuntimeConfig{
+			ServiceDiscoveryEndpoint: "test.my-app.local",
+			AccountID:                "123456789123",
+			Region:                   "us-west-2",
+		}, []string{"arn:aws:sns:us-west-2:123456789123:my-app-test-dogsvc-givesdogs", "arn:aws:sns:us-west-2:123456789123:my-app-test-dogsvc-giveshuskies"})
+		require.NoError(t, err)
+		_, err = badSubSerializer.Template()
+		require.EqualError(t, fmt.Errorf(`invalid topic subscription "bad-topic": topic not in list of topics available to subscribe to`), err.Error())
 	})
 }

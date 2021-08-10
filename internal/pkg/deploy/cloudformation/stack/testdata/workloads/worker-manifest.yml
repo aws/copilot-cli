@@ -29,6 +29,12 @@ subscribe:
       queue:
         timeout: 1s
 
+environments:
+  subscriptiontest:
+    subscribe:
+      topics:
+        - name: bad-topic
+          service: evil
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.
