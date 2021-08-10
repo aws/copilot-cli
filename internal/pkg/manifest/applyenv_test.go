@@ -1103,6 +1103,10 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 	}
 }
 
+func TestApplyEnv_Platform(t *testing.T) {
+	// TODO: Add test for platform in the next PR
+}
+
 func TestApplyEnv_Entrypoint(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
