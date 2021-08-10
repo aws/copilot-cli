@@ -6,7 +6,6 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -42,8 +41,11 @@ const (
 	PrivateSubnetsPlacement = "PrivateSubnets"
 
 	// RuntimePlatform configuration.
-	linuxOS = "LINUX"
-	x86Arch = "X86_64"
+	OSLinux             = "LINUX"
+	OSWindowsServerFull = "WINDOWS_SERVER_2019_FULL"
+	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
+
+	ArchX86 = "X86_64"
 )
 
 // Constants for ARN options.
@@ -79,6 +81,11 @@ var (
 		"accessrole",
 		"publish",
 		"subscribe",
+	}
+
+	// Operating systems to determine Fargate platform versions.
+	osFamiliesForPV100 = [...]string{
+		OSWindowsServerFull, OSWindowsServerCore,
 	}
 )
 
@@ -290,6 +297,31 @@ type RuntimePlatformOpts struct {
 	Arch string
 }
 
+// IsDefault returns true if the platform matches the default docker image platform of "linux/amd64".
+func (p RuntimePlatformOpts) IsDefault() bool {
+	if p.isEmpty() {
+		return true
+	}
+	if p.OS == OSLinux && p.Arch == ArchX86 {
+		return true
+	}
+	return false
+}
+
+// Version returns the Fargate platform version based on the selected os family.
+func (p RuntimePlatformOpts) Version() string {
+	for _, os := range osFamiliesForPV100 {
+		if p.OS == os {
+			return "1.0.0"
+		}
+	}
+	return "1.4.0"
+}
+
+func (p RuntimePlatformOpts) isEmpty() bool {
+	return p.OS == "" && p.Arch == ""
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -422,13 +454,6 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 		return nil, fmt.Errorf("execute template %s with data %v: %w", name, data, err)
 	}
 	return &Content{buf}, nil
-}
-
-func (p RuntimePlatformOpts) Version() string {
-	if strings.HasPrefix(p.OS, "WINDOWS_SERVER") {
-		return "1.0.0"
-	}
-	return "1.4.0"
 }
 
 func withSvcParsingFuncs() ParseOption {
