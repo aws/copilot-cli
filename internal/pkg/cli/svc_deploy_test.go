@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,7 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -272,10 +273,9 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithBadPlatform, nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 				)
 			},
-			wantErr: fmt.Errorf("get platform for service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
+			wantErr: fmt.Errorf("unmarshal service serviceA manifest: unmarshal to load balanced web service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
 		},
 		"success with valid platform": {
 			inputSvc: "serviceA",
@@ -283,7 +283,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithGoodPlatform, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path"),
 						Platform:   "linux/amd64",
@@ -319,7 +319,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifest, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path"),
 					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
@@ -333,7 +333,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftBuildString, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
 					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
@@ -347,7 +347,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftNoContext, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
 					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
@@ -552,7 +552,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 		mockAddonsURL = "mockAddonsURL"
 	)
 	tests := map[string]struct {
-		inAlias        string
+		inAliases      *manifest.Alias
 		inApp          *config.Application
 		inEnvironment  *config.Environment
 		inBuildRequire bool
@@ -625,7 +625,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr:              fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
 		"fail to get app version": {
-			inAlias: "mockAlias",
+			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -647,7 +647,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
-			inAlias: "mockAlias",
+			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -669,7 +669,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
-			inAlias: "v1.v2.mockDomain",
+			inAliases: &manifest.Alias{String: aws.String("v1.v2.mockDomain")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -688,10 +688,15 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
 				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			wantErr: fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot"),
+			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
 		"success": {
-			inAlias: "v1.mockDomain",
+			inAliases: &manifest.Alias{
+				StringSlice: []string{
+					"v1.mockDomain",
+					"mockDomain",
+				},
+			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -749,7 +754,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 						},
 						LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
 							RoutingRule: manifest.RoutingRule{
-								Alias: aws.String(tc.inAlias),
+								Alias: tc.inAliases,
 							},
 						},
 					}, nil

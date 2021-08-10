@@ -357,7 +357,7 @@ func (o *secretInitOpts) askForSecretName() error {
 	name, err := o.prompter.Get(secretInitSecretNamePrompt,
 		secretInitSecretNamePromptHelp,
 		validateSecretName,
-		prompt.WithFinalMessage("secret name: "))
+		prompt.WithFinalMessage("Secret name: "))
 	if err != nil {
 		return fmt.Errorf("ask for the secret name: %w", err)
 	}
@@ -387,7 +387,9 @@ func (o *secretInitOpts) askForSecretValues() error {
 	for _, env := range envs {
 		value, err := o.prompter.GetSecret(
 			fmt.Sprintf(fmtSecretInitSecretValuePrompt, color.HighlightUserInput(o.name), env.Name),
-			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name))
+			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name),
+			prompt.WithFinalMessage(fmt.Sprintf("%s secret value:", strings.Title(env.Name))),
+		)
 		if err != nil {
 			return fmt.Errorf("get secret value for %s in environment %s: %w", color.HighlightUserInput(o.name), env.Name, err)
 		}

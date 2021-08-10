@@ -116,7 +116,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
-				if err := validateAliasAndAppVersion(aws.StringValue(t.Name), aws.StringValue(t.Alias), app, env.Name, appVersionGetter); err != nil {
+				if err := validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, app, env.Name, appVersionGetter); err != nil {
 					return nil, err
 				}
 				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)

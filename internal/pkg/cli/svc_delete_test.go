@@ -197,6 +197,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
 					svcDeleteConfirmHelp,
+					gomock.Any(),
 				).Times(1).Return(true, mockError)
 			},
 
@@ -213,6 +214,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
 					svcDeleteConfirmHelp,
+					gomock.Any(),
 				).Times(1).Return(false, nil)
 			},
 
@@ -229,6 +231,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
 					svcDeleteConfirmHelp,
+					gomock.Any(),
 				).Times(1).Return(true, nil)
 			},
 
@@ -246,6 +249,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, testSvcName, "test"),
 					fmt.Sprintf(svcDeleteFromEnvConfirmHelp, "test"),
+					gomock.Any(),
 				).Times(1).Return(true, nil)
 			},
 
