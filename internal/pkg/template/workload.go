@@ -84,7 +84,7 @@ var (
 	}
 
 	// Operating systems to determine Fargate platform versions.
-	osFamiliesForPV100 = [...]string{
+	osFamiliesForPV100 = []string{
 		OSWindowsServerFull, OSWindowsServerCore,
 	}
 )
