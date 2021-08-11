@@ -62,10 +62,12 @@ var (
 		dockerengine.PlatformString(OSWindows, ArchX86),
 	}
 	validAdvancedPlatforms = []PlatformArgs{
-		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
+		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchX86)},
+		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchX86)},
+		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
 	}
 
 	// Error definitions.
@@ -699,7 +701,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 // OS returns the operating system family.
 func (p *PlatformArgsOrString) OS() string {
 	if p := aws.StringValue(p.PlatformString); p != "" {
-		args := strings.Split(p, "/") // There is always at least two elements because of validateShortPlatform.
+		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
 		return args[0]
 	}
 	return aws.StringValue(p.PlatformArgs.OSFamily)
@@ -708,7 +710,7 @@ func (p *PlatformArgsOrString) OS() string {
 // Arch returns the architecture.
 func (p *PlatformArgsOrString) Arch() string {
 	if p := aws.StringValue(p.PlatformString); p != "" {
-		args := strings.Split(p, "/") // There is always at least two elements because of validateShortPlatform.
+		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
 		return args[1]
 	}
 	return aws.StringValue(p.PlatformArgs.Arch)
