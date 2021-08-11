@@ -214,7 +214,8 @@ func (c CmdClient) getPlatform() (os, arch string, err error) {
 	return platform.OS, platform.Arch, nil
 }
 
-func DockerBuildPlatform(os, arch string) string {
+// PlatformString returns a specified of the format <os>/<arch>.
+func PlatformString(os, arch string) string {
 	return fmt.Sprintf("%s/%s", os, arch)
 }
 
@@ -267,7 +268,7 @@ func (c CmdClient) RedirectPlatform(image string) (*string, error) {
 	}
 	// Log a message informing non-default arch users of platform for build.
 	if arch != ArchAMD64 {
-		return aws.String(DockerBuildPlatform(OSLinux, ArchAMD64)), nil
+		return aws.String(PlatformString(OSLinux, ArchAMD64)), nil
 	}
 	return nil, nil
 }

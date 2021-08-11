@@ -319,13 +319,13 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 			inContent: []byte(`platform:
   osfamily: OSFamilia
   architecture: amd64`),
-			wantedError: errors.New("platform pair ('OSFamilia', 'amd64') is invalid: osfamily and architecture must be one of ('linux', 'amd64'), ('linux', 'x86_64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_full', 'x86_64')"),
+			wantedError: errors.New("platform pair ('OSFamilia', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'amd64'), ('linux', 'x86_64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_full', 'x86_64')"),
 		},
 		"returns error if args.arch invalid": {
 			inContent: []byte(`platform:
   osfamily: linux
   architecture: abc123`),
-			wantedError: errors.New("platform pair ('linux', 'abc123') is invalid: osfamily and architecture must be one of ('linux', 'amd64'), ('linux', 'x86_64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_full', 'x86_64')"),
+			wantedError: errors.New("platform pair ('linux', 'abc123') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'amd64'), ('linux', 'x86_64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_full', 'x86_64')"),
 		},
 		"platform string": {
 			inContent: []byte(`platform: linux/amd64`),

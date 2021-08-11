@@ -56,10 +56,10 @@ var (
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	validShortPlatforms = []string{
-		dockerengine.DockerBuildPlatform(OSLinux, ArchAMD64),
-		dockerengine.DockerBuildPlatform(OSLinux, ArchX86),
-		dockerengine.DockerBuildPlatform(OSWindows, ArchAMD64),
-		dockerengine.DockerBuildPlatform(OSWindows, ArchX86),
+		dockerengine.PlatformString(OSLinux, ArchAMD64),
+		dockerengine.PlatformString(OSLinux, ArchX86),
+		dockerengine.PlatformString(OSWindows, ArchAMD64),
+		dockerengine.PlatformString(OSWindows, ArchX86),
 	}
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
@@ -680,7 +680,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 		if !p.PlatformArgs.bothSpecified() {
 			return errors.New(`fields 'osfamily' and 'architecture' must either both be specified or both be empty`)
 		}
-		if err := validateAdvancedPlatforms(p.PlatformArgs); err != nil {
+		if err := validateAdvancedPlatform(p.PlatformArgs); err != nil {
 			return err
 		}
 		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
@@ -745,7 +745,7 @@ func validateShortPlatform(platform *string) error {
 	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validShortPlatforms, "and"))
 }
 
-func validateAdvancedPlatforms(platform PlatformArgs) error {
+func validateAdvancedPlatform(platform PlatformArgs) error {
 	var ss []string
 	for _, p := range validAdvancedPlatforms {
 		ss = append(ss, p.String())
@@ -759,7 +759,7 @@ func validateAdvancedPlatforms(platform PlatformArgs) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform pair %s is invalid: osfamily and architecture must be one of %s", platform.String(), prettyValidPlatforms)
+	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", platform.String(), prettyValidPlatforms)
 }
 
 func requiresBuild(image Image) (bool, error) {
