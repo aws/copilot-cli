@@ -135,6 +135,7 @@ func (s *WorkerService) Template() (string, error) {
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Subscribe:                subscribe,
+		Platform:                 convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)
