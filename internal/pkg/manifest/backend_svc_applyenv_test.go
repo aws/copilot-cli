@@ -139,7 +139,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				svc.CPU = aws.Int(0)
 			},
 		},
-		"FAILED_AFTER_UPGRADE: cpu not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: cpu not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.CPU = aws.Int(1024)
 				svc.Environments["test"].TaskConfig = TaskConfig{}
@@ -166,7 +166,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				svc.Memory = aws.Int(0)
 			},
 		},
-		"FAILED_AFTER_UPGRADE: memory not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: memory not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Memory = aws.Int(1024)
 				svc.Environments["test"].TaskConfig = TaskConfig{}
@@ -218,7 +218,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: count not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: count not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Count = Count{
 					Value: aws.Int(3),
@@ -261,7 +261,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: exec not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: exec not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.ExecuteCommand = ExecuteCommand{
 					Enable: aws.Bool(true),

@@ -31,7 +31,7 @@ func TestRequestDrivenWebService_ApplyEnv_HTTP(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: healthcheck not overridden": {
+		"PENDING: healthcheck not overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
 				svc.HealthCheckConfiguration = HealthCheckArgsOrString{
 					HealthCheckPath: aws.String("mockPath"),
@@ -62,7 +62,7 @@ func TestRequestDrivenWebService_ApplyEnv_HTTP(t *testing.T) {
 				svc.Alias = aws.String("")
 			},
 		},
-		"FAILED_AFTER_UPGRADE: alias not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: alias not overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
 				svc.Alias = aws.String("mockAlias")
 				svc.Environments["test"].RequestDrivenWebServiceHttpConfig = RequestDrivenWebServiceHttpConfig{}
@@ -95,7 +95,7 @@ func TestRequestDrivenWebService_ApplyEnv_New(t *testing.T) {
 		inSvc  func(svc *RequestDrivenWebService)
 		wanted func(svc *RequestDrivenWebService)
 	}{
-		"FAILED_AFTER_UPGRADE: http overridden": {
+		"PENDING: http overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
 				svc.RequestDrivenWebServiceHttpConfig = RequestDrivenWebServiceHttpConfig{
 					HealthCheckConfiguration: HealthCheckArgsOrString{
@@ -115,7 +115,7 @@ func TestRequestDrivenWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: http not overridden": {
+		"PENDING: http not overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
 				svc.RequestDrivenWebServiceHttpConfig = RequestDrivenWebServiceHttpConfig{
 					HealthCheckConfiguration: HealthCheckArgsOrString{
@@ -188,7 +188,7 @@ func TestRequestDrivenWebService_ApplyEnv_New(t *testing.T) {
 				svc.InstanceConfig.CPU = aws.Int(0)
 			},
 		},
-		"FAILED_AFTER_UPGRADE: cpu not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: cpu not overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
 				svc.InstanceConfig.CPU = aws.Int(1024)
 				svc.Environments["test"].InstanceConfig = AppRunnerInstanceConfig{}
@@ -215,7 +215,7 @@ func TestRequestDrivenWebService_ApplyEnv_New(t *testing.T) {
 				svc.InstanceConfig.Memory = aws.Int(0)
 			},
 		},
-		"FAILED_AFTER_UPGRADE: memory not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: memory not overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
 				svc.InstanceConfig.Memory = aws.Int(1024)
 				svc.Environments["test"].InstanceConfig = AppRunnerInstanceConfig{}

@@ -45,7 +45,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: ephemeral not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: ephemeral not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Ephemeral: aws.Int(1),
@@ -207,7 +207,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"path overridden": {
+		"FAILED_AFTER_TRANSFORM_POINTER: path overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -240,7 +240,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 		},
-		"path explicitly overridden by zero value": {
+		"FAILED_AFTER_TRANSFORM_POINTER： path explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{

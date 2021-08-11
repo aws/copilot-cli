@@ -83,7 +83,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: value not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: value not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					Value: aws.Int(13),
@@ -123,7 +123,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: advanced count not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: advanced count not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -413,7 +413,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: spot not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: spot not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -522,7 +522,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: cpu_percentage not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: cpu_percentage not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -583,7 +583,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: memory_percentage not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: memory_percentage not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -644,7 +644,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: requests not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: requests not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -711,7 +711,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: response_time not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: response_time not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockResponseTime := 1010 * time.Second
 				svc.Count = Count{

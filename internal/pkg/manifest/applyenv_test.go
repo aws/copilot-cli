@@ -276,7 +276,7 @@ func TestApplyEnv_Image(t *testing.T) {
 				svc.ImageConfig.Port = aws.Uint16(0)
 			},
 		},
-		"FAILED_AFTER_UPGRADE: port not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: port not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.Port = aws.Uint16(1)
 				svc.Environments["test"].ImageConfig.Image = Image{}
@@ -305,7 +305,7 @@ func TestApplyEnv_Image(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: healthcheck not overridden": {
+		"FIXED_AFTER_TRANSFORM_STRUCT: healthcheck not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
 					Retries: aws.Int(3),
@@ -844,7 +844,7 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"command appended": {
+		"command overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
 					Command: []string{"mock", "command"},
@@ -923,7 +923,7 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: interval not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: interval not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockInterval := 600 * time.Second
 				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
@@ -968,7 +968,7 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: retries not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: retries not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
 					Retries: aws.Int(13),
@@ -1017,7 +1017,7 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: timeout not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: timeout not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockTimeout := 60 * time.Second
 				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
@@ -1068,7 +1068,7 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: start_period not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: start_period not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockStartPeriod := 10 * time.Second
 				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
@@ -1190,7 +1190,7 @@ func TestApplyEnv_Platform(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: platform args overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: platform args overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Platform = &PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
@@ -1274,7 +1274,7 @@ func TestApplyEnv_Platform(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: osfamily string not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: osfamily string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Platform = &PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
@@ -1335,7 +1335,7 @@ func TestApplyEnv_Platform(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: architecture string not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: architecture string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Platform = &PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
@@ -1688,7 +1688,7 @@ func TestApplyEnv_Logging(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: image not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: image not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Logging = &Logging{
 					Image: aws.String("mockImage"),
@@ -1796,7 +1796,7 @@ func TestApplyEnv_Logging(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: enableMetadata not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: enableMetadata not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Logging = &Logging{
 					EnableMetadata: aws.Bool(true),
@@ -1904,7 +1904,7 @@ func TestApplyEnv_Logging(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: configFilePath not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: configFilePath not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Logging = &Logging{
 					ConfigFile: aws.String("mockPath"),
@@ -2047,7 +2047,7 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: placement not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: placement not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Network = &NetworkConfig{
 					VPC: &vpcConfig{

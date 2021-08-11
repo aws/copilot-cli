@@ -100,7 +100,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"on not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: on not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.On = JobTriggerConfig{
 					Schedule: aws.String("mockSchedule"),
@@ -221,7 +221,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				job.CPU = aws.Int(0)
 			},
 		},
-		"cpu not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: cpu not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.CPU = aws.Int(1024)
 				job.Environments["test"].TaskConfig = TaskConfig{}
@@ -248,7 +248,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				job.Memory = aws.Int(0)
 			},
 		},
-		"memory not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: memory not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Memory = aws.Int(1024)
 				job.Environments["test"].TaskConfig = TaskConfig{}
@@ -303,7 +303,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				job.Retries = aws.Int(0)
 			},
 		},
-		"retries not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: retries not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Retries = aws.Int(4)
 				job.Environments["test"].JobFailureHandlerConfig = JobFailureHandlerConfig{}
@@ -330,7 +330,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				job.Timeout = aws.String("")
 			},
 		},
-		"timeout not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: timeout not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Timeout = aws.String("mockTimeout")
 				job.Environments["test"].JobFailureHandlerConfig = JobFailureHandlerConfig{}
@@ -369,16 +369,16 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: exec not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: exec not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.ExecuteCommand = ExecuteCommand{
-					Enable: aws.Bool(false),
+					Enable: aws.Bool(true), // `false` is the zero value of pointer-to-bool
 				}
 				job.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(job *ScheduledJob) {
 				job.ExecuteCommand = ExecuteCommand{
-					Enable: aws.Bool(false),
+					Enable: aws.Bool(true),
 				}
 			},
 		},
