@@ -164,7 +164,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"entrypoint not overridden": {
+		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.EntryPoint = &EntryPointOverride{
 					String: aws.String("mock entrypoint"),
@@ -191,7 +191,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"command not overridden": {
+		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Command = &CommandOverride{
 					String: aws.String("mock command"),
@@ -272,7 +272,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"platform not overridden": {
+		"FAILED_AFTER_UPGRADE: platform not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Platform = &PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
@@ -369,7 +369,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"exec not overridden": {
+		"FAILED_AFTER_UPGRADE: exec not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.ExecuteCommand = ExecuteCommand{
 					Enable: aws.Bool(false),
@@ -403,7 +403,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"network not overridden": {
+		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Network = &NetworkConfig{
 					VPC: &vpcConfig{
@@ -532,7 +532,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"storage not overridden": {
+		"FAILED_AFTER_UPGRADE: storage not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Storage = &Storage{
 					Ephemeral: aws.Int(3),
@@ -560,7 +560,7 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"logging not overridden": {
+		"FAILED_AFTER_UPGRADE: logging not overridden": {
 			inJob: func(job *ScheduledJob) {
 				job.Logging = &Logging{
 					Image: aws.String("mockImage"),

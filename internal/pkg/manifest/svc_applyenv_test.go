@@ -83,7 +83,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"value not overridden": {
+		"FAILED_AFTER_UPGRADE: value not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					Value: aws.Int(13),
@@ -123,7 +123,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"advanced count not overridden": {
+		"FAILED_AFTER_UPGRADE: advanced count not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -413,7 +413,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"spot not overridden": {
+		"FAILED_AFTER_UPGRADE: spot not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -457,7 +457,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"range not overridden": {
+		"FAILED_AFTER_UPGRADE: range not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -522,7 +522,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"cpu_percentage not overridden": {
+		"FAILED_AFTER_UPGRADE: cpu_percentage not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -583,7 +583,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"memory_percentage not overridden": {
+		"FAILED_AFTER_UPGRADE: memory_percentage not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -644,7 +644,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"requests not overridden": {
+		"FAILED_AFTER_UPGRADE: requests not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
@@ -711,7 +711,7 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 			},
 		},
-		"response_time not overridden": {
+		"FAILED_AFTER_UPGRADE: response_time not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockResponseTime := 1010 * time.Second
 				svc.Count = Count{
@@ -876,7 +876,7 @@ func TestApplyEnv_Count_Range(t *testing.T) {
 				}
 			},
 		},
-		"range value not overridden": {
+		"FAILED_AFTER_UPGRADE: range value not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{

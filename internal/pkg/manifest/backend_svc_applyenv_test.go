@@ -80,7 +80,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"entrypoint not overridden": {
+		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.EntryPoint = &EntryPointOverride{
 					String: aws.String("mock entrypoint"),
@@ -108,7 +108,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"command not overridden": {
+		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Command = &CommandOverride{
 					String: aws.String("mock command"),
@@ -139,7 +139,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				svc.CPU = aws.Int(0)
 			},
 		},
-		"cpu not overridden": {
+		"FAILED_AFTER_UPGRADE: cpu not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.CPU = aws.Int(1024)
 				svc.Environments["test"].TaskConfig = TaskConfig{}
@@ -166,7 +166,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				svc.Memory = aws.Int(0)
 			},
 		},
-		"memory not overridden": {
+		"FAILED_AFTER_UPGRADE: memory not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Memory = aws.Int(1024)
 				svc.Environments["test"].TaskConfig = TaskConfig{}
@@ -190,7 +190,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"platform not overridden": {
+		"FAILED_AFTER_UPGRADE: platform not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Platform = &PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
@@ -218,7 +218,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"count not overridden": {
+		"FAILED_AFTER_UPGRADE: count not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Count = Count{
 					Value: aws.Int(3),
@@ -261,7 +261,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"exec not overridden": {
+		"FAILED_AFTER_UPGRADE: exec not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.ExecuteCommand = ExecuteCommand{
 					Enable: aws.Bool(true),
@@ -295,7 +295,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"network not overridden": {
+		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Network = &NetworkConfig{
 					VPC: &vpcConfig{
@@ -424,7 +424,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"storage not overridden": {
+		"FAILED_AFTER_UPGRADE: storage not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Storage = &Storage{
 					Ephemeral: aws.Int(3),
@@ -452,7 +452,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"logging not overridden": {
+		"FAILED_AFTER_UPGRADE: logging not overridden": {
 			inSvc: func(svc *BackendService) {
 				svc.Logging = &Logging{
 					Image: aws.String("mockImage"),

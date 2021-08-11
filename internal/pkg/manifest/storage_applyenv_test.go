@@ -45,7 +45,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 				}
 			},
 		},
-		"ephemeral not overridden": {
+		"FAILED_AFTER_UPGRADE: ephemeral not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Ephemeral: aws.Int(1),
@@ -273,7 +273,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 		},
-		"path not overridden": {
+		"FAILED_AFTER_UPGRADE: path not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -370,7 +370,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 		},
-		"read_only not overridden": {
+		"FAILED_AFTER_UPGRADE: read_only not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -442,7 +442,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 		},
-		"efs not overridden": {
+		"FAILED_AFTER_UPGRADE: efs not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -642,7 +642,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 		},
-		"efs bool not overridden": {
+		"FAILED_AFTER_UPGRADE: efs bool not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -714,7 +714,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 		},
-		"efs config not overridden": {
+		"FAILED_AFTER_UPGRADE: efs config not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -1323,7 +1323,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 		},
-		"id not overridden": {
+		"FAILED_AFTER_UPGRADE: id not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -1438,7 +1438,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 		},
-		"root_dir not overridden": {
+		"FAILED_AFTER_UPGRADE: root_dir not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -1553,7 +1553,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 		},
-		"uid not overridden": {
+		"FAILED_AFTER_UPGRADE: uid not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -1668,7 +1668,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 		},
-		"gid not overridden": {
+		"FAILED_AFTER_UPGRADE: gid not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -1752,7 +1752,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 		},
-		"auth not overridden": {
+		"FAILED_AFTER_UPGRADE: auth not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -1907,7 +1907,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 		},
-		"iam not overridden": {
+		"FAILED_AFTER_UPGRADE: iam not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
@@ -2040,7 +2040,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 		},
-		"access_point_id not overridden": {
+		"FAILED_AFTER_UPGRADE: access_point_id not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Volumes: map[string]Volume{
