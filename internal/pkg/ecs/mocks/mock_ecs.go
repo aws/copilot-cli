@@ -197,6 +197,25 @@ func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
 }
 
+// UpdateService mocks base method.
+func (m *MockecsClient) UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{clusterName, serviceName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateService", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateService indicates an expected call of UpdateService.
+func (mr *MockecsClientMockRecorder) UpdateService(clusterName, serviceName interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{clusterName, serviceName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateService", reflect.TypeOf((*MockecsClient)(nil).UpdateService), varargs...)
+}
+
 // MockstepFunctionsClient is a mock of stepFunctionsClient interface.
 type MockstepFunctionsClient struct {
 	ctrl     *gomock.Controller

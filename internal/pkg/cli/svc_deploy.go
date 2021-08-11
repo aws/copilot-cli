@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -43,12 +44,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	fmtForceUpdateSvcStart    = "Forcing an update for service %s from environment %s"
+	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
+	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
+)
+
 type deployWkldVars struct {
-	appName      string
-	name         string
-	envName      string
-	imageTag     string
-	resourceTags map[string]string
+	appName        string
+	name           string
+	envName        string
+	imageTag       string
+	resourceTags   map[string]string
+	forceNewUpdate bool
 }
 
 type uploadCustomResourcesOpts struct {
@@ -67,7 +75,8 @@ type deploySvcOpts struct {
 	cmd                 runner
 	addons              templater
 	appCFN              appResourcesGetter
-	svcCFN              cloudformation.CloudFormation
+	svcCFN              serviceDeployer
+	svcUpdater          serviceUpdater
 	sessProvider        sessionProvider
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
@@ -274,6 +283,8 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 
 	o.s3 = s3.New(defaultSessEnvRegion)
+
+	o.svcUpdater = ecs.New(envSession)
 
 	// CF client against env account profile AND target environment region.
 	o.svcCFN = cloudformation.New(envSession)
@@ -555,6 +566,20 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	}
 
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+		if _, ok := err.(*awscloudformation.ErrChangeSetEmpty); ok {
+			if o.forceNewUpdate {
+				// Force update ECS service if --force is set and change set is empty.
+				o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
+				if err = o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
+					o.spinner.Stop(log.Serrorf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName), err))
+					return fmt.Errorf("force an update for service %s: %w", o.name, err)
+				}
+				o.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
+				return nil
+			} else {
+				log.Warningf("Set --%s to force an update for the ECS service.\n", forceFlag)
+			}
+		}
 		return fmt.Errorf("deploy service: %w", err)
 	}
 	return nil
@@ -811,6 +836,7 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 
 	return cmd
 }
