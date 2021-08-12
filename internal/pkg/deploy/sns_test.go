@@ -37,8 +37,11 @@ func TestTopic_Name(t *testing.T) {
 		"bad arn format": {
 			inputARN:    "bad arn",
 			wantedError: errInvalidARN,
+			inputApp:  mockApp,
+			inputEnv:  mockEnv,
+			inputWkld: mockSvc,
 		},
-		"bad arn: for non-copilot topic": {
+		"bad arn: non-copilot topic": {
 			inputARN:  mockBadARN,
 			inputApp:  mockApp,
 			inputEnv:  mockEnv,
@@ -54,15 +57,6 @@ func TestTopic_Name(t *testing.T) {
 
 			wantedError: errInvalidARNService,
 		},
-		"bad arn: arn for copilot topic subscription": {
-
-			inputARN:  mockGoodARN + ":12345-abcde-12345-abcde",
-			inputApp:  mockApp,
-			inputEnv:  mockEnv,
-			inputWkld: mockSvc,
-
-			wantedError: errInvalidARNService,
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -72,44 +66,6 @@ func TestTopic_Name(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wanted, topic.Name())
-			}
-		})
-	}
-}
-
-func TestTopic_ID(t *testing.T) {
-	testCases := map[string]struct {
-		inputARN  string
-		inputApp  string
-		inputEnv  string
-		inputWkld string
-
-		wanted      string
-		wantedError error
-	}{
-		"good arn": {
-			inputARN:  mockGoodARN,
-			inputApp:  mockApp,
-			inputEnv:  mockEnv,
-			inputWkld: mockSvc,
-			wanted:    "app-env-svc-topic",
-		},
-		"rejects improperly constructed ARN": {
-			inputARN:    mockGoodARN,
-			inputApp:    mockApp,
-			inputEnv:    mockEnv,
-			inputWkld:   "not-the-right-svc",
-			wantedError: errInvalidTopicARN,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			topic, err := NewTopic(tc.inputARN, tc.inputApp, tc.inputEnv, tc.inputWkld)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wanted, topic.ID())
 			}
 		})
 	}
