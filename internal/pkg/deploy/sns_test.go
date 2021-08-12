@@ -16,7 +16,7 @@ const (
 	mockSvc     = "svc"
 )
 
-func TestTopic_Name(t *testing.T) {
+func TestTopic_String(t *testing.T) {
 
 	testCases := map[string]struct {
 		inputARN  string
@@ -32,14 +32,14 @@ func TestTopic_Name(t *testing.T) {
 			inputApp:  mockApp,
 			inputEnv:  mockEnv,
 			inputWkld: mockSvc,
-			wanted:    "topic",
+			wanted:    "topic (svc)",
 		},
 		"bad arn format": {
 			inputARN:    "bad arn",
 			wantedError: errInvalidARN,
-			inputApp:  mockApp,
-			inputEnv:  mockEnv,
-			inputWkld: mockSvc,
+			inputApp:    mockApp,
+			inputEnv:    mockEnv,
+			inputWkld:   mockSvc,
 		},
 		"bad arn: non-copilot topic": {
 			inputARN:  mockBadARN,
@@ -65,7 +65,7 @@ func TestTopic_Name(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wanted, topic.Name())
+				require.Equal(t, tc.wanted, topic.String())
 			}
 		})
 	}

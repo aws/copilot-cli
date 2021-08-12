@@ -544,7 +544,7 @@ func Test_IsJobDeployed(t *testing.T) {
 	}
 }
 
-func TestStore_ListDeployedSNSTopics(t *testing.T) {
+func TestStore_ListSNSTopics(t *testing.T) {
 	testCases := map[string]struct {
 		inputApp   string
 		inputEnv   string
@@ -566,7 +566,7 @@ func TestStore_ListDeployedSNSTopics(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("get SNS topics for environment mockEnv: some error"),
+			wantedError: fmt.Errorf("get SNS topics for environment mockEnv and app mockApp: some error"),
 		},
 		"return nil if no topics are found": {
 			inputApp: "mockApp",
@@ -676,7 +676,7 @@ func TestStore_ListDeployedSNSTopics(t *testing.T) {
 			}
 
 			// WHEN
-			topics, err := store.ListDeployedSNSTopics(tc.inputApp, tc.inputEnv)
+			topics, err := store.ListSNSTopics(tc.inputApp, tc.inputEnv)
 
 			// THEN
 			if tc.wantedError != nil {

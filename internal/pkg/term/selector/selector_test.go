@@ -45,7 +45,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 			setupMocks: func(m deploySelectMocks) {
 				m.deploySvc.
 					EXPECT().
-					ListDeployedSNSTopics(testApp, testEnv).
+					ListSNSTopics(testApp, testEnv).
 					Return(nil, errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("list SNS topics: some error"),
@@ -54,7 +54,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 			setupMocks: func(m deploySelectMocks) {
 				m.deploySvc.
 					EXPECT().
-					ListDeployedSNSTopics(testApp, testEnv).
+					ListSNSTopics(testApp, testEnv).
 					Return([]deploy.Topic{*mockTopic}, nil)
 				m.prompt.
 					EXPECT().
@@ -67,7 +67,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 			setupMocks: func(m deploySelectMocks) {
 				m.deploySvc.
 					EXPECT().
-					ListDeployedSNSTopics(testApp, testEnv).
+					ListSNSTopics(testApp, testEnv).
 					Return([]deploy.Topic{*mockTopic}, nil)
 				m.prompt.
 					EXPECT().

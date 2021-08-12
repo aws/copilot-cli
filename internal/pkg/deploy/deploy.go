@@ -132,9 +132,9 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	return wklds, nil
 }
 
-// ListDeployedSNSTopics returns a list of SNS topics deployed to the current environment and tagged with
+// ListSNSTopics returns a list of SNS topics deployed to the current environment and tagged with
 // Copilot identifiers.
-func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, error) {
+func (s *Store) ListSNSTopics(appName string, envName string) ([]Topic, error) {
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, 
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("get SNS topics for environment %s: %w", envName, err)
+		return nil, fmt.Errorf("get SNS topics for environment %s and app %s: %w", envName, appName, err)
 	}
 
 	var out []Topic
@@ -156,24 +156,19 @@ func (s *Store) ListDeployedSNSTopics(appName string, envName string) ([]Topic, 
 		}
 
 		t, err := NewTopic(r.ARN, appName, envName, r.Tags[ServiceTagKey])
-		// If there's an error parsing the topic ARN, don't include it in the list of topics.
-		// This includes times where the topic name does not match its tags, or the name
-		// is invalid.
-		switch err {
-		case errInvalidTopicARN:
-			// This error indicates that despite having the correct tags, the topic name is not formatted
-			// the way that Copilot expects. (app-env-wkld-name)
-			continue
-		case errInvalidComponent:
-			// This error indicates that app, env, or wkld is an empty string.
-			continue
-		case errInvalidARN:
-			// This error indicates that the returned ARN is not parseable.
-			return nil, err
-		case errInvalidARNService:
-			// This error indicates that the service in the ARN is not SNS.
-			continue
+		if err != nil {
+			// If there's an error parsing the topic ARN, don't include it in the list of topics.
+			// This includes times where the topic name does not match its tags, or the name
+			// is invalid.
+			switch err {
+			case errInvalidARN:
+				// This error indicates that the returned ARN is not parseable.
+				return nil, err
+			default:
+				continue
+			}
 		}
+
 		out = append(out, *t)
 	}
 

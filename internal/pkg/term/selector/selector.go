@@ -36,8 +36,6 @@ const (
 	pipelineEscapeOpt = "[No additional environments]"
 
 	fmtCopilotTaskGroup = "copilot-%s"
-
-	fmtTopicDescription = "%s (%s)"
 )
 
 const (
@@ -136,7 +134,7 @@ type DeployStoreClient interface {
 	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 	IsJobDeployed(appName, envName, jobName string) (bool, error)
-	ListDeployedSNSTopics(appName string, envName string) ([]deploy.Topic, error)
+	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
 // TaskStackDescriber wraps cloudformation client methods to describe task stacks
@@ -1027,7 +1025,7 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 // Topics asks the user to select from all Copilot-managed SNS topics and returns the ARNs
 // of those topics.
 func (s *DeploySelect) Topics(promptMsg, help, app, env string) ([]string, error) {
-	topics, err := s.deployStoreSvc.ListDeployedSNSTopics(app, env)
+	topics, err := s.deployStoreSvc.ListSNSTopics(app, env)
 	if err != nil {
 		return nil, fmt.Errorf("list SNS topics: %w", err)
 	}
@@ -1038,13 +1036,8 @@ func (s *DeploySelect) Topics(promptMsg, help, app, env string) ([]string, error
 	var topicDescriptions []string
 	topicMap := make(map[string]deploy.Topic)
 	for _, t := range topics {
-		n := t.Name()
-		// A slug is the human string printed out as an option.
-		// In this case, it's "orders (api)" to denote the "orders"
-		// topic published by the "api" service.
-		slug := fmt.Sprintf(fmtTopicDescription, n, t.Workload())
-		topicDescriptions = append(topicDescriptions, slug)
-		topicMap[slug] = t
+		topicDescriptions = append(topicDescriptions, t.String())
+		topicMap[t.String()] = t
 	}
 
 	selectedTopics, err := s.prompt.MultiSelect(

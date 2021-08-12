@@ -572,21 +572,6 @@ func (mr *MockDeployStoreClientMockRecorder) ListDeployedJobs(appName, envName i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockDeployStoreClient)(nil).ListDeployedJobs), appName, envName)
 }
 
-// ListDeployedSNSTopics mocks base method.
-func (m *MockDeployStoreClient) ListDeployedSNSTopics(appName, envName string) ([]deploy.Topic, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDeployedSNSTopics", appName, envName)
-	ret0, _ := ret[0].([]deploy.Topic)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDeployedSNSTopics indicates an expected call of ListDeployedSNSTopics.
-func (mr *MockDeployStoreClientMockRecorder) ListDeployedSNSTopics(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedSNSTopics", reflect.TypeOf((*MockDeployStoreClient)(nil).ListDeployedSNSTopics), appName, envName)
-}
-
 // ListDeployedServices mocks base method.
 func (m *MockDeployStoreClient) ListDeployedServices(appName, envName string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -600,6 +585,21 @@ func (m *MockDeployStoreClient) ListDeployedServices(appName, envName string) ([
 func (mr *MockDeployStoreClientMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployStoreClient)(nil).ListDeployedServices), appName, envName)
+}
+
+// ListSNSTopics mocks base method.
+func (m *MockDeployStoreClient) ListSNSTopics(appName, envName string) ([]deploy.Topic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSNSTopics", appName, envName)
+	ret0, _ := ret[0].([]deploy.Topic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSNSTopics indicates an expected call of ListSNSTopics.
+func (mr *MockDeployStoreClientMockRecorder) ListSNSTopics(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSNSTopics", reflect.TypeOf((*MockDeployStoreClient)(nil).ListSNSTopics), appName, envName)
 }
 
 // MockTaskStackDescriber is a mock of TaskStackDescriber interface.
