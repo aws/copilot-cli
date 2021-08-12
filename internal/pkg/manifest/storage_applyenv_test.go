@@ -376,7 +376,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 					Volumes: map[string]Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
-								ReadOnly: aws.Bool(true),
+								ReadOnly: aws.Bool(false),
 							},
 						},
 					},
@@ -394,7 +394,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 					Volumes: map[string]Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
-								ReadOnly: aws.Bool(true),
+								ReadOnly: aws.Bool(false),
 							},
 						},
 					},
