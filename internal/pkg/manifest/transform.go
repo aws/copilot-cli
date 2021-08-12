@@ -31,8 +31,78 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 				return transformPointer() // Use `transformPointer` only if the pointer is to a "basic type" TODO: reword this
 			}
 		}
+
+		if typ.Elem().Kind() == reflect.Struct {
+			return transformPStruct()
+		}
 	}
 	return nil
+}
+
+func transformPStruct() func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		if src.IsNil() {
+			return nil
+		}
+
+		// Perform default merge
+		var err error
+		switch dst.Elem().Type().Name() {
+		case "ContainerHealthCheck":
+			dstElem := dst.Interface().(*ContainerHealthCheck)
+			srcElem := src.Elem().Interface().(ContainerHealthCheck)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "PlatformArgsOrString":
+			dstElem := dst.Interface().(*PlatformArgsOrString)
+			srcElem := src.Elem().Interface().(PlatformArgsOrString)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "EntryPointOverride":
+			dstElem := dst.Interface().(*EntryPointOverride)
+			srcElem := src.Elem().Interface().(EntryPointOverride)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "CommandOverride":
+			dstElem := dst.Interface().(*CommandOverride)
+			srcElem := src.Elem().Interface().(CommandOverride)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "NetworkConfig":
+			dstElem := dst.Interface().(*NetworkConfig)
+			srcElem := src.Elem().Interface().(NetworkConfig)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "vpcConfig":
+			dstElem := dst.Interface().(*vpcConfig)
+			srcElem := src.Elem().Interface().(vpcConfig)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "Logging":
+			dstElem := dst.Interface().(*Logging)
+			srcElem := src.Elem().Interface().(Logging)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "Storage":
+			dstElem := dst.Interface().(*Storage)
+			srcElem := src.Elem().Interface().(Storage)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "Alias":
+			dstElem := dst.Interface().(*Alias)
+			srcElem := src.Elem().Interface().(Alias)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "SidecarConfig":
+			dstElem := dst.Interface().(*SidecarConfig)
+			srcElem := src.Elem().Interface().(SidecarConfig)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "SubscribeConfig":
+			dstElem := dst.Interface().(*SubscribeConfig)
+			srcElem := src.Elem().Interface().(SubscribeConfig)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "SQSQueue":
+			dstElem := dst.Interface().(*SQSQueue)
+			srcElem := src.Elem().Interface().(SQSQueue)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		}
+
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func transformPointer() func(dst, src reflect.Value) error {
