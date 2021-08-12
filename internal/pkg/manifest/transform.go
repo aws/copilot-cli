@@ -6,8 +6,6 @@ import (
 	"github.com/imdario/mergo"
 )
 
-type workloadTransformer struct{}
-
 var overrideKinds = []reflect.Kind{
 	reflect.Bool,
 	reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -17,12 +15,18 @@ var overrideKinds = []reflect.Kind{
 	reflect.Array, reflect.String, reflect.Slice,
 }
 
+type workloadTransformer struct{}
+
 // Transformer implements customized merge logic for Image field of manifest.
 // It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
 // And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
 func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ == reflect.TypeOf(Image{}) {
 		return transformImage()
+	}
+
+	if typ.Kind() == reflect.Slice {
+		return transformSlice()
 	}
 
 	if typ.Kind() == reflect.Ptr {
@@ -41,6 +45,31 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 		return transformMapStringToVolume()
 	}
 	return nil
+}
+
+type volumeTransformer struct{}
+
+func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	//fmt.Println(typ)
+	if typ.Kind() == reflect.Ptr {
+		for _, k := range overrideKinds {
+			if typ.Elem().Kind() == k {
+				return transformPointer() // Use `transformPointer` only if the pointer is to a "basic type" TODO: reword this
+			}
+		}
+
+		if typ.Elem().Kind() == reflect.Struct {
+			return transformPStruct()
+		}
+	}
+	return nil
+}
+
+func transformSlice() func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		dst.Set(src)
+		return nil
+	}
 }
 
 func transformMapStringToVolume() func(dst, src reflect.Value) error {
@@ -65,24 +94,6 @@ func transformMapStringToVolume() func(dst, src reflect.Value) error {
 		}
 		return nil
 	}
-}
-
-type volumeTransformer struct{}
-
-func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	//fmt.Println(typ)
-	if typ.Kind() == reflect.Ptr {
-		for _, k := range overrideKinds {
-			if typ.Elem().Kind() == k {
-				return transformPointer() // Use `transformPointer` only if the pointer is to a "basic type" TODO: reword this
-			}
-		}
-
-		if typ.Elem().Kind() == reflect.Struct {
-			return transformPStruct()
-		}
-	}
-	return nil
 }
 
 func transformPStruct() func(dst, src reflect.Value) error {
