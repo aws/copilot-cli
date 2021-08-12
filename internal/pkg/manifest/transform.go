@@ -36,8 +36,76 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 			return transformPStruct()
 		}
 	}
+
+	if typ.String() == "map[string]manifest.Volume" {
+		return transformMapStringToVolume()
+	}
 	return nil
 }
+
+func transformMapStringToVolume() func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		for _, key := range src.MapKeys() {
+			srcElement := src.MapIndex(key)
+			if !srcElement.IsValid() {
+				continue
+			}
+			dstElement := dst.MapIndex(key)
+
+			// Perform default merge
+			dstV := dstElement.Interface().(Volume)
+			srcV := srcElement.Interface().(Volume)
+			err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(volumeTransformer{}))
+			if err != nil {
+				return err
+			}
+
+			// Set merged value for the key
+			dst.SetMapIndex(key, reflect.ValueOf(dstV))
+		}
+		return nil
+	}
+}
+
+type volumeTransformer struct{}
+
+func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ.Kind() == reflect.Ptr {
+		for _, k := range overrideKinds {
+			if typ.Elem().Kind() == k {
+				return transformPointer() // Use `transformPointer` only if the pointer is to a "basic type" TODO: reword this
+			}
+		}
+
+		if typ.Elem().Kind() == reflect.Struct {
+			return transformPStruct()
+		}
+	}
+	return nil
+}
+
+//func transformVolume() func(dst, src reflect.Value) error {
+//	return func(dst, src reflect.Value) error {
+//		// Perform default merge
+//		dstV := dst.Interface().(Volume)
+//		srcV := src.Interface().(Volume)
+//
+//		fmt.Printf("addr of dst: %p\n", &dst)
+//		fmt.Printf("addr of dstV: %p\n", &dstV)
+//
+//		err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(volumeTransformer{}))
+//		if err != nil {
+//			return err
+//		}
+//
+//		//fmt.Println(*dstV.MountPointOpts.ContainerPath)
+//		fmt.Println(dst.FieldByName("ContainerPath").Elem())
+//		fmt.Println(*dstV.ContainerPath)
+//		fmt.Printf("addr of dst: %p\n", &dst)
+//		fmt.Printf("addr of dstV: %p\n", &dstV)
+//		return nil
+//	}
+//}
 
 func transformPStruct() func(dst, src reflect.Value) error {
 	return func(dst, src reflect.Value) error {
@@ -95,6 +163,14 @@ func transformPStruct() func(dst, src reflect.Value) error {
 		case "SQSQueue":
 			dstElem := dst.Interface().(*SQSQueue)
 			srcElem := src.Elem().Interface().(SQSQueue)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "EFSConfigOrBool":
+			dstElem := dst.Interface().(*EFSConfigOrBool)
+			srcElem := src.Elem().Interface().(EFSConfigOrBool)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+		case "AuthorizationConfig":
+			dstElem := dst.Interface().(*AuthorizationConfig)
+			srcElem := src.Elem().Interface().(AuthorizationConfig)
 			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
 		}
 
