@@ -7,6 +7,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -166,7 +168,7 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform == nil {
 		return nil, nil
 	}
-	return t.Platform.PlatformString, nil
+	return aws.String(dockerengine.PlatformString(t.Platform.OS(), t.Platform.Arch())), nil
 }
 
 // isWindows returns whether or not the service is building with a Windows OS.
