@@ -583,7 +583,7 @@ func TestStore_ListDeployedSNSTopics(t *testing.T) {
 
 			wantedTopics: nil,
 		},
-		"success": {
+		"return nil if the only topic doesn't have workload tag": {
 			inputApp: "mockApp",
 			inputEnv: "mockEnv",
 
@@ -592,12 +592,40 @@ func TestStore_ListDeployedSNSTopics(t *testing.T) {
 					m.rgGetter.EXPECT().GetResourcesByTags(snsResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
-					}).Return([]*rg.Resource{{ARN: "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc1-topic", Tags: map[string]string{ServiceTagKey: "mockSvc1"}},
-						{ARN: "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc2-events", Tags: map[string]string{ServiceTagKey: "mockSvc2"}},
-						{ARN: "arn:ws:sns:us-west-2:012345678912:mockApp-mockEnv-events"}}, nil),
+					}).Return([]*rg.Resource{
+						{
+							ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc1-topic",
+							Tags: map[string]string{},
+						},
+					}, nil),
 				)
 			},
+			wantedTopics: []Topic{},
+		},
+		"success": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
 
+			setupMocks: func(m storeMock) {
+				m.rgGetter.EXPECT().GetResourcesByTags(
+					snsResourceType,
+					map[string]string{
+						AppTagKey: "mockApp",
+						EnvTagKey: "mockEnv",
+					},
+				).Return(
+					[]*rg.Resource{
+						{
+							ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc1-topic",
+							Tags: map[string]string{ServiceTagKey: "mockSvc1"},
+						}, {
+							ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc2-events",
+							Tags: map[string]string{ServiceTagKey: "mockSvc2"},
+						},
+					},
+					nil,
+				)
+			},
 			wantedTopics: []Topic{
 				{
 					awsARN: arn.ARN{
