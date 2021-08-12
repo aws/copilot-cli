@@ -64,14 +64,15 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 
 // Final messages displayed after prompting.
 const (
-	appNameFinalMessage = "Application:"
-	envNameFinalMessage = "Environment:"
-	svcNameFinalMsg     = "Service name:"
-	jobNameFinalMsg     = "Job name:"
-	deployedSvcFinalMsg = "Service:"
-	taskFinalMsg        = "Task:"
-	workloadFinalMsg    = "Name:"
-	dockerfileFinalMsg  = "Dockerfile:"
+	appNameFinalMessage  = "Application:"
+	envNameFinalMessage  = "Environment:"
+	svcNameFinalMsg      = "Service name:"
+	jobNameFinalMsg      = "Job name:"
+	deployedSvcFinalMsg  = "Service:"
+	taskFinalMsg         = "Task:"
+	workloadFinalMsg     = "Name:"
+	dockerfileFinalMsg   = "Dockerfile:"
+	fmtTopicFinalmessage = "Environment %s subscriptions:"
 )
 
 var scheduleTypes = []string{
@@ -1050,7 +1051,7 @@ func (s *DeploySelect) Topics(promptMsg, help, app, env string) ([]string, error
 		promptMsg,
 		help,
 		topicDescriptions,
-		prompt.WithFinalMessage(fmt.Sprintf("Environment %s topics:", env)),
+		prompt.WithFinalMessage(fmt.Sprintf(fmtTopicFinalmessage, env)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
