@@ -4,6 +4,10 @@
 package manifest
 
 import (
+	"errors"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -97,7 +101,10 @@ func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
 	if s.InstanceConfig.Platform == nil {
 		return nil, nil
 	}
-	return s.InstanceConfig.Platform.PlatformString, nil
+	if isWindowsPlatform(s.InstanceConfig.Platform) {
+		return nil, errors.New("Windows is not supported for App Runner services")
+	}
+	return aws.String(dockerengine.PlatformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -122,4 +129,10 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+// Here, this method is simply satisfying the WorkloadManifest interface.
+func (s RequestDrivenWebService) WindowsCompatibility() error {
+	return nil
 }

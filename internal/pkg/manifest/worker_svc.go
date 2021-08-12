@@ -208,3 +208,21 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	s.Environments = nil
 	return &s, nil
 }
+
+// WindowsCompatibility disallows unsupported when deploying Windows containers on Fargate.
+func (s WorkerService) WindowsCompatibility() error {
+	if !s.isWindows() {
+		return nil
+	}
+	// Exec is not supported.
+	if aws.BoolValue(s.ExecuteCommand.Enable) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported.
+	for _, volume := range s.Storage.Volumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS is not supported when deploying a Windows container'`)
+		}
+	}
+	return nil
+}

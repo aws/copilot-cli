@@ -266,7 +266,6 @@ func (c CmdClient) RedirectPlatform(image string) (*string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get os/arch from docker: %w", err)
 	}
-	// Log a message informing non-default arch users of platform for build.
 	if arch != ArchAMD64 {
 		return aws.String(PlatformString(OSLinux, ArchAMD64)), nil
 	}

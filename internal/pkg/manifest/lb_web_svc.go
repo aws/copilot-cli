@@ -169,6 +169,14 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	return t.Platform.PlatformString, nil
 }
 
+// isWindows returns whether or not the service is building with a Windows OS.
+func (t *TaskConfig) isWindows() bool {
+	if t.Platform == nil {
+		return false
+	}
+	return isWindowsPlatform(t.Platform)
+}
+
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)
@@ -201,4 +209,24 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (s LoadBalancedWebService) WindowsCompatibility() error {
+	if !s.isWindows() {
+		return nil
+	}
+	// Exec is not supported.
+	if aws.BoolValue(s.ExecuteCommand.Enable) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported.
+	if s.Storage != nil {
+		for _, volume := range s.Storage.Volumes {
+			if !volume.EmptyVolume() {
+				return errors.New(`'EFS is not supported when deploying a Windows container'`)
+			}
+		}
+	}
+	return nil
 }

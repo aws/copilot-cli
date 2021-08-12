@@ -5,6 +5,8 @@
 package manifest
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -134,6 +136,24 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	}
 	j.Environments = nil
 	return &j, nil
+}
+
+// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (j ScheduledJob) WindowsCompatibility() error {
+	if !j.isWindows() {
+		return nil
+	}
+	// Exec is not supported.
+	if aws.BoolValue(j.ExecuteCommand.Enable) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported.
+	for _, volume := range j.Storage.Volumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS is not supported when deploying a Windows container'`)
+		}
+	}
+	return nil
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.

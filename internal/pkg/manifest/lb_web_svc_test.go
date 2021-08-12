@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -1168,6 +1169,92 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
+		})
+	}
+}
+
+func TestLoadBalancedWebService_ValidateForWindows(t *testing.T) {
+	testCases := map[string]struct {
+		in        *LoadBalancedWebService
+		wantedErr error
+	}{
+		"returns nil if not windows": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Platform: &PlatformArgsOrString{
+							PlatformString: aws.String("notwindows/abc123"),
+							PlatformArgs: PlatformArgs{
+								OSFamily: nil,
+								Arch:     nil,
+							},
+						},
+						ExecuteCommand: ExecuteCommand{
+							Config: ExecuteCommandConfig{
+								Enable: aws.Bool(true)},
+						},
+					},
+				},
+			},
+			wantedErr: nil,
+		},
+		"throws error when windows and exec both present": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Platform: &PlatformArgsOrString{
+							PlatformString: nil,
+							PlatformArgs: PlatformArgs{
+								OSFamily: aws.String("Windows-Server-2019-Full"),
+								Arch:     aws.String("amd64"),
+							},
+						},
+						ExecuteCommand: ExecuteCommand{
+							Config: ExecuteCommandConfig{
+								Enable: aws.Bool(true)},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("'exec' is not supported when deploying a Windows container"),
+		},
+		"throws error when windows and efs both present": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Platform: &PlatformArgsOrString{
+							PlatformString: aws.String("windows/amd64"),
+						},
+						Storage: &Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-1234"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("'EFS is not supported when deploying a Windows container'"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			err := tc.in.ValidateForWindows()
+
+			// THEN
+			if err != nil {
+				require.EqualError(t, err, tc.wantedErr.Error(), "errors should be returned when disallowed services present")
+			}
 		})
 	}
 }

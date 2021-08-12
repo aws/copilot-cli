@@ -87,6 +87,7 @@ var (
 // WorkloadManifest represents a workload manifest.
 type WorkloadManifest interface {
 	ApplyEnv(envName string) (WorkloadManifest, error)
+	WindowsCompatibility() error
 }
 
 // WorkloadProps contains properties for creating a new workload manifest.
@@ -560,11 +561,17 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to load balanced web service: %w", err)
 		}
+		if err := m.WindowsCompatibility(); err != nil {
+			return nil, err
+		}
 		return m, nil
 	case RequestDrivenWebServiceType:
 		m := newDefaultRequestDrivenWebService()
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to request-driven web service: %w", err)
+		}
+		if err := m.WindowsCompatibility(); err != nil {
+			return nil, err
 		}
 		return m, nil
 	case BackendServiceType:
@@ -572,17 +579,26 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
 		}
+		if err := m.WindowsCompatibility(); err != nil {
+			return nil, err
+		}
 		return m, nil
 	case WorkerServiceType:
 		m := newDefaultWorkerService()
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to worker service: %w", err)
 		}
+		if err := m.WindowsCompatibility(); err != nil {
+			return nil, err
+		}
 		return m, nil
 	case ScheduledJobType:
 		m := newDefaultScheduledJob()
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to scheduled job: %w", err)
+		}
+		if err := m.WindowsCompatibility(); err != nil {
+			return nil, err
 		}
 		return m, nil
 	default:
@@ -762,6 +778,10 @@ func validateAdvancedPlatform(platform PlatformArgs) error {
 		}
 	}
 	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", platform.String(), prettyValidPlatforms)
+}
+
+func isWindowsPlatform(platform *PlatformArgsOrString) bool {
+	return platform.OS() == OSWindows || platform.OS() == OSWindowsServer2019Core || platform.OS() == OSWindowsServer2019Full
 }
 
 func requiresBuild(image Image) (bool, error) {
