@@ -6,7 +6,7 @@ import (
 	"github.com/imdario/mergo"
 )
 
-var overrideKinds = []reflect.Kind{
+var basicKinds = []reflect.Kind{
 	reflect.Bool,
 	reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 	reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
@@ -17,28 +17,14 @@ var overrideKinds = []reflect.Kind{
 
 type workloadTransformer struct{}
 
-// Transformer implements customized merge logic for Image field of manifest.
-// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
-// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
+// Transformer returns custom merge logic for workload's fields.
 func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if transform := transformBasic(typ); transform != nil {
+		return transform
+	}
+
 	if typ == reflect.TypeOf(Image{}) {
 		return transformImage()
-	}
-
-	if typ.Kind() == reflect.Slice {
-		return transformSlice()
-	}
-
-	if typ.Kind() == reflect.Ptr {
-		for _, k := range overrideKinds {
-			if typ.Elem().Kind() == k {
-				return transformPointer() // Use `transformPointer` only if the pointer is to a "basic type" TODO: reword this
-			}
-		}
-
-		if typ.Elem().Kind() == reflect.Struct {
-			return transformPStruct()
-		}
 	}
 
 	if typ.String() == "map[string]manifest.Volume" {
@@ -49,12 +35,20 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 
 type volumeTransformer struct{}
 
+// Transformer returns custom merge logic for volume's fields.
 func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	//fmt.Println(typ)
+	return transformBasic(typ)
+}
+
+func transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ.Kind() == reflect.Slice {
+		return transformSlice()
+	}
+
 	if typ.Kind() == reflect.Ptr {
-		for _, k := range overrideKinds {
+		for _, k := range basicKinds {
 			if typ.Elem().Kind() == k {
-				return transformPointer() // Use `transformPointer` only if the pointer is to a "basic type" TODO: reword this
+				return transformPBasic()
 			}
 		}
 
@@ -102,6 +96,7 @@ func transformPStruct() func(dst, src reflect.Value) error {
 			return nil
 		}
 
+		// TODO: these can be removed if we change all pointers struct to struct
 		// Perform default merge
 		var err error
 		switch dst.Elem().Type().Name() {
@@ -170,7 +165,7 @@ func transformPStruct() func(dst, src reflect.Value) error {
 	}
 }
 
-func transformPointer() func(dst, src reflect.Value) error {
+func transformPBasic() func(dst, src reflect.Value) error {
 	return func(dst, src reflect.Value) error {
 		if src.IsNil() {
 			return nil
@@ -180,6 +175,9 @@ func transformPointer() func(dst, src reflect.Value) error {
 	}
 }
 
+// transformImage implements customized merge logic for Image field of manifest.
+// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
 func transformImage() func(dst, src reflect.Value) error {
 	return func(dst, src reflect.Value) error {
 		// Perform default merge
