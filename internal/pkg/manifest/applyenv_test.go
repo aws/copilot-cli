@@ -31,6 +31,12 @@ When writing tests for a field F (e.g. When writing `TestApplyEnv_Image`, where 
 	For each subfield f in F:
 		- If f has subfields || if f is a composite field ->
 			Write another test group for this field (e.g. F is `image` and f is `image.build`, write another test functions named `TestApplyEnv_Image_Build`)
+
+Expected Behaviors:
+	- Slice type: override-only.
+		Take `security_groups` (which takes []string) as an example. If original is `[]string{1, 2}`, and environment override
+		is `[]string{3}`, the result should be `[]string{3}`.
+	- Map: override value of existing keys, append non-existing keys.
 */
 
 func TestApplyEnv_Image(t *testing.T) {
@@ -749,50 +755,50 @@ func TestApplyEnv_Image_Build(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED_TEST: cacheFrom appended": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache"},
-		//			},
-		//		}
-		//		svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"Append", "Test"},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildString: nil,
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache", "Append", "Test"},
-		//			},
-		//		}
-		//	},
-		//},
-		//"FAILED_TEST: cacheFrom not overridden by zero slice": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache"},
-		//			},
-		//		}
-		//		svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.Build = BuildArgsOrString{
-		//			BuildString: nil,
-		//			BuildArgs: DockerBuildArgs{
-		//				CacheFrom: []string{"mock", "Cache"},
-		//			},
-		//		}
-		//	},
-		//},
+		"cacheFrom overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "Cache"},
+					},
+				}
+				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "CacheTest", "Test"},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildString: nil,
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "CacheTest", "Test"},
+					},
+				}
+			},
+		},
+		"cacheFrom overridden by zero slice": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{"mock", "Cache"},
+					},
+				}
+				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Build = BuildArgsOrString{
+					BuildString: nil,
+					BuildArgs: DockerBuildArgs{
+						CacheFrom: []string{},
+					},
+				}
+			},
+		},
 		"cacheFrom not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.Build = BuildArgsOrString{
@@ -838,36 +844,36 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		//"FAILED TEST: command appended": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command"},
-		//		}
-		//		svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"append", "test"},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command", "append", "test"},
-		//		}
-		//	},
-		//},
-		//"FAILED TEST: command cacheFrom not overridden by zero slice": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command"},
-		//		}
-		//		svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-		//			Command: []string{"mock", "command"},
-		//		}
-		//	},
-		//},
+		"command appended": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command"},
+				}
+				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command_test", "test"},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command_test", "test"},
+				}
+			},
+		},
+		"command overridden by zero slice": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{"mock", "command"},
+				}
+				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command: []string{},
+				}
+			},
+		},
 		//"FAILED TEST: command not overridden": {
 		//	inSvc: func(svc *LoadBalancedWebService) {
 		//		svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
@@ -1097,6 +1103,276 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 	}
 }
 
+func TestApplyEnv_Platform(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
+		//"FAILED_TEST: composite fields: platform string is overridden if platform args is not nil": {
+		//	inSvc: func(svc *LoadBalancedWebService) {
+		//		svc.Platform = &PlatformArgsOrString{
+		//			PlatformString: aws.String("mockPlatform"),
+		//		}
+		//		svc.Environments["test"].Platform = &PlatformArgsOrString{
+		//			PlatformArgs: PlatformArgs{
+		//				OSFamily: aws.String("mock"),
+		//				Arch:     aws.String("platformTest"),
+		//			},
+		//		}
+		//	},
+		//	wanted: func(svc *LoadBalancedWebService) {
+		//		svc.Platform = &PlatformArgsOrString{
+		//			PlatformArgs: PlatformArgs{
+		//				OSFamily: aws.String("mock"),
+		//				Arch:     aws.String("platformTest"),
+		//			},
+		//		}
+		//	},
+		//},
+		//"FAILED_TEST: composite fields: platform args is overridden if platform string is not nil": {
+		//	inSvc: func(svc *LoadBalancedWebService) {
+		//		svc.Platform = &PlatformArgsOrString{
+		//			PlatformArgs: PlatformArgs{
+		//				OSFamily: aws.String("mock"),
+		//				Arch:     aws.String("platformTest"),
+		//			},
+		//		}
+		//		svc.Environments["test"].Platform = &PlatformArgsOrString{
+		//			PlatformString: aws.String("mockPlatform"),
+		//		}
+		//	},
+		//	wanted: func(svc *LoadBalancedWebService) {
+		//		svc.Platform = &PlatformArgsOrString{
+		//			PlatformString: aws.String("mockPlatform"),
+		//		}
+		//	},
+		//},
+		"platform string overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatform"),
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatformTest"),
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatformTest"),
+				}
+			},
+		},
+		"platform string explicitly overridden by zero value": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatform"),
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformString: aws.String(""),
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String(""),
+				}
+			},
+		},
+		"platform string not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatform"),
+				}
+				svc.Environments["test"].TaskConfig = TaskConfig{}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatform"),
+				}
+			},
+		},
+		"platform args overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mock"),
+						Arch:     aws.String("platform"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String("platformTest"),
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mock"),
+						Arch:     aws.String("platformTest"),
+					},
+				}
+			},
+		},
+		"platform args not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mock"),
+						Arch:     aws.String("platform"),
+					},
+				}
+				svc.Environments["test"].TaskConfig = TaskConfig{}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mock"),
+						Arch:     aws.String("platform"),
+					},
+				}
+			},
+		},
+		"osfamily string overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mockOSFamily"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mockOSFamilyTest"),
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mockOSFamilyTest"),
+					},
+				}
+			},
+		},
+		"osfamily string explicitly overridden by zero value": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mockOSFamily"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String(""),
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String(""),
+					},
+				}
+			},
+		},
+		"osfamily string not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mockOSFamily"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mockOSFamily"),
+					},
+				}
+			},
+		},
+		"architecture string overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String("mockArch"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String("mockArchTest"),
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String("mockArchTest"),
+					},
+				}
+			},
+		},
+		"architecture string explicitly overridden by zero value": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String("mockArch"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String(""),
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String(""),
+					},
+				}
+			},
+		},
+		"architecture string not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String("mockArch"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						Arch: aws.String("mockArch"),
+					},
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.ApplyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
 func TestApplyEnv_Entrypoint(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
@@ -1190,7 +1466,7 @@ func TestApplyEnv_Entrypoint(t *testing.T) {
 				}
 			},
 		},
-		"string slice explicitly overridden by empty value": {
+		"string slice explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.EntryPoint = &EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint"},
@@ -1330,18 +1606,18 @@ func TestApplyEnv_Command(t *testing.T) {
 				}
 			},
 		},
-		"string slice explicitly overridden by empty value": {
+		"string slice explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Command = &CommandOverride{
 					StringSlice: []string{"mock", "command"},
 				}
 				svc.Environments["test"].Command = &CommandOverride{
-					StringSlice: []string{""},
+					StringSlice: []string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.Command = &CommandOverride{
-					StringSlice: []string{""},
+					StringSlice: []string{},
 				}
 			},
 		},
@@ -1790,48 +2066,48 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED TEST: security_groups appended": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group"},
-		//			},
-		//		}
-		//		svc.Environments["test"].Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"append", "test"},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group", "append", "test"},
-		//			},
-		//		}
-		//	},
-		//},
-		//"FAILED TEST: security_groups not overridden by zero slice": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group"},
-		//			},
-		//		}
-		//		svc.Environments["test"].Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Network = &NetworkConfig{
-		//			VPC: &vpcConfig{
-		//				SecurityGroups: []string{"mock", "security_group"},
-		//			},
-		//		}
-		//	},
-		//},
+		"security_groups overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group"},
+					},
+				}
+				svc.Environments["test"].Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group_test", "test"},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group_test", "test"},
+					},
+				}
+			},
+		},
+		"security_groups overridden by zero slice": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{"mock", "security_group"},
+					},
+				}
+				svc.Environments["test"].Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Network = &NetworkConfig{
+					VPC: &vpcConfig{
+						SecurityGroups: []string{},
+					},
+				}
+			},
+		},
 		//"FAILED TEST: security_groups not overridden": {
 		//	inSvc: func(svc *LoadBalancedWebService) {
 		//		svc.Network = &NetworkConfig{
