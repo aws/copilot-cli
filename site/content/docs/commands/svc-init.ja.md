@@ -30,7 +30,7 @@ Flags
 
 "frontend" として Load Balanced Web Service を作成するには、次のように実行します。
 
-`$ copilot svc init --name frontend --app-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile`
+`$ copilot svc init --name frontend --svc-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile`
 
 ## 出力例
 

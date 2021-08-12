@@ -18,9 +18,8 @@ const (
 
 // Default values for HTTPHealthCheck for a load balanced web service.
 const (
-	DefaultHealthCheckPath                = "/"
-	DefaultHealthCheckDeregistrationDelay = 60
-	DefaultHealthCheckGracePeriod         = 60
+	DefaultHealthCheckPath        = "/"
+	DefaultHealthCheckGracePeriod = 60
 )
 
 var (
