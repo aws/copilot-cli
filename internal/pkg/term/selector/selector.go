@@ -1011,7 +1011,7 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 
 // Topics asks the user to select from all Copilot-managed SNS topics and returns the ARNs
 // of those topics.
-func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
+func (s *DeploySelect) Topics(promptMsg, help, app, env string) ([]string, error) {
 	topics, err := s.deployStoreSvc.ListDeployedSNSTopics(app, env)
 	if err != nil {
 		return nil, fmt.Errorf("list SNS topics: %w", err)
@@ -1032,7 +1032,12 @@ func (s *DeploySelect) Topics(prompt, help, app, env string) ([]string, error) {
 		topicMap[slug] = t
 	}
 
-	selectedTopics, err := s.prompt.MultiSelect(prompt, help, topicDescriptions)
+	selectedTopics, err := s.prompt.MultiSelect(
+		promptMsg,
+		help,
+		topicDescriptions,
+		prompt.WithFinalMessage(fmt.Sprintf("Environment %s topics:", env)),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
 	}
