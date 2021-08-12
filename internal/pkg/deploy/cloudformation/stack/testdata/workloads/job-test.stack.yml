@@ -347,9 +347,9 @@ Resources:
               "Resource": "arn:${Partition}:states:::ecs:runTask.sync",
               "Parameters": {
                 "LaunchType": "FARGATE",
+                "PlatformVersion": "1.4.0",
                 "Cluster": "${Cluster}",
                 "TaskDefinition": "${TaskDefinition}",
-                "PlatformVersion": "1.4.0",
                 "PropagateTags": "TASK_DEFINITION",
                 "Group.$": "$$.Execution.Name",
                 "NetworkConfiguration": {
