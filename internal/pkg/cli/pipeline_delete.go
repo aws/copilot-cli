@@ -103,7 +103,8 @@ func (o *deletePipelineOpts) Ask() error {
 
 	deleteConfirmed, err := o.prompt.Confirm(
 		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.appName),
-		pipelineDeleteConfirmHelp)
+		pipelineDeleteConfirmHelp,
+		prompt.WithConfirmFinalMessage())
 
 	if err != nil {
 		return fmt.Errorf("pipeline delete confirmation prompt: %w", err)

@@ -1,0 +1,52 @@
+# The manifest for the "{{.Name}}" job.
+# Read the full specification for the "{{.Type}}" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/
+
+# Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
+name: {{.Name}}
+type: {{.Type}}
+
+# Trigger for your task.
+on:
+  # The scheduled trigger for your job. You can specify a Unix cron schedule or keyword (@weekly) or a rate (@every 1h30m)
+  # AWS Schedule Expressions are also accepted: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
+  schedule: "{{.On.Schedule}}"
+{{- if .Retries}}
+retries: {{.Retries}}    # Optional. The number of times to retry the job before failing.
+{{- else}}
+#retries: 3        # Optional. The number of times to retry the job before failing.
+{{- end}}
+{{- if .Timeout}}
+timeout: {{.Timeout}}    # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
+{{- else}}
+#timeout: 1h30m    # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
+{{- end}}
+
+# Configuration for your container and task.
+image:
+{{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/#image-build
+  build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
+{{- end}}
+{{- if .ImageConfig.Location}}
+  location: {{.ImageConfig.Location}}
+{{- end}}
+
+cpu: {{.CPU}}       # Number of CPU units for the task.
+memory: {{.Memory}}    # Amount of memory in MiB used by the task.
+{{- if .Platform}}
+platform: {{.Platform}}   # See https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/#platform
+{{- end}}
+
+# Optional fields for more advanced use-cases.
+#
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+
+# You can override any of the values defined above by environment.
+#environments:
+#  prod:
+#    cpu: 2048               # Larger CPU value for prod environment 

@@ -246,7 +246,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve service URI: get stack parameters for environment test: some error"),
 		},
-		"return error if fail to retrieve service deployment configuration": {
+		"return error if fail to retrieve service discovery endpoint": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
@@ -261,10 +261,10 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.ecsSvcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve environment variables: some error"),
+			wantedError: fmt.Errorf("some error"),
 		},
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
@@ -281,6 +281,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsSvcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
@@ -301,6 +302,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -330,6 +332,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -371,6 +374,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -396,6 +400,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
 						cfnstack.LBWebServiceRulePathParamKey:      prodSvcPath,
 					}, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",

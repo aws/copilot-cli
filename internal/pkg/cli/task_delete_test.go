@@ -190,7 +190,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 				m.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil)
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to delete abc from application phonetool and environment test?", gomock.Any()).Return(true, nil)
+				m.EXPECT().Confirm("Are you sure you want to delete abc from application phonetool and environment test?", gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		"name flag not specified and confirm cancelled": {
@@ -209,7 +209,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 				m.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil)
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to delete abc from application phonetool and environment test?", gomock.Any()).Return(false, nil)
+				m.EXPECT().Confirm("Are you sure you want to delete abc from application phonetool and environment test?", gomock.Any(), gomock.Any()).Return(false, nil)
 			},
 			wantErr: "task delete cancelled - no changes made",
 		},
@@ -226,7 +226,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 				m.EXPECT().Default().Return(&session.Session{}, nil)
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to delete abc from the default cluster?", gomock.Any()).Return(true, nil)
+				m.EXPECT().Confirm("Are you sure you want to delete abc from the default cluster?", gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		"no flags specified": {
@@ -245,7 +245,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 				m.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil)
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to delete abc from application phonetool and environment test?", gomock.Any()).Return(true, nil)
+				m.EXPECT().Confirm("Are you sure you want to delete abc from application phonetool and environment test?", gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		"no flags specified (default path)": {
@@ -260,7 +260,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 				m.EXPECT().Default().Return(&session.Session{}, nil)
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to delete abc from the default cluster?", gomock.Any()).Return(true, nil)
+				m.EXPECT().Confirm("Are you sure you want to delete abc from the default cluster?", gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 	}

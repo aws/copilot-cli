@@ -7,6 +7,8 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -152,7 +154,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error)
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
 
 type repositoryURIGetter interface {
@@ -306,8 +308,15 @@ type zipAndUploader interface {
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
+type Uploader interface {
+	zipAndUploader
+	Upload(bucket, key string, file s3.NamedBinary) (string, error)
+}
+
 type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
+	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
+	UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {
@@ -574,7 +583,7 @@ type runningTaskSelector interface {
 
 type dockerEngine interface {
 	CheckDockerEngineRunning() error
-	GetPlatform() (string, string, error)
+	RedirectPlatform(string) (*string, error)
 }
 
 type codestar interface {

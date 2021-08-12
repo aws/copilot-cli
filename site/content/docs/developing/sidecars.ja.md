@@ -39,7 +39,16 @@ sidecars:
     # コンテナに付与する Docker ラベル (オプション)
     labels:
       {label key} : <label value>
+    # このコンテナに適用するコンテナの依存関係 (オプション)
+    depends_on:
+      {container name}: <condition>
 ```
+
+{% include 'sidecar-config.ja.md' %}
+
+<div class="separator"></div>
+
+## 実行例
 
 以下は Load Balanced Web Service の Manifest で [nginx](https://www.nginx.com/) サイドカーコンテナを指定する例です。
 

@@ -49,6 +49,9 @@ type EnvDescriber struct {
 	configStore ConfigStoreSvc
 	deployStore DeployedEnvServicesLister
 	cfn         stackDescriber
+
+	// Cached values for reuse.
+	description *EnvDescription
 }
 
 // NewEnvDescriberConfig contains fields that initiates EnvDescriber struct.
@@ -83,6 +86,9 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 
 // Describe returns info about an application's environment.
 func (d *EnvDescriber) Describe() (*EnvDescription, error) {
+	if d.description != nil {
+		return d.description, nil
+	}
 	svcs, err := d.filterDeployedSvcs()
 	if err != nil {
 		return nil, err
@@ -100,14 +106,14 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 			return nil, fmt.Errorf("retrieve environment resources: %w", err)
 		}
 	}
-
-	return &EnvDescription{
+	d.description = &EnvDescription{
 		Environment:    d.env,
 		Services:       svcs,
 		Tags:           tags,
 		Resources:      stackResources,
 		EnvironmentVPC: environmentVPC,
-	}, nil
+	}
+	return d.description, nil
 }
 
 // Params returns the parameters of the environment stack.

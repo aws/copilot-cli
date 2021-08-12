@@ -517,6 +517,7 @@ Resources:
       Type: AWS::SNS::Topic
       Properties:
         TopicName: ${AWS::StackName}-givesdogs
+        KmsMasterKeyId: 'alias/aws/sns'
     
   givesdogsSNSTopicPolicy:
       Type: AWS::SNS::TopicPolicy

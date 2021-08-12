@@ -103,7 +103,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 				mockSelector.EXPECT().Environment(envDeleteNamePrompt, "", testApp).Return(testEnv, nil)
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any()).Return(true, nil)
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any(), gomock.Any()).Return(true, nil)
 
 				o.sel = mockSelector
 				o.prompt = mockPrompter
@@ -127,7 +127,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any()).Return(false, errors.New("some error"))
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any(), gomock.Any()).Return(false, errors.New("some error"))
 
 				o.prompt = mockPrompter
 			},

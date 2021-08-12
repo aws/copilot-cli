@@ -391,12 +391,14 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	appName := randStringBytes(10)
 	bucketName := randStringBytes(10)
 	environmentToDeploy := deploy.CreateEnvironmentInput{
-		Name:                     envName,
-		AppName:                  appName,
-		ToolsAccountPrincipalARN: id.RootUserARN,
-		Version:                  deploy.LatestEnvTemplateVersion,
+		Name: envName,
+		App: deploy.AppInformation{
+			Name:                appName,
+			AccountPrincipalARN: id.RootUserARN,
+		},
+		Version: deploy.LatestEnvTemplateVersion,
 	}
-	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.AppName, environmentToDeploy.Name)
+	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.App.Name, environmentToDeploy.Name)
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
 		// Given our stack doesn't exist
@@ -519,6 +521,16 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.NotNil(t,
 					output.OutputValue,
 					"ServiceDiscoveryNamespaceID value should not be nil")
+			},
+			"InternetGatewayID": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-InternetGatewayID", envStackName),
+					*output.ExportName,
+					"Should export InternetGatewayID as stackname-InternetGatewayID")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"InternetGatewayID value should not be nil")
 			},
 			"EnvironmentSecurityGroup": func(output *awsCF.Output) {
 				require.Equal(t,

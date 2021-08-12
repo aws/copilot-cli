@@ -1,0 +1,183 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a request driven web service on AWS App Runner.
+Parameters:
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  WorkloadName:
+    Type: String
+  ContainerImage:
+    Type: String
+  ContainerPort:
+    Type: Number
+  ImageRepositoryType:
+    Type: String
+  InstanceCPU:
+    Type: String
+  InstanceMemory:
+    Type: String
+  HealthCheckPath:
+    Type: String
+    Default: ''
+  HealthCheckInterval:
+    Type: String
+    Default: ''
+  HealthCheckTimeout:
+    Type: String
+    Default: ''
+  HealthCheckHealthyThreshold:
+    Type: String
+    Default: ''
+  HealthCheckUnhealthyThreshold:
+    Type: String
+    Default: ''
+  AddonsTemplateURL:
+    Description: 'URL of the addons nested stack template within the S3 bucket.'
+    Type: String
+    Default: ''
+
+Conditions:
+  # App Runner will not accept an AccessRole for ImageRepositoryTypes other than ECR.
+  # In this scenario the request will fail.
+  NeedsAccessRole:
+    !Equals [!Ref ImageRepositoryType, 'ECR']
+  HasHealthCheckPath:
+    !Not [!Equals [!Ref HealthCheckPath, '']]
+  HasHealthCheckInterval:
+    !Not [!Equals [!Ref HealthCheckInterval, '']]
+  HasHealthCheckTimeout:
+    !Not [!Equals [!Ref HealthCheckTimeout, '']]
+  HasHealthCheckHealthyThreshold:
+    !Not [!Equals [!Ref HealthCheckHealthyThreshold, '']]
+  HasHealthCheckUnhealthyThreshold:
+    !Not [!Equals [!Ref HealthCheckUnhealthyThreshold, '']]
+  HasAddons: # If a bucket URL is specified, that means the template exists.
+    !Not [!Equals [!Ref AddonsTemplateURL, '']]
+
+Resources:
+{{include "accessrole" . | indent 2}}
+{{include "instancerole" . | indent 2}}
+  Service:
+    Metadata:
+      'aws:copilot:description': 'An App Runner service to run and manage your containers'
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+      SourceConfiguration:
+        AuthenticationConfiguration: !If
+          - NeedsAccessRole
+          - AccessRoleArn: !GetAtt AccessRole.Arn
+          - !Ref AWS::NoValue
+        AutoDeploymentsEnabled: false
+        ImageRepository:
+          ImageIdentifier: !Ref ContainerImage
+          ImageRepositoryType: !Ref ImageRepositoryType
+          ImageConfiguration:
+            Port: !Ref ContainerPort
+            RuntimeEnvironmentVariables:
+              - Name: COPILOT_APPLICATION_NAME
+                Value: !Ref AppName
+              - Name: COPILOT_ENVIRONMENT_NAME
+                Value: !Ref EnvName
+              - Name: COPILOT_SERVICE_NAME
+                Value: !Ref WorkloadName
+              {{- if .Variables}}
+              {{- range $name, $value := .Variables}}
+              - Name: {{$name}}
+                Value: {{$value | printf "%q"}}
+              {{- end}}
+              {{- end}}
+              {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
+              {{- range $var := .NestedStack.VariableOutputs}}
+              - Name: {{toSnakeCase $var}}
+                Value:
+                  Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
+              {{- end}}
+              {{- end}}
+      InstanceConfiguration:
+        Cpu: !Ref InstanceCPU
+        Memory: !Ref InstanceMemory
+        InstanceRoleArn: !GetAtt InstanceRole.Arn
+{{- if .EnableHealthCheck }}
+      HealthCheckConfiguration:
+        Path: !If [HasHealthCheckPath, !Ref HealthCheckPath, !Ref AWS::NoValue]
+        Protocol: HTTP
+        Interval: !If [HasHealthCheckInterval, !Ref HealthCheckInterval, !Ref AWS::NoValue]
+        Timeout: !If [HasHealthCheckTimeout, !Ref HealthCheckTimeout, !Ref AWS::NoValue]
+        HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
+        UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
+{{- end }}
+      Tags:
+        - Key: copilot-application
+          Value: !Ref AppName
+        - Key: copilot-environment
+          Value: !Ref EnvName
+        - Key: copilot-service
+          Value: !Ref WorkloadName{{if .Tags}}{{range $name, $value := .Tags}}
+        - Key: {{$name}}
+          Value: {{$value}}{{end}}{{end}}
+
+{{include "addons" . | indent 2}}
+{{if .Alias}}
+  CustomDomainFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: {{ .ScriptBucketName }}
+        S3Key: {{ .CustomDomainLambda }}
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt CustomResourceRole.Arn
+      Runtime: nodejs14.x
+      Layers:
+        - {{ .AWSSDKLayer }}
+
+  CustomDomainAction:
+      Metadata:
+        'aws:copilot:description': 'Associate the domain with the service as well as upserting the domain record and validation records'
+      DependsOn: CustomDomainFunction
+      Type: Custom::CustomDomainFunction
+      Properties:
+        ServiceToken: !GetAtt CustomDomainFunction.Arn
+        ServiceARN: !GetAtt Service.ServiceArn
+        CustomDomain: {{ .Alias }}
+        AppDNSRole: {{ .AppDNSDelegationRole }}
+        AppDNSName: {{ .AppDNSName }}
+
+  CustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: "DNSandACMAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "apprunner:AssociateCustomDomain"
+                  - "apprunner:DisassociateCustomDomain"
+                  - "apprunner:DescribeCustomDomains"
+                  - "sts:AssumeRole"
+                  - "route53:ChangeResourceRecordSets"
+                  - "route53:ListHostedZonesByName"
+                Resource:
+                  - "*"
+{{- end }}
+{{include "publish" . | indent 2}}

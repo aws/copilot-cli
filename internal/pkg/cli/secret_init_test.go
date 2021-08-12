@@ -246,11 +246,11 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 						Name: "prod",
 					},
 				}, nil)
-				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any(), gomock.Any()).
 					Return("test-password", nil)
-				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any(), gomock.Any()).
 					Return("dev-password", nil)
-				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any(), gomock.Any()).
 					Return("prod-password", nil)
 			},
 			wantedVars: wantedVars,
@@ -278,10 +278,10 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 						Name: "prod",
 					},
 				}, nil)
-				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
-				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any()).MinTimes(0).MaxTimes(1)
-				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any()).MinTimes(0).MaxTimes(1)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any(), gomock.Any()).MinTimes(0).MaxTimes(1)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any(), gomock.Any()).MinTimes(0).MaxTimes(1)
 			},
 			wantedError: errors.New("get secret value for db-password in environment test: some error"),
 		},

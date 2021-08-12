@@ -34,6 +34,7 @@ type RequestDrivenWebServiceConfig struct {
 
 type RequestDrivenWebServiceHttpConfig struct {
 	HealthCheckConfiguration HealthCheckArgsOrString `yaml:"healthcheck"`
+	Alias                    *string                 `yaml:"alias"`
 }
 
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
@@ -44,8 +45,9 @@ type RequestDrivenWebServiceProps struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU    *int `yaml:"cpu"`
-	Memory *int `yaml:"memory"`
+	CPU      *int                  `yaml:"cpu"`
+	Memory   *int                  `yaml:"memory"`
+	Platform *PlatformArgsOrString `yaml:"platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -88,6 +90,14 @@ func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
+}
+
+// TaskPlatform returns the platform for the service.
+func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
+	if s.InstanceConfig.Platform == nil {
+		return nil, nil
+	}
+	return s.InstanceConfig.Platform.PlatformString, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

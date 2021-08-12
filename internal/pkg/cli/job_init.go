@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -63,8 +65,7 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	os           string
-	arch         string
+	platform     *string
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -106,7 +107,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		init:         jobInitter,
 		prompt:       prompter,
 		sel:          sel,
-		dockerEngine: exec.NewDockerCommand(),
+		dockerEngine: dockerengine.New(exec.NewCmd()),
 		initParser: func(path string) dockerfileParser {
 			return exec.NewDockerfile(fs, path)
 		},
@@ -187,10 +188,11 @@ func (o *initJobOpts) Execute() error {
 		}
 	}
 
-	o.os, o.arch, err = dockerPlatform(o.dockerEngine, o.image)
+	platform, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
 		return err
 	}
+	o.platform = platform
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -199,10 +201,7 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform: &manifest.PlatformConfig{
-				OS:   o.os,
-				Arch: o.arch,
-			},
+			Platform:       o.platform,
 		},
 
 		Schedule:    o.schedule,
@@ -275,9 +274,9 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 		return true, nil
 	}
 	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
-		var errDaemon *exec.ErrDockerDaemonNotResponsive
+		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
 		switch {
-		case errors.Is(err, exec.ErrDockerCommandNotFound):
+		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
 			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
 			return false, nil
 		case errors.As(err, &errDaemon):

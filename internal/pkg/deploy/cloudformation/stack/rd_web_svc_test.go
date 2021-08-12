@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -213,6 +214,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebServiceWithAlias(t *testing.
 func TestRequestDrivenWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
 		inCustomResourceURLs map[string]string
+		inManifest           func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService
 		mockDependencies     func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService)
 		wantedTemplate       string
 		wantedError          error
@@ -226,7 +228,11 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")), // TODO
 		},
-		"should be able to parse custom resource URLs": {
+		"should be able to parse custom resource URLs when alias is enabled": {
+			inManifest: func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				manifest.Alias = aws.String("convex.domain.com")
+				return manifest
+			},
 			inCustomResourceURLs: map[string]string{
 				template.AppRunnerCustomDomainLambdaFileName: "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
 				template.AWSSDKLayerFileName:                 "https://mockbucket.s3-us-west-2.amazonaws.com/mockURL2",
@@ -234,14 +240,15 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
-				mockBucket, mockCustomDomainLambda, mockAWSSDKLayer := "mockbucket", "mockURL1", "mockURL2"
+				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 					Variables:          c.manifest.Variables,
 					Tags:               c.manifest.Tags,
 					EnableHealthCheck:  true,
+					Alias:              aws.String("convex.domain.com"),
 					ScriptBucketName:   &mockBucket,
 					CustomDomainLambda: &mockCustomDomainLambda,
-					AWSSDKLayer:        &mockAWSSDKLayer,
+					AWSSDKLayer:        aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.wkld.addons = addons
@@ -302,10 +309,13 @@ Outputs:
 			},
 			wantedError: errors.New("parsing error"),
 		},
-		"should return error if a custom resource url cannot be parsed": {
+		"should return error if a custom resource url cannot be parsed when alias is enabled": {
+			inManifest: func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				manifest.Alias = aws.String("convex.domain.com")
+				return manifest
+			},
 			inCustomResourceURLs: map[string]string{
 				template.AppRunnerCustomDomainLambdaFileName: "such-a-weird-url",
-				template.AWSSDKLayerFileName:                 "such-a-weird-url",
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
@@ -322,6 +332,11 @@ Outputs:
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+
+			mft := *testRDWebServiceManifest
+			if tc.inManifest != nil {
+				mft = tc.inManifest(mft)
+			}
 			conf := &RequestDrivenWebService{
 				appRunnerWkld: &appRunnerWkld{
 					wkld: &wkld{
@@ -337,9 +352,9 @@ Outputs:
 							Region:    "us-west-2",
 						},
 					},
-					healthCheckConfig: testRDWebServiceManifest.HealthCheckConfiguration,
+					healthCheckConfig: mft.HealthCheckConfiguration,
 				},
-				manifest:            testRDWebServiceManifest,
+				manifest:            &mft,
 				customResourceS3URL: tc.inCustomResourceURLs,
 			}
 			tc.mockDependencies(t, ctrl, conf)
@@ -354,6 +369,109 @@ Outputs:
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedTemplate, template)
+			}
+		})
+	}
+}
+
+func TestRequestDrivenWebService_Parameters(t *testing.T) {
+	testCases := map[string]struct {
+		imageConfig    manifest.ImageWithPort
+		instanceConfig manifest.AppRunnerInstanceConfig
+
+		wantedParams []*cloudformation.Parameter
+		wantedError  error
+	}{
+		"all required fields specified": {
+			imageConfig: manifest.ImageWithPort{
+				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
+				Port:  aws.Uint16(80),
+			},
+			instanceConfig: manifest.AppRunnerInstanceConfig{
+				CPU:    aws.Int(1024),
+				Memory: aws.Int(1024),
+			},
+			wantedParams: []*cloudformation.Parameter{{
+				ParameterKey:   aws.String("AppName"),
+				ParameterValue: aws.String("phonetool"),
+			}, {
+				ParameterKey:   aws.String("EnvName"),
+				ParameterValue: aws.String("test"),
+			}, {
+				ParameterKey:   aws.String("WorkloadName"),
+				ParameterValue: aws.String("frontend"),
+			}, {
+				ParameterKey:   aws.String("ContainerImage"),
+				ParameterValue: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest"),
+			}, {
+				ParameterKey:   aws.String("AddonsTemplateURL"),
+				ParameterValue: aws.String(""),
+			}, {
+				ParameterKey:   aws.String(RDWkldImageRepositoryType),
+				ParameterValue: aws.String("ECR_PUBLIC"),
+			}, {
+				ParameterKey:   aws.String(WorkloadContainerPortParamKey),
+				ParameterValue: aws.String("80"),
+			}, {
+				ParameterKey:   aws.String(RDWkldInstanceCPUParamKey),
+				ParameterValue: aws.String("1024"),
+			}, {
+				ParameterKey:   aws.String(RDWkldInstanceMemoryParamKey),
+				ParameterValue: aws.String("1024"),
+			}},
+		},
+		"error when port unspecified": {
+			imageConfig: manifest.ImageWithPort{
+				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
+			},
+			instanceConfig: manifest.AppRunnerInstanceConfig{
+				CPU:    aws.Int(1024),
+				Memory: aws.Int(1024),
+			},
+			wantedError: errors.New("field `image.port` is required for Request Driven Web Services"),
+		},
+		"error when CPU unspecified": {
+			imageConfig: manifest.ImageWithPort{
+				Port:  aws.Uint16(80),
+				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
+			},
+			instanceConfig: manifest.AppRunnerInstanceConfig{
+				Memory: aws.Int(1024),
+			},
+			wantedError: errors.New("field `cpu` is required for Request Driven Web Services"),
+		},
+		"error when memory unspecified": {
+			imageConfig: manifest.ImageWithPort{
+				Port:  aws.Uint16(80),
+				Image: manifest.Image{Location: aws.String("public.ecr.aws/aws-containers/hello-app-runner:latest")},
+			},
+			instanceConfig: manifest.AppRunnerInstanceConfig{
+				CPU: aws.Int(1024),
+			},
+			wantedError: errors.New("field `memory` is required for Request Driven Web Services"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			c := &RequestDrivenWebService{
+				appRunnerWkld: &appRunnerWkld{
+					wkld: &wkld{
+						name:  aws.StringValue(testRDWebServiceManifest.Name),
+						env:   testEnvName,
+						app:   testAppName,
+						image: tc.imageConfig,
+					},
+					instanceConfig: tc.instanceConfig,
+					imageConfig:    tc.imageConfig,
+				},
+				manifest: testRDWebServiceManifest,
+			}
+			p, err := c.Parameters()
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedParams, p)
 			}
 		})
 	}

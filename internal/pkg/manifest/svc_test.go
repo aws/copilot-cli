@@ -36,6 +36,9 @@ exec: true
 http:
   path: "svc"
   target_container: "frontend"
+  alias:
+    - foobar.com
+    - v1.foobar.com
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -85,6 +88,12 @@ environments:
 							}, Port: aws.Uint16(80)},
 						},
 						RoutingRule: RoutingRule{
+							Alias: &Alias{
+								StringSlice: []string{
+									"foobar.com",
+									"v1.foobar.com",
+								},
+							},
 							Path:            aws.String("svc"),
 							TargetContainer: aws.String("frontend"),
 							HealthCheck: HealthCheckArgsOrString{
@@ -92,8 +101,9 @@ environments:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(512),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(512),
+							Memory:   aws.Int(1024),
+							Platform: nil,
 							Count: Count{
 								Value: aws.Int(1),
 							},
@@ -217,8 +227,9 @@ secrets:
 							},
 						},
 						TaskConfig: TaskConfig{
-							CPU:    aws.Int(1024),
-							Memory: aws.Int(1024),
+							CPU:      aws.Int(1024),
+							Memory:   aws.Int(1024),
+							Platform: nil,
 							Count: Count{
 								Value: aws.Int(1),
 							},

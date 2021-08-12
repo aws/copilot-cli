@@ -6,13 +6,13 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
@@ -243,7 +243,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(exec.ErrDockerCommandNotFound)
+				m.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
 			},
 			wantedErr: nil,
 		},
@@ -259,7 +259,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerDaemonNotResponsive{})
+				m.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
 			},
 			wantedErr: nil,
 		},
@@ -529,10 +529,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
-						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
-							Arch: "amd64",
-						},
+						Platform:       nil,
 					},
 					Port: 80,
 				}).Return("manifest/path", nil)
@@ -541,7 +538,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+				m.EXPECT().RedirectPlatform("").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -559,10 +556,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Backend Service",
 						DockerfilePath: "./Dockerfile",
-						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
-							Arch: "amd64",
-						},
+						Platform:       nil,
 					},
 				}).Return("manifest/path", nil)
 			},
@@ -570,7 +564,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+				m.EXPECT().RedirectPlatform("").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -585,18 +579,18 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
-						App:   "sample",
-						Name:  "backend",
-						Type:  "Backend Service",
-						Image: "nginx:latest",
-						Platform: &manifest.PlatformConfig{
-							OS:   runtime.GOOS,
-							Arch: runtime.GOARCH,
-						},
+						App:      "sample",
+						Name:     "backend",
+						Type:     "Backend Service",
+						Image:    "nginx:latest",
+						Platform: nil,
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().RedirectPlatform("nginx:latest").Return(nil, nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
@@ -610,30 +604,31 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
 					WorkloadProps: initialize.WorkloadProps{
-						App:   "sample",
-						Name:  "frontend",
-						Type:  "Load Balanced Web Service",
-						Image: "nginx:latest",
-						Platform: &manifest.PlatformConfig{
-							OS:   runtime.GOOS,
-							Arch: runtime.GOARCH,
-						},
+						App:      "sample",
+						Name:     "frontend",
+						Type:     "Load Balanced Web Service",
+						Image:    "nginx:latest",
+						Platform: nil,
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().RedirectPlatform("nginx:latest").Return(nil, nil)
+
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
-		"return error if OS/arch detection fails": {
+		"return error if platform detection/redirection fails": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().GetPlatform().Return("", "", mockError)
+				m.EXPECT().RedirectPlatform("").Return(nil, errors.New("some error"))
 			},
-			wantedErr: errors.New("get os/arch from docker: mock error"),
+			wantedErr: errors.New("get/redirect docker engine platform: some error"),
 		},
 		"failure": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+				m.EXPECT().RedirectPlatform("").Return(nil, nil)
 			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(gomock.Any()).Return("", errors.New("some error"))

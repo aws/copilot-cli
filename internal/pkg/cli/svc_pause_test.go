@@ -169,7 +169,7 @@ func TestSvcPause_Ask(t *testing.T) {
 					}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "").Times(1).Return(true, mockError)
+				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "", gomock.Any()).Times(1).Return(true, mockError)
 			},
 			wantedError: fmt.Errorf("svc pause confirmation prompt: %w", mockError),
 		},
@@ -186,7 +186,7 @@ func TestSvcPause_Ask(t *testing.T) {
 					}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "").Times(1).Return(false, nil)
+				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "", gomock.Any()).Times(1).Return(false, nil)
 			},
 			wantedError: errors.New("svc pause cancelled - no changes made"),
 		},
@@ -203,7 +203,7 @@ func TestSvcPause_Ask(t *testing.T) {
 					}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "").Times(1).Return(true, nil)
+				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "", gomock.Any()).Times(1).Return(true, nil)
 			},
 			wantedError: nil,
 		},

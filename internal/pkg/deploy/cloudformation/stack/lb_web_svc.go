@@ -150,9 +150,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 
 	var aliases []string
 	if s.httpsEnabled {
-		albAlias := aws.StringValue(s.manifest.Alias)
-		if albAlias != "" {
-			aliases = append(aliases, albAlias)
+		if aliases, err = convertAlias(s.manifest.Alias); err != nil {
+			return "", err
 		}
 	}
 
