@@ -21,26 +21,35 @@ var errInvalidComponent = errors.New("Topic must be initialized with valid app, 
 // Topic holds information about a Copilot SNS topic and its ARN, ID, and Name.
 type Topic struct {
 	awsARN arn.ARN
-	app    string
-	env    string
+	prefix string
 	wkld   string
 
 	name string
 }
 
 // NewTopic creates a new Topic struct, validating the ARN as a Copilot-managed SNS topic.
+// This function will
 func NewTopic(inputARN string, app, env, wkld string) (*Topic, error) {
-	t := &Topic{
-		app:  app,
-		env:  env,
-		wkld: wkld,
+	if app == "" || env == "" || wkld == "" {
+		return nil, errInvalidComponent
 	}
+
 	parsedARN, err := arn.Parse(inputARN)
 	if err != nil {
 		return nil, errInvalidARN
 	}
-	t.awsARN = parsedARN
-	if err := t.validateAndExtractName(); err != nil {
+
+	if parsedARN.Service != snsServiceName {
+		return nil, errInvalidARNService
+	}
+
+	t := &Topic{
+		prefix: fmt.Sprintf(fmtSNSTopicNamePrefix, app, env, wkld),
+		wkld:   wkld,
+		awsARN: parsedARN,
+	}
+
+	if err = t.validateAndExtractName(); err != nil {
 		return nil, err
 	}
 
@@ -62,33 +71,19 @@ func (t Topic) Workload() string {
 	return t.wkld
 }
 
-// validateAndExtractName determines whether the given ARN is a Copilot-valid SNS topic ARN and
-// returns the parsed components of the ARN.
+// validateAndExtractName determines whether the given ARN is a Copilot-valid SNS topic ARN.
+// It extracts the topic name from the ARN resource field.
 func (t *Topic) validateAndExtractName() error {
-	if len(t.wkld) == 0 || len(t.env) == 0 || len(t.app) == 0 {
-		return errInvalidComponent
-	}
-
-	if t.awsARN.Service != snsServiceName {
-		return errInvalidARNService
-	}
-
-	// Should not include subscriptions to SNS topics.
-	if len(strings.Split(t.awsARN.Resource, ":")) != 1 {
-		return errInvalidARNService
-	}
-
 	// Check that the topic name has the correct app-env-workload prefix.
-	prefix := fmt.Sprintf(fmtSNSTopicNamePrefix, t.app, t.env, t.wkld)
-	if !strings.HasPrefix(t.awsARN.Resource, prefix) {
+	if !strings.HasPrefix(t.awsARN.Resource, t.prefix) {
 		return errInvalidTopicARN
 	}
-	// Check that the topic name has a postfix AFTER that prefix.
-	if len(t.awsARN.Resource)-len(prefix) == 0 {
+	// Check that the topic resources ID has a postfix AFTER that prefix.
+	if len(t.awsARN.Resource)-len(t.prefix) == 0 {
 		return errInvalidTopicARN
 	}
 
-	t.name = t.awsARN.Resource[len(prefix):]
+	t.name = t.awsARN.Resource[len(t.prefix):]
 
 	return nil
 }
