@@ -62,14 +62,15 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 
 // Final messages displayed after prompting.
 const (
-	appNameFinalMessage = "Application:"
-	envNameFinalMessage = "Environment:"
-	svcNameFinalMsg     = "Service name:"
-	jobNameFinalMsg     = "Job name:"
-	deployedSvcFinalMsg = "Service:"
-	taskFinalMsg        = "Task:"
-	workloadFinalMsg    = "Name:"
-	dockerfileFinalMsg  = "Dockerfile:"
+	appNameFinalMessage  = "Application:"
+	envNameFinalMessage  = "Environment:"
+	svcNameFinalMsg      = "Service name:"
+	jobNameFinalMsg      = "Job name:"
+	deployedSvcFinalMsg  = "Service:"
+	taskFinalMsg         = "Task:"
+	workloadFinalMsg     = "Name:"
+	dockerfileFinalMsg   = "Dockerfile:"
+	fmtTopicFinalmessage = "Environment %s subscriptions:"
 )
 
 var scheduleTypes = []string{
@@ -133,6 +134,7 @@ type DeployStoreClient interface {
 	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 	IsJobDeployed(appName, envName, jobName string) (bool, error)
+	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
 // TaskStackDescriber wraps cloudformation client methods to describe task stacks
@@ -1018,4 +1020,40 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 		}
 	}
 	return outServices, nil
+}
+
+// Topics asks the user to select from all Copilot-managed SNS topics and returns the ARNs
+// of those topics.
+func (s *DeploySelect) Topics(promptMsg, help, app, env string) ([]string, error) {
+	topics, err := s.deployStoreSvc.ListSNSTopics(app, env)
+	if err != nil {
+		return nil, fmt.Errorf("list SNS topics: %w", err)
+	}
+	if len(topics) == 0 {
+		return nil, nil
+	}
+	// Create the list of options and the map from option to full topic specification.
+	var topicDescriptions []string
+	topicMap := make(map[string]deploy.Topic)
+	for _, t := range topics {
+		topicDescriptions = append(topicDescriptions, t.String())
+		topicMap[t.String()] = t
+	}
+
+	selectedTopics, err := s.prompt.MultiSelect(
+		promptMsg,
+		help,
+		topicDescriptions,
+		prompt.WithFinalMessage(fmt.Sprintf(fmtTopicFinalmessage, env)),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select SNS topics: %w", err)
+	}
+
+	// Get the ARNs from the topic slugs again.
+	var topicARNs []string
+	for _, t := range selectedTopics {
+		topicARNs = append(topicARNs, topicMap[t].ARN())
+	}
+	return topicARNs, nil
 }
