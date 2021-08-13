@@ -214,7 +214,7 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 }
 
 // windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-func (s LoadBalancedWebService) windowsCompatibility() error {
+func (s *LoadBalancedWebService) windowsCompatibility() error {
 	if !s.isWindows() {
 		return nil
 	}

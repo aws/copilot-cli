@@ -550,58 +550,38 @@ func (c *vpcConfig) isValidPlacement() bool {
 // If an error occurs during deserialization, then returns the error.
 // If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
 func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
+	type manifest interface {
+		WorkloadManifest
+		windowsCompatibility() error
+	}
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
 	}
 	typeVal := aws.StringValue(am.Type)
-
+	var m manifest
 	switch typeVal {
 	case LoadBalancedWebServiceType:
-		m := newDefaultLoadBalancedWebService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to load balanced web service: %w", err)
-		}
-		if err := m.windowsCompatibility(); err != nil {
-			return nil, err
-		}
-		return m, nil
+		m = newDefaultLoadBalancedWebService()
+
 	case RequestDrivenWebServiceType:
-		m := newDefaultRequestDrivenWebService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to request-driven web service: %w", err)
-		}
-		return m, nil
+		m = newDefaultRequestDrivenWebService()
 	case BackendServiceType:
-		m := newDefaultBackendService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
-		}
-		if err := m.windowsCompatibility(); err != nil {
-			return nil, err
-		}
-		return m, nil
+		m = newDefaultBackendService()
 	case WorkerServiceType:
-		m := newDefaultWorkerService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to worker service: %w", err)
-		}
-		if err := m.windowsCompatibility(); err != nil {
-			return nil, err
-		}
-		return m, nil
+		m = newDefaultWorkerService()
 	case ScheduledJobType:
-		m := newDefaultScheduledJob()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to scheduled job: %w", err)
-		}
-		if err := m.windowsCompatibility(); err != nil {
-			return nil, err
-		}
-		return m, nil
+		m = newDefaultScheduledJob()
 	default:
 		return nil, &ErrInvalidWorkloadType{Type: typeVal}
 	}
+	if err := yaml.Unmarshal(in, m); err != nil {
+		return nil, fmt.Errorf("unmarshal manifest for %s: %w", typeVal, err)
+	}
+	if err := m.windowsCompatibility(); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ContainerHealthCheck holds the configuration to determine if the service container is healthy.
