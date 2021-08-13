@@ -40,9 +40,11 @@ memory: {{.Memory}}    # Amount of memory in MiB used by the task.
 platform: {{.Platform}}     # See https://aws.github.io/copilot-cli/docs/manifest/backend-service/#platform
 {{- end}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
-{{- if  or (not .Platform) (ne .Platform.PlatformString "windows/amd64")}}
+  {{- if not .Platform}}
 exec: true     # Enable running commands in your container.
-{{- end}}
+  {{- else if ne .Platform.PlatformString "windows/amd64"}}
+exec: true     # Enable running commands in your container.
+  {{- end}}
 
 # Optional fields for more advanced use-cases.
 #
