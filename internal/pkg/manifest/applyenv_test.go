@@ -1378,21 +1378,21 @@ func TestApplyEnv_Entrypoint(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		//"FAILED TEST: composite fields: string slice is overridden if string is not nil": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.EntryPoint = &EntryPointOverride{
-		//			StringSlice: []string{"mock", "entrypoint"},
-		//		}
-		//		svc.Environments["test"].EntryPoint = &EntryPointOverride{
-		//			String: aws.String("mock entrypoint test"),
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.EntryPoint = &EntryPointOverride{
-		//			String: aws.String("mock entrypoint test"),
-		//		}
-		//	},
-		//},
+		"composite fields: string slice is overridden if string is not nil": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.EntryPoint = &EntryPointOverride{
+					StringSlice: []string{"mock", "entrypoint"},
+				}
+				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+					String: aws.String("mock entrypoint test"),
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.EntryPoint = &EntryPointOverride{
+					String: aws.String("mock entrypoint test"),
+				}
+			},
+		},
 		//"FAILED TEST: composite fields: string is overridden if string slice is not nil": {
 		//	inSvc: func(svc *LoadBalancedWebService) {
 		//		svc.EntryPoint = &EntryPointOverride{
@@ -1518,21 +1518,21 @@ func TestApplyEnv_Command(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		//"FAILED TEST: composite fields: string slice is overridden if string is not nil": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Command = &CommandOverride{
-		//			StringSlice: []string{"mock", "command"},
-		//		}
-		//		svc.Environments["test"].Command = &CommandOverride{
-		//			String: aws.String("mock command test"),
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Command = &CommandOverride{
-		//			String: aws.String("mock command test"),
-		//		}
-		//	},
-		//},
+		"composite fields: string slice is overridden if string is not nil": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Command = &CommandOverride{
+					StringSlice: []string{"mock", "command"},
+				}
+				svc.Environments["test"].Command = &CommandOverride{
+					String: aws.String("mock command test"),
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Command = &CommandOverride{
+					String: aws.String("mock command test"),
+				}
+			},
+		},
 		//"FAILED TEST: composite fields: string is overridden if string slice is not nil": {
 		//	inSvc: func(svc *LoadBalancedWebService) {
 		//		svc.Command = &CommandOverride{

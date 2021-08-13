@@ -27,6 +27,18 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 		return transformImage()
 	}
 
+	if typ == reflect.TypeOf(EntryPointOverride{}) {
+		return transformStringSliceOrString(reflect.TypeOf(EntryPointOverride{}))
+	}
+
+	if typ == reflect.TypeOf(CommandOverride{}) {
+		return transformStringSliceOrString(reflect.TypeOf(CommandOverride{}))
+	}
+
+	if typ == reflect.TypeOf(Alias{}) {
+		return transformStringSliceOrString(reflect.TypeOf(Alias{}))
+	}
+
 	if typ.String() == "map[string]manifest.Volume" {
 		return transformMapStringToVolume()
 	}
@@ -220,6 +232,36 @@ func transformBuildArgsOrString() func(dst, src reflect.Value) error {
 			dstString.Set(srcString)
 		} else if !srcString.IsNil() {
 			dstArgs.Set(srcArgs)
+		}
+
+		return nil
+	}
+}
+
+func transformStringSliceOrString(originalType reflect.Type) func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		// Perform default merge
+		dstStruct := dst.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
+		srcStruct := src.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
+
+		err := mergo.Merge(&dstStruct, srcStruct, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
+		if err != nil {
+			return err
+		}
+		dst.Set(reflect.ValueOf(dstStruct).Convert(originalType))
+
+		// Perform customized merge
+		dstString := dst.FieldByName("String")
+		dstStringSlice := dst.FieldByName("StringSlice")
+
+		srcString := src.FieldByName("String")
+		srcStringSlice := src.FieldByName("StringSlice")
+
+		//` `srcArgs.IsZero()` and `srcString.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
+		if !srcStringSlice.IsZero() {
+			dstString.Set(srcString)
+		} else if !srcString.IsNil() {
+			dstStringSlice.Set(srcStringSlice)
 		}
 
 		return nil
