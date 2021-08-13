@@ -36,10 +36,10 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 	return nil
 }
 
-type volumeTransformer struct{}
+type basicTransformer struct{}
 
 // Transformer returns custom merge logic for volume's fields.
-func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+func (t basicTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	return transformBasic(typ)
 }
 
@@ -86,7 +86,7 @@ func transformMapStringToVolume() func(dst, src reflect.Value) error {
 			// Perform default merge
 			dstV := dstElement.Interface().(Volume)
 			srcV := srcElement.Interface().(Volume)
-			err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithTransformers(volumeTransformer{}))
+			err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
 			if err != nil {
 				return err
 			}
@@ -192,10 +192,12 @@ func transformImage() func(dst, src reflect.Value) error {
 		dstImage := dst.Interface().(Image)
 		srcImage := src.Interface().(Image)
 
-		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
 		if err != nil {
 			return err
 		}
+
+		dst.Set(reflect.ValueOf(dstImage))
 
 		// Perform customized merge
 		dstBuild := dst.FieldByName("Build")
@@ -208,6 +210,7 @@ func transformImage() func(dst, src reflect.Value) error {
 			dstBuild.Set(srcBuild)
 			dstLocation.Set(srcLocation)
 		}
+
 		return nil
 	}
 }
