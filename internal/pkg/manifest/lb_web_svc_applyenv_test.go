@@ -35,7 +35,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				svc.Path = aws.String("")
 			},
 		},
-		"path not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: path not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Path = aws.String("mockPath")
 				svc.Environments["test"].RoutingRule = RoutingRule{}
@@ -59,7 +59,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				}
 			},
 		},
-		"healthcheck not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: healthcheck not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{
 					HealthCheckPath: aws.String("mockPath"),
@@ -96,7 +96,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				svc.DeregistrationDelay = &mockDeregistrationDelayTest
 			},
 		},
-		"deregistration_delay not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: deregistration_delay not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockDeregistrationDelay := 10 * time.Second
 				svc.DeregistrationDelay = &mockDeregistrationDelay
@@ -125,7 +125,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				svc.TargetContainer = aws.String("")
 			},
 		},
-		"target_container not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: target_container not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.TargetContainer = aws.String("mockTargetContainer")
 				svc.Environments["test"].RoutingRule = RoutingRule{}
@@ -152,7 +152,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				svc.TargetContainerCamelCase = aws.String("")
 			},
 		},
-		"targetContainer not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: targetContainer not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.TargetContainerCamelCase = aws.String("mockTargetContainer")
 				svc.Environments["test"].RoutingRule = RoutingRule{}
@@ -179,7 +179,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				svc.Stickiness = aws.Bool(false)
 			},
 		},
-		"stickness not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: stickness not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Stickiness = aws.Bool(true)
 				svc.Environments["test"].RoutingRule = RoutingRule{}
@@ -212,7 +212,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				svc.AllowedSourceIps = &mockAllowedSourceIPsWanted
 			},
 		},
-		"allowed_source_ips not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: allowed_source_ips not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockAllowedSourceIps := []string{"1", "2"}
 				svc.AllowedSourceIps = &mockAllowedSourceIps
@@ -238,7 +238,7 @@ func TestApplyEnv_HTTP(t *testing.T) {
 				}
 			},
 		},
-		"alias not overridden": {
+		"FAILED_AFTER_UPGRADE: alias not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Alias = &Alias{
 					String: aws.String("mockAlias"),
@@ -342,7 +342,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"string not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{
 					HealthCheckPath: aws.String("/"),
@@ -378,7 +378,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"args not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: args not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{
 					HealthCheckArgs: HTTPHealthCheckArgs{
@@ -437,7 +437,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"path not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: path not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{
 					HealthCheckArgs: HTTPHealthCheckArgs{
@@ -498,7 +498,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"success_codes not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: success_codes not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{
 					HealthCheckArgs: HTTPHealthCheckArgs{
@@ -559,7 +559,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"healthy_threshold not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: healthy_threshold not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{
 					HealthCheckArgs: HTTPHealthCheckArgs{
@@ -620,7 +620,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"unhealthy_threshold not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: unhealthy_threshold not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{
 					HealthCheckArgs: HTTPHealthCheckArgs{
@@ -687,7 +687,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"timeout not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: timeout not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockTimeout := 10 * time.Second
 				svc.HealthCheck = HealthCheckArgsOrString{
@@ -756,7 +756,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"interval not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: interval not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockInterval := 10 * time.Second
 				svc.HealthCheck = HealthCheckArgsOrString{
@@ -825,7 +825,7 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 				}
 			},
 		},
-		"grace_period not overridden": {
+		"FIXED_AFTER_TRANSFORM_POINTER: grace_period not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockGracePeriod := 10 * time.Second
 				svc.HealthCheck = HealthCheckArgsOrString{
@@ -933,7 +933,7 @@ func TestApplyEnv_HTTP_Alias(t *testing.T) {
 				}
 			},
 		},
-		"string not overridden": {
+		"FAILED_AFTER_UPGRADE: string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Alias = &Alias{
 					String: aws.String("mock alias"),
@@ -976,7 +976,7 @@ func TestApplyEnv_HTTP_Alias(t *testing.T) {
 				}
 			},
 		},
-		"string slice not overridden": {
+		"FAILED_AFTER_UPGRADE: string slice not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Alias = &Alias{
 					StringSlice: []string{"mock", "alias"},
@@ -1030,7 +1030,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"http not overridden": {
+		"FAILED_AFTER_UPGRADE: http not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.RoutingRule = RoutingRule{
 					Path: aws.String("/"),
@@ -1039,6 +1039,36 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.RoutingRule = RoutingRule{
 					Path: aws.String("/"),
+				}
+			},
+		},
+		"empty image overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig = ImageWithPortAndHealthcheck{
+					HealthCheck: &ContainerHealthCheck{
+						Retries: aws.Int(3),
+					},
+				}
+				svc.Environments["test"].ImageConfig = ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							DependsOn: map[string]string{"foo": "bar"},
+							Location:  aws.String("mockLocation"),
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig = ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							DependsOn: map[string]string{"foo": "bar"},
+							Location:  aws.String("mockLocation"),
+						},
+					},
+					HealthCheck: &ContainerHealthCheck{
+						Retries: aws.Int(3),
+					},
 				}
 			},
 		},
@@ -1073,7 +1103,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"image not overridden": {
+		"FAILED_AFTER_UPGRADE: image not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig = ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
@@ -1114,7 +1144,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"entrypoint not overridden": {
+		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.EntryPoint = &EntryPointOverride{
 					String: aws.String("mockEntrypoint"),
@@ -1141,7 +1171,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"command not overridden": {
+		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Command = &CommandOverride{
 					String: aws.String("mockCommand"),
@@ -1171,7 +1201,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				svc.CPU = aws.Int(0)
 			},
 		},
-		"cpu not overridden": {
+		"FAILED_AFTER_UPGRADE: cpu not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.CPU = aws.Int(1024)
 			},
@@ -1197,7 +1227,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				svc.Memory = aws.Int(0)
 			},
 		},
-		"memory not overridden": {
+		"FAILED_AFTER_UPGRADE: memory not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.CPU = aws.Int(1024)
 			},
@@ -1220,7 +1250,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"platform not overridden": {
+		"FAILED_AFTER_UPGRADE: platform not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Platform = &PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
@@ -1247,7 +1277,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"count not overridden": {
+		"FAILED_AFTER_UPGRADE: count not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					Value: aws.Int(3),
@@ -1289,7 +1319,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"exec not overridden": {
+		"FAILED_AFTER_UPGRADE: exec not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ExecuteCommand = ExecuteCommand{
 					Enable: aws.Bool(true),
@@ -1324,7 +1354,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"network not overridden": {
+		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Network = &NetworkConfig{
 					VPC: &vpcConfig{
@@ -1453,7 +1483,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"storage not overridden": {
+		"FAILED_AFTER_UPGRADE: storage not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Storage = &Storage{
 					Ephemeral: aws.Int(3),
@@ -1481,7 +1511,7 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 				}
 			},
 		},
-		"logging not overridden": {
+		"FAILED_AFTER_UPGRADE: logging not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Logging = &Logging{
 					Image: aws.String("mockImage"),
