@@ -22,16 +22,16 @@ type workloadTransformer struct{}
 
 // Transformer returns custom merge logic for workload's fields.
 func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if transform := transformBasic(typ); transform != nil {
-		return transform
-	}
-
 	if typ == reflect.TypeOf(Image{}) {
 		return transformImage()
 	}
 
 	if typ.String() == "map[string]manifest.Volume" {
 		return transformMapStringToVolume()
+	}
+
+	if transform := transformBasic(typ); transform != nil {
+		return transform
 	}
 	return nil
 }
@@ -40,6 +40,16 @@ type basicTransformer struct{}
 
 // Transformer returns custom merge logic for volume's fields.
 func (t basicTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	return transformBasic(typ)
+}
+
+type imageTransformer struct{}
+
+// Transformer returns custom merge logic for volume's fields.
+func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ == reflect.TypeOf(BuildArgsOrString{}) {
+		return transformBuildArgsOrString()
+	}
 	return transformBasic(typ)
 }
 
@@ -65,7 +75,9 @@ func transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
 
 func transformSlice() func(dst, src reflect.Value) error {
 	return func(dst, src reflect.Value) error {
-		dst.Set(src)
+		if !src.IsNil() {
+			dst.Set(src)
+		}
 		return nil
 	}
 }
@@ -183,6 +195,36 @@ func transformPBasic() func(dst, src reflect.Value) error {
 	}
 }
 
+func transformBuildArgsOrString() func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		// Perform default merge
+		dstBuildArgsOrString := dst.Interface().(BuildArgsOrString)
+		srcBuildArgsOrString := src.Interface().(BuildArgsOrString)
+
+		err := mergo.Merge(&dstBuildArgsOrString, srcBuildArgsOrString, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
+		if err != nil {
+			return err
+		}
+		dst.Set(reflect.ValueOf(dstBuildArgsOrString))
+
+		// Perform customized merge
+		dstString := dst.FieldByName("BuildString")
+		dstArgs := dst.FieldByName("BuildArgs")
+
+		srcString := src.FieldByName("BuildString")
+		srcArgs := src.FieldByName("BuildArgs")
+
+		//` `srcArgs.IsZero()` and `srcString.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
+		if !srcArgs.IsZero() {
+			dstString.Set(srcString)
+		} else if !srcString.IsNil() {
+			dstArgs.Set(srcArgs)
+		}
+
+		return nil
+	}
+}
+
 // transformImage implements customized merge logic for Image field of manifest.
 // It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
 // And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
@@ -192,11 +234,10 @@ func transformImage() func(dst, src reflect.Value) error {
 		dstImage := dst.Interface().(Image)
 		srcImage := src.Interface().(Image)
 
-		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
+		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithTransformers(imageTransformer{}))
 		if err != nil {
 			return err
 		}
-
 		dst.Set(reflect.ValueOf(dstImage))
 
 		// Perform customized merge
@@ -206,9 +247,11 @@ func transformImage() func(dst, src reflect.Value) error {
 		srcBuild := src.FieldByName("Build")
 		srcLocation := src.FieldByName("Location")
 
-		if !srcBuild.IsZero() || !srcLocation.IsZero() {
-			dstBuild.Set(srcBuild)
+		//` `srcBuild.IsZero()` and `srcLocation.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
+		if !srcBuild.IsZero() {
 			dstLocation.Set(srcLocation)
+		} else if !srcLocation.IsZero() {
+			dstBuild.Set(srcBuild)
 		}
 
 		return nil
