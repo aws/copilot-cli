@@ -121,7 +121,7 @@ func (s BackendService) WindowsCompatibility() error {
 	// EFS is not supported.
 	for _, volume := range s.Storage.Volumes {
 		if !volume.EmptyVolume() {
-			return errors.New(`'EFS is not supported when deploying a Windows container'`)
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
 		}
 	}
 	return nil

@@ -226,7 +226,7 @@ func (s LoadBalancedWebService) WindowsCompatibility() error {
 	if s.Storage != nil {
 		for _, volume := range s.Storage.Volumes {
 			if !volume.EmptyVolume() {
-				return errors.New(`'EFS is not supported when deploying a Windows container'`)
+				return errors.New(`'EFS' is not supported when deploying a Windows container`)
 			}
 		}
 	}

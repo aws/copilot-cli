@@ -143,14 +143,10 @@ func (j ScheduledJob) WindowsCompatibility() error {
 	if !j.isWindows() {
 		return nil
 	}
-	// Exec is not supported.
-	if aws.BoolValue(j.ExecuteCommand.Enable) {
-		return errors.New(`'exec' is not supported when deploying a Windows container`)
-	}
 	// EFS is not supported.
 	for _, volume := range j.Storage.Volumes {
 		if !volume.EmptyVolume() {
-			return errors.New(`'EFS is not supported when deploying a Windows container'`)
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
 		}
 	}
 	return nil
