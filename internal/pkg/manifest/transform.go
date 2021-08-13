@@ -9,6 +9,7 @@ import (
 	"github.com/imdario/mergo"
 )
 
+// See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
 var basicKinds = []reflect.Kind{
 	reflect.Bool,
 	reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
