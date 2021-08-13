@@ -1243,7 +1243,7 @@ func TestLoadBalancedWebService_ValidateForWindows(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New("'EFS is not supported when deploying a Windows container'"),
+			wantedErr: errors.New("'EFS' is not supported when deploying a Windows container"),
 		},
 	}
 	for name, tc := range testCases {
