@@ -138,8 +138,8 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &j, nil
 }
 
-// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-func (j ScheduledJob) WindowsCompatibility() error {
+// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (j ScheduledJob) windowsCompatibility() error {
 	if !j.isWindows() {
 		return nil
 	}

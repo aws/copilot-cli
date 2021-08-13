@@ -209,8 +209,8 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &s, nil
 }
 
-// WindowsCompatibility disallows unsupported when deploying Windows containers on Fargate.
-func (s WorkerService) WindowsCompatibility() error {
+// windowsCompatibility disallows unsupported when deploying Windows containers on Fargate.
+func (s WorkerService) windowsCompatibility() error {
 	if !s.isWindows() {
 		return nil
 	}

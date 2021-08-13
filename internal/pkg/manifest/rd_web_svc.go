@@ -130,9 +130,3 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 	s.Environments = nil
 	return &s, nil
 }
-
-// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-// Here, this method is simply satisfying the WorkloadManifest interface.
-func (s RequestDrivenWebService) WindowsCompatibility() error {
-	return nil
-}

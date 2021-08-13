@@ -109,8 +109,8 @@ func (s BackendService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &s, nil
 }
 
-// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-func (s BackendService) WindowsCompatibility() error {
+// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (s BackendService) windowsCompatibility() error {
 	if !s.isWindows() {
 		return nil
 	}
