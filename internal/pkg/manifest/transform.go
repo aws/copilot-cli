@@ -43,6 +43,7 @@ func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.V
 	return transformBasic(typ)
 }
 
+// transformBasic implements customized merge logic for manifest fields that are number, string, bool, array, and duration.
 func transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ.Kind() == reflect.Slice {
 		return transformSlice()
@@ -77,6 +78,10 @@ func transformMapStringToVolume() func(dst, src reflect.Value) error {
 				continue
 			}
 			dstElement := dst.MapIndex(key)
+			if !dstElement.IsValid() {
+				dst.SetMapIndex(key, srcElement)
+				continue
+			}
 
 			// Perform default merge
 			dstV := dstElement.Interface().(Volume)
