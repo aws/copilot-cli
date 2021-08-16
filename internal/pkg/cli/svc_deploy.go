@@ -566,7 +566,8 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	}
 
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
-		if _, ok := err.(*awscloudformation.ErrChangeSetEmpty); ok {
+		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
+		if errors.As(err, &errEmptyCS) {
 			if o.forceNewUpdate {
 				// Force update ECS service if --force is set and change set is empty.
 				o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))

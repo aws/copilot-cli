@@ -684,7 +684,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("deploy service: some error"),
 		},
-		"error if fail to deploy service if change set is empty but force flag is not set": {
+		"error if change set is empty but force flag is not set": {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",

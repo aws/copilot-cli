@@ -194,7 +194,7 @@ func TestECS_UpdateService(t *testing.T) {
 	)
 	testCases := map[string]struct {
 		forceUpdate   bool
-		tryNum        int
+		maxTryNum     int
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantErr error
@@ -211,7 +211,6 @@ func TestECS_UpdateService(t *testing.T) {
 			wantErr: fmt.Errorf("update service mockService from cluster mockCluster: some error"),
 		},
 		"errors if max retries exceeded": {
-			tryNum: waitServiceStableMaxTry,
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().UpdateService(&ecs.UpdateServiceInput{
 					Cluster: aws.String(clusterName),
@@ -225,6 +224,20 @@ func TestECS_UpdateService(t *testing.T) {
 						ServiceName:  aws.String(serviceName),
 					},
 				}, nil)
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String(clusterName),
+					Services: aws.StringSlice([]string{serviceName}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							Deployments:  []*ecs.Deployment{{}},
+							DesiredCount: aws.Int64(1),
+							RunningCount: aws.Int64(2),
+							ClusterArn:   aws.String(clusterName),
+							ServiceName:  aws.String(serviceName),
+						},
+					},
+				}, nil).Times(2)
 			},
 			wantErr: fmt.Errorf("wait until service mockService becomes stable: max retries %v exceeded", waitServiceStableMaxTry),
 		},
@@ -273,6 +286,20 @@ func TestECS_UpdateService(t *testing.T) {
 						{
 							Deployments:  []*ecs.Deployment{{}},
 							DesiredCount: aws.Int64(1),
+							RunningCount: aws.Int64(2),
+							ClusterArn:   aws.String(clusterName),
+							ServiceName:  aws.String(serviceName),
+						},
+					},
+				}, nil)
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String(clusterName),
+					Services: aws.StringSlice([]string{serviceName}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							Deployments:  []*ecs.Deployment{{}},
+							DesiredCount: aws.Int64(1),
 							RunningCount: aws.Int64(1),
 							ClusterArn:   aws.String(clusterName),
 							ServiceName:  aws.String(serviceName),
@@ -293,8 +320,9 @@ func TestECS_UpdateService(t *testing.T) {
 			tc.mockECSClient(mockECSClient)
 
 			service := ECS{
-				client: mockECSClient,
-				tryNum: tc.tryNum,
+				client:                  mockECSClient,
+				maxForceDeploymentTries: 2,
+				pollIntervalDuration:    0,
 			}
 			var opts []UpdateServiceOpts
 			if tc.forceUpdate {

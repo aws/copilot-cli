@@ -79,7 +79,7 @@ func (c Client) ClusterARN(app, env string) (string, error) {
 
 // ForceUpdateService forces a new update for an ECS service given Copilot service info.
 func (c Client) ForceUpdateService(app, env, svc string) error {
-	clusterName, serviceName, err := c.clusterServiceName(app, env, svc)
+	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (c Client) ForceUpdateService(app, env, svc string) error {
 
 // DescribeService returns the description of an ECS service given Copilot service info.
 func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
-	clusterName, serviceName, err := c.clusterServiceName(app, env, svc)
+	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +383,7 @@ func (c Client) clusterARN(app, env string) (string, error) {
 	return clusters[0].ARN, nil
 }
 
-func (c Client) clusterServiceName(app, env, svc string) (cluster, service string, err error) {
+func (c Client) fetchAndParseServiceARN(app, env, svc string) (cluster, service string, err error) {
 	svcARN, err := c.serviceARN(app, env, svc)
 	if err != nil {
 		return "", "", err

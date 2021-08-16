@@ -21,7 +21,7 @@ import (
 const (
 	clusterStatusActive              = "ACTIVE"
 	waitServiceStablePollingInterval = 15 * time.Second
-	waitServiceStableMaxTry          = 40
+	waitServiceStableMaxTry          = 80
 	stableServiceDeploymentNum       = 1
 )
 
@@ -47,8 +47,8 @@ type ECS struct {
 	client         api
 	newSessStarter func() ssmSessionStarter
 
-	// Overrriden by unit test
-	tryNum int
+	maxForceDeploymentTries int
+	pollIntervalDuration    time.Duration
 }
 
 // RunTaskInput holds the fields needed to run tasks.
@@ -76,6 +76,8 @@ func New(s *session.Session) *ECS {
 		newSessStarter: func() ssmSessionStarter {
 			return exec.NewSSMPluginCommand(s)
 		},
+		maxForceDeploymentTries: waitServiceStableMaxTry,
+		pollIntervalDuration:    waitServiceStablePollingInterval,
 	}
 }
 
@@ -143,23 +145,21 @@ func (e *ECS) UpdateService(clusterName, serviceName string, opts ...UpdateServi
 // See https://docs.aws.amazon.com/cli/latest/reference/ecs/wait/services-stable.html
 func (e *ECS) waitUntilServiceStable(svc *Service) error {
 	var err error
-	defer func() {
-		e.tryNum = 0
-	}()
+	var tryNum int
 	for {
 		if len(svc.Deployments) == stableServiceDeploymentNum &&
 			aws.Int64Value(svc.DesiredCount) == aws.Int64Value(svc.RunningCount) {
 			return nil
 		}
-		if e.tryNum >= waitServiceStableMaxTry {
+		if tryNum >= e.maxForceDeploymentTries {
 			return fmt.Errorf("max retries %v exceeded", waitServiceStableMaxTry)
 		}
 		svc, err = e.Service(aws.StringValue(svc.ClusterArn), aws.StringValue(svc.ServiceName))
 		if err != nil {
 			return err
 		}
-		e.tryNum++
-		time.Sleep(waitServiceStablePollingInterval)
+		tryNum++
+		time.Sleep(e.pollIntervalDuration)
 	}
 }
 
