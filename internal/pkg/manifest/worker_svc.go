@@ -211,7 +211,7 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 
 // windowsCompatibility disallows unsupported when deploying Windows containers on Fargate.
 func (s *WorkerService) windowsCompatibility() error {
-	if !s.isWindows() {
+	if !s.IsWindows() {
 		return nil
 	}
 	// Exec is not supported.

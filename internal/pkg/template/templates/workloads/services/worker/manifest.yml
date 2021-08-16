@@ -33,7 +33,7 @@ platform: {{.Platform}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
   {{- if not .Platform}}
 exec: true     # Enable running commands in your container.
-  {{- else if ne .Platform.PlatformString "windows/amd64"}}
+  {{- else if not .IsWindows}}
 exec: true     # Enable running commands in your container.
   {{- end}}
 {{- if .Subscribe}}{{- if .Subscribe.Topics}}

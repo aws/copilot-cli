@@ -171,8 +171,8 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	return aws.String(dockerengine.PlatformString(t.Platform.OS(), t.Platform.Arch())), nil
 }
 
-// isWindows returns whether or not the service is building with a Windows OS.
-func (t *TaskConfig) isWindows() bool {
+// IsWindows returns whether or not the service is building with a Windows OS.
+func (t *TaskConfig) IsWindows() bool {
 	if t.Platform == nil {
 		return false
 	}
@@ -215,7 +215,7 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 
 // windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
 func (s *LoadBalancedWebService) windowsCompatibility() error {
-	if !s.isWindows() {
+	if !s.IsWindows() {
 		return nil
 	}
 	// Exec is not supported.

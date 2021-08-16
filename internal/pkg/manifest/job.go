@@ -140,7 +140,7 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 
 // windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
 func (j *ScheduledJob) windowsCompatibility() error {
-	if !j.isWindows() {
+	if !j.IsWindows() {
 		return nil
 	}
 	// EFS is not supported.
