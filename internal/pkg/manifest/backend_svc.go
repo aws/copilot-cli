@@ -98,7 +98,7 @@ func (s BackendService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, BackendService{
 		BackendServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+	}, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
 
 	if err != nil {
 		return nil, err

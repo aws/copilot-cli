@@ -8,11 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"time"
 
-	"github.com/imdario/mergo"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/google/shlex"
 
@@ -37,16 +38,21 @@ var (
 	// All placement options.
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
-	// Error definitions.
-	errUnmarshalBuildOpts  = errors.New("cannot unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts  = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalRangeOpts  = errors.New(`cannot unmarshal "range" field`)
-	errUnmarshalExec       = errors.New("cannot unmarshal exec field into boolean or exec configuration")
-	errUnmarshalEntryPoint = errors.New("cannot unmarshal entrypoint into string or slice of strings")
-	errUnmarshalCommand    = errors.New("cannot unmarshal command into string or slice of strings")
+	validPlatforms        = []string{dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch)}
+	validOperatingSystems = []string{dockerengine.LinuxOS}
+	validArchitectures    = []string{dockerengine.Amd64Arch}
 
-	errInvalidRangeOpts     = errors.New(`cannot specify both "range" and "min"/"max"`)
-	errInvalidAdvancedCount = errors.New(`cannot specify both "spot" and autoscaling fields`)
+	// Error definitions.
+	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
+	errUnmarshalPlatformOpts = errors.New("unable to unmarshal platform field into string or compose-style map")
+	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
+	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
+	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
+
+	errInvalidRangeOpts     = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
+	errInvalidAdvancedCount = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
 	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
@@ -75,44 +81,6 @@ type Image struct {
 	Credentials  *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
 	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
-}
-
-type workloadTransformer struct{}
-
-// Transformer implements customized merge logic for Image field of manifest.
-// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
-// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
-func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ == reflect.TypeOf(Image{}) {
-		return transformImage()
-	}
-	return nil
-}
-
-func transformImage() func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstImage := dst.Interface().(Image)
-		srcImage := src.Interface().(Image)
-
-		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
-		if err != nil {
-			return err
-		}
-
-		// Perform customized merge
-		dstBuild := dst.FieldByName("Build")
-		dstLocation := dst.FieldByName("Location")
-
-		srcBuild := src.FieldByName("Build")
-		srcLocation := src.FieldByName("Location")
-
-		if !srcBuild.IsZero() || !srcLocation.IsZero() {
-			dstBuild.Set(srcBuild)
-			dstLocation.Set(srcLocation)
-		}
-		return nil
-	}
 }
 
 // ImageWithHealthcheck represents a container image with health check.
@@ -443,14 +411,14 @@ type SidecarConfig struct {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU            *int              `yaml:"cpu"`
-	Memory         *int              `yaml:"memory"`
-	Platform       *string           `yaml:"platform,omitempty"`
-	Count          Count             `yaml:"count"`
-	ExecuteCommand ExecuteCommand    `yaml:"exec"`
-	Variables      map[string]string `yaml:"variables"`
-	Secrets        map[string]string `yaml:"secrets"`
-	Storage        *Storage          `yaml:"storage"`
+	CPU            *int                  `yaml:"cpu"`
+	Memory         *int                  `yaml:"memory"`
+	Platform       *PlatformArgsOrString `yaml:"platform,omitempty"`
+	Count          Count                 `yaml:"count"`
+	ExecuteCommand ExecuteCommand        `yaml:"exec"`
+	Variables      map[string]string     `yaml:"variables"`
+	Secrets        map[string]string     `yaml:"secrets"`
+	Storage        *Storage              `yaml:"storage"`
 }
 
 // PublishConfig represents the configurable options for setting up publishers.
@@ -622,6 +590,99 @@ func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
 		return nil
 	}
 	return i.HealthCheck.healthCheckOpts()
+}
+
+// PlatformArgsOrString is a custom type which supports unmarshaling yaml which
+// can either be of type string or type PlatformArgs.
+type PlatformArgsOrString struct {
+	PlatformString *string
+	PlatformArgs   PlatformArgs
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the PlatformArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&p.PlatformArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !p.PlatformArgs.isEmpty() {
+		if !p.PlatformArgs.bothSpecified() {
+			return errors.New(`fields 'osfamily' and 'architecture' must either both be specified or both be empty.`)
+		}
+		if err := validateOS(p.PlatformArgs.OSFamily); err != nil {
+			return fmt.Errorf("validate OS: %w", err)
+		}
+		if err := validateArch(p.PlatformArgs.Arch); err != nil {
+			return fmt.Errorf("validate arch: %w", err)
+		}
+		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
+		p.PlatformString = nil
+		return nil
+	}
+	if err := unmarshal(&p.PlatformString); err != nil {
+		return errUnmarshalPlatformOpts
+	}
+	if err := validatePlatform(p.PlatformString); err != nil {
+		return fmt.Errorf("validate platform: %w", err)
+	}
+	return nil
+}
+
+// PlatformArgs represents the specifics of a target OS.
+type PlatformArgs struct {
+	OSFamily *string `yaml:"osfamily,omitempty"`
+	Arch     *string `yaml:"architecture,omitempty"`
+}
+
+func (p *PlatformArgs) isEmpty() bool {
+	return p.OSFamily == nil && p.Arch == nil
+}
+
+func (p *PlatformArgs) bothSpecified() bool {
+	return (p.OSFamily != nil) && (p.Arch != nil)
+}
+
+func validatePlatform(platform *string) error {
+	if platform == nil {
+		return nil
+	}
+	for _, validPlatform := range validPlatforms {
+		if aws.StringValue(platform) == validPlatform {
+			return nil
+		}
+	}
+	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
+}
+
+func validateOS(os *string) error {
+	if os == nil {
+		return nil
+	}
+	for _, validOS := range validOperatingSystems {
+		if aws.StringValue(os) == validOS {
+			return nil
+		}
+	}
+	return fmt.Errorf("OS %s is invalid; %s: %s", aws.StringValue(os), english.PluralWord(len(validOperatingSystems), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOperatingSystems, "and"))
+}
+
+func validateArch(arch *string) error {
+	if arch == nil {
+		return nil
+	}
+	for _, validArch := range validArchitectures {
+		if aws.StringValue(arch) == validArch {
+			return nil
+		}
+	}
+	return fmt.Errorf("architecture %s is invalid; %s: %s", aws.StringValue(arch), english.PluralWord(len(validArchitectures), "the valid architecture is", "valid architectures are"), english.WordSeries(validArchitectures, "and"))
 }
 
 func requiresBuild(image Image) (bool, error) {

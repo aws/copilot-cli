@@ -311,6 +311,12 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
 {{- end}}
+{{- if not .ImportVPC}}
+  InternetGatewayID:
+    Value: !Ref InternetGateway
+    Export:
+      Name: !Sub ${AWS::StackName}-InternetGatewayID
+{{- end}}
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:

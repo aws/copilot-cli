@@ -292,6 +292,13 @@ func WithFinalMessage(msg string) PromptConfig {
 	}
 }
 
+// WithConfirmFinalMessage sets a short final message for to confirm the user's input.
+func WithConfirmFinalMessage() PromptConfig {
+	return func(p *prompt) {
+		p.FinalMessage = color.Emphasize("Sure?")
+	}
+}
+
 // WithTrueDefault sets the default for a confirm prompt to true.
 func WithTrueDefault() PromptConfig {
 	return func(p *prompt) {

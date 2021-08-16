@@ -22,7 +22,11 @@ http:
     unhealthy_threshold: 2
     interval: 15s
     timeout: 10s
+    grace_period: 60s
 ```
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-path" href="#http-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
+ヘルスチェックリクエスト送信先。
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-success-codes" href="#http-healthcheck-success-codes" class="field">`success_codes`</a> <span class="type">String</span>  
 healthy なターゲットがヘルスチェックに対して返す HTTP ステータスコードを指定します。200 から 499 の範囲で指定可能です。また、"200,202" のように複数の値を指定することや "200-299" のような値の範囲指定も可能です。デフォルト値は 200 です。
@@ -38,6 +42,12 @@ unhealthy なターゲットを healthy とみなすために必要な、連続�
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 ターゲットからの応答がない場合、ヘルスチェックが失敗したとみなすまでの時間を秒単位で指定します。デフォルト値は 5 秒で、設定可能な範囲は、5 〜 300 です。
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-grace-period" href="#http-healthcheck-grace-period" class="field">`grace_period`</a> <span class="type">Duration</span>  
+コンテナ起動時にターゲットグループのヘルスチェックが失敗した場合の、それを無視する時間を指定します。デフォルトは 60 秒です。これは、healthy であることを担保しながら着信を待機するまでに時間がかかるコンテナのデプロイ時の問題を修正したり、迅速な起動が保証されているコンテナのデプロイを高速化したりするのに役立ちます。
+
+<span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
+登録解除時にターゲットがクライアントとの接続を閉じるのを待つ時間を指定します。デフォルトでは 60 秒です。この値を大きくするとターゲットが安全に接続を閉じるための時間を確保できますが、新バージョンのデプロイに必要となる時間が長くなります。範囲は 0 〜 3600 です。
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサからのリクエストを受け取れます。

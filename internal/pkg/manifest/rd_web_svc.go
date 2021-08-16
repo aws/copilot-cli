@@ -4,10 +4,7 @@
 package manifest
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -48,9 +45,9 @@ type RequestDrivenWebServiceProps struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU      *int    `yaml:"cpu"`
-	Memory   *int    `yaml:"memory"`
-	Platform *string `yaml:"platform,omitempty"`
+	CPU      *int                  `yaml:"cpu"`
+	Memory   *int                  `yaml:"memory"`
+	Platform *PlatformArgsOrString `yaml:"platform,omitempty"`
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -95,12 +92,12 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the os/arch for the service.
-func (c *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if err := exec.ValidatePlatform(c.RequestDrivenWebServiceConfig.InstanceConfig.Platform); err != nil {
-		return nil, fmt.Errorf("validate platform: %w", err)
+// TaskPlatform returns the platform for the service.
+func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
+	if s.InstanceConfig.Platform == nil {
+		return nil, nil
 	}
-	return c.RequestDrivenWebServiceConfig.InstanceConfig.Platform, nil
+	return s.InstanceConfig.Platform.PlatformString, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -118,7 +115,7 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 	// Apply overrides to the original service configuration.
 	err := mergo.Merge(&s, RequestDrivenWebService{
 		RequestDrivenWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+	}, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
 
 	if err != nil {
 		return nil, err

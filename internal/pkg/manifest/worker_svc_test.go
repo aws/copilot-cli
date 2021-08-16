@@ -1046,7 +1046,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 
 			original: &mockWorkerServiceWithSubscribeQueueNilOverride,
 		},
-		"with empty subscribe queue overriden by full subscribe queue": {
+		"with empty subscribe queue overridden by full subscribe queue": {
 			svc:       &mockWorkerServiceWithSubscribeQueueEmptyOverride,
 			inEnvName: "test-sub",
 			wanted: &WorkerService{

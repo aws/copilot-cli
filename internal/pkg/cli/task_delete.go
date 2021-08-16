@@ -261,7 +261,8 @@ func (o *deleteTaskOpts) Ask() error {
 
 	deleteConfirmed, err := o.prompt.Confirm(
 		deletePrompt,
-		taskDeleteConfirmHelp)
+		taskDeleteConfirmHelp,
+		prompt.WithConfirmFinalMessage())
 
 	if err != nil {
 		return fmt.Errorf("task delete confirmation prompt: %w", err)
