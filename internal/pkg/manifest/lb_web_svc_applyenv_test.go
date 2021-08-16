@@ -276,42 +276,42 @@ func TestApplyEnv_HTTP_HealthCheck(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		//"FAILED_TEST: composite fields: string is overridden if args is not nil": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.HealthCheck = HealthCheckArgsOrString{
-		//			HealthCheckPath: aws.String("/"),
-		//		}
-		//		svc.Environments["test"].HealthCheck = HealthCheckArgsOrString{
-		//			HealthCheckArgs: HTTPHealthCheckArgs{
-		//				Path: aws.String("/test"),
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.HealthCheck = HealthCheckArgsOrString{
-		//			HealthCheckArgs: HTTPHealthCheckArgs{
-		//				Path: aws.String("/test"),
-		//			},
-		//		}
-		//	},
-		//},
-		//"FAILED_TEST: composite fields: args is overridden if string is not nil": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.HealthCheck = HealthCheckArgsOrString{
-		//			HealthCheckArgs: HTTPHealthCheckArgs{
-		//				Path: aws.String("/test"),
-		//			},
-		//		}
-		//		svc.Environments["test"].HealthCheck = HealthCheckArgsOrString{
-		//			HealthCheckPath: aws.String("/"),
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.HealthCheck = HealthCheckArgsOrString{
-		//			HealthCheckPath: aws.String("/"),
-		//		}
-		//	},
-		//},
+		"FIXED_BUG: composite fields: string is overridden if args is not nil": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.HealthCheck = HealthCheckArgsOrString{
+					HealthCheckPath: aws.String("/"),
+				}
+				svc.Environments["test"].HealthCheck = HealthCheckArgsOrString{
+					HealthCheckArgs: HTTPHealthCheckArgs{
+						Path: aws.String("/test"),
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.HealthCheck = HealthCheckArgsOrString{
+					HealthCheckArgs: HTTPHealthCheckArgs{
+						Path: aws.String("/test"),
+					},
+				}
+			},
+		},
+		"FIXED_BUG: composite fields: args is overridden if string is not nil": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.HealthCheck = HealthCheckArgsOrString{
+					HealthCheckArgs: HTTPHealthCheckArgs{
+						Path: aws.String("/test"),
+					},
+				}
+				svc.Environments["test"].HealthCheck = HealthCheckArgsOrString{
+					HealthCheckPath: aws.String("/"),
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.HealthCheck = HealthCheckArgsOrString{
+					HealthCheckPath: aws.String("/"),
+				}
+			},
+		},
 		"string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.HealthCheck = HealthCheckArgsOrString{

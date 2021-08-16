@@ -23,6 +23,10 @@ type workloadTransformer struct{}
 
 // Transformer returns custom merge logic for workload's fields.
 func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if transform := transformExclusiveType(typ); transform != nil {
+		return transform
+	}
+
 	if transform := transformCompositeType(typ); transform != nil {
 		return transform
 	}
@@ -34,6 +38,7 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 	if transform := transformBasic(typ); transform != nil {
 		return transform
 	}
+
 	return nil
 }
 
@@ -60,6 +65,26 @@ type volumeTransformer struct{}
 func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ == reflect.TypeOf(EFSConfigOrBool{}) {
 		return transformCompositeType(typ)
+	}
+	return transformBasic(typ)
+}
+
+type efsConfigOrBoolTransformer struct{}
+
+// Transformer returns custom merge logic for volume's fields.
+func (t efsConfigOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if transform := transformExclusiveType(typ); transform != nil {
+		return transform
+	}
+	return transformBasic(typ)
+}
+
+type countTransformer struct{}
+
+// Transformer returns custom merge logic for volume's fields.
+func (t countTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if transform := transformExclusiveType(typ); transform != nil {
+		return transform
 	}
 	return transformBasic(typ)
 }
@@ -166,6 +191,10 @@ func transformPStruct() func(dst, src reflect.Value) error {
 			dstElem := dst.Interface().(*Alias)
 			srcElem := src.Elem().Interface().(Alias)
 			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
+		case "Range":
+			dstElem := dst.Interface().(*Range)
+			srcElem := src.Elem().Interface().(Range)
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
 		case "SidecarConfig":
 			dstElem := dst.Interface().(*SidecarConfig)
 			srcElem := src.Elem().Interface().(SidecarConfig)
@@ -207,23 +236,6 @@ func transformPBasic() func(dst, src reflect.Value) error {
 
 func transformCompositeType(originalType reflect.Type) func(dst, src reflect.Value) error {
 	switch originalType {
-	case reflect.TypeOf(Image{}):
-		return func(dst, src reflect.Value) error {
-			// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
-			// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
-
-			// Perform default merge
-			dstImage := dst.Interface().(Image)
-			srcImage := src.Interface().(Image)
-			if err := mergo.Merge(&dstImage, srcImage, opts(imageTransformer{})...); err != nil {
-				return err
-			}
-			dst.Set(reflect.ValueOf(dstImage))
-
-			// Perform customized merge
-			resetComposite(dst, src, "Build", "Location")
-			return nil
-		}
 	case reflect.TypeOf(EntryPointOverride{}), reflect.TypeOf(CommandOverride{}), reflect.TypeOf(Alias{}):
 		return func(dst, src reflect.Value) error {
 			// Perform default merge
@@ -271,13 +283,132 @@ func transformCompositeType(originalType reflect.Type) func(dst, src reflect.Val
 			// Perform default merge
 			dstEFSConfigOrBool := dst.Interface().(EFSConfigOrBool)
 			srcEFSConfigOrBool := src.Interface().(EFSConfigOrBool)
-			if err := mergo.Merge(&dstEFSConfigOrBool, srcEFSConfigOrBool, opts(basicTransformer{})...); err != nil {
+			if err := mergo.Merge(&dstEFSConfigOrBool, srcEFSConfigOrBool, opts(efsConfigOrBoolTransformer{})...); err != nil {
 				return err
 			}
 			dst.Set(reflect.ValueOf(dstEFSConfigOrBool))
 
 			// Perform customized merge
 			resetComposite(dst, src, "Enabled", "Advanced")
+			return nil
+		}
+	case reflect.TypeOf(HealthCheckArgsOrString{}):
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstHC := dst.Interface().(HealthCheckArgsOrString)
+			srcHC := src.Interface().(HealthCheckArgsOrString)
+			if err := mergo.Merge(&dstHC, srcHC, opts(basicTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstHC))
+
+			// Perform customized merge
+			resetComposite(dst, src, "HealthCheckPath", "HealthCheckArgs")
+			return nil
+		}
+	case reflect.TypeOf(Range{}):
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstHC := dst.Interface().(Range)
+			srcHC := src.Interface().(Range)
+			if err := mergo.Merge(&dstHC, srcHC, opts(basicTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstHC))
+
+			// Perform customized merge
+			resetComposite(dst, src, "Value", "RangeConfig")
+			return nil
+		}
+	case reflect.TypeOf(Count{}):
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstC := dst.Interface().(Count)
+			srcC := src.Interface().(Count)
+			if err := mergo.Merge(&dstC, srcC, opts(countTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstC))
+
+			// Perform customized merge
+			resetComposite(dst, src, "Value", "AdvancedCount")
+			return nil
+		}
+	}
+	return nil
+}
+
+func transformExclusiveType(originalType reflect.Type) func(dst, src reflect.Value) error {
+	switch originalType {
+	case reflect.TypeOf(Image{}):
+		return func(dst, src reflect.Value) error {
+			// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+			// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
+
+			// Perform default merge
+			dstImage := dst.Interface().(Image)
+			srcImage := src.Interface().(Image)
+			if err := mergo.Merge(&dstImage, srcImage, opts(imageTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstImage))
+
+			// Perform customized merge
+			resetComposite(dst, src, "Build", "Location")
+			return nil
+		}
+	case reflect.TypeOf(EFSVolumeConfiguration{}):
+		return func(dst, src reflect.Value) error {
+			// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+			// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
+
+			// Perform default merge
+			dstV := dst.Interface().(EFSVolumeConfiguration)
+			srcV := src.Interface().(EFSVolumeConfiguration)
+			if err := mergo.Merge(&dstV, srcV, opts(volumeTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstV))
+
+			// Perform customized merge
+			// TODO: these two conditionals shouldn't return true at the same time if the manifest is not malformed.
+			if !src.FieldByName("UID").IsZero() || !src.FieldByName("GID").IsZero() {
+				dst.FieldByName("FileSystemID").Set(src.FieldByName("FileSystemID"))
+				dst.FieldByName("RootDirectory").Set(src.FieldByName("RootDirectory"))
+				dst.FieldByName("AuthConfig").Set(src.FieldByName("AuthConfig"))
+			} else if !src.FieldByName("FileSystemID").IsZero() ||
+				!src.FieldByName("RootDirectory").IsZero() ||
+				!src.FieldByName("AuthConfig").IsZero() {
+				dst.FieldByName("UID").Set(src.FieldByName("UID"))
+				dst.FieldByName("GID").Set(src.FieldByName("GID"))
+			}
+			return nil
+		}
+	case reflect.TypeOf(AdvancedCount{}):
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstC := dst.Interface().(AdvancedCount)
+			srcC := src.Interface().(AdvancedCount)
+			if err := mergo.Merge(&dstC, srcC, opts(basicTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstC))
+
+			// Perform customized merge
+			// TODO: these two conditionals shouldn't return true at the same time if the manifest is not malformed.
+			if !src.FieldByName("Spot").IsZero() {
+				dst.FieldByName("Range").Set(src.FieldByName("Range"))
+				dst.FieldByName("CPU").Set(src.FieldByName("CPU"))
+				dst.FieldByName("Memory").Set(src.FieldByName("Memory"))
+				dst.FieldByName("Requests").Set(src.FieldByName("Requests"))
+				dst.FieldByName("ResponseTime").Set(src.FieldByName("ResponseTime"))
+			} else if !src.FieldByName("Range").IsZero() ||
+				!src.FieldByName("CPU").IsZero() ||
+				!src.FieldByName("Memory").IsZero() ||
+				!src.FieldByName("Requests").IsZero() ||
+				!src.FieldByName("ResponseTime").IsZero() {
+				dst.FieldByName("Spot").Set(src.FieldByName("Spot"))
+			}
 			return nil
 		}
 	}
