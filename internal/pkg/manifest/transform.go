@@ -38,6 +38,10 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 	if typ == reflect.TypeOf(Alias{}) {
 		return transformStringSliceOrString(reflect.TypeOf(Alias{}))
 	}
+	//
+	//if typ == reflect.TypeOf(PlatformArgsOrString{}) {
+	//	return transformPlatformArgsOrString()
+	//}
 
 	if typ.String() == "map[string]manifest.Volume" {
 		return transformMapStringToVolume()
@@ -219,6 +223,22 @@ func transformBuildArgsOrString() func(dst, src reflect.Value) error {
 
 		// Perform customized merge
 		resetComposite(dst, src, "BuildString", "BuildArgs")
+		return nil
+	}
+}
+
+func transformPlatformArgsOrString() func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		// Perform default merge
+		dstPlatformArgsOrString := dst.Interface().(PlatformArgsOrString)
+		srcPlatformArgsOrString := src.Interface().(PlatformArgsOrString)
+		if err := mergo.Merge(&dstPlatformArgsOrString, srcPlatformArgsOrString, opts(basicTransformer{})...); err != nil {
+			return err
+		}
+		dst.Set(reflect.ValueOf(dstPlatformArgsOrString))
+
+		// Perform customized merge
+		resetComposite(dst, src, "PlatformString", "PlatformArgs")
 		return nil
 	}
 }

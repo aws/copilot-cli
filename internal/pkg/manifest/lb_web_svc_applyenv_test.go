@@ -888,21 +888,21 @@ func TestApplyEnv_HTTP_Alias(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED TEST: composite fields: string is overridden if string slice is not nil": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Alias = &Alias{
-		//			String: aws.String("mock alias"),
-		//		}
-		//		svc.Environments["test"].Alias = &Alias{
-		//			StringSlice: []string{"mock", "alias_test", "test"},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Alias = &Alias{
-		//			StringSlice: []string{"mock", "alias_test", "test"},
-		//		}
-		//	},
-		//},
+		"FIXED_BUG: composite fields: string is overridden if string slice is not nil": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Alias = &Alias{
+					String: aws.String("mock alias"),
+				}
+				svc.Environments["test"].Alias = &Alias{
+					StringSlice: []string{"mock", "alias_test", "test"},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Alias = &Alias{
+					StringSlice: []string{"mock", "alias_test", "test"},
+				}
+			},
+		},
 		"string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Alias = &Alias{
