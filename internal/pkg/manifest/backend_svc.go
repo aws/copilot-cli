@@ -39,6 +39,7 @@ type BackendServiceConfig struct {
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       *NetworkConfig            `yaml:"network"`
 	Publish       *PublishConfig            `yaml:"publish"`
+	OverrideRule  `yaml:",inline"`
 }
 
 // NewBackendService applies the props to a default backend service configuration with

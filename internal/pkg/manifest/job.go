@@ -45,6 +45,7 @@ type ScheduledJobConfig struct {
 	JobFailureHandlerConfig `yaml:",inline"`
 	Network                 *NetworkConfig `yaml:"network"`
 	Publish                 *PublishConfig `yaml:"publish"`
+	OverrideRule            `yaml:",inline"`
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.

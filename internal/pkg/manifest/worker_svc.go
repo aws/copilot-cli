@@ -40,6 +40,7 @@ type WorkerServiceConfig struct {
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Subscribe     *SubscribeConfig          `yaml:"subscribe"`
 	Network       *NetworkConfig            `yaml:"network"`
+	OverrideRule  `yaml:",inline"`
 }
 
 // WorkerServiceProps represents the configuration needed to create a worker service.

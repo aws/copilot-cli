@@ -57,6 +57,8 @@ logging:
   secretOptions:
     LOG_TOKEN: LOG_TOKEN
   configFilePath: /extra.conf
+taskdef_override:
+  - "ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName"
 environments:
   test:
     count: 3
@@ -139,6 +141,11 @@ environments:
 						Network: &NetworkConfig{
 							VPC: &vpcConfig{
 								Placement: stringP("public"),
+							},
+						},
+						OverrideRule: OverrideRule{
+							TaskDefOverrideRules: []TaskDefinitionOverrideRule{
+								"ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName",
 							},
 						},
 					},

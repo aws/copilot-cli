@@ -53,6 +53,7 @@ type LoadBalancedWebServiceConfig struct {
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
 	Publish       *PublishConfig            `yaml:"publish"`
+	OverrideRule  `yaml:",inline"`
 }
 
 // RoutingRule holds the path to route requests to the service.
