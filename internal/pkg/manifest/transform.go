@@ -49,7 +49,7 @@ type imageTransformer struct{}
 // Transformer returns custom merge logic for volume's fields.
 func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ == reflect.TypeOf(BuildArgsOrString{}) {
-		return transformBuildArgsOrString()
+		return transformCompositeType(typ)
 	}
 	return transformBasic(typ)
 }
@@ -59,16 +59,8 @@ type volumeTransformer struct{}
 // Transformer returns custom merge logic for volume's fields.
 func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ == reflect.TypeOf(EFSConfigOrBool{}) {
-		return transformEFSConfigOrBool()
+		return transformCompositeType(typ)
 	}
-	return transformBasic(typ)
-}
-
-func (t workloadTransformer) transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
-	return transformBasic(typ)
-}
-
-func (t volumeTransformer) transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
 	return transformBasic(typ)
 }
 
@@ -124,22 +116,6 @@ func transformMapStringToVolume() func(dst, src reflect.Value) error {
 			// Set merged value for the key
 			dst.SetMapIndex(key, reflect.ValueOf(dstV))
 		}
-		return nil
-	}
-}
-
-func transformEFSConfigOrBool() func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstEFSConfigOrBool := dst.Interface().(EFSConfigOrBool)
-		srcEFSConfigOrBool := src.Interface().(EFSConfigOrBool)
-		if err := mergo.Merge(&dstEFSConfigOrBool, srcEFSConfigOrBool, opts(basicTransformer{})...); err != nil {
-			return err
-		}
-		dst.Set(reflect.ValueOf(dstEFSConfigOrBool))
-
-		// Perform customized merge
-		resetComposite(dst, src, "Enabled", "Advanced")
 		return nil
 	}
 }
@@ -229,22 +205,6 @@ func transformPBasic() func(dst, src reflect.Value) error {
 	}
 }
 
-func transformBuildArgsOrString() func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstBuildArgsOrString := dst.Interface().(BuildArgsOrString)
-		srcBuildArgsOrString := src.Interface().(BuildArgsOrString)
-		if err := mergo.Merge(&dstBuildArgsOrString, srcBuildArgsOrString, opts(basicTransformer{})...); err != nil {
-			return err
-		}
-		dst.Set(reflect.ValueOf(dstBuildArgsOrString))
-
-		// Perform customized merge
-		resetComposite(dst, src, "BuildString", "BuildArgs")
-		return nil
-	}
-}
-
 func transformCompositeType(originalType reflect.Type) func(dst, src reflect.Value) error {
 	switch originalType {
 	case reflect.TypeOf(Image{}):
@@ -265,7 +225,19 @@ func transformCompositeType(originalType reflect.Type) func(dst, src reflect.Val
 			return nil
 		}
 	case reflect.TypeOf(EntryPointOverride{}), reflect.TypeOf(CommandOverride{}), reflect.TypeOf(Alias{}):
-		return transformStringSliceOrString(originalType)
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstStruct := dst.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
+			srcStruct := src.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
+			if err := mergo.Merge(&dstStruct, srcStruct, opts(basicTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstStruct).Convert(originalType))
+
+			// Perform customized merge
+			resetComposite(dst, src, "String", "StringSlice")
+			return nil
+		}
 	case reflect.TypeOf(PlatformArgsOrString{}):
 		return func(dst, src reflect.Value) error {
 			// Perform default merge
@@ -280,24 +252,36 @@ func transformCompositeType(originalType reflect.Type) func(dst, src reflect.Val
 			resetComposite(dst, src, "PlatformString", "PlatformArgs")
 			return nil
 		}
+	case reflect.TypeOf(BuildArgsOrString{}):
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstBuildArgsOrString := dst.Interface().(BuildArgsOrString)
+			srcBuildArgsOrString := src.Interface().(BuildArgsOrString)
+			if err := mergo.Merge(&dstBuildArgsOrString, srcBuildArgsOrString, opts(basicTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstBuildArgsOrString))
+
+			// Perform customized merge
+			resetComposite(dst, src, "BuildString", "BuildArgs")
+			return nil
+		}
+	case reflect.TypeOf(EFSConfigOrBool{}):
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstEFSConfigOrBool := dst.Interface().(EFSConfigOrBool)
+			srcEFSConfigOrBool := src.Interface().(EFSConfigOrBool)
+			if err := mergo.Merge(&dstEFSConfigOrBool, srcEFSConfigOrBool, opts(basicTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstEFSConfigOrBool))
+
+			// Perform customized merge
+			resetComposite(dst, src, "Enabled", "Advanced")
+			return nil
+		}
 	}
 	return nil
-}
-
-func transformStringSliceOrString(originalType reflect.Type) func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstStruct := dst.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
-		srcStruct := src.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
-		if err := mergo.Merge(&dstStruct, srcStruct, opts(basicTransformer{})...); err != nil {
-			return err
-		}
-		dst.Set(reflect.ValueOf(dstStruct).Convert(originalType))
-
-		// Perform customized merge
-		resetComposite(dst, src, "String", "StringSlice")
-		return nil
-	}
 }
 
 func opts(transformers mergo.Transformers) []func(*mergo.Config) {
