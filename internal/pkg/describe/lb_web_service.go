@@ -84,15 +84,8 @@ type LBWebServiceDescriber struct {
 	svcParams map[string]string
 }
 
-// NewLBWebServiceConfig contains fields that initiates WebServiceDescriber struct.
-type NewLBWebServiceConfig struct {
-	NewServiceConfig
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
-}
-
 // NewLBWebServiceDescriber instantiates a load balanced service describer.
-func NewLBWebServiceDescriber(opt NewLBWebServiceConfig) (*LBWebServiceDescriber, error) {
+func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, error) {
 	describer := &LBWebServiceDescriber{
 		app:             opt.App,
 		svc:             opt.Svc,

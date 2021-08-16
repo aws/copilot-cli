@@ -64,42 +64,34 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		}
 		switch svc.Type {
 		case manifest.LoadBalancedWebServiceType:
-			d, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
-				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.appName,
-					Svc:         opts.svcName,
-					ConfigStore: ssmStore,
-				},
+			d, err = describe.NewLBWebServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
 		case manifest.RequestDrivenWebServiceType:
-			d, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
-				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.appName,
-					Svc:         opts.svcName,
-					ConfigStore: ssmStore,
-				},
+			d, err = describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
 		case manifest.BackendServiceType:
-			d, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
-				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.appName,
-					Svc:         opts.svcName,
-					ConfigStore: ssmStore,
-				},
+			d, err = describe.NewBackendServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
 		case manifest.WorkerServiceType:
-			d, err = describe.NewWorkerServiceDescriber(describe.NewWorkerServiceConfig{
-				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.appName,
-					Svc:         opts.svcName,
-					ConfigStore: ssmStore,
-				},
+			d, err = describe.NewWorkerServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})

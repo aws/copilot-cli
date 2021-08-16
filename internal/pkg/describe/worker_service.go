@@ -26,15 +26,8 @@ type WorkerServiceDescriber struct {
 	initServiceDescriber func(string) error
 }
 
-// NewWorkerServiceConfig contains fields that initiates WorkerServiceDescriber struct.
-type NewWorkerServiceConfig struct {
-	NewServiceConfig
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
-}
-
 // NewWorkerServiceDescriber instantiates a worker service describer.
-func NewWorkerServiceDescriber(opt NewWorkerServiceConfig) (*WorkerServiceDescriber, error) {
+func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, error) {
 	describer := &WorkerServiceDescriber{
 		app:             opt.App,
 		svc:             opt.Svc,
