@@ -1108,45 +1108,45 @@ func TestApplyEnv_Platform(t *testing.T) {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		//"FIXED_BUG: composite fields: platform string is overridden if platform args is not nil": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Platform = &PlatformArgsOrString{
-		//			PlatformString: aws.String("mockPlatform"),
-		//		}
-		//		svc.Environments["test"].Platform = &PlatformArgsOrString{
-		//			PlatformArgs: PlatformArgs{
-		//				OSFamily: aws.String("mock"),
-		//				Arch:     aws.String("platformTest"),
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Platform = &PlatformArgsOrString{
-		//			PlatformArgs: PlatformArgs{
-		//				OSFamily: aws.String("mock"),
-		//				Arch:     aws.String("platformTest"),
-		//			},
-		//		}
-		//	},
-		//},
-		//"FIXED_BUG: composite fields: platform args is overridden if platform string is not nil": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Platform = &PlatformArgsOrString{
-		//			PlatformArgs: PlatformArgs{
-		//				OSFamily: aws.String("mock"),
-		//				Arch:     aws.String("platformTest"),
-		//			},
-		//		}
-		//		svc.Environments["test"].Platform = &PlatformArgsOrString{
-		//			PlatformString: aws.String("mockPlatform"),
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Platform = &PlatformArgsOrString{
-		//			PlatformString: aws.String("mockPlatform"),
-		//		}
-		//	},
-		//},
+		"FIXED_BUG: composite fields: platform string is overridden if platform args is not nil": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatform"),
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mock"),
+						Arch:     aws.String("platformTest"),
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mock"),
+						Arch:     aws.String("platformTest"),
+					},
+				}
+			},
+		},
+		"FIXED_BUG: composite fields: platform args is overridden if platform string is not nil": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("mock"),
+						Arch:     aws.String("platformTest"),
+					},
+				}
+				svc.Environments["test"].Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatform"),
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Platform = &PlatformArgsOrString{
+					PlatformString: aws.String("mockPlatform"),
+				}
+			},
+		},
 		"platform string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Platform = &PlatformArgsOrString{

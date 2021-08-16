@@ -38,10 +38,10 @@ func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect
 	if typ == reflect.TypeOf(Alias{}) {
 		return transformStringSliceOrString(reflect.TypeOf(Alias{}))
 	}
-	//
-	//if typ == reflect.TypeOf(PlatformArgsOrString{}) {
-	//	return transformPlatformArgsOrString()
-	//}
+
+	if typ == reflect.TypeOf(PlatformArgsOrString{}) {
+		return transformPlatformArgsOrString()
+	}
 
 	if typ.String() == "map[string]manifest.Volume" {
 		return transformMapStringToVolume()
