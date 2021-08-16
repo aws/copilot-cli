@@ -23,24 +23,8 @@ type workloadTransformer struct{}
 
 // Transformer returns custom merge logic for workload's fields.
 func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ == reflect.TypeOf(Image{}) {
-		return transformImage()
-	}
-
-	if typ == reflect.TypeOf(EntryPointOverride{}) {
-		return transformStringSliceOrString(reflect.TypeOf(EntryPointOverride{}))
-	}
-
-	if typ == reflect.TypeOf(CommandOverride{}) {
-		return transformStringSliceOrString(reflect.TypeOf(CommandOverride{}))
-	}
-
-	if typ == reflect.TypeOf(Alias{}) {
-		return transformStringSliceOrString(reflect.TypeOf(Alias{}))
-	}
-
-	if typ == reflect.TypeOf(PlatformArgsOrString{}) {
-		return transformPlatformArgsOrString()
+	if transform := transformCompositeType(typ); transform != nil {
+		return transform
 	}
 
 	if typ.String() == "map[string]manifest.Volume" {
@@ -227,20 +211,43 @@ func transformBuildArgsOrString() func(dst, src reflect.Value) error {
 	}
 }
 
-func transformPlatformArgsOrString() func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstPlatformArgsOrString := dst.Interface().(PlatformArgsOrString)
-		srcPlatformArgsOrString := src.Interface().(PlatformArgsOrString)
-		if err := mergo.Merge(&dstPlatformArgsOrString, srcPlatformArgsOrString, opts(basicTransformer{})...); err != nil {
-			return err
-		}
-		dst.Set(reflect.ValueOf(dstPlatformArgsOrString))
+func transformCompositeType(originalType reflect.Type) func(dst, src reflect.Value) error {
+	switch originalType {
+	case reflect.TypeOf(Image{}):
+		return func(dst, src reflect.Value) error {
+			// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+			// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
 
-		// Perform customized merge
-		resetComposite(dst, src, "PlatformString", "PlatformArgs")
-		return nil
+			// Perform default merge
+			dstImage := dst.Interface().(Image)
+			srcImage := src.Interface().(Image)
+			if err := mergo.Merge(&dstImage, srcImage, opts(imageTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstImage))
+
+			// Perform customized merge
+			resetComposite(dst, src, "Build", "Location")
+			return nil
+		}
+	case reflect.TypeOf(EntryPointOverride{}), reflect.TypeOf(CommandOverride{}), reflect.TypeOf(Alias{}):
+		return transformStringSliceOrString(originalType)
+	case reflect.TypeOf(PlatformArgsOrString{}):
+		return func(dst, src reflect.Value) error {
+			// Perform default merge
+			dstPlatformArgsOrString := dst.Interface().(PlatformArgsOrString)
+			srcPlatformArgsOrString := src.Interface().(PlatformArgsOrString)
+			if err := mergo.Merge(&dstPlatformArgsOrString, srcPlatformArgsOrString, opts(basicTransformer{})...); err != nil {
+				return err
+			}
+			dst.Set(reflect.ValueOf(dstPlatformArgsOrString))
+
+			// Perform customized merge
+			resetComposite(dst, src, "PlatformString", "PlatformArgs")
+			return nil
+		}
 	}
+	return nil
 }
 
 func transformStringSliceOrString(originalType reflect.Type) func(dst, src reflect.Value) error {
@@ -255,25 +262,6 @@ func transformStringSliceOrString(originalType reflect.Type) func(dst, src refle
 
 		// Perform customized merge
 		resetComposite(dst, src, "String", "StringSlice")
-		return nil
-	}
-}
-
-// transformImage implements customized merge logic for Image field of manifest.
-// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
-// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
-func transformImage() func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstImage := dst.Interface().(Image)
-		srcImage := src.Interface().(Image)
-		if err := mergo.Merge(&dstImage, srcImage, opts(imageTransformer{})...); err != nil {
-			return err
-		}
-		dst.Set(reflect.ValueOf(dstImage))
-
-		// Perform customized merge
-		resetComposite(dst, src, "Build", "Location")
 		return nil
 	}
 }
