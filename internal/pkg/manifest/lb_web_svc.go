@@ -172,7 +172,7 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.
-func (t *TaskConfig) IsWindows() bool {
+func (t TaskConfig) IsWindows() bool {
 	if t.Platform == nil {
 		return false
 	}
