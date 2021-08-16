@@ -167,6 +167,9 @@ type NewServiceConfig struct {
 	Env         string
 	Svc         string
 	ConfigStore ConfigStoreSvc
+
+	EnableResources bool
+	DeployStore     DeployedEnvServicesLister
 }
 
 func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {

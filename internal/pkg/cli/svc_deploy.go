@@ -723,28 +723,22 @@ func (o *deploySvcOpts) showSvcURI() error {
 	var err error
 	switch o.targetSvc.Type {
 	case manifest.LoadBalancedWebServiceType:
-		ecsSvcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
-			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.appName,
-				Svc:         o.name,
-				ConfigStore: o.store,
-			},
+		ecsSvcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewServiceConfig{
+			App:         o.appName,
+			Svc:         o.name,
+			ConfigStore: o.store,
 		})
 	case manifest.RequestDrivenWebServiceType:
-		ecsSvcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
-			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.appName,
-				Svc:         o.name,
-				ConfigStore: o.store,
-			},
+		ecsSvcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
+			App:         o.appName,
+			Svc:         o.name,
+			ConfigStore: o.store,
 		})
 	case manifest.BackendServiceType:
-		ecsSvcDescriber, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
-			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.appName,
-				Svc:         o.name,
-				ConfigStore: o.store,
-			},
+		ecsSvcDescriber, err = describe.NewBackendServiceDescriber(describe.NewServiceConfig{
+			App:         o.appName,
+			Svc:         o.name,
+			ConfigStore: o.store,
 		})
 	default:
 		err = errors.New("unexpected service type")
