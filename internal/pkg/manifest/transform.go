@@ -54,6 +54,24 @@ func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 	return transformBasic(typ)
 }
 
+type volumeTransformer struct{}
+
+// Transformer returns custom merge logic for volume's fields.
+func (t volumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ == reflect.TypeOf(EFSConfigOrBool{}) {
+		return transformEFSConfigOrBool()
+	}
+	return transformBasic(typ)
+}
+
+func (t workloadTransformer) transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
+	return transformBasic(typ)
+}
+
+func (t volumeTransformer) transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
+	return transformBasic(typ)
+}
+
 // transformBasic implements customized merge logic for manifest fields that are number, string, bool, array, and duration.
 func transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ.Kind() == reflect.Slice {
@@ -99,13 +117,29 @@ func transformMapStringToVolume() func(dst, src reflect.Value) error {
 			// Perform default merge
 			dstV := dstElement.Interface().(Volume)
 			srcV := srcElement.Interface().(Volume)
-			if err := mergo.Merge(&dstV, srcV, opts(basicTransformer{})...); err != nil {
+			if err := mergo.Merge(&dstV, srcV, opts(volumeTransformer{})...); err != nil {
 				return err
 			}
 
 			// Set merged value for the key
 			dst.SetMapIndex(key, reflect.ValueOf(dstV))
 		}
+		return nil
+	}
+}
+
+func transformEFSConfigOrBool() func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		// Perform default merge
+		dstEFSConfigOrBool := dst.Interface().(EFSConfigOrBool)
+		srcEFSConfigOrBool := src.Interface().(EFSConfigOrBool)
+		if err := mergo.Merge(&dstEFSConfigOrBool, srcEFSConfigOrBool, opts(basicTransformer{})...); err != nil {
+			return err
+		}
+		dst.Set(reflect.ValueOf(dstEFSConfigOrBool))
+
+		// Perform customized merge
+		resetComposite(dst, src, "Enabled", "Advanced")
 		return nil
 	}
 }
@@ -171,7 +205,7 @@ func transformPStruct() func(dst, src reflect.Value) error {
 		case "EFSConfigOrBool":
 			dstElem := dst.Interface().(*EFSConfigOrBool)
 			srcElem := src.Elem().Interface().(EFSConfigOrBool)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
+			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(volumeTransformer{}))
 		case "AuthorizationConfig":
 			dstElem := dst.Interface().(*AuthorizationConfig)
 			srcElem := src.Elem().Interface().(AuthorizationConfig)
