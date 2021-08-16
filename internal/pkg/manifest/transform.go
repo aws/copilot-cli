@@ -111,8 +111,7 @@ func transformMapStringToVolume() func(dst, src reflect.Value) error {
 			// Perform default merge
 			dstV := dstElement.Interface().(Volume)
 			srcV := srcElement.Interface().(Volume)
-			err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
-			if err != nil {
+			if err := mergo.Merge(&dstV, srcV, opts(basicTransformer{})...); err != nil {
 				return err
 			}
 
@@ -213,27 +212,13 @@ func transformBuildArgsOrString() func(dst, src reflect.Value) error {
 		// Perform default merge
 		dstBuildArgsOrString := dst.Interface().(BuildArgsOrString)
 		srcBuildArgsOrString := src.Interface().(BuildArgsOrString)
-
-		err := mergo.Merge(&dstBuildArgsOrString, srcBuildArgsOrString, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
-		if err != nil {
+		if err := mergo.Merge(&dstBuildArgsOrString, srcBuildArgsOrString, opts(basicTransformer{})...); err != nil {
 			return err
 		}
 		dst.Set(reflect.ValueOf(dstBuildArgsOrString))
 
 		// Perform customized merge
-		dstString := dst.FieldByName("BuildString")
-		dstArgs := dst.FieldByName("BuildArgs")
-
-		srcString := src.FieldByName("BuildString")
-		srcArgs := src.FieldByName("BuildArgs")
-
-		//` `srcArgs.IsZero()` and `srcString.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
-		if !srcArgs.IsZero() {
-			dstString.Set(srcString)
-		} else if !srcString.IsNil() {
-			dstArgs.Set(srcArgs)
-		}
-
+		resetComposite(dst, src, "BuildString", "BuildArgs")
 		return nil
 	}
 }
@@ -243,27 +228,13 @@ func transformStringSliceOrString(originalType reflect.Type) func(dst, src refle
 		// Perform default merge
 		dstStruct := dst.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
 		srcStruct := src.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
-
-		err := mergo.Merge(&dstStruct, srcStruct, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
-		if err != nil {
+		if err := mergo.Merge(&dstStruct, srcStruct, opts(basicTransformer{})...); err != nil {
 			return err
 		}
 		dst.Set(reflect.ValueOf(dstStruct).Convert(originalType))
 
 		// Perform customized merge
-		dstString := dst.FieldByName("String")
-		dstStringSlice := dst.FieldByName("StringSlice")
-
-		srcString := src.FieldByName("String")
-		srcStringSlice := src.FieldByName("StringSlice")
-
-		//` `srcArgs.IsZero()` and `srcString.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
-		if !srcStringSlice.IsZero() {
-			dstString.Set(srcString)
-		} else if !srcString.IsNil() {
-			dstStringSlice.Set(srcStringSlice)
-		}
-
+		resetComposite(dst, src, "String", "StringSlice")
 		return nil
 	}
 }
@@ -276,27 +247,35 @@ func transformImage() func(dst, src reflect.Value) error {
 		// Perform default merge
 		dstImage := dst.Interface().(Image)
 		srcImage := src.Interface().(Image)
-
-		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithTransformers(imageTransformer{}))
-		if err != nil {
+		if err := mergo.Merge(&dstImage, srcImage, opts(imageTransformer{})...); err != nil {
 			return err
 		}
 		dst.Set(reflect.ValueOf(dstImage))
 
 		// Perform customized merge
-		dstBuild := dst.FieldByName("Build")
-		dstLocation := dst.FieldByName("Location")
-
-		srcBuild := src.FieldByName("Build")
-		srcLocation := src.FieldByName("Location")
-
-		//` `srcBuild.IsZero()` and `srcLocation.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
-		if !srcBuild.IsZero() {
-			dstLocation.Set(srcLocation)
-		} else if !srcLocation.IsZero() {
-			dstBuild.Set(srcBuild)
-		}
-
+		resetComposite(dst, src, "Build", "Location")
 		return nil
+	}
+}
+
+func opts(transformers mergo.Transformers) []func(*mergo.Config) {
+	return []func(*mergo.Config){
+		mergo.WithOverride,
+		mergo.WithTransformers(transformers),
+	}
+}
+
+func resetComposite(dst, src reflect.Value, fieldA, fieldB string) {
+	dstA := dst.FieldByName(fieldA)
+	dstB := dst.FieldByName(fieldB)
+
+	srcA := src.FieldByName(fieldA)
+	srcB := src.FieldByName(fieldB)
+
+	// TODO: `srcArgs.IsZero()` and `srcString.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
+	if !srcB.IsZero() {
+		dstA.Set(srcA)
+	} else if !srcA.IsZero() {
+		dstB.Set(srcB)
 	}
 }
