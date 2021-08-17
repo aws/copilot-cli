@@ -123,19 +123,6 @@ func (t workloadTransformer) transformExclusiveTypes(originalType reflect.Type) 
 		et.resetExclusiveFields = func(dst, src reflect.Value) error {
 			return resetExclusiveFields(dst, src, []string{"Build"}, []string{"Location"})
 		}
-	//case reflect.TypeOf(AdvancedCount{}):
-	//	et.merge = func(dst, src reflect.Value) error {
-	//		dstC := dst.Interface().(AdvancedCount)
-	//		srcC := src.Interface().(AdvancedCount)
-	//		if err := mergo.Merge(&dstC, srcC, opts(basicTransformer{})...); err != nil {
-	//			return err
-	//		}
-	//		dst.Set(reflect.ValueOf(dstC))
-	//		return nil
-	//	}
-	//	et.resetExclusiveFields = func(dst, src reflect.Value) error {
-	//		return resetExclusiveFields(dst, src, []string{"Spot"}, []string{"Range", "CPU", "Memory", "Requests", "ResponseTime"})
-	//	}
 	default:
 		return nil
 	}
