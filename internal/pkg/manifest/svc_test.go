@@ -25,6 +25,9 @@ func TestUnmarshalSvc(t *testing.T) {
 version: 1.0
 name: frontend
 type: "Load Balanced Web Service"
+taskdef_overrides:
+  - path: "ContainerDefinitions[0].Ulimits[-].HardLimit"
+    value: !Ref ParamName
 image:
   location: foo/bar
   credentials: some arn
@@ -57,8 +60,6 @@ logging:
   secretOptions:
     LOG_TOKEN: LOG_TOKEN
   configFilePath: /extra.conf
-taskdef_override:
-  - "ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName"
 environments:
   test:
     count: 3
@@ -143,9 +144,17 @@ environments:
 								Placement: stringP("public"),
 							},
 						},
-						OverrideRule: OverrideRule{
-							TaskDefOverrideRules: []TaskDefinitionOverrideRule{
-								"ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName",
+						TaskDefOverrides: []OverrideRule{
+							{
+								Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
+								Value: yaml.Node{
+									Kind:   8,
+									Style:  1,
+									Tag:    "!Ref",
+									Value:  "ParamName",
+									Line:   7,
+									Column: 12,
+								},
 							},
 						},
 					},

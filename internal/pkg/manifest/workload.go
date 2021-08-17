@@ -9,11 +9,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/template/override"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -78,27 +76,8 @@ type Workload struct {
 
 // OverrideRule holds the manifest overriding rule for CloudFormation template.
 type OverrideRule struct {
-	TaskDefOverrideRules []TaskDefinitionOverrideRule `yaml:"taskdef_override"`
-}
-
-// TaskDefinitionOverrideRule holds the overriding rule for ECS Task Definition.
-type TaskDefinitionOverrideRule string
-
-// Parse parses the manifest ECS Task Definition overriding rule into override.Rule.
-func (r TaskDefinitionOverrideRule) Parse() (*override.Rule, error) {
-	// Make sure the overriding rule is in a map format.
-	// For example: "ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName"
-	if len(strings.Split(string(r), ":")) != 2 {
-		return nil, fmt.Errorf("invalid overriding rule %s", r)
-	}
-	var node yaml.Node
-	if err := yaml.Unmarshal([]byte(r), &node); err != nil {
-		return nil, fmt.Errorf("unmarshal task definition overriding rule %s: %w", r, err)
-	}
-	return &override.Rule{
-		Path:  node.Content[0].Content[0].Value,
-		Value: node.Content[0].Content[1],
-	}, nil
+	Path  string    `yaml:"path"`
+	Value yaml.Node `yaml:"value"`
 }
 
 // Image represents the workload's container image.

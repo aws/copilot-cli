@@ -5,60 +5,13 @@ package manifest
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
-
-func TestTaskDefinitionOverrideRule_Parse(t *testing.T) {
-	testCases := map[string]struct {
-		inOverrideRule string
-
-		wantedRule  *override.Rule
-		wantedError error
-	}{
-		"error if invalid override rule": {
-			inOverrideRule: "badRule",
-			wantedError:    fmt.Errorf("invalid overriding rule badRule"),
-		},
-		"error if fail to unmarshal override rule": {
-			inOverrideRule: ": foo",
-			wantedError:    fmt.Errorf("unmarshal task definition overriding rule : foo: yaml: did not find expected key"),
-		},
-		"success": {
-			inOverrideRule: "ContainerDefinitions[0].Ulimits[-].HardLimit: !Ref ParamName",
-			wantedRule: &override.Rule{
-				Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
-				Value: &yaml.Node{
-					Kind:   8,
-					Style:  1,
-					Tag:    "!Ref",
-					Value:  "ParamName",
-					Line:   1,
-					Column: 47,
-				},
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			r := TaskDefinitionOverrideRule(tc.inOverrideRule)
-			got, err := r.Parse()
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedRule, got)
-			}
-		})
-	}
-}
 
 func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {

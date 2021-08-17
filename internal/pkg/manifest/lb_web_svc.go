@@ -45,15 +45,15 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	ImageConfig   ImageWithPortAndHealthcheck `yaml:"image,flow"`
-	ImageOverride `yaml:",inline"`
-	RoutingRule   `yaml:"http,flow"`
-	TaskConfig    `yaml:",inline"`
-	*Logging      `yaml:"logging,flow"`
-	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Network       *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
-	Publish       *PublishConfig            `yaml:"publish"`
-	OverrideRule  `yaml:",inline"`
+	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
+	ImageOverride    `yaml:",inline"`
+	RoutingRule      `yaml:"http,flow"`
+	TaskConfig       `yaml:",inline"`
+	*Logging         `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
+	Network          *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
+	Publish          *PublishConfig            `yaml:"publish"`
+	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
 // RoutingRule holds the path to route requests to the service.
