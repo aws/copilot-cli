@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -713,10 +714,12 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(mockError)
-				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError))
+				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError,
+					color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", mockSvcName, mockEnvName))))
 			},
 			wantErr: fmt.Errorf("force an update for service mockSvc: some error"),
 		},

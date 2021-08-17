@@ -149,6 +149,8 @@ func (e *ECS) waitUntilServiceStable(svc *Service) error {
 	for {
 		if len(svc.Deployments) == stableServiceDeploymentNum &&
 			aws.Int64Value(svc.DesiredCount) == aws.Int64Value(svc.RunningCount) {
+			// We can safely assume the service has been successfully updated, because before
+			// the circuit breaker is triggered to use the previous deployment, it should have timed out already.
 			return nil
 		}
 		if tryNum >= e.maxForceDeploymentTries {

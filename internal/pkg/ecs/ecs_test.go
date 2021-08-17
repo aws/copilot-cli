@@ -348,7 +348,7 @@ func TestClient_ForceUpdateService(t *testing.T) {
 
 		wantedError error
 	}{
-		"return error if failed to get service tasks": {
+		"return error if failed to update service": {
 			setupMocks: func(m clientMocks) {
 				gomock.InOrder(
 					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
