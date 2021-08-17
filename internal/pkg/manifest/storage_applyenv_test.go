@@ -694,7 +694,6 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
-									UID:           aws.Uint32(42),
 								},
 							},
 						},
@@ -709,7 +708,6 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
-									UID:           aws.Uint32(42),
 								},
 							},
 						},
