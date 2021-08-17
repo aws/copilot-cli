@@ -74,6 +74,12 @@ type Workload struct {
 	Type *string `yaml:"type"` // must be one of the supported manifest types.
 }
 
+// OverrideRule holds the manifest overriding rule for CloudFormation template.
+type OverrideRule struct {
+	Path  string    `yaml:"path"`
+	Value yaml.Node `yaml:"value"`
+}
+
 // Image represents the workload's container image.
 type Image struct {
 	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
