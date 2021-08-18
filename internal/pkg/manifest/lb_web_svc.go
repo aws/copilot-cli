@@ -7,6 +7,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -166,7 +168,15 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform == nil {
 		return nil, nil
 	}
-	return t.Platform.PlatformString, nil
+	return aws.String(dockerengine.PlatformString(t.Platform.OS(), t.Platform.Arch())), nil
+}
+
+// IsWindows returns whether or not the service is building with a Windows OS.
+func (t TaskConfig) IsWindows() bool {
+	if t.Platform == nil {
+		return false
+	}
+	return isWindowsPlatform(t.Platform)
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -201,4 +211,24 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (s *LoadBalancedWebService) windowsCompatibility() error {
+	if !s.IsWindows() {
+		return nil
+	}
+	// Exec is not supported.
+	if aws.BoolValue(s.ExecuteCommand.Enable) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported.
+	if s.Storage != nil {
+		for _, volume := range s.Storage.Volumes {
+			if !volume.EmptyVolume() {
+				return errors.New(`'EFS' is not supported when deploying a Windows container`)
+			}
+		}
+	}
+	return nil
 }

@@ -493,3 +493,52 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestDrivenWebService_windowsCompatibility(t *testing.T) {
+	testCases := map[string]struct {
+		in *RequestDrivenWebService
+
+		wantedErr error
+	}{
+		"returns error if windows indicated as string": {
+			in: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					InstanceConfig: AppRunnerInstanceConfig{
+						Platform: &PlatformArgsOrString{
+							PlatformString: stringP("windows/amd64"),
+							PlatformArgs:   PlatformArgs{},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("Windows is not supported for App Runner services"),
+		},
+		"returns error if windows indicated as map": {
+			in: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					InstanceConfig: AppRunnerInstanceConfig{
+						Platform: &PlatformArgsOrString{
+							PlatformString: nil,
+							PlatformArgs: PlatformArgs{
+								OSFamily: stringP("windows_server_2019_core"),
+								Arch:     stringP("arm64"),
+							},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("Windows is not supported for App Runner services"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			err := tc.in.windowsCompatibility()
+
+			// THEN
+			if err != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}

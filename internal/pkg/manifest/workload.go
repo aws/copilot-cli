@@ -70,6 +70,8 @@ var (
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
 	}
 
+	windowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
+
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
 	errUnmarshalPlatformOpts = errors.New("unable to unmarshal platform field into string or compose-style map")
@@ -548,46 +550,38 @@ func (c *vpcConfig) isValidPlacement() bool {
 // If an error occurs during deserialization, then returns the error.
 // If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
 func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
+	type manifest interface {
+		WorkloadManifest
+		windowsCompatibility() error
+	}
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
 	}
 	typeVal := aws.StringValue(am.Type)
-
+	var m manifest
 	switch typeVal {
 	case LoadBalancedWebServiceType:
-		m := newDefaultLoadBalancedWebService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to load balanced web service: %w", err)
-		}
-		return m, nil
+		m = newDefaultLoadBalancedWebService()
+
 	case RequestDrivenWebServiceType:
-		m := newDefaultRequestDrivenWebService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to request-driven web service: %w", err)
-		}
-		return m, nil
+		m = newDefaultRequestDrivenWebService()
 	case BackendServiceType:
-		m := newDefaultBackendService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
-		}
-		return m, nil
+		m = newDefaultBackendService()
 	case WorkerServiceType:
-		m := newDefaultWorkerService()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to worker service: %w", err)
-		}
-		return m, nil
+		m = newDefaultWorkerService()
 	case ScheduledJobType:
-		m := newDefaultScheduledJob()
-		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to scheduled job: %w", err)
-		}
-		return m, nil
+		m = newDefaultScheduledJob()
 	default:
 		return nil, &ErrInvalidWorkloadType{Type: typeVal}
 	}
+	if err := yaml.Unmarshal(in, m); err != nil {
+		return nil, fmt.Errorf("unmarshal manifest for %s: %w", typeVal, err)
+	}
+	if err := m.windowsCompatibility(); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ContainerHealthCheck holds the configuration to determine if the service container is healthy.
@@ -762,6 +756,15 @@ func validateAdvancedPlatform(platform PlatformArgs) error {
 		}
 	}
 	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", platform.String(), prettyValidPlatforms)
+}
+
+func isWindowsPlatform(platform *PlatformArgsOrString) bool {
+	for _, win := range windowsOSFamilies {
+		if platform.OS() == win {
+			return true
+		}
+	}
+	return false
 }
 
 func requiresBuild(image Image) (bool, error) {
