@@ -34,15 +34,8 @@ type BackendServiceDescriber struct {
 	initDescribers func(string) error
 }
 
-// NewBackendServiceConfig contains fields that initiates BackendServiceDescriber struct.
-type NewBackendServiceConfig struct {
-	NewServiceConfig
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
-}
-
 // NewBackendServiceDescriber instantiates a backend service describer.
-func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDescriber, error) {
+func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber, error) {
 	describer := &BackendServiceDescriber{
 		app:             opt.App,
 		svc:             opt.Svc,
