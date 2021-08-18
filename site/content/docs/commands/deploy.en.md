@@ -3,7 +3,7 @@
 $ copilot deploy
 ```
 
-## What does it do? 
+## What does it do?
 
 This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot job deploy`](../commands/job-deploy.en.md) under the hood. The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
 
@@ -18,6 +18,7 @@ This command is used to run either [`copilot svc deploy`](../commands/svc-deploy
 ```bash
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
+      --force                          Optional. Force a new ECS service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service or job.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
