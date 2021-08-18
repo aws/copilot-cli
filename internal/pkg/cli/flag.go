@@ -25,6 +25,7 @@ const (
 	yesFlag      = "yes"
 	jsonFlag     = "json"
 	allFlag      = "all"
+	forceFlag    = "force"
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
@@ -182,6 +183,7 @@ const (
 	yesFlagDescription      = "Skips confirmation prompt."
 	execYesFlagDescription  = "Optional. Whether to update the Session Manager Plugin."
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
+	forceFlagDescription    = "Optional. Force a new ECS service deployment using the existing image."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
