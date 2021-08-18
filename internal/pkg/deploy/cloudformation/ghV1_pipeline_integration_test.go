@@ -220,7 +220,7 @@ func TestGHv1PipelineCreation(t *testing.T) {
 
 		resources, err := appDeployer.GetRegionalAppResources(&app)
 		require.NoError(t, err)
-		artifactBuckets := regionalResourcesToArtifactBuckets(t, resources)
+		artifactBuckets := regionalResourcesToArtifactBuckets(t, environmentToDeploy.Name, resources)
 
 		pipelineInput := &deploy.CreatePipelineInput{
 			AppName: app.Name,
@@ -304,14 +304,16 @@ func assertStackExists(t *testing.T, cfClient *awsCF.CloudFormation, stackName s
 	return resp
 }
 
-func regionalResourcesToArtifactBuckets(t *testing.T, resources []*stack.AppRegionalResources) []deploy.ArtifactBucket {
-	buckets := make([]deploy.ArtifactBucket, 0, len(resources))
+func regionalResourcesToArtifactBuckets(t *testing.T, envName string, resources []*stack.AppRegionalResources) []deploy.Bucket {
+	buckets := make([]deploy.Bucket, 0, len(resources))
 	for _, res := range resources {
 		require.True(t, res.S3Bucket != "", "S3 Bucket shouldn't be blank")
 		require.True(t, res.KMSKeyARN != "", "KMSKey ARN shouldn't be blank")
-		buckets = append(buckets, deploy.ArtifactBucket{
-			BucketName: res.S3Bucket,
-			KeyArn:     res.KMSKeyARN,
+		buckets = append(buckets, deploy.Bucket{
+			Region:       res.Region,
+			Name:         res.S3Bucket,
+			Environments: []string{envName},
+			KeyARN:       res.KMSKeyARN,
 		})
 	}
 	return buckets

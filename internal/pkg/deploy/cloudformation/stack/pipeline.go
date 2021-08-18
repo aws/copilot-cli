@@ -4,6 +4,8 @@
 package stack
 
 import (
+	"encoding/json"
+
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -38,6 +40,14 @@ func (p *pipelineStackConfig) Template() (string, error) {
 			}
 			_, ok := source.(connectionName)
 			return ok
+		},
+		"jsonArtifactBuckets": func(buckets []deploy.Bucket) (string, error) {
+			out, err := json.Marshal(struct {
+				Buckets []deploy.Bucket `json:"buckets"`
+			}{
+				Buckets: buckets,
+			})
+			return string(out), err
 		},
 	}))
 	if err != nil {

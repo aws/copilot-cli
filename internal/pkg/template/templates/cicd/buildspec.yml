@@ -60,7 +60,7 @@ phases:
               aws s3 cp "$ADDONSFILE" "$s3URL/manual/$timestamp/$workload.addons.stack.yml";
               httpsURL="https://$(echo $bucket | jq -r .name).s3.$(echo $bucket | jq -r .region).amazonaws.com/";
               for env in $(echo $bucket | jq -r -c .environments[]); do
-                jq --arg a "$httpsURL/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-$env.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-$env.params.json{{end}}{{end}}
+                jq --arg a "$httpsURL/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-$env.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-$env.params.json
               done;
             done;
           fi

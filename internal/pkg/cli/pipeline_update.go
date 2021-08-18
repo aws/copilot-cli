@@ -151,7 +151,7 @@ func (o *updatePipelineOpts) Execute() error {
 	}
 
 	// get cross-regional resources
-	artifactBuckets, err := o.getArtifactBuckets()
+	artifactBuckets, err := o.getArtifactBuckets(pipeline.Stages)
 	if err != nil {
 		return fmt.Errorf("get cross-regional resources: %w", err)
 	}
@@ -202,17 +202,44 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 	return stages, nil
 }
 
-func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
+func (o *updatePipelineOpts) getArtifactBuckets(stages []manifest.PipelineStage) ([]deploy.Bucket, error) {
+	// Filter all environment configurations to only the ones defined in the pipeline manifest.
+	environments, err := o.envStore.ListEnvironments(o.appName)
+	if err != nil {
+		return nil, err
+	}
+	// See https://github.com/golang/go/wiki/SliceTricks#filter-in-place for filtering a slice.
+	n := 0
+	for _, env := range environments {
+		for _, stage := range stages {
+			if env.Name == stage.Name {
+				environments[n] = env
+				n += 1
+				break
+			}
+		}
+	}
+	environments = environments[:n]
+
+	// Retrieve existing pipeline buckets.
 	regionalResources, err := o.pipelineDeployer.GetRegionalAppResources(o.app)
 	if err != nil {
 		return nil, err
 	}
-
-	var buckets []deploy.ArtifactBucket
+	var buckets []deploy.Bucket
 	for _, resource := range regionalResources {
-		bucket := deploy.ArtifactBucket{
-			BucketName: resource.S3Bucket,
-			KeyArn:     resource.KMSKeyARN,
+		var envsInRegion []string
+		for _, env := range environments {
+			if resource.Region == env.Region {
+				envsInRegion = append(envsInRegion, env.Name)
+			}
+		}
+
+		bucket := deploy.Bucket{
+			Region:       resource.Region,
+			Name:         resource.S3Bucket,
+			KeyARN:       resource.KMSKeyARN,
+			Environments: envsInRegion,
 		}
 		buckets = append(buckets, bucket)
 	}

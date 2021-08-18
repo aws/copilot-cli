@@ -140,19 +140,19 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 				LocalWorkloads:        []string{"frontend", "backend"},
 			},
 		},
-		ArtifactBuckets: []deploy.ArtifactBucket{
+		ArtifactBuckets: []deploy.Bucket{
 			{
-				BucketName: "chicken-us-east-1",
-				KeyArn:     fmt.Sprintf("arn:aws:kms:us-east-1:%s:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e", toolsAccountID),
+				Name:   "chicken-us-east-1",
+				KeyARN: fmt.Sprintf("arn:aws:kms:us-east-1:%s:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e", toolsAccountID),
 			},
 			{
-				BucketName: "chicken-us-west-2",
-				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-2:%s:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc", toolsAccountID),
+				Name:   "chicken-us-west-2",
+				KeyARN: fmt.Sprintf("arn:aws:kms:us-west-2:%s:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc", toolsAccountID),
 			},
 			// assume the pipeline is hosted in a region that does not contain any copilot environment
 			{
-				BucketName: "chicken-us-west-1",
-				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-1:%s:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1", toolsAccountID),
+				Name:   "chicken-us-west-1",
+				KeyARN: fmt.Sprintf("arn:aws:kms:us-west-1:%s:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1", toolsAccountID),
 			},
 		},
 		AdditionalTags: map[string]string{

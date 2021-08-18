@@ -1,3 +1,5 @@
+// +build integration localintegration
+
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -42,10 +44,12 @@ func TestGHv1Pipeline_Template(t *testing.T) {
 				TestCommands:     []string{`echo "test"`},
 			},
 		},
-		ArtifactBuckets: []deploy.ArtifactBucket{
+		ArtifactBuckets: []deploy.Bucket{
 			{
-				BucketName: "fancy-bucket",
-				KeyArn:     "arn:aws:kms:us-west-2:1111:key/abcd",
+				Region:       "us-west-2",
+				Name:         "fancy-bucket",
+				Environments: []string{"test"},
+				KeyARN:       "arn:aws:kms:us-west-2:1111:key/abcd",
 			},
 		},
 		AdditionalTags: nil,

@@ -64,8 +64,8 @@ Resources:
             # that is in the same region as the pipeline.
             # Loop through all the artifact buckets created in the stackset
             Resource:{{range .ArtifactBuckets}}
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+              - !Join ['', ['arn:aws:s3:::', '{{.Name}}']]
+              - !Join ['', ['arn:aws:s3:::', '{{.Name}}', '/*']]{{end}}
           - Effect: Allow
             Action:
               # TODO: scope this down if possible
@@ -76,7 +76,7 @@ Resources:
             # across (cross-regional) pipeline stages, with each stage
             # backed by a (regional) S3 bucket.
             Resource:{{range .ArtifactBuckets}}
-              - {{.KeyArn}}{{end}}
+              - {{.KeyARN}}{{end}}
           - Effect: Allow
             Action:
               - logs:CreateLogGroup
@@ -129,6 +129,8 @@ Resources:
         EnvironmentVariables:
           - Name: AWS_ACCOUNT_ID
             Value: !Sub '${AWS::AccountId}'
+          - Name: COPILOT_PIPELINE_BUCKETS
+            Value: {{jsonArtifactBuckets .ArtifactBuckets | printf "%q"}}
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/buildspec.yml
@@ -213,7 +215,7 @@ Resources:
               - kms:Encrypt
               - kms:GenerateDataKey
             Resource:{{range .ArtifactBuckets}}
-              - {{.KeyArn}}{{end}}
+              - {{.KeyARN}}{{end}}
           - Effect: Allow
             Action:
               - s3:PutObject
@@ -225,8 +227,8 @@ Resources:
               - s3:GetObjectAcl
               {{- end}}
             Resource:{{range .ArtifactBuckets}}
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+              - !Join ['', ['arn:aws:s3:::', '{{.Name}}']]
+              - !Join ['', ['arn:aws:s3:::', '{{.Name}}', '/*']]{{end}}
           - Effect: Allow
             Action:
               - sts:AssumeRole
@@ -273,9 +275,9 @@ Resources:
         - Region: {{.Region}}
           ArtifactStore:
             Type: S3
-            Location: {{.BucketName}}
+            Location: {{.Name}}
             EncryptionKey:
-              Id: {{.KeyArn}}
+              Id: {{.KeyARN}}
               Type: KMS{{end}}
       RoleArn: !GetAtt PipelineRole.Arn
       Name: !Ref AWS::StackName

@@ -41,10 +41,12 @@ func TestGHPipeline_Template(t *testing.T) {
 				TestCommands:     []string{`echo "test"`},
 			},
 		},
-		ArtifactBuckets: []deploy.ArtifactBucket{
+		ArtifactBuckets: []deploy.Bucket{
 			{
-				BucketName: "fancy-bucket",
-				KeyArn:     "arn:aws:kms:us-west-2:1111:key/abcd",
+				Region:       "us-west-2",
+				Name:         "fancy-bucket",
+				Environments: []string{"test"},
+				KeyARN:       "arn:aws:kms:us-west-2:1111:key/abcd",
 			},
 		},
 		AdditionalTags: nil,

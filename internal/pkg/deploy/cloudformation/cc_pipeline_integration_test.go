@@ -203,7 +203,7 @@ func TestCCPipelineCreation(t *testing.T) {
 
 		resources, err := appDeployer.GetRegionalAppResources(&app)
 		require.NoError(t, err)
-		artifactBuckets := regionalResourcesToArtifactBuckets(t, resources)
+		artifactBuckets := regionalResourcesToArtifactBuckets(t, environmentToDeploy.Name, resources)
 
 		pipelineInput := &deploy.CreatePipelineInput{
 			AppName: app.Name,

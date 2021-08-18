@@ -123,6 +123,8 @@ Resources:
         EnvironmentVariables:
           - Name: AWS_ACCOUNT_ID
             Value: !Sub '${AWS::AccountId}'
+          - Name: COPILOT_PIPELINE_BUCKETS
+            Value: "{\"buckets\":[{\"name\":\"fancy-bucket\",\"region\":\"us-west-2\",\"environments\":[\"test\"],\"KeyARN\":\"arn:aws:kms:us-west-2:1111:key/abcd\"}]}"
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/buildspec.yml

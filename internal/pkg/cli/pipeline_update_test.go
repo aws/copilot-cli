@@ -181,59 +181,6 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 	}
 }
 
-func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
-	testCases := map[string]struct {
-		mockDeployer func(m *mocks.MockpipelineDeployer)
-
-		expectedOut []deploy.ArtifactBucket
-
-		expectedError error
-	}{
-		"getsBucketInfo": {
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				mockResources := []*stack.AppRegionalResources{
-					{
-						S3Bucket:  "someBucket",
-						KMSKeyARN: "someKey",
-					},
-				}
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-			},
-			expectedOut: []deploy.ArtifactBucket{
-				{
-					BucketName: "someBucket",
-					KeyArn:     "someKey",
-				},
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockPipelineDeployer := mocks.NewMockpipelineDeployer(ctrl)
-			tc.mockDeployer(mockPipelineDeployer)
-
-			opts := &updatePipelineOpts{
-				pipelineDeployer: mockPipelineDeployer,
-			}
-
-			// WHEN
-			actual, err := opts.getArtifactBuckets()
-
-			// THEN
-			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError, err)
-			} else {
-				require.NoError(t, err)
-				require.ElementsMatch(t, tc.expectedOut, actual)
-			}
-		})
-	}
-}
-
 func TestUpdatePipelineOpts_Execute(t *testing.T) {
 	const (
 		appName      = "badgoose"
@@ -248,7 +195,6 @@ source:
   provider: GitHub
   properties:
     repository: aws/somethingCool
-    access_token_secret: "github-token-badgoose-backend"
     branch: main
 
 stages:
@@ -316,13 +262,50 @@ stages:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
-					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return([]*stack.AppRegionalResources{
+						{
+							Region:    "us-east-1",
+							KMSKeyARN: "arn1",
+							S3Bucket:  "bucket1",
+						},
+						{
+							Region:    "us-west-2",
+							KMSKeyARN: "arn2",
+							S3Bucket:  "bucket2",
+						},
+					}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil).Do(
+						func(in *deploy.CreatePipelineInput, _ string) {
+							require.ElementsMatch(t, []deploy.Bucket{
+								{
+									Name:         "bucket1",
+									Region:       "us-east-1",
+									Environments: []string{"wings"},
+									KeyARN:       "arn1",
+								},
+								{
+									Name:         "bucket2",
+									Region:       "us-west-2",
+									Environments: []string{"chicken"},
+									KeyARN:       "arn2",
+								},
+							}, in.ArtifactBuckets)
+						}),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(1),
 				)
 			},
@@ -346,6 +329,16 @@ stages:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// deployPipeline
@@ -377,6 +370,16 @@ stages:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// deployPipeline
@@ -405,6 +408,16 @@ stages:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// deployPipeline
@@ -518,6 +531,29 @@ source:
 			},
 			expectedError: fmt.Errorf("convert environments to deployment stage: get workload names from workspace: some error"),
 		},
+		"returns an error if fails to list available environments": {
+			inApp:     &app,
+			inRegion:  region,
+			inAppName: appName,
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return(nil, errors.New("list env err")),
+				)
+			},
+			expectedError: fmt.Errorf("get cross-regional resources: list env err"),
+		},
 		"returns an error if fails to get cross-regional resources": {
 			inApp:     &app,
 			inRegion:  region,
@@ -536,6 +572,16 @@ source:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, errors.New("some error")),
 				)
 			},
@@ -559,6 +605,16 @@ source:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// deployPipeline
@@ -585,6 +641,16 @@ source:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// deployPipeline
@@ -615,6 +681,16 @@ source:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// deployPipeline
@@ -672,6 +748,16 @@ stages:
 					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
+					m.envStore.EXPECT().ListEnvironments(appName).Return([]*config.Environment{
+						{
+							Name:   "chicken",
+							Region: "us-west-2",
+						},
+						{
+							Name:   "wings",
+							Region: "us-east-1",
+						},
+					}, nil),
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// deployPipeline

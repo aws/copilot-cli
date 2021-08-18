@@ -11,8 +11,6 @@ import (
 	"regexp"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
-	"github.com/aws/aws-sdk-go/aws/arn"
 )
 
 const (
@@ -51,7 +49,7 @@ type CreatePipelineInput struct {
 
 	// A list of artifact buckets and corresponding KMS keys that will
 	// be used in this pipeline.
-	ArtifactBuckets []ArtifactBucket
+	ArtifactBuckets []Bucket
 
 	// AdditionalTags are labels applied to resources under the application.
 	AdditionalTags map[string]string
@@ -64,26 +62,14 @@ type Build struct {
 	Image string
 }
 
-// ArtifactBucket represents an S3 bucket used by the CodePipeline to store
+// Bucket represents an S3 bucket used by the CodePipeline to store
 // intermediate artifacts produced by the pipeline.
-type ArtifactBucket struct {
-	// The name of the S3 bucket.
-	BucketName string
+type Bucket struct {
+	Name         string   `json:"name"`
+	Region       string   `json:"region"`
+	Environments []string `json:"environments"` // Name of stages in the pipeline that use this artifact bucket.
 
-	// The ARN of the KMS key used to en/decrypt artifacts stored in this bucket.
-	KeyArn string
-}
-
-// Region parses out the region from the ARN of the KMS key associated with
-// the artifact bucket.
-func (a *ArtifactBucket) Region() (string, error) {
-	// We assume the bucket and the key are in the same AWS region.
-	parsedArn, err := arn.Parse(a.KeyArn)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse region out of key ARN: %s, error: %w",
-			a.BucketName, err)
-	}
-	return parsedArn.Region, nil
+	KeyARN string // The ARN of the KMS key used to en/decrypt artifacts stored in this bucket.
 }
 
 // GitHubV1Source defines the source of the artifacts to be built and deployed. This version uses personal access tokens
