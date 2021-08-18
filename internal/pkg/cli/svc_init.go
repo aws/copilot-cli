@@ -470,7 +470,16 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	if err != nil {
 		return fmt.Errorf("select publisher: %w", err)
 	}
-	o.topics = &topics
+
+	subscriptions := make([]manifest.TopicSubscription, 0, len(topics))
+	for _, t := range topics {
+		subscriptions = append(subscriptions, manifest.TopicSubscription{
+			Name:    t.Name(),
+			Service: t.Workload(),
+		})
+	}
+	o.topics = &subscriptions
+
 	return nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -128,6 +129,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedSvcPort        = 80
 		wantedImage          = "mockImage"
 	)
+	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
 	testCases := map[string]struct {
 		inSvcType         string
 		inSvcName         string
@@ -524,12 +526,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					gomock.Eq(svcInitPublisherPrompt),
 					gomock.Eq(svcInitPublisherHelpPrompt),
 					gomock.Any(),
-				).Return([]manifest.TopicSubscription{
-					{
-						Name:    "thetopic",
-						Service: "theservice",
-					},
-				}, nil)
+				).Return([]deploy.Topic{*mockTopic}, nil)
 			},
 			wantedErr: nil,
 		},
