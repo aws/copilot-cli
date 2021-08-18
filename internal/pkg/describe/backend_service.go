@@ -24,25 +24,23 @@ const (
 
 // BackendServiceDescriber retrieves information about a backend service.
 type BackendServiceDescriber struct {
-	app             string
-	svc             string
-	enableResources bool
+	*ecsServiceDescriber
 
-	store          DeployedEnvServicesLister
-	svcDescriber   map[string]ecsSvcDescriber
-	envDescriber   map[string]envDescriber
-	initDescribers func(string) error
+	envDescriber map[string]envDescriber
 }
 
 // NewBackendServiceDescriber instantiates a backend service describer.
 func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber, error) {
 	describer := &BackendServiceDescriber{
-		app:             opt.App,
-		svc:             opt.Svc,
-		enableResources: opt.EnableResources,
-		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]ecsSvcDescriber),
-		envDescriber:    make(map[string]envDescriber),
+		ecsServiceDescriber: &ecsServiceDescriber{
+			app:             opt.App,
+			svc:             opt.Svc,
+			enableResources: opt.EnableResources,
+			store:           opt.DeployStore,
+			svcDescriber:    make(map[string]ecsSvcDescriber),
+		},
+
+		envDescriber: make(map[string]envDescriber),
 	}
 	describer.initDescribers = func(env string) error {
 		if _, ok := describer.svcDescriber[env]; ok {

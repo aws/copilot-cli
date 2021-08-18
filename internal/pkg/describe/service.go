@@ -161,6 +161,16 @@ type ServiceDescriber struct {
 	sess      *session.Session
 }
 
+type ecsServiceDescriber struct {
+	app             string
+	svc             string
+	enableResources bool
+
+	store          DeployedEnvServicesLister
+	svcDescriber   map[string]ecsSvcDescriber
+	initDescribers func(string) error
+}
+
 // NewServiceConfig contains fields that initiates ServiceDescriber struct.
 type NewServiceConfig struct {
 	App         string

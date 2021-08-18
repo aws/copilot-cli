@@ -17,25 +17,21 @@ import (
 
 // WorkerServiceDescriber retrieves information about a worker service.
 type WorkerServiceDescriber struct {
-	app             string
-	svc             string
-	enableResources bool
-
-	store                DeployedEnvServicesLister
-	svcDescriber         map[string]ecsSvcDescriber
-	initServiceDescriber func(string) error
+	*ecsServiceDescriber
 }
 
 // NewWorkerServiceDescriber instantiates a worker service describer.
 func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, error) {
 	describer := &WorkerServiceDescriber{
-		app:             opt.App,
-		svc:             opt.Svc,
-		enableResources: opt.EnableResources,
-		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]ecsSvcDescriber),
+		ecsServiceDescriber: &ecsServiceDescriber{
+			app:             opt.App,
+			svc:             opt.Svc,
+			enableResources: opt.EnableResources,
+			store:           opt.DeployStore,
+			svcDescriber:    make(map[string]ecsSvcDescriber),
+		},
 	}
-	describer.initServiceDescriber = func(env string) error {
+	describer.initDescribers = func(env string) error {
 		if _, ok := describer.svcDescriber[env]; ok {
 			return nil
 		}
@@ -71,7 +67,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
-		err := d.initServiceDescriber(env)
+		err := d.initDescribers(env)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +99,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {
 		for _, env := range environments {
-			err := d.initServiceDescriber(env)
+			err := d.initDescribers(env)
 			if err != nil {
 				return nil, err
 			}
