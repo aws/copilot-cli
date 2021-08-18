@@ -37,13 +37,13 @@ func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber,
 			svc:             opt.Svc,
 			enableResources: opt.EnableResources,
 			store:           opt.DeployStore,
-			svcDescriber:    make(map[string]ecsSvcDescriber),
+			svcStackDescriber:    make(map[string]ecsStackDescriber),
 		},
 
 		envDescriber: make(map[string]envDescriber),
 	}
 	describer.initDescribers = func(env string) error {
-		if _, ok := describer.svcDescriber[env]; ok {
+		if _, ok := describer.svcStackDescriber[env]; ok {
 			return nil
 		}
 		d, err := NewECSServiceDescriber(NewServiceConfig{
@@ -55,7 +55,7 @@ func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber,
 		if err != nil {
 			return err
 		}
-		describer.svcDescriber[env] = d
+		describer.svcStackDescriber[env] = d
 		envDescr, err := NewEnvDescriber(NewEnvDescriberConfig{
 			App:         opt.App,
 			Env:         env,
@@ -76,7 +76,7 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err := d.initDescribers(envName); err != nil {
 		return "", err
 	}
-	svcStackParams, err := d.svcDescriber[envName].Params()
+	svcStackParams, err := d.svcStackDescriber[envName].Params()
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
@@ -112,7 +112,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		svcParams, err := d.svcDescriber[env].Params()
+		svcParams, err := d.svcStackDescriber[env].Params()
 		if err != nil {
 			return nil, fmt.Errorf("get stack parameters for environment %s: %w", env, err)
 		}
@@ -138,12 +138,12 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+		backendSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
 		envVars = append(envVars, flattenContainerEnvVars(env, backendSvcEnvVars)...)
-		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		webSvcSecrets, err := d.svcStackDescriber[env].Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
 		}
@@ -157,7 +157,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			stackResources, err := d.svcStackDescriber[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}

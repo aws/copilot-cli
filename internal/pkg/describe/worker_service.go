@@ -24,15 +24,15 @@ type WorkerServiceDescriber struct {
 func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, error) {
 	describer := &WorkerServiceDescriber{
 		ecsServiceDescriber: &ecsServiceDescriber{
-			app:             opt.App,
-			svc:             opt.Svc,
-			enableResources: opt.EnableResources,
-			store:           opt.DeployStore,
-			svcDescriber:    make(map[string]ecsSvcDescriber),
+			app:               opt.App,
+			svc:               opt.Svc,
+			enableResources:   opt.EnableResources,
+			store:             opt.DeployStore,
+			svcStackDescriber: make(map[string]ecsStackDescriber),
 		},
 	}
 	describer.initDescribers = func(env string) error {
-		if _, ok := describer.svcDescriber[env]; ok {
+		if _, ok := describer.svcStackDescriber[env]; ok {
 			return nil
 		}
 		d, err := NewECSServiceDescriber(NewServiceConfig{
@@ -44,7 +44,7 @@ func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, e
 		if err != nil {
 			return err
 		}
-		describer.svcDescriber[env] = d
+		describer.svcStackDescriber[env] = d
 		return nil
 	}
 	return describer, nil
@@ -71,7 +71,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		svcParams, err := d.svcDescriber[env].Params()
+		svcParams, err := d.svcStackDescriber[env].Params()
 		if err != nil {
 			return nil, fmt.Errorf("get stack parameters for environment %s: %w", env, err)
 		}
@@ -84,12 +84,12 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		workerSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+		workerSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
 		envVars = append(envVars, flattenContainerEnvVars(env, workerSvcEnvVars)...)
-		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		webSvcSecrets, err := d.svcStackDescriber[env].Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
 		}
@@ -103,7 +103,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			stackResources, err := d.svcStackDescriber[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}

@@ -71,14 +71,8 @@ type envDescriber interface {
 
 // LBWebServiceDescriber retrieves information about a load balanced web service.
 type LBWebServiceDescriber struct {
-	app             string
-	svc             string
-	enableResources bool
-
-	store         DeployedEnvServicesLister
-	svcDescriber  map[string]ecsSvcDescriber
-	envDescriber  map[string]envDescriber
-	initDescriber func(string) error
+	*ecsServiceDescriber
+	envDescriber map[string]envDescriber
 
 	// cache only last svc paramerters
 	svcParams map[string]string
@@ -87,15 +81,17 @@ type LBWebServiceDescriber struct {
 // NewLBWebServiceDescriber instantiates a load balanced service describer.
 func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, error) {
 	describer := &LBWebServiceDescriber{
-		app:             opt.App,
-		svc:             opt.Svc,
-		enableResources: opt.EnableResources,
-		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]ecsSvcDescriber),
-		envDescriber:    make(map[string]envDescriber),
+		ecsServiceDescriber: &ecsServiceDescriber{
+			app:               opt.App,
+			svc:               opt.Svc,
+			enableResources:   opt.EnableResources,
+			store:             opt.DeployStore,
+			svcStackDescriber: make(map[string]ecsStackDescriber),
+		},
+		envDescriber: make(map[string]envDescriber),
 	}
-	describer.initDescriber = func(env string) error {
-		if _, ok := describer.svcDescriber[env]; ok {
+	describer.initDescribers = func(env string) error {
+		if _, ok := describer.svcStackDescriber[env]; ok {
 			return nil
 		}
 		svcDescr, err := NewServiceDescriber(NewServiceConfig{
@@ -107,7 +103,7 @@ func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, err
 		if err != nil {
 			return err
 		}
-		describer.svcDescriber[env] = svcDescr
+		describer.svcStackDescriber[env] = svcDescr
 		envDescr, err := NewEnvDescriber(NewEnvDescriberConfig{
 			App:         opt.App,
 			Env:         env,
@@ -135,7 +131,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
-		err := d.initDescriber(env)
+		err := d.initDescribers(env)
 		if err != nil {
 			return nil, err
 		}
@@ -165,12 +161,12 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
-		webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+		webSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
-		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		webSvcSecrets, err := d.svcStackDescriber[env].Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
 		}
@@ -179,11 +175,11 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {
 		for _, env := range environments {
-			err := d.initDescriber(env)
+			err := d.initDescribers(env)
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			stackResources, err := d.svcStackDescriber[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
@@ -208,7 +204,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 // URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
 func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
-	err := d.initDescriber(envName)
+	err := d.initDescribers(envName)
 	if err != nil {
 		return "", err
 	}
@@ -221,7 +217,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
 	}
-	svcParams, err := d.svcDescriber[envName].Params()
+	svcParams, err := d.svcStackDescriber[envName].Params()
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
