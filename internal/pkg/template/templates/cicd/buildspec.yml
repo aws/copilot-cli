@@ -54,9 +54,15 @@ phases:
           ADDONSFILE=./infrastructure/$workload.addons.stack.yml
           if [ -f "$ADDONSFILE" ]; then
             tmp=$(mktemp)
-            timestamp=$(date +%s){{range $bucket := .ArtifactBuckets}}
-            aws s3 cp "$ADDONSFILE" "s3://{{$bucket.BucketName}}/manual/$timestamp/$workload.addons.stack.yml";{{range $envName := $bucket.Environments}}
-            jq --arg a "https://{{$bucket.BucketName}}.s3.{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-{{$envName}}.params.json{{end}}{{end}}
+            timestamp=$(date +%s)
+            for bucket in $(echo $COPILOT_PIPELINE_BUCKETS | jq -c .buckets[]); do
+              s3URL="s3://$(echo $bucket | jq -r .name)/";
+              aws s3 cp "$ADDONSFILE" "$s3URL/manual/$timestamp/$workload.addons.stack.yml";
+              httpsURL="https://$(echo $bucket | jq -r .name).s3.$(echo $bucket | jq -r .region).amazonaws.com/";
+              for env in $(echo $bucket | jq -r -c .environments[]); do
+                jq --arg a "$httpsURL/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-$env.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-$env.params.json{{end}}{{end}}
+              done;
+            done;
           fi
         done;
       # Build images

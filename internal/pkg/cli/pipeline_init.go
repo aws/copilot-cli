@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -24,9 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -84,7 +84,6 @@ type initPipelineOpts struct {
 	parser         template.Parser
 	runner         runner
 	sessProvider   sessionProvider
-	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
 	sel            pipelineSelector
@@ -119,12 +118,6 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("new secretsmanager client: %w", err)
 	}
 
-	p := sessions.NewProvider()
-	defaultSession, err := p.Default()
-	if err != nil {
-		return nil, err
-	}
-
 	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store client: %w", err)
@@ -137,8 +130,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		workspace:        ws,
 		secretsmanager:   secretsmanager,
 		parser:           template.New(),
-		sessProvider:     p,
-		cfnClient:        cloudformation.New(defaultSession),
+		sessProvider:     sessions.NewProvider(),
 		store:            ssmStore,
 		prompt:           prompter,
 		sel:              selector.NewSelect(prompter, ssmStore),
@@ -542,18 +534,12 @@ Update the file to add additional stages, change the branch to be tracked, or ad
 }
 
 func (o *initPipelineOpts) createBuildspec() error {
-	artifactBuckets, err := o.artifactBuckets()
-	if err != nil {
-		return err
-	}
 	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
-		ArtifactBuckets    []artifactBucket
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
 		Version:            version.Version,
-		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {
 		return err
@@ -624,34 +610,6 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 		return nil, fmt.Errorf("unable to create pipeline source provider for %s", o.repoName)
 	}
 	return manifest.NewProvider(config)
-}
-
-func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", o.appName, err)
-	}
-	regionalResources, err := o.cfnClient.GetRegionalAppResources(app)
-	if err != nil {
-		return nil, fmt.Errorf("get regional application resources: %w", err)
-	}
-
-	var buckets []artifactBucket
-	for _, resource := range regionalResources {
-		var envNames []string
-		for _, env := range o.envConfigs {
-			if env.Region == resource.Region {
-				envNames = append(envNames, env.Name)
-			}
-		}
-		bucket := artifactBucket{
-			BucketName:   resource.S3Bucket,
-			Region:       resource.Region,
-			Environments: envNames,
-		}
-		buckets = append(buckets, bucket)
-	}
-	return buckets, nil
 }
 
 // buildPipelineInitCmd build the command for creating a new pipeline.
