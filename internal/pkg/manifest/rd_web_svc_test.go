@@ -494,12 +494,11 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 	}
 }
 
-func TestRequestDrivenWebService_TaskPlatform(t *testing.T) {
+func TestRequestDrivenWebService_windowsCompatibility(t *testing.T) {
 	testCases := map[string]struct {
 		in *RequestDrivenWebService
 
-		wantedPlatform *string
-		wantedErr      error
+		wantedErr error
 	}{
 		"returns error if windows indicated as string": {
 			in: &RequestDrivenWebService{
@@ -530,35 +529,15 @@ func TestRequestDrivenWebService_TaskPlatform(t *testing.T) {
 			},
 			wantedErr: errors.New("Windows is not supported for App Runner services"),
 		},
-		"returns platform if not windows (to be validated later)": {
-			in: &RequestDrivenWebService{
-				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					InstanceConfig: AppRunnerInstanceConfig{
-						Platform: &PlatformArgsOrString{
-							PlatformString: nil,
-							PlatformArgs: PlatformArgs{
-								OSFamily: aws.String("linux"),
-								Arch:     aws.String("arm64"),
-							},
-						},
-					},
-				},
-			},
-			wantedPlatform: aws.String("linux/arm64"),
-			wantedErr:      nil,
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			platform, err := tc.in.TaskPlatform()
+			err := tc.in.windowsCompatibility()
 
 			// THEN
 			if err != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
-
-			} else {
-				require.Equal(t, tc.wantedPlatform, platform)
 			}
 		})
 	}

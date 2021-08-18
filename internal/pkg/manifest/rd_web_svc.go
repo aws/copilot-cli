@@ -101,9 +101,6 @@ func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
 	if s.InstanceConfig.Platform == nil {
 		return nil, nil
 	}
-	if isWindowsPlatform(s.InstanceConfig.Platform) {
-		return nil, errors.New("Windows is not supported for App Runner services")
-	}
 	return aws.String(dockerengine.PlatformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
 }
 
@@ -134,5 +131,11 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 // WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
 // Here, this method is simply satisfying the WorkloadManifest interface.
 func (s *RequestDrivenWebService) windowsCompatibility() error {
+	if s.InstanceConfig.Platform == nil {
+		return nil
+	}
+	if isWindowsPlatform(s.InstanceConfig.Platform) {
+		return errors.New("Windows is not supported for App Runner services")
+	}
 	return nil
 }
