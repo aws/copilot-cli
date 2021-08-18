@@ -540,6 +540,14 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
+type serviceUpdater interface {
+	ForceUpdateService(app, env, svc string) error
+}
+
+type serviceDeployer interface {
+	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, opts ...awscloudformation.StackOption) error
+}
+
 type apprunnerServiceDescriber interface {
 	ServiceARN() (string, error)
 }
