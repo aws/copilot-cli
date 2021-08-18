@@ -101,12 +101,6 @@ type initPipelineOpts struct {
 	envConfigs []*config.Environment
 }
 
-type artifactBucket struct {
-	BucketName   string
-	Region       string
-	Environments []string
-}
-
 func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	ws, err := workspace.New()
 	if err != nil {
