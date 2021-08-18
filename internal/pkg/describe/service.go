@@ -90,7 +90,7 @@ type apprunnerSvcDescriber interface {
 	ServiceURL() (string, error)
 }
 
-type ecsSvcDescriber interface {
+type ecsStackDescriber interface {
 	Params() (map[string]string, error)
 	Outputs() (map[string]string, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
@@ -159,6 +159,16 @@ type ServiceDescriber struct {
 	cfn       stackDescriber
 	ecsClient ecsClient
 	sess      *session.Session
+}
+
+type ecsServiceDescriber struct {
+	app             string
+	svc             string
+	enableResources bool
+
+	store             DeployedEnvServicesLister
+	svcStackDescriber map[string]ecsStackDescriber
+	initDescribers    func(string) error
 }
 
 // NewServiceConfig contains fields that initiates ServiceDescriber struct.
