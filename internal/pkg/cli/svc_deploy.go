@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
@@ -45,10 +46,8 @@ import (
 )
 
 const (
-	fmtForceUpdateSvcStart  = "Forcing an update for service %s from environment %s"
-	fmtForceUpdateSvcFailed = `Failed to force an update for service %s from environment %s: %v.
-  Run %s to check for the fail reason.
-`
+	fmtForceUpdateSvcStart    = "Forcing an update for service %s from environment %s"
+	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
 )
 
@@ -574,9 +573,14 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 				// Force update ECS service if --force is set and change set is empty.
 				o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
 				if err = o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
-					o.spinner.Stop(log.Serrorf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
-						color.HighlightUserInput(o.envName), err,
-						color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", o.name, o.envName))))
+					errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
+						color.HighlightUserInput(o.envName), err)
+					var errWaitUpdateTimeout *awsecs.ErrWaitServiceStableTimeout
+					if errors.As(err, &errWaitUpdateTimeout) {
+						errLog = fmt.Sprintf("%s  Run %s to check for the fail reason.\n", errLog,
+							color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", o.name, o.envName)))
+					}
+					o.spinner.Stop(log.Serror(errLog))
 					return fmt.Errorf("force an update for service %s: %w", o.name, err)
 				}
 				o.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))

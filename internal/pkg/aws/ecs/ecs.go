@@ -47,8 +47,8 @@ type ECS struct {
 	client         api
 	newSessStarter func() ssmSessionStarter
 
-	maxForceDeploymentTries int
-	pollIntervalDuration    time.Duration
+	maxServiceStableTries int
+	pollIntervalDuration  time.Duration
 }
 
 // RunTaskInput holds the fields needed to run tasks.
@@ -76,8 +76,8 @@ func New(s *session.Session) *ECS {
 		newSessStarter: func() ssmSessionStarter {
 			return exec.NewSSMPluginCommand(s)
 		},
-		maxForceDeploymentTries: waitServiceStableMaxTry,
-		pollIntervalDuration:    waitServiceStablePollingInterval,
+		maxServiceStableTries: waitServiceStableMaxTry,
+		pollIntervalDuration:  waitServiceStablePollingInterval,
 	}
 }
 
@@ -149,12 +149,15 @@ func (e *ECS) waitUntilServiceStable(svc *Service) error {
 	for {
 		if len(svc.Deployments) == stableServiceDeploymentNum &&
 			aws.Int64Value(svc.DesiredCount) == aws.Int64Value(svc.RunningCount) {
-			// We can safely assume the service has been successfully updated, because before
-			// the circuit breaker is triggered to use the previous deployment, it should have timed out already.
+			// This conditional is sufficient to determine that the service is stable AND has successfully updated (hence not rolled-back).
+			// The stable service cannot be a rolled-back service because a rollback can only be triggered by circuit breaker after ~1hr,
+			// by which time we would have already timed out.
 			return nil
 		}
-		if tryNum >= e.maxForceDeploymentTries {
-			return fmt.Errorf("max retries %v exceeded", waitServiceStableMaxTry)
+		if tryNum >= e.maxServiceStableTries {
+			return &ErrWaitServiceStableTimeout{
+				maxRetries: e.maxServiceStableTries,
+			}
 		}
 		svc, err = e.Service(aws.StringValue(svc.ClusterArn), aws.StringValue(svc.ServiceName))
 		if err != nil {

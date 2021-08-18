@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -718,10 +719,34 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(mockError)
-				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError,
-					color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", mockSvcName, mockEnvName))))
+				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError))
 			},
 			wantErr: fmt.Errorf("force an update for service mockSvc: some error"),
+		},
+		"error if fail to force an update because of timeout": {
+			inForceDeploy: true,
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
+				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).
+					Return(&ecs.ErrWaitServiceStableTimeout{})
+				m.mockSpinner.EXPECT().Stop(
+					log.Serror(fmt.Sprintf("%s  Run %s to check for the fail reason.\n",
+						fmt.Sprintf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, &ecs.ErrWaitServiceStableTimeout{}),
+						color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", mockSvcName, mockEnvName)))))
+			},
+			wantErr: fmt.Errorf("force an update for service mockSvc: max retries 0 exceeded"),
 		},
 		"success": {
 			inAliases: &manifest.Alias{

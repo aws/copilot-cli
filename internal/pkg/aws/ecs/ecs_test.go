@@ -239,7 +239,7 @@ func TestECS_UpdateService(t *testing.T) {
 					},
 				}, nil).Times(2)
 			},
-			wantErr: fmt.Errorf("wait until service mockService becomes stable: max retries %v exceeded", waitServiceStableMaxTry),
+			wantErr: fmt.Errorf("wait until service mockService becomes stable: max retries 2 exceeded"),
 		},
 		"errors if failed to describe service": {
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -320,9 +320,9 @@ func TestECS_UpdateService(t *testing.T) {
 			tc.mockECSClient(mockECSClient)
 
 			service := ECS{
-				client:                  mockECSClient,
-				maxForceDeploymentTries: 2,
-				pollIntervalDuration:    0,
+				client:                mockECSClient,
+				maxServiceStableTries: 2,
+				pollIntervalDuration:  0,
 			}
 			var opts []UpdateServiceOpts
 			if tc.forceUpdate {
