@@ -10,7 +10,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -508,7 +507,7 @@ type dockerfileSelector interface {
 }
 
 type topicSelector interface {
-	Topics(prompt, help, app string) ([]manifest.TopicSubscription, error)
+	Topics(prompt, help, app string) ([]deploy.Topic, error)
 }
 
 type ec2Selector interface {

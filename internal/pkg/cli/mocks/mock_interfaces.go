@@ -25,7 +25,6 @@ import (
 	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
-	manifest "github.com/aws/copilot-cli/internal/pkg/manifest"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -5410,10 +5409,10 @@ func (m *MocktopicSelector) EXPECT() *MocktopicSelectorMockRecorder {
 }
 
 // Topics mocks base method.
-func (m *MocktopicSelector) Topics(prompt, help, app string) ([]manifest.TopicSubscription, error) {
+func (m *MocktopicSelector) Topics(prompt, help, app string) ([]deploy.Topic, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Topics", prompt, help, app)
-	ret0, _ := ret[0].([]manifest.TopicSubscription)
+	ret0, _ := ret[0].([]deploy.Topic)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
