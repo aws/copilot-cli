@@ -106,7 +106,8 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 		},
 		manifest: mft,
 
@@ -190,7 +191,11 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
 	}
-	return content.String(), nil
+	overridenTemp, err := j.taskDefOverrideFunc(convertTaskDefOverrideRules(j.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTemp), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

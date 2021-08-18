@@ -63,7 +63,8 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 		},
 		manifest:     mft,
 		httpsEnabled: false,
@@ -196,7 +197,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return content.String(), nil
+	overridenTemp, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTemp), nil
 }
 
 func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
