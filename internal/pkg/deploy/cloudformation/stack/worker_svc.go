@@ -140,11 +140,11 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)
 	}
-	overridenTemp, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	overridenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
-	return string(overridenTemp), nil
+	return string(overridenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
