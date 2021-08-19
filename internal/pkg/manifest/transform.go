@@ -13,11 +13,11 @@ import (
 var fmtExclusiveFieldsSpecifiedTogether = "invalid manifest: %s %s mutually exclusive with %s and shouldn't be specified at the same time"
 
 var defaultTransformers = []mergo.Transformers{
-	// NOTE: mapToVolumeTransformer need has to be the first transformer. Otherwise `mergo` will overwrite the `dst` map
+	// NOTE: mapToVolumeTransformer needs to be the first transformer. Otherwise `mergo` will overwrite the `dst` map
 	// completely and we will lose `dst`'s values.
 	mapToVolumeTransformer{},
 
-	// NOTE: basicTransformer needs to used before the rest of the custom transformers, because the other transformers
+	// NOTE: basicTransformer needs to be used before the rest of the custom transformers, because the other transformers
 	// do not merge anything - they just unset the fields that do not get specified in source manifest.
 	basicTransformer{},
 	imageTransformer{},
