@@ -188,7 +188,7 @@ func (o *initJobOpts) Execute() error {
 		}
 	}
 
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
+	_, platform, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,9 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
+			Platform: &manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
 		},
 
 		Schedule:    o.schedule,

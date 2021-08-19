@@ -66,7 +66,7 @@ type WorkloadProps struct {
 	Name           string
 	DockerfilePath string
 	Image          string
-	Platform       *string
+	Platform       *manifest.PlatformArgsOrString
 }
 
 // JobProps contains the information needed to represent a Job.
@@ -270,6 +270,7 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 				Image:      i.Image,
 			},
 			HealthCheck: i.HealthCheck,
+			Platform:    i.Platform,
 			Schedule:    i.Schedule,
 			Timeout:     i.Timeout,
 			Retries:     i.Retries,
@@ -302,6 +303,7 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 		},
 		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
 		Path:        "/",
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
@@ -326,7 +328,8 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port: i.Port,
+		Port:     i.Port,
+		Platform: i.Platform,
 	}
 	return manifest.NewRequestDrivenWebService(props)
 }
@@ -340,6 +343,7 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 		},
 		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
 	}), nil
 }
 

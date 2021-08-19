@@ -44,7 +44,8 @@ type RequestDrivenWebServiceHttpConfig struct {
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
-	Port uint16
+	Port     uint16
+	Platform *PlatformArgsOrString
 }
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
@@ -61,6 +62,7 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -134,6 +136,7 @@ func (s *RequestDrivenWebService) windowsCompatibility() error {
 	if s.InstanceConfig.Platform == nil {
 		return nil
 	}
+	// Error out if user added Windows as platform in manifest.
 	if isWindowsPlatform(s.InstanceConfig.Platform) {
 		return errors.New("Windows is not supported for App Runner services")
 	}

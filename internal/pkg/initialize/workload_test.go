@@ -24,6 +24,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		inDockerfilePath string
 		inImage          string
 		inAppName        string
+		inPlatform       *manifest.PlatformArgsOrString
 
 		inSchedule string
 		inRetries  int
@@ -236,6 +237,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					DockerfilePath: tc.inDockerfilePath,
 					Image:          tc.inImage,
 					Type:           tc.inJobType,
+					Platform:       tc.inPlatform,
 				},
 				Schedule: tc.inSchedule,
 				Retries:  tc.inRetries,

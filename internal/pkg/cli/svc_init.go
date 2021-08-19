@@ -7,6 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
@@ -223,15 +226,18 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
+	detectedPlatform, targetPlatform, err := o.dockerEngine.RedirectPlatform(o.image)
 	if err != nil {
 		return fmt.Errorf("get/redirect docker engine platform: %w", err)
 	}
-	o.platform = platform
+	o.platform = targetPlatform
 	if o.platform != nil {
-		log.Warningf(`Your architecture type is currently unsupported. Setting platform %s instead.\n`, dockerengine.PlatformString(dockerengine.OSLinux, dockerengine.ArchAMD64))
-		if o.wkldType != manifest.RequestDrivenWebServiceType {
-			log.Warning("See 'platform' field in your manifest.\n")
+		// Error out early if Windows && AppRunner/RDWS.
+		if strings.Split(aws.StringValue(targetPlatform), "/")[0] == manifest.OSWindows && o.wkldType == manifest.RequestDrivenWebServiceType {
+			return errors.New("Windows is not supported for App Runner services")
+		}
+		if detectedPlatform != aws.StringValue(targetPlatform) {
+			log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, aws.StringValue(o.platform))
 		}
 	}
 
@@ -242,7 +248,9 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
+			Platform: &manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
 		},
 		Port:        o.port,
 		HealthCheck: hc,

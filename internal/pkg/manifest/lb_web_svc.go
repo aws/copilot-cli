@@ -76,6 +76,7 @@ type LoadBalancedWebServiceProps struct {
 	Path        string
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    *PlatformArgsOrString // Optional platform configuration.
 }
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
@@ -111,6 +112,13 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	if props.Platform != nil {
+		svc.LoadBalancedWebServiceConfig.Platform = props.Platform
+		if isWindowsPlatform(props.Platform) {
+			svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(1024)
+			svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(2048)
+		}
+	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	return svc

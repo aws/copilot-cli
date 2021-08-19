@@ -108,6 +108,56 @@ func TestNewBackendSvc(t *testing.T) {
 				},
 			},
 		},
+		"with windows platform": {
+			inProps: BackendServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "subscribers",
+					Dockerfile: "./subscribers/Dockerfile",
+				},
+				Platform: &PlatformArgsOrString{PlatformString: aws.String("windows/amd64")},
+			},
+			wantedManifest: &BackendService{
+				Workload: Workload{
+					Name: aws.String("subscribers"),
+					Type: aws.String(BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./subscribers/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(1024),
+						Memory: aws.Int(2048),
+						Platform: &PlatformArgsOrString{
+							PlatformString: aws.String("windows/amd64"),
+							PlatformArgs: PlatformArgs{
+								OSFamily: nil,
+								Arch:     nil,
+							},
+						},
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
+							Placement: stringP("public"),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {

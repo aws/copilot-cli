@@ -66,6 +66,7 @@ type ScheduledJobProps struct {
 	Schedule    string
 	Timeout     string
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    *PlatformArgsOrString // Optional platform configuration.
 	Retries     int
 }
 
@@ -101,6 +102,13 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	job.ImageConfig.Location = stringP(props.Image)
 	job.ImageConfig.HealthCheck = props.HealthCheck
+	if props.Platform != nil {
+		job.Platform = props.Platform
+		if isWindowsPlatform(props.Platform) {
+			job.TaskConfig.CPU = aws.Int(1024)
+			job.TaskConfig.Memory = aws.Int(2048)
+		}
+	}
 	job.On.Schedule = stringP(props.Schedule)
 	if props.Retries != 0 {
 		job.Retries = aws.Int(props.Retries)
