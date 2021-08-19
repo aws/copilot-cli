@@ -66,12 +66,12 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inAppName: "",
 			wantedErr: errNoAppInWorkspace,
 		},
-		"fail if both no subscriptions and subscriptions are set": {
+		"fail if both no-subscribe and subscribe are set": {
 			inAppName:         "phonetool",
 			inSvcName:         "service",
 			inSubscribeTags:   []string{"name:svc"},
 			inNoSubscriptions: true,
-			wantedErr:         errors.New("validate subscribe configuration: cannot specify --no-subscriptions and --subscribe options at once"),
+			wantedErr:         errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe"),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",
@@ -169,7 +169,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					},
 					{
 						Value: manifest.WorkerServiceType,
-						Hint:  "Consumes Events",
+						Hint:  "Events to SQS to ECS on Fargate",
 					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)

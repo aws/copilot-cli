@@ -123,7 +123,7 @@ func TestInitOpts_Run(t *testing.T) {
 					},
 					{
 						Value: manifest.WorkerServiceType,
-						Hint:  "Consumes Events",
+						Hint:  "Events to SQS to ECS on Fargate",
 					},
 					{
 						Value: manifest.ScheduledJobType,
