@@ -39,6 +39,16 @@ Expected Behaviors:
 	- Map: override value of existing keys, append non-existing keys.
 */
 
+func TestEnsureTransformersOrder(t *testing.T) {
+	t.Run("ensure we transform volumes first", func(t *testing.T) {
+		_, ok := defaultTransformers[0].(mapToVolumeTransformer)
+		require.True(t, ok, "mapToVolumeTransformer need has to be the first transformer. Otherwise `mergo` will overwrite the `dst` map completely and we will lose `dst`'s values.")
+
+		_, ok = defaultTransformers[1].(basicTransformer)
+		require.True(t, ok, "basicTransformer needs to used before the rest of the custom transformers, because the other transformers do not merge anything - they just unset the fields that do not get specified in source manifest.")
+	})
+}
+
 func TestApplyEnv_Image(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
