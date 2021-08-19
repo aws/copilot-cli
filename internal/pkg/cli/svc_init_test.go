@@ -71,7 +71,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inSvcName:       "service",
 			inSubscribeTags: []string{"name:svc"},
 			inNoSubscribe:   true,
-			wantedErr:       errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe"),
+			wantedErr:       errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",

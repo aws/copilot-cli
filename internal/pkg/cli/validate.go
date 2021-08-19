@@ -639,7 +639,7 @@ func validateLSIs(val interface{}) error {
 func validateSubscribe(noSubscription bool, subscribeTags []string) error {
 	// --no-subscriptions and --subscribe are mutually exclusive.
 	if noSubscription && len(subscribeTags) != 0 {
-		return fmt.Errorf("validate subscribe configuration: cannot specify both --%s and --%s", noSubscriptionFlag, subscribeFlag)
+		return fmt.Errorf("validate subscribe configuration: cannot specify both --%s and --%s", noSubscriptionFlag, subscribeTopicsFlag)
 	}
 	if len(subscribeTags) != 0 {
 		if err := validateSubscriptions(subscribeTags); err != nil {

@@ -764,7 +764,7 @@ func Test_validateSubscribe(t *testing.T) {
 		"error when no-subscriptions and subscribe": {
 			inNoSubscriptions: true,
 			inSubscribeTags:   []string{"svc1:topic1", "svc2:topic2"},
-			wantErr:           errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe"),
+			wantErr:           errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
 		},
 		"error when bad subscription tag": {
 			inNoSubscriptions: false,
