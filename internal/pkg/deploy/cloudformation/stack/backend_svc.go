@@ -55,7 +55,8 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 		},
 		manifest: mft,
 
@@ -148,7 +149,11 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
 	}
-	return content.String(), nil
+	overridenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

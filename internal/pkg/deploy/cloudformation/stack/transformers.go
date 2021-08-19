@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 
@@ -328,6 +329,17 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 		Destination:    lc.Destination,
 		SecretOptions:  lc.SecretOptions,
 	}
+}
+
+func convertTaskDefOverrideRules(inRules []manifest.OverrideRule) []override.Rule {
+	var res []override.Rule
+	for _, r := range inRules {
+		res = append(res, override.Rule{
+			Path:  r.Path,
+			Value: &r.Value,
+		})
+	}
+	return res
 }
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
