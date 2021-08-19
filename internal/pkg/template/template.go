@@ -238,7 +238,7 @@ func newTextTemplate(name string) *template.Template {
 }
 
 func (t *Template) read(path string) (string, error) {
-	dat, err := t.fs.ReadFile(filepath.Join("templates", path))
+	dat, err := t.fs.ReadFile(filepath.ToSlash(filepath.Join("templates", path))) // We need to use "/" even on Windows with go:embed.
 	if err != nil {
 		return "", fmt.Errorf("read template %s: %w", path, err)
 	}

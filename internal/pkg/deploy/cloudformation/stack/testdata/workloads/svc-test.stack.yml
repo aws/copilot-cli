@@ -350,6 +350,7 @@ Resources:
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+      PlatformVersion: 1.4.0
       PropagateTags: SERVICE
       LaunchType: FARGATE
       NetworkConfiguration:
