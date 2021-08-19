@@ -49,7 +49,6 @@ func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 	}
 
 	return func(dst, src reflect.Value) error {
-		// NOTE: Since `dst` comes from an exported field (all manifest fields are exported), `Interface{}` won't panic.
 		dstStruct, srcStruct := dst.Interface().(Image), src.Interface().(Image)
 
 		if !srcStruct.Build.isEmpty() && srcStruct.Location != nil {
