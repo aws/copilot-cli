@@ -193,7 +193,7 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	}
 
 	// Apply overrides to the original service s.
-	for _, t := range TT {
+	for _, t := range defaultTransformers {
 		err := mergo.Merge(&s, WorkerService{
 			WorkerServiceConfig: *overrideConfig,
 		}, mergo.WithOverride, mergo.WithTransformers(t))

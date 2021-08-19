@@ -186,22 +186,7 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 		return &s, nil
 	}
 
-	transformers := []mergo.Transformers{
-		mapToVolumeTransformer{},
-
-		basicTransformer{},
-
-		imageTransformer{},
-		buildArgsOrStringTransformer{},
-		stringSliceOrStringTransformer{},
-		platformArgsOrStringTransformer{},
-		healthCheckArgsOrStringTransformer{},
-		countTransformer{},
-		advancedCountTransformer{},
-		rangeTransformer{},
-	}
-
-	for _, t := range transformers {
+	for _, t := range defaultTransformers {
 		// Apply overrides to the original service s.
 		err := mergo.Merge(&s, LoadBalancedWebService{
 			LoadBalancedWebServiceConfig: *overrideConfig,
@@ -214,21 +199,4 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 
 	s.Environments = nil
 	return &s, nil
-}
-
-var TT = []mergo.Transformers{
-	//workloadTransformer{},
-
-	mapToVolumeTransformer{},
-
-	basicTransformer{},
-
-	imageTransformer{},
-	buildArgsOrStringTransformer{},
-	stringSliceOrStringTransformer{},
-	platformArgsOrStringTransformer{},
-	healthCheckArgsOrStringTransformer{},
-	countTransformer{},
-	advancedCountTransformer{},
-	rangeTransformer{},
 }
