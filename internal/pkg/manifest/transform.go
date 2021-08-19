@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/dustin/go-humanize/english"
-
 	"github.com/imdario/mergo"
 )
 
@@ -215,26 +213,11 @@ func (t advancedCountTransformer) Transformer(typ reflect.Type) func(dst, src re
 	return func(dst, src reflect.Value) error {
 		dstStruct, srcStruct := dst.Interface().(AdvancedCount), src.Interface().(AdvancedCount)
 
-		spotSpecified := srcStruct.Spot != nil
-		elseSpecified := srcStruct.Range != nil ||
-			srcStruct.CPU != nil ||
-			srcStruct.Memory != nil ||
-			srcStruct.Requests != nil ||
-			srcStruct.ResponseTime != nil
-		if spotSpecified && elseSpecified {
-			return fmt.Errorf(fmtExclusiveFieldsSpecifiedTogether, "spot", "is",
-				english.WordSeries([]string{"range", "cpu", "memory", "requests", "response_time"}, "and"))
+		if srcStruct.Spot != nil {
+			dstStruct.unsetAutoscaling()
 		}
 
-		if spotSpecified {
-			dstStruct.Range = nil
-			dstStruct.CPU = nil
-			dstStruct.Memory = nil
-			dstStruct.Requests = nil
-			dstStruct.ResponseTime = nil
-		}
-
-		if elseSpecified {
+		if srcStruct.hasAutoscaling() {
 			dstStruct.Spot = nil
 		}
 
@@ -384,28 +367,12 @@ func (t efsVolumeConfigurationTransformer) Transformer(typ reflect.Type) func(ds
 	}
 	return func(dst, src reflect.Value) error {
 		dstStruct, srcStruct := dst.Interface().(EFSVolumeConfiguration), src.Interface().(EFSVolumeConfiguration)
-
-		uidOrGIDSet := srcStruct.UID != nil || srcStruct.GID != nil
-		elseSet := srcStruct.FileSystemID != nil ||
-			srcStruct.RootDirectory != nil ||
-			srcStruct.AuthConfig != nil
-
-		if uidOrGIDSet && elseSet {
-			return fmt.Errorf(fmtExclusiveFieldsSpecifiedTogether,
-				english.WordSeries([]string{"uid", "gid"}, "and"),
-				english.PluralWord(len([]string{"uid", "gid"}), "is", "and"),
-				english.WordSeries([]string{"id", "root_dir", "auth"}, "and"))
+		if !srcStruct.EmptyUIDConfig() {
+			dstStruct.unsetBYOConfig()
 		}
 
-		if uidOrGIDSet {
-			dstStruct.FileSystemID = nil
-			dstStruct.RootDirectory = nil
-			dstStruct.AuthConfig = nil
-		}
-
-		if elseSet {
-			dstStruct.UID = nil
-			dstStruct.GID = nil
+		if !srcStruct.EmptyBYOConfig() {
+			dstStruct.unsetUIDConfig()
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

@@ -77,6 +77,14 @@ efs:
 				},
 			},
 		},
+		"invalid": {
+			manifest: []byte(`
+efs: 
+  uid: 1000
+  gid: 10000
+  id: 1`),
+			wantErr: `must specify one, not both, of "uid/gid" and "id/root_dir/auth"`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
