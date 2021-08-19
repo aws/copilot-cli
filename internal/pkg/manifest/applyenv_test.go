@@ -322,6 +322,23 @@ func TestApplyEnv_Image(t *testing.T) {
 				}
 			},
 		},
+		"empty healthcheck overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.Image = Image{}
+				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Retries: aws.Int(3),
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+					Command:     nil,
+					Interval:    nil,
+					Retries:     aws.Int(3),
+					Timeout:     nil,
+					StartPeriod: nil,
+				}
+			},
+		},
 	}
 
 	for name, tc := range testCases {
