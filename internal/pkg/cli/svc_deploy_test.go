@@ -1182,7 +1182,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
-				m.EXPECT().ListDeployedSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
+				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
 			},
 			wantErr: fmt.Errorf("%w", mockError),
 		},
@@ -1204,7 +1204,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
-				m.EXPECT().ListDeployedSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
+				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
 					*topic,
 				}, nil)
 			},

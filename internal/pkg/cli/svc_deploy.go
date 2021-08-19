@@ -569,7 +569,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	case *manifest.WorkerService:
-		topics, err := o.snsTopicGetter.ListDeployedSNSTopics(o.appName, o.envName)
+		topics, err := o.snsTopicGetter.ListSNSTopics(o.appName, o.envName)
 		if err != nil {
 			return nil, err
 		}
@@ -856,7 +856,7 @@ func StripNonAlphaNumFunc(s string) string {
 }
 
 func (o *deploySvcOpts) buildWorkerQueueNames() (string, error) {
-	topics, err := o.snsTopicGetter.ListDeployedSNSTopics(o.appName, o.envName)
+	topics, err := o.snsTopicGetter.ListSNSTopics(o.appName, o.envName)
 	if err != nil {
 		return "", err
 	}
