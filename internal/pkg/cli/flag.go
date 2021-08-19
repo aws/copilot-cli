@@ -52,7 +52,7 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
-	noSubscriptionFlag = "no-subscriptions"
+	noSubscriptionFlag = "no-subscribe"
 	subscribeFlag      = "subscribe"
 
 	storageTypeFlag              = "storage-type"
@@ -222,7 +222,8 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	svcPortFlagDescription           = "The port on which your service listens."
 
 	noSubscriptionFlagDescription = "Optional. Turn off selection for adding subscriptions for worker services."
-	subscribeFlagDescription      = "Optional. Publishers for worker services to subscribe to. Must be of format '<svcName>:<publisherName>"
+	subscribeFlagDescription      = `Optional. Events to subscribe to from services in your application. 
+Must be of format '<svcName>:<topicName>'`
 
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."

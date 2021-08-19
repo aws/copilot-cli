@@ -64,14 +64,15 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 
 	svcInitPublisherPrompt     = "Which publishers do you want to subscribe to?"
-	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic that the designated service publishes messages to. These messages can be consumed by the Worker Service.`
+	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
+These messages can be consumed by the Worker Service.`
 )
 
 var serviceTypeHints = map[string]string{
 	manifest.RequestDrivenWebServiceType: "App Runner",
 	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
 	manifest.BackendServiceType:          "ECS on Fargate",
-	manifest.WorkerServiceType:           "Consumes Events",
+	manifest.WorkerServiceType:           "Events to SQS to ECS on Fargate",
 }
 
 type initWkldVars struct {

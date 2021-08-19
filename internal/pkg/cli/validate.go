@@ -63,7 +63,7 @@ var (
 
 	// Topic subscription errors.
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
-	errInvalidPubSubTopicName   = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
+	errInvalidPubSubTopicName   = errors.New("topic names can only contain letters, numbers, underscores, and hyphens")
 	errSubscribeBadFormat       = errors.New("value must be of the form <serviceName>:<topicName>")
 )
 
@@ -639,7 +639,7 @@ func validateLSIs(val interface{}) error {
 func validateSubscribe(noSubscription bool, subscribeTags []string) error {
 	// --no-subscriptions and --subscribe are mutually exclusive.
 	if noSubscription && len(subscribeTags) != 0 {
-		return fmt.Errorf("validate subscribe configuration: cannot specify --%s and --%s options at once", noSubscriptionFlag, subscribeFlag)
+		return fmt.Errorf("validate subscribe configuration: cannot specify both --%s and --%s", noSubscriptionFlag, subscribeFlag)
 	}
 	if len(subscribeTags) != 0 {
 		if err := validateSubscriptions(subscribeTags); err != nil {
