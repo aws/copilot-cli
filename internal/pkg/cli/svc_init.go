@@ -81,8 +81,8 @@ type initWkldVars struct {
 	name           string
 	dockerfilePath string
 	image          string
-	subscribeTags  []string
-	noSubscription bool
+	subscriptions  []string
+	noSubscribe    bool
 }
 
 type initSvcVars struct {
@@ -105,7 +105,7 @@ type initSvcOpts struct {
 	// Outputs stored on successful actions.
 	manifestPath string
 	platform     *string
-	topics       *[]manifest.TopicSubscription
+	topics       []manifest.TopicSubscription
 
 	// Cache variables
 	df dockerfileParser
@@ -198,7 +198,7 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
-	if err := validateSubscribe(o.noSubscription, o.subscribeTags); err != nil {
+	if err := validateSubscribe(o.noSubscribe, o.subscriptions); err != nil {
 		return err
 	}
 	return nil
@@ -449,21 +449,21 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 		return nil
 	}
 	// publishers already specified by flags
-	if len(o.subscribeTags) > 0 {
+	if len(o.subscriptions) > 0 {
 		var topicSubscriptions []manifest.TopicSubscription
-		for _, sub := range o.subscribeTags {
+		for _, sub := range o.subscriptions {
 			sub, err := subscriptionFromKey(sub)
 			if err != nil {
 				return err
 			}
 			topicSubscriptions = append(topicSubscriptions, sub)
 		}
-		o.topics = &topicSubscriptions
+		o.topics = topicSubscriptions
 		return nil
 	}
 
 	// if --no-subscriptions flag specified, no need to ask for publishers
-	if o.noSubscription {
+	if o.noSubscribe {
 		return nil
 	}
 
@@ -479,7 +479,7 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 			Service: t.Workload(),
 		})
 	}
-	o.topics = &subscriptions
+	o.topics = subscriptions
 
 	return nil
 }
@@ -566,8 +566,8 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
-	cmd.Flags().StringArrayVar(&vars.subscribeTags, subscribeFlag, []string{}, subscribeFlagDescription)
-	cmd.Flags().BoolVar(&vars.noSubscription, noSubscriptionFlag, false, noSubscriptionFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeFlag, []string{}, subscribeFlagDescription)
+	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
 
 	return cmd
 }

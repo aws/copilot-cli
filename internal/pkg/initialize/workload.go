@@ -67,7 +67,7 @@ type WorkloadProps struct {
 	DockerfilePath string
 	Image          string
 	Platform       *string
-	Topics         *[]manifest.TopicSubscription
+	Topics         []manifest.TopicSubscription
 }
 
 // JobProps contains the information needed to represent a Job.
@@ -354,7 +354,7 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 			Image:      i.Image,
 		},
 		HealthCheck: i.HealthCheck,
-		Topics:      i.Topics,
+		Topics:      &i.Topics,
 	}), nil
 }
 

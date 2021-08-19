@@ -444,7 +444,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		inAppName        string
 		inImage          string
 		inHealthCheck    *manifest.ContainerHealthCheck
-		inTopics         *[]manifest.TopicSubscription
+		inTopics         []manifest.TopicSubscription
 
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
@@ -721,7 +721,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcName:        "worker",
 			inDockerfilePath: "worker/Dockerfile",
 			inSvcPort:        80,
-			inTopics: &[]manifest.TopicSubscription{
+			inTopics: []manifest.TopicSubscription{
 				{
 					Name:    "theTopic",
 					Service: "publisher",

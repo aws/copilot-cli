@@ -23,14 +23,14 @@ import (
 
 func TestSvcInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inSvcType         string
-		inSvcName         string
-		inDockerfilePath  string
-		inImage           string
-		inAppName         string
-		inSvcPort         uint16
-		inSubscribeTags   []string
-		inNoSubscriptions bool
+		inSvcType        string
+		inSvcName        string
+		inDockerfilePath string
+		inImage          string
+		inAppName        string
+		inSvcPort        uint16
+		inSubscribeTags  []string
+		inNoSubscribe    bool
 
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
@@ -67,11 +67,11 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			wantedErr: errNoAppInWorkspace,
 		},
 		"fail if both no-subscribe and subscribe are set": {
-			inAppName:         "phonetool",
-			inSvcName:         "service",
-			inSubscribeTags:   []string{"name:svc"},
-			inNoSubscriptions: true,
-			wantedErr:         errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe"),
+			inAppName:       "phonetool",
+			inSvcName:       "service",
+			inSubscribeTags: []string{"name:svc"},
+			inNoSubscribe:   true,
+			wantedErr:       errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe"),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",
@@ -97,8 +97,8 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 						dockerfilePath: tc.inDockerfilePath,
 						image:          tc.inImage,
 						appName:        tc.inAppName,
-						subscribeTags:  tc.inSubscribeTags,
-						noSubscription: tc.inNoSubscriptions,
+						subscriptions:  tc.inSubscribeTags,
+						noSubscribe:    tc.inNoSubscribe,
 					},
 					port: tc.inSvcPort,
 				},
@@ -131,13 +131,13 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 	)
 	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
 	testCases := map[string]struct {
-		inSvcType         string
-		inSvcName         string
-		inDockerfilePath  string
-		inImage           string
-		inSvcPort         uint16
-		inSubscribeTags   []string
-		inNoSubscriptions bool
+		inSvcType        string
+		inSvcName        string
+		inDockerfilePath string
+		inImage          string
+		inSvcPort        uint16
+		inSubscribeTags  []string
+		inNoSubscribe    bool
 
 		mockPrompt       func(m *mocks.Mockprompter)
 		mockSel          func(m *mocks.MockdockerfileSelector)
@@ -482,11 +482,11 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 		},
 		"skip selecting subscriptions if no-subscriptions flag is set": {
-			inSvcType:         "Worker Service",
-			inSvcName:         wantedSvcName,
-			inSvcPort:         wantedSvcPort,
-			inImage:           "mockImage",
-			inNoSubscriptions: true,
+			inSvcType:     "Worker Service",
+			inSvcName:     wantedSvcName,
+			inSvcPort:     wantedSvcPort,
+			inImage:       "mockImage",
+			inNoSubscribe: true,
 
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
@@ -496,12 +496,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			wantedErr:        nil,
 		},
 		"skip selecting subscriptions if subscribe flag is set": {
-			inSvcType:         "Worker Service",
-			inSvcName:         wantedSvcName,
-			inSvcPort:         wantedSvcPort,
-			inImage:           "mockImage",
-			inNoSubscriptions: false,
-			inSubscribeTags:   []string{"svc:name"},
+			inSvcType:       "Worker Service",
+			inSvcName:       wantedSvcName,
+			inSvcPort:       wantedSvcPort,
+			inImage:         "mockImage",
+			inNoSubscribe:   false,
+			inSubscribeTags: []string{"svc:name"},
 
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
@@ -550,8 +550,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 						name:           tc.inSvcName,
 						image:          tc.inImage,
 						dockerfilePath: tc.inDockerfilePath,
-						noSubscription: tc.inNoSubscriptions,
-						subscribeTags:  tc.inSubscribeTags,
+						noSubscribe:    tc.inNoSubscribe,
+						subscriptions:  tc.inSubscribeTags,
 					},
 					port: tc.inSvcPort,
 				},
