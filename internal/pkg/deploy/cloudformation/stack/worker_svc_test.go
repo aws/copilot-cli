@@ -94,7 +94,7 @@ Outputs:
 			setUpManifest: func(svc *WorkerService) {
 				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
 				testWorkerSvcManifestWithBadSubscribe.Subscribe = &manifest.SubscribeConfig{
-					Topics: &[]manifest.TopicSubscription{
+					Topics: []manifest.TopicSubscription{
 						{
 							Name:    "name",
 							Service: "un@cept#ble",
@@ -124,7 +124,7 @@ Outputs:
 			setUpManifest: func(svc *WorkerService) {
 				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
 				testWorkerSvcManifestWithBadSubscribe.Subscribe = &manifest.SubscribeConfig{
-					Topics: &[]manifest.TopicSubscription{
+					Topics: []manifest.TopicSubscription{
 						{
 							Name:    "badname",
 							Service: "frontend",

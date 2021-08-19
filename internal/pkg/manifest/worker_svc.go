@@ -46,13 +46,13 @@ type WorkerServiceConfig struct {
 type WorkerServiceProps struct {
 	WorkloadProps
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	Topics      *[]TopicSubscription  // Optional topics for subscriptions
+	Topics      []TopicSubscription   // Optional topics for subscriptions
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
-	Topics *[]TopicSubscription `yaml:"topics"`
-	Queue  *SQSQueue            `yaml:"queue"`
+	Topics []TopicSubscription `yaml:"topics"`
+	Queue  *SQSQueue           `yaml:"queue"`
 }
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
