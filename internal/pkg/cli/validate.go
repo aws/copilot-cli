@@ -669,7 +669,7 @@ func validateSubscriptionKey(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	sub, err := subscriptionFromKey(s)
+	sub, err := parseSerializedSubscription(s)
 	if err != nil {
 		return errSubscribeBadFormat
 	}

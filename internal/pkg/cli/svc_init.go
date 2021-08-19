@@ -452,7 +452,7 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	if len(o.subscriptions) > 0 {
 		var topicSubscriptions []manifest.TopicSubscription
 		for _, sub := range o.subscriptions {
-			sub, err := subscriptionFromKey(sub)
+			sub, err := parseSerializedSubscription(sub)
 			if err != nil {
 				return err
 			}
@@ -484,8 +484,8 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	return nil
 }
 
-// subscriptionFromKey parses the service and topic name out of keys specified in the form "service:topicName"
-func subscriptionFromKey(input string) (manifest.TopicSubscription, error) {
+// parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"
+func parseSerializedSubscription(input string) (manifest.TopicSubscription, error) {
 	attrs := regexpMatchSubscription.FindStringSubmatch(input)
 	if len(attrs) == 0 {
 		return manifest.TopicSubscription{}, fmt.Errorf("parse subscription from key: %s", input)
