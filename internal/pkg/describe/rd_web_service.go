@@ -26,15 +26,8 @@ type RDWebServiceDescriber struct {
 	initServiceDescriber func(string) error
 }
 
-// NewRDWebServiceConfig contains fields that initiates RDWebServiceDescriber struct.
-type NewRDWebServiceConfig struct {
-	NewServiceConfig
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
-}
-
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
-func NewRDWebServiceDescriber(opt NewRDWebServiceConfig) (*RDWebServiceDescriber, error) {
+func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, error) {
 	describer := &RDWebServiceDescriber{
 		app:              opt.App,
 		svc:              opt.Svc,

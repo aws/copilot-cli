@@ -10,11 +10,15 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws"
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -28,6 +32,12 @@ import (
 type deploySvcMocks struct {
 	mockWs                 *mocks.MockwsSvcDirReader
 	mockimageBuilderPusher *mocks.MockimageBuilderPusher
+	mockAppResourcesGetter *mocks.MockappResourcesGetter
+	mockAppVersionGetter   *mocks.MockversionGetter
+	mockEndpointGetter     *mocks.MockendpointGetter
+	mockServiceDeployer    *mocks.MockserviceDeployer
+	mockSpinner            *mocks.Mockprogress
+	mockServiceUpdater     *mocks.MockserviceUpdater
 }
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
@@ -543,7 +553,7 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 	}
 }
 
-func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
+func TestSvcDeployOpts_deploySvc(t *testing.T) {
 	mockError := errors.New("some error")
 	const (
 		mockAppName   = "mockApp"
@@ -556,23 +566,17 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 		inApp          *config.Application
 		inEnvironment  *config.Environment
 		inBuildRequire bool
+		inForceDeploy  bool
 
-		mockWorkspace          func(m *mocks.MockwsSvcDirReader)
-		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
-		mockAppVersionGetter   func(m *mocks.MockversionGetter)
-		mockEndpointGetter     func(m *mocks.MockendpointGetter)
-		mockIdentity           func(m *mocks.MockidentityService)
+		mock func(m *deploySvcMocks)
 
 		wantErr error
 	}{
 		"fail to read service manifest": {
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return(nil, mockError)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return(nil, mockError)
 			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
-			mockEndpointGetter:     func(m *mocks.MockendpointGetter) {},
-			wantErr:                fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
+			wantErr: fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
 		},
 		"fail to get app resources": {
 			inBuildRequire: true,
@@ -583,19 +587,14 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			inApp: &config.Application{
 				Name: mockAppName,
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&config.Application{
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: mockAppName,
 				}, "us-west-2").Return(nil, mockError)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-			},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {},
-			wantErr:              fmt.Errorf("get application %s resources from region us-west-2: %w", mockAppName, mockError),
+			wantErr: fmt.Errorf("get application %s resources from region us-west-2: %w", mockAppName, mockError),
 		},
 		"cannot to find ECR repo": {
 			inBuildRequire: true,
@@ -607,22 +606,17 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Name:      mockAppName,
 				AccountID: "1234567890",
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&config.Application{
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name:      mockAppName,
 					AccountID: "1234567890",
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					RepositoryURLs: map[string]string{},
 				}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-			},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {},
-			wantErr:              fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
+			wantErr: fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
 		"fail to get app version": {
 			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
@@ -634,15 +628,10 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Name:   mockAppName,
 				Domain: "mockDomain",
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
-				m.EXPECT().Version().Return("", mockError)
-			},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("", mockError)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
@@ -656,15 +645,10 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Name:   mockAppName,
 				Domain: "mockDomain",
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
-				m.EXPECT().Version().Return("v0.0.0", nil)
-			},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v0.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
@@ -678,17 +662,91 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Name:   mockAppName,
 				Domain: "mockDomain",
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
-				m.EXPECT().Version().Return("v1.0.0", nil)
-			},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+
 			},
 			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
+		},
+		"error if fail to deploy service": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("deploy service: some error"),
+		},
+		"error if change set is empty but force flag is not set": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
+			},
+			wantErr: fmt.Errorf("deploy service: change set with name mockChangeSet for stack mockStack has no changes"),
+		},
+		"error if fail to force an update": {
+			inForceDeploy: true,
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
+				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(mockError)
+				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError))
+			},
+			wantErr: fmt.Errorf("force an update for service mockSvc: some error"),
+		},
+		"error if fail to force an update because of timeout": {
+			inForceDeploy: true,
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
+				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).
+					Return(&ecs.ErrWaitServiceStableTimeout{})
+				m.mockSpinner.EXPECT().Stop(
+					log.Serror(fmt.Sprintf("%s  Run %s to check for the fail reason.\n",
+						fmt.Sprintf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, &ecs.ErrWaitServiceStableTimeout{}),
+						color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", mockSvcName, mockEnvName)))))
+			},
+			wantErr: fmt.Errorf("force an update for service mockSvc: max retries 0 exceeded"),
 		},
 		"success": {
 			inAliases: &manifest.Alias{
@@ -705,15 +763,30 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Name:   mockAppName,
 				Domain: "mockDomain",
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
-				m.EXPECT().Version().Return("v1.0.0", nil)
+		},
+		"success with force update": {
+			inForceDeploy: true,
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
 			},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
+				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(nil)
+				m.mockSpinner.EXPECT().Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, mockSvcName, mockEnvName))
 			},
 		},
 	}
@@ -723,28 +796,31 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
-			mockAppResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
-			mockAppVersionGetter := mocks.NewMockversionGetter(ctrl)
-			mockEndpointGetter := mocks.NewMockendpointGetter(ctrl)
-			tc.mockWorkspace(mockWorkspace)
-			tc.mockAppResourcesGetter(mockAppResourcesGetter)
-			tc.mockAppVersionGetter(mockAppVersionGetter)
-			tc.mockEndpointGetter(mockEndpointGetter)
+			m := &deploySvcMocks{
+				mockWs:                 mocks.NewMockwsSvcDirReader(ctrl),
+				mockAppResourcesGetter: mocks.NewMockappResourcesGetter(ctrl),
+				mockAppVersionGetter:   mocks.NewMockversionGetter(ctrl),
+				mockEndpointGetter:     mocks.NewMockendpointGetter(ctrl),
+				mockServiceDeployer:    mocks.NewMockserviceDeployer(ctrl),
+				mockServiceUpdater:     mocks.NewMockserviceUpdater(ctrl),
+				mockSpinner:            mocks.NewMockprogress(ctrl),
+			}
+			tc.mock(m)
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
-					name:    mockSvcName,
-					appName: mockAppName,
-					envName: mockEnvName,
+					name:           mockSvcName,
+					appName:        mockAppName,
+					envName:        mockEnvName,
+					forceNewUpdate: tc.inForceDeploy,
 				},
-				ws:            mockWorkspace,
+				ws:            m.mockWs,
 				buildRequired: tc.inBuildRequire,
-				appCFN:        mockAppResourcesGetter,
+				appCFN:        m.mockAppResourcesGetter,
 				newAppVersionGetter: func(s string) (versionGetter, error) {
-					return mockAppVersionGetter, nil
+					return m.mockAppVersionGetter, nil
 				},
-				endpointGetter:    mockEndpointGetter,
+				endpointGetter:    m.mockEndpointGetter,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
@@ -759,9 +835,12 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 						},
 					}, nil
 				},
+				svcCFN:     m.mockServiceDeployer,
+				svcUpdater: m.mockServiceUpdater,
+				spinner:    m.mockSpinner,
 			}
 
-			_, gotErr := opts.stackConfiguration(mockAddonsURL)
+			gotErr := opts.deploySvc(mockAddonsURL)
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
@@ -1047,5 +1126,4 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			}
 		})
 	}
-
 }

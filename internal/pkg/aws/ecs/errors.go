@@ -18,6 +18,15 @@ const (
 	fmtErrTaskStopped = "task %s: %s"
 )
 
+// ErrWaitServiceStableTimeout occurs when the max retries number waiting for the service to be stable exceeded the limit.
+type ErrWaitServiceStableTimeout struct {
+	maxRetries int
+}
+
+func (e *ErrWaitServiceStableTimeout) Error() string {
+	return fmt.Sprintf("max retries %v exceeded", e.maxRetries)
+}
+
 // ErrNoDefaultCluster occurs when the default cluster is not found.
 var ErrNoDefaultCluster = errors.New("default cluster does not exist")
 

@@ -67,6 +67,7 @@ type WorkloadProps struct {
 	DockerfilePath string
 	Image          string
 	Platform       *string
+	Topics         []manifest.TopicSubscription
 }
 
 // JobProps contains the information needed to represent a Job.
@@ -288,6 +289,8 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 		return w.newRequestDrivenWebServiceManifest(i), nil
 	case manifest.BackendServiceType:
 		return newBackendServiceManifest(i)
+	case manifest.WorkerServiceType:
+		return newWorkerServiceManifest(i)
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", i.Type)
 	}
@@ -340,6 +343,18 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 		},
 		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
+	}), nil
+}
+
+func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) {
+	return manifest.NewWorkerService(manifest.WorkerServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
+			Name:       i.Name,
+			Dockerfile: i.DockerfilePath,
+			Image:      i.Image,
+		},
+		HealthCheck: i.HealthCheck,
+		Topics:      &i.Topics,
 	}), nil
 }
 

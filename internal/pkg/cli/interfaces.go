@@ -506,6 +506,10 @@ type dockerfileSelector interface {
 	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
 
+type topicSelector interface {
+	Topics(prompt, help, app string) ([]deploy.Topic, error)
+}
+
 type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
 	PublicSubnets(prompt, help, vpcID string) ([]string, error)
@@ -538,6 +542,14 @@ type roleDeleter interface {
 
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
+}
+
+type serviceUpdater interface {
+	ForceUpdateService(app, env, svc string) error
+}
+
+type serviceDeployer interface {
+	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, opts ...awscloudformation.StackOption) error
 }
 
 type apprunnerServiceDescriber interface {

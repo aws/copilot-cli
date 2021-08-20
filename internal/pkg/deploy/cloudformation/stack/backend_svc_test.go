@@ -240,6 +240,7 @@ Outputs:
 							},
 						},
 					},
+					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
 			}
 

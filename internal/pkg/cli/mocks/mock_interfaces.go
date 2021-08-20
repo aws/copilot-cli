@@ -5385,6 +5385,44 @@ func (mr *MockdockerfileSelectorMockRecorder) Dockerfile(selPrompt, notFoundProm
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockdockerfileSelector)(nil).Dockerfile), selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
 }
 
+// MocktopicSelector is a mock of topicSelector interface.
+type MocktopicSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MocktopicSelectorMockRecorder
+}
+
+// MocktopicSelectorMockRecorder is the mock recorder for MocktopicSelector.
+type MocktopicSelectorMockRecorder struct {
+	mock *MocktopicSelector
+}
+
+// NewMocktopicSelector creates a new mock instance.
+func NewMocktopicSelector(ctrl *gomock.Controller) *MocktopicSelector {
+	mock := &MocktopicSelector{ctrl: ctrl}
+	mock.recorder = &MocktopicSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktopicSelector) EXPECT() *MocktopicSelectorMockRecorder {
+	return m.recorder
+}
+
+// Topics mocks base method.
+func (m *MocktopicSelector) Topics(prompt, help, app string) ([]deploy.Topic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Topics", prompt, help, app)
+	ret0, _ := ret[0].([]deploy.Topic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Topics indicates an expected call of Topics.
+func (mr *MocktopicSelectorMockRecorder) Topics(prompt, help, app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Topics", reflect.TypeOf((*MocktopicSelector)(nil).Topics), prompt, help, app)
+}
+
 // Mockec2Selector is a mock of ec2Selector interface.
 type Mockec2Selector struct {
 	ctrl     *gomock.Controller
@@ -5715,6 +5753,85 @@ func (m *MockserviceDescriber) DescribeService(app, env, svc string) (*ecs0.Serv
 func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
+}
+
+// MockserviceUpdater is a mock of serviceUpdater interface.
+type MockserviceUpdater struct {
+	ctrl     *gomock.Controller
+	recorder *MockserviceUpdaterMockRecorder
+}
+
+// MockserviceUpdaterMockRecorder is the mock recorder for MockserviceUpdater.
+type MockserviceUpdaterMockRecorder struct {
+	mock *MockserviceUpdater
+}
+
+// NewMockserviceUpdater creates a new mock instance.
+func NewMockserviceUpdater(ctrl *gomock.Controller) *MockserviceUpdater {
+	mock := &MockserviceUpdater{ctrl: ctrl}
+	mock.recorder = &MockserviceUpdaterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockserviceUpdater) EXPECT() *MockserviceUpdaterMockRecorder {
+	return m.recorder
+}
+
+// ForceUpdateService mocks base method.
+func (m *MockserviceUpdater) ForceUpdateService(app, env, svc string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForceUpdateService", app, env, svc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ForceUpdateService indicates an expected call of ForceUpdateService.
+func (mr *MockserviceUpdaterMockRecorder) ForceUpdateService(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceUpdateService", reflect.TypeOf((*MockserviceUpdater)(nil).ForceUpdateService), app, env, svc)
+}
+
+// MockserviceDeployer is a mock of serviceDeployer interface.
+type MockserviceDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MockserviceDeployerMockRecorder
+}
+
+// MockserviceDeployerMockRecorder is the mock recorder for MockserviceDeployer.
+type MockserviceDeployerMockRecorder struct {
+	mock *MockserviceDeployer
+}
+
+// NewMockserviceDeployer creates a new mock instance.
+func NewMockserviceDeployer(ctrl *gomock.Controller) *MockserviceDeployer {
+	mock := &MockserviceDeployer{ctrl: ctrl}
+	mock.recorder = &MockserviceDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockserviceDeployer) EXPECT() *MockserviceDeployerMockRecorder {
+	return m.recorder
+}
+
+// DeployService mocks base method.
+func (m *MockserviceDeployer) DeployService(out progress.FileWriter, conf cloudformation0.StackConfiguration, opts ...cloudformation.StackOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{out, conf}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployService", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployService indicates an expected call of DeployService.
+func (mr *MockserviceDeployerMockRecorder) DeployService(out, conf interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{out, conf}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
 }
 
 // MockapprunnerServiceDescriber is a mock of apprunnerServiceDescriber interface.

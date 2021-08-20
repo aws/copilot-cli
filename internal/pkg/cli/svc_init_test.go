@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -28,6 +29,8 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		inImage          string
 		inAppName        string
 		inSvcPort        uint16
+		inSubscribeTags  []string
+		inNoSubscribe    bool
 
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
@@ -35,7 +38,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		"invalid service type": {
 			inAppName: "phonetool",
 			inSvcType: "TestSvcType",
-			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service"`),
+			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Worker Service"`),
 		},
 		"invalid service name": {
 			inAppName: "phonetool",
@@ -63,6 +66,13 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inAppName: "",
 			wantedErr: errNoAppInWorkspace,
 		},
+		"fail if both no-subscribe and subscribe are set": {
+			inAppName:       "phonetool",
+			inSvcName:       "service",
+			inSubscribeTags: []string{"name:svc"},
+			inNoSubscribe:   true,
+			wantedErr:       errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
+		},
 		"valid flags": {
 			inSvcName:        "frontend",
 			inSvcType:        "Load Balanced Web Service",
@@ -87,6 +97,8 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 						dockerfilePath: tc.inDockerfilePath,
 						image:          tc.inImage,
 						appName:        tc.inAppName,
+						subscriptions:  tc.inSubscribeTags,
+						noSubscribe:    tc.inNoSubscribe,
 					},
 					port: tc.inSvcPort,
 				},
@@ -117,15 +129,19 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedSvcPort        = 80
 		wantedImage          = "mockImage"
 	)
+	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
 	testCases := map[string]struct {
 		inSvcType        string
 		inSvcName        string
 		inDockerfilePath string
 		inImage          string
 		inSvcPort        uint16
+		inSubscribeTags  []string
+		inNoSubscribe    bool
 
 		mockPrompt       func(m *mocks.Mockprompter)
 		mockSel          func(m *mocks.MockdockerfileSelector)
+		mocktopicSel     func(m *mocks.MocktopicSelector)
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
 		mockDockerEngine func(m *mocks.MockdockerEngine)
 
@@ -151,11 +167,16 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 						Value: manifest.BackendServiceType,
 						Hint:  "ECS on Fargate",
 					},
+					{
+						Value: manifest.WorkerServiceType,
+						Hint:  "Events to SQS to ECS on Fargate",
+					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
 			},
 			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        nil,
 		},
@@ -171,6 +192,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        fmt.Errorf("select service type: some error"),
 		},
@@ -187,6 +209,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        nil,
 		},
@@ -203,6 +226,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			wantedErr:        fmt.Errorf("get service name: some error"),
 		},
 		"skip selecting Dockerfile if image flag is set": {
@@ -214,6 +238,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        nil,
@@ -225,6 +250,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt:     func(m *mocks.Mockprompter) {},
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
@@ -241,6 +267,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("mockImage", nil)
 			},
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
@@ -257,6 +284,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("mockImage", nil)
 			},
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
@@ -282,6 +310,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
 			},
+			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
@@ -308,6 +337,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
 			},
+			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
@@ -329,6 +359,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("frontend/Dockerfile", nil)
 			},
+			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
@@ -346,6 +377,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
+			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
 			mockPrompt:     func(m *mocks.Mockprompter) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
@@ -363,6 +395,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        nil,
 		},
@@ -380,6 +413,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        nil,
 		},
@@ -397,6 +431,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        fmt.Errorf("get port: some error"),
 		},
@@ -414,6 +449,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 			wantedErr:        fmt.Errorf("get port: some error"),
 		},
@@ -429,6 +465,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 		},
 		"don't use dockerfile port if flag specified": {
@@ -441,7 +478,57 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+		},
+		"skip selecting subscriptions if no-subscriptions flag is set": {
+			inSvcType:     "Worker Service",
+			inSvcName:     wantedSvcName,
+			inSvcPort:     wantedSvcPort,
+			inImage:       "mockImage",
+			inNoSubscribe: true,
+
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
+			wantedErr:        nil,
+		},
+		"skip selecting subscriptions if subscribe flag is set": {
+			inSvcType:       "Worker Service",
+			inSvcName:       wantedSvcName,
+			inSvcPort:       wantedSvcPort,
+			inImage:         "mockImage",
+			inNoSubscribe:   false,
+			inSubscribeTags: []string{"svc:name"},
+
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
+			wantedErr:        nil,
+		},
+		"select subscriptions": {
+			inSvcType:        "Worker Service",
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inImage:          "mockImage",
+			inDockerfilePath: "",
+
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			mocktopicSel: func(m *mocks.MocktopicSelector) {
+				m.EXPECT().Topics(
+					gomock.Eq(svcInitPublisherPrompt),
+					gomock.Eq(svcInitPublisherHelpPrompt),
+					gomock.Any(),
+				).Return([]deploy.Topic{*mockTopic}, nil)
+			},
+			wantedErr: nil,
 		},
 	}
 
@@ -454,6 +541,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
+			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 			opts := &initSvcOpts{
 				initSvcVars: initSvcVars{
@@ -462,6 +550,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 						name:           tc.inSvcName,
 						image:          tc.inImage,
 						dockerfilePath: tc.inDockerfilePath,
+						noSubscribe:    tc.inNoSubscribe,
+						subscriptions:  tc.inSubscribeTags,
 					},
 					port: tc.inSvcPort,
 				},
@@ -472,9 +562,11 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				df:           mockDockerfile,
 				prompt:       mockPrompt,
 				sel:          mockSel,
+				topicSel:     mockTopicSel,
 				dockerEngine: mockDockerEngine,
 			}
 			tc.mockSel(mockSel)
+			tc.mocktopicSel(mockTopicSel)
 			tc.mockPrompt(mockPrompt)
 			tc.mockDockerfile(mockDockerfile)
 			tc.mockDockerEngine(mockDockerEngine)
@@ -504,6 +596,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 		mockSvcInit      func(m *mocks.MocksvcInitializer)
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
 		mockDockerEngine func(m *mocks.MockdockerEngine)
+		mockTopicSel     func(m *mocks.MocktopicSelector)
 		inSvcPort        uint16
 		inSvcType        string
 		inSvcName        string
@@ -565,6 +658,44 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().RedirectPlatform("").Return(nil, nil)
+			},
+
+			wantedManifestPath: "manifest/path",
+		},
+		"Worker service": {
+			inAppName:        "sample",
+			inSvcName:        "frontend",
+			inDockerfilePath: "./Dockerfile",
+			inSvcType:        manifest.WorkerServiceType,
+
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "frontend",
+						Type:           "Worker Service",
+						DockerfilePath: "./Dockerfile",
+						Platform:       nil,
+					},
+				}).Return("manifest/path", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().RedirectPlatform("").Return(nil, nil)
+			},
+			mockTopicSel: func(m *mocks.MocktopicSelector) {
+				m.EXPECT().Topics(
+					gomock.Eq(svcInitPublisherPrompt),
+					gomock.Eq(svcInitPublisherHelpPrompt),
+					gomock.Any(),
+				).Return([]manifest.TopicSubscription{
+					{
+						Name:    "thetopic",
+						Service: "theservice",
+					},
+				}, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -646,6 +777,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockSvcInitializer := mocks.NewMocksvcInitializer(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
+			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
 
 			if tc.mockSvcInit != nil {
 				tc.mockSvcInit(mockSvcInitializer)
@@ -673,6 +805,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				},
 				df:           mockDockerfile,
 				dockerEngine: mockDockerEngine,
+				topicSel:     mockTopicSel,
 			}
 
 			// WHEN

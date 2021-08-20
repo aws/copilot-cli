@@ -73,6 +73,12 @@ func (t Topic) String() string {
 	return fmt.Sprintf(fmtTopicDescription, t.name, t.wkld)
 }
 
+// Workload returns the workload associated with the given topic.
+func (t Topic) Workload() string { return t.wkld }
+
+// Name returns the name of the given topic.
+func (t Topic) Name() string { return t.name }
+
 // validateAndExtractName determines whether the given ARN is a Copilot-valid SNS topic ARN.
 // It extracts the topic name from the ARN resource field.
 func (t *Topic) validateAndExtractName() error {
