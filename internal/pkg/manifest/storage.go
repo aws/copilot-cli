@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	errUnmarshalEFSOpts = errors.New(`cannot unmarshal efs field into bool or map`)
+	errUnmarshalEFSOpts        = errors.New(`cannot unmarshal efs field into bool or map`)
+	errInvalidEFSConfiguration = errors.New(`must specify one, not both, of "uid/gid" and "id/root_dir/auth"`)
 )
 
 // Storage represents the options for external and native storage.
@@ -85,6 +86,9 @@ func (e *EFSConfigOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 	if !e.Advanced.IsEmpty() {
 		// Unmarshaled successfully to e.Config, unset e.ID, and return.
+		if err := e.Advanced.isValid(); err != nil {
+			return err
+		}
 		e.Enabled = nil
 		return nil
 	}
@@ -125,6 +129,24 @@ func (e *EFSVolumeConfiguration) EmptyBYOConfig() bool {
 // with BYO EFS. If they are nonempty, then we should use managed EFS instead.
 func (e *EFSVolumeConfiguration) EmptyUIDConfig() bool {
 	return e.UID == nil && e.GID == nil
+}
+
+func (e *EFSVolumeConfiguration) unsetBYOConfig() {
+	e.FileSystemID = nil
+	e.AuthConfig = nil
+	e.RootDirectory = nil
+}
+
+func (e *EFSVolumeConfiguration) unsetUIDConfig() {
+	e.UID = nil
+	e.GID = nil
+}
+
+func (e *EFSVolumeConfiguration) isValid() error {
+	if !e.EmptyBYOConfig() && !e.EmptyUIDConfig() {
+		return errInvalidEFSConfiguration
+	}
+	return nil
 }
 
 // AuthorizationConfig holds options relating to access points and IAM authorization.

@@ -354,7 +354,7 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 			Image:      i.Image,
 		},
 		HealthCheck: i.HealthCheck,
-		Topics:      &i.Topics,
+		Topics:      i.Topics,
 	}), nil
 }
 

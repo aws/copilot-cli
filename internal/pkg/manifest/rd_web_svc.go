@@ -113,13 +113,15 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 		return &s, nil
 	}
 	// Apply overrides to the original service configuration.
-	err := mergo.Merge(&s, RequestDrivenWebService{
-		RequestDrivenWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-
-	if err != nil {
-		return nil, err
+	for _, t := range defaultTransformers {
+		err := mergo.Merge(&s, RequestDrivenWebService{
+			RequestDrivenWebServiceConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	s.Environments = nil
 	return &s, nil
 }

@@ -212,6 +212,14 @@ func (a *AdvancedCount) IsValid() error {
 	return nil
 }
 
+func (a *AdvancedCount) unsetAutoscaling() {
+	a.Range = nil
+	a.CPU = nil
+	a.Memory = nil
+	a.Requests = nil
+	a.ResponseTime = nil
+}
+
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
 func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
 	return dockerfileBuildRequired("service", svc)
