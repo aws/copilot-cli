@@ -506,6 +506,10 @@ type dockerfileSelector interface {
 	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
 
+type topicSelector interface {
+	Topics(prompt, help, app string) ([]deploy.Topic, error)
+}
+
 type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
 	PublicSubnets(prompt, help, vpcID string) ([]string, error)
