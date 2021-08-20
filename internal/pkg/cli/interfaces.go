@@ -617,3 +617,8 @@ type secretPutter interface {
 type servicePauser interface {
 	PauseService(svcARN string) error
 }
+
+type timeoutError interface {
+	error
+	Timeout() bool
+}

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -835,9 +836,10 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 						},
 					}, nil
 				},
-				svcCFN:     m.mockServiceDeployer,
-				svcUpdater: m.mockServiceUpdater,
-				spinner:    m.mockSpinner,
+				svcCFN:        m.mockServiceDeployer,
+				svcUpdater:    m.mockServiceUpdater,
+				newSvcUpdater: func(f func(*session.Session) serviceUpdater) {},
+				spinner:       m.mockSpinner,
 			}
 
 			gotErr := opts.deploySvc(mockAddonsURL)
@@ -1093,6 +1095,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				newAppVersionGetter: func(s string) (versionGetter, error) {
 					return m.mockAppVersionGetter, nil
 				},
+				newSvcUpdater:     func(f func(*session.Session) serviceUpdater) {},
 				endpointGetter:    m.mockEndpointGetter,
 				identity:          m.mockIdentity,
 				targetApp:         tc.inApp,

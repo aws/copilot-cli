@@ -108,3 +108,18 @@ func (mr *MockapiMockRecorder) ResumeService(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeService", reflect.TypeOf((*Mockapi)(nil).ResumeService), input)
 }
+
+// StartDeployment mocks base method.
+func (m *Mockapi) StartDeployment(input *apprunner.StartDeploymentInput) (*apprunner.StartDeploymentOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartDeployment", input)
+	ret0, _ := ret[0].(*apprunner.StartDeploymentOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartDeployment indicates an expected call of StartDeployment.
+func (mr *MockapiMockRecorder) StartDeployment(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartDeployment", reflect.TypeOf((*Mockapi)(nil).StartDeployment), input)
+}
