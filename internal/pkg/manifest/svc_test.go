@@ -323,7 +323,7 @@ subscribe:
 							},
 						},
 						Subscribe: &SubscribeConfig{
-							Topics: &[]TopicSubscription{
+							Topics: []TopicSubscription{
 								{
 									Name:    "publisher1",
 									Service: "testpubsvc",
