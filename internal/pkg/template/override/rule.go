@@ -6,6 +6,7 @@ package override
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -30,7 +31,7 @@ const (
 var (
 	// pathSegmentRegexp checks for map key or single sequence reference.
 	// For example: ContainerDefinitions[0], PortMapping[-], or Ulimits.
-	pathSegmentRegexp = regexp.MustCompile(fmt.Sprintf(`^[a-zA-Z0-9_-]+(\[(\d+|%s)\])?$`, seqAppendToLastSymbol))
+	pathSegmentRegexp = regexp.MustCompile(fmt.Sprintf(`^([a-zA-Z0-9_-]+)(\[(\d+|%s)\])?$`, seqAppendToLastSymbol))
 )
 
 // nodeUpserter is the interface to insert or update a series of nodes to a YAML file.
@@ -60,7 +61,58 @@ func (r Rule) validate() error {
 }
 
 func (r Rule) parse() (nodeUpserter, error) {
-	return nil, nil
+	pathSegments := strings.SplitAfterN(r.Path, pathSegmentSeparator, 2)
+	currPathSegment := strings.TrimSuffix(pathSegments[0], ".")
+	subMatches := pathSegmentRegexp.FindStringSubmatch(currPathSegment)
+	// Given that path segment is valid, len(subMatches) >= 1.
+	// subMatches[1:] are individual capture groups.
+	// There are 3 capture groups.
+	// The first capture group is always "([a-zA-Z0-9_-]+)", i.e. the key.
+	// The second capture group would be "[<index>]", the third "<index>", and they could be empty strings.
+	key := subMatches[1] // key is the first captured group
+	node := upsertNode{
+		key: key,
+	}
+	if len(pathSegments) < 2 {
+		// This is the last segment
+		node.valueToInsert = r.Value
+		return currNode(subMatches, node)
+	}
+
+	nextRule := Rule{
+		Path:  pathSegments[1],
+		Value: r.Value,
+	}
+	nextNode, err := nextRule.parse()
+	if err != nil {
+		return nil, err
+	}
+	node.next = nextNode
+	return currNode(subMatches, node)
+}
+
+func currNode(subMatches []string, upsertNode upsertNode) (nodeUpserter, error) {
+	if subMatches[2] == "" {
+		return &mapUpsertNode{
+			upsertNode: upsertNode,
+		}, nil
+	}
+
+	indexStr := subMatches[3] // index is the third captured group
+	if indexStr == seqAppendToLastSymbol {
+		return &seqIdxUpsertNode{
+			appendToLast: true,
+			upsertNode:   upsertNode,
+		}, nil
+	}
+	index, err := strconv.Atoi(indexStr)
+	if err != nil {
+		return nil, err
+	}
+	return &seqIdxUpsertNode{
+		index:      index,
+		upsertNode: upsertNode,
+	}, nil
 }
 
 // upsertNode represents a node that needs to be upserted at the given key.

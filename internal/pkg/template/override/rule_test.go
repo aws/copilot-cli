@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +16,7 @@ func Test_parseRules(t *testing.T) {
 	testCases := map[string]struct {
 		inRules []Rule
 
-		wantedNodeUpserter []nodeUpserter
+		wantedNodeUpserter func() []nodeUpserter
 		wantedError        error
 	}{
 		"error when empty rule path": {
@@ -47,10 +49,33 @@ func Test_parseRules(t *testing.T) {
 		"success": {
 			inRules: []Rule{
 				{
-					Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
+					Path:  "ContainerDefinitions[0].Ulimits[-].HardLimit",
+					Value: &yaml.Node{},
 				},
 			},
-			wantedNodeUpserter: []nodeUpserter{nil},
+			wantedNodeUpserter: func() []nodeUpserter {
+				node3 := &mapUpsertNode{
+					upsertNode: upsertNode{
+						key:           "HardLimit",
+						valueToInsert: &yaml.Node{},
+					},
+				}
+				node2 := &seqIdxUpsertNode{
+					upsertNode: upsertNode{
+						key:  "Ulimits",
+						next: node3,
+					},
+					appendToLast: true,
+				}
+				node1 := &seqIdxUpsertNode{
+					upsertNode: upsertNode{
+						key:  "ContainerDefinitions",
+						next: node2,
+					},
+					index: 0,
+				}
+				return []nodeUpserter{node1}
+			},
 		},
 	}
 
@@ -62,7 +87,7 @@ func Test_parseRules(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.ElementsMatch(t, tc.wantedNodeUpserter, got)
+				require.ElementsMatch(t, tc.wantedNodeUpserter(), got)
 			}
 		})
 	}
