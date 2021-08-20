@@ -7,6 +7,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -103,6 +104,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	prompt := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompt, ssm, ws)
+	deployStore, err := deploy.NewStore(ssm)
+	if err != nil {
+		return nil, err
+	}
+	snsSel := selector.NewDeploySelect(prompt, ssm, deployStore)
 	spin := termprogress.NewSpinner(log.DiagnosticWriter)
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess)
@@ -240,6 +246,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					fs:           fs,
 					init:         wlInitializer,
 					sel:          sel,
+					topicSel:     snsSel,
 					prompt:       prompt,
 					dockerEngine: dockerengine.New(cmd),
 				}

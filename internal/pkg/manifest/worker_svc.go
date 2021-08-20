@@ -33,13 +33,14 @@ type WorkerService struct {
 
 // WorkerServiceConfig holds the configuration that can be overridden per environments.
 type WorkerServiceConfig struct {
-	ImageConfig   ImageWithHealthcheck `yaml:"image,flow"`
-	ImageOverride `yaml:",inline"`
-	TaskConfig    `yaml:",inline"`
-	*Logging      `yaml:"logging,flow"`
-	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Subscribe     *SubscribeConfig          `yaml:"subscribe"`
-	Network       *NetworkConfig            `yaml:"network"`
+	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
+	ImageOverride    `yaml:",inline"`
+	TaskConfig       `yaml:",inline"`
+	*Logging         `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
+	Subscribe        *SubscribeConfig          `yaml:"subscribe"`
+	Network          *NetworkConfig            `yaml:"network"`
+	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
 // WorkerServiceProps represents the configuration needed to create a worker service.

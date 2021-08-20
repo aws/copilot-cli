@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Template rendering configuration common across workloads.
@@ -254,9 +255,17 @@ func envVarOutputNames(outputs []addon.Output) []string {
 	return envVars
 }
 
+// TODO: Remove this mock function and use override.CloudFormationTemplate when it is finished.
+var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
+	return origTemp, nil
+}
+
 type ecsWkld struct {
 	*wkld
 	tc manifest.TaskConfig
+
+	// Overriden in unit tests.
+	taskDefOverrideFunc func(overrideRules []override.Rule, origTemp []byte) ([]byte, error)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

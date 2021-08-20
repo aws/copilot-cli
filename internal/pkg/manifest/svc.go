@@ -30,6 +30,7 @@ var ServiceTypes = []string{
 	RequestDrivenWebServiceType,
 	LoadBalancedWebServiceType,
 	BackendServiceType,
+	WorkerServiceType,
 }
 
 // Range contains either a Range or a range configuration for Autoscaling ranges

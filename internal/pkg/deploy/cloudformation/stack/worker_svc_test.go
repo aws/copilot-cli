@@ -288,6 +288,7 @@ Outputs:
 							Region:    "us-west-2",
 						},
 					},
+					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
 				allowedTopics: []string{"arn:aws:sns:us-west-2:123456789012:phonetool-test-frontend-name"},
 			}

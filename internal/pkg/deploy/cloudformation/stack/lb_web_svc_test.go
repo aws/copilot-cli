@@ -302,6 +302,7 @@ Outputs:
 							Region:    "us-west-2",
 						},
 					},
+					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
 				manifest: testLBWebServiceManifest,
 			}

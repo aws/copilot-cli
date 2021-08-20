@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBackendServiceDescriber_Describe(t *testing.T) {
+func TestWorkerServiceDescriber_Describe(t *testing.T) {
 	const (
 		testApp = "phonetool"
 		testEnv = "test"
@@ -31,8 +31,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 
 		setupMocks func(mocks lbWebSvcDescriberMocks)
 
-		wantedBackendSvc *backendSvcDesc
-		wantedError      error
+		wantedWorkerSvc *workerSvcDesc
+		wantedError     error
 	}{
 		"return error if fail to list environment": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
@@ -51,32 +51,16 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
 		},
-		"return error if fail to retrieve svc discovery endpoint": {
-			setupMocks: func(m lbWebSvcDescriberMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-					}, nil),
-					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
-				)
-			},
-			wantedError: fmt.Errorf("some error"),
-		},
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "1",
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 						cfnstack.WorkloadTaskCPUParamKey:           "256",
 					}, nil),
-					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
@@ -88,12 +72,11 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
 					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "1",
 						cfnstack.WorkloadTaskCPUParamKey:           "256",
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -113,12 +96,11 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
 					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
+						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "1",
 						cfnstack.WorkloadTaskCPUParamKey:           "256",
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -134,12 +116,11 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
+						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "2",
 						cfnstack.WorkloadTaskCPUParamKey:           "512",
 						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
@@ -149,13 +130,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsStackDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
-							Name:      "SOME_OTHER_SECRET",
+							Name:      "A_SECRET",
 							Container: "container",
-							ValueFrom: "SHHHHHHHH",
+							ValueFrom: "SECRET",
 						},
 					}, nil),
 					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-1",
+						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "2",
 						cfnstack.WorkloadTaskCPUParamKey:           "512",
 						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
@@ -189,9 +170,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedBackendSvc: &backendSvcDesc{
+			wantedWorkerSvc: &workerSvcDesc{
 				Service: testSvc,
-				Type:    "Backend Service",
+				Type:    "Worker Service",
 				App:     testApp,
 				Configurations: []*ECSServiceConfig{
 					{
@@ -199,7 +180,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							CPU:         "256",
 							Environment: "test",
 							Memory:      "512",
-							Port:        "5000",
+							Port:        "-",
 						},
 						Tasks: "1",
 					},
@@ -208,7 +189,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							CPU:         "512",
 							Environment: "prod",
 							Memory:      "1024",
-							Port:        "5000",
+							Port:        "-",
 						},
 						Tasks: "2",
 					},
@@ -220,16 +201,6 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							Port:        "-",
 						},
 						Tasks: "2",
-					},
-				},
-				ServiceDiscovery: []*ServiceDiscovery{
-					{
-						Environment: []string{"test"},
-						Namespace:   "jobs.test.phonetool.local:5000",
-					},
-					{
-						Environment: []string{"prod"},
-						Namespace:   "jobs.prod.phonetool.local:5000",
 					},
 				},
 				Variables: []*containerEnvVar{
@@ -266,10 +237,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						ValueFrom:   "GH_WEBHOOK_SECRET",
 					},
 					{
-						Name:        "SOME_OTHER_SECRET",
+						Name:        "A_SECRET",
 						Container:   "container",
 						Environment: "prod",
-						ValueFrom:   "SHHHHHHHH",
+						ValueFrom:   "SECRET",
 					},
 				},
 				Resources: map[string][]*stack.Resource{
@@ -304,16 +275,14 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMockecsStackDescriber(ctrl)
-			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
 			mocks := lbWebSvcDescriberMocks{
 				storeSvc:          mockStore,
 				ecsStackDescriber: mockSvcDescriber,
-				envDescriber:      mockEnvDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &BackendServiceDescriber{
+			d := &WorkerServiceDescriber{
 				ecsServiceDescriber: &ecsServiceDescriber{
 					app:             testApp,
 					svc:             testSvc,
@@ -326,28 +295,23 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					},
 					initDescribers: func(string) error { return nil },
 				},
-				envDescriber: map[string]envDescriber{
-					"test":    mockEnvDescriber,
-					"prod":    mockEnvDescriber,
-					"mockEnv": mockEnvDescriber,
-				},
 			}
 
 			// WHEN
-			backendsvc, err := d.Describe()
+			workersvc, err := d.Describe()
 
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedBackendSvc, backendsvc, "expected output content match")
+				require.Equal(t, tc.wantedWorkerSvc, workersvc, "expected output content match")
 			}
 		})
 	}
 }
 
-func TestBackendSvcDesc_String(t *testing.T) {
+func TestWorkerSvcDesc_String(t *testing.T) {
 	testCases := map[string]struct {
 		wantedHumanString string
 		wantedJSONString  string
@@ -357,21 +321,14 @@ func TestBackendSvcDesc_String(t *testing.T) {
 
   Application       my-app
   Name              my-svc
-  Type              Backend Service
+  Type              Worker Service
 
 Configurations
 
   Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
   -----------       -----               ----------          ------------        ----
-  test              1                   0.25                512                 80
-  prod              3                   0.5                 1024                5000
-
-Service Discovery
-
-  Environment       Namespace
-  -----------       ---------
-  test              http://my-svc.test.my-app.local:5000
-  prod              http://my-svc.prod.my-app.local:5000
+  test              1                   0.25                512                 -
+  prod              3                   0.5                 1024                  "
 
 Variables
 
@@ -384,8 +341,8 @@ Secrets
 
   Name                   Container           Environment         Value From
   ----                   ---------           -----------         ----------
-  GITHUB_WEBHOOK_SECRET  container           test                parameter/GH_WEBHOOK_SECRET
-  SOME_OTHER_SECRET        "                 prod                parameter/SHHHHH
+  A_SECRET               container           prod                parameter/SECRET
+  GITHUB_WEBHOOK_SECRET    "                 test                parameter/GH_WEBHOOK_SECRET
 
 Resources
 
@@ -395,7 +352,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"tasks\":\"3\"}],\"serviceDiscovery\":[{\"environment\":[\"test\"],\"namespace\":\"http://my-svc.test.my-app.local:5000\"},{\"environment\":[\"prod\"],\"namespace\":\"http://my-svc.prod.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"tasks\":\"3\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -407,7 +364,7 @@ Resources
 						CPU:         "256",
 						Environment: "test",
 						Memory:      "512",
-						Port:        "80",
+						Port:        "-",
 					},
 					Tasks: "1",
 				},
@@ -416,7 +373,7 @@ Resources
 						CPU:         "512",
 						Environment: "prod",
 						Memory:      "1024",
-						Port:        "5000",
+						Port:        "-",
 					},
 					Tasks: "3",
 				},
@@ -447,20 +404,10 @@ Resources
 					ValueFrom:   "GH_WEBHOOK_SECRET",
 				},
 				{
-					Name:        "SOME_OTHER_SECRET",
+					Name:        "A_SECRET",
 					Container:   "container",
 					Environment: "prod",
-					ValueFrom:   "SHHHHH",
-				},
-			}
-			sds := []*ServiceDiscovery{
-				{
-					Environment: []string{"test"},
-					Namespace:   "http://my-svc.test.my-app.local:5000",
-				},
-				{
-					Environment: []string{"prod"},
-					Namespace:   "http://my-svc.prod.my-app.local:5000",
+					ValueFrom:   "SECRET",
 				},
 			}
 			resources := map[string][]*stack.Resource{
@@ -477,19 +424,18 @@ Resources
 					},
 				},
 			}
-			backendSvc := &backendSvcDesc{
-				Service:          "my-svc",
-				Type:             "Backend Service",
-				Configurations:   config,
-				App:              "my-app",
-				Variables:        envVars,
-				Secrets:          secrets,
-				ServiceDiscovery: sds,
-				Resources:        resources,
-				environments:     []string{"test", "prod"},
+			workerSvc := &workerSvcDesc{
+				Service:        "my-svc",
+				Type:           "Worker Service",
+				Configurations: config,
+				App:            "my-app",
+				Variables:      envVars,
+				Secrets:        secrets,
+				Resources:      resources,
+				environments:   []string{"test", "prod"},
 			}
-			human := backendSvc.HumanString()
-			json, _ := backendSvc.JSONString()
+			human := workerSvc.HumanString()
+			json, _ := workerSvc.JSONString()
 
 			require.Equal(t, tc.wantedHumanString, human)
 			require.Equal(t, tc.wantedJSONString, json)
