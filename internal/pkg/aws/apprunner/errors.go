@@ -15,3 +15,8 @@ type ErrWaitServiceOperationFailed struct {
 func (e *ErrWaitServiceOperationFailed) Error() string {
 	return fmt.Sprintf("operation failed %s", e.operationId)
 }
+
+// Timeout allows ErrWaitServiceOperationFailed to implement a timeout error interface.
+func (e *ErrWaitServiceOperationFailed) Timeout() bool {
+	return true
+}

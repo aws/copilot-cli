@@ -13,8 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
-	awsapprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -596,9 +594,8 @@ func (o *deploySvcOpts) forceDeploy() error {
 	if err := o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
 		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
 			color.HighlightUserInput(o.envName), err)
-		var errWaitUpdateTimeout *awsecs.ErrWaitServiceStableTimeout
-		var errWaitOperationFailed *awsapprunner.ErrWaitServiceOperationFailed
-		if errors.As(err, &errWaitUpdateTimeout) || errors.As(err, &errWaitOperationFailed) {
+		var terr timeoutError
+		if errors.As(err, &terr) {
 			errLog = fmt.Sprintf("%s  Run %s to check for the fail reason.\n", errLog,
 				color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", o.name, o.envName)))
 		}
