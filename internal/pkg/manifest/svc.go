@@ -30,6 +30,7 @@ var ServiceTypes = []string{
 	RequestDrivenWebServiceType,
 	LoadBalancedWebServiceType,
 	BackendServiceType,
+	WorkerServiceType,
 }
 
 // Range contains either a Range or a range configuration for Autoscaling ranges
@@ -209,6 +210,14 @@ func (a *AdvancedCount) IsValid() error {
 	}
 
 	return nil
+}
+
+func (a *AdvancedCount) unsetAutoscaling() {
+	a.Range = nil
+	a.CPU = nil
+	a.Memory = nil
+	a.Requests = nil
+	a.ResponseTime = nil
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.

@@ -187,19 +187,17 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 		return &s, nil
 	}
 
-	envCount := overrideConfig.TaskConfig.Count
-	if !envCount.IsEmpty() {
-		s.TaskConfig.Count = envCount
+	for _, t := range defaultTransformers {
+		// Apply overrides to the original service s.
+		err := mergo.Merge(&s, LoadBalancedWebService{
+			LoadBalancedWebServiceConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Apply overrides to the original service s.
-	err := mergo.Merge(&s, LoadBalancedWebService{
-		LoadBalancedWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-
-	if err != nil {
-		return nil, err
-	}
 	s.Environments = nil
 	return &s, nil
 }

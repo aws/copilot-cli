@@ -47,13 +47,13 @@ type WorkerServiceConfig struct {
 type WorkerServiceProps struct {
 	WorkloadProps
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	Topics      *[]TopicSubscription  // Optional topics for subscriptions
+	Topics      []TopicSubscription   // Optional topics for subscriptions
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
-	Topics *[]TopicSubscription `yaml:"topics"`
-	Queue  *SQSQueue            `yaml:"queue"`
+	Topics []TopicSubscription `yaml:"topics"`
+	Queue  *SQSQueue           `yaml:"queue"`
 }
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
@@ -193,18 +193,15 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 		return &s, nil
 	}
 
-	envCount := overrideConfig.TaskConfig.Count
-	if !envCount.IsEmpty() {
-		s.TaskConfig.Count = envCount
-	}
-
 	// Apply overrides to the original service s.
-	err := mergo.Merge(&s, WorkerService{
-		WorkerServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+	for _, t := range defaultTransformers {
+		err := mergo.Merge(&s, WorkerService{
+			WorkerServiceConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.Environments = nil
 	return &s, nil

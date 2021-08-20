@@ -7,6 +7,7 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -62,15 +63,15 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 
 // Final messages displayed after prompting.
 const (
-	appNameFinalMessage  = "Application:"
-	envNameFinalMessage  = "Environment:"
-	svcNameFinalMsg      = "Service name:"
-	jobNameFinalMsg      = "Job name:"
-	deployedSvcFinalMsg  = "Service:"
-	taskFinalMsg         = "Task:"
-	workloadFinalMsg     = "Name:"
-	dockerfileFinalMsg   = "Dockerfile:"
-	fmtTopicFinalmessage = "Environment %s subscriptions:"
+	appNameFinalMessage = "Application:"
+	envNameFinalMessage = "Environment:"
+	svcNameFinalMsg     = "Service name:"
+	jobNameFinalMsg     = "Job name:"
+	deployedSvcFinalMsg = "Service:"
+	taskFinalMsg        = "Task:"
+	workloadFinalMsg    = "Name:"
+	dockerfileFinalMsg  = "Dockerfile:"
+	topicFinalmessage   = "Topic subscriptions:"
 )
 
 var scheduleTypes = []string{
@@ -1022,38 +1023,80 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 	return outServices, nil
 }
 
-// Topics asks the user to select from all Copilot-managed SNS topics and returns the ARNs
-// of those topics.
-func (s *DeploySelect) Topics(promptMsg, help, app, env string) ([]string, error) {
-	topics, err := s.deployStoreSvc.ListSNSTopics(app, env)
+// Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
+// across all environments* and returns the topic structs.
+func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
+	envs, err := s.config.ListEnvironments(app)
 	if err != nil {
-		return nil, fmt.Errorf("list SNS topics: %w", err)
+		return nil, fmt.Errorf("list environments: %w", err)
 	}
-	if len(topics) == 0 {
+	if len(envs) == 0 {
+		log.Infoln("No environments are currently deployed. Skipping subscription selection.")
 		return nil, nil
 	}
-	// Create the list of options and the map from option to full topic specification.
-	var topicDescriptions []string
-	topicMap := make(map[string]deploy.Topic)
-	for _, t := range topics {
-		topicDescriptions = append(topicDescriptions, t.String())
-		topicMap[t.String()] = t
+
+	envTopics := make(map[string][]deploy.Topic, len(envs))
+	for _, env := range envs {
+		topics, err := s.deployStoreSvc.ListSNSTopics(app, env.Name)
+		if err != nil {
+			return nil, fmt.Errorf("list SNS topics: %w", err)
+		}
+		envTopics[env.Name] = topics
 	}
+
+	// Get only topics deployed in all environments.
+	// Computes the intersection of the `envTopics` lists.
+	overallTopics := make(map[string]deploy.Topic)
+	// Initialize the list of topics.
+	for _, topic := range envTopics[envs[0].Name] {
+		overallTopics[topic.String()] = topic
+	}
+	// Then do the pairwise intersection of all other envs.
+	for _, env := range envs[1:] {
+		topics := envTopics[env.Name]
+		overallTopics = intersect(overallTopics, topics)
+	}
+
+	if len(overallTopics) == 0 {
+		log.Infoln("No SNS topics are currently deployed in all environments. You can customize subscriptions in your manifest.")
+		return nil, nil
+	}
+	// Create the list of options.
+	var topicDescriptions []string
+	for t := range overallTopics {
+		topicDescriptions = append(topicDescriptions, t)
+	}
+	// Sort descriptions by ARN, which implies sorting by workload name and then by topic name due to
+	// behavior of `intersect`. That is, the `overallTopics` map is guaranteed to contain topics
+	// referencing the same environment.
+	sort.Slice(topicDescriptions, func(i, j int) bool {
+		return overallTopics[topicDescriptions[i]].ARN() < overallTopics[topicDescriptions[j]].ARN()
+	})
 
 	selectedTopics, err := s.prompt.MultiSelect(
 		promptMsg,
 		help,
 		topicDescriptions,
-		prompt.WithFinalMessage(fmt.Sprintf(fmtTopicFinalmessage, env)),
+		prompt.WithFinalMessage(topicFinalmessage),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
 	}
 
-	// Get the ARNs from the topic slugs again.
-	var topicARNs []string
+	// Get the topics from the topic descriptions again.
+	var topics []deploy.Topic
 	for _, t := range selectedTopics {
-		topicARNs = append(topicARNs, topicMap[t].ARN())
+		topics = append(topics, overallTopics[t])
 	}
-	return topicARNs, nil
+	return topics, nil
+}
+
+func intersect(firstMap map[string]deploy.Topic, secondArr []deploy.Topic) map[string]deploy.Topic {
+	out := make(map[string]deploy.Topic)
+	for _, topic := range secondArr {
+		if _, ok := firstMap[topic.String()]; ok {
+			out[topic.String()] = topic
+		}
+	}
+	return out
 }

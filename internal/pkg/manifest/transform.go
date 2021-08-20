@@ -4,10 +4,31 @@
 package manifest
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/imdario/mergo"
 )
+
+var fmtExclusiveFieldsSpecifiedTogether = "invalid manifest: %s %s mutually exclusive with %s and shouldn't be specified at the same time"
+
+var defaultTransformers = []mergo.Transformers{
+	// NOTE: mapToVolumeTransformer needs to be the first transformer. Otherwise `mergo` will overwrite the `dst` map
+	// completely and we will lose `dst`'s values.
+	mapToVolumeTransformer{},
+
+	// NOTE: basicTransformer needs to be used before the rest of the custom transformers, because the other transformers
+	// do not merge anything - they just unset the fields that do not get specified in source manifest.
+	basicTransformer{},
+	imageTransformer{},
+	buildArgsOrStringTransformer{},
+	stringSliceOrStringTransformer{},
+	platformArgsOrStringTransformer{},
+	healthCheckArgsOrStringTransformer{},
+	countTransformer{},
+	advancedCountTransformer{},
+	rangeTransformer{},
+}
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
 var basicKinds = []reflect.Kind{
@@ -19,89 +40,265 @@ var basicKinds = []reflect.Kind{
 	reflect.Array, reflect.String, reflect.Slice,
 }
 
-type workloadTransformer struct{}
-
-// Transformer returns custom merge logic for workload's fields.
-func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ == reflect.TypeOf(Image{}) {
-		return transformImage()
-	}
-
-	if typ == reflect.TypeOf(EntryPointOverride{}) {
-		return transformStringSliceOrString(reflect.TypeOf(EntryPointOverride{}))
-	}
-
-	if typ == reflect.TypeOf(CommandOverride{}) {
-		return transformStringSliceOrString(reflect.TypeOf(CommandOverride{}))
-	}
-
-	if typ == reflect.TypeOf(Alias{}) {
-		return transformStringSliceOrString(reflect.TypeOf(Alias{}))
-	}
-
-	if typ.String() == "map[string]manifest.Volume" {
-		return transformMapStringToVolume()
-	}
-
-	if transform := transformBasic(typ); transform != nil {
-		return transform
-	}
-	return nil
-}
-
-type basicTransformer struct{}
-
-// Transformer returns custom merge logic for volume's fields.
-func (t basicTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	return transformBasic(typ)
-}
-
 type imageTransformer struct{}
 
-// Transformer returns custom merge logic for volume's fields.
+// Transformer provides custom logic to transform an Image.
 func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ == reflect.TypeOf(BuildArgsOrString{}) {
-		return transformBuildArgsOrString()
-	}
-	return transformBasic(typ)
-}
-
-// transformBasic implements customized merge logic for manifest fields that are number, string, bool, array, and duration.
-func transformBasic(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ.Kind() == reflect.Slice {
-		return transformSlice()
+	if typ != reflect.TypeOf(Image{}) {
+		return nil
 	}
 
-	if typ.Kind() == reflect.Ptr {
-		for _, k := range basicKinds {
-			if typ.Elem().Kind() == k {
-				return transformPBasic()
-			}
-		}
-
-		if typ.Elem().Kind() == reflect.Struct {
-			return transformPStruct()
-		}
-	}
-	return nil
-}
-
-func transformSlice() func(dst, src reflect.Value) error {
 	return func(dst, src reflect.Value) error {
-		if !src.IsNil() {
-			dst.Set(src)
+		dstStruct, srcStruct := dst.Interface().(Image), src.Interface().(Image)
+
+		if !srcStruct.Build.isEmpty() && srcStruct.Location != nil {
+			return fmt.Errorf(fmtExclusiveFieldsSpecifiedTogether, "image.build", "is", "image.location")
+		}
+
+		if !srcStruct.Build.isEmpty() {
+			dstStruct.Location = nil
+		}
+
+		if srcStruct.Location != nil {
+			dstStruct.Build = BuildArgsOrString{}
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
 		}
 		return nil
 	}
 }
 
-func transformMapStringToVolume() func(dst, src reflect.Value) error {
+type buildArgsOrStringTransformer struct{}
+
+// Transformer returns custom merge logic for BuildArgsOrString's fields.
+func (t buildArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(BuildArgsOrString{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(BuildArgsOrString), src.Interface().(BuildArgsOrString)
+
+		if !srcStruct.BuildArgs.isEmpty() {
+			dstStruct.BuildString = nil
+		}
+
+		if srcStruct.BuildString != nil {
+			dstStruct.BuildArgs = DockerBuildArgs{}
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type stringSliceOrStringTransformer struct{}
+
+// Transformer returns custom merge logic for stringSliceOrStringTransformer's fields.
+func (t stringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if !typ.ConvertibleTo(reflect.TypeOf(stringSliceOrString{})) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct := dst.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
+		srcStruct := src.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
+
+		if srcStruct.String != nil {
+			dstStruct.StringSlice = nil
+		}
+
+		if srcStruct.StringSlice != nil {
+			dstStruct.String = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct).Convert(typ))
+		}
+		return nil
+	}
+}
+
+type platformArgsOrStringTransformer struct{}
+
+// Transformer returns custom merge logic for PlatformArgsOrString's fields.
+func (t platformArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(PlatformArgsOrString{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(PlatformArgsOrString), src.Interface().(PlatformArgsOrString)
+
+		if srcStruct.PlatformString != nil {
+			dstStruct.PlatformArgs = PlatformArgs{}
+		}
+
+		if !srcStruct.PlatformArgs.isEmpty() {
+			dstStruct.PlatformString = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type healthCheckArgsOrStringTransformer struct{}
+
+// Transformer returns custom merge logic for HealthCheckArgsOrString's fields.
+func (t healthCheckArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(HealthCheckArgsOrString{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(HealthCheckArgsOrString), src.Interface().(HealthCheckArgsOrString)
+
+		if srcStruct.HealthCheckPath != nil {
+			dstStruct.HealthCheckArgs = HTTPHealthCheckArgs{}
+		}
+
+		if !srcStruct.HealthCheckArgs.isEmpty() {
+			dstStruct.HealthCheckPath = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type countTransformer struct{}
+
+// Transformer returns custom merge logic for Count's fields.
+func (t countTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Count{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(Count), src.Interface().(Count)
+
+		if !srcStruct.AdvancedCount.IsEmpty() {
+			dstStruct.Value = nil
+		}
+
+		if srcStruct.Value != nil {
+			dstStruct.AdvancedCount = AdvancedCount{}
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type advancedCountTransformer struct{}
+
+// Transformer returns custom merge logic for AdvancedCount's fields.
+func (t advancedCountTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(AdvancedCount{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(AdvancedCount), src.Interface().(AdvancedCount)
+
+		if srcStruct.Spot != nil {
+			dstStruct.unsetAutoscaling()
+		}
+
+		if srcStruct.hasAutoscaling() {
+			dstStruct.Spot = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type rangeTransformer struct{}
+
+// Transformer returns custom merge logic for Range's fields.
+func (t rangeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Range{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(Range), src.Interface().(Range)
+
+		if !srcStruct.RangeConfig.IsEmpty() {
+			dstStruct.Value = nil
+		}
+
+		if srcStruct.Value != nil {
+			dstStruct.RangeConfig = RangeConfig{}
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type mapToVolumeTransformer struct{}
+
+// Transformer returns custom merge logic for map[string]Volume.
+func (t mapToVolumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	/**
+	There are two things to notice:
+	1. Custom logic for `map[string]Volume` is needed because when `withOverride` flag is specified, `mergo` set
+	dst map's value directly by src map's value, instead of continuing deep merging `Volume`.
+	For example, given that
+			dst = map[string]Volume{
+				"volume1": {
+					prop1: 1,
+					prop2: 2,
+				},
+			}
+	and 	src = map[string]Volume{
+				"volume1": {
+					prop1: 3,
+				},
+			}
+	Without this transformer, the result would be
+			res = map[string]Volume{
+				"volume1": {
+					prop1: 3,
+				}
+			}
+	The merge stops at `map`, while we expect `Volume` to be merged instead of overwritten.
+	2. Note that at the end the transformer sets src map's value as well by `src.SetMapIndex(key, reflect.ValueOf(dstV))`.
+	This is because when `withOverride` flag is specified, `mergo` stops merging at map instead of `Volume`. The merged
+	value will get overwritten by any other transformers.
+	*/
+	if typ.Kind() != reflect.Map {
+		return nil
+	}
+
+	if typ.Key().Kind() != reflect.String || typ.Elem() != reflect.TypeOf(Volume{}) {
+		return nil
+	}
+
 	return func(dst, src reflect.Value) error {
 		for _, key := range src.MapKeys() {
 			srcElement := src.MapIndex(key)
 			if !srcElement.IsValid() {
 				continue
 			}
+
 			dstElement := dst.MapIndex(key)
 			if !dstElement.IsValid() {
 				dst.SetMapIndex(key, srcElement)
@@ -111,192 +308,127 @@ func transformMapStringToVolume() func(dst, src reflect.Value) error {
 			// Perform default merge
 			dstV := dstElement.Interface().(Volume)
 			srcV := srcElement.Interface().(Volume)
-			err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
-			if err != nil {
-				return err
+
+			transformers := []mergo.Transformers{
+				efsConfigOrBoolTransformer{},
+				efsVolumeConfigurationTransformer{},
+				basicTransformer{},
+			}
+
+			for _, t := range transformers {
+				if err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithTransformers(t)); err != nil {
+					return err
+				}
 			}
 
 			// Set merged value for the key
 			dst.SetMapIndex(key, reflect.ValueOf(dstV))
+
+			// NOTE: if we don't set the merged value for `src`, `dst`'s value for this key will be completely overwritten
+			// (instead of merging) by other transformers.
+			src.SetMapIndex(key, reflect.ValueOf(dstV))
 		}
 		return nil
 	}
 }
 
-func transformPStruct() func(dst, src reflect.Value) error {
+type efsConfigOrBoolTransformer struct{}
+
+// Transformer returns custom merge logic for EFSConfigOrBool's fields.
+func (t efsConfigOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(EFSConfigOrBool{}) {
+		return nil
+	}
 	return func(dst, src reflect.Value) error {
-		if src.IsNil() {
-			return nil
+		dstStruct, srcStruct := dst.Interface().(EFSConfigOrBool), src.Interface().(EFSConfigOrBool)
+
+		if !srcStruct.Advanced.IsEmpty() {
+			dstStruct.Enabled = nil
 		}
 
-		// TODO: these can be removed if we change all pointers struct to struct
-		// Perform default merge
-		var err error
-		switch dst.Elem().Type().Name() {
-		case "ContainerHealthCheck":
-			dstElem := dst.Interface().(*ContainerHealthCheck)
-			srcElem := src.Elem().Interface().(ContainerHealthCheck)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "PlatformArgsOrString":
-			dstElem := dst.Interface().(*PlatformArgsOrString)
-			srcElem := src.Elem().Interface().(PlatformArgsOrString)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "EntryPointOverride":
-			dstElem := dst.Interface().(*EntryPointOverride)
-			srcElem := src.Elem().Interface().(EntryPointOverride)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "CommandOverride":
-			dstElem := dst.Interface().(*CommandOverride)
-			srcElem := src.Elem().Interface().(CommandOverride)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "NetworkConfig":
-			dstElem := dst.Interface().(*NetworkConfig)
-			srcElem := src.Elem().Interface().(NetworkConfig)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "vpcConfig":
-			dstElem := dst.Interface().(*vpcConfig)
-			srcElem := src.Elem().Interface().(vpcConfig)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "Logging":
-			dstElem := dst.Interface().(*Logging)
-			srcElem := src.Elem().Interface().(Logging)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "Storage":
-			dstElem := dst.Interface().(*Storage)
-			srcElem := src.Elem().Interface().(Storage)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "Alias":
-			dstElem := dst.Interface().(*Alias)
-			srcElem := src.Elem().Interface().(Alias)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "SidecarConfig":
-			dstElem := dst.Interface().(*SidecarConfig)
-			srcElem := src.Elem().Interface().(SidecarConfig)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "SubscribeConfig":
-			dstElem := dst.Interface().(*SubscribeConfig)
-			srcElem := src.Elem().Interface().(SubscribeConfig)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "SQSQueue":
-			dstElem := dst.Interface().(*SQSQueue)
-			srcElem := src.Elem().Interface().(SQSQueue)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "EFSConfigOrBool":
-			dstElem := dst.Interface().(*EFSConfigOrBool)
-			srcElem := src.Elem().Interface().(EFSConfigOrBool)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-		case "AuthorizationConfig":
-			dstElem := dst.Interface().(*AuthorizationConfig)
-			srcElem := src.Elem().Interface().(AuthorizationConfig)
-			err = mergo.Merge(dstElem, srcElem, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
+		if srcStruct.Enabled != nil {
+			dstStruct.Advanced = EFSVolumeConfiguration{}
 		}
 
-		if err != nil {
-			return err
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type efsVolumeConfigurationTransformer struct{}
+
+// Transformer returns custom merge logic for EFSVolumeConfiguration's fields.
+func (t efsVolumeConfigurationTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(EFSVolumeConfiguration{}) {
+		return nil
+	}
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(EFSVolumeConfiguration), src.Interface().(EFSVolumeConfiguration)
+		if !srcStruct.EmptyUIDConfig() {
+			dstStruct.unsetBYOConfig()
+		}
+
+		if !srcStruct.EmptyBYOConfig() {
+			dstStruct.unsetUIDConfig()
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
 		}
 		return nil
 	}
 }
 
 func transformPBasic() func(dst, src reflect.Value) error {
+	// NOTE: `dst` must be of kind reflect.Ptr.
 	return func(dst, src reflect.Value) error {
+		// This condition shouldn't ever be true. It's merely here for extra safety so that `src.IsNil` won't panic.
+		if src.Kind() != reflect.Ptr {
+			return nil
+		}
+
 		if src.IsNil() {
 			return nil
 		}
-		dst.Set(src)
+
+		if dst.CanSet() {
+			dst.Set(src)
+		}
 		return nil
 	}
 }
 
-func transformBuildArgsOrString() func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstBuildArgsOrString := dst.Interface().(BuildArgsOrString)
-		srcBuildArgsOrString := src.Interface().(BuildArgsOrString)
+type basicTransformer struct{}
 
-		err := mergo.Merge(&dstBuildArgsOrString, srcBuildArgsOrString, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
-		if err != nil {
-			return err
+// Transformer returns custom merge logic for volume's fields.
+func (t basicTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ.Kind() == reflect.Slice {
+		return func(dst, src reflect.Value) error {
+			// This condition shouldn't ever be true. It's merely here for extra safety so that `src.IsNil` won't panic.
+			if src.Kind() != reflect.Slice {
+				return nil
+			}
+
+			if src.IsNil() {
+				return nil
+			}
+
+			if dst.CanSet() {
+				dst.Set(src)
+			}
+
+			return nil
 		}
-		dst.Set(reflect.ValueOf(dstBuildArgsOrString))
-
-		// Perform customized merge
-		dstString := dst.FieldByName("BuildString")
-		dstArgs := dst.FieldByName("BuildArgs")
-
-		srcString := src.FieldByName("BuildString")
-		srcArgs := src.FieldByName("BuildArgs")
-
-		//` `srcArgs.IsZero()` and `srcString.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
-		if !srcArgs.IsZero() {
-			dstString.Set(srcString)
-		} else if !srcString.IsNil() {
-			dstArgs.Set(srcArgs)
-		}
-
-		return nil
 	}
-}
 
-func transformStringSliceOrString(originalType reflect.Type) func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstStruct := dst.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
-		srcStruct := src.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
-
-		err := mergo.Merge(&dstStruct, srcStruct, mergo.WithOverride, mergo.WithTransformers(basicTransformer{}))
-		if err != nil {
-			return err
+	if typ.Kind() == reflect.Ptr {
+		for _, k := range basicKinds {
+			if typ.Elem().Kind() == k {
+				return transformPBasic()
+			}
 		}
-		dst.Set(reflect.ValueOf(dstStruct).Convert(originalType))
-
-		// Perform customized merge
-		dstString := dst.FieldByName("String")
-		dstStringSlice := dst.FieldByName("StringSlice")
-
-		srcString := src.FieldByName("String")
-		srcStringSlice := src.FieldByName("StringSlice")
-
-		//` `srcArgs.IsZero()` and `srcString.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
-		if !srcStringSlice.IsZero() {
-			dstString.Set(srcString)
-		} else if !srcString.IsNil() {
-			dstStringSlice.Set(srcStringSlice)
-		}
-
-		return nil
 	}
-}
-
-// transformImage implements customized merge logic for Image field of manifest.
-// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
-// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
-func transformImage() func(dst, src reflect.Value) error {
-	return func(dst, src reflect.Value) error {
-		// Perform default merge
-		dstImage := dst.Interface().(Image)
-		srcImage := src.Interface().(Image)
-
-		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithTransformers(imageTransformer{}))
-		if err != nil {
-			return err
-		}
-		dst.Set(reflect.ValueOf(dstImage))
-
-		// Perform customized merge
-		dstBuild := dst.FieldByName("Build")
-		dstLocation := dst.FieldByName("Location")
-
-		srcBuild := src.FieldByName("Build")
-		srcLocation := src.FieldByName("Location")
-
-		//` `srcBuild.IsZero()` and `srcLocation.IsZero()` shouldn't return true at the same time if the manifest is not malformed.
-		if !srcBuild.IsZero() {
-			dstLocation.Set(srcLocation)
-		} else if !srcLocation.IsZero() {
-			dstBuild.Set(srcBuild)
-		}
-
-		return nil
-	}
+	return nil
 }
