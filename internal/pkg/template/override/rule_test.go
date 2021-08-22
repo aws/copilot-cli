@@ -49,15 +49,19 @@ func Test_parseRules(t *testing.T) {
 		"success": {
 			inRules: []Rule{
 				{
-					Path:  "ContainerDefinitions[0].Ulimits[-].HardLimit",
-					Value: &yaml.Node{},
+					Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
+					Value: &yaml.Node{
+						Value: "testNode",
+					},
 				},
 			},
 			wantedNodeUpserter: func() []nodeUpserter {
 				node3 := &mapUpsertNode{
 					upsertNode: upsertNode{
-						key:           "HardLimit",
-						valueToInsert: &yaml.Node{},
+						key: "HardLimit",
+						valueToInsert: &yaml.Node{
+							Value: "testNode",
+						},
 					},
 				}
 				node2 := &seqIdxUpsertNode{

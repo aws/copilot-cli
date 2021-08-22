@@ -120,6 +120,7 @@ func currNode(indexMatch string, baseNode upsertNode) (nodeUpserter, error) {
 	}
 	index, err := strconv.Atoi(indexMatch)
 	if err != nil {
+		// This error also shouldn't occur given that `validate()` has passed.
 		return nil, fmt.Errorf("convert string %s to integer: %w", indexMatch, err)
 	}
 	return &seqIdxUpsertNode{
