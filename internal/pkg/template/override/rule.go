@@ -89,7 +89,7 @@ func (r Rule) parseRule() (nodeUpserter, error) {
 	if len(pathSegments) < 2 {
 		// This is the last segment.
 		baseNode.valueToInsert = &r.Value
-		return currNode(indexMatch, baseNode)
+		return baseNode.newNodeUpserter(indexMatch)
 	}
 
 	subRule := Rule{
@@ -101,32 +101,7 @@ func (r Rule) parseRule() (nodeUpserter, error) {
 		return nil, err
 	}
 	baseNode.next = nextNode
-	return currNode(indexMatch, baseNode)
-}
-
-func currNode(indexMatch string, baseNode upsertNode) (nodeUpserter, error) {
-	if indexMatch == "" {
-		// The second capture group is empty string, meaning that the path segment doesn't contain "[<index>]".
-		return &mapUpsertNode{
-			upsertNode: baseNode,
-		}, nil
-	}
-
-	if indexMatch == seqAppendToLastSymbol {
-		return &seqIdxUpsertNode{
-			appendToLast: true,
-			upsertNode:   baseNode,
-		}, nil
-	}
-	index, err := strconv.Atoi(indexMatch)
-	if err != nil {
-		// This error also shouldn't occur given that `validate()` has passed.
-		return nil, fmt.Errorf("convert string %s to integer: %w", indexMatch, err)
-	}
-	return &seqIdxUpsertNode{
-		index:      index,
-		upsertNode: baseNode,
-	}, nil
+	return baseNode.newNodeUpserter(indexMatch)
 }
 
 // upsertNode represents a node that needs to be upserted at the given key.
@@ -137,9 +112,34 @@ type upsertNode struct {
 	next          nodeUpserter
 }
 
-// NextNode returns the next node.
+// Next returns the next node.
 func (m *upsertNode) Next() nodeUpserter {
 	return m.next
+}
+
+func (m *upsertNode) newNodeUpserter(indexMatch string) (nodeUpserter, error) {
+	if indexMatch == "" {
+		// The second capture group is empty string, meaning that the path segment doesn't contain "[<index>]".
+		return &mapUpsertNode{
+			upsertNode: *m,
+		}, nil
+	}
+
+	if indexMatch == seqAppendToLastSymbol {
+		return &seqIdxUpsertNode{
+			appendToLast: true,
+			upsertNode:   *m,
+		}, nil
+	}
+	index, err := strconv.Atoi(indexMatch)
+	if err != nil {
+		// This error also shouldn't occur given that `validate()` has passed.
+		return nil, fmt.Errorf("convert string %s to integer: %w", indexMatch, err)
+	}
+	return &seqIdxUpsertNode{
+		index:      index,
+		upsertNode: *m,
+	}, nil
 }
 
 // mapUpsertNode represents a map node that needs to be upserted at the given key.
