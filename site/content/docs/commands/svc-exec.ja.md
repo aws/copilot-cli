@@ -15,6 +15,7 @@ $ copilot svc exec
   -h, --help               help for exec
   -n, --name string        Name of the service, job, or task group.
       --task-id string     Optional. ID of the task you want to exec in.
+      --yes                Optional. Whether to update the Session Manager Plugin.
 ```
 
 ## 実行例
