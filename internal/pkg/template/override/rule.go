@@ -44,7 +44,7 @@ type nodeUpserter interface {
 // Rule is the override rule override package uses.
 type Rule struct {
 	Path  string // example: "ContainerDefinitions[0].Ulimits[-].HardLimit"
-	Value *yaml.Node
+	Value yaml.Node
 }
 
 func (r Rule) validate() error {
@@ -88,7 +88,7 @@ func (r Rule) parseRule() (nodeUpserter, error) {
 	}
 	if len(pathSegments) < 2 {
 		// This is the last segment.
-		baseNode.valueToInsert = r.Value
+		baseNode.valueToInsert = &r.Value
 		return currNode(indexMatch, baseNode)
 	}
 

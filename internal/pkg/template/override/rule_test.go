@@ -50,7 +50,7 @@ func Test_parseRules(t *testing.T) {
 			inRules: []Rule{
 				{
 					Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
-					Value: &yaml.Node{
+					Value: yaml.Node{
 						Value: "testNode",
 					},
 				},

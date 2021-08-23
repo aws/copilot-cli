@@ -153,7 +153,7 @@ func requiresCompatibilitiesNode() nodeUpserter {
 func requiresCompatibilitiesRule() Rule {
 	return newTaskDefPropertyRule(Rule{
 		Path: "RequiresCompatibilities[-]",
-		Value: &yaml.Node{
+		Value: yaml.Node{
 			Kind:  yaml.ScalarNode,
 			Tag:   nodeTagStr,
 			Value: "EC2",
@@ -195,7 +195,7 @@ func linuxParametersCapabilitiesRule() Rule {
 	}
 	return newTaskDefPropertyRule(Rule{
 		Path: "ContainerDefinitions[0].LinuxParameters.Capabilities.Add",
-		Value: &yaml.Node{
+		Value: yaml.Node{
 			Kind:    yaml.SequenceNode,
 			Style:   yaml.FlowStyle,
 			Tag:     nodeTagSeq,
@@ -227,7 +227,7 @@ func linuxParametersCapabilitiesInitProcessEnabledNode() nodeUpserter {
 func linuxParametersCapabilitiesInitProcessEnabledRule() Rule {
 	return newTaskDefPropertyRule(Rule{
 		Path: "ContainerDefinitions[0].LinuxParameters.Capabilities.InitProcessEnabled",
-		Value: &yaml.Node{
+		Value: yaml.Node{
 			Kind:  yaml.ScalarNode,
 			Tag:   nodeTagBool,
 			Value: "true",
@@ -282,7 +282,7 @@ func ulimitsNode() nodeUpserter {
 func ulimitsRule() Rule {
 	return newTaskDefPropertyRule(Rule{
 		Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
-		Value: &yaml.Node{
+		Value: yaml.Node{
 			Kind:  yaml.ScalarNode,
 			Style: yaml.TaggedStyle,
 			Tag:   "!Ref",
@@ -322,7 +322,7 @@ func exposeExtraPortNode() nodeUpserter {
 func exposeExtraPortRule() Rule {
 	return Rule{
 		Path: "Resources.TaskDefinition.Properties.ContainerDefinitions[0].PortMappings[-].ContainerPort",
-		Value: &yaml.Node{
+		Value: yaml.Node{
 			Kind:  8,
 			Tag:   nodeTagInt,
 			Value: "5000",
