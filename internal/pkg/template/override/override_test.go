@@ -107,57 +107,6 @@ const wantedOverriddenTemplate = `Resources:
               InitProcessEnabled: true
 `
 
-const overriddenTestContent = `
-Resources:
-    TaskDefinition:
-        Metadata:
-            'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
-        Type: AWS::ECS::TaskDefinition
-        DependsOn: LogGroup
-        Properties:
-            Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
-            NetworkMode: awsvpc
-            RequiresCompatibilities:
-                - FARGATE
-                - EC2
-            Cpu: !Ref TaskCPU
-            Memory: !Ref TaskMemory
-            ExecutionRoleArn: !Ref ExecutionRole
-            TaskRoleArn: !Ref TaskRole
-            ContainerDefinitions:
-                - Name: !Ref WorkloadName
-                  Image: !Ref ContainerImage
-                  # We pipe certain environment variables directly into the task definition.
-                  # This lets customers have access to, for example, their LB endpoint - which they'd
-                  # have no way of otherwise determining.
-                  Environment:
-                    - Name: COPILOT_APPLICATION_NAME
-                      Value: !Sub '${AppName}'
-                    - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
-                      Value: test.demo.local
-                    - Name: COPILOT_ENVIRONMENT_NAME
-                      Value: !Sub '${EnvName}'
-                    - Name: COPILOT_SERVICE_NAME
-                      Value: !Sub '${WorkloadName}'
-                    - Name: COPILOT_LB_DNS
-                      Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-                  LogConfiguration:
-                    LogDriver: awslogs
-                    Options:
-                        awslogs-region: !Ref AWS::Region
-                        awslogs-group: !Ref LogGroup
-                        awslogs-stream-prefix: copilot
-                  PortMappings:
-                    - ContainerPort: !Ref ContainerPort
-                    - ContainerPort: 5000
-                  Ulimits:
-                    - HardLimit: !Ref ParamName
-                  LinuxParameters:
-                    Capabilities:
-                        Add: ["AUDIT_CONTROL", "AUDIT_WRITE"]
-                        InitProcessEnabled: true
-`
-
 func newTaskDefPropertyNode(nextNode nodeUpserter) nodeUpserter {
 	end := &mapUpsertNode{
 		upsertNode: upsertNode{
