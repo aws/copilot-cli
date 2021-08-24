@@ -11,7 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func Test_convertSidecar(t *testing.T) {
@@ -541,6 +543,36 @@ func Test_convertAutoscaling(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wanted, got)
 			}
+		})
+	}
+}
+
+func Test_convertTaskDefOverrideRules(t *testing.T) {
+	testCases := map[string]struct {
+		inRule []manifest.OverrideRule
+
+		wanted []override.Rule
+	}{
+		"should have proper prefix": {
+			inRule: []manifest.OverrideRule{
+				{
+					Path:  "ContainerDefinitions[0].Ulimits[-].HardLimit",
+					Value: yaml.Node{},
+				},
+			},
+			wanted: []override.Rule{
+				{
+					Path:  "Resources.TaskDefinition.Properties.ContainerDefinitions[0].Ulimits[-].HardLimit",
+					Value: yaml.Node{},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := convertTaskDefOverrideRules(tc.inRule)
+
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

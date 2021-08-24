@@ -59,6 +59,8 @@ const (
 var (
 	errEphemeralBadSize  = errors.New("ephemeral storage must be between 20 GiB and 200 GiB")
 	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
+
+	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
 )
 
 type convertSidecarOpts struct {
@@ -333,9 +335,10 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 
 func convertTaskDefOverrideRules(inRules []manifest.OverrideRule) []override.Rule {
 	var res []override.Rule
+	suffixStr := strings.Join(taskDefOverrideRulePrefixes, override.PathSegmentSeparator)
 	for _, r := range inRules {
 		res = append(res, override.Rule{
-			Path:  r.Path,
+			Path:  strings.Join([]string{suffixStr, r.Path}, override.PathSegmentSeparator),
 			Value: r.Value,
 		})
 	}
