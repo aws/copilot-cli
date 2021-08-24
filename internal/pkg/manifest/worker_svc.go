@@ -181,6 +181,15 @@ func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)
 }
 
+// Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
+// receives messages from.
+func (s *WorkerService) Subscriptions() []TopicSubscription {
+	if s.Subscribe != nil {
+		return s.Subscribe.Topics
+	}
+	return nil
+}
+
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
 func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {

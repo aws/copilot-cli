@@ -1303,3 +1303,60 @@ fifo: xyz`),
 		})
 	}
 }
+
+func TestWorkerSvc_Subscriptions(t *testing.T) {
+	testCases := map[string]struct {
+		inSubscription SubscribeConfig
+		expected       []TopicSubscription
+	}{
+		"subscription specified": {
+			inSubscription: SubscribeConfig{
+				Topics: []TopicSubscription{
+					{
+						Name:    "orders",
+						Service: "database",
+					},
+					{
+						Name:    "events",
+						Service: "api",
+					},
+				},
+				Queue: &SQSQueue{
+					Retention: durationPointer(4 * 24 * time.Hour),
+					FIFO: &FIFOOrBool{
+						Enabled: aws.Bool(true),
+					},
+				},
+			},
+			expected: []TopicSubscription{
+				{
+					Name:    "orders",
+					Service: "database",
+				},
+				{
+					Name:    "events",
+					Service: "api",
+				},
+			},
+		},
+		"no topics": {
+			inSubscription: SubscribeConfig{},
+			expected:       nil,
+		},
+	}
+	for name, tc := range testCases {
+		// GIVEN
+		svc := WorkerService{
+			WorkerServiceConfig: WorkerServiceConfig{
+				Subscribe: &tc.inSubscription,
+			},
+		}
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := svc.Subscriptions()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}

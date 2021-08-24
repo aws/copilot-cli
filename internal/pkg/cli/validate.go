@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/afero"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -65,6 +66,8 @@ var (
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
 	errInvalidPubSubTopicName   = errors.New("topic names can only contain letters, numbers, underscores, and hyphens")
 	errSubscribeBadFormat       = errors.New("value must be of the form <serviceName>:<topicName>")
+
+	fmtErrTopicSubscriptionNotAllowed = "SNS topic %s does not exist in environment %s"
 )
 
 const fmtErrValueBadSize = "value must be between %d and %d characters in length"
@@ -148,6 +151,8 @@ var (
 	awsSNSTopicRegexp       = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`) // Validates that an expression contains only letters, numbers, underscores, and hyphens.
 	regexpMatchSubscription = regexp.MustCompile(`^(\S+):(\S+)`)     // Validates that an expression contains the format serviceName:topicName
 )
+
+var resourceNameFormat = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
 
 const regexpFindAllMatches = -1
 
@@ -696,6 +701,35 @@ func validatePubSubName(name string) error {
 		return errInvalidPubSubTopicName
 	}
 
+	return nil
+}
+
+func validateTopicsExist(mft interface{}, topicARNs []string, app, env string) error {
+	type subscriptions interface {
+		Subscriptions() []manifest.TopicSubscription
+	}
+
+	subscriptionGetter, ok := mft.(subscriptions)
+	if !ok {
+		return errors.New("manifest does not have required method Subscriptions")
+	}
+	mftSubscriptions := subscriptionGetter.Subscriptions()
+
+	validTopicResources := make([]string, 0, len(topicARNs))
+	for _, topic := range topicARNs {
+		parsedTopic, err := arn.Parse(topic)
+		if err != nil {
+			continue
+		}
+		validTopicResources = append(validTopicResources, parsedTopic.Resource)
+	}
+
+	for _, ts := range mftSubscriptions {
+		topicName := fmt.Sprintf(resourceNameFormat, app, env, ts.Service, ts.Name)
+		if !contains(topicName, validTopicResources) {
+			return fmt.Errorf(fmtErrTopicSubscriptionNotAllowed, topicName, env)
+		}
+	}
 	return nil
 }
 

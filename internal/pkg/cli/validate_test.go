@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/spf13/afero"
@@ -705,7 +706,7 @@ func Test_validatePubSubTopicName(t *testing.T) {
 	}
 }
 
-func Test_validateSubscriptioKey(t *testing.T) {
+func Test_validateSubscriptionKey(t *testing.T) {
 	testCases := map[string]struct {
 		inSub interface{}
 
@@ -779,6 +780,72 @@ func Test_validateSubscribe(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateTopicsExist(t *testing.T) {
+	mockApp := "app"
+	mockEnv := "env"
+	mockAllowedTopics := []string{
+		"arn:aws:sqs:us-west-2:123456789012:app-env-database-events",
+		"arn:aws:sqs:us-west-2:123456789012:app-env-database-orders",
+		"arn:aws:sqs:us-west-2:123456789012:app-env-api-events",
+	}
+	testGoodMft := manifest.WorkerService{
+		WorkerServiceConfig: manifest.WorkerServiceConfig{
+			Subscribe: &manifest.SubscribeConfig{
+				Topics: []manifest.TopicSubscription{
+					{
+						Name:    "events",
+						Service: "database",
+					},
+					{
+						Name:    "orders",
+						Service: "database",
+						Queue: &manifest.SQSQueue{
+							FIFO: &manifest.FIFOOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inMft       interface{}
+		inTopicARNs []string
+
+		wantErr string
+	}{
+		"empty subscriptions": {
+			inMft:       &manifest.WorkerService{},
+			inTopicARNs: mockAllowedTopics,
+		},
+		"topics are valid": {
+			inMft:       &testGoodMft,
+			inTopicARNs: mockAllowedTopics,
+		},
+		"topic is invalid": {
+			inMft:       &testGoodMft,
+			inTopicARNs: []string{},
+			wantErr:     "SNS topic app-env-database-events does not exist in environment env",
+		},
+		"manifest is invalid": {
+			inMft:       &manifest.BackendService{},
+			inTopicARNs: mockAllowedTopics,
+			wantErr:     "manifest does not have required method Subscriptions",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateTopicsExist(tc.inMft, tc.inTopicARNs, mockApp, mockEnv)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

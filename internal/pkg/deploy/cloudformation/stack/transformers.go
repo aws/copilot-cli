@@ -698,7 +698,7 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 
 	var subscriptions template.SubscribeOpts
 	for _, sb := range s.Topics {
-		ts, err := convertTopicSubscription(sb, validTopicARNs, sqsEndpoint.URL, accountID, app, env, svc)
+		ts, err := convertTopicSubscription(sb, sqsEndpoint.URL, accountID, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
@@ -714,8 +714,8 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
-	err := validateTopicSubscription(t, validTopicARNs, app, env)
+func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
+	err := validateTopicSubscription(t)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}

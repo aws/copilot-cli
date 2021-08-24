@@ -569,11 +569,8 @@ func TestValidateWorkerName(t *testing.T) {
 }
 
 func TestValidateTopicSubscription(t *testing.T) {
-	app := "app"
-	env := "env"
 	testCases := map[string]struct {
-		inTS          manifest.TopicSubscription
-		inValidTopics []string
+		inTS manifest.TopicSubscription
 
 		wantErr error
 	}{
@@ -582,44 +579,25 @@ func TestValidateTopicSubscription(t *testing.T) {
 				Name:    "name2",
 				Service: "svc",
 			},
-			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
-			wantErr:       nil,
+			wantErr: nil,
 		},
 		"empty name": {
 			inTS: manifest.TopicSubscription{
 				Service: "svc",
 			},
-			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
-			wantErr:       errMissingPublishTopicField,
+			wantErr: errMissingPublishTopicField,
 		},
 		"empty svc name": {
 			inTS: manifest.TopicSubscription{
 				Name: "theName",
 			},
-			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
-			wantErr:       errInvalidSvcName,
-		},
-		"topic not in list of valid topics": {
-			inTS: manifest.TopicSubscription{
-				Name:    "badName",
-				Service: "svc",
-			},
-			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
-			wantErr:       errTopicSubscriptionNotAllowed,
-		},
-		"topic in list of valid topics but one cannot be parsed": {
-			inTS: manifest.TopicSubscription{
-				Name:    "name2",
-				Service: "svc",
-			},
-			inValidTopics: []string{"arn:aws:sns:us-east-1:123456789012:app-env-svc-name", "", "arn:aws:sns:us-east-1:123456789012:app-env-svc-name2"},
-			wantErr:       nil,
+			wantErr: errInvalidSvcName,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateTopicSubscription(tc.inTS, tc.inValidTopics, app, env)
+			err := validateTopicSubscription(tc.inTS)
 
 			if tc.wantErr == nil {
 				require.NoError(t, err)

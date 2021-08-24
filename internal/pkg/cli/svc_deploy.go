@@ -440,6 +440,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
+
 	return envMft, nil
 }
 
@@ -573,12 +574,14 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		if err != nil {
 			return nil, err
 		}
-		ts := []string{}
+		topicARNs := []string{}
 		for _, topic := range topics {
-			ts = append(ts, topic.ARN())
+			topicARNs = append(topicARNs, topic.ARN())
 		}
-
-		conf, err = stack.NewWorkerService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, ts)
+		if err = validateTopicsExist(mft, topicARNs, o.appName, o.envName); err != nil {
+			return nil, err
+		}
+		conf, err = stack.NewWorkerService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)

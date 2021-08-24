@@ -1716,28 +1716,6 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errSvcNameBadFormat),
 		},
-		"topic not allowed": {
-			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    "topic1",
-						Service: "svc",
-					},
-				},
-			},
-			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errTopicSubscriptionNotAllowed),
-		},
-		"sneaky topic not allowed": {
-			inSubscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    "sneakytopic",
-						Service: "svc-name",
-					},
-				},
-			},
-			wantedError: fmt.Errorf(`invalid topic subscription "sneakytopic": %w`, errTopicSubscriptionNotAllowed),
-		},
 		"subscribe queue delay invalid": {
 			inSubscribe: &manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
