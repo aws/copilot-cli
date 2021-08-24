@@ -632,14 +632,14 @@ func TestApplyEnv_Count(t *testing.T) {
 				}
 				svc.Environments["test"].Count = Count{
 					AdvancedCount: AdvancedCount{
-						Memory: aws.Int(0),
+						Requests: aws.Int(0),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
 					AdvancedCount: AdvancedCount{
-						Memory: aws.Int(0),
+						Requests: aws.Int(0),
 					},
 				}
 			},
@@ -965,37 +965,37 @@ func TestApplyEnv_Count_Range(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED TEST: min not overridden": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{
-		//						Min: aws.Int(5),
-		//					},
-		//				},
-		//			},
-		//		}
-		//		svc.Environments["test"].Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{},
-		//				},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{
-		//						Min: aws.Int(5),
-		//					},
-		//				},
-		//			},
-		//		}
-		//	},
-		//},
+		"FIXED_BUG: min not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{
+								Min: aws.Int(5),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{
+								Min: aws.Int(5),
+							},
+						},
+					},
+				}
+			},
+		},
 		"max overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
@@ -1062,37 +1062,37 @@ func TestApplyEnv_Count_Range(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED TEST: max not overridden": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{
-		//						Max: aws.Int(13),
-		//					},
-		//				},
-		//			},
-		//		}
-		//		svc.Environments["test"].Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{},
-		//				},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{
-		//						Max: aws.Int(13),
-		//					},
-		//				},
-		//			},
-		//		}
-		//	},
-		//},
+		"FIXED_BUG: max not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{
+								Max: aws.Int(13),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{
+								Max: aws.Int(13),
+							},
+						},
+					},
+				}
+			},
+		},
 		"spot_from overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.Count = Count{
@@ -1159,37 +1159,37 @@ func TestApplyEnv_Count_Range(t *testing.T) {
 				}
 			},
 		},
-		//"FAILED TEST: spot_from not overridden": {
-		//	inSvc: func(svc *LoadBalancedWebService) {
-		//		svc.Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{
-		//						SpotFrom: aws.Int(10),
-		//					},
-		//				},
-		//			},
-		//		}
-		//		svc.Environments["test"].Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{},
-		//				},
-		//			},
-		//		}
-		//	},
-		//	wanted: func(svc *LoadBalancedWebService) {
-		//		svc.Count = Count{
-		//			AdvancedCount: AdvancedCount{
-		//				Range: &Range{
-		//					RangeConfig: RangeConfig{
-		//						SpotFrom: aws.Int(10),
-		//					},
-		//				},
-		//			},
-		//		}
-		//	},
-		//},
+		"FIXED_BUG: spot_from not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{
+								SpotFrom: aws.Int(10),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Count = Count{
+					AdvancedCount: AdvancedCount{
+						Range: &Range{
+							RangeConfig: RangeConfig{
+								SpotFrom: aws.Int(10),
+							},
+						},
+					},
+				}
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

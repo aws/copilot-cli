@@ -63,17 +63,11 @@ func (r Rule) validate() error {
 }
 
 func (r Rule) parse() (nodeUpserter, error) {
-	return r.parseRule()
-}
-
-func (r Rule) parseRule() (nodeUpserter, error) {
-	pathSegments := strings.SplitAfterN(r.Path, PathSegmentSeparator, 2)
-	currPathSegment := strings.TrimSuffix(pathSegments[0], ".")
-
-	subMatches := pathSegmentRegexp.FindStringSubmatch(currPathSegment)
+	pathSegments := strings.SplitN(r.Path, PathSegmentSeparator, 2)
+	subMatches := pathSegmentRegexp.FindStringSubmatch(pathSegments[0])
 	if len(subMatches) == 0 {
 		// This error shouldn't occur given that `validate()` has passed.
-		return nil, fmt.Errorf(`invalid override path segment "%s"`, currPathSegment)
+		return nil, fmt.Errorf(`invalid override path segment "%s"`, pathSegments[0])
 	}
 	// https://pkg.go.dev/regexp#Regexp.FindStringSubmatch
 	// Given that path segment is valid (after `validate()`), `subMatches` contains four elements.
@@ -83,26 +77,52 @@ func (r Rule) parseRule() (nodeUpserter, error) {
 	// subMatches[2], the second capture group is "[<index>]".
 	// subMatches[3], the third capture group us "<index>".
 	// subMatches[2] and subMatches[3] could also be empty string, depending on whether there is "[<i>]" in path segment.
-	key, indexMatch := subMatches[1], subMatches[3]
+	key := subMatches[1]
 	baseNode := upsertNode{
 		key: key,
 	}
 	if len(pathSegments) < 2 {
 		// This is the last segment.
 		baseNode.valueToInsert = &r.Value
-		return baseNode.newNodeUpserter(indexMatch)
+		return newNodeUpserter(baseNode, subMatches)
 	}
 
 	subRule := Rule{
 		Path:  pathSegments[1],
 		Value: r.Value,
 	}
-	nextNode, err := subRule.parseRule()
+	nextNode, err := subRule.parse()
 	if err != nil {
 		return nil, err
 	}
 	baseNode.next = nextNode
-	return baseNode.newNodeUpserter(indexMatch)
+	return newNodeUpserter(baseNode, subMatches)
+}
+
+func newNodeUpserter(baseNode upsertNode, pathGroups []string) (nodeUpserter, error) {
+	currPath, indexMatch := pathGroups[0], pathGroups[3]
+	if indexMatch == "" {
+		// The indexMatch capture group is empty string, meaning that the path segment doesn't contain "[<index>]".
+		return &mapUpsertNode{
+			upsertNode: baseNode,
+		}, nil
+	}
+
+	if indexMatch == seqAppendToLastSymbol {
+		return &seqIdxUpsertNode{
+			appendToLast: true,
+			upsertNode:   baseNode,
+		}, nil
+	}
+	index, err := strconv.Atoi(indexMatch)
+	if err != nil {
+		// This error also shouldn't occur given that `validate()` has passed.
+		return nil, fmt.Errorf("convert index %s to integer: %w", currPath, err)
+	}
+	return &seqIdxUpsertNode{
+		index:      index,
+		upsertNode: baseNode,
+	}, nil
 }
 
 // upsertNode represents a node that needs to be upserted at the given key.
@@ -116,31 +136,6 @@ type upsertNode struct {
 // Next returns the next node.
 func (m *upsertNode) Next() nodeUpserter {
 	return m.next
-}
-
-func (m *upsertNode) newNodeUpserter(indexMatch string) (nodeUpserter, error) {
-	if indexMatch == "" {
-		// The second capture group is empty string, meaning that the path segment doesn't contain "[<index>]".
-		return &mapUpsertNode{
-			upsertNode: *m,
-		}, nil
-	}
-
-	if indexMatch == seqAppendToLastSymbol {
-		return &seqIdxUpsertNode{
-			appendToLast: true,
-			upsertNode:   *m,
-		}, nil
-	}
-	index, err := strconv.Atoi(indexMatch)
-	if err != nil {
-		// This error also shouldn't occur given that `validate()` has passed.
-		return nil, fmt.Errorf("convert string %s to integer: %w", indexMatch, err)
-	}
-	return &seqIdxUpsertNode{
-		index:      index,
-		upsertNode: *m,
-	}, nil
 }
 
 // mapUpsertNode represents a map node that needs to be upserted at the given key.

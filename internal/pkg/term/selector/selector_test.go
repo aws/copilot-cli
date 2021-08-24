@@ -33,16 +33,21 @@ func TestDeploySelect_Topics(t *testing.T) {
 	const (
 		testApp = "mockApp"
 		testEnv = "mockEnv"
+		prodEnv = "mockProdEnv"
 	)
 	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", testApp, testEnv, "mockWkld")
+	mockTopic2, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-events", testApp, testEnv, "mockWkld")
 	testCases := map[string]struct {
 		setupMocks func(mocks deploySelectMocks)
 
 		wantErr    error
-		wantTopics []string
+		wantTopics []deploy.Topic
 	}{
 		"return error if fail to retrieve topics from deploy": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return(
+					[]*config.Environment{{Name: testEnv}}, nil,
+				)
 				m.deploySvc.
 					EXPECT().
 					ListSNSTopics(testApp, testEnv).
@@ -52,6 +57,9 @@ func TestDeploySelect_Topics(t *testing.T) {
 		},
 		"return error if fail to select topics": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return(
+					[]*config.Environment{{Name: testEnv}}, nil,
+				)
 				m.deploySvc.
 					EXPECT().
 					ListSNSTopics(testApp, testEnv).
@@ -65,16 +73,23 @@ func TestDeploySelect_Topics(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return(
+					[]*config.Environment{{Name: testEnv}, {Name: prodEnv}}, nil,
+				)
 				m.deploySvc.
 					EXPECT().
 					ListSNSTopics(testApp, testEnv).
+					Return([]deploy.Topic{*mockTopic, *mockTopic2}, nil)
+				m.deploySvc.
+					EXPECT().
+					ListSNSTopics(testApp, prodEnv).
 					Return([]deploy.Topic{*mockTopic}, nil)
 				m.prompt.
 					EXPECT().
 					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}, gomock.Any()).
 					Return([]string{"orders (mockWkld)"}, nil)
 			},
-			wantTopics: []string{mockTopic.ARN()},
+			wantTopics: []deploy.Topic{*mockTopic},
 		},
 	}
 	for name, tc := range testCases {
@@ -90,6 +105,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 				configSvc: mockconfigSvc,
 				prompt:    mockprompt,
 			}
+
 			tc.setupMocks(mocks)
 
 			sel := DeploySelect{
@@ -99,7 +115,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
-			topics, err := sel.Topics("Select a deployed topic", "Help text", testApp, testEnv)
+			topics, err := sel.Topics("Select a deployed topic", "Help text", testApp)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
@@ -109,6 +125,77 @@ func TestDeploySelect_Topics(t *testing.T) {
 	}
 }
 
+func TestIntersect(t *testing.T) {
+	mockTopic1Env1, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv1-mockWkld-orders", "mockApp", "mockEnv1", "mockWkld")
+	mockTopic1Env2, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv2-mockWkld-orders", "mockApp", "mockEnv2", "mockWkld")
+	mockTopic2Env1, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv1-mockWkld2-events", "mockApp", "mockEnv1", "mockWkld2")
+	mockTopic2Env2, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv2-mockWkld2-events", "mockApp", "mockEnv2", "mockWkld2")
+	testCases := map[string]struct {
+		inArray []deploy.Topic
+		inMap   map[string]deploy.Topic
+
+		wantedMap map[string]deploy.Topic
+	}{
+		"with no common entries": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+			},
+			wantedMap: map[string]deploy.Topic{},
+		},
+		"with common entries": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+				*mockTopic2Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+				mockTopic1Env2.String(): *mockTopic1Env2,
+			},
+			wantedMap: map[string]deploy.Topic{
+				mockTopic2Env1.String(): *mockTopic2Env1,
+				mockTopic1Env1.String(): *mockTopic1Env1,
+			},
+		},
+		"with one common entry, extra entry in array": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+				*mockTopic2Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+			},
+			wantedMap: map[string]deploy.Topic{
+				mockTopic2Env1.String(): *mockTopic2Env1,
+			},
+		},
+		"with one common entry, extra entry in map": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+				mockTopic1Env2.String(): *mockTopic1Env2,
+			},
+			wantedMap: map[string]deploy.Topic{
+				mockTopic1Env1.String(): *mockTopic1Env1,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+
+			// WHEN
+			out := intersect(tc.inMap, tc.inArray)
+
+			// THEN
+			require.Equal(t, out, tc.wantedMap)
+		})
+	}
+}
 func TestDeploySelect_Service(t *testing.T) {
 	const testApp = "mockApp"
 	testCases := map[string]struct {

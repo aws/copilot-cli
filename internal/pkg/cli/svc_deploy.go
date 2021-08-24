@@ -11,10 +11,10 @@ import (
 	"regexp"
 	"strings"
 
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -77,7 +77,7 @@ type deploySvcOpts struct {
 	addons              templater
 	appCFN              appResourcesGetter
 	svcCFN              serviceDeployer
-	svcUpdater          serviceUpdater
+	newSvcUpdater       func(func(*session.Session) serviceUpdater)
 	sessProvider        sessionProvider
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
@@ -96,6 +96,7 @@ type deploySvcOpts struct {
 	buildRequired     bool
 	appEnvResources   *stack.AppRegionalResources
 	rdSvcAlias        string
+	svcUpdater        serviceUpdater
 
 	uploadOpts *uploadCustomResourcesOpts
 }
@@ -285,7 +286,9 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
-	o.svcUpdater = ecs.New(envSession)
+	o.newSvcUpdater = func(f func(*session.Session) serviceUpdater) {
+		o.svcUpdater = f(envSession)
+	}
 
 	// CF client against env account profile AND target environment region.
 	o.svcCFN = cloudformation.New(envSession)
@@ -498,6 +501,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	if err != nil {
 		return nil, err
 	}
+	o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+		return ecs.New(s)
+	})
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -514,6 +520,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
+		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+			return apprunner.New(s)
+		})
 		var caller identity.Caller
 		caller, err = o.identity.Get()
 		if err != nil {
@@ -570,27 +579,30 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyCS) {
 			if o.forceNewUpdate {
-				// Force update ECS service if --force is set and change set is empty.
-				o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
-				if err = o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
-					errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
-						color.HighlightUserInput(o.envName), err)
-					var errWaitUpdateTimeout *awsecs.ErrWaitServiceStableTimeout
-					if errors.As(err, &errWaitUpdateTimeout) {
-						errLog = fmt.Sprintf("%s  Run %s to check for the fail reason.\n", errLog,
-							color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", o.name, o.envName)))
-					}
-					o.spinner.Stop(log.Serror(errLog))
-					return fmt.Errorf("force an update for service %s: %w", o.name, err)
-				}
-				o.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
-				return nil
-			} else {
-				log.Warningf("Set --%s to force an update for the ECS service.\n", forceFlag)
+				return o.forceDeploy()
 			}
+			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
 		}
 		return fmt.Errorf("deploy service: %w", err)
 	}
+	return nil
+}
+
+func (o *deploySvcOpts) forceDeploy() error {
+	// Force update the service if --force is set and change set is empty.
+	o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
+	if err := o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
+		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
+			color.HighlightUserInput(o.envName), err)
+		var terr timeoutError
+		if errors.As(err, &terr) {
+			errLog = fmt.Sprintf("%s  Run %s to check for the fail reason.\n", errLog,
+				color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", o.name, o.envName)))
+		}
+		o.spinner.Stop(log.Serror(errLog))
+		return fmt.Errorf("force an update for service %s: %w", o.name, err)
+	}
+	o.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
 	return nil
 }
 

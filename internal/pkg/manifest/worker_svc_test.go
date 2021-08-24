@@ -140,7 +140,7 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
 				},
-				Topics: &[]TopicSubscription{
+				Topics: []TopicSubscription{
 					{
 						Name:    "testTopic",
 						Service: "service4TestTopic",
@@ -259,7 +259,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 			},
 			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+				Topics: []TopicSubscription{
 					{
 						Name:    "topicName",
 						Service: "bestService",
@@ -299,7 +299,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+					Topics: []TopicSubscription{
 						{
 							Name:    "topicName2",
 							Service: "bestService2",
@@ -418,7 +418,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+				Topics: []TopicSubscription{
 					{
 						Name:    "name",
 						Service: "svc",
@@ -450,7 +450,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+					Topics: []TopicSubscription{
 						{
 							Name:    "name",
 							Service: "svc",
@@ -474,7 +474,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+				Topics: []TopicSubscription{
 					{
 						Name:    "name",
 						Service: "svc",
@@ -508,7 +508,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+					Topics: []TopicSubscription{
 						{
 							Name:    "name",
 							Service: "svc",
@@ -532,7 +532,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+				Topics: []TopicSubscription{
 					{
 						Name:    "name",
 						Service: "svc",
@@ -562,13 +562,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{},
+				Topics: []TopicSubscription{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+					Topics: []TopicSubscription{
 						{
 							Name:    "name",
 							Service: "svc",
@@ -731,7 +731,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+						Topics: []TopicSubscription{
 							{
 								Name:    "topicName2",
 								Service: "bestService2",
@@ -830,7 +830,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+						Topics: []TopicSubscription{
 							{
 								Name:    "name",
 								Service: "svc",
@@ -859,7 +859,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+						Topics: []TopicSubscription{
 							{
 								Name:    "name",
 								Service: "svc",
@@ -891,7 +891,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Image: Image{},
 					},
 					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+						Topics: []TopicSubscription{
 							{
 								Name:    "name",
 								Service: "svc",
@@ -920,7 +920,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+						Topics: []TopicSubscription{
 							{
 								Name:    "name",
 								Service: "svc",
@@ -949,7 +949,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+						Topics: []TopicSubscription{
 							{
 								Name:    "name",
 								Service: "svc",
@@ -981,7 +981,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Image: Image{},
 					},
 					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+						Topics: []TopicSubscription{
 							{
 								Name:    "name",
 								Service: "svc",
