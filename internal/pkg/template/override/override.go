@@ -14,7 +14,7 @@ import (
 // CloudFormationTemplate overrides the given CloudFormation template by applying
 // the override rules.
 func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, error) {
-	content, err := unmarshalCFNYAML(origTemp)
+	content, err := unmarshalYAML(origTemp)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, erro
 	if err := applyRules(ruleNodes, content); err != nil {
 		return nil, err
 	}
-	output, err := marshalCFNYAML(content)
+	output, err := marshalYAML(content)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func parseRules(rules []Rule) ([]nodeUpserter, error) {
 	return ruleNodes, nil
 }
 
-func unmarshalCFNYAML(temp []byte) (*yaml.Node, error) {
+func unmarshalYAML(temp []byte) (*yaml.Node, error) {
 	var node yaml.Node
 	if err := yaml.Unmarshal(temp, &node); err != nil {
 		return nil, fmt.Errorf("unmarshal CloudFormation YAML template: %w", err)
@@ -55,7 +55,7 @@ func unmarshalCFNYAML(temp []byte) (*yaml.Node, error) {
 	return &node, nil
 }
 
-func marshalCFNYAML(content *yaml.Node) ([]byte, error) {
+func marshalYAML(content *yaml.Node) ([]byte, error) {
 	var out bytes.Buffer
 	yamlEncoder := yaml.NewEncoder(&out)
 	yamlEncoder.SetIndent(2)

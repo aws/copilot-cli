@@ -435,7 +435,7 @@ func Test_applyRules(t *testing.T) {
 
 			// WHEN
 			err := applyRules(tc.inRules, &node)
-			out, marshalErr := marshalCFNYAML(&node)
+			out, marshalErr := marshalYAML(&node)
 			require.NoError(t, marshalErr)
 
 			if tc.wantedError != nil {
