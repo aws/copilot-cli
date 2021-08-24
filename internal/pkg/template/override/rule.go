@@ -62,10 +62,6 @@ func (r Rule) validate() error {
 }
 
 func (r Rule) parse() (nodeUpserter, error) {
-	return r.parseRule()
-}
-
-func (r Rule) parseRule() (nodeUpserter, error) {
 	pathSegments := strings.SplitAfterN(r.Path, pathSegmentSeparator, 2)
 	currPathSegment := strings.TrimSuffix(pathSegments[0], ".")
 
@@ -96,7 +92,7 @@ func (r Rule) parseRule() (nodeUpserter, error) {
 		Path:  pathSegments[1],
 		Value: r.Value,
 	}
-	nextNode, err := subRule.parseRule()
+	nextNode, err := subRule.parse()
 	if err != nil {
 		return nil, err
 	}
