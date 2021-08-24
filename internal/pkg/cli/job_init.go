@@ -325,10 +325,13 @@ func (o *initJobOpts) askSchedule() error {
 
 func (o initJobOpts) legitimizePlatform() error {
 	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
+	if err != nil {
+		return fmt.Errorf("get docker engine platform: %w", err)
+	}
 	detectedPlatform := aws.String(manifest.PlatformString(detectedOs, detectedArch))
 	platform, err := manifest.RedirectPlatform(o.image, detectedOs, detectedArch, o.wkldType)
 	if err != nil {
-		return fmt.Errorf("get/redirect docker engine platform: %w", err)
+		return fmt.Errorf("redirect docker engine platform: %w", err)
 	}
 	o.platform = platform
 	if o.platform != nil {

@@ -546,6 +546,12 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New("some error"),
 		},
+		"return error if platform detection fails": {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
+			},
+			wantedErr: errors.New("get docker engine platform: some error"),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
