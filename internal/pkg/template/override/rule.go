@@ -76,14 +76,14 @@ func (r Rule) parse() (nodeUpserter, error) {
 	// subMatches[2], the second capture group is "[<index>]".
 	// subMatches[3], the third capture group us "<index>".
 	// subMatches[2] and subMatches[3] could also be empty string, depending on whether there is "[<i>]" in path segment.
-	key, indexMatch := subMatches[1], subMatches[3]
+	key := subMatches[1]
 	baseNode := upsertNode{
 		key: key,
 	}
 	if len(pathSegments) < 2 {
 		// This is the last segment.
 		baseNode.valueToInsert = &r.Value
-		return baseNode.newNodeUpserter(indexMatch)
+		return baseNode.newNodeUpserter(subMatches)
 	}
 
 	subRule := Rule{
@@ -95,7 +95,7 @@ func (r Rule) parse() (nodeUpserter, error) {
 		return nil, err
 	}
 	baseNode.next = nextNode
-	return baseNode.newNodeUpserter(indexMatch)
+	return baseNode.newNodeUpserter(subMatches)
 }
 
 // upsertNode represents a node that needs to be upserted at the given key.
@@ -111,9 +111,10 @@ func (m *upsertNode) Next() nodeUpserter {
 	return m.next
 }
 
-func (m *upsertNode) newNodeUpserter(indexMatch string) (nodeUpserter, error) {
+func (m *upsertNode) newNodeUpserter(pathGroups []string) (nodeUpserter, error) {
+	currPath, indexMatch := pathGroups[0], pathGroups[3]
 	if indexMatch == "" {
-		// The second capture group is empty string, meaning that the path segment doesn't contain "[<index>]".
+		// The indexMatch capture group is empty string, meaning that the path segment doesn't contain "[<index>]".
 		return &mapUpsertNode{
 			upsertNode: *m,
 		}, nil
@@ -128,7 +129,7 @@ func (m *upsertNode) newNodeUpserter(indexMatch string) (nodeUpserter, error) {
 	index, err := strconv.Atoi(indexMatch)
 	if err != nil {
 		// This error also shouldn't occur given that `validate()` has passed.
-		return nil, fmt.Errorf("convert string %s to integer: %w", indexMatch, err)
+		return nil, fmt.Errorf("convert index %s to integer: %w", currPath, err)
 	}
 	return &seqIdxUpsertNode{
 		index:      index,
