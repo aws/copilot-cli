@@ -183,14 +183,15 @@ func Test_CloudFormationTemplate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			in, err := ioutil.ReadFile(filepath.Join("testdata", "original", tc.inTplFileName))
 			require.NoError(t, err)
-			wantedContent, err := ioutil.ReadFile(filepath.Join("testdata", "outputs", tc.wantedTplFileName))
-			require.NoError(t, err)
 
-			got, err := CloudFormationTemplate(tc.inRules, in)
+			got, gotErr := CloudFormationTemplate(tc.inRules, in)
 			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
+				require.EqualError(t, gotErr, tc.wantedError.Error())
 			} else {
+				wantedContent, err := ioutil.ReadFile(filepath.Join("testdata", "outputs", tc.wantedTplFileName))
 				require.NoError(t, err)
+
+				require.NoError(t, gotErr)
 				require.Equal(t, string(wantedContent), string(got))
 			}
 		})
