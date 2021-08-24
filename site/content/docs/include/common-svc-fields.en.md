@@ -204,10 +204,10 @@ Required. The ID of the filesystem you would like to mount.
 Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
 <span class="parent-field">volume.efs.</span><a id="uid" href="#uid" class="field">`uid`</a> <span class="type">Uint32</span>
-Optional. Must be specified with `gid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX UID to use for the dedicated access point created for the managed EFS filesystem. 
+Optional. Must be specified with `gid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX UID to use for the dedicated access point created for the managed EFS filesystem.
 
 <span class="parent-field">volume.efs.</span><a id="gid" href="#gid" class="field">`gid`</a> <span class="type">Uint32</span>
-Optional. Must be specified with `uid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX GID to use for the dedicated access point created for the managed EFS filesystem. 
+Optional. Must be specified with `uid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX GID to use for the dedicated access point created for the managed EFS filesystem.
 
 <span class="parent-field">volume.efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
 Specify advanced authorization configuration for EFS.
@@ -237,6 +237,17 @@ Optional. The secrets to pass to the log configuration.
 
 <span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
 Optional. The full config file path in your custom Fluent Bit image.
+
+<div class="separator"></div>
+
+<a id="taskdef_overrides" href="#taskdef_overrides" class="field">`taskdef_overrides`</a> <span class="type">Array</span>  
+The `taskdef_overrides` section allows users to apply overriding rules to their ECS Task Definitions (see examples [here](../developing/overrides.en.md#task-definition-override)).
+
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-path" href="#taskdef_overrides-path" class="field">`path`</a> <span class="type">String</span>  
+Required. Path to the Task Definition field to override.
+
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-value" href="#taskdef_overrides-value" class="field">`value`</a> <span class="type">Any</span>  
+Required. Value of the Task Definition field to override.
 
 <div class="separator"></div>
 
