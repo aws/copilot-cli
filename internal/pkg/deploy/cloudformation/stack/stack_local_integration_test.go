@@ -24,7 +24,7 @@ const (
 	imageTag = "latest"
 )
 
-func Test_Autoscaling_Integration(t *testing.T) {
+func Test_Stack_Local_Integration(t *testing.T) {
 	const (
 		wantedAutoScalingCFNTemplatePath  = "autoscaling-svc-cf.yml"
 		wantedAutoScalingCFNParameterPath = "cf.params.json"
