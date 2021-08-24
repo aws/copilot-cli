@@ -62,13 +62,11 @@ func (r Rule) validate() error {
 }
 
 func (r Rule) parse() (nodeUpserter, error) {
-	pathSegments := strings.SplitAfterN(r.Path, pathSegmentSeparator, 2)
-	currPathSegment := strings.TrimSuffix(pathSegments[0], ".")
-
-	subMatches := pathSegmentRegexp.FindStringSubmatch(currPathSegment)
+	pathSegments := strings.SplitN(r.Path, pathSegmentSeparator, 2)
+	subMatches := pathSegmentRegexp.FindStringSubmatch(pathSegments[0])
 	if len(subMatches) == 0 {
 		// This error shouldn't occur given that `validate()` has passed.
-		return nil, fmt.Errorf(`invalid override path segment "%s"`, currPathSegment)
+		return nil, fmt.Errorf(`invalid override path segment "%s"`, pathSegments[0])
 	}
 	// https://pkg.go.dev/regexp#Regexp.FindStringSubmatch
 	// Given that path segment is valid (after `validate()`), `subMatches` contains four elements.
