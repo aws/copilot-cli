@@ -5,6 +5,8 @@ package override
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -450,13 +452,43 @@ func Test_applyRules(t *testing.T) {
 
 func Test_CloudFormationTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		inRules    []Rule
-		inOrigTemp []byte
+		inRules       []Rule
+		inTplFileName string
 
-		wantedErr error
-		wantedOut string
+		wantedErr         error
+		wantedTplFileName string
 	}{
-		"success": {
+		"success with ulimits": {
+			inTplFileName: "backend_svc.yml",
+			inRules: []Rule{
+				ulimitsRule(),
+			},
+			wantedTplFileName: "ulimits.yml",
+		},
+		"success with extra port": {
+			inTplFileName: "backend_svc.yml",
+			inRules: []Rule{
+				exposeExtraPortRule(),
+			},
+			wantedTplFileName: "extra_port.yml",
+		},
+		"success with linux parameters": {
+			inTplFileName: "backend_svc.yml",
+			inRules: []Rule{
+				linuxParametersCapabilitiesRule(),
+				linuxParametersCapabilitiesInitProcessEnabledRule(),
+			},
+			wantedTplFileName: "linux_parameters.yml",
+		},
+		"success with requires compatibilities": {
+			inTplFileName: "backend_svc.yml",
+			inRules: []Rule{
+				requiresCompatibilitiesRule(),
+			},
+			wantedTplFileName: "requires_compatibilities.yml",
+		},
+		"success with multiple override rules": {
+			inTplFileName: "backend_svc.yml",
 			inRules: []Rule{
 				ulimitsRule(),
 				exposeExtraPortRule(),
@@ -464,19 +496,20 @@ func Test_CloudFormationTemplate(t *testing.T) {
 				linuxParametersCapabilitiesInitProcessEnabledRule(),
 				requiresCompatibilitiesRule(),
 			},
-			inOrigTemp: []byte(testContent),
-			wantedOut:  wantedOverriddenTemplate,
-		},
+			wantedTplFileName: "multiple_overrides.yml"},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := CloudFormationTemplate(tc.inRules, tc.inOrigTemp)
+			in, err := ioutil.ReadFile(filepath.Join("testdata", tc.inTplFileName))
+			wantedContent, err := ioutil.ReadFile(filepath.Join("testdata", "outputs", tc.wantedTplFileName))
+
+			got, err := CloudFormationTemplate(tc.inRules, in)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedOut, string(got))
+				require.Equal(t, string(wantedContent), string(got))
 			}
 		})
 	}
