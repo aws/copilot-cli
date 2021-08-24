@@ -538,7 +538,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return("", nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -564,7 +564,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return("", nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -589,7 +589,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("nginx:latest").Return("", nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -614,21 +614,20 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("nginx:latest").Return("", nil, nil)
-
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
 		},
-		"return error if platform detection/redirection fails": {
+		"return error if platform detection fails": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return("", nil, errors.New("some error"))
+				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
 			},
-			wantedErr: errors.New("get/redirect docker engine platform: some error"),
+			wantedErr: errors.New("get docker engine platform: some error"),
 		},
 		"failure": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return("", nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(gomock.Any()).Return("", errors.New("some error"))

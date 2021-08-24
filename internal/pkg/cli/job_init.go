@@ -188,14 +188,8 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	detectedPlatform, targetPlatform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return fmt.Errorf("get/redirect docker engine platform: %w", err)
-	}
-	if detectedPlatform != aws.StringValue(targetPlatform) {
-		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, aws.StringValue(targetPlatform))
-		o.platform = targetPlatform
+	if err = o.legitimizePlatform(); err != nil {
+		return err
 	}
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
@@ -326,6 +320,22 @@ func (o *initJobOpts) askSchedule() error {
 	}
 
 	o.schedule = schedule
+	return nil
+}
+
+func (o initJobOpts) legitimizePlatform() error {
+	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
+	detectedPlatform := aws.String(manifest.PlatformString(detectedOs, detectedArch))
+	platform, err := manifest.RedirectPlatform(o.image, detectedOs, detectedArch, o.wkldType)
+	if err != nil {
+		return fmt.Errorf("get/redirect docker engine platform: %w", err)
+	}
+	o.platform = platform
+	if o.platform != nil {
+		if o.platform != detectedPlatform {
+			log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, aws.StringValue(o.platform))
+		}
+	}
 	return nil
 }
 

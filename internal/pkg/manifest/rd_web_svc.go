@@ -6,8 +6,6 @@ package manifest
 import (
 	"errors"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -103,7 +101,7 @@ func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
 	if s.InstanceConfig.Platform == nil {
 		return nil, nil
 	}
-	return aws.String(dockerengine.PlatformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
+	return aws.String(PlatformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
