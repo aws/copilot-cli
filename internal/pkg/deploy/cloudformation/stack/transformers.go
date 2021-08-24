@@ -336,7 +336,7 @@ func convertTaskDefOverrideRules(inRules []manifest.OverrideRule) []override.Rul
 	for _, r := range inRules {
 		res = append(res, override.Rule{
 			Path:  r.Path,
-			Value: &r.Value,
+			Value: r.Value,
 		})
 	}
 	return res
