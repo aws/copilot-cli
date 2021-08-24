@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	// PathSegmentSeparator is the separateor for path segments.
+	// PathSegmentSeparator is the separator for path segments.
 	PathSegmentSeparator = "."
 	// seqAppendToLastSymbol is the symbol used to add a node to the tail of a list.
 	seqAppendToLastSymbol = "-"
