@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"regexp"
 	"strings"
 	"time"
 
@@ -60,7 +61,8 @@ var (
 	errEphemeralBadSize  = errors.New("ephemeral storage must be between 20 GiB and 200 GiB")
 	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 
-	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
+	taskDefOverrideRulePrefixes      = []string{"Resources", "TaskDefinition", "Properties"}
+	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
 type convertSidecarOpts struct {
@@ -337,12 +339,25 @@ func convertTaskDefOverrideRules(inRules []manifest.OverrideRule) []override.Rul
 	var res []override.Rule
 	suffixStr := strings.Join(taskDefOverrideRulePrefixes, override.PathSegmentSeparator)
 	for _, r := range inRules {
+		if !isValidTaskDefOverridePath(r.Path) {
+			continue
+		}
 		res = append(res, override.Rule{
 			Path:  strings.Join([]string{suffixStr, r.Path}, override.PathSegmentSeparator),
 			Value: r.Value,
 		})
 	}
 	return res
+}
+
+func isValidTaskDefOverridePath(path string) bool {
+	for _, s := range invalidTaskDefOverridePathRegexp {
+		re := regexp.MustCompile(fmt.Sprintf(`^%s$`, s))
+		if re.MatchString(path) {
+			return false
+		}
+	}
+	return true
 }
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used

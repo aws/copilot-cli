@@ -559,6 +559,14 @@ func Test_convertTaskDefOverrideRules(t *testing.T) {
 					Path:  "ContainerDefinitions[0].Ulimits[-].HardLimit",
 					Value: yaml.Node{},
 				},
+				{
+					Path:  "ContainerDefinitions[0].Name",
+					Value: yaml.Node{},
+				},
+				{
+					Path:  "Family",
+					Value: yaml.Node{},
+				},
 			},
 			wanted: []override.Rule{
 				{
