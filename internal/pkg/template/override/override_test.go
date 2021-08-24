@@ -182,7 +182,9 @@ func Test_CloudFormationTemplate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			in, err := ioutil.ReadFile(filepath.Join("testdata", "original", tc.inTplFileName))
+			require.NoError(t, err)
 			wantedContent, err := ioutil.ReadFile(filepath.Join("testdata", "outputs", tc.wantedTplFileName))
+			require.NoError(t, err)
 
 			got, err := CloudFormationTemplate(tc.inRules, in)
 			if tc.wantedError != nil {
