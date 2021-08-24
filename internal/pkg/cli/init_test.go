@@ -122,6 +122,10 @@ func TestInitOpts_Run(t *testing.T) {
 						Hint:  "ECS on Fargate",
 					},
 					{
+						Value: manifest.WorkerServiceType,
+						Hint:  "Events to SQS to ECS on Fargate",
+					},
+					{
 						Value: manifest.ScheduledJobType,
 						Hint:  "Scheduled event to State Machine to Fargate",
 					},

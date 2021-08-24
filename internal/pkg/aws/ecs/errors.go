@@ -27,6 +27,11 @@ func (e *ErrWaitServiceStableTimeout) Error() string {
 	return fmt.Sprintf("max retries %v exceeded", e.maxRetries)
 }
 
+// Timeout allows ErrWaitServiceStableTimeout to implement a timeout error interface.
+func (e *ErrWaitServiceStableTimeout) Timeout() bool {
+	return true
+}
+
 // ErrNoDefaultCluster occurs when the default cluster is not found.
 var ErrNoDefaultCluster = errors.New("default cluster does not exist")
 

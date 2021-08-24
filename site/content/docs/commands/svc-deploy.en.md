@@ -5,7 +5,7 @@ $ copilot svc deploy
 
 ## What does it do?
 
-`copilot svc deploy` takes your local code and configuration and deploys it. 
+`copilot svc deploy` takes your local code and configuration and deploys it.
 
 The steps involved in service deploy are:
 
@@ -19,6 +19,7 @@ The steps involved in service deploy are:
 
 ```bash
   -e, --env string                     Name of the environment.
+      --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.

@@ -471,7 +471,11 @@ func TestAppRunner_PauseService(t *testing.T) {
 
 			err := service.PauseService(mockSvcARN)
 
-			require.Equal(t, tc.wantErr, err)
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -552,7 +556,65 @@ func TestAppRunner_ResumeService(t *testing.T) {
 
 			err := service.ResumeService(mockSvcARN)
 
-			require.Equal(t, tc.wantErr, err)
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAppRunner_StartDeployment(t *testing.T) {
+	const (
+		mockOperationId = "mock-operation"
+		mockSvcARN      = "mockSvcArn"
+	)
+	testCases := map[string]struct {
+		mockAppRunnerClient func(m *mocks.Mockapi)
+
+		wantErr         error
+		wantOperationID string
+	}{
+		"error if fail to start new deployment": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().StartDeployment(&apprunner.StartDeploymentInput{
+					ServiceArn: aws.String(mockSvcARN),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("start new deployment: some error"),
+		},
+		"success": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().StartDeployment(&apprunner.StartDeploymentInput{
+					ServiceArn: aws.String(mockSvcARN),
+				}).Return(&apprunner.StartDeploymentOutput{
+					OperationId: aws.String(mockOperationId),
+				}, nil)
+			},
+			wantOperationID: mockOperationId,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAppRunnerClient := mocks.NewMockapi(ctrl)
+			tc.mockAppRunnerClient(mockAppRunnerClient)
+
+			service := AppRunner{
+				client: mockAppRunnerClient,
+			}
+
+			got, err := service.StartDeployment(mockSvcARN)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantOperationID, got)
+			}
 		})
 	}
 }

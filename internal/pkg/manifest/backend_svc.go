@@ -91,18 +91,14 @@ func (s BackendService) ApplyEnv(envName string) (WorkloadManifest, error) {
 		return &s, nil
 	}
 
-	envCount := overrideConfig.TaskConfig.Count
-	if !envCount.IsEmpty() {
-		s.TaskConfig.Count = envCount
-	}
-
 	// Apply overrides to the original service s.
-	err := mergo.Merge(&s, BackendService{
-		BackendServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithTransformers(workloadTransformer{}))
-
-	if err != nil {
-		return nil, err
+	for _, t := range defaultTransformers {
+		err := mergo.Merge(&s, BackendService{
+			BackendServiceConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.Environments = nil
 	return &s, nil
