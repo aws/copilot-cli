@@ -73,7 +73,7 @@ func (r Rule) parse() (nodeUpserter, error) {
 	if len(pathSegments) < 2 {
 		// This is the last segment.
 		baseNode.valueToInsert = &r.Value
-		return newNodeUpserter(baseNode, *segment)
+		return newNodeUpserter(baseNode, segment)
 	}
 
 	subRule := Rule{
@@ -85,7 +85,7 @@ func (r Rule) parse() (nodeUpserter, error) {
 		return nil, err
 	}
 	baseNode.next = nextNode
-	return newNodeUpserter(baseNode, *segment)
+	return newNodeUpserter(baseNode, segment)
 }
 
 func newNodeUpserter(baseNode upsertNode, segment pathSegment) (nodeUpserter, error) {
@@ -119,14 +119,14 @@ type pathSegment struct {
 	index string // The index, if any, of the segment, e.g. 0. It is an empty string if the path is not a slice segment.
 }
 
-func parsePathSegment(rawPathSegment string) (*pathSegment, error) {
+func parsePathSegment(rawPathSegment string) (pathSegment, error) {
 	subMatches := pathSegmentRegexp.FindStringSubmatch(rawPathSegment)
 	if len(subMatches) == 0 {
 		// This error shouldn't occur given that `validate()` has passed.
-		return nil, fmt.Errorf(`invalid path segment "%s"`, rawPathSegment)
+		return pathSegment{}, fmt.Errorf(`invalid path segment "%s"`, rawPathSegment)
 	}
 	// https://pkg.go.dev/regexp#Regexp.FindStringSubmatch
-	return &pathSegment{
+	return pathSegment{
 		raw:   rawPathSegment,
 		key:   subMatches[1], // The first capture group - "([a-zA-Z0-9_-]+)". Example match: "ContainerDefinitions".
 		index: subMatches[3], // The third capture group -  "(\d+|%s)". Example matches: "1", "-".
