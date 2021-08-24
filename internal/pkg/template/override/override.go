@@ -50,7 +50,7 @@ func parseRules(rules []Rule) ([]nodeUpserter, error) {
 func unmarshalYAML(temp []byte) (*yaml.Node, error) {
 	var node yaml.Node
 	if err := yaml.Unmarshal(temp, &node); err != nil {
-		return nil, fmt.Errorf("unmarshal CloudFormation YAML template: %w", err)
+		return nil, fmt.Errorf("unmarshal YAML template: %w", err)
 	}
 	return &node, nil
 }
@@ -60,7 +60,7 @@ func marshalYAML(content *yaml.Node) ([]byte, error) {
 	yamlEncoder := yaml.NewEncoder(&out)
 	yamlEncoder.SetIndent(2)
 	if err := yamlEncoder.Encode(content); err != nil {
-		return nil, fmt.Errorf("marshal CloudFormation YAML template: %w", err)
+		return nil, fmt.Errorf("marshal YAML template: %w", err)
 	}
 	return out.Bytes(), nil
 }
