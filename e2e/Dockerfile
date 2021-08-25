@@ -1,4 +1,7 @@
 FROM docker:stable-dind
+
+ARG GOLANG_VERSION=1.16.6
+
 # Docker needs somewhere to put creds from docker login.
 RUN wget https://github.com/docker/docker-credential-helpers/releases/download/v0.6.0/docker-credential-pass-v0.6.0-amd64.tar.gz && tar -xf docker-credential-pass-v0.6.0-amd64.tar.gz && chmod +x docker-credential-pass &&  mv docker-credential-pass /bin
 ENV DOCKER_HOST=tcp://127.0.0.1:2375
@@ -6,7 +9,14 @@ ENV GOPROXY direct
 ENV GOBIN /go/bin
 
 # Install Go, Git and other dependencies so we can run ginkgo
-RUN apk add --no-cache --virtual .build-deps bash gcc musl-dev openssl go git aws-cli jq
+RUN apk update && apk add bash gcc musl-dev openssl go git aws-cli jq
+
+# Upgrade go to $GOLANG_VERSION. The version that's available in the base image is "go1.13.15 linux/amd64" by default.
+RUN wget https://dl.google.com/go/go$GOLANG_VERSION.src.tar.gz && tar -C /usr/local -xzf go$GOLANG_VERSION.src.tar.gz
+RUN cd /usr/local/go/src && ./make.bash
+ENV PATH=$PATH:/usr/local/go/bin
+RUN rm go$GOLANG_VERSION.src.tar.gz
+RUN apk del go
 
 RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
 
