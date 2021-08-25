@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Template rendering configuration.
@@ -64,7 +65,7 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 				addons: addons,
 			},
 			tc:                  mft.TaskConfig,
-			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:     mft,
 		httpsEnabled: false,

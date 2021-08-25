@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Parameter logical IDs for a backend service.
@@ -56,7 +57,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 				addons: addons,
 			},
 			tc:                  mft.TaskConfig,
-			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: mft,
 
