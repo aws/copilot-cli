@@ -190,9 +190,12 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			if err != nil {
 				return nil, err
 			}
-			ts := []string{}
+			topicARNs := []string{}
 			for _, topic := range topics {
-				ts = append(ts, topic.ARN())
+				topicARNs = append(topicARNs, topic.ARN())
+			}
+			if err = validateTopicsExist(mft, topicARNs, app.Name, env.Name); err != nil {
+				return nil, err
 			}
 
 			serializer, err = stack.NewWorkerService(t, env.Name, app.Name, rc)

@@ -1201,7 +1201,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
 			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockEnv.mockApp.local", nil)
 			},
 			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
 				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
