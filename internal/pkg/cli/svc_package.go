@@ -186,7 +186,8 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				return nil, fmt.Errorf("init backend service stack serializer: %w", err)
 			}
 		case *manifest.WorkerService:
-			topics, err := opts.snsTopicGetter.ListSNSTopics(opts.appName, opts.envName)
+			var topics []deploy.Topic
+			topics, err = opts.snsTopicGetter.ListSNSTopics(opts.appName, opts.envName)
 			if err != nil {
 				return nil, err
 			}
@@ -197,9 +198,10 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			if err = validateTopicsExist(mft, topicARNs, app.Name, env.Name); err != nil {
 				return nil, err
 			}
-
 			serializer, err = stack.NewWorkerService(t, env.Name, app.Name, rc)
-
+			if err != nil {
+				return nil, fmt.Errorf("init worker service stack serializer: %w", err)
+			}
 		default:
 			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)
 		}

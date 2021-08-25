@@ -570,7 +570,8 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	case *manifest.WorkerService:
-		topics, err := o.snsTopicGetter.ListSNSTopics(o.appName, o.envName)
+		var topics []deploy.Topic
+		topics, err = o.snsTopicGetter.ListSNSTopics(o.appName, o.envName)
 		if err != nil {
 			return nil, err
 		}
