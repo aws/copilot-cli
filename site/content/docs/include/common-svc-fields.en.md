@@ -241,7 +241,7 @@ Optional. The full config file path in your custom Fluent Bit image.
 <div class="separator"></div>
 
 <a id="taskdef_overrides" href="#taskdef_overrides" class="field">`taskdef_overrides`</a> <span class="type">Array</span>  
-The `taskdef_overrides` section allows users to apply overriding rules to their ECS Task Definitions (see examples [here](../developing/overrides.en.md#task-definition-override)).
+The `taskdef_overrides` section allows users to apply overriding rules to their ECS Task Definitions (see examples [here](../developing/taskdef-overrides.en.md#examples)).
 
 <span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-path" href="#taskdef_overrides-path" class="field">`path`</a> <span class="type">String</span>  
 Required. Path to the Task Definition field to override.
