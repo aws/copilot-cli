@@ -13,9 +13,10 @@ import (
 )
 
 const (
+	// PathSegmentSeparator is the separator for path segments.
+	PathSegmentSeparator = "."
 	// seqAppendToLastSymbol is the symbol used to add a node to the tail of a list.
 	seqAppendToLastSymbol = "-"
-	pathSegmentSeparator  = "."
 )
 
 // Subset of YAML tag values: http://yaml.org/type/
@@ -51,7 +52,7 @@ func (r Rule) validate() error {
 	if r.Path == "" {
 		return fmt.Errorf("rule path is empty")
 	}
-	pathSegments := strings.Split(r.Path, pathSegmentSeparator)
+	pathSegments := strings.Split(r.Path, PathSegmentSeparator)
 	for _, pathSegment := range pathSegments {
 		if !pathSegmentRegexp.MatchString(pathSegment) {
 			return fmt.Errorf(`invalid override path segment "%s": segments must be of the form "array[0]", "array[%s]" or "key"`,
@@ -62,7 +63,7 @@ func (r Rule) validate() error {
 }
 
 func (r Rule) parse() (nodeUpserter, error) {
-	pathSegments := strings.SplitN(r.Path, pathSegmentSeparator, 2)
+	pathSegments := strings.SplitN(r.Path, PathSegmentSeparator, 2)
 	segment, err := parsePathSegment(pathSegments[0])
 	if err != nil {
 		return nil, err

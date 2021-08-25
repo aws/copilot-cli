@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 type workerSvcReadParser interface {
@@ -46,7 +47,7 @@ func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeCo
 				addons: addons,
 			},
 			tc:                  mft.TaskConfig,
-			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:      mft,
 		allowedTopics: allowedTopics,
