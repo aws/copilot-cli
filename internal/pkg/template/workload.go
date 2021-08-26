@@ -6,6 +6,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -424,6 +425,7 @@ func withSvcParsingFuncs() ParseOption {
 			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
 			"logicalIDSafe":       StripNonAlphaNumFunc,
+			"join":                strings.Join,
 		})
 	}
 }
