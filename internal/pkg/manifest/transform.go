@@ -28,7 +28,6 @@ var defaultTransformers = []mergo.Transformers{
 	countTransformer{},
 	advancedCountTransformer{},
 	rangeTransformer{},
-	fifoOrBoolTransformer{},
 }
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
@@ -245,32 +244,6 @@ func (t rangeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 
 		if srcStruct.Value != nil {
 			dstStruct.RangeConfig = RangeConfig{}
-		}
-
-		if dst.CanSet() { // For extra safety to prevent panicking.
-			dst.Set(reflect.ValueOf(dstStruct))
-		}
-		return nil
-	}
-}
-
-type fifoOrBoolTransformer struct{}
-
-// Transformer returns custom merge logic for FIFOOrBool's fields.
-func (t fifoOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(FIFOOrBool{}) {
-		return nil
-	}
-
-	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(FIFOOrBool), src.Interface().(FIFOOrBool)
-
-		if !srcStruct.FIFO.IsEmpty() {
-			dstStruct.Enabled = nil
-		}
-
-		if srcStruct.Enabled != nil {
-			dstStruct.FIFO = FIFOQueue{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
