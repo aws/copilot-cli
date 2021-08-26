@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"errors"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,10 +13,6 @@ import (
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
-)
-
-var (
-	errUnmarshalFIFO = errors.New("cannot unmarshal field `fifo` under `subscribe`")
 )
 
 // WorkerService holds the configuration to create a worker service.
