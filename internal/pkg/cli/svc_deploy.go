@@ -99,7 +99,8 @@ type deploySvcOpts struct {
 	rdSvcAlias        string
 	svcUpdater        serviceUpdater
 
-	subscriptions []manifest.TopicSubscription
+	recommendedActions []string
+	subscriptions      []manifest.TopicSubscription
 
 	uploadOpts *uploadCustomResourcesOpts
 }
@@ -214,18 +215,31 @@ func (o *deploySvcOpts) Execute() error {
 	return o.showSvcURI()
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deploySvcOpts) RecommendedActions() []string {
-	queueNames := o.buildWorkerQueueNames()
-	retrieveEnvVarCode := fmt.Sprintf("const {eventsQueue%s} = JSON.parse(process.env.COPILOT_QUEUE_URIS)", queueNames)
+func (o *deploySvcOpts) generateWorkerServiceRecommendedActions() {
+	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
 	actionRetrieveEnvVar := fmt.Sprintf(
-		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URIS".
+		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URI".
 For example, in JavaScript you can write %s.`,
 		o.name,
-		color.HighlightCode(retrieveEnvVarCode))
-	return []string{
-		actionRetrieveEnvVar,
+		color.HighlightCode(retrieveEnvVarCode),
+	)
+	o.recommendedActions = append(o.recommendedActions, actionRetrieveEnvVar)
+	topicQueueNames := o.buildWorkerQueueNames()
+	if topicQueueNames == "" {
+		return
 	}
+	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = process.env.COPILOT_TOPIC_QUEUE_URIS", topicQueueNames)
+	actionRetrieveTopicQueues := fmt.Sprintf(
+		`You can retrieve topic-specific queues by writing
+%s.`,
+		color.HighlightCode(retrieveTopicQueueEnvVarCode),
+	)
+	o.recommendedActions = append(o.recommendedActions, actionRetrieveTopicQueues)
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deploySvcOpts) RecommendedActions() []string {
+	return o.recommendedActions
 }
 
 func (o *deploySvcOpts) validateSvcName() error {
@@ -831,11 +845,9 @@ func (o *deploySvcOpts) showSvcURI() error {
 			ConfigStore: o.store,
 		})
 	case manifest.WorkerServiceType:
-		ecsSvcDescriber, err = describe.NewWorkerServiceDescriber(describe.NewServiceConfig{
-			App:         o.appName,
-			Svc:         o.name,
-			ConfigStore: o.store,
-		})
+		o.generateWorkerServiceRecommendedActions()
+		log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
+		return nil
 	default:
 		err = errors.New("unexpected service type")
 	}
@@ -874,11 +886,13 @@ func (o *deploySvcOpts) buildWorkerQueueNames() string {
 			topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
 			topicName := template.StripNonAlphaNumFunc(subscription.Name)
 			subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
-
-			queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
+			if queueNames == "" {
+				queueNames = subName
+			} else {
+				queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
+			}
 		}
 	}
-
 	return queueNames
 }
 
