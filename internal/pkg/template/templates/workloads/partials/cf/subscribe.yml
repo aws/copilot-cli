@@ -1,5 +1,7 @@
 {{- if .Subscribe}}
 EventsKMSKey:
+  Metadata:
+    'aws:copilot:description': 'A KMS key to encrypt messages in your queues'
   Type: AWS::KMS::Key
   Properties:
     KeyPolicy:
@@ -59,7 +61,7 @@ EventsKMSKey:
 
 EventsQueue:
   Metadata:
-    'aws:copilot:description': 'An SQS Queue for queueing messages'
+    'aws:copilot:description': 'An events SQS queue to buffer messages'
   Type: AWS::SQS::Queue
   {{- if .Subscribe.Queue}}
   Properties:
@@ -90,7 +92,7 @@ EventsQueue:
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetterQueue:
   Metadata:
-    'aws:copilot:description': 'An SQS Queue for queueing dead letters'
+    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the events queue'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -157,7 +159,7 @@ QueuePolicy:
 {{- if $topic.Queue}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
   Metadata:
-    'aws:copilot:description': 'An SQS Queue for queueing messages from the topic {{logicalIDSafe $topic.Name}}'
+    'aws:copilot:description': 'A SQS queue to buffer messages from the topic {{logicalIDSafe $topic.Name}}'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -186,7 +188,7 @@ QueuePolicy:
 {{- if $topic.Queue.DeadLetter}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
   Metadata:
-    'aws:copilot:description': 'An SQS Queue for queueing dead letters from the topic {{logicalIDSafe $topic.Name}}'
+    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the topic {{logicalIDSafe $topic.Name}}'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
