@@ -30,10 +30,12 @@ Environment:
 {{- if .Subscribe}}{{- if .Subscribe.Topics}}
 - Name: COPILOT_TOPIC_QUEUE_URIS
   Value: !Sub
-    - '{{jsonQueueURIs .Subscribe.Topics}}'
-    {{- range $topic := .Subscribe.Topics}}{{- if and $topic.Queue $topic.Service $topic.Name}}
-      {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}URL: !Ref {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue
-    {{- end}}{{- end}}
+      - '{{jsonQueueURIs .Subscribe.Topics}}'
+      - {{- range $topic := .Subscribe.Topics}}
+        {{- if and $topic.Queue $topic.Service $topic.Name}}
+        {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}URL: !Ref {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue
+        {{- end}}
+        {{- end}}
 {{- end}}{{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
 - Name: COPILOT_LB_DNS
