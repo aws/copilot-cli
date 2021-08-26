@@ -1274,7 +1274,7 @@ func TestSvcDeployOpts_generateWorkerServiceActions(t *testing.T) {
 		"only base queue needed": {
 			inputSubscriptions: []manifest.TopicSubscription{},
 			wantedActions: []string{
-				"Update service's code to leverage the injected environment variable \"COPILOT_QUEUE_URI\".\nFor example, in JavaScript you can write `const eventsQueueURI = process.env.COPILOT_QUEUE_URI`.",
+				"Update service's code to leverage the injected environment variable \"COPILOT_QUEUE_URI\".\nIn JavaScript you can write `const eventsQueueURI = process.env.COPILOT_QUEUE_URI`.",
 			},
 		},
 		"with base queue and topic queues": {

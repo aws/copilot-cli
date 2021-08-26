@@ -212,14 +212,14 @@ func (o *deploySvcOpts) Execute() error {
 	if err := o.deploySvc(addonsURL); err != nil {
 		return err
 	}
-	return o.showSvcURI()
+	return o.logSuccessfulDeployment()
 }
 
 func (o *deploySvcOpts) generateWorkerServiceRecommendedActions() {
 	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
 	actionRetrieveEnvVar := fmt.Sprintf(
 		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URI".
-For example, in JavaScript you can write %s.`,
+In JavaScript you can write %s.`,
 		o.name,
 		color.HighlightCode(retrieveEnvVarCode),
 	)
@@ -818,7 +818,7 @@ func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {
 	return nil
 }
 
-func (o *deploySvcOpts) showSvcURI() error {
+func (o *deploySvcOpts) logSuccessfulDeployment() error {
 	type identifier interface {
 		URI(string) (string, error)
 	}
@@ -882,15 +882,16 @@ Please visit %s to check the validation status.
 func (o *deploySvcOpts) buildWorkerQueueNames() string {
 	var queueNames string
 	for _, subscription := range o.subscriptions {
-		if subscription.Queue != nil {
-			topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
-			topicName := template.StripNonAlphaNumFunc(subscription.Name)
-			subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
-			if queueNames == "" {
-				queueNames = subName
-			} else {
-				queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
-			}
+		if subscription.Queue == nil {
+			continue
+		}
+		topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
+		topicName := template.StripNonAlphaNumFunc(subscription.Name)
+		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
+		if queueNames == "" {
+			queueNames = subName
+		} else {
+			queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
 		}
 	}
 	return queueNames
@@ -922,10 +923,11 @@ func buildSvcDeployCmd() *cobra.Command {
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-
-			log.Infoln("Recommended follow-up actions:")
-			for _, action := range opts.RecommendedActions() {
-				log.Infof("- %s\n", action)
+			if len(opts.RecommendedActions()) > 0 {
+				log.Infoln("Recommended follow-up actions:")
+				for _, action := range opts.RecommendedActions() {
+					log.Infof("- %s\n", action)
+				}
 			}
 			return nil
 		}),
