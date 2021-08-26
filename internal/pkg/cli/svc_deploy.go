@@ -880,7 +880,8 @@ Please visit %s to check the validation status.
 }
 
 func (o *deploySvcOpts) buildWorkerQueueNames() string {
-	var queueNames string
+	sb := new(strings.Builder)
+	first := true
 	for _, subscription := range o.subscriptions {
 		if subscription.Queue == nil {
 			continue
@@ -888,13 +889,14 @@ func (o *deploySvcOpts) buildWorkerQueueNames() string {
 		topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
 		topicName := template.StripNonAlphaNumFunc(subscription.Name)
 		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
-		if queueNames == "" {
-			queueNames = subName
+		if first {
+			sb.WriteString(subName)
+			first = false
 		} else {
-			queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
+			sb.WriteString(fmt.Sprintf(", %s", subName))
 		}
 	}
-	return queueNames
+	return sb.String()
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
