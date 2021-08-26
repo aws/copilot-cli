@@ -757,7 +757,6 @@ func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*
 		Delay:      delay,
 		Timeout:    timeout,
 		DeadLetter: deadletter,
-		FIFO:       convertFIFO(q.FIFO),
 	}, nil
 }
 
@@ -783,16 +782,6 @@ func convertDelay(t *time.Duration) (*int64, error) {
 
 func convertTimeout(t *time.Duration) (*int64, error) {
 	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
-}
-
-func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
-	if f == nil || !aws.BoolValue(f.Enabled) {
-		return nil
-	}
-
-	return &template.FIFOQueue{
-		HighThroughput: aws.BoolValue(f.FIFO.HighThroughput),
-	}
 }
 
 func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
