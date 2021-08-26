@@ -162,8 +162,6 @@ func generateQueueURIJSON(ts []*TopicSubscription) string {
 		return ""
 	}
 	urlMap := make(map[string]string)
-	urlMap["eventsQueue"] = "${mainURL}"
-
 	for _, sub := range ts {
 		// TopicSubscriptions with no name, service, or queue will not be included in the json
 		if sub.Name == nil || sub.Service == nil || sub.Queue == nil {

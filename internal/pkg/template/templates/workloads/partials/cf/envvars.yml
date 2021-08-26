@@ -23,11 +23,14 @@ Environment:
 - Name: COPILOT_SNS_TOPIC_ARNS
   Value: '{{jsonSNSTopics .Publish.Topics}}'
 {{- end}}{{- end}}
+{{- if .Subscribe}}
+- Name: COPILOT_QUEUE_URI
+  Value: !Ref EventsQueue
+{{- end}}
 {{- if .Subscribe}}{{- if .Subscribe.Topics}}
-- Name: COPILOT_QUEUE_URIS
+- Name: COPILOT_TOPIC_QUEUE_URIS
   Value: !Sub
     - '{{jsonQueueURIs .Subscribe.Topics}}'
-    - mainURL: !Ref EventsQueue
     {{- range $topic := .Subscribe.Topics}}{{- if and $topic.Queue $topic.Service $topic.Name}}
       {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}URL: !Ref {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue
     {{- end}}{{- end}}
