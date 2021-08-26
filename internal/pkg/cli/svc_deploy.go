@@ -104,8 +104,6 @@ type deploySvcOpts struct {
 	uploadOpts *uploadCustomResourcesOpts
 }
 
-var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
-
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
