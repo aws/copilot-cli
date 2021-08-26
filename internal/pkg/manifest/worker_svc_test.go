@@ -427,7 +427,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
 							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 						},
 					},
 				},
@@ -459,7 +458,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
 								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 							},
 						},
 					},
@@ -483,7 +481,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
 							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 						},
 					},
 				},
@@ -517,7 +514,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
 								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 							},
 						},
 					},
@@ -541,7 +537,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
 							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 						},
 					},
 				},
@@ -577,7 +572,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
 								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 							},
 						},
 					},
@@ -603,7 +597,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Delay:      &duration111Seconds,
 						Timeout:    &duration111Seconds,
 						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-						FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 					},
 				},
 			},
@@ -621,7 +614,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Delay:      &duration111Seconds,
 					Timeout:    &duration111Seconds,
 					DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-					FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 				},
 			},
 		},
@@ -651,7 +643,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Delay:      &duration111Seconds,
 						Timeout:    &duration111Seconds,
 						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-						FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 					},
 				},
 			},
@@ -839,7 +830,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
 									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 								},
 							},
 						},
@@ -868,7 +858,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
 									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 								},
 							},
 						},
@@ -900,7 +889,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
 									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 								},
 							},
 						},
@@ -929,7 +917,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
 									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 								},
 							},
 						},
@@ -958,7 +945,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
 									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 								},
 							},
 						},
@@ -990,7 +976,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
 									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 								},
 							},
 						},
@@ -1015,7 +1000,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
 							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 						},
 					},
 				},
@@ -1038,7 +1022,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
 							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 						},
 					},
 				},
@@ -1064,7 +1047,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
 							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
 						},
 					},
 				},
@@ -1242,64 +1224,6 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
-type testFIFO struct {
-	FIFO *FIFOOrBool `yaml:"fifo"`
-}
-
-func Test_UnmarshalFifo(t *testing.T) {
-	testCases := map[string]struct {
-		manifest []byte
-		want     testFIFO
-		wantErr  error
-	}{
-		"fifo specified": {
-			manifest: []byte(`
-fifo:
-  high_throughput: true`),
-			want: testFIFO{
-				FIFO: &FIFOOrBool{
-					FIFO: FIFOQueue{
-						HighThroughput: aws.Bool(true),
-					},
-				},
-			},
-		},
-		"enabled": {
-			manifest: []byte(`
-fifo: true`),
-			want: testFIFO{
-				FIFO: &FIFOOrBool{
-					Enabled: aws.Bool(true),
-				},
-			},
-		},
-		"invalid input": {
-			manifest: []byte(`
-fifo: xyz`),
-			wantErr: errUnmarshalFIFO,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			v := testFIFO{
-				FIFO: &FIFOOrBool{},
-			}
-
-			// WHEN
-			err := yaml.Unmarshal(tc.manifest, &v)
-			// THEN
-			if tc.wantErr == nil {
-				require.NoError(t, err)
-				require.Equal(t, tc.want.FIFO.Enabled, v.FIFO.Enabled)
-				require.Equal(t, tc.want.FIFO.FIFO.HighThroughput, v.FIFO.FIFO.HighThroughput)
-			} else {
-				require.EqualError(t, err, tc.wantErr.Error())
-			}
 		})
 	}
 }
