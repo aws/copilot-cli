@@ -191,11 +191,21 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			if err != nil {
 				return nil, err
 			}
-			topicARNs := []string{}
+			var topicARNs []string
 			for _, topic := range topics {
 				topicARNs = append(topicARNs, topic.ARN())
 			}
-			if err = validateTopicsExist(mft, topicARNs, app.Name, env.Name); err != nil {
+			type subscriptions interface {
+				Subscriptions() []manifest.TopicSubscription
+			}
+
+			subscriptionGetter, ok := mft.(subscriptions)
+			if !ok {
+				return nil, errors.New("manifest does not have required method Subscriptions")
+			}
+			// Cache the subscriptions for later.
+			topicSubs := subscriptionGetter.Subscriptions()
+			if err = validateTopicsExist(topicSubs, topicARNs, app.Name, env.Name); err != nil {
 				return nil, err
 			}
 			serializer, err = stack.NewWorkerService(t, env.Name, app.Name, rc)

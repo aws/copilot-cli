@@ -99,6 +99,8 @@ type deploySvcOpts struct {
 	rdSvcAlias        string
 	svcUpdater        serviceUpdater
 
+	subscriptions []manifest.TopicSubscription
+
 	uploadOpts *uploadCustomResourcesOpts
 }
 
@@ -216,7 +218,16 @@ func (o *deploySvcOpts) Execute() error {
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (o *deploySvcOpts) RecommendedActions() []string {
-	return nil
+	queueNames := o.buildWorkerQueueNames()
+	retrieveEnvVarCode := fmt.Sprintf("const {eventsQueue%s} = JSON.parse(process.env.COPILOT_QUEUE_URIS)", queueNames)
+	actionRetrieveEnvVar := fmt.Sprintf(
+		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URIS".
+For example, in JavaScript you can write %s.`,
+		o.name,
+		color.HighlightCode(retrieveEnvVarCode))
+	return []string{
+		actionRetrieveEnvVar,
+	}
 }
 
 func (o *deploySvcOpts) validateSvcName() error {
@@ -573,13 +584,24 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		var topics []deploy.Topic
 		topics, err = o.snsTopicGetter.ListSNSTopics(o.appName, o.envName)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get SNS topics for app %s and environment %s: %w", o.appName, o.envName, err)
 		}
-		topicARNs := []string{}
+		var topicARNs []string
 		for _, topic := range topics {
 			topicARNs = append(topicARNs, topic.ARN())
 		}
-		if err = validateTopicsExist(mft, topicARNs, o.appName, o.envName); err != nil {
+		type subscriptions interface {
+			Subscriptions() []manifest.TopicSubscription
+		}
+
+		subscriptionGetter, ok := mft.(subscriptions)
+		if !ok {
+			return nil, errors.New("manifest does not have required method Subscriptions")
+		}
+		// Cache the subscriptions for later.
+		o.subscriptions = subscriptionGetter.Subscriptions()
+
+		if err = validateTopicsExist(o.subscriptions, topicARNs, o.appName, o.envName); err != nil {
 			return nil, err
 		}
 		conf, err = stack.NewWorkerService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
@@ -811,18 +833,11 @@ func (o *deploySvcOpts) showSvcURI() error {
 			ConfigStore: o.store,
 		})
 	case manifest.WorkerServiceType:
-		queueNames, err := o.buildWorkerQueueNames()
-		if err != nil {
-			return err
-		}
-		retrieveEnvVarCode := fmt.Sprintf("const {eventsQueue%s} = JSON.parse(process.env.COPILOT_QUEUE_URIS)", queueNames)
-		actionRetrieveEnvVar := fmt.Sprintf(
-			`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URIS".
-	For example, in JavaScript you can write %s.`,
-			o.name,
-			color.HighlightCode(retrieveEnvVarCode))
-		log.Successf("Deployed %s.\n\n%s\n", color.HighlightUserInput(o.name), actionRetrieveEnvVar)
-		return nil
+		ecsSvcDescriber, err = describe.NewWorkerServiceDescriber(describe.NewServiceConfig{
+			App:         o.appName,
+			Svc:         o.name,
+			ConfigStore: o.store,
+		})
 	default:
 		err = errors.New("unexpected service type")
 	}
@@ -854,27 +869,19 @@ Please visit %s to check the validation status.
 	return nil
 }
 
-// StripNonAlphaNumFunc strips non-alphanumeric characters from an input string.
-func StripNonAlphaNumFunc(s string) string {
-	return nonAlphaNum.ReplaceAllString(s, "")
-}
-
-func (o *deploySvcOpts) buildWorkerQueueNames() (string, error) {
-	topics, err := o.snsTopicGetter.ListSNSTopics(o.appName, o.envName)
-	if err != nil {
-		return "", err
-	}
+func (o *deploySvcOpts) buildWorkerQueueNames() string {
 	var queueNames string
-	for _, topic := range topics {
-		name := topic.Name()
-		topicSvc := StripNonAlphaNumFunc(topic.Workload())
-		topicName := StripNonAlphaNumFunc(name)
-		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
+	for _, subscription := range o.subscriptions {
+		if subscription.Queue != nil {
+			topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
+			topicName := template.StripNonAlphaNumFunc(subscription.Name)
+			subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
 
-		queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
+			queueNames = fmt.Sprintf("%s, %s", queueNames, subName)
+		}
 	}
 
-	return queueNames, nil
+	return queueNames
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
@@ -902,6 +909,11 @@ func buildSvcDeployCmd() *cobra.Command {
 			}
 			if err := opts.Execute(); err != nil {
 				return err
+			}
+
+			log.Infoln("Recommended follow-up actions:")
+			for _, action := range opts.RecommendedActions() {
+				log.Infof("- %s\n", action)
 			}
 			return nil
 		}),

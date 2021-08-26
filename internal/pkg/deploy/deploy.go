@@ -145,7 +145,7 @@ func (s *Store) ListSNSTopics(appName string, envName string) ([]Topic, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("get SNS topics for environment %s and app %s: %w", envName, appName, err)
+		return nil, err
 	}
 
 	var out []Topic

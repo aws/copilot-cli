@@ -566,7 +566,7 @@ func TestStore_ListSNSTopics(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("get SNS topics for environment mockEnv and app mockApp: some error"),
+			wantedError: fmt.Errorf("some error"),
 		},
 		"return nil if no topics are found": {
 			inputApp: "mockApp",

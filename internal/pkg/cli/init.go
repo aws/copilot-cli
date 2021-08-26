@@ -160,14 +160,16 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			appName:  vars.appName,
 		},
 
-		store:        ssm,
-		prompt:       prompt,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		sel:          sel,
-		spinner:      spin,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessProvider,
+		store:          ssm,
+		prompt:         prompt,
+		ws:             ws,
+		unmarshal:      manifest.UnmarshalWorkload,
+		sel:            sel,
+		spinner:        spin,
+		cmd:            exec.NewCmd(),
+		sessProvider:   sessProvider,
+		snsTopicGetter: deployStore,
+
 		newAppVersionGetter: func(appName string) (versionGetter, error) {
 			return describe.NewAppDescriber(appName)
 		},

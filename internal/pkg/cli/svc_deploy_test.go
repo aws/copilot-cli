@@ -1184,7 +1184,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
 				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
 			},
-			wantErr: fmt.Errorf("%w", mockError),
+			wantErr: fmt.Errorf("get SNS topics for app mockApp and environment mockEnv: %w", mockError),
 		},
 		"success": {
 			inEnvironment: &config.Environment{

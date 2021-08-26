@@ -704,17 +704,7 @@ func validatePubSubName(name string) error {
 	return nil
 }
 
-func validateTopicsExist(mft interface{}, topicARNs []string, app, env string) error {
-	type subscriptions interface {
-		Subscriptions() []manifest.TopicSubscription
-	}
-
-	subscriptionGetter, ok := mft.(subscriptions)
-	if !ok {
-		return errors.New("manifest does not have required method Subscriptions")
-	}
-	mftSubscriptions := subscriptionGetter.Subscriptions()
-
+func validateTopicsExist(subscriptions []manifest.TopicSubscription, topicARNs []string, app, env string) error {
 	validTopicResources := make([]string, 0, len(topicARNs))
 	for _, topic := range topicARNs {
 		parsedTopic, err := arn.Parse(topic)
@@ -724,7 +714,7 @@ func validateTopicsExist(mft interface{}, topicARNs []string, app, env string) e
 		validTopicResources = append(validTopicResources, parsedTopic.Resource)
 	}
 
-	for _, ts := range mftSubscriptions {
+	for _, ts := range subscriptions {
 		topicName := fmt.Sprintf(resourceNameFormat, app, env, ts.Service, ts.Name)
 		if !contains(topicName, validTopicResources) {
 			return fmt.Errorf(fmtErrTopicSubscriptionNotAllowed, topicName, env)

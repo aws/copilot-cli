@@ -793,55 +793,44 @@ func Test_validateTopicsExist(t *testing.T) {
 		"arn:aws:sqs:us-west-2:123456789012:app-env-database-orders",
 		"arn:aws:sqs:us-west-2:123456789012:app-env-api-events",
 	}
-	testGoodMft := manifest.WorkerService{
-		WorkerServiceConfig: manifest.WorkerServiceConfig{
-			Subscribe: &manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    "events",
-						Service: "database",
-					},
-					{
-						Name:    "orders",
-						Service: "database",
-						Queue: &manifest.SQSQueue{
-							FIFO: &manifest.FIFOOrBool{
-								Enabled: aws.Bool(true),
-							},
-						},
-					},
+	testGoodTopics := []manifest.TopicSubscription{
+		{
+			Name:    "events",
+			Service: "database",
+		},
+		{
+			Name:    "orders",
+			Service: "database",
+			Queue: &manifest.SQSQueue{
+				FIFO: &manifest.FIFOOrBool{
+					Enabled: aws.Bool(true),
 				},
 			},
 		},
 	}
 	testCases := map[string]struct {
-		inMft       interface{}
+		inTopics    []manifest.TopicSubscription
 		inTopicARNs []string
 
 		wantErr string
 	}{
 		"empty subscriptions": {
-			inMft:       &manifest.WorkerService{},
+			inTopics:    nil,
 			inTopicARNs: mockAllowedTopics,
 		},
 		"topics are valid": {
-			inMft:       &testGoodMft,
+			inTopics:    testGoodTopics,
 			inTopicARNs: mockAllowedTopics,
 		},
 		"topic is invalid": {
-			inMft:       &testGoodMft,
+			inTopics:    testGoodTopics,
 			inTopicARNs: []string{},
 			wantErr:     "SNS topic app-env-database-events does not exist in environment env",
-		},
-		"manifest is invalid": {
-			inMft:       &manifest.BackendService{},
-			inTopicARNs: mockAllowedTopics,
-			wantErr:     "manifest does not have required method Subscriptions",
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateTopicsExist(tc.inMft, tc.inTopicARNs, mockApp, mockEnv)
+			err := validateTopicsExist(tc.inTopics, tc.inTopicARNs, mockApp, mockEnv)
 			if tc.wantErr != "" {
 				require.EqualError(t, err, tc.wantErr)
 			} else {
