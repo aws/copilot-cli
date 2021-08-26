@@ -1646,12 +1646,6 @@ func Test_convertSubscribe(t *testing.T) {
 					DeadLetter: &manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
-					FIFO: &manifest.FIFOOrBool{
-						Enabled: aws.Bool(true),
-						FIFO: manifest.FIFOQueue{
-							HighThroughput: aws.Bool(false),
-						},
-					},
 				},
 			},
 			wanted: &template.SubscribeOpts{

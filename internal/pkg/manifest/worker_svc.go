@@ -69,7 +69,6 @@ type SQSQueue struct {
 	Delay      *time.Duration   `yaml:"delay"`
 	Timeout    *time.Duration   `yaml:"timeout"`
 	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
-	FIFO       *FIFOOrBool      `yaml:"fifo"`
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
