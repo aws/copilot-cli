@@ -58,6 +58,8 @@ EventsKMSKey:
           Resource: '*'
 
 EventsQueue:
+  Metadata:
+    'aws:copilot:description': 'An SQS Queue for queueing messages'
   Type: AWS::SQS::Queue
   {{- if .Subscribe.Queue}}
   Properties:
@@ -87,6 +89,8 @@ EventsQueue:
 
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetterQueue:
+  Metadata:
+    'aws:copilot:description': 'An SQS Queue for queueing dead letters'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -152,6 +156,8 @@ QueuePolicy:
 
 {{- if $topic.Queue}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
+  Metadata:
+    'aws:copilot:description': 'An SQS Queue for queueing messages from the topic {{logicalIDSafe $topic.Name}}'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -179,6 +185,8 @@ QueuePolicy:
 
 {{- if $topic.Queue.DeadLetter}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
+  Metadata:
+    'aws:copilot:description': 'An SQS Queue for queueing dead letters from the topic {{logicalIDSafe $topic.Name}}'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
