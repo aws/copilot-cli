@@ -603,34 +603,39 @@ Resources:
         !Ref AddonsTemplateURL
 
   givesdogsSNSTopic:
-      Type: AWS::SNS::Topic
-      Properties:
-        TopicName: ${AWS::StackName}-givesdogs
-        KmsMasterKeyId: 'alias/aws/sns'
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast givesdogs events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ${AWS::StackName}-givesdogs
+      KmsMasterKeyId: 'alias/aws/sns'
     
   givesdogsSNSTopicPolicy:
-      Type: AWS::SNS::TopicPolicy
-      DependsOn: givesdogsSNSTopic
-      Properties:
-        Topics: 
-          - !Ref givesdogsSNSTopic
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service: sqs.amazonaws.com
-              Action: 
-                - sns:Subscribe
-              Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
-              Condition:
-                StringEquals:
-                  'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
-                  'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
-                ForAnyValue:StringEquals:
-                  'sqs:ResourceTag/copilot-service':
-                      - 'takes-dogs'
-                      - 'takes-animals'
+    Metadata:
+      'aws:copilot:description': 'A SNS topic policy to allow takes-dogs, takes-animals and takes-all services to consume givesdogs events'
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: givesdogsSNSTopic
+    Properties:
+      Topics:
+        - !Ref givesdogsSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sqs.amazonaws.com
+            Action:
+              - sns:Subscribe
+            Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
+            Condition:
+              StringEquals:
+                'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
+                'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              ForAnyValue:StringEquals:
+                'sqs:ResourceTag/copilot-service':
+                    - 'takes-dogs'
+                    - 'takes-animals'
+                    - 'takes-all'
 
 Outputs:
   DiscoveryServiceARN:

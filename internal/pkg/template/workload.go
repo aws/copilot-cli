@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -418,6 +420,8 @@ func withSvcParsingFuncs() ParseOption {
 			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
 			"logicalIDSafe":       StripNonAlphaNumFunc,
+			"wordSeries":          english.WordSeries,
+			"pluralWord":          english.PluralWord,
 		})
 	}
 }

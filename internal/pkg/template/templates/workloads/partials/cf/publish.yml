@@ -1,6 +1,8 @@
 {{- if .Publish}}
 {{- range $topic := .Publish.Topics}}
 {{logicalIDSafe $topic.Name}}SNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast {{$topic.Name}} events'
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub '${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
@@ -8,6 +10,8 @@
 
 {{- if $topic.AllowedWorkers}}
 {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
+    Metadata:
+      'aws:copilot:description': 'A SNS topic policy to allow {{wordSeries $topic.AllowedWorkers "and"}} {{pluralWord (len $topic.AllowedWorkers) "service" "services"}} to consume {{$topic.Name}} events'
     Type: AWS::SNS::TopicPolicy
     DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
     Properties:
