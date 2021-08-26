@@ -4,21 +4,15 @@
 package manifest
 
 import (
-	"errors"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
-	"gopkg.in/yaml.v3"
 )
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
-)
-
-var (
-	errUnmarshalFIFO = errors.New("cannot unmarshal field `fifo` under `subscribe`")
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -69,51 +63,11 @@ type SQSQueue struct {
 	Delay      *time.Duration   `yaml:"delay"`
 	Timeout    *time.Duration   `yaml:"timeout"`
 	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
-	FIFO       *FIFOOrBool      `yaml:"fifo"`
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
 	Tries *uint16 `yaml:"tries"`
-}
-
-// FIFOOrBool contains custom unmarshaling logic for the `fifo` field in the manifest.
-type FIFOOrBool struct {
-	FIFO    FIFOQueue
-	Enabled *bool
-}
-
-// FIFOQueue represents the configurable options for setting up a FIFO queue.
-type FIFOQueue struct {
-	HighThroughput *bool `yaml:"high_throughput"`
-}
-
-// IsEmpty returns empty if the struct has all zero members.
-func (q *FIFOQueue) IsEmpty() bool {
-	return q.HighThroughput == nil
-}
-
-// UnmarshalYAML implements the yaml(v2) interface. It allows FIFOQueue to be specified as a
-// string or a struct alternately.
-func (q *FIFOOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&q.FIFO); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
-
-	if !q.FIFO.IsEmpty() {
-		q.Enabled = nil
-		return nil
-	}
-
-	if err := unmarshal(&q.Enabled); err != nil {
-		return errUnmarshalFIFO
-	}
-	return nil
 }
 
 // NewWorkerService applies the props to a default Worker service configuration with

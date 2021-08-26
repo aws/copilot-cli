@@ -75,13 +75,6 @@ EventsQueue:
     {{- if .Subscribe.Queue.Timeout}}
     VisibilityTimeout: {{.Subscribe.Queue.Timeout}}
     {{- end}}
-    {{- if .Subscribe.Queue.FIFO}}
-    FifoQueue: true
-    {{- if .Subscribe.Queue.FIFO.HighThroughput}}
-    FifoThroughputLimit: 'perMessageGroupId'
-    DeduplicationScope: 'messageGroup'
-    {{- end}}
-    {{- end}}
     {{- if .Subscribe.Queue.DeadLetter}}
     RedrivePolicy:
       deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
@@ -171,13 +164,6 @@ QueuePolicy:
     {{- end}}
     {{- if $topic.Queue.Timeout}}
     VisibilityTimeout: {{$topic.Queue.Timeout}}
-    {{- end}}
-    {{- if $topic.Queue.FIFO}}
-    FifoQueue: true
-    {{- if $topic.Queue.FIFO.HighThroughput}}
-    FifoThroughputLimit: 'perMessageGroupId'
-    DeduplicationScope: 'messageGroup'
-    {{- end}}
     {{- end}}
     {{- if $topic.Queue.DeadLetter}}
     RedrivePolicy:
