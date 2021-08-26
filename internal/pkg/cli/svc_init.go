@@ -40,15 +40,23 @@ const (
 )
 
 var (
-	fmtSvcInitSvcTypePrompt     = "Which %s best represents your service's architecture?"
-	fmtSvcInitSvcTypeHelpPrompt = `A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
-To learn more see: https://git.io/Jt2UC
+	fmtSvcInitSvcTypePrompt  = "Which %s best represents your service's architecture?"
+	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
+To learn more see: https://git.io/JEEfb
 
 A %s is an internet-facing HTTP server managed by Amazon ECS on AWS Fargate behind a load balancer.
-To learn more see: https://git.io/JfIpv
+To learn more see: https://git.io/JEEJe
 
 A %s is a private, non internet-facing service accessible from other services in your VPC.
-To learn more see: https://git.io/JfIpT`
+To learn more see: https://git.io/JEEJt
+
+A %s is a private service that can consume messages published to topics in your application.
+To learn more see: https://git.io/JEEJY`,
+		manifest.RequestDrivenWebServiceType,
+		manifest.LoadBalancedWebServiceType,
+		manifest.BackendServiceType,
+		manifest.WorkerServiceType,
+	)
 
 	fmtWkldInitNamePrompt     = "What do you want to %s this %s?"
 	fmtWkldInitNameHelpPrompt = `The name will uniquely identify this %s within your app %s.
@@ -293,15 +301,8 @@ func (o *initSvcOpts) askSvcType() error {
 		return nil
 	}
 
-	help := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
-		manifest.RequestDrivenWebServiceType,
-		manifest.LoadBalancedWebServiceType,
-		manifest.BackendServiceType,
-		manifest.WorkerServiceType,
-	)
 	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))
-
-	t, err := o.prompt.SelectOption(msg, help, svcTypePromptOpts(), prompt.WithFinalMessage("Service type:"))
+	t, err := o.prompt.SelectOption(msg, svcInitSvcTypeHelpPrompt, svcTypePromptOpts(), prompt.WithFinalMessage("Service type:"))
 	if err != nil {
 		return fmt.Errorf("select service type: %w", err)
 	}
