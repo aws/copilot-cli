@@ -1239,6 +1239,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				newAppVersionGetter: func(s string) (versionGetter, error) {
 					return mockAppVersionGetter, nil
 				},
+				newSvcUpdater:     func(f func(*session.Session) serviceUpdater) {},
 				endpointGetter:    mockEndpointGetter,
 				snsTopicGetter:    mockDeployStore,
 				targetApp:         tc.inApp,
