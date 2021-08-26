@@ -28,7 +28,7 @@ Each rule is applied sequentially to the CloudFormation template. The resulting 
 
 - Copilot recursively inserts fields if they don't exist in the CloudFormation template. For example: if a rule has the path `A.B[-].C` (`B` and `C` don't exist), Copilot will insert the field `B` and `C`. A concrete example can be found [below](#add-ulimits-to-the-main-container).
 
-- If the target path specifies an member that already exists, that member's value is replaced.
+- If the target path specifies a member that already exists, that member's value is replaced.
 
 - To append a new member to a `list` field such as `Ulimits` you can use the special character `-`: `Ulimits[-]`.
 
