@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +39,10 @@ func (m mockTemplater) Template() (string, error) {
 		return "", m.err
 	}
 	return m.tpl, nil
+}
+
+var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
+	return origTemp, nil
 }
 
 func TestLoadBalancedWebService_StackName(t *testing.T) {
