@@ -604,7 +604,7 @@ Resources:
 
   givesdogsSNSTopicPolicy:
     Metadata:
-      'aws:copilot:description': 'A SNS topic policy to allow takes-dogs, takes-animals services to consume givesdogs events'
+      'aws:copilot:description': 'A SNS topic policy to allow takes-dogs, takes-animals and takes-all services to consume givesdogs events'
     Type: AWS::SNS::TopicPolicy
     DependsOn: givesdogsSNSTopic
     Properties:
@@ -627,6 +627,7 @@ Resources:
                 'sqs:ResourceTag/copilot-service':
                     - 'takes-dogs'
                     - 'takes-animals'
+                    - 'takes-all'
                         
 
 Outputs:

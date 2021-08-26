@@ -6,8 +6,9 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
+
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/google/uuid"
 
@@ -425,7 +426,8 @@ func withSvcParsingFuncs() ParseOption {
 			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
 			"logicalIDSafe":       StripNonAlphaNumFunc,
-			"join":                strings.Join,
+			"wordSeries":          english.WordSeries,
+			"pluralWord":          english.PluralWord,
 		})
 	}
 }
