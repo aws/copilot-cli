@@ -255,11 +255,6 @@ func envVarOutputNames(outputs []addon.Output) []string {
 	return envVars
 }
 
-// TODO: Remove this mock function and use override.CloudFormationTemplate when it is finished.
-var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
-	return origTemp, nil
-}
-
 type ecsWkld struct {
 	*wkld
 	tc manifest.TaskConfig
