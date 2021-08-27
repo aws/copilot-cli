@@ -222,7 +222,7 @@ type PublishOpts struct {
 	Topics []*Topic
 }
 
-// Topics holds information needed to render a SNSTopic in a container definition.
+// Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
 	Name           *string
 	AllowedWorkers []string
