@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/spf13/afero"
@@ -793,6 +793,7 @@ func Test_validateTopicsExist(t *testing.T) {
 		"arn:aws:sqs:us-west-2:123456789012:app-env-database-orders",
 		"arn:aws:sqs:us-west-2:123456789012:app-env-api-events",
 	}
+	duration10Hours := 10 * time.Hour
 	testGoodTopics := []manifest.TopicSubscription{
 		{
 			Name:    "events",
@@ -802,9 +803,7 @@ func Test_validateTopicsExist(t *testing.T) {
 			Name:    "orders",
 			Service: "database",
 			Queue: &manifest.SQSQueue{
-				FIFO: &manifest.FIFOOrBool{
-					Enabled: aws.Bool(true),
-				},
+				Retention: &duration10Hours,
 			},
 		},
 	}

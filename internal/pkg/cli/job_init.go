@@ -37,7 +37,8 @@ executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
 jobs or those which require specific execution schedules.`
 
-	fmtJobInitTypeHelp = "A %s is a task which is invoked on a set schedule, with optional retry logic."
+	jobInitTypeHelp = fmt.Sprintf(`A %s is a task which is invoked on a set schedule, with optional retry logic.
+To learn more see: https://git.io/JEEU4`, manifest.ScheduledJobType)
 )
 
 var jobTypeHints = map[string]string{

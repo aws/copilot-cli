@@ -366,14 +366,7 @@ func (o *initOpts) askWorkload() (string, error) {
 	}
 	wkldInitTypePrompt := "Which " + color.Emphasize("workload type") + " best represents your architecture?"
 	// Build the workload help prompt from existing helps text.
-	wkldHelp := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
-		manifest.RequestDrivenWebServiceType,
-		manifest.LoadBalancedWebServiceType,
-		manifest.BackendServiceType,
-	) + `
-
-` + fmt.Sprintf(fmtJobInitTypeHelp, manifest.ScheduledJobType)
-
+	wkldHelp := fmt.Sprintf("%s\n\n%s", svcInitSvcTypeHelpPrompt, jobInitTypeHelp)
 	t, err := o.prompt.SelectOption(wkldInitTypePrompt, wkldHelp, append(svcTypePromptOpts(), jobTypePromptOpts()...), prompt.WithFinalMessage("Workload type:"))
 	if err != nil {
 		return "", fmt.Errorf("select workload type: %w", err)

@@ -1646,12 +1646,6 @@ func Test_convertSubscribe(t *testing.T) {
 					DeadLetter: &manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
-					FIFO: &manifest.FIFOOrBool{
-						Enabled: aws.Bool(true),
-						FIFO: manifest.FIFOQueue{
-							HighThroughput: aws.Bool(false),
-						},
-					},
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1667,9 +1661,6 @@ func Test_convertSubscribe(t *testing.T) {
 					Timeout:   aws.Int64(111),
 					DeadLetter: &template.DeadLetterQueue{
 						Tries: aws.Uint16(35),
-					},
-					FIFO: &template.FIFOQueue{
-						HighThroughput: false,
 					},
 				},
 			},
@@ -1739,62 +1730,6 @@ func Test_convertSubscribe(t *testing.T) {
 			} else {
 				require.Equal(t, tc.wanted, got)
 			}
-		})
-	}
-}
-
-func Test_convertFIFO(t *testing.T) {
-	testCases := map[string]struct {
-		inFIFO *manifest.FIFOOrBool
-
-		wanted      *template.FIFOQueue
-		wantedError error
-	}{
-		"empty FIFO": {
-			inFIFO: &manifest.FIFOOrBool{},
-			wanted: nil,
-		},
-		"FIFO with enabled false": {
-			inFIFO: &manifest.FIFOOrBool{
-				Enabled: aws.Bool(false),
-			},
-			wanted: nil,
-		},
-		"FIFO with enabled true and no high throughput": {
-			inFIFO: &manifest.FIFOOrBool{
-				Enabled: aws.Bool(true),
-			},
-			wanted: &template.FIFOQueue{
-				HighThroughput: false,
-			},
-		},
-		"FIFO with enabled true and high throughput false": {
-			inFIFO: &manifest.FIFOOrBool{
-				Enabled: aws.Bool(true),
-				FIFO: manifest.FIFOQueue{
-					HighThroughput: aws.Bool(false),
-				},
-			},
-			wanted: &template.FIFOQueue{
-				HighThroughput: false,
-			},
-		},
-		"FIFO with enabled true and high throughput true": {
-			inFIFO: &manifest.FIFOOrBool{
-				Enabled: aws.Bool(true),
-				FIFO: manifest.FIFOQueue{
-					HighThroughput: aws.Bool(true),
-				},
-			},
-			wanted: &template.FIFOQueue{
-				HighThroughput: true,
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := convertFIFO(tc.inFIFO)
-			require.Equal(t, tc.wanted, got)
 		})
 	}
 }
