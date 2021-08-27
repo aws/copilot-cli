@@ -61,8 +61,6 @@ func TestWorkerService_Template(t *testing.T) {
 		// Cut random GUID from template.
 		actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
 		actualString := string(actualBytes)
-		// Fix random order of json
-		actualString = strings.ReplaceAll(actualString, "'{\"dogsvcGiveshuskiesEventsQueue\":\"${dogsvcgiveshuskiesURL}\",\"eventsQueue\":\"${mainURL}\"}'", "'{\"eventsQueue\":\"${mainURL}\",\"dogsvcGiveshuskiesEventsQueue\":\"${dogsvcgiveshuskiesURL}\"}'")
 		// Cut out zip file for more readable output
 		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 		actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")

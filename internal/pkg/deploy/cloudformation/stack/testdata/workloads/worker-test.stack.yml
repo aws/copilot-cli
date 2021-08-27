@@ -66,11 +66,12 @@ Resources:
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
-          - Name: COPILOT_QUEUE_URIS
+          - Name: COPILOT_QUEUE_URI
+            Value: !Ref EventsQueue
+          - Name: COPILOT_TOPIC_QUEUE_URIS
             Value: !Sub 
-              - '{"eventsQueue":"${mainURL}","dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}"}'
-              - mainURL: !Ref EventsQueue
-                dogsvcgiveshuskiesURL: !Ref dogsvcgiveshuskiesEventsQueue
+              - '{"dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}"}'
+              - dogsvcgiveshuskiesURL: !Ref dogsvcgiveshuskiesEventsQueue
           
           LogConfiguration:
             LogDriver: awslogs
