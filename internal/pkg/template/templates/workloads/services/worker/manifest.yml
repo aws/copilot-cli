@@ -32,8 +32,8 @@ platform: {{.Platform}}
 {{- end}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
-{{- if .Subscribe}}{{- if .Subscribe.Topics}}
-# The events will be available in an SQS queue via the env var $COPILOT_QUEUE_URIS
+{{if .Subscribe}}{{- if .Subscribe.Topics}}
+# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 subscribe:
   topics:
 {{- range $topic := .Subscribe.Topics}}
@@ -42,7 +42,7 @@ subscribe:
 {{- end}}
 {{- else}}
 # You can register to topics from other services.
-# The events will be available in an SQS queue via the env var $COPILOT_QUEUE_URIS
+# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 # subscribe:
 #   topics: 
 #     - name: topic-from-another-service
