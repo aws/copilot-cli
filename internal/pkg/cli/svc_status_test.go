@@ -25,6 +25,12 @@ func TestSvcStatus_Validate(t *testing.T) {
 
 		wantedError error
 	}{
+		"skip validation if app flag is not set": {
+			inputSvc:         "my-svc",
+			inputEnvironment: "test",
+
+			mockStoreReader: func(m *mocks.Mockstore) {},
+		},
 		"invalid app name": {
 			inputApp: "my-app",
 

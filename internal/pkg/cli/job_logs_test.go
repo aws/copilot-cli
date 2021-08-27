@@ -39,10 +39,12 @@ func TestJobLogs_Validate(t *testing.T) {
 	}{
 		"with no flag set": {
 			mockstore: func(m *mocks.Mockstore) {},
-
-			wantedError: nil,
 		},
-		"invalid project name": {
+		"skip validation if app flag is not set": {
+			inputSvc:  "frontend",
+			mockstore: func(m *mocks.Mockstore) {},
+		},
+		"invalid app name": {
 			inputApp: "my-app",
 
 			mockstore: func(m *mocks.Mockstore) {

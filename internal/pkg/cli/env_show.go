@@ -80,13 +80,12 @@ func (o *showEnvOpts) Validate() error {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
-	}
-	if o.name != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
-			return err
+		if o.name != "" {
+			if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
+				return err
+			}
 		}
 	}
-
 	return nil
 }
 

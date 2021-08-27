@@ -43,6 +43,11 @@ func TestSvcShow_Validate(t *testing.T) {
 
 		wantedError error
 	}{
+		"skip validation if app flag is not set": {
+			inputSvc: "my-svc",
+
+			setupMocks: func(m showSvcMocks) {},
+		},
 		"valid app name and service name": {
 			inputApp: "my-app",
 			inputSvc: "my-svc",

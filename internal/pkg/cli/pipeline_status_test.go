@@ -5,6 +5,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -26,6 +27,11 @@ type pipelineStatusMocks struct {
 }
 
 func TestPipelineStatus_Validate(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		testAppName      string
 		testPipelineName string
@@ -109,6 +115,11 @@ func TestPipelineStatus_Validate(t *testing.T) {
 }
 
 func TestPipelineStatus_Ask(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	testTags := map[string]string{
 		"copilot-application": mockAppName,
 	}
@@ -289,6 +300,10 @@ stages:
 }
 
 func TestPipelineStatus_Execute(t *testing.T) {
+	const (
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	mockPipelineStatus := mockDescribeData{
 		data: "mockData",
 		err:  mockError,

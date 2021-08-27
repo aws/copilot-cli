@@ -78,6 +78,7 @@ func TestPipelineList_Ask(t *testing.T) {
 }
 
 func TestPipelineList_Execute(t *testing.T) {
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		shouldOutputJSON bool
 		appName          string

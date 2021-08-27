@@ -53,15 +53,15 @@ func (o *resumeSvcOpts) Validate() error {
 		if err := o.validateAppName(); err != nil {
 			return err
 		}
-	}
-	if o.envName != "" {
-		if err := o.validateEnvName(); err != nil {
-			return err
+		if o.envName != "" {
+			if err := o.validateEnvName(); err != nil {
+				return err
+			}
 		}
-	}
-	if o.svcName != "" {
-		if err := o.validateSvcName(); err != nil {
-			return err
+		if o.svcName != "" {
+			if err := o.validateSvcName(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

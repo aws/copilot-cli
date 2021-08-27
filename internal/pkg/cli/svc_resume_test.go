@@ -26,6 +26,11 @@ func TestResumeSvcOpts_Validate(t *testing.T) {
 
 		want error
 	}{
+		"skip validation if app flag is not set": {
+			inEnvName:  "test",
+			inName:     "frontend",
+			setupMocks: func(m *mocks.Mockstore) {},
+		},
 		"with no flag set": {
 			inAppName: "phonetool",
 			setupMocks: func(m *mocks.Mockstore) {
