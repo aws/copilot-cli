@@ -283,6 +283,8 @@ Resources:
         - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   EventsKMSKey:
+    Metadata:
+      'aws:copilot:description': 'A KMS key to encrypt messages in your queues'
     Type: AWS::KMS::Key
     Properties:
       KeyPolicy:
@@ -341,6 +343,8 @@ Resources:
             Resource: '*'
             
   EventsQueue:
+    Metadata:
+      'aws:copilot:description': 'An events SQS queue to buffer messages'
     Type: AWS::SQS::Queue
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey
@@ -350,6 +354,8 @@ Resources:
         maxReceiveCount: 5
   
   DeadLetterQueue:
+    Metadata:
+      'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the events queue'
     Type: AWS::SQS::Queue
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey
@@ -412,6 +418,8 @@ Resources:
       Endpoint: !GetAtt dogsvcgiveshuskiesEventsQueue.Arn
  
   dogsvcgiveshuskiesEventsQueue:
+    Metadata:
+      'aws:copilot:description': 'A SQS queue to buffer messages from the topic giveshuskies'
     Type: AWS::SQS::Queue
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey
