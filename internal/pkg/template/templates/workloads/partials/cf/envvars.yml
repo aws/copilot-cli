@@ -27,7 +27,7 @@ Environment:
 - Name: COPILOT_QUEUE_URI
   Value: !Ref EventsQueue
 {{- end}}
-{{- if .Subscribe}}{{- if .Subscribe.Topics}}
+{{- if .Subscribe}}{{if .Subscribe.HasTopicQueues}}
 - Name: COPILOT_TOPIC_QUEUE_URIS
   Value: !Sub
       - '{{jsonQueueURIs .Subscribe.Topics}}'

@@ -239,6 +239,16 @@ type SubscribeOpts struct {
 	Queue  *SQSQueue
 }
 
+// HasTopicQueues returns true if any individual subscription has a dedicated queue.
+func (s *SubscribeOpts) HasTopicQueues() bool {
+	for _, t := range s.Topics {
+		if t.Queue != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
 	Name    *string
