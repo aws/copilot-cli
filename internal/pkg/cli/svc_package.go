@@ -75,6 +75,7 @@ type packageSvcOpts struct {
 	identity          identityService
 	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 	newEndpointGetter func(app, env string) (endpointGetter, error)
+	snsTopicGetter    deployedEnvironmentLister
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -85,6 +86,10 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
+	}
+	deployStore, err := deploy.NewStore(store)
+	if err != nil {
+		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
 	p := sessions.NewProvider()
 	sess, err := p.Default()
@@ -106,6 +111,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		paramsWriter:     ioutil.Discard,
 		addonsWriter:     ioutil.Discard,
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
+		snsTopicGetter:   deployStore,
 	}
 	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
 	if err != nil {
@@ -178,6 +184,33 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			serializer, err = stack.NewBackendService(t, env.Name, app.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init backend service stack serializer: %w", err)
+			}
+		case *manifest.WorkerService:
+			var topics []deploy.Topic
+			topics, err = opts.snsTopicGetter.ListSNSTopics(opts.appName, opts.envName)
+			if err != nil {
+				return nil, err
+			}
+			var topicARNs []string
+			for _, topic := range topics {
+				topicARNs = append(topicARNs, topic.ARN())
+			}
+			type subscriptions interface {
+				Subscriptions() []manifest.TopicSubscription
+			}
+
+			subscriptionGetter, ok := mft.(subscriptions)
+			if !ok {
+				return nil, errors.New("manifest does not have required method Subscriptions")
+			}
+			// Cache the subscriptions for later.
+			topicSubs := subscriptionGetter.Subscriptions()
+			if err = validateTopicsExist(topicSubs, topicARNs, app.Name, env.Name); err != nil {
+				return nil, err
+			}
+			serializer, err = stack.NewWorkerService(t, env.Name, app.Name, rc)
+			if err != nil {
+				return nil, fmt.Errorf("init worker service stack serializer: %w", err)
 			}
 		default:
 			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)

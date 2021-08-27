@@ -43,7 +43,7 @@ func TestWorkerService_Template(t *testing.T) {
 		ServiceDiscoveryEndpoint: "test.my-app.local",
 		AccountID:                "123456789123",
 		Region:                   "us-west-2",
-	}, []string{"arn:aws:sns:us-west-2:123456789123:my-app-test-dogsvc-givesdogs", "arn:aws:sns:us-west-2:123456789123:my-app-test-dogsvc-giveshuskies"})
+	})
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -705,7 +706,7 @@ func Test_validatePubSubTopicName(t *testing.T) {
 	}
 }
 
-func Test_validateSubscriptioKey(t *testing.T) {
+func Test_validateSubscriptionKey(t *testing.T) {
 	testCases := map[string]struct {
 		inSub interface{}
 
@@ -779,6 +780,60 @@ func Test_validateSubscribe(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateTopicsExist(t *testing.T) {
+	mockApp := "app"
+	mockEnv := "env"
+	mockAllowedTopics := []string{
+		"arn:aws:sqs:us-west-2:123456789012:app-env-database-events",
+		"arn:aws:sqs:us-west-2:123456789012:app-env-database-orders",
+		"arn:aws:sqs:us-west-2:123456789012:app-env-api-events",
+	}
+	duration10Hours := 10 * time.Hour
+	testGoodTopics := []manifest.TopicSubscription{
+		{
+			Name:    "events",
+			Service: "database",
+		},
+		{
+			Name:    "orders",
+			Service: "database",
+			Queue: &manifest.SQSQueue{
+				Retention: &duration10Hours,
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inTopics    []manifest.TopicSubscription
+		inTopicARNs []string
+
+		wantErr string
+	}{
+		"empty subscriptions": {
+			inTopics:    nil,
+			inTopicARNs: mockAllowedTopics,
+		},
+		"topics are valid": {
+			inTopics:    testGoodTopics,
+			inTopicARNs: mockAllowedTopics,
+		},
+		"topic is invalid": {
+			inTopics:    testGoodTopics,
+			inTopicARNs: []string{},
+			wantErr:     "SNS topic app-env-database-events does not exist in environment env",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateTopicsExist(tc.inTopics, tc.inTopicARNs, mockApp, mockEnv)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

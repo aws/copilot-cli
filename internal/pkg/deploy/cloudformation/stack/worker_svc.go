@@ -29,7 +29,7 @@ type WorkerService struct {
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
-func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig, allowedTopics []string) (*WorkerService, error) {
+func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig) (*WorkerService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -49,8 +49,7 @@ func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeCo
 			tc:                  mft.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest:      mft,
-		allowedTopics: allowedTopics,
+		manifest: mft,
 
 		parser: parser,
 	}, nil

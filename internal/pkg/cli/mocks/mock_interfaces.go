@@ -1245,6 +1245,21 @@ func (mr *MockdeployedEnvironmentListerMockRecorder) ListEnvironmentsDeployedTo(
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListEnvironmentsDeployedTo), appName, svcName)
 }
 
+// ListSNSTopics mocks base method.
+func (m *MockdeployedEnvironmentLister) ListSNSTopics(appName, envName string) ([]deploy.Topic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSNSTopics", appName, envName)
+	ret0, _ := ret[0].([]deploy.Topic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSNSTopics indicates an expected call of ListSNSTopics.
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListSNSTopics(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSNSTopics", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListSNSTopics), appName, envName)
+}
+
 // MocksecretsManager is a mock of secretsManager interface.
 type MocksecretsManager struct {
 	ctrl     *gomock.Controller
