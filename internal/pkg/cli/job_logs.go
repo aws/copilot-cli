@@ -81,8 +81,10 @@ func (o *jobLogsOpts) Validate() error {
 		if _, err := o.configStore.GetApplication(o.appName); err != nil {
 			return err
 		}
-		if _, err := o.configStore.GetJob(o.appName, o.name); err != nil {
-			return err
+		if o.name != "" {
+			if _, err := o.configStore.GetJob(o.appName, o.name); err != nil {
+				return err
+			}
 		}
 	}
 
