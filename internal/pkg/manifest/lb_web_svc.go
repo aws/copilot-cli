@@ -122,7 +122,7 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 }
 
 // Port returns the exposed port in the manifest.
-// A load balanced web service always has a port exposed therefore the boolean is always true.
+// A LoadBalancedWebService always has a port exposed therefore the boolean is always true.
 func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 	return aws.Uint16Value(s.ImageConfig.Port), true
 }

@@ -302,6 +302,24 @@ func TestRequestDrivenWebService_MarshalBinary(t *testing.T) {
 	}
 }
 
+func TestRequestDrivenWebService_Port(t *testing.T) {
+	// GIVEN
+	mft := RequestDrivenWebService{
+		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+			ImageConfig: ImageWithPort{
+				Port: uint16P(80),
+			},
+		},
+	}
+
+	// WHEN
+	actual, ok := mft.Port()
+
+	// THEN
+	require.True(t, ok)
+	require.Equal(t, uint16(80), actual)
+}
+
 func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 	testCases := map[string]struct {
 		in         *RequestDrivenWebService
