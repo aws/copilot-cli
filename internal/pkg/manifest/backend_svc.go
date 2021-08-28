@@ -13,13 +13,6 @@ const (
 	backendSvcManifestPath = "workloads/services/backend/manifest.yml"
 )
 
-// BackendServiceProps represents the configuration needed to create a backend service.
-type BackendServiceProps struct {
-	WorkloadProps
-	Port        uint16
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-}
-
 // BackendService holds the configuration to create a backend service manifest.
 type BackendService struct {
 	Workload             `yaml:",inline"`
@@ -40,6 +33,13 @@ type BackendServiceConfig struct {
 	Network          *NetworkConfig            `yaml:"network"`
 	Publish          *PublishConfig            `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
+}
+
+// BackendServiceProps represents the configuration needed to create a backend service.
+type BackendServiceProps struct {
+	WorkloadProps
+	Port        uint16
+	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
 }
 
 // NewBackendService applies the props to a default backend service configuration with
@@ -67,6 +67,16 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return content.Bytes(), nil
+}
+
+// Port returns the exposed the exposed port in the manifest.
+// If the backend service is not meant to be reachable, then ok is set to false.
+func (s *BackendService) Port() (port uint16, ok bool) {
+	value := s.BackendServiceConfig.ImageConfig.Port
+	if value == nil {
+		return 0, false
+	}
+	return aws.Uint16Value(value), true
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
