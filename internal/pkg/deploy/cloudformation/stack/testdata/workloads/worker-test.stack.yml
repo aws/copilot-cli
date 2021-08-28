@@ -404,6 +404,8 @@ Resources:
 
 
   dogsvcgivesdogsSNSTopicSubscription:
+    Metadata:
+      'aws:copilot:description': 'A SNS subscription to topic givesdogs from service dogsvc'
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-givesdogs']]
@@ -411,6 +413,8 @@ Resources:
       Endpoint: !GetAtt EventsQueue.Arn
   
   dogsvcgiveshuskiesSNSTopicSubscription:
+    Metadata:
+      'aws:copilot:description': 'A SNS subscription to topic giveshuskies from service dogsvc'
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-giveshuskies']]
