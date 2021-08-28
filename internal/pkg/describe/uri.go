@@ -8,13 +8,41 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/dustin/go-humanize/english"
 )
 
 var (
 	fmtSvcDiscoveryEndpointWithPort = "%s.%s:%s" // Format string of the form {svc}.{endpoint}:{port}
 )
+
+// ReachableService represents a service describe that has an endpoint.
+type ReachableService interface {
+	URI(env string) (string, error)
+}
+
+// NewReachableService returns a ReachableService based on the type of the service.
+func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableService, error) {
+	cfg, err := store.GetWorkload(app, svc)
+	if err != nil {
+		return nil, err
+	}
+	in := NewServiceConfig{
+		App:         app,
+		Svc:         svc,
+		ConfigStore: store,
+	}
+	switch cfg.Type {
+	case manifest.LoadBalancedWebServiceType:
+		return NewLBWebServiceDescriber(in)
+	case manifest.RequestDrivenWebServiceType:
+		return NewRDWebServiceDescriber(in)
+	case manifest.BackendServiceType:
+		return NewBackendServiceDescriber(in)
+	default:
+		return nil, fmt.Errorf("service %s is of type %s which cannot be reached over the network", svc, cfg.Type)
+	}
+}
 
 // URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
 func (d *LBWebServiceDescriber) URI(envName string) (string, error) {

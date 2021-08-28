@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
