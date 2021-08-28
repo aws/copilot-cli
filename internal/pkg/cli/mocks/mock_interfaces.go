@@ -5446,34 +5446,19 @@ func (m *Mockec2Selector) EXPECT() *Mockec2SelectorMockRecorder {
 	return m.recorder
 }
 
-// PrivateSubnets mocks base method.
-func (m *Mockec2Selector) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
+// Subnets mocks base method.
+func (m *Mockec2Selector) Subnets(input selector.SubnetsInput) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrivateSubnets", prompt, help, vpcID)
+	ret := m.ctrl.Call(m, "Subnets", input)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// PrivateSubnets indicates an expected call of PrivateSubnets.
-func (mr *Mockec2SelectorMockRecorder) PrivateSubnets(prompt, help, vpcID interface{}) *gomock.Call {
+// Subnets indicates an expected call of Subnets.
+func (mr *Mockec2SelectorMockRecorder) Subnets(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PrivateSubnets), prompt, help, vpcID)
-}
-
-// PublicSubnets mocks base method.
-func (m *Mockec2Selector) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublicSubnets", prompt, help, vpcID)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PublicSubnets indicates an expected call of PublicSubnets.
-func (mr *Mockec2SelectorMockRecorder) PublicSubnets(prompt, help, vpcID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PublicSubnets), prompt, help, vpcID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subnets", reflect.TypeOf((*Mockec2Selector)(nil).Subnets), input)
 }
 
 // VPC mocks base method.
@@ -6485,4 +6470,55 @@ func (m *MockservicePauser) PauseService(svcARN string) error {
 func (mr *MockservicePauserMockRecorder) PauseService(svcARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseService", reflect.TypeOf((*MockservicePauser)(nil).PauseService), svcARN)
+}
+
+// MocktimeoutError is a mock of timeoutError interface.
+type MocktimeoutError struct {
+	ctrl     *gomock.Controller
+	recorder *MocktimeoutErrorMockRecorder
+}
+
+// MocktimeoutErrorMockRecorder is the mock recorder for MocktimeoutError.
+type MocktimeoutErrorMockRecorder struct {
+	mock *MocktimeoutError
+}
+
+// NewMocktimeoutError creates a new mock instance.
+func NewMocktimeoutError(ctrl *gomock.Controller) *MocktimeoutError {
+	mock := &MocktimeoutError{ctrl: ctrl}
+	mock.recorder = &MocktimeoutErrorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktimeoutError) EXPECT() *MocktimeoutErrorMockRecorder {
+	return m.recorder
+}
+
+// Error mocks base method.
+func (m *MocktimeoutError) Error() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Error")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Error indicates an expected call of Error.
+func (mr *MocktimeoutErrorMockRecorder) Error() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Error", reflect.TypeOf((*MocktimeoutError)(nil).Error))
+}
+
+// Timeout mocks base method.
+func (m *MocktimeoutError) Timeout() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Timeout")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Timeout indicates an expected call of Timeout.
+func (mr *MocktimeoutErrorMockRecorder) Timeout() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Timeout", reflect.TypeOf((*MocktimeoutError)(nil).Timeout))
 }

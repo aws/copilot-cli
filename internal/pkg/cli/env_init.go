@@ -328,6 +328,15 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
+	if o.importVPC.isSet() {
+		// Allow passing in VPC without subnets, but error out early for too few subnets-- we won't prompt the user to select more of one type if they pass in any.
+		if len(o.importVPC.PublicSubnetIDs) == 1 {
+			log.Warningf("at least two public subnets must be imported to enable Load Balancing")
+		}
+		if len(o.importVPC.PrivateSubnetIDs) == 1 {
+			return fmt.Errorf("at least two private subnets must be imported")
+		}
+	}
 	return nil
 }
 
@@ -458,10 +467,16 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		return fmt.Errorf("VPC %s has no DNS support enabled", o.importVPC.ID)
 	}
 	if o.importVPC.PublicSubnetIDs == nil {
-		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.importVPC.ID)
+		input := selector.SubnetsInput{
+			Msg:      envInitPublicSubnetsSelectPrompt,
+			Help:     "",
+			VPCID:    o.importVPC.ID,
+			IsPublic: true,
+		}
+		publicSubnets, err := o.selVPC.Subnets(input)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Warningf(`No existing public subnets were found in VPC %s.
+				log.Warningf(`No existing subnets were found in VPC %s.
 If you proceed without at least two public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
 `, o.importVPC.ID)
 			} else {
@@ -474,10 +489,16 @@ If you proceed without at least two public subnets, you will not be able to depl
 		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
 	if o.importVPC.PrivateSubnetIDs == nil {
-		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.importVPC.ID)
+		input := selector.SubnetsInput{
+			Msg:      envInitPrivateSubnetsSelectPrompt,
+			Help:     "",
+			VPCID:    o.importVPC.ID,
+			IsPublic: false,
+		}
+		privateSubnets, err := o.selVPC.Subnets(input)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
+				log.Errorf(`No existing subnets were found in VPC %s. You can either:
 - Create new private subnets and then import them.
 - Use the default Copilot environment configuration.`, o.importVPC.ID)
 			}
