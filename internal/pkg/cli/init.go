@@ -409,7 +409,13 @@ func (o *initOpts) deploySvc() error {
 	if err := o.deploySvcCmd.Ask(); err != nil {
 		return err
 	}
-	return o.deploySvcCmd.Execute()
+	if err := o.deploySvcCmd.Execute(); err != nil {
+		return err
+	}
+	if err := o.deploySvcCmd.RecommendActions(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *initOpts) deployJob() error {
@@ -425,7 +431,13 @@ func (o *initOpts) deployJob() error {
 	if err := o.deployJobCmd.Ask(); err != nil {
 		return err
 	}
-	return o.deployJobCmd.Execute()
+	if err := o.deployJobCmd.Execute(); err != nil {
+		return err
+	}
+	if err := o.deployJobCmd.RecommendActions(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *initOpts) askShouldDeploy() error {
