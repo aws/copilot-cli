@@ -127,6 +127,14 @@ func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 	return aws.Uint16Value(s.ImageConfig.Port), true
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (s *LoadBalancedWebService) Publish() []Topic {
+	if s.LoadBalancedWebServiceConfig.Publish == nil {
+		return nil
+	}
+	return s.LoadBalancedWebServiceConfig.Publish.Topics
+}
+
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
