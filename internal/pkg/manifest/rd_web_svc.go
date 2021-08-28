@@ -77,6 +77,14 @@ func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {
 	return aws.Uint16Value(s.ImageConfig.Port), true
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (s *RequestDrivenWebService) Publish() []Topic {
+	if s.RequestDrivenWebServiceConfig.Publish == nil {
+		return nil
+	}
+	return s.RequestDrivenWebServiceConfig.Publish.Topics
+}
+
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)

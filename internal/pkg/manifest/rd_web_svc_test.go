@@ -320,6 +320,46 @@ func TestRequestDrivenWebService_Port(t *testing.T) {
 	require.Equal(t, uint16(80), actual)
 }
 
+func TestRequestDrivenWebService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *RequestDrivenWebService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &RequestDrivenWebService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					Publish: &PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
+		})
+	}
+}
+
 func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 	testCases := map[string]struct {
 		in         *RequestDrivenWebService
