@@ -8,10 +8,71 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestBackendServiceDescriber_URI(t *testing.T) {
+	t.Run("should return a blank service discovery URI if there is no port exposed", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := mocks.NewMockecsStackDescriber(ctrl)
+		m.EXPECT().Params().Return(map[string]string{
+			stack.LBWebServiceContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
+		}, nil)
+
+		d := &BackendServiceDescriber{
+			ecsServiceDescriber: &ecsServiceDescriber{
+				svcStackDescriber: map[string]ecsStackDescriber{
+					"test": m,
+				},
+				initDescribers: func(string) error { return nil },
+			},
+		}
+
+		// WHEN
+		actual, err := d.URI("test")
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, BlankServiceDiscoveryURI, actual)
+	})
+	t.Run("should return service discovery endpoint if port is exposed", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSvcStack := mocks.NewMockecsStackDescriber(ctrl)
+		mockSvcStack.EXPECT().Params().Return(map[string]string{
+			stack.LBWebServiceContainerPortParamKey: "8080",
+		}, nil)
+		mockEnvStack := mocks.NewMockenvDescriber(ctrl)
+		mockEnvStack.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
+
+		d := &BackendServiceDescriber{
+			ecsServiceDescriber: &ecsServiceDescriber{
+				svc: "hello",
+				svcStackDescriber: map[string]ecsStackDescriber{
+					"test": mockSvcStack,
+				},
+				initDescribers: func(string) error { return nil },
+			},
+			envDescriber: map[string]envDescriber{
+				"test": mockEnvStack,
+			},
+		}
+
+		// WHEN
+		actual, err := d.URI("test")
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "hello.test.app.local:8080", actual)
+	})
+}
 
 func TestRDWebServiceDescriber_URI(t *testing.T) {
 	const (
