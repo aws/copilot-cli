@@ -457,10 +457,6 @@ type executor interface {
 	Execute() error
 }
 
-type deletePipelineRunner interface {
-	Run() error
-}
-
 type executeAsker interface {
 	Ask() error
 	executor
