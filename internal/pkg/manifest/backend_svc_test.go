@@ -214,6 +214,46 @@ func TestBackendService_Port(t *testing.T) {
 	}
 }
 
+func TestBackendService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &BackendService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					Publish: &PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
+		})
+	}
+}
+
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{

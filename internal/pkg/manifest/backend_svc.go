@@ -79,6 +79,14 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 	return aws.Uint16Value(value), true
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (s *BackendService) Publish() []Topic {
+	if s.BackendServiceConfig.Publish == nil {
+		return nil
+	}
+	return s.BackendServiceConfig.Publish.Topics
+}
+
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *BackendService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
