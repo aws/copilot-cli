@@ -427,6 +427,14 @@ type TaskConfig struct {
 	Storage        *Storage              `yaml:"storage"`
 }
 
+// TaskPlatform returns the platform for the service.
+func (t *TaskConfig) TaskPlatform() (*string, error) {
+	if t.Platform == nil {
+		return nil, nil
+	}
+	return t.Platform.PlatformString, nil
+}
+
 // PublishConfig represents the configurable options for setting up publishers.
 type PublishConfig struct {
 	Topics []Topic `yaml:"topics"`
