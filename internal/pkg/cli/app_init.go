@@ -189,13 +189,18 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.name)))
 
-	return o.store.CreateApplication(&config.Application{
+	if err := o.store.CreateApplication(&config.Application{
 		AccountID:          caller.Account,
 		Name:               o.name,
 		Domain:             o.domainName,
 		DomainHostedZoneID: hostedZoneID,
 		Tags:               o.resourceTags,
-	})
+	}); err != nil {
+		return err
+	}
+	log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(o.name))
+	log.Infoln()
+	return nil
 }
 
 func (o *initAppOpts) validateAppName(name string) error {
@@ -227,11 +232,12 @@ func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
 	return hostedZoneID, nil
 }
 
-// RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
-func (o *initAppOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns a list of suggested additional commands users can run after successfully executing this command.
+func (o *initAppOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to add a new service or job to your application.", color.HighlightCode("copilot init")),
-	}
+	})
+	return nil
 }
 
 func (o *initAppOpts) askAppName(formatMsg string) error {
@@ -297,11 +303,8 @@ An application is a collection of containerized services that operate together.`
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(opts.name))
-			log.Infoln()
-			log.Infoln("Recommended follow-up actions:")
-			for _, followUp := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followUp)
+			if err := opts.RecommendActions(); err != nil {
+				return err
 			}
 			return nil
 		}),

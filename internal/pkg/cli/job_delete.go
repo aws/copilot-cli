@@ -350,12 +350,13 @@ func (o *deleteJobOpts) deleteSSMParam() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deleteJobOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deleteJobOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
 			color.HighlightCode("copilot pipeline update")),
-	}
+	})
+	return nil
 }
 
 // buildJobDeleteCmd builds the command to delete job(s).
@@ -390,10 +391,8 @@ func buildJobDeleteCmd() *cobra.Command {
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
+			if err := opts.RecommendActions(); err != nil {
+				return err
 			}
 			return nil
 		}),

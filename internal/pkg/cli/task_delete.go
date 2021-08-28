@@ -443,7 +443,7 @@ func (o *deleteTaskOpts) deleteStack() error {
 	return nil
 }
 
-func (o *deleteTaskOpts) RecommendedActions() []string {
+func (o *deleteTaskOpts) RecommendActions() error {
 	return nil
 }
 
@@ -476,14 +476,8 @@ func BuildTaskDeleteCmd() *cobra.Command {
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-
-			if len(opts.RecommendedActions()) == 0 {
-				return nil
-			}
-
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
+			if err := opts.RecommendActions(); err != nil {
+				return err
 			}
 			return nil
 		}),

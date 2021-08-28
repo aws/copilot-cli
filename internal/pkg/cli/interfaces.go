@@ -44,8 +44,8 @@ type actionCommand interface {
 	// Execute runs the command after collecting all required options.
 	Execute() error
 
-	// RecommendedActions returns a list of follow-up suggestions users can run once the command executes successfully.
-	RecommendedActions() []string
+	// RecommendActions logs a list of follow-up suggestions users can run once the command executes successfully.
+	RecommendActions() error
 }
 
 // SSM store interfaces.

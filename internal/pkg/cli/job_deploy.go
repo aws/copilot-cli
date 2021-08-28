@@ -367,8 +367,8 @@ func (o *deployJobOpts) manifest() (interface{}, error) {
 	return envMft, nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deployJobOpts) RecommendedActions() []string {
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deployJobOpts) RecommendActions() error {
 	return nil
 }
 

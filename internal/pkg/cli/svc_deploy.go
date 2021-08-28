@@ -237,9 +237,10 @@ func (o *deploySvcOpts) generateWorkerServiceRecommendedActions() {
 	o.recommendedActions = append(o.recommendedActions, actionRetrieveTopicQueues)
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deploySvcOpts) RecommendedActions() []string {
-	return o.recommendedActions
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deploySvcOpts) RecommendActions() error {
+	logRecommendedActions(o.recommendedActions)
+	return nil
 }
 
 func (o *deploySvcOpts) validateSvcName() error {
@@ -925,11 +926,8 @@ func buildSvcDeployCmd() *cobra.Command {
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			if len(opts.RecommendedActions()) > 0 {
-				log.Infoln("Recommended follow-up actions:")
-				for _, action := range opts.RecommendedActions() {
-					log.Infof("- %s\n", action)
-				}
+			if err := opts.RecommendActions(); err != nil {
+				return err
 			}
 			return nil
 		}),

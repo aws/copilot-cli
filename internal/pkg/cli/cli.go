@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -93,4 +95,14 @@ func relPath(fullPath string) (string, error) {
 		return "", fmt.Errorf("get relative path of file: %w", err)
 	}
 	return path, nil
+}
+
+func logRecommendedActions(actions []string) {
+	if len(actions) == 0 {
+		return
+	}
+	log.Infoln("Recommended follow-up actions:")
+	for _, followup := range actions {
+		log.Infof("- %s\n", followup)
+	}
 }

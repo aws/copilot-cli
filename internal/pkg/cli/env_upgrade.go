@@ -187,8 +187,8 @@ func (o *envUpgradeOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *envUpgradeOpts) RecommendedActions() []string {
+// RecommendActions is a no-op for this command.
+func (o *envUpgradeOpts) RecommendActions() error {
 	return nil
 }
 

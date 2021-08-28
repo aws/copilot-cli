@@ -192,8 +192,8 @@ func (o *deletePipelineOpts) deleteStack() error {
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *deletePipelineOpts) RecommendedActions() []string {
+// RecommendActions is a no-op for this command.
+func (o *deletePipelineOpts) RecommendActions() error {
 	return nil
 }
 

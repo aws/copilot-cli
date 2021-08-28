@@ -85,18 +85,18 @@ func (mr *MockactionCommandMockRecorder) Execute() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockactionCommand)(nil).Execute))
 }
 
-// RecommendedActions mocks base method.
-func (m *MockactionCommand) RecommendedActions() []string {
+// RecommendActions mocks base method.
+func (m *MockactionCommand) RecommendActions() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecommendedActions")
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "RecommendActions")
+	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RecommendedActions indicates an expected call of RecommendedActions.
-func (mr *MockactionCommandMockRecorder) RecommendedActions() *gomock.Call {
+// RecommendActions indicates an expected call of RecommendActions.
+func (mr *MockactionCommandMockRecorder) RecommendActions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockactionCommand)(nil).RecommendedActions))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendActions", reflect.TypeOf((*MockactionCommand)(nil).RecommendActions))
 }
 
 // Validate mocks base method.
@@ -6500,4 +6500,55 @@ func (m *MockservicePauser) PauseService(svcARN string) error {
 func (mr *MockservicePauserMockRecorder) PauseService(svcARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseService", reflect.TypeOf((*MockservicePauser)(nil).PauseService), svcARN)
+}
+
+// MocktimeoutError is a mock of timeoutError interface.
+type MocktimeoutError struct {
+	ctrl     *gomock.Controller
+	recorder *MocktimeoutErrorMockRecorder
+}
+
+// MocktimeoutErrorMockRecorder is the mock recorder for MocktimeoutError.
+type MocktimeoutErrorMockRecorder struct {
+	mock *MocktimeoutError
+}
+
+// NewMocktimeoutError creates a new mock instance.
+func NewMocktimeoutError(ctrl *gomock.Controller) *MocktimeoutError {
+	mock := &MocktimeoutError{ctrl: ctrl}
+	mock.recorder = &MocktimeoutErrorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktimeoutError) EXPECT() *MocktimeoutErrorMockRecorder {
+	return m.recorder
+}
+
+// Error mocks base method.
+func (m *MocktimeoutError) Error() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Error")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Error indicates an expected call of Error.
+func (mr *MocktimeoutErrorMockRecorder) Error() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Error", reflect.TypeOf((*MocktimeoutError)(nil).Error))
+}
+
+// Timeout mocks base method.
+func (m *MocktimeoutError) Timeout() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Timeout")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Timeout indicates an expected call of Timeout.
+func (mr *MocktimeoutErrorMockRecorder) Timeout() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Timeout", reflect.TypeOf((*MocktimeoutError)(nil).Timeout))
 }

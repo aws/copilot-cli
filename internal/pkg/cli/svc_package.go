@@ -455,8 +455,8 @@ func (o *packageSvcOpts) setAddonsFileWriter() error {
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *packageSvcOpts) RecommendedActions() []string {
+// RecommendActions is a no-op for this command.
+func (o *packageSvcOpts) RecommendActions() error {
 	return nil
 }
 

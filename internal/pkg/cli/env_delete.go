@@ -173,8 +173,8 @@ func (o *deleteEnvOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *deleteEnvOpts) RecommendedActions() []string {
+// RecommendActions is a no-op for this command.
+func (o *deleteEnvOpts) RecommendActions() error {
 	return nil
 }
 

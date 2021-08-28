@@ -196,11 +196,12 @@ func (o *svcPauseOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *svcPauseOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *svcPauseOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to start processing requests again.", color.HighlightCode(fmt.Sprintf("copilot svc resume -n %s", o.svcName))),
-	}
+	})
+	return nil
 }
 
 // buildSvcPauseCmd builds the command for pausing the running service.
@@ -228,9 +229,8 @@ func buildSvcPauseCmd() *cobra.Command {
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			log.Infoln("Recommended follow-up action:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
+			if err := opts.RecommendActions(); err != nil {
+				return err
 			}
 			return nil
 		}),

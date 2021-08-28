@@ -114,11 +114,8 @@ func (o *deployOpts) Run() error {
 	if err := o.deployWkld.Execute(); err != nil {
 		return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
 	}
-	if actions := o.deployWkld.RecommendedActions(); len(actions) > 0 {
-		log.Infoln("Recommended follow-up actions:")
-		for _, action := range actions {
-			log.Infof("- %s\n", action)
-		}
+	if err := o.deployWkld.RecommendActions(); err != nil {
+		return err
 	}
 	return nil
 }

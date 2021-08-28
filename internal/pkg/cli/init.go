@@ -457,9 +457,7 @@ func BuildInitCmd() *cobra.Command {
 				log.Info("\nNo problem, you can deploy your service later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
 					color.HighlightCode(fmt.Sprintf("copilot env init --name %s --profile %s --app %s", defaultEnvironmentName, defaultEnvironmentProfile, *opts.appName)))
-				for _, followup := range opts.initWlCmd.RecommendedActions() {
-					log.Infof("- %s\n", followup)
-				}
+				log.Infof("- Run %s to deploy your service.\n", color.HighlightCode("copilot deploy"))
 			}
 			return nil
 		}),

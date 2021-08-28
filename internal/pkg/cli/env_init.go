@@ -300,8 +300,8 @@ func (o *initEnvOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initEnvOpts) RecommendedActions() []string {
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initEnvOpts) RecommendActions() error {
 	return nil
 }
 
