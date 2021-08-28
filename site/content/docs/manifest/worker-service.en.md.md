@@ -90,7 +90,6 @@ Timeout defines the length of time a message is unavailable after being delivere
 <span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>
 If specified, creates a dead letter queue and a redrive policy which routes messages to the DLQ after `tries` attempts. That is, if a worker service fails to process a message successfully `tries` times, it will be routed to the DLQ for examination instead of redriven.
 
-
 <span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>
 Contains information about which SNS topics the worker service should subscribe to.
 
@@ -99,9 +98,6 @@ Required. The name of the SNS topic to subscribe to.
 
 <span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>
 Required. The service this SNS topic is exposed by. Together with the topic name, this uniquely identifies an SNS topic in the copilot environment.
-
-
-
 
 {% include 'image-config.en.md' %}
 
