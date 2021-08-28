@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package manifest provides functionality to create Manifest files.
 package manifest
 
 import (
@@ -365,6 +364,46 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				require.NoError(t, actualErr)
 				require.Equal(t, tc.wantedManifest, actualManifest)
 			}
+		})
+	}
+}
+
+func TestScheduledJob_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *ScheduledJob
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &ScheduledJob{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					Publish: &PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
 		})
 	}
 }
