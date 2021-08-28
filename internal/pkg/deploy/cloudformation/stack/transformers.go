@@ -643,8 +643,8 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 	return out, nil
 }
 
-func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
-	if p == nil || len(p.Topics) == 0 {
+func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
+	if len(topics) == 0 {
 		return nil, nil
 	}
 	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
@@ -653,7 +653,7 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 	}
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
-	for _, topic := range p.Topics {
+	for _, topic := range topics {
 		t, err := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
 		if err != nil {
 			return nil, err

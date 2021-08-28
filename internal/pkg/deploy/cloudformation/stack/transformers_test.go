@@ -1506,29 +1506,27 @@ func Test_convertPublish(t *testing.T) {
 	env := "testenv"
 	svc := "hello"
 	testCases := map[string]struct {
-		inPublish *manifest.PublishConfig
+		inTopics []manifest.Topic
 
 		wanted      *template.PublishOpts
 		wantedError error
 	}{
-		"empty publish": {
-			inPublish: &manifest.PublishConfig{},
-			wanted:    nil,
+		"no manifest publishers should return nil": {
+			inTopics: nil,
+			wanted:   nil,
+		},
+		"empty manifest publishers should return nil": {
+			inTopics: []manifest.Topic{},
+			wanted:   nil,
 		},
 		"publish with no topic names": {
-			inPublish: &manifest.PublishConfig{
-				Topics: []manifest.Topic{
-					{},
-				},
-			},
+			inTopics:    []manifest.Topic{{}},
 			wantedError: errMissingPublishTopicField,
 		},
 		"publish with no workers": {
-			inPublish: &manifest.PublishConfig{
-				Topics: []manifest.Topic{
-					{
-						Name: aws.String("topic1"),
-					},
+			inTopics: []manifest.Topic{
+				{
+					Name: aws.String("topic1"),
 				},
 			},
 			wanted: &template.PublishOpts{
@@ -1546,12 +1544,10 @@ func Test_convertPublish(t *testing.T) {
 			},
 		},
 		"publish with workers": {
-			inPublish: &manifest.PublishConfig{
-				Topics: []manifest.Topic{
-					{
-						Name:           aws.String("topic1"),
-						AllowedWorkers: []string{"worker1"},
-					},
+			inTopics: []manifest.Topic{
+				{
+					Name:           aws.String("topic1"),
+					AllowedWorkers: []string{"worker1"},
 				},
 			},
 			wanted: &template.PublishOpts{
@@ -1570,23 +1566,19 @@ func Test_convertPublish(t *testing.T) {
 			},
 		},
 		"invalid worker name": {
-			inPublish: &manifest.PublishConfig{
-				Topics: []manifest.Topic{
-					{
-						Name:           aws.String("topic1"),
-						AllowedWorkers: []string{"worker1~~@#$"},
-					},
+			inTopics: []manifest.Topic{
+				{
+					Name:           aws.String("topic1"),
+					AllowedWorkers: []string{"worker1~~@#$"},
 				},
 			},
 			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errSvcNameBadFormat),
 		},
 		"invalid topic name": {
-			inPublish: &manifest.PublishConfig{
-				Topics: []manifest.Topic{
-					{
-						Name:           aws.String("topic1~~@#$"),
-						AllowedWorkers: []string{"worker1"},
-					},
+			inTopics: []manifest.Topic{
+				{
+					Name:           aws.String("topic1~~@#$"),
+					AllowedWorkers: []string{"worker1"},
 				},
 			},
 			wantedError: errInvalidPubSubTopicName,
@@ -1594,7 +1586,7 @@ func Test_convertPublish(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertPublish(tc.inPublish, accountId, region, app, env, svc)
+			got, err := convertPublish(tc.inTopics, accountId, region, app, env, svc)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
