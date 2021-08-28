@@ -863,7 +863,7 @@ func (o *deploySvcOpts) subscribeRecommendedActions() []string {
 	recs := []string{actionRetrieveEnvVar}
 	topicQueueNames := o.buildWorkerQueueNames()
 	if topicQueueNames == "" {
-		return nil
+		return recs
 	}
 	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = JSON.parse(process.env.COPILOT_TOPIC_QUEUE_URIS)", topicQueueNames)
 	actionRetrieveTopicQueues := fmt.Sprintf(
