@@ -219,7 +219,7 @@ func (o *deploySvcOpts) generateWorkerServiceRecommendedActions() {
 	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
 	actionRetrieveEnvVar := fmt.Sprintf(
 		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URI".
-In JavaScript you can write %s.`,
+  In JavaScript you can write %s.`,
 		o.name,
 		color.HighlightCode(retrieveEnvVarCode),
 	)
@@ -231,7 +231,7 @@ In JavaScript you can write %s.`,
 	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = process.env.COPILOT_TOPIC_QUEUE_URIS", topicQueueNames)
 	actionRetrieveTopicQueues := fmt.Sprintf(
 		`You can retrieve topic-specific queues by writing
-%s.`,
+  %s.`,
 		color.HighlightCode(retrieveTopicQueueEnvVarCode),
 	)
 	o.recommendedActions = append(o.recommendedActions, actionRetrieveTopicQueues)
