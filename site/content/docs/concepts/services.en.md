@@ -40,6 +40,8 @@ If you want a service that can't be accessed externally, but only from other ser
 
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
 
+### Worker Service
+If you don't need your service to be accessible by HTTP, and would instead like a way of simply processing messages from an SQS queue, a __Worker Service__ will provide one or more queues, subscriptions to SNS topics, and ergonomic ways of accessing messages from inside your service containers.
 
 ## Config and the Manifest
 
