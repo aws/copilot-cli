@@ -34,6 +34,71 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
+// Mockcmd is a mock of cmd interface.
+type Mockcmd struct {
+	ctrl     *gomock.Controller
+	recorder *MockcmdMockRecorder
+}
+
+// MockcmdMockRecorder is the mock recorder for Mockcmd.
+type MockcmdMockRecorder struct {
+	mock *Mockcmd
+}
+
+// NewMockcmd creates a new mock instance.
+func NewMockcmd(ctrl *gomock.Controller) *Mockcmd {
+	mock := &Mockcmd{ctrl: ctrl}
+	mock.recorder = &MockcmdMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockcmd) EXPECT() *MockcmdMockRecorder {
+	return m.recorder
+}
+
+// Ask mocks base method.
+func (m *Mockcmd) Ask() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ask")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ask indicates an expected call of Ask.
+func (mr *MockcmdMockRecorder) Ask() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ask", reflect.TypeOf((*Mockcmd)(nil).Ask))
+}
+
+// Execute mocks base method.
+func (m *Mockcmd) Execute() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Execute")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Execute indicates an expected call of Execute.
+func (mr *MockcmdMockRecorder) Execute() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*Mockcmd)(nil).Execute))
+}
+
+// Validate mocks base method.
+func (m *Mockcmd) Validate() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Validate")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Validate indicates an expected call of Validate.
+func (mr *MockcmdMockRecorder) Validate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*Mockcmd)(nil).Validate))
+}
+
 // MockactionCommand is a mock of actionCommand interface.
 type MockactionCommand struct {
 	ctrl     *gomock.Controller

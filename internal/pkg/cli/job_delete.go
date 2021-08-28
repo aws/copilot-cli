@@ -382,19 +382,7 @@ func buildJobDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			if err := opts.RecommendActions(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 

@@ -294,19 +294,7 @@ An application is a collection of containerized services that operate together.`
 			if len(args) == 1 {
 				opts.name = args[0]
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			if err := opts.RecommendActions(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVar(&vars.domainName, domainNameFlag, "", domainNameFlagDescription)

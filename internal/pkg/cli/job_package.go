@@ -206,14 +206,7 @@ func buildJobPackageCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", jobFlagDescription)

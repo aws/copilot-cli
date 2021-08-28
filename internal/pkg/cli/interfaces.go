@@ -33,8 +33,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
-// actionCommand is the interface that every command that creates a resource implements.
-type actionCommand interface {
+type cmd interface {
 	// Validate returns an error if a flag's value is invalid.
 	Validate() error
 
@@ -43,7 +42,11 @@ type actionCommand interface {
 
 	// Execute runs the command after collecting all required options.
 	Execute() error
+}
 
+// actionCommand is the interface that every command that creates a resource implements.
+type actionCommand interface {
+	cmd
 	// RecommendActions logs a list of follow-up suggestions users can run once the command executes successfully.
 	RecommendActions() error
 }

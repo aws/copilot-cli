@@ -97,6 +97,24 @@ func relPath(fullPath string) (string, error) {
 	return path, nil
 }
 
+func run(cmd cmd) error {
+	if err := cmd.Validate(); err != nil {
+		return err
+	}
+	if err := cmd.Ask(); err != nil {
+		return err
+	}
+	if err := cmd.Execute(); err != nil {
+		return err
+	}
+	if actionCmd, ok := cmd.(actionCommand); ok {
+		if err := actionCmd.RecommendActions(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func logRecommendedActions(actions []string) {
 	if len(actions) == 0 {
 		return

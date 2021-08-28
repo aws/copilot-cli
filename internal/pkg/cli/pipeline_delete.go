@@ -197,20 +197,6 @@ func (o *deletePipelineOpts) RecommendActions() error {
 	return nil
 }
 
-// Run validates user input, asks for any missing flags, and then executes the command.
-func (o *deletePipelineOpts) Run() error {
-	if err := o.Validate(); err != nil {
-		return err
-	}
-	if err := o.Ask(); err != nil {
-		return err
-	}
-	if err := o.Execute(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // buildPipelineDeleteCmd build the command for deleting an existing pipeline.
 func buildPipelineDeleteCmd() *cobra.Command {
 	vars := deletePipelineVars{}
@@ -226,7 +212,7 @@ func buildPipelineDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return opts.Run()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

@@ -186,17 +186,7 @@ func buildAppShowCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			return nil
+			return run(opts)
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})

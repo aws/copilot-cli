@@ -768,19 +768,7 @@ Resource names are injected into your containers as environment variables for ea
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			if err := opts.RecommendActions(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
