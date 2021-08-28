@@ -121,6 +121,12 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// Port returns the exposed port in the manifest.
+// A load balanced web service always has a port exposed therefore the boolean is always true.
+func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
+	return aws.Uint16Value(s.ImageConfig.Port), true
+}
+
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)

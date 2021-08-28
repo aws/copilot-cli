@@ -1172,6 +1172,26 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 	}
 }
 
+func TestLoadBalancedWebService_Port(t *testing.T) {
+	// GIVEN
+	mft := LoadBalancedWebService{
+		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{
+				ImageWithPort: ImageWithPort{
+					Port: uint16P(80),
+				},
+			},
+		},
+	}
+
+	// WHEN
+	actual, ok := mft.Port()
+
+	// THEN
+	require.True(t, ok)
+	require.Equal(t, uint16(80), actual)
+}
+
 func Test_Temp(t *testing.T) {
 	wamtedImageConfig := ImageWithPortAndHealthcheck{
 		ImageWithPort: ImageWithPort{
