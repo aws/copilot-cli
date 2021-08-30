@@ -130,6 +130,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedImage          = "mockImage"
 	)
 	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", "mockApp", "mockEnv", "mockWkld")
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		inSvcType        string
 		inSvcName        string

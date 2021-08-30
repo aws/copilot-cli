@@ -49,10 +49,11 @@ type resumeSvcOpts struct {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *resumeSvcOpts) Validate() error {
-	if o.appName != "" {
-		if err := o.validateAppName(); err != nil {
-			return err
-		}
+	if o.appName == "" {
+		return nil
+	}
+	if err := o.validateAppName(); err != nil {
+		return err
 	}
 	if o.envName != "" {
 		if err := o.validateEnvName(); err != nil {

@@ -176,6 +176,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 		wantedImage          = "mockImage"
 		wantedCronSchedule   = "0 9-17 * * MON-FRI"
 	)
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		inJobType        string
 		inJobName        string

@@ -39,6 +39,9 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 
 		wantedError error
 	}{
+		"skip validation if app flag is not set": {
+			setupMocks: func(m secretInitMocks) {},
+		},
 		"valid with input file": {
 			inInputFilePath: "./deep/secrets.yml",
 			inOverwrite:     true,
