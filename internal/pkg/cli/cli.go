@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -119,8 +121,12 @@ func logRecommendedActions(actions []string) {
 	if len(actions) == 0 {
 		return
 	}
-	log.Infoln("Recommended follow-up actions:")
+	log.Infoln(fmt.Sprintf("Recommended follow-up %s:", english.PluralWord(len(actions), "action", "actions")))
+	prefix := "- "
+	if len(actions) == 1 {
+		prefix = "  "
+	}
 	for _, followup := range actions {
-		log.Infof("- %s\n", followup)
+		log.Infof("%s %s\n", prefix, followup)
 	}
 }
