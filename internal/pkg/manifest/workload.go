@@ -56,10 +56,10 @@ var (
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	validShortPlatforms = []string{
-		PlatformString(OSLinux, ArchAMD64),
-		PlatformString(OSLinux, ArchX86),
-		PlatformString(OSWindows, ArchAMD64),
-		PlatformString(OSWindows, ArchX86),
+		platformString(OSLinux, ArchAMD64),
+		platformString(OSLinux, ArchX86),
+		platformString(OSWindows, ArchAMD64),
+		platformString(OSWindows, ArchX86),
 	}
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
@@ -729,32 +729,24 @@ func (p *PlatformArgs) bothSpecified() bool {
 	return (p.OSFamily != nil) && (p.Arch != nil)
 }
 
-// PlatformString returns a specified of the format <os>/<arch>.
-func PlatformString(os, arch string) string {
+// platformString returns a specified of the format <os>/<arch>.
+func platformString(os, arch string) string {
 	return fmt.Sprintf("%s/%s", os, arch)
 }
 
 // RedirectPlatform returns a platform that's supported for the given manifest type.
-func RedirectPlatform(image, os, arch, wlType string) (platform *string, err error) {
-	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
-	if image != "" {
-		return nil, nil
-	}
+func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	// Return nil if passed the default platform.
-	if PlatformString(os, arch) == PlatformString(OSLinux, ArchAMD64) {
-		return nil, nil
+	if platformString(os, arch) == platformString(OSLinux, ArchAMD64) {
+		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.
 	if wlType == RequestDrivenWebServiceType && os == OSWindows {
-		return nil, errors.New("Windows is not supported for App Runner services")
+		return "", errors.New("Windows is not supported for App Runner services")
 	}
 	// All architectures must be 'amd64' (the only one currently supported); leave OS as is.
-	if arch != ArchAMD64 {
-		arch = ArchAMD64
-	}
-
 	// If a string is returned, the platform is not the default platform but is supported (except for more obscure platforms).
-	return aws.String(PlatformString(os, arch)), nil
+	return platformString(os, ArchAMD64), nil
 }
 
 func validateShortPlatform(platform *string) error {

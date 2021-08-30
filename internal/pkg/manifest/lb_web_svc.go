@@ -174,7 +174,7 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform == nil {
 		return nil, nil
 	}
-	return aws.String(PlatformString(t.Platform.OS(), t.Platform.Arch())), nil
+	return aws.String(platformString(t.Platform.OS(), t.Platform.Arch())), nil
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.

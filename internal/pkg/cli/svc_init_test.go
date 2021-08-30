@@ -588,9 +588,6 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
-			},
 
 			wantedManifestPath: "manifest/path",
 		},
@@ -613,9 +610,6 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
-			},
 
 			wantedManifestPath: "manifest/path",
 		},

@@ -529,6 +529,22 @@ func TestRequestDrivenWebService_windowsCompatibility(t *testing.T) {
 			},
 			wantedErr: errors.New("Windows is not supported for App Runner services"),
 		},
+		"returns error if arch is not valid": {
+			in: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					InstanceConfig: AppRunnerInstanceConfig{
+						Platform: &PlatformArgsOrString{
+							PlatformString: nil,
+							PlatformArgs: PlatformArgs{
+								OSFamily: stringP("linux"),
+								Arch:     stringP("arm64"),
+							},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("App Runner services can only build on amd64 and x86_64 architectures"),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

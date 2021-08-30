@@ -250,6 +250,11 @@ func (c CmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
 	return false
 }
 
+// PlatformString returns a specified of the format <os>/<arch>.
+func PlatformString(os, arch string) string {
+	return fmt.Sprintf("%s/%s", os, arch)
+}
+
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 	/*
 			Sample docker config file
