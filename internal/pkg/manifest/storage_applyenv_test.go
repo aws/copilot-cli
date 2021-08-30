@@ -205,6 +205,139 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 	}
 }
 
+func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
+		"volume overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: &EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPathTest"),
+							},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPathTest"),
+							},
+							EFS: &EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+		},
+		"volume not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: &EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": nil,
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: &EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+		},
+		"nil volume overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": nil,
+					},
+				}
+				svc.Environments["test"].Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: &EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Storage = &Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: &EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.ApplyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
 func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
