@@ -177,6 +177,83 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 	}
 }
 
+func TestBackendService_Port(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wantedPort uint16
+		wantedOK   bool
+	}{
+		"sets ok to false if no port is exposed": {
+			mft: &BackendService{},
+		},
+		"returns the port value and sets ok to true if a port is exposed": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: uint16P(80),
+						},
+					},
+				},
+			},
+			wantedPort: 80,
+			wantedOK:   true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, ok := tc.mft.Port()
+
+			// THEN
+			require.Equal(t, tc.wantedOK, ok)
+			require.Equal(t, tc.wantedPort, actual)
+		})
+	}
+}
+
+func TestBackendService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &BackendService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					Publish: &PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
+		})
+	}
+}
+
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{

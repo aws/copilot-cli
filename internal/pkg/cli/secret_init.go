@@ -401,8 +401,8 @@ func (o *secretInitOpts) askForSecretValues() error {
 	return nil
 }
 
-// RecommendedActions shows recommended actions to do after running `secret init`.
-func (o *secretInitOpts) RecommendedActions() error {
+// RecommendActions shows recommended actions to do after running `secret init`.
+func (o *secretInitOpts) RecommendActions() error {
 	type secretInitOutput struct {
 		SecretsPerEnv map[string]map[string]string
 	}
@@ -514,7 +514,7 @@ Create secrets from input.yml. For the format of the YAML file, please see https
 				return err
 			}
 
-			if err := opts.RecommendedActions(); err != nil {
+			if err := opts.RecommendActions(); err != nil {
 				return err
 			}
 			return nil

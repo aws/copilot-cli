@@ -118,22 +118,6 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
-// URI returns the WebServiceURI to identify this service uniquely given an environment name.
-func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
-
-	err := d.initServiceDescriber(envName)
-	if err != nil {
-		return "", err
-	}
-
-	serviceURL, err := d.envSvcDescribers[envName].ServiceURL()
-	if err != nil {
-		return "", fmt.Errorf("get outputs for service %s: %w", d.svc, err)
-	}
-
-	return serviceURL, nil
-}
-
 // rdWebSvcDesc contains serialized parameters for a web service.
 type rdWebSvcDesc struct {
 	Service        string               `json:"service"`

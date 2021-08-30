@@ -409,7 +409,13 @@ func (o *initOpts) deploySvc() error {
 	if err := o.deploySvcCmd.Ask(); err != nil {
 		return err
 	}
-	return o.deploySvcCmd.Execute()
+	if err := o.deploySvcCmd.Execute(); err != nil {
+		return err
+	}
+	if err := o.deploySvcCmd.RecommendActions(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *initOpts) deployJob() error {
@@ -425,7 +431,13 @@ func (o *initOpts) deployJob() error {
 	if err := o.deployJobCmd.Ask(); err != nil {
 		return err
 	}
-	return o.deployJobCmd.Execute()
+	if err := o.deployJobCmd.Execute(); err != nil {
+		return err
+	}
+	if err := o.deployJobCmd.RecommendActions(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *initOpts) askShouldDeploy() error {
@@ -457,9 +469,7 @@ func BuildInitCmd() *cobra.Command {
 				log.Info("\nNo problem, you can deploy your service later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
 					color.HighlightCode(fmt.Sprintf("copilot env init --name %s --profile %s --app %s", defaultEnvironmentName, defaultEnvironmentProfile, *opts.appName)))
-				for _, followup := range opts.initWlCmd.RecommendedActions() {
-					log.Infof("- %s\n", followup)
-				}
+				log.Infof("- Run %s to deploy your service.\n", color.HighlightCode("copilot deploy"))
 			}
 			return nil
 		}),

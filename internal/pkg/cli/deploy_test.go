@@ -43,7 +43,7 @@ func TestDeployOpts_Run(t *testing.T) {
 				m.EXPECT().Ask()
 				m.EXPECT().Validate()
 				m.EXPECT().Execute()
-				m.EXPECT().RecommendedActions()
+				m.EXPECT().RecommendActions()
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)
@@ -71,7 +71,7 @@ func TestDeployOpts_Run(t *testing.T) {
 				m.EXPECT().Ask()
 				m.EXPECT().Validate()
 				m.EXPECT().Execute()
-				m.EXPECT().RecommendedActions()
+				m.EXPECT().RecommendActions()
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetWorkload("app", "fe").Return(&mockWl, nil)

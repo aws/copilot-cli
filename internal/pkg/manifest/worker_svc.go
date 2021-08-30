@@ -37,13 +37,6 @@ type WorkerServiceConfig struct {
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
-// WorkerServiceProps represents the configuration needed to create a worker service.
-type WorkerServiceProps struct {
-	WorkloadProps
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	Topics      []TopicSubscription   // Optional topics for subscriptions
-}
-
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
 	Topics []TopicSubscription `yaml:"topics"`
@@ -70,6 +63,13 @@ type DeadLetterQueue struct {
 	Tries *uint16 `yaml:"tries"`
 }
 
+// WorkerServiceProps represents the configuration needed to create a worker service.
+type WorkerServiceProps struct {
+	WorkloadProps
+	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Topics      []TopicSubscription   // Optional topics for subscriptions
+}
+
 // NewWorkerService applies the props to a default Worker service configuration with
 // minimal cpu/memory thresholds, single replica, no healthcheck, and then returns it.
 func NewWorkerService(props WorkerServiceProps) *WorkerService {
@@ -82,34 +82,6 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.parser = template.New()
 	return svc
-}
-
-// newDefaultWorkerService returns a Worker service with minimal task sizes and a single replica.
-func newDefaultWorkerService() *WorkerService {
-	return &WorkerService{
-		Workload: Workload{
-			Type: aws.String(WorkerServiceType),
-		},
-		WorkerServiceConfig: WorkerServiceConfig{
-			ImageConfig: ImageWithHealthcheck{},
-			Subscribe:   &SubscribeConfig{},
-			TaskConfig: TaskConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
-				Count: Count{
-					Value: aws.Int(1),
-				},
-				ExecuteCommand: ExecuteCommand{
-					Enable: aws.Bool(false),
-				},
-			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
-					Placement: aws.String(PublicSubnetPlacement),
-				},
-			},
-		},
-	}
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
@@ -168,4 +140,32 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// newDefaultWorkerService returns a Worker service with minimal task sizes and a single replica.
+func newDefaultWorkerService() *WorkerService {
+	return &WorkerService{
+		Workload: Workload{
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			ImageConfig: ImageWithHealthcheck{},
+			Subscribe:   &SubscribeConfig{},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count: Count{
+					Value: aws.Int(1),
+				},
+				ExecuteCommand: ExecuteCommand{
+					Enable: aws.Bool(false),
+				},
+			},
+			Network: &NetworkConfig{
+				VPC: &vpcConfig{
+					Placement: aws.String(PublicSubnetPlacement),
+				},
+			},
+		},
+	}
 }

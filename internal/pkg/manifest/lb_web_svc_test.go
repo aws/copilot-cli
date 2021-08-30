@@ -1172,6 +1172,66 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 	}
 }
 
+func TestLoadBalancedWebService_Port(t *testing.T) {
+	// GIVEN
+	mft := LoadBalancedWebService{
+		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{
+				ImageWithPort: ImageWithPort{
+					Port: uint16P(80),
+				},
+			},
+		},
+	}
+
+	// WHEN
+	actual, ok := mft.Port()
+
+	// THEN
+	require.True(t, ok)
+	require.Equal(t, uint16(80), actual)
+}
+
+func TestLoadBalancedWebService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *LoadBalancedWebService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &LoadBalancedWebService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					Publish: &PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
+		})
+	}
+}
+
 func Test_Temp(t *testing.T) {
 	wamtedImageConfig := ImageWithPortAndHealthcheck{
 		ImageWithPort: ImageWithPort{
