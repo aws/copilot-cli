@@ -441,7 +441,7 @@ func convertMountPoint(sourceVolume, containerPath *string, readOnly *bool) *tem
 	}
 }
 
-func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
+func convertMountPoints(input map[string]*manifest.Volume) ([]*template.MountPoint, error) {
 	if len(input) == 0 {
 		return nil, nil
 	}
@@ -452,7 +452,7 @@ func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoin
 	return output, nil
 }
 
-func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
+func convertEFSPermissions(input map[string]*manifest.Volume) ([]*template.EFSPermission, error) {
 	var output []*template.EFSPermission
 	for _, volume := range input {
 		// If there's no EFS configuration, we don't need to generate any permissions.
@@ -486,7 +486,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 	return output, nil
 }
 
-func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
+func convertManagedFSInfo(wlName *string, input map[string]*manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
 	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
 		if volume.EmptyVolume() {
@@ -525,7 +525,7 @@ func getRandomUIDGID(name *string) uint32 {
 	return crc32.ChecksumIEEE([]byte(aws.StringValue(name)))
 }
 
-func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
+func convertVolumes(input map[string]*manifest.Volume) ([]*template.Volume, error) {
 	var output []*template.Volume
 	for name, volume := range input {
 		// Volumes can contain either:

@@ -735,13 +735,13 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 func Test_convertManagedFSInfo(t *testing.T) {
 	testCases := map[string]struct {
-		inVolumes         map[string]manifest.Volume
+		inVolumes         map[string]*manifest.Volume
 		wantManagedConfig *template.ManagedVolumeCreationInfo
 		wantVolumes       map[string]manifest.Volume
 		wantErr           string
 	}{
 		"no managed config": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
@@ -768,7 +768,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 			},
 		},
 		"with managed config": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
@@ -787,7 +787,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 			wantVolumes: map[string]manifest.Volume{},
 		},
 		"with custom UID": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
@@ -826,13 +826,13 @@ func Test_convertManagedFSInfo(t *testing.T) {
 }
 func Test_convertStorageOpts(t *testing.T) {
 	testCases := map[string]struct {
-		inVolumes   map[string]manifest.Volume
+		inVolumes   map[string]*manifest.Volume
 		inEphemeral *int
 		wantOpts    template.StorageOpts
 		wantErr     string
 	}{
 		"minimal configuration": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
@@ -871,7 +871,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 		},
 		"empty volume for shareable storage between sidecar and main container": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"scratch": {
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/scratch"),
@@ -897,7 +897,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 		},
 		"container path not specified": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
@@ -909,7 +909,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			wantErr: fmt.Sprintf("validate container configuration for volume wordpress: %s", errNoContainerPath.Error()),
 		},
 		"full specification with access point renders correctly": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
@@ -956,7 +956,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 		},
 		"full specification without access point renders correctly": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
@@ -1000,7 +1000,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 		},
 		"managed EFS": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
@@ -1028,7 +1028,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 		},
 		"managed EFS with config": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
@@ -1059,7 +1059,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 		},
 		"error when multiple managed volumes specified": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
@@ -1081,7 +1081,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			wantErr: "cannot specify more than one managed volume per service",
 		},
 		"managed EFS and BYO": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
@@ -1156,7 +1156,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 		},
 		"efs specified with just ID": {
-			inVolumes: map[string]manifest.Volume{
+			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{

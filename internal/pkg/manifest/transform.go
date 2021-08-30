@@ -13,10 +13,6 @@ import (
 var fmtExclusiveFieldsSpecifiedTogether = "invalid manifest: %s %s mutually exclusive with %s and shouldn't be specified at the same time"
 
 var defaultTransformers = []mergo.Transformers{
-	// NOTE: mapToVolumeTransformer needs to be the first transformer. Otherwise `mergo` will overwrite the `dst` map
-	// completely and we will lose `dst`'s values.
-	mapToVolumeTransformer{},
-
 	// NOTE: basicTransformer needs to be used before the rest of the custom transformers, because the other transformers
 	// do not merge anything - they just unset the fields that do not get specified in source manifest.
 	basicTransformer{},
@@ -28,6 +24,8 @@ var defaultTransformers = []mergo.Transformers{
 	countTransformer{},
 	advancedCountTransformer{},
 	rangeTransformer{},
+	efsConfigOrBoolTransformer{},
+	efsVolumeConfigurationTransformer{},
 }
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
@@ -248,85 +246,6 @@ func (t rangeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
 			dst.Set(reflect.ValueOf(dstStruct))
-		}
-		return nil
-	}
-}
-
-type mapToVolumeTransformer struct{}
-
-// Transformer returns custom merge logic for map[string]Volume.
-func (t mapToVolumeTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	/**
-	There are two things to notice:
-	1. Custom logic for `map[string]Volume` is needed because when `withOverride` flag is specified, `mergo` set
-	dst map's value directly by src map's value, instead of continuing deep merging `Volume`.
-	For example, given that
-			dst = map[string]Volume{
-				"volume1": {
-					prop1: 1,
-					prop2: 2,
-				},
-			}
-	and 	src = map[string]Volume{
-				"volume1": {
-					prop1: 3,
-				},
-			}
-	Without this transformer, the result would be
-			res = map[string]Volume{
-				"volume1": {
-					prop1: 3,
-				}
-			}
-	The merge stops at `map`, while we expect `Volume` to be merged instead of overwritten.
-	2. Note that at the end the transformer sets src map's value as well by `src.SetMapIndex(key, reflect.ValueOf(dstV))`.
-	This is because when `withOverride` flag is specified, `mergo` stops merging at map instead of `Volume`. The merged
-	value will get overwritten by any other transformers.
-	*/
-	if typ.Kind() != reflect.Map {
-		return nil
-	}
-
-	if typ.Key().Kind() != reflect.String || typ.Elem() != reflect.TypeOf(Volume{}) {
-		return nil
-	}
-
-	return func(dst, src reflect.Value) error {
-		for _, key := range src.MapKeys() {
-			srcElement := src.MapIndex(key)
-			if !srcElement.IsValid() {
-				continue
-			}
-
-			dstElement := dst.MapIndex(key)
-			if !dstElement.IsValid() {
-				dst.SetMapIndex(key, srcElement)
-				continue
-			}
-
-			// Perform default merge
-			dstV := dstElement.Interface().(Volume)
-			srcV := srcElement.Interface().(Volume)
-
-			transformers := []mergo.Transformers{
-				efsConfigOrBoolTransformer{},
-				efsVolumeConfigurationTransformer{},
-				basicTransformer{},
-			}
-
-			for _, t := range transformers {
-				if err := mergo.Merge(&dstV, srcV, mergo.WithOverride, mergo.WithTransformers(t)); err != nil {
-					return err
-				}
-			}
-
-			// Set merged value for the key
-			dst.SetMapIndex(key, reflect.ValueOf(dstV))
-
-			// NOTE: if we don't set the merged value for `src`, `dst`'s value for this key will be completely overwritten
-			// (instead of merging) by other transformers.
-			src.SetMapIndex(key, reflect.ValueOf(dstV))
 		}
 		return nil
 	}

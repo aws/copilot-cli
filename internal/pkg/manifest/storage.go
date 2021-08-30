@@ -17,8 +17,8 @@ var (
 
 // Storage represents the options for external and native storage.
 type Storage struct {
-	Ephemeral *int              `yaml:"ephemeral"`
-	Volumes   map[string]Volume `yaml:"volumes"`
+	Ephemeral *int               `yaml:"ephemeral"`
+	Volumes   map[string]*Volume `yaml:"volumes"`
 }
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
