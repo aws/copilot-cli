@@ -122,9 +122,9 @@ func logRecommendedActions(actions []string) {
 		return
 	}
 	log.Infoln(fmt.Sprintf("Recommended follow-up %s:", english.PluralWord(len(actions), "action", "actions")))
-	prefix := "- "
+	prefix := "  -"
 	if len(actions) == 1 {
-		prefix = "  "
+		prefix = "   "
 	}
 	for _, followup := range actions {
 		log.Infof("%s %s\n", prefix, followup)
