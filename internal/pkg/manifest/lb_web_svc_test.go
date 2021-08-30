@@ -227,7 +227,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: aws.Int(1),
 						},
 						Storage: &Storage{
-							Volumes: map[string]Volume{
+							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
@@ -277,7 +277,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: aws.Int(1),
 						},
 						Storage: &Storage{
-							Volumes: map[string]Volume{
+							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
@@ -335,7 +335,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"TWILIO_TOKEN": "1111",
 						},
 						Storage: &Storage{
-							Volumes: map[string]Volume{
+							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
@@ -397,7 +397,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								"DDB_TABLE_NAME": "awards-prod",
 							},
 							Storage: &Storage{
-								Volumes: map[string]Volume{
+								Volumes: map[string]*Volume{
 									"myEFSVolume": {
 										EFS: &EFSConfigOrBool{
 											Advanced: EFSVolumeConfiguration{
@@ -480,7 +480,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"TWILIO_TOKEN": "1111",
 						},
 						Storage: &Storage{
-							Volumes: map[string]Volume{
+							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
