@@ -148,19 +148,18 @@ func (o *secretInitOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf("get application %s: %w", o.appName, err)
 		}
+		if o.values != nil {
+			for env := range o.values {
+				if _, err := o.targetEnv(env); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	if o.name != "" {
 		if err := validateSecretName(o.name); err != nil {
 			return err
-		}
-	}
-
-	if o.values != nil {
-		for env := range o.values {
-			if _, err := o.targetEnv(env); err != nil {
-				return err
-			}
 		}
 	}
 

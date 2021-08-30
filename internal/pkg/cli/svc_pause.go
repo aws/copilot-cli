@@ -108,10 +108,11 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *svcPauseOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
+	if o.appName == "" {
+		return nil
+	}
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return err
 	}
 	if o.svcName != "" {
 		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {

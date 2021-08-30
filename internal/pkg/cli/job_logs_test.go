@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -39,14 +40,38 @@ func TestJobLogs_Validate(t *testing.T) {
 	}{
 		"with no flag set": {
 			mockstore: func(m *mocks.Mockstore) {},
-
-			wantedError: nil,
 		},
-		"invalid project name": {
+		"skip validation if app flag is not set": {
+			inputSvc:     "frontend",
+			inputEnvName: "test",
+			mockstore:    func(m *mocks.Mockstore) {},
+		},
+		"invalid app name": {
 			inputApp: "my-app",
 
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
+		"invalid env name": {
+			inputApp:     "my-app",
+			inputEnvName: "test",
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{}, nil)
+				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
+		"invalid svc name": {
+			inputApp: "my-app",
+			inputSvc: "frontend",
+
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{}, nil)
+				m.EXPECT().GetJob("my-app", "frontend").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),

@@ -83,10 +83,10 @@ func (o *taskExecOpts) Validate() error {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
+		if o.envName != "" {
+			if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+				return err
+			}
 		}
 	}
 	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)

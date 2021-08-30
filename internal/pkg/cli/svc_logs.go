@@ -116,9 +116,13 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 // Validate returns an error if the values provided by flags are invalid.
 func (o *svcLogsOpts) Validate() error {
 	if o.appName != "" {
-		_, err := o.configStore.GetApplication(o.appName)
-		if err != nil {
+		if _, err := o.configStore.GetApplication(o.appName); err != nil {
 			return err
+		}
+		if o.name != "" {
+			if _, err := o.configStore.GetService(o.appName, o.name); err != nil {
+				return err
+			}
 		}
 	}
 
