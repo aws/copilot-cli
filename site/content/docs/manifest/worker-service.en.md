@@ -4,10 +4,8 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
 
     ```yaml
     # Your service name will be used in naming your resources like log groups, ECS services, etc.
-    name: events-worker
+    name: orders-worker
     type: Worker Service
-
-    # Your service is reachable at "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" but is not public.
 
     # Configuration for your containers and service.
     image:
@@ -21,10 +19,6 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
       topics:
         - name: events
           service: api
-          queue:
-            timeout: 10s
-            dead_letter:
-              tries: 5
         - name: events
           service: fe
       queue:
@@ -69,7 +63,7 @@ subscribe:
         timeout: 20s 
     - name: events
       service: fe
-  queue:
+  queue: # By default, messages from all topics will go to a shared queue.
     timeout: 45s
     retention: 96h
     delay: 30s

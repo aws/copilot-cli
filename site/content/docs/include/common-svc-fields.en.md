@@ -242,16 +242,16 @@ Optional. The full config file path in your custom Fluent Bit image.
 <div class="separator"></div>
 
 <a id="publish" href="#publish" class="field">`publish`</a> <span class="type">Map</span>
-The `publish` section allows services to publish messages to one or more SNS topics. By default, no other services are allowed to subscribe to the created topics. Other services in the environment can be allowlisted using the `allowed_workers` field on each topic.
+The `publish` section allows services to publish messages to one or more SNS topics. By default, no worker services are allowed to subscribe to the created topics. Worker services in the environment can be allowlisted using the `allowed_workers` field on each topic.
 
 ```yaml
 publish:
   topics:
     - name: order-events
-      allowed-workers: [database-worker, receipts-worker]
+      allowed_workers: [database-worker, receipts-worker]
 ```
 
-In the example above, this manifest declares an SNS topic named `order-events` and authorizes any services named `database-worker` or `receipts-worker` which are deployed to the Copilot environment to subscribe to this topic.
+In the example above, this manifest declares an SNS topic named `order-events` and authorizes the worker services named `database-worker` or `receipts-worker` which are deployed to the Copilot environment to subscribe to this topic.
 
 <span class="parent-field">publish.</span><a id="publish-topics" href="#publish-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>
 Required.
