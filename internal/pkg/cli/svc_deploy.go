@@ -841,7 +841,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	}
 	if o.rdSvcAlias != "" {
 		recs = append(recs, fmt.Sprintf(`The validation process for https://%s can take more than 15 minutes.
-  Please visit %s to check the validation status.`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home")))
+    Please visit %s to check the validation status.`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home")))
 	}
 	return recs, nil
 }
@@ -856,7 +856,7 @@ func (o *deploySvcOpts) subscribeRecommendedActions() []string {
 	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
 	actionRetrieveEnvVar := fmt.Sprintf(
 		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URI".
-  In JavaScript you can write %s.`,
+    In JavaScript you can write %s.`,
 		o.name,
 		color.HighlightCode(retrieveEnvVarCode),
 	)
@@ -868,7 +868,7 @@ func (o *deploySvcOpts) subscribeRecommendedActions() []string {
 	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = JSON.parse(process.env.COPILOT_TOPIC_QUEUE_URIS)", topicQueueNames)
 	actionRetrieveTopicQueues := fmt.Sprintf(
 		`You can retrieve topic-specific queues by writing
-  %s.`,
+    %s.`,
 		color.HighlightCode(retrieveTopicQueueEnvVarCode),
 	)
 	recs = append(recs, actionRetrieveTopicQueues)
@@ -889,7 +889,7 @@ func (o *deploySvcOpts) publishRecommendedActions() []string {
 
 	return []string{
 		fmt.Sprintf(`Update %s's code to leverage the injected environment variable "COPILOT_SNS_TOPIC_ARNS".
-  In JavaScript you can write %s.`,
+    In JavaScript you can write %s.`,
 			o.name,
 			color.HighlightCode("const {<topicName>} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)")),
 	}
