@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
@@ -49,7 +48,6 @@ var (
 	errInvalidSvcName                = errors.New("service names cannot be empty")
 	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
 	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
-	errTopicSubscriptionNotAllowed   = errors.New("topic not in list of topics available to subscribe to")
 )
 
 // Container dependency status options.
@@ -69,7 +67,6 @@ var (
 
 // Options for SQS Queues.
 var (
-	resourceNameFormat      = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
 	deadLetterTriesMaxValue = 1000
 )
 
@@ -471,7 +468,7 @@ func isCorrectSvcNameFormat(s string) bool {
 	return len(trailingMatch) == 0
 }
 
-func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []string, app, env string) error {
+func validateTopicSubscription(ts manifest.TopicSubscription) error {
 	if err := validatePubSubName(ts.Name); err != nil {
 		return err
 	}
@@ -480,21 +477,7 @@ func validateTopicSubscription(ts manifest.TopicSubscription, validTopicARNs []s
 		return err
 	}
 
-	// Check that the topic is included in the list of available topics
-	topicName := fmt.Sprintf(resourceNameFormat, app, env, ts.Service, ts.Name)
-	for _, topicARN := range validTopicARNs {
-		arn, err := arn.Parse(topicARN)
-		if err != nil {
-			continue
-		}
-		validTopicName := arn.Resource
-
-		if validTopicName == topicName {
-			return nil
-		}
-	}
-
-	return errTopicSubscriptionNotAllowed
+	return nil
 }
 
 func validateTime(t, floor, ceiling time.Duration) error {

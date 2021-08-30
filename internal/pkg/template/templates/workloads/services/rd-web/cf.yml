@@ -84,6 +84,12 @@ Resources:
                 Value: !Ref EnvName
               - Name: COPILOT_SERVICE_NAME
                 Value: !Ref WorkloadName
+              {{- if .Publish }}
+              {{- if .Publish.Topics }}
+              - Name: COPILOT_SNS_TOPIC_ARNS
+                Value: '{{jsonSNSTopics .Publish.Topics}}'
+              {{- end }}
+              {{- end }}
               {{- if .Variables}}
               {{- range $name, $value := .Variables}}
               - Name: {{$name}}

@@ -15,8 +15,9 @@ cpu: 256       # Number of CPU units for the task.
 memory: 512    # Amount of memory in MiB used by the task.
 count: 1       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
+
 # You can register to topics from other services.
-# The events will be available in an SQS queue via the env var $COPILOT_QUEUE_URIS
+# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 # subscribe:
 #   topics: 
 #     - name: topic-from-another-service
