@@ -187,6 +187,7 @@ Optional. Defaults to `true`. Defines whether the volume is read-only or not. If
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Boolean or Map</span>  
 Specify more detailed EFS configuration. If specified as a boolean, or using only the `uid` and `gid` subfields, creates a managed EFS filesystem and dedicated Access Point for this workload.
+
 ```yaml
 // Simple managed EFS
 efs: true
@@ -243,10 +244,10 @@ Optional. The full config file path in your custom Fluent Bit image.
 <a id="taskdef_overrides" href="#taskdef_overrides" class="field">`taskdef_overrides`</a> <span class="type">Array of Rules</span>  
 The `taskdef_overrides` section allows users to apply overriding rules to their ECS Task Definitions (see examples [here](../developing/taskdef-overrides.en.md#examples)).
 
-<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-path" href="#taskdef_overrides-path" class="field">`path`</a> <span class="type">String</span>  
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-path" href="#taskdef_overrides-path" class="field">`path`</a> <span class="type">String</span>
 Required. Path to the Task Definition field to override.
 
-<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-value" href="#taskdef_overrides-value" class="field">`value`</a> <span class="type">Any</span>  
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-value" href="#taskdef_overrides-value" class="field">`value`</a> <span class="type">Any</span>
 Required. Value of the Task Definition field to override.
 
 <div class="separator"></div>
