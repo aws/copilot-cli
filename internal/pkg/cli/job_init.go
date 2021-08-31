@@ -323,7 +323,11 @@ func (o *initJobOpts) askSchedule() error {
 	return nil
 }
 
-func (o initJobOpts) legitimizePlatform() error {
+func (o *initJobOpts) legitimizePlatform() error {
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image != "" {
+		return nil
+	}
 	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
 	if err != nil {
 		return fmt.Errorf("get docker engine platform: %w", err)
@@ -334,6 +338,9 @@ func (o initJobOpts) legitimizePlatform() error {
 		return fmt.Errorf("redirect docker engine platform: %w", err)
 	}
 	o.platform = &platform
+	if platform == "" {
+		o.platform = nil
+	}
 	if o.platform != nil {
 		if o.platform != detectedPlatform {
 			log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, aws.StringValue(o.platform))
