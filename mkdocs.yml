@@ -48,11 +48,11 @@ nav:
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Secrets: docs/developing/secrets.en.md
       - Service Discovery: docs/developing/service-discovery.en.md
+      - Publish/Subscribe: docs/developing/publish-subscribe.en.md
       - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
       - Sidecars: docs/developing/sidecars.en.md
       - Storage: docs/developing/storage.en.md
       - Task Definition Overrides: docs/developing/taskdef-overrides.en.md
-      - Publish/Subscribe: docs/developing/publish-subscribe.en.md
     - Commands:
       - Getting Started:
         - init: docs/commands/init.en.md
