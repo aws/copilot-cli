@@ -23,7 +23,7 @@ publish:
       allowed_workers: [orders-worker, receipts-worker]
 ```
 
-This will create an [SNS topic](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) and set a resource policy on the topic to allow Copilot services called `orders-worker` and `receipts-worker` to create subscriptions. This will let those worker services connect their 
+This will create an [SNS topic](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) and set a resource policy on the topic to allow Copilot services called `orders-worker` and `receipts-worker` to create subscriptions.
 
 Copilot also injects the ARNs of any SNS topics into your container under the environment variable `COPILOT_SNS_TOPIC_ARNS`. 
 
