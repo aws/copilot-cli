@@ -52,6 +52,7 @@ nav:
       - Sidecars: docs/developing/sidecars.en.md
       - Storage: docs/developing/storage.en.md
       - Task Definition Overrides: docs/developing/taskdef-overrides.en.md
+      - Publish/Subscribe: docs/developing/publish-subscribe.en.md
     - Commands:
       - Getting Started:
         - init: docs/commands/init.en.md
