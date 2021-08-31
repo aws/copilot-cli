@@ -455,8 +455,8 @@ func (o *packageSvcOpts) setAddonsFileWriter() error {
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *packageSvcOpts) RecommendedActions() []string {
+// RecommendActions is a no-op for this command.
+func (o *packageSvcOpts) RecommendActions() error {
 	return nil
 }
 
@@ -509,14 +509,7 @@ func buildSvcPackageCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)

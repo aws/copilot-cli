@@ -114,6 +114,9 @@ func (o *deployOpts) Run() error {
 	if err := o.deployWkld.Execute(); err != nil {
 		return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
 	}
+	if err := o.deployWkld.RecommendActions(); err != nil {
+		return err
+	}
 	return nil
 }
 

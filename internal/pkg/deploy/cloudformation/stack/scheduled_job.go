@@ -135,7 +135,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
 	}
-	publishers, err := convertPublish(j.manifest.Publish, j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
+	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for job %s: %w`, j.name, err)
 	}

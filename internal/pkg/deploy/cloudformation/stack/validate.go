@@ -93,9 +93,12 @@ func validateStorageConfig(in *manifest.Storage) error {
 	return validateVolumes(in.Volumes)
 }
 
-func validateVolumes(in map[string]manifest.Volume) error {
+func validateVolumes(in map[string]*manifest.Volume) error {
 	for name, v := range in {
-		if err := validateVolume(name, v); err != nil {
+		if v == nil {
+			return fmt.Errorf("validate configuration for volume %s: configuration cannot be empty", name)
+		}
+		if err := validateVolume(name, *v); err != nil {
 			return err
 		}
 	}

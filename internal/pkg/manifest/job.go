@@ -68,30 +68,6 @@ type ScheduledJobProps struct {
 	Retries     int
 }
 
-// newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
-func newDefaultScheduledJob() *ScheduledJob {
-	return &ScheduledJob{
-		Workload: Workload{
-			Type: aws.String(ScheduledJobType),
-		},
-		ScheduledJobConfig: ScheduledJobConfig{
-			ImageConfig: ImageWithHealthcheck{},
-			TaskConfig: TaskConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
-				Count: Count{
-					Value: aws.Int(1),
-				},
-			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
-				},
-			},
-		},
-	}
-}
-
 // NewScheduledJob creates a new scheduled job object.
 func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
@@ -139,6 +115,14 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &j, nil
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (j *ScheduledJob) Publish() []Topic {
+	if j.ScheduledJobConfig.Publish == nil {
+		return nil
+	}
+	return j.ScheduledJobConfig.Publish.Topics
+}
+
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
 func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return j.ImageConfig.BuildConfig(wsRoot)
@@ -152,4 +136,28 @@ func (j *ScheduledJob) BuildRequired() (bool, error) {
 // JobDockerfileBuildRequired returns if the job container image should be built from local Dockerfile.
 func JobDockerfileBuildRequired(job interface{}) (bool, error) {
 	return dockerfileBuildRequired("job", job)
+}
+
+// newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
+func newDefaultScheduledJob() *ScheduledJob {
+	return &ScheduledJob{
+		Workload: Workload{
+			Type: aws.String(ScheduledJobType),
+		},
+		ScheduledJobConfig: ScheduledJobConfig{
+			ImageConfig: ImageWithHealthcheck{},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count: Count{
+					Value: aws.Int(1),
+				},
+			},
+			Network: &NetworkConfig{
+				VPC: &vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
+				},
+			},
+		},
+	}
 }

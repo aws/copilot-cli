@@ -71,7 +71,7 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 
-	svcInitPublisherPrompt     = "Which publishers do you want to subscribe to?"
+	svcInitPublisherPrompt     = "Which topics do you want to subscribe to?"
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
 These messages can be consumed by the Worker Service.`
 )
@@ -286,14 +286,15 @@ func (o *initSvcOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initSvcOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initSvcOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
 			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
 			defaultEnvironmentName),
-	}
+	})
+	return nil
 }
 
 func (o *initSvcOpts) askSvcType() error {
@@ -554,9 +555,8 @@ This command is also run as part of "copilot init".`,
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
+			if err := opts.RecommendActions(); err != nil {
+				return err
 			}
 			return nil
 		}),

@@ -50,12 +50,6 @@ func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, e
 	return describer, nil
 }
 
-// URI returns the service discovery namespace and is used to make
-// WorkerServiceDescriber have the same signature as WebServiceDescriber.
-func (d *WorkerServiceDescriber) URI(envName string) (string, error) {
-	return BlankServiceDiscoveryURI, nil
-}
-
 // Describe returns info of a worker service.
 func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	environments, err := d.store.ListEnvironmentsDeployedTo(d.app, d.svc)

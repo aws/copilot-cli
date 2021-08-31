@@ -110,17 +110,17 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showSvcOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
+	if o.appName == "" {
+		return nil
+	}
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return err
 	}
 	if o.svcName != "" {
 		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -201,13 +201,7 @@ func buildSvcShowCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
