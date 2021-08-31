@@ -33,10 +33,10 @@ Once the publishing service has been deployed, you can send messages to SNS via 
 ```javascript
 const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
 const client = new SNSClient({ region: "us-west-2" });
-const {customers} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS);
+const {orders} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS);
 const out = await client.send(new PublishCommand({
    Message: "hello",
-   TopicArn: customers,
+   TopicArn: orders,
  }));
 ```
 
