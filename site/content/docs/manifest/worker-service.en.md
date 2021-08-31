@@ -9,7 +9,7 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
 
     # Configuration for your containers and service.
     image:
-      build: ./api/Dockerfile
+      build: ./orders/Dockerfile
 
     cpu: 256
     memory: 512
