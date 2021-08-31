@@ -39,6 +39,7 @@ nav:
       - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
       - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
       - Backend Service: docs/manifest/backend-service.en.md
+      - Worker Service: docs/manifest/worker-service.en.md
       - Scheduled Job: docs/manifest/scheduled-job.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:

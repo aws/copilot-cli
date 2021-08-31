@@ -11,10 +11,6 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
     image:
       build: ./orders/Dockerfile
 
-    cpu: 256
-    memory: 512
-    count: 1
-
     subscribe:
       topics:
         - name: events
@@ -26,6 +22,10 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
         timeout: 30s
         dead_letter:
           tries: 10
+
+    cpu: 256
+    memory: 512
+    count: 1
 
     variables:
       LOG_LEVEL: info

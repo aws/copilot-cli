@@ -43,7 +43,9 @@ If you want a service that can't be accessed externally, but only from other ser
 ### Worker Service
 __Worker Services__ allow you to implement asynchronous service-to-service communication with [pub/sub architectures](https://aws.amazon.com/pub-sub-messaging/). 
 Your microservices in your application can `publish` events to [Amazon SNS topics](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) that can then be consumed by a "Worker Service".  
-A Worker Service is composed of: 
+
+A Worker Service is composed of:  
+
   * One or more [Amazon SQS queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html) to process notifications published to the topics, as well as [dead-letter queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html) to handle failures. 
   * An Amazon ECS service on AWS Fargate that has permission to poll the SQS queues and process the messages asynchronously.
 

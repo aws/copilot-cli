@@ -75,3 +75,5 @@ The architecture type for your service. A [Load Balanced Web Service](../concept
 {% include 'image-healthcheck.en.md' %}
 
 {% include 'common-svc-fields.en.md' %}
+
+{% include 'publish.en.md' %}
