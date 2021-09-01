@@ -427,14 +427,12 @@ func (o *initSvcOpts) legitimizePlatform() error {
 	if err != nil {
 		return fmt.Errorf("redirect docker engine platform: %w", err)
 	}
-	o.platform = &platform
 	if platform == "" {
-		o.platform = nil
+		return nil
 	}
-	if o.platform != nil {
-		if o.platform != detectedPlatform {
-			log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", aws.StringValue(detectedPlatform), aws.StringValue(o.platform))
-		}
+	if o.platform != detectedPlatform {
+		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", aws.StringValue(detectedPlatform), aws.StringValue(o.platform))
+		o.platform = &platform
 	}
 	return nil
 }

@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -137,7 +136,7 @@ func (s *RequestDrivenWebService) windowsCompatibility() error {
 	}
 	// Error out if user added Windows as platform in manifest.
 	if isWindowsPlatform(s.InstanceConfig.Platform) {
-		return errors.New("Windows is not supported for App Runner services")
+		return errAppRunnerInvalidPlatformWindows
 	}
 	if s.InstanceConfig.Platform.Arch() != ArchAMD64 || s.InstanceConfig.Platform.Arch() != ArchX86 {
 		return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)

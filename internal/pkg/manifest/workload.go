@@ -70,6 +70,11 @@ var (
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
 	}
 
+	defaultPlatform = platformString(OSLinux, ArchAMD64)
+
+	windowsTaskCPU    = 1024
+	windowsTaskMemory = 2048
+
 	windowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
 
 	// Error definitions.
@@ -84,6 +89,8 @@ var (
 	errInvalidRangeOpts     = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
 	errInvalidAdvancedCount = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
 	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
+
+	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -737,12 +744,12 @@ func platformString(os, arch string) string {
 // RedirectPlatform returns a platform that's supported for the given manifest type.
 func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	// Return nil if passed the default platform.
-	if platformString(os, arch) == platformString(OSLinux, ArchAMD64) {
+	if platformString(os, arch) == defaultPlatform {
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.
 	if wlType == RequestDrivenWebServiceType && os == OSWindows {
-		return "", errors.New("Windows is not supported for App Runner services")
+		return "", errAppRunnerInvalidPlatformWindows
 	}
 	// All architectures must be 'amd64' (the only one currently supported); leave OS as is.
 	// If a string is returned, the platform is not the default platform but is supported (except for more obscure platforms).

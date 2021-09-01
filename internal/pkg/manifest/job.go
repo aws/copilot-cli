@@ -105,8 +105,8 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	if props.Platform != nil {
 		job.Platform = props.Platform
 		if isWindowsPlatform(props.Platform) {
-			job.TaskConfig.CPU = aws.Int(1024)
-			job.TaskConfig.Memory = aws.Int(2048)
+			job.TaskConfig.CPU = aws.Int(windowsTaskCPU)
+			job.TaskConfig.Memory = aws.Int(windowsTaskMemory)
 		}
 	}
 	job.On.Schedule = stringP(props.Schedule)
