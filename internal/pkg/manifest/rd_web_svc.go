@@ -29,7 +29,7 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
-	Publish                           *PublishConfig          `yaml:"publish"`
+	Publish                           PublishConfig           `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {
@@ -79,9 +79,6 @@ func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *RequestDrivenWebService) Publish() []Topic {
-	if s.RequestDrivenWebServiceConfig.Publish == nil {
-		return nil
-	}
 	return s.RequestDrivenWebServiceConfig.Publish.Topics
 }
 

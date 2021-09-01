@@ -31,7 +31,7 @@ type BackendServiceConfig struct {
 	*Logging         `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
 	Network          NetworkConfig             `yaml:"network"`
-	Publish          *PublishConfig            `yaml:"publish"`
+	Publish          PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
@@ -81,9 +81,6 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *BackendService) Publish() []Topic {
-	if s.BackendServiceConfig.Publish == nil {
-		return nil
-	}
 	return s.BackendServiceConfig.Publish.Topics
 }
 

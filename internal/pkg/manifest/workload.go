@@ -440,6 +440,10 @@ type PublishConfig struct {
 	Topics []Topic `yaml:"topics"`
 }
 
+func (c *PublishConfig) isEmpty() bool {
+	return c.Topics == nil
+}
+
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
 	Name           *string  `yaml:"name"`

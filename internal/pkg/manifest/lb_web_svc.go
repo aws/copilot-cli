@@ -52,7 +52,7 @@ type LoadBalancedWebServiceConfig struct {
 	*Logging         `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
 	Network          NetworkConfig             `yaml:"network"`
-	Publish          *PublishConfig            `yaml:"publish"`
+	Publish          PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
@@ -129,9 +129,6 @@ func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *LoadBalancedWebService) Publish() []Topic {
-	if s.LoadBalancedWebServiceConfig.Publish == nil {
-		return nil
-	}
 	return s.LoadBalancedWebServiceConfig.Publish.Topics
 }
 
