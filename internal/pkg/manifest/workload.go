@@ -384,6 +384,11 @@ type Logging struct {
 	ConfigFile     *string           `yaml:"configFilePath"`
 }
 
+// TODO: add cmment for exported and unit test
+func (lc *Logging) IsEmpty() bool {
+	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil && lc.SecretOptions == nil && lc.ConfigFile == nil
+}
+
 // LogImage returns the default Fluent Bit image if not otherwise configured.
 func (lc *Logging) LogImage() *string {
 	if lc.Image == nil {

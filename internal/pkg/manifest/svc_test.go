@@ -127,7 +127,7 @@ environments:
 								CredsParam: aws.String("some arn"),
 							},
 						},
-						Logging: &Logging{
+						Logging: Logging{
 							Destination: map[string]string{
 								"exclude-pattern": "^.*[aeiou]$",
 								"include-pattern": "^[a-z][aeiou].*$",

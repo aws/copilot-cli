@@ -547,27 +547,27 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"logging overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
-				job.Environments["test"].Logging = &Logging{
+				job.Environments["test"].Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: logging not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},

@@ -318,14 +318,10 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 	return &template.ExecuteCommandOpts{}
 }
 
-func convertLogging(lc *manifest.Logging) *template.LogConfigOpts {
-	if lc == nil {
+func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
+	if lc.IsEmpty() {
 		return nil
 	}
-	return logConfigOpts(lc)
-}
-
-func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 	return &template.LogConfigOpts{
 		Image:          lc.LogImage(),
 		ConfigFile:     lc.ConfigFile,

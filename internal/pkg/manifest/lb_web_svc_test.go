@@ -361,7 +361,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
 					Network: NetworkConfig{
@@ -425,7 +425,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								},
 							},
 						},
-						Logging: &Logging{
+						Logging: Logging{
 							SecretOptions: map[string]string{
 								"FOO": "BAR",
 							},
@@ -515,7 +515,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",

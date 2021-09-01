@@ -345,7 +345,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
-			Logging: &Logging{
+			Logging: Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
@@ -379,7 +379,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						CredsParam: aws.String("some arn"),
 					},
 				},
-				Logging: &Logging{
+				Logging: Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
@@ -576,7 +576,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",

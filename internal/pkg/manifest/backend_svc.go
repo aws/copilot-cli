@@ -28,7 +28,7 @@ type BackendServiceConfig struct {
 	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	*Logging         `yaml:"logging,flow"`
+	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
 	Network          NetworkConfig             `yaml:"network"`
 	Publish          PublishConfig             `yaml:"publish"`

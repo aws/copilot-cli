@@ -30,7 +30,7 @@ type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	*Logging         `yaml:"logging,flow"`
+	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
 	Subscribe        *SubscribeConfig          `yaml:"subscribe"`
 	Network          NetworkConfig             `yaml:"network"`

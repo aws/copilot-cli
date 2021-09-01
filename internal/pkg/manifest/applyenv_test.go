@@ -1684,56 +1684,56 @@ func TestApplyEnv_Logging(t *testing.T) {
 	}{
 		"image overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 		},
 		"image explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					Image: aws.String(""),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String(""),
 				}
 			},
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: image not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
-				svc.Environments["test"].Logging = &Logging{}
+				svc.Environments["test"].Logging = Logging{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},
 		},
 		"destination overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Destination: map[string]string{
 						"mockDestination1": "1",
 						"mockDestination2": "2",
 					},
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					Destination: map[string]string{
 						"mockDestination1": "3", // Modify the value of mockDestination1.
 						"mockDestination3": "3", // Append mockDestination3.
@@ -1741,7 +1741,7 @@ func TestApplyEnv_Logging(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Destination: map[string]string{
 						"mockDestination1": "3",
 						"mockDestination2": "2",
@@ -1752,18 +1752,18 @@ func TestApplyEnv_Logging(t *testing.T) {
 		},
 		"destination not overridden by empty map": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Destination: map[string]string{
 						"mockDestination1": "1",
 						"mockDestination2": "2",
 					},
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					Destination: map[string]string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Destination: map[string]string{
 						"mockDestination1": "1",
 						"mockDestination2": "2",
@@ -1773,16 +1773,16 @@ func TestApplyEnv_Logging(t *testing.T) {
 		},
 		"destination not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Destination: map[string]string{
 						"mockDestination1": "1",
 						"mockDestination2": "2",
 					},
 				}
-				svc.Environments["test"].Logging = &Logging{}
+				svc.Environments["test"].Logging = Logging{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Destination: map[string]string{
 						"mockDestination1": "1",
 						"mockDestination2": "2",
@@ -1792,56 +1792,56 @@ func TestApplyEnv_Logging(t *testing.T) {
 		},
 		"enableMetadata overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					EnableMetadata: aws.Bool(false),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					EnableMetadata: aws.Bool(true),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					EnableMetadata: aws.Bool(true),
 				}
 			},
 		},
 		"enableMetadata explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					EnableMetadata: aws.Bool(true),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					EnableMetadata: aws.Bool(false),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					EnableMetadata: aws.Bool(false),
 				}
 			},
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: enableMetadata not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					EnableMetadata: aws.Bool(true),
 				}
-				svc.Environments["test"].Logging = &Logging{}
+				svc.Environments["test"].Logging = Logging{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					EnableMetadata: aws.Bool(true),
 				}
 			},
 		},
 		"secretOptions overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					SecretOptions: map[string]string{
 						"mockSecretOption1": "1",
 						"mockSecretOption2": "2",
 					},
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					SecretOptions: map[string]string{
 						"mockSecretOption1": "3", // Modify the value of mockSecretOption1.
 						"mockSecretOption3": "3", // Append mockSecretOption3.
@@ -1849,7 +1849,7 @@ func TestApplyEnv_Logging(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					SecretOptions: map[string]string{
 						"mockSecretOption1": "3",
 						"mockSecretOption2": "2",
@@ -1860,18 +1860,18 @@ func TestApplyEnv_Logging(t *testing.T) {
 		},
 		"secretOptions not overridden by empty map": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					SecretOptions: map[string]string{
 						"mockSecretOption1": "1",
 						"mockSecretOption2": "2",
 					},
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					SecretOptions: map[string]string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					SecretOptions: map[string]string{
 						"mockSecretOption1": "1",
 						"mockSecretOption2": "2",
@@ -1881,16 +1881,16 @@ func TestApplyEnv_Logging(t *testing.T) {
 		},
 		"secretOptions not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					SecretOptions: map[string]string{
 						"mockSecretOption1": "1",
 						"mockSecretOption2": "2",
 					},
 				}
-				svc.Environments["test"].Logging = &Logging{}
+				svc.Environments["test"].Logging = Logging{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					SecretOptions: map[string]string{
 						"mockSecretOption1": "1",
 						"mockSecretOption2": "2",
@@ -1900,43 +1900,43 @@ func TestApplyEnv_Logging(t *testing.T) {
 		},
 		"configFilePath overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					ConfigFile: aws.String("mockPath"),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					ConfigFile: aws.String("mockPathTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					ConfigFile: aws.String("mockPathTest"),
 				}
 			},
 		},
 		"configFilePath explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					ConfigFile: aws.String("mockPath"),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					ConfigFile: aws.String(""),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					ConfigFile: aws.String(""),
 				}
 			},
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: configFilePath not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					ConfigFile: aws.String("mockPath"),
 				}
-				svc.Environments["test"].Logging = &Logging{}
+				svc.Environments["test"].Logging = Logging{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					ConfigFile: aws.String("mockPath"),
 				}
 			},

@@ -1490,28 +1490,28 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 		},
 		"logging overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: logging not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 				svc.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},
