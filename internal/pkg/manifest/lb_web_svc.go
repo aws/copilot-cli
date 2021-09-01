@@ -51,7 +51,7 @@ type LoadBalancedWebServiceConfig struct {
 	TaskConfig       `yaml:",inline"`
 	*Logging         `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
-	Network          *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
+	Network          NetworkConfig             `yaml:"network"`
 	Publish          *PublishConfig            `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
@@ -102,8 +102,8 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},

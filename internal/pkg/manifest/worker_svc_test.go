@@ -53,8 +53,8 @@ func TestNewWorkerSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -94,8 +94,8 @@ func TestNewWorkerSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},

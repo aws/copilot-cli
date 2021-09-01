@@ -1333,21 +1333,21 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 		},
 		"network overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement:      aws.String("mockPlacementTest"),
 						SecurityGroups: []string{"mock", "security_group", "test"},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement:      aws.String("mockPlacementTest"),
 						SecurityGroups: []string{"mock", "security_group", "test"},
 					},
@@ -1356,15 +1356,15 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}

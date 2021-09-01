@@ -33,7 +33,7 @@ type WorkerServiceConfig struct {
 	*Logging         `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
 	Subscribe        *SubscribeConfig          `yaml:"subscribe"`
-	Network          *NetworkConfig            `yaml:"network"`
+	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
@@ -161,8 +161,8 @@ func newDefaultWorkerService() *WorkerService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: aws.String(PublicSubnetPlacement),
 				},
 			},

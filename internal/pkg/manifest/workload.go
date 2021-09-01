@@ -448,14 +448,19 @@ type Topic struct {
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
-	VPC *vpcConfig `yaml:"vpc"`
+	VPC vpcConfig `yaml:"vpc"`
+}
+
+// TODO: Add exported comment & unit test
+func (c *NetworkConfig) IsEmpty() bool {
+	return c.VPC.isEmpty()
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
 // If the user specified a placement that's not valid then throw an error.
 func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type networkWithDefaults NetworkConfig
-	defaultVPCConf := &vpcConfig{
+	defaultVPCConf := vpcConfig{
 		Placement: stringP(PublicSubnetPlacement),
 	}
 	conf := networkWithDefaults{
@@ -464,7 +469,7 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&conf); err != nil {
 		return err
 	}
-	if conf.VPC == nil { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
+	if conf.VPC.isEmpty() { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
 		conf.VPC = defaultVPCConf
 	}
 	if !conf.VPC.isValidPlacement() {
@@ -478,6 +483,10 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type vpcConfig struct {
 	Placement      *string  `yaml:"placement"`
 	SecurityGroups []string `yaml:"security_groups"`
+}
+
+func (c *vpcConfig) isEmpty() bool {
+	return c.Placement == nil && c.SecurityGroups == nil
 }
 
 func (c *vpcConfig) isValidPlacement() bool {

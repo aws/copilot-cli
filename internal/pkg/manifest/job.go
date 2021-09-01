@@ -43,7 +43,7 @@ type ScheduledJobConfig struct {
 	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
-	Network                 *NetworkConfig `yaml:"network"`
+	Network                 NetworkConfig  `yaml:"network"`
 	Publish                 *PublishConfig `yaml:"publish"`
 	TaskDefOverrides        []OverrideRule `yaml:"taskdef_overrides"`
 }
@@ -153,8 +153,8 @@ func newDefaultScheduledJob() *ScheduledJob {
 					Value: aws.Int(1),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},

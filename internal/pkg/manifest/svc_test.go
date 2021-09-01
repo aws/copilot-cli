@@ -139,8 +139,8 @@ environments:
 								"LOG_TOKEN": "LOG_TOKEN",
 							},
 						},
-						Network: &NetworkConfig{
-							VPC: &vpcConfig{
+						Network: NetworkConfig{
+							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},
 						},
@@ -256,8 +256,8 @@ secrets:
 								"API_TOKEN": "SUBS_API_TOKEN",
 							},
 						},
-						Network: &NetworkConfig{
-							VPC: &vpcConfig{
+						Network: NetworkConfig{
+							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},
 						},
@@ -317,8 +317,8 @@ subscribe:
 								Enable: aws.Bool(true),
 							},
 						},
-						Network: &NetworkConfig{
-							VPC: &vpcConfig{
+						Network: NetworkConfig{
+							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},
 						},

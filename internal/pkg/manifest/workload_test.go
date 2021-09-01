@@ -618,7 +618,7 @@ network:
   vpc:
 `,
 			wantedConfig: &NetworkConfig{
-				VPC: &vpcConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
@@ -641,7 +641,7 @@ network:
     - 'sg-4567'
 `,
 			wantedConfig: &NetworkConfig{
-				VPC: &vpcConfig{
+				VPC: vpcConfig{
 					Placement:      stringP(PublicSubnetPlacement),
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},

@@ -30,7 +30,7 @@ type BackendServiceConfig struct {
 	TaskConfig       `yaml:",inline"`
 	*Logging         `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
-	Network          *NetworkConfig            `yaml:"network"`
+	Network          NetworkConfig             `yaml:"network"`
 	Publish          *PublishConfig            `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
@@ -140,8 +140,8 @@ func newDefaultBackendService() *BackendService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},

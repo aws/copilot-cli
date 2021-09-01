@@ -276,20 +276,20 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"network overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
@@ -297,15 +297,15 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}

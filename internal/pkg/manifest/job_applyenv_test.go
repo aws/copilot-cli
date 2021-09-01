@@ -384,20 +384,20 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"network overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				job.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
@@ -405,15 +405,15 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}

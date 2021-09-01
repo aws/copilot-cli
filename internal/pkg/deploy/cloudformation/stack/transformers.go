@@ -589,8 +589,8 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 }
 
-func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts {
-	if network == nil || network.VPC == nil {
+func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
+	if network.IsEmpty() {
 		return &template.NetworkOpts{
 			AssignPublicIP: template.EnablePublicIP,
 			SubnetsType:    template.PublicSubnetsPlacement,

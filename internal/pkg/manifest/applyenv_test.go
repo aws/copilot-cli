@@ -1967,21 +1967,21 @@ func TestApplyEnv_Network(t *testing.T) {
 	}{
 		"vpc overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement:      aws.String("mockPlacementTest"),
 						SecurityGroups: []string{"mock", "security", "group"},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement:      aws.String("mockPlacementTest"),
 						SecurityGroups: []string{"mock", "security", "group"},
 					},
@@ -1990,16 +1990,16 @@ func TestApplyEnv_Network(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: vpc not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{}
+				svc.Environments["test"].Network = NetworkConfig{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
@@ -2031,20 +2031,20 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 	}{
 		"placement overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
@@ -2052,20 +2052,20 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 		},
 		"placement explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String(""),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String(""),
 					},
 				}
@@ -2073,18 +2073,18 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: placement not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{},
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
@@ -2092,20 +2092,20 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 		},
 		"security_groups overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{"mock", "security_group"},
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{"mock", "security_group_test", "test"},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{"mock", "security_group_test", "test"},
 					},
 				}
@@ -2113,20 +2113,20 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 		},
 		"security_groups overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{"mock", "security_group"},
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{},
 					},
 				}
@@ -2134,18 +2134,18 @@ func TestApplyEnv_Network_VPC(t *testing.T) {
 		},
 		"FIXED_BUG: security_groups not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{"mock", "security_group"},
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{},
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						SecurityGroups: []string{"mock", "security_group"},
 					},
 				}
