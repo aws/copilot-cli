@@ -431,7 +431,7 @@ func (o *initSvcOpts) legitimizePlatform() error {
 		return nil
 	}
 	if o.platform != detectedPlatform {
-		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", aws.StringValue(detectedPlatform), aws.StringValue(o.platform))
+		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", aws.StringValue(detectedPlatform), platform)
 		o.platform = &platform
 	}
 	return nil

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -565,6 +567,36 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
+
+			wantedManifestPath: "manifest/path",
+		},
+		"windows platform": {
+			inAppName:        "sample",
+			inSvcName:        "frontend",
+			inDockerfilePath: "./Dockerfile",
+			inSvcType:        manifest.LoadBalancedWebServiceType,
+
+			inSvcPort: 80,
+
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "frontend",
+						Type:           "Load Balanced Web Service",
+						DockerfilePath: "./Dockerfile",
+						Platform: &manifest.PlatformArgsOrString{
+							PlatformString: aws.String("windows/amd64")},
+					},
+					Port: 80,
+				}).Return("manifest/path", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().GetPlatform().Return("windows", "x86_64", nil)
 			},
 
 			wantedManifestPath: "manifest/path",

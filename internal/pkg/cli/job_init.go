@@ -341,7 +341,7 @@ func (o *initJobOpts) legitimizePlatform() error {
 		return nil
 	}
 	if o.platform != detectedPlatform {
-		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, aws.StringValue(o.platform))
+		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, platform)
 		o.platform = &platform
 	}
 	return nil

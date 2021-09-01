@@ -34,7 +34,7 @@ image:
 
 cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
-{{- if .Platform}}
+{{- if .Platform.PlatformString}}
 platform: {{.Platform.PlatformString}}   # See https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/#platform
 {{- end}}
 
