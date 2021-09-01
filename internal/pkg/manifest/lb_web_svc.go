@@ -180,9 +180,9 @@ type RoutingRule struct {
 	Alias               *Alias                  `yaml:"alias"`
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string   `yaml:"target_container"`
-	TargetContainerCamelCase *string   `yaml:"targetContainer"`    // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         *[]string `yaml:"allowed_source_ips"` // TODO: the type needs to be updated after we upgrade mergo
+	TargetContainer          *string  `yaml:"target_container"`
+	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
 }
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which

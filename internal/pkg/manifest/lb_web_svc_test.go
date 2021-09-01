@@ -1048,13 +1048,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						RoutingRule: RoutingRule{
-							AllowedSourceIps: &[]string{"ip1", "ip3"},
+							AllowedSourceIps: []string{"ip1", "ip3"},
 						},
 					},
 				},
@@ -1071,7 +1071,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip3"},
+						AllowedSourceIps: []string{"ip1", "ip3"},
 					},
 				},
 			},
@@ -1087,7 +1087,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
@@ -1112,7 +1112,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("another-path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 			},
@@ -1128,7 +1128,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
@@ -1137,7 +1137,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							HealthCheck: HealthCheckArgsOrString{
 								HealthCheckPath: aws.String("another-path"),
 							},
-							AllowedSourceIps: &[]string{},
+							AllowedSourceIps: []string{},
 						},
 					},
 				},
@@ -1154,7 +1154,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("another-path"),
 						},
-						AllowedSourceIps: &[]string{},
+						AllowedSourceIps: []string{},
 					},
 				},
 			},

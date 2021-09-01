@@ -190,37 +190,29 @@ func TestApplyEnv_HTTP(t *testing.T) {
 		},
 		"allowed_source_ips overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				mockAllowedSourceIps := []string{"1", "2"}
-				mockAllowedSourceIpsTest := []string{"3", "4"}
-				svc.AllowedSourceIps = &mockAllowedSourceIps
-				svc.Environments["test"].AllowedSourceIps = &mockAllowedSourceIpsTest
+				svc.AllowedSourceIps = []string{"1", "2"}
+				svc.Environments["test"].AllowedSourceIps = []string{"3", "4"}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				mockAllowedSourceIPsWanted := []string{"3", "4"}
-				svc.AllowedSourceIps = &mockAllowedSourceIPsWanted
+				svc.AllowedSourceIps = []string{"3", "4"}
 			},
 		},
 		"allowed_source_ips explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				mockAllowedSourceIps := []string{"1", "2"}
-				mockAllowedSourceIpsTest := []string{}
-				svc.AllowedSourceIps = &mockAllowedSourceIps
-				svc.Environments["test"].AllowedSourceIps = &mockAllowedSourceIpsTest
+				svc.AllowedSourceIps = []string{"1", "2"}
+				svc.Environments["test"].AllowedSourceIps = []string{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				mockAllowedSourceIPsWanted := []string{}
-				svc.AllowedSourceIps = &mockAllowedSourceIPsWanted
+				svc.AllowedSourceIps = []string{}
 			},
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: allowed_source_ips not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				mockAllowedSourceIps := []string{"1", "2"}
-				svc.AllowedSourceIps = &mockAllowedSourceIps
+				svc.AllowedSourceIps = []string{"1", "2"}
 				svc.Environments["test"].RoutingRule = RoutingRule{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				mockAllowedSourceIPsWanted := []string{"1", "2"}
-				svc.AllowedSourceIps = &mockAllowedSourceIPsWanted
+				svc.AllowedSourceIps = []string{"1", "2"}
 			},
 		},
 		"alias overridden": {
