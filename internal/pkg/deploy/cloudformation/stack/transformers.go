@@ -695,7 +695,7 @@ func convertSubscribe(s manifest.SubscribeConfig, validTopicARNs []string, accou
 
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	queue, err := convertQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
+	queue, err := convertQueue(s.Queue)
 	if err != nil {
 		return nil, err
 	}
@@ -709,7 +709,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app,
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
-	queue, err := convertQueue(t.Queue, url, accountID, app, env, svc)
+	queue, err := convertQueue(t.Queue)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -721,7 +721,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app,
 	}, nil
 }
 
-func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
+func convertQueue(q *manifest.SQSQueue) (*template.SQSQueue, error) {
 	if q == nil {
 		return nil, nil
 	}
