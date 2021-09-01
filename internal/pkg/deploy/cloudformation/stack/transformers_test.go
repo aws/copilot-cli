@@ -179,7 +179,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify entrypoint as a string": {
 			inImageOverride: manifest.ImageOverride{
-				EntryPoint: &manifest.EntryPointOverride{String: aws.String("bin")},
+				EntryPoint: manifest.EntryPointOverride{String: aws.String("bin")},
 			},
 
 			wanted: &template.SidecarOpts{
@@ -195,7 +195,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify entrypoint as a string slice": {
 			inImageOverride: manifest.ImageOverride{
-				EntryPoint: &manifest.EntryPointOverride{StringSlice: []string{"bin", "arg"}},
+				EntryPoint: manifest.EntryPointOverride{StringSlice: []string{"bin", "arg"}},
 			},
 
 			wanted: &template.SidecarOpts{
@@ -211,7 +211,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify command as a string": {
 			inImageOverride: manifest.ImageOverride{
-				Command: &manifest.CommandOverride{String: aws.String("arg")},
+				Command: manifest.CommandOverride{String: aws.String("arg")},
 			},
 
 			wanted: &template.SidecarOpts{
@@ -227,7 +227,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify command as a string slice": {
 			inImageOverride: manifest.ImageOverride{
-				Command: &manifest.CommandOverride{StringSlice: []string{"arg1", "arg2"}},
+				Command: manifest.CommandOverride{StringSlice: []string{"arg1", "arg2"}},
 			},
 
 			wanted: &template.SidecarOpts{

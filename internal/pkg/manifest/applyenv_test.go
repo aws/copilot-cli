@@ -1404,116 +1404,116 @@ func TestApplyEnv_Entrypoint(t *testing.T) {
 	}{
 		"composite fields: string slice is overridden if string is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint"},
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 		},
 		"FIXED_BUG: composite fields: string is overridden if string slice is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint_test", "test"},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint_test", "test"},
 				}
 			},
 		},
 		"string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 		},
 		"string explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String(""),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String(""),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 			},
 		},
 		"string slice overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint"},
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint_test", "test"},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint_test", "test"},
 				}
 			},
 		},
 		"string slice explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint"},
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					StringSlice: []string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{},
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: string slice not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint"},
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					StringSlice: []string{"mock", "entrypoint"},
 				}
 			},
@@ -1544,116 +1544,116 @@ func TestApplyEnv_Command(t *testing.T) {
 	}{
 		"composite fields: string slice is overridden if string is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{"mock", "command"},
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 		},
 		"FIXED_BUG: composite fields: string is overridden if string slice is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					StringSlice: []string{"mock", "command_test", "test"},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{"mock", "command_test", "test"},
 				}
 			},
 		},
 		"string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 		},
 		"string explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					String: aws.String(""),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String(""),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 			},
 		},
 		"string slice overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{"mock", "command"},
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					StringSlice: []string{"mock", "command_test", "test"},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{"mock", "command_test", "test"},
 				}
 			},
 		},
 		"string slice explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{"mock", "command"},
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					StringSlice: []string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{},
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: string slice not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{"mock", "command"},
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					StringSlice: []string{"mock", "command"},
 				}
 			},

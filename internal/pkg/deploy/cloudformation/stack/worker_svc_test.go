@@ -185,11 +185,11 @@ Outputs:
 						StartPeriod: &testStartPeriod,
 					},
 				})
-				svc.manifest.EntryPoint = &manifest.EntryPointOverride{
+				svc.manifest.EntryPoint = manifest.EntryPointOverride{
 					String:      nil,
 					StringSlice: []string{"enter", "from"},
 				}
-				svc.manifest.Command = &manifest.CommandOverride{
+				svc.manifest.Command = manifest.CommandOverride{
 					String:      nil,
 					StringSlice: []string{"here"},
 				}

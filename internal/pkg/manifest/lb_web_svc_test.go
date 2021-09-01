@@ -542,10 +542,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "default"},
 						},
-						EntryPoint: &EntryPointOverride{
+						EntryPoint: EntryPointOverride{
 							StringSlice: []string{"entrypoint", "default"},
 						},
 					},
@@ -568,10 +568,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "default"},
 						},
-						EntryPoint: &EntryPointOverride{
+						EntryPoint: EntryPointOverride{
 							StringSlice: []string{"entrypoint", "default"},
 						},
 					},
@@ -1006,7 +1006,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "default"},
 						},
 					},
@@ -1014,7 +1014,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						ImageOverride: ImageOverride{
-							Command: &CommandOverride{
+							Command: CommandOverride{
 								StringSlice: []string{"command", "prod"},
 							},
 						},
@@ -1030,7 +1030,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "prod"},
 						},
 					},

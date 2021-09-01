@@ -67,56 +67,56 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"entrypoint overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 			},
 		},
 		"command overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 			},

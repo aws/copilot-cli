@@ -1131,54 +1131,54 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 		},
 		"entrypoint overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mockEntrypoint"),
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String("mockEntrypointTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mockEntrypointTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mockEntrypoint"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mockEntrypoint"),
 				}
 			},
 		},
 		"command overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mockCommand"),
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					String: aws.String("mockCommandTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mockCommandTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mockCommand"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mockCommand"),
 				}
 			},

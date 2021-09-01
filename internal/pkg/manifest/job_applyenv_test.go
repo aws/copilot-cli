@@ -151,54 +151,54 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"entrypoint overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
-				job.Environments["test"].EntryPoint = &EntryPointOverride{
+				job.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 			},
 		},
 		"command overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
-				job.Environments["test"].Command = &CommandOverride{
+				job.Environments["test"].Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 			},
