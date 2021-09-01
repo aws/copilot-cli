@@ -29,262 +29,107 @@ func TestBasicTransformer_Transformer(t *testing.T) {
 		override func(s *testBasicTransformerStruct)
 		wanted   func(s *testBasicTransformerStruct)
 	}{
-		"PBool overridden": {
+		"overridden": {
 			original: func(s *testBasicTransformerStruct) {
 				s.PBool = aws.Bool(false)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PBool = aws.Bool(true)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PBool = aws.Bool(true)
-			},
-		},
-		"PBool explicitly overridden by zero value": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PBool = aws.Bool(true)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PBool = aws.Bool(false)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PBool = aws.Bool(false)
-			},
-		},
-		"PBool not overridden by nil": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PBool = aws.Bool(true)
-			},
-			override: func(s *testBasicTransformerStruct) {},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PBool = aws.Bool(true)
-			},
-		},
-		"PInt overridden": {
-			original: func(s *testBasicTransformerStruct) {
 				s.PInt = aws.Int(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PInt = aws.Int(42)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PInt = aws.Int(42)
-			},
-		},
-		"PInt explicitly overridden by zero value": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PInt = aws.Int(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PInt = aws.Int(0)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PInt = aws.Int(0)
-			},
-		},
-		"PInt not overridden by nil": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PInt = aws.Int(24)
-			},
-			override: func(s *testBasicTransformerStruct) {},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PInt = aws.Int(24)
-			},
-		},
-		"PInt64 overridden": {
-			original: func(s *testBasicTransformerStruct) {
 				s.PInt64 = aws.Int64(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PInt64 = aws.Int64(42)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PInt64 = aws.Int64(42)
-			},
-		},
-		"PInt64 explicitly overridden by zero value": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PInt64 = aws.Int64(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PInt64 = aws.Int64(0)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PInt64 = aws.Int64(0)
-			},
-		},
-		"PInt64 not overridden by nil": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PInt64 = aws.Int64(24)
-			},
-			override: func(s *testBasicTransformerStruct) {},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PInt64 = aws.Int64(24)
-			},
-		},
-		"PUint16 overridden": {
-			original: func(s *testBasicTransformerStruct) {
 				s.PUint16 = aws.Uint16(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PUint16 = aws.Uint16(42)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PUint16 = aws.Uint16(42)
-			},
-		},
-		"PUint16 explicitly overridden by zero value": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PUint16 = aws.Uint16(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PUint16 = aws.Uint16(0)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PUint16 = aws.Uint16(0)
-			},
-		},
-		"PUint16 not overridden by nil": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PUint16 = aws.Uint16(24)
-			},
-			override: func(s *testBasicTransformerStruct) {},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PUint16 = aws.Uint16(24)
-			},
-		},
-		"PUint32 overridden": {
-			original: func(s *testBasicTransformerStruct) {
 				s.PUint32 = aws.Uint32(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PUint32 = aws.Uint32(42)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PUint32 = aws.Uint32(42)
-			},
-		},
-		"PUint32 explicitly overridden by zero value": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PUint32 = aws.Uint32(24)
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PUint32 = aws.Uint32(0)
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PUint32 = aws.Uint32(0)
-			},
-		},
-		"PUint32 not overridden by nil": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PUint32 = aws.Uint32(24)
-			},
-			override: func(s *testBasicTransformerStruct) {},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PUint32 = aws.Uint32(24)
-			},
-		},
-		"PString overridden": {
-			original: func(s *testBasicTransformerStruct) {
 				s.PString = aws.String("horse")
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PString = aws.String("pony")
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PString = aws.String("pony")
-			},
-		},
-		"PString explicitly overridden by zero value": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PString = aws.String("horse")
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.PString = aws.String("")
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PString = aws.String("")
-			},
-		},
-		"PString not overridden by nil": {
-			original: func(s *testBasicTransformerStruct) {
-				s.PString = aws.String("horse")
-			},
-			override: func(s *testBasicTransformerStruct) {},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.PString = aws.String("horse")
-			},
-		},
-		"PSlice overridden": {
-			original: func(s *testBasicTransformerStruct) {
+				s.Slice = []string{"horses", "run"}
+
 				mockSlice := []string{"horses", "run"}
 				s.PSlice = &mockSlice
 			},
 			override: func(s *testBasicTransformerStruct) {
+				s.PBool = aws.Bool(true)
+				s.PInt = aws.Int(42)
+				s.PInt64 = aws.Int64(42)
+				s.PUint16 = aws.Uint16(42)
+				s.PUint32 = aws.Uint32(42)
+				s.PString = aws.String("pony")
+				s.Slice = []string{"pony", "run"}
+
 				mockSlice := []string{"pony", "run"}
 				s.PSlice = &mockSlice
 			},
 			wanted: func(s *testBasicTransformerStruct) {
+				s.PBool = aws.Bool(true)
+				s.PInt = aws.Int(42)
+				s.PInt64 = aws.Int64(42)
+				s.PUint16 = aws.Uint16(42)
+				s.PUint32 = aws.Uint32(42)
+				s.PString = aws.String("pony")
+				s.Slice = []string{"pony", "run"}
+
 				mockSlice := []string{"pony", "run"}
 				s.PSlice = &mockSlice
 			},
 		},
-		"PSlice explicitly overridden by zero value": {
+		"explicitly overridden by zero value": {
 			original: func(s *testBasicTransformerStruct) {
+				s.PBool = aws.Bool(true)
+				s.PInt = aws.Int(24)
+				s.PInt64 = aws.Int64(24)
+				s.PUint16 = aws.Uint16(24)
+				s.PUint32 = aws.Uint32(24)
+				s.PString = aws.String("horse")
+				s.Slice = []string{"horses", "run"}
+
 				mockSlice := []string{"horses", "run"}
 				s.PSlice = &mockSlice
 			},
 			override: func(s *testBasicTransformerStruct) {
+				s.PBool = aws.Bool(false)
+				s.PInt = aws.Int(0)
+				s.PInt64 = aws.Int64(0)
+				s.PUint16 = aws.Uint16(0)
+				s.PUint32 = aws.Uint32(0)
+				s.PString = aws.String("")
+				s.Slice = []string{}
+
 				var mockSlice []string
 				s.PSlice = &mockSlice
 			},
 			wanted: func(s *testBasicTransformerStruct) {
+				s.PBool = aws.Bool(false)
+				s.PInt = aws.Int(0)
+				s.PInt64 = aws.Int64(0)
+				s.PUint16 = aws.Uint16(0)
+				s.PUint32 = aws.Uint32(0)
+				s.PString = aws.String("")
+				s.Slice = []string{}
+
 				var mockSlice []string
 				s.PSlice = &mockSlice
 			},
 		},
-		"PSlice not overridden by nil": {
+		"not overridden by nil": {
 			original: func(s *testBasicTransformerStruct) {
+				s.PBool = aws.Bool(true)
+				s.PInt = aws.Int(24)
+				s.PInt64 = aws.Int64(24)
+				s.PUint16 = aws.Uint16(24)
+				s.PUint32 = aws.Uint32(24)
+				s.PString = aws.String("horse")
+				s.Slice = []string{"horses", "run"}
+
 				mockSlice := []string{"horses", "run"}
 				s.PSlice = &mockSlice
 			},
 			override: func(s *testBasicTransformerStruct) {},
 			wanted: func(s *testBasicTransformerStruct) {
+				s.PBool = aws.Bool(true)
+				s.PInt = aws.Int(24)
+				s.PInt64 = aws.Int64(24)
+				s.PUint16 = aws.Uint16(24)
+				s.PUint32 = aws.Uint32(24)
+				s.PString = aws.String("horse")
+				s.Slice = []string{"horses", "run"}
+
 				mockSlice := []string{"horses", "run"}
 				s.PSlice = &mockSlice
-			},
-		},
-		"slice overridden": {
-			original: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{"horses", "run"}
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{"pony", "run"}
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{"pony", "run"}
-			},
-		},
-		"slice explicitly overridden by zero value": {
-			original: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{"horses", "run"}
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{}
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{}
-			},
-		},
-		"slice not overridden by nil": {
-			original: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{"horses", "run"}
-			},
-			override: func(s *testBasicTransformerStruct) {
-				s.Slice = nil
-			},
-			wanted: func(s *testBasicTransformerStruct) {
-				s.Slice = []string{"horses", "run"}
 			},
 		},
 	}
