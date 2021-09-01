@@ -241,10 +241,6 @@ type stringSliceOrString struct {
 	StringSlice []string
 }
 
-func isEmptyStringSliceOrString(s *stringSliceOrString) bool {
-	return s.StringSlice == nil && s.String == nil
-}
-
 func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(interface{}) error) error {
 	if err := unmarshal(&s.StringSlice); err != nil {
 		switch err.(type) {
@@ -447,10 +443,6 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 // PublishConfig represents the configurable options for setting up publishers.
 type PublishConfig struct {
 	Topics []Topic `yaml:"topics"`
-}
-
-func (c *PublishConfig) isEmpty() bool {
-	return c.Topics == nil
 }
 
 // Topic represents the configurable options for setting up a SNS Topic.
