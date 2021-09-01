@@ -519,28 +519,28 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"storage overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
-				job.Environments["test"].Storage = &Storage{
+				job.Environments["test"].Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: storage not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 				job.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 			},

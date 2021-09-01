@@ -1462,28 +1462,28 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 		},
 		"storage overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
-				svc.Environments["test"].Storage = &Storage{
+				svc.Environments["test"].Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: storage not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 				svc.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 			},

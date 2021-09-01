@@ -429,7 +429,7 @@ type TaskConfig struct {
 	ExecuteCommand ExecuteCommand        `yaml:"exec"`
 	Variables      map[string]string     `yaml:"variables"`
 	Secrets        map[string]string     `yaml:"secrets"`
-	Storage        *Storage              `yaml:"storage"`
+	Storage        Storage               `yaml:"storage"`
 }
 
 // TaskPlatform returns the platform for the service.

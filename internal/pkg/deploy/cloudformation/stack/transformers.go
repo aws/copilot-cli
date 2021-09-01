@@ -358,8 +358,8 @@ func isValidTaskDefOverridePath(path string) bool {
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(wlName *string, in *manifest.Storage) (*template.StorageOpts, error) {
-	if in == nil {
+func convertStorageOpts(wlName *string, in manifest.Storage) (*template.StorageOpts, error) {
+	if in.IsEmpty() {
 		return nil, nil
 	}
 	if err := validateStorageConfig(in); err != nil {

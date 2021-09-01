@@ -86,8 +86,8 @@ func validatePath(input string, maxLength int) error {
 	return nil
 }
 
-func validateStorageConfig(in *manifest.Storage) error {
-	if in == nil {
+func validateStorageConfig(in manifest.Storage) error {
+	if in.IsEmpty() {
 		return nil
 	}
 	return validateVolumes(in.Volumes)

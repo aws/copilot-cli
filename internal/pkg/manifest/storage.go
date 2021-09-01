@@ -21,6 +21,11 @@ type Storage struct {
 	Volumes   map[string]*Volume `yaml:"volumes"`
 }
 
+// TODO: add comment and unit test
+func (s *Storage) IsEmpty() bool {
+	return s.Ephemeral == nil && s.Volumes == nil
+}
+
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
 	EFS            *EFSConfigOrBool `yaml:"efs"`

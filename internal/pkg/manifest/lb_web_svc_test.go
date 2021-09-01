@@ -226,7 +226,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
@@ -276,7 +276,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
@@ -334,7 +334,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
@@ -396,7 +396,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
-							Storage: &Storage{
+							Storage: Storage{
 								Volumes: map[string]*Volume{
 									"myEFSVolume": {
 										EFS: &EFSConfigOrBool{
@@ -479,7 +479,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{

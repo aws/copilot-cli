@@ -1205,7 +1205,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			}
 
 			// WHEN
-			got, err := convertStorageOpts(aws.String("fe"), &s)
+			got, err := convertStorageOpts(aws.String("fe"), s)
 
 			// THEN
 			if tc.wantErr != "" {
