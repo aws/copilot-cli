@@ -469,10 +469,7 @@ func convertEFSPermissions(input map[string]*manifest.Volume) ([]*template.EFSPe
 		if volume.ReadOnly != nil {
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
-		var accessPointID *string
-		if volume.EFS.Advanced.AuthConfig != nil {
-			accessPointID = volume.EFS.Advanced.AuthConfig.AccessPointID
-		}
+		accessPointID := volume.EFS.Advanced.AuthConfig.AccessPointID
 		output = append(output, &template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
@@ -565,7 +562,7 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 	// Set default values for IAM and AccessPointID
 	iam := aws.String(defaultIAM)
-	if in.AuthConfig == nil {
+	if in.AuthConfig.IsEmpty() {
 		return &template.EFSVolumeConfiguration{
 			Filesystem:    in.FileSystemID,
 			RootDirectory: rootDir,

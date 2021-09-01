@@ -915,7 +915,7 @@ func Test_convertStorageOpts(t *testing.T) {
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/"),
-							AuthConfig: &manifest.AuthorizationConfig{
+							AuthConfig: manifest.AuthorizationConfig{
 								IAM:           aws.Bool(true),
 								AccessPointID: aws.String("ap-1234"),
 							},
@@ -962,7 +962,7 @@ func Test_convertStorageOpts(t *testing.T) {
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/wordpress"),
-							AuthConfig: &manifest.AuthorizationConfig{
+							AuthConfig: manifest.AuthorizationConfig{
 								IAM: aws.Bool(true),
 							},
 						},

@@ -377,7 +377,7 @@ func validateEFSConfig(in manifest.Volume) error {
 }
 
 func validateAuthConfig(in manifest.EFSVolumeConfiguration) error {
-	if in.AuthConfig == nil {
+	if in.AuthConfig.IsEmpty() {
 		return nil
 	}
 	rd := aws.StringValue(in.RootDirectory)

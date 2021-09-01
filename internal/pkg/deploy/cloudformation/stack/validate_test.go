@@ -47,7 +47,7 @@ func Test_validateEFSConfig(t *testing.T) {
 				Advanced: manifest.EFSVolumeConfiguration{
 					FileSystemID:  aws.String("fs-1234"),
 					RootDirectory: aws.String("/files"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM: aws.Bool(true),
 					},
 				},
@@ -58,7 +58,7 @@ func Test_validateEFSConfig(t *testing.T) {
 				Advanced: manifest.EFSVolumeConfiguration{
 					FileSystemID:  aws.String("fs-1234"),
 					RootDirectory: aws.String("/files"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM:           aws.Bool(true),
 						AccessPointID: aws.String("fsap-12345"),
 					},
@@ -70,7 +70,7 @@ func Test_validateEFSConfig(t *testing.T) {
 			inConfig: &manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					FileSystemID: aws.String("fs-1234"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM:           aws.Bool(false),
 						AccessPointID: aws.String("fsap-12345"),
 					},
@@ -133,7 +133,7 @@ func Test_validateEFSConfig(t *testing.T) {
 			inConfig: &manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					RootDirectory: aws.String("/storage"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM: aws.Bool(true),
 					},
 				},

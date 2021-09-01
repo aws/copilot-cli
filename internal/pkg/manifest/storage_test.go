@@ -69,7 +69,7 @@ efs:
 					Advanced: EFSVolumeConfiguration{
 						FileSystemID:  aws.String("fs-12345"),
 						RootDirectory: aws.String("/"),
-						AuthConfig: &AuthorizationConfig{
+						AuthConfig: AuthorizationConfig{
 							IAM:           aws.Bool(true),
 							AccessPointID: aws.String("fsap-1234"),
 						},

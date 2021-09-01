@@ -1048,7 +1048,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -1076,7 +1076,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID:        aws.Uint32(13),
-									AuthConfig: nil,
+									AuthConfig: AuthorizationConfig{},
 								},
 							},
 						},
@@ -1102,7 +1102,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockIDTest"),
 									},
@@ -1119,7 +1119,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: nil,
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockIDTest"),
 									},
@@ -1297,7 +1297,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -1324,7 +1324,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: nil,
+									AuthConfig: AuthorizationConfig{},
 									GID:        aws.Uint32(13),
 								},
 							},
@@ -1351,7 +1351,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -1367,7 +1367,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -1846,7 +1846,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -1859,7 +1859,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockPointTest"),
 									},
@@ -1875,7 +1875,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockPointTest"),
 									},
@@ -1893,7 +1893,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -1917,7 +1917,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -1958,7 +1958,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
 									},
 								},
@@ -1971,7 +1971,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -1986,7 +1986,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -2003,7 +2003,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -2016,7 +2016,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
 									},
 								},
@@ -2031,7 +2031,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
 									},
 								},
@@ -2048,7 +2048,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -2061,7 +2061,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{},
+									AuthConfig: AuthorizationConfig{},
 								},
 							},
 						},
@@ -2074,7 +2074,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -2091,7 +2091,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -2104,7 +2104,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPointTest"),
 									},
 								},
@@ -2119,7 +2119,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPointTest"),
 									},
 								},
@@ -2136,7 +2136,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -2149,7 +2149,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String(""),
 									},
 								},
@@ -2164,7 +2164,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String(""),
 									},
 								},
@@ -2181,7 +2181,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -2194,7 +2194,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{},
+									AuthConfig: AuthorizationConfig{},
 								},
 							},
 						},
@@ -2207,7 +2207,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						"mockVolume1": {
 							EFS: &EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},

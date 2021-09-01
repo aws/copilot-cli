@@ -344,7 +344,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									EFS: &EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
-											AuthConfig: &AuthorizationConfig{
+											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-1234"),
 											},
@@ -402,7 +402,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										EFS: &EFSConfigOrBool{
 											Advanced: EFSVolumeConfiguration{
 												FileSystemID: aws.String("fs-5678"),
-												AuthConfig: &AuthorizationConfig{
+												AuthConfig: AuthorizationConfig{
 													AccessPointID: aws.String("ap-5678"),
 												},
 											},
@@ -489,7 +489,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									EFS: &EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-5678"),
-											AuthConfig: &AuthorizationConfig{
+											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-5678"),
 											},
