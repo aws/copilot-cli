@@ -601,11 +601,7 @@ func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts 
 	return opts
 }
 
-func convertAlias(alias *manifest.Alias) ([]string, error) {
-	if alias == nil {
-		return nil, nil
-	}
-
+func convertAlias(alias manifest.Alias) ([]string, error) {
 	out, err := alias.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)

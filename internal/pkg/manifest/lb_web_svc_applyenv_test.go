@@ -217,28 +217,28 @@ func TestApplyEnv_HTTP(t *testing.T) {
 		},
 		"alias overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mockAlias"),
 				}
-				svc.Environments["test"].Alias = &Alias{
+				svc.Environments["test"].Alias = Alias{
 					String: aws.String("mockAliasTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mockAliasTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: alias not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mockAlias"),
 				}
 				svc.Environments["test"].RoutingRule = RoutingRule{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mockAlias"),
 				}
 			},
@@ -867,116 +867,116 @@ func TestApplyEnv_HTTP_Alias(t *testing.T) {
 	}{
 		"composite fields: string slice is overridden if string is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{"mock", "alias"},
 				}
-				svc.Environments["test"].Alias = &Alias{
+				svc.Environments["test"].Alias = Alias{
 					String: aws.String("mock alias test"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mock alias test"),
 				}
 			},
 		},
 		"FIXED_BUG: composite fields: string is overridden if string slice is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mock alias"),
 				}
-				svc.Environments["test"].Alias = &Alias{
+				svc.Environments["test"].Alias = Alias{
 					StringSlice: []string{"mock", "alias_test", "test"},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{"mock", "alias_test", "test"},
 				}
 			},
 		},
 		"string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mock alias"),
 				}
-				svc.Environments["test"].Alias = &Alias{
+				svc.Environments["test"].Alias = Alias{
 					String: aws.String("mock alias test"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mock alias test"),
 				}
 			},
 		},
 		"string explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mock alias"),
 				}
-				svc.Environments["test"].Alias = &Alias{
+				svc.Environments["test"].Alias = Alias{
 					String: aws.String(""),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String(""),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mock alias"),
 				}
 				svc.Environments["test"].RoutingRule = RoutingRule{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					String: aws.String("mock alias"),
 				}
 			},
 		},
 		"string slice overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{"mock", "alias"},
 				}
-				svc.Environments["test"].Alias = &Alias{
+				svc.Environments["test"].Alias = Alias{
 					StringSlice: []string{"mock", "alias_test", "test"},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{"mock", "alias_test", "test"},
 				}
 			},
 		},
 		"string slice explicitly overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{"mock", "entrypoint"},
 				}
-				svc.Environments["test"].Alias = &Alias{
+				svc.Environments["test"].Alias = Alias{
 					StringSlice: []string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{},
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: string slice not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{"mock", "alias"},
 				}
 				svc.Environments["test"].RoutingRule = RoutingRule{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Alias = &Alias{
+				svc.Alias = Alias{
 					StringSlice: []string{"mock", "alias"},
 				}
 			},

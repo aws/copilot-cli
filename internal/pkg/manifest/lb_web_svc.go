@@ -174,7 +174,7 @@ type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness          *bool                   `yaml:"stickiness"`
-	Alias               *Alias                  `yaml:"alias"`
+	Alias               Alias                   `yaml:"alias"`
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer          *string  `yaml:"target_container"`
@@ -185,6 +185,11 @@ type RoutingRule struct {
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
 // can either be of type string or type slice of string.
 type Alias stringSliceOrString
+
+// todo: ADD COMMENT AND test
+func (e *Alias) IsEmpty() bool {
+	return e.String == nil && e.StringSlice == nil
+}
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
 // struct, allowing it to perform more complex unmarshaling behavior.
