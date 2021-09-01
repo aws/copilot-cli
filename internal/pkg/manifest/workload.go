@@ -241,6 +241,10 @@ type stringSliceOrString struct {
 	StringSlice []string
 }
 
+func isEmptyStringSliceOrString(s *stringSliceOrString) bool {
+	return s.StringSlice == nil && s.String == nil
+}
+
 func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(interface{}) error) error {
 	if err := unmarshal(&s.StringSlice); err != nil {
 		switch err.(type) {
@@ -384,7 +388,7 @@ type Logging struct {
 	ConfigFile     *string           `yaml:"configFilePath"`
 }
 
-// TODO: add cmment for exported and unit test
+// IsEmpty returns empty if the struct has all zero members.
 func (lc *Logging) IsEmpty() bool {
 	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil && lc.SecretOptions == nil && lc.ConfigFile == nil
 }
@@ -460,7 +464,7 @@ type NetworkConfig struct {
 	VPC vpcConfig `yaml:"vpc"`
 }
 
-// TODO: Add exported comment & unit test
+// IsEmpty returns empty if the struct has all zero members.
 func (c *NetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }

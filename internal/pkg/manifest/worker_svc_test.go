@@ -1281,3 +1281,30 @@ func TestWorkerSvc_Subscriptions(t *testing.T) {
 		})
 	}
 }
+
+func TestDeadLetterQueue_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     DeadLetterQueue
+		wanted bool
+	}{
+		"empty dead letter queue": {
+			in:     DeadLetterQueue{},
+			wanted: true,
+		},
+		"non empty dead letter queue": {
+			in: DeadLetterQueue{
+				Tries: aws.Uint16(3),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}

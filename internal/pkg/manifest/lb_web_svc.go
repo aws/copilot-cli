@@ -186,7 +186,7 @@ type RoutingRule struct {
 // can either be of type string or type slice of string.
 type Alias stringSliceOrString
 
-// todo: ADD COMMENT AND test
+// IsEmpty returns empty if Alias is empty.
 func (e *Alias) IsEmpty() bool {
 	return e.String == nil && e.StringSlice == nil
 }

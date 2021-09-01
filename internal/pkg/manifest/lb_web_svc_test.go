@@ -1360,3 +1360,30 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 		})
 	}
 }
+
+func TestAlias_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     Alias
+		wanted bool
+	}{
+		"empty alias": {
+			in:     Alias{},
+			wanted: true,
+		},
+		"non empty alias": {
+			in: Alias{
+				String: aws.String("alias test"),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}

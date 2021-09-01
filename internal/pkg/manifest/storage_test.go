@@ -247,3 +247,59 @@ func Test_UseManagedFS(t *testing.T) {
 		})
 	}
 }
+
+func TestStorage_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     Storage
+		wanted bool
+	}{
+		"empty storage": {
+			in:     Storage{},
+			wanted: true,
+		},
+		"non empty storage": {
+			in: Storage{
+				Volumes: map[string]*Volume{
+					"volume1": nil,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestAuthorizationConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     AuthorizationConfig
+		wanted bool
+	}{
+		"empty auth": {
+			in:     AuthorizationConfig{},
+			wanted: true,
+		},
+		"non empty auth": {
+			in: AuthorizationConfig{
+				IAM: aws.Bool(false),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}

@@ -63,7 +63,7 @@ type DeadLetterQueue struct {
 	Tries *uint16 `yaml:"tries"`
 }
 
-// TODO: comment and test
+// IsEmpty returns empty if the struct has all zero members.
 func (q *DeadLetterQueue) IsEmpty() bool {
 	return q.Tries == nil
 }

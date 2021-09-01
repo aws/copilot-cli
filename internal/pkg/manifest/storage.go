@@ -21,7 +21,7 @@ type Storage struct {
 	Volumes   map[string]*Volume `yaml:"volumes"`
 }
 
-// TODO: add comment and unit test
+// IsEmpty returns empty if the struct has all zero members.
 func (s *Storage) IsEmpty() bool {
 	return s.Ephemeral == nil && s.Volumes == nil
 }
@@ -160,7 +160,7 @@ type AuthorizationConfig struct {
 	AccessPointID *string `yaml:"access_point_id"` // Default ""
 }
 
-// TODO: add comment and unit test
+// IsEmpty returns empty if the struct has all zero members.
 func (a *AuthorizationConfig) IsEmpty() bool {
 	return a.IAM == nil && a.AccessPointID == nil
 }

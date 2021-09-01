@@ -549,6 +549,35 @@ func TestBuildConfig(t *testing.T) {
 	}
 }
 
+func TestLogging_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     Logging
+		wanted bool
+	}{
+		"empty logging": {
+			in:     Logging{},
+			wanted: true,
+		},
+		"non empty logging": {
+			in: Logging{
+				SecretOptions: map[string]string{
+					"secret1": "value1",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
 func TestLogging_LogImage(t *testing.T) {
 	testCases := map[string]struct {
 		inputImage  *string
@@ -600,6 +629,34 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 			}
 			got := l.GetEnableMetadata()
 
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestNetworkConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     NetworkConfig
+		wanted bool
+	}{
+		"empty network config": {
+			in:     NetworkConfig{},
+			wanted: true,
+		},
+		"non empty network config": {
+			in: NetworkConfig{
+				VPC: vpcConfig{
+					SecurityGroups: []string{"group"},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
 			require.Equal(t, tc.wanted, got)
 		})
 	}
