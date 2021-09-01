@@ -39,6 +39,7 @@ nav:
       - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
       - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
       - Backend Service: docs/manifest/backend-service.en.md
+      - Worker Service: docs/manifest/worker-service.en.md
       - Scheduled Job: docs/manifest/scheduled-job.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
@@ -47,6 +48,7 @@ nav:
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Secrets: docs/developing/secrets.en.md
       - Service Discovery: docs/developing/service-discovery.en.md
+      - Publish/Subscribe: docs/developing/publish-subscribe.en.md
       - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
       - Sidecars: docs/developing/sidecars.en.md
       - Storage: docs/developing/storage.en.md

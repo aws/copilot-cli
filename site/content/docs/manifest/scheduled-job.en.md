@@ -254,6 +254,8 @@ Optional. The secrets to pass to the log configuration.
 <span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
 Optional. The full config file path in your custom Fluent Bit image.
 
+{% include 'publish.en.md' %}
+
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
