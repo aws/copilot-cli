@@ -338,7 +338,7 @@ subscribe:
 							},
 							Queue: &SQSQueue{
 								Delay: &duration15Seconds,
-								DeadLetter: &DeadLetterQueue{
+								DeadLetter: DeadLetterQueue{
 									Tries: aws.Uint16(5),
 								},
 							},

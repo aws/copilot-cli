@@ -589,14 +589,14 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 			inSvc: func(svc *WorkerService) {
 				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},
 				}
 				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(42),
 						},
 					},
@@ -605,7 +605,7 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 			wanted: func(svc *WorkerService) {
 				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(42),
 						},
 					},
@@ -616,14 +616,14 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 			inSvc: func(svc *WorkerService) {
 				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},
 				}
 				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(0),
 						},
 					},
@@ -632,7 +632,7 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 			wanted: func(svc *WorkerService) {
 				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(0),
 						},
 					},
@@ -643,7 +643,7 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 			inSvc: func(svc *WorkerService) {
 				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},
@@ -655,7 +655,7 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 			wanted: func(svc *WorkerService) {
 				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},

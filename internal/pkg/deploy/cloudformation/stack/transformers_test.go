@@ -1635,7 +1635,7 @@ func Test_convertSubscribe(t *testing.T) {
 					Retention: &duration111Seconds,
 					Delay:     &duration111Seconds,
 					Timeout:   &duration111Seconds,
-					DeadLetter: &manifest.DeadLetterQueue{
+					DeadLetter: manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
 				},

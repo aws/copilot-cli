@@ -645,18 +645,18 @@ func TestValidateTime(t *testing.T) {
 
 func TestValidateDeadLetter(t *testing.T) {
 	testCases := map[string]struct {
-		inDL *manifest.DeadLetterQueue
+		inDL manifest.DeadLetterQueue
 
 		wantErr error
 	}{
 		"good case": {
-			inDL: &manifest.DeadLetterQueue{
+			inDL: manifest.DeadLetterQueue{
 				Tries: aws.Uint16(35),
 			},
 			wantErr: nil,
 		},
 		"wrong number of tries": {
-			inDL: &manifest.DeadLetterQueue{
+			inDL: manifest.DeadLetterQueue{
 				Tries: aws.Uint16(9999),
 			},
 			wantErr: errDeadLetterQueueTries,

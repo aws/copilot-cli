@@ -491,7 +491,7 @@ func validateTime(t, floor, ceiling time.Duration) error {
 	return nil
 }
 
-func validateDeadLetter(dl *manifest.DeadLetterQueue) error {
+func validateDeadLetter(dl manifest.DeadLetterQueue) error {
 	if aws.Uint16Value(dl.Tries) > uint16(deadLetterTriesMaxValue) {
 		return errDeadLetterQueueTries
 	}

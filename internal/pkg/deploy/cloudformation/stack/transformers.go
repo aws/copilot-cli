@@ -774,8 +774,8 @@ func convertTimeout(t *time.Duration) (*int64, error) {
 	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
 }
 
-func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
-	if d == nil {
+func convertDeadLetter(d manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
+	if d.IsEmpty() {
 		return nil, nil
 	}
 	if err := validateDeadLetter(d); err != nil {

@@ -52,15 +52,20 @@ type TopicSubscription struct {
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Retention  *time.Duration   `yaml:"retention"`
-	Delay      *time.Duration   `yaml:"delay"`
-	Timeout    *time.Duration   `yaml:"timeout"`
-	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
+	Retention  *time.Duration  `yaml:"retention"`
+	Delay      *time.Duration  `yaml:"delay"`
+	Timeout    *time.Duration  `yaml:"timeout"`
+	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
 	Tries *uint16 `yaml:"tries"`
+}
+
+// TODO: comment and test
+func (q *DeadLetterQueue) IsEmpty() bool {
+	return q.Tries == nil
 }
 
 // WorkerServiceProps represents the configuration needed to create a worker service.
