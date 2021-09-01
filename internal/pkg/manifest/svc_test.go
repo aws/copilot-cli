@@ -322,7 +322,7 @@ subscribe:
 								Placement: stringP("public"),
 							},
 						},
-						Subscribe: &SubscribeConfig{
+						Subscribe: SubscribeConfig{
 							Topics: []TopicSubscription{
 								{
 									Name:    "publisher1",

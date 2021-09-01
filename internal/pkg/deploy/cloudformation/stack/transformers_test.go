@@ -1606,17 +1606,17 @@ func Test_convertSubscribe(t *testing.T) {
 	duration111Seconds := 111 * time.Second
 	duration5Days := 120 * time.Hour
 	testCases := map[string]struct {
-		inSubscribe *manifest.SubscribeConfig
+		inSubscribe manifest.SubscribeConfig
 
 		wanted      *template.SubscribeOpts
 		wantedError error
 	}{
 		"empty subscription": {
-			inSubscribe: &manifest.SubscribeConfig{},
+			inSubscribe: manifest.SubscribeConfig{},
 			wanted:      nil,
 		},
 		"subscription with empty topic subscriptions": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{},
 				},
@@ -1624,7 +1624,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPublishTopicField),
 		},
 		"valid subscribe": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "name",
@@ -1658,7 +1658,7 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with minimal queue": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "name",
@@ -1678,7 +1678,7 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"invalid topic name": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "t@p!c1~",
@@ -1689,7 +1689,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wantedError: fmt.Errorf(`invalid topic subscription "t@p!c1~": %w`, errInvalidPubSubTopicName),
 		},
 		"invalid service name": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "topic1",
@@ -1700,7 +1700,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errSvcNameBadFormat),
 		},
 		"subscribe queue delay invalid": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "name",

@@ -32,7 +32,7 @@ type WorkerServiceConfig struct {
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
-	Subscribe        *SubscribeConfig          `yaml:"subscribe"`
+	Subscribe        SubscribeConfig           `yaml:"subscribe"`
 	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
@@ -110,10 +110,7 @@ func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
 // receives messages from.
 func (s *WorkerService) Subscriptions() []TopicSubscription {
-	if s.Subscribe != nil {
-		return s.Subscribe.Topics
-	}
-	return nil
+	return s.Subscribe.Topics
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -150,7 +147,7 @@ func newDefaultWorkerService() *WorkerService {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{},
-			Subscribe:   &SubscribeConfig{},
+			Subscribe:   SubscribeConfig{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),

@@ -93,7 +93,7 @@ Outputs:
 		"failed parsing subscribe template": {
 			setUpManifest: func(svc *WorkerService) {
 				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
-				testWorkerSvcManifestWithBadSubscribe.Subscribe = &manifest.SubscribeConfig{
+				testWorkerSvcManifestWithBadSubscribe.Subscribe = manifest.SubscribeConfig{
 					Topics: []manifest.TopicSubscription{
 						{
 							Name:    "name",

@@ -676,8 +676,8 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	}, nil
 }
 
-func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
-	if s == nil || s.Topics == nil {
+func convertSubscribe(s manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
+	if s.Topics == nil {
 		return nil, nil
 	}
 
