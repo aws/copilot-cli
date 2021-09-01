@@ -318,7 +318,7 @@ func (t basicTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 	return nil
 }
 
-var transformPBasicOrSlice = func(dst, src reflect.Value) error {
+func transformPBasicOrSlice(dst, src reflect.Value) error {
 	// This condition shouldn't ever be true. It's merely here for extra safety so that `src.IsNil` won't panic.
 	if src.Kind() != reflect.Ptr && src.Kind() != reflect.Slice {
 		return nil
