@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -332,7 +331,7 @@ func (o *initJobOpts) legitimizePlatform() error {
 	if err != nil {
 		return fmt.Errorf("get docker engine platform: %w", err)
 	}
-	detectedPlatform := aws.String(dockerengine.PlatformString(detectedOs, detectedArch))
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
 	platform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
 	if err != nil {
 		return fmt.Errorf("redirect docker engine platform: %w", err)
@@ -340,7 +339,7 @@ func (o *initJobOpts) legitimizePlatform() error {
 	if platform == "" {
 		return nil
 	}
-	if platform != aws.StringValue(detectedPlatform) {
+	if platform != detectedPlatform {
 		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, platform)
 		o.platform = &platform
 	}
