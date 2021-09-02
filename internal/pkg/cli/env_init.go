@@ -475,7 +475,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		}
 		publicSubnets, err := o.selVPC.Subnets(input)
 		if err != nil {
-			if err == selector.ErrSubnetsNotFound {
+			if errors.Is(err, selector.ErrSubnetsNotFound) {
 				log.Warningf(`No existing subnets were found in VPC %s.
 If you proceed without at least two public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
 `, o.importVPC.ID)
