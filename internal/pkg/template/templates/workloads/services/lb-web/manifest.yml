@@ -28,8 +28,8 @@ image:
 
 cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
-{{- if .Platform}}    # See https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#platform
-platform: {{.Platform}}
+{{- if .Platform.PlatformString}}
+platform: {{.Platform.PlatformString}} # See https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#platform
 {{- end}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 {{- if not .TaskConfig.IsWindows}}

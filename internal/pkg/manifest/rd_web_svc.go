@@ -4,9 +4,7 @@
 package manifest
 
 import (
-	"errors"
-
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -44,7 +42,8 @@ type RequestDrivenWebServiceHttpConfig struct {
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
-	Port uint16
+	Port     uint16
+	Platform *PlatformArgsOrString
 }
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
@@ -61,6 +60,7 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -101,7 +101,7 @@ func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
 	if s.InstanceConfig.Platform == nil {
 		return nil, nil
 	}
-	return aws.String(dockerengine.PlatformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
+	return aws.String(platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -134,8 +134,12 @@ func (s *RequestDrivenWebService) windowsCompatibility() error {
 	if s.InstanceConfig.Platform == nil {
 		return nil
 	}
+	// Error out if user added Windows as platform in manifest.
 	if isWindowsPlatform(s.InstanceConfig.Platform) {
-		return errors.New("Windows is not supported for App Runner services")
+		return errAppRunnerInvalidPlatformWindows
+	}
+	if s.InstanceConfig.Platform.Arch() != ArchAMD64 || s.InstanceConfig.Platform.Arch() != ArchX86 {
+		return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)
 	}
 	return nil
 }

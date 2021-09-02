@@ -80,6 +80,73 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
+		"with windows platform": {
+			props: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "subscribers",
+					Dockerfile: "./subscribers/Dockerfile",
+				},
+				Path: "/",
+				HealthCheck: &ContainerHealthCheck{
+					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+				},
+				Platform: &PlatformArgsOrString{PlatformString: aws.String("windows/amd64")},
+
+				Port: 80,
+			},
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("subscribers"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./subscribers/Dockerfile"),
+									},
+								},
+							},
+							Port: aws.Uint16(80),
+						},
+						HealthCheck: &ContainerHealthCheck{
+							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+						},
+					},
+					RoutingRule: RoutingRule{
+						Path: stringP("/"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: stringP("/"),
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(1024),
+						Memory: aws.Int(2048),
+						Platform: &PlatformArgsOrString{
+							PlatformString: aws.String("windows/amd64"),
+							PlatformArgs: PlatformArgs{
+								OSFamily: nil,
+								Arch:     nil,
+							},
+						},
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
+							Placement: stringP("public"),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -164,6 +231,10 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./frontend/Dockerfile",
+				},
+				Platform: &PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
 				},
 			},
 			wantedTestdata: "lb-svc.yml",

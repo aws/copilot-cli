@@ -222,19 +222,9 @@ func (o *initSvcOpts) Execute() error {
 			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
 		}
 	}
-
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return fmt.Errorf("get/redirect docker engine platform: %w", err)
+	if err = o.legitimizePlatform(); err != nil {
+		return err
 	}
-	o.platform = platform
-	if o.platform != nil {
-		log.Warningf(`Your architecture type is currently unsupported. Setting platform %s instead.\n`, dockerengine.PlatformString(dockerengine.OSLinux, dockerengine.ArchAMD64))
-		if o.wkldType != manifest.RequestDrivenWebServiceType {
-			log.Warning("See 'platform' field in your manifest.\n")
-		}
-	}
-
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -242,7 +232,9 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
+			Platform: &manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -416,6 +408,30 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 
 	o.port = uint16(portUint)
 
+	return nil
+}
+
+func (o *initSvcOpts) legitimizePlatform() error {
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image != "" {
+		return nil
+	}
+	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
+	if err != nil {
+		return fmt.Errorf("get docker engine platform: %w", err)
+	}
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
+	platform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
+	if err != nil {
+		return fmt.Errorf("redirect docker engine platform: %w", err)
+	}
+	if platform == "" {
+		return nil
+	}
+	if platform != detectedPlatform {
+		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, platform)
+		o.platform = &platform
+	}
 	return nil
 }
 

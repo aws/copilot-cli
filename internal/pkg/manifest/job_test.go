@@ -25,6 +25,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 					Name:  "cuteness-aggregator",
 					Image: "copilot/cuteness-aggregator",
 				},
+				Platform: &PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
+				},
 				Schedule: "@weekly",
 			},
 			wantedTestData: "scheduled-job-no-timeout-or-retries.yml",
@@ -34,6 +38,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
+				},
+				Platform: &PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
 				},
 				Schedule: "0 */2 * * *",
 				Retries:  3,
@@ -47,6 +55,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
 				},
+				Platform: &PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
+				},
 				Schedule: "@every 5h",
 				Retries:  0,
 				Timeout:  "3h",
@@ -58,6 +70,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
+				},
+				Platform: &PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
 				},
 				Schedule: "@every 5h",
 				Retries:  5,

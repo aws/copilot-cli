@@ -20,6 +20,7 @@ type BackendServiceProps struct {
 	WorkloadProps
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    *PlatformArgsOrString // Optional platform configuration.
 }
 
 // BackendService holds the configuration to create a backend service manifest.
@@ -53,6 +54,13 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	if props.Platform != nil {
+		svc.BackendServiceConfig.Platform = props.Platform
+		if isWindowsPlatform(props.Platform) {
+			svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(windowsTaskCPU)
+			svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(windowsTaskMemory)
+		}
+	}
 	svc.parser = template.New()
 	return svc
 }

@@ -187,12 +187,9 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
+	if err = o.legitimizePlatform(); err != nil {
 		return err
 	}
-	o.platform = platform
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -201,7 +198,9 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
+			Platform: &manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
 		},
 
 		Schedule:    o.schedule,
@@ -320,6 +319,30 @@ func (o *initJobOpts) askSchedule() error {
 	}
 
 	o.schedule = schedule
+	return nil
+}
+
+func (o *initJobOpts) legitimizePlatform() error {
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image != "" {
+		return nil
+	}
+	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
+	if err != nil {
+		return fmt.Errorf("get docker engine platform: %w", err)
+	}
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
+	platform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
+	if err != nil {
+		return fmt.Errorf("redirect docker engine platform: %w", err)
+	}
+	if platform == "" {
+		return nil
+	}
+	if platform != detectedPlatform {
+		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, platform)
+		o.platform = &platform
+	}
 	return nil
 }
 

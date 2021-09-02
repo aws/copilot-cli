@@ -7,8 +7,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -76,6 +74,7 @@ type LoadBalancedWebServiceProps struct {
 	Path        string
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    *PlatformArgsOrString // Optional platform configuration.
 }
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
@@ -111,6 +110,13 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	if props.Platform != nil {
+		svc.LoadBalancedWebServiceConfig.Platform = props.Platform
+		if isWindowsPlatform(props.Platform) {
+			svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(windowsTaskCPU)
+			svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(windowsTaskMemory)
+		}
+	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	return svc
@@ -168,7 +174,7 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform == nil {
 		return nil, nil
 	}
-	return aws.String(dockerengine.PlatformString(t.Platform.OS(), t.Platform.Arch())), nil
+	return aws.String(platformString(t.Platform.OS(), t.Platform.Arch())), nil
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.
