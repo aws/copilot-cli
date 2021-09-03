@@ -26,7 +26,6 @@ var (
 	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
 	errNoContainerPath          = errors.New("`path` cannot be empty")
 	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
-	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
 	errDeadLetterQueueTries     = fmt.Errorf("DeadLetter `tries` field cannot exceed %d", deadLetterTriesMaxValue)
 )
