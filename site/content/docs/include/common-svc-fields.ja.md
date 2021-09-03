@@ -247,5 +247,16 @@ logging セクションには、コンテナの [FireLens](https://docs.aws.amaz
 
 <div class="separator"></div>
 
+<a id="taskdef_overrides" href="#taskdef_overrides" class="field">`taskdef_overrides`</a> <span class="type">Array of Rules</span>  
+`taskdef_overrides` セクションでは、ECS のタスク定義のオーバーライドルールを適用できます (例は[こちら](../developing/taskdef-overrides.ja.md #examples))。
+
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-path" href="#taskdef_overrides-path" class="field">`path`</a> <span class="type">String</span>
+必須設定項目です。オーバーライドするタスク定義のフィールドのパス。
+
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-value" href="#taskdef_overrides-value" class="field">`value`</a> <span class="type">Any</span>
+必須設定項目です。オーバーライドするタスク定義のフィールドの値。
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 `environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで 'prod' Environment で実行されるタスク数を ２ に設定し、'staging' Environment で実行される Fargate Spot capacity によるタスク数を ２ に設定します。

@@ -63,7 +63,9 @@ Pipeline の設定はワークスペースのレベルで作成されます。�
 Service がシンプルな Manifest ファイルを持つのと同様に、Pipeline にも Manifest があります。`pipeline init` コマンドの実行が完了すると、`copilot/` ディレクトリ内に `pipeline.yml` と `buildspec.yml` という２つのファイルが作成されます。`pipeline.yml` の中は次のような感じになっているはずです (<!-- textlint-disable ja-technical-writing/no-doubled-conjunction -->ここでは "api-frontend" という Service が "test" と "prod" の２つの Environment にデプロイされるものと仮定しましょう<!-- textlint-enable ja-technical-writing/no-doubled-conjunction -->)
 
 ```yaml
-# この YAML ファイルでは Environment の関係とデプロイ順序を定義します
+# Pipeline 名 "pipeline-ecs-kudos-kohidave-demo-api-frontend" の Manifest
+# この YAML ファイルは Pipeline を定義します。追跡するソースリポジトリと、Environment のデプロイ順序を指定します
+# 詳細はこちら: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
 # Pipeline 名
 name: pipeline-ecs-kudos-kohidave-demo-api-frontend
@@ -74,23 +76,23 @@ version: 1
 # このセクションでは Pipeline の実行をトリガーするソースを定義します
 source:
   # ソースコードのプロバイダ名を記述します
+  # (例: GitHub, Bitbucket, CodeCommit)
   provider: GitHub
-  # ソースが格納されている具体的な場所を指定する追加のプロパティです
-  # 例えば GitHub プロバイダには repository と branch というプロパティがあります
+  # ソースコードの場所を追加で指定するプロパティです
   properties:
     branch: main
     repository: https://github.com/kohidave/demo-api-frontend
     # オプション: 既存の CodeStar Connections で作成された接続名を利用することも可能です
     # connection_name: a-connection
 
-# このセクションでは各 Environment のデプロイ順序を定義します
+# このセクションでは Pipeline のデプロイ先となる Environment の順序を定義します
 stages:
-    - # デプロイ先の Environment 名
+    - # Environment 名
       name: test
       test_commands:
         - make test
         - echo "woo! Tests passed"
-    - # デプロイ先の Environment 名
+    - # Environment 名
       name: prod
       # requires_approval: true
 ```
