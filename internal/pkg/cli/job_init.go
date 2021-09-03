@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -188,14 +187,8 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	detectedPlatform, targetPlatform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return fmt.Errorf("get/redirect docker engine platform: %w", err)
-	}
-	if detectedPlatform != aws.StringValue(targetPlatform) {
-		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, aws.StringValue(targetPlatform))
-		o.platform = targetPlatform
+	if err = o.legitimizePlatform(); err != nil {
+		return err
 	}
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
@@ -326,6 +319,30 @@ func (o *initJobOpts) askSchedule() error {
 	}
 
 	o.schedule = schedule
+	return nil
+}
+
+func (o *initJobOpts) legitimizePlatform() error {
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image != "" {
+		return nil
+	}
+	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
+	if err != nil {
+		return fmt.Errorf("get docker engine platform: %w", err)
+	}
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
+	platform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
+	if err != nil {
+		return fmt.Errorf("redirect docker engine platform: %w", err)
+	}
+	if platform == "" {
+		return nil
+	}
+	if platform != detectedPlatform {
+		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, platform)
+		o.platform = &platform
+	}
 	return nil
 }
 

@@ -15,8 +15,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
@@ -191,8 +189,8 @@ func (c CmdClient) CheckDockerEngineRunning() error {
 	}
 }
 
-// getPlatform will run the `docker version` command to get the OS/Arch.
-func (c CmdClient) getPlatform() (os, arch string, err error) {
+// GetPlatform will run the `docker version` command to get the OS/Arch.
+func (c CmdClient) GetPlatform() (os, arch string, err error) {
 	if _, err := osexec.LookPath("docker"); err != nil {
 		return "", "", ErrDockerCommandNotFound
 	}
@@ -213,11 +211,6 @@ func (c CmdClient) getPlatform() (os, arch string, err error) {
 
 	}
 	return platform.OS, platform.Arch, nil
-}
-
-// PlatformString returns a specified of the format <os>/<arch>.
-func PlatformString(os, arch string) string {
-	return fmt.Sprintf("%s/%s", os, arch)
 }
 
 func imageName(uri, tag string) string {
@@ -257,28 +250,9 @@ func (c CmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
 	return false
 }
 
-// RedirectPlatform returns an alternative platform to use while building the image if it's not supported by AWS services.
-func (c CmdClient) RedirectPlatform(image string) (detectedPlatform string, targetPlatform *string, err error) {
-	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
-	if image != "" {
-		return "", nil, nil
-	}
-	os, arch, err := c.getPlatform()
-	if err != nil {
-		return "", nil, fmt.Errorf("get os/arch from docker: %w", err)
-	}
-	// Return nil if detect default platform.
-	detectedPlatform = PlatformString(os, arch)
-	if detectedPlatform == PlatformString(OSLinux, ArchAMD64) {
-		return "", nil, nil
-	}
-	// Change architectures to amd, but leave OS as is.
-	if arch != ArchAMD64 {
-		arch = ArchAMD64
-	}
-
-	// If a string is returned, it is not the default platform.
-	return detectedPlatform, aws.String(PlatformString(os, arch)), nil
+// PlatformString returns a specified of the format <os>/<arch>.
+func PlatformString(os, arch string) string {
+	return fmt.Sprintf("%s/%s", os, arch)
 }
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {

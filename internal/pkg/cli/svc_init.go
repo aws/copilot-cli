@@ -7,9 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
-
-	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
@@ -225,22 +222,9 @@ func (o *initSvcOpts) Execute() error {
 			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
 		}
 	}
-
-	detectedPlatform, targetPlatform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return fmt.Errorf("get/redirect docker engine platform: %w", err)
+	if err = o.legitimizePlatform(); err != nil {
+		return err
 	}
-	o.platform = targetPlatform
-	if o.platform != nil {
-		// Error out early if Windows && AppRunner/RDWS.
-		if strings.Split(aws.StringValue(targetPlatform), "/")[0] == manifest.OSWindows && o.wkldType == manifest.RequestDrivenWebServiceType {
-			return errors.New("Windows is not supported for App Runner services")
-		}
-		if detectedPlatform != aws.StringValue(targetPlatform) {
-			log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, aws.StringValue(o.platform))
-		}
-	}
-
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -424,6 +408,30 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 
 	o.port = uint16(portUint)
 
+	return nil
+}
+
+func (o *initSvcOpts) legitimizePlatform() error {
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image != "" {
+		return nil
+	}
+	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
+	if err != nil {
+		return fmt.Errorf("get docker engine platform: %w", err)
+	}
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
+	platform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
+	if err != nil {
+		return fmt.Errorf("redirect docker engine platform: %w", err)
+	}
+	if platform == "" {
+		return nil
+	}
+	if platform != detectedPlatform {
+		log.Warningf("Your platform %s is currently unsupported. Setting %s instead.\nSee 'platform' field in your manifest.\n", detectedPlatform, platform)
+		o.platform = &platform
+	}
 	return nil
 }
 

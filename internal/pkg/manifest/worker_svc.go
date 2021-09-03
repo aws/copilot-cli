@@ -128,8 +128,13 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	if props.Platform != nil {
 		svc.WorkerServiceConfig.Platform = props.Platform
 		if isWindowsPlatform(props.Platform) {
+<<<<<<< HEAD
 			svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(1024)
 			svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(2048)
+=======
+			svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(windowsTaskCPU)
+			svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(windowsTaskMemory)
+>>>>>>> archer/feat/pencere
 		}
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics

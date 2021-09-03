@@ -7,8 +7,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -115,8 +113,13 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	if props.Platform != nil {
 		svc.LoadBalancedWebServiceConfig.Platform = props.Platform
 		if isWindowsPlatform(props.Platform) {
+<<<<<<< HEAD
 			svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(1024)
 			svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(2048)
+=======
+			svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(windowsTaskCPU)
+			svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(windowsTaskMemory)
+>>>>>>> archer/feat/pencere
 		}
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
@@ -176,7 +179,7 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform == nil {
 		return nil, nil
 	}
-	return aws.String(dockerengine.PlatformString(t.Platform.OS(), t.Platform.Arch())), nil
+	return aws.String(platformString(t.Platform.OS(), t.Platform.Arch())), nil
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.
