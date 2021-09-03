@@ -610,10 +610,6 @@ func convertAlias(alias manifest.Alias) ([]string, error) {
 }
 
 func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error) {
-	//if entrypoint == nil {
-	//	return nil, nil
-	//}
-
 	out, err := entrypoint.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)

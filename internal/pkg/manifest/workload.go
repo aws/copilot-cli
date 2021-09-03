@@ -92,13 +92,13 @@ type Image struct {
 // ImageWithHealthcheck represents a container image with health check.
 type ImageWithHealthcheck struct {
 	Image       `yaml:",inline"`
-	HealthCheck *ContainerHealthCheck `yaml:"healthcheck"`
+	HealthCheck *ContainerHealthCheck `yaml:"healthcheck"` // This is used as a pointer so that we can use `{{- if .ContainerHealthCheck}}` for manifest rendering.
 }
 
 // ImageWithPortAndHealthcheck represents a container image with an exposed port and health check.
 type ImageWithPortAndHealthcheck struct {
 	ImageWithPort `yaml:",inline"`
-	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"`
+	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"` // This is used as a pointer so that we can use `{{- if .ContainerHealthCheck}}` for manifest rendering.
 }
 
 // ImageWithPort represents a container image with an exposed port.

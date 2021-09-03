@@ -28,7 +28,7 @@ func (s *Storage) IsEmpty() bool {
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
-	EFS            *EFSConfigOrBool `yaml:"efs"` // TODO: this pointer can be removed after manifest validation is implemented. We need it to be a pointer right now to differentiate a non-specified EFS from an invalid empty EFS.
+	EFS            *EFSConfigOrBool `yaml:"efs"`
 	MountPointOpts `yaml:",inline"`
 }
 
