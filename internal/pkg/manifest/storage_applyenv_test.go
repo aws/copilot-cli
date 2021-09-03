@@ -68,7 +68,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -77,7 +77,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						}, // Modify the value for mockVolume1.
@@ -93,7 +93,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 							MountPointOpts: MountPointOpts{
@@ -101,7 +101,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -124,7 +124,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -143,7 +143,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -161,7 +161,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -178,7 +178,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -218,7 +218,7 @@ func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
 							},
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -241,7 +241,7 @@ func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPathTest"),
 							},
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -257,7 +257,7 @@ func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
 							},
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -276,7 +276,7 @@ func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
 							},
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -297,7 +297,7 @@ func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
 							},
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -311,7 +311,7 @@ func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
 							},
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -542,7 +542,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -553,7 +553,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -567,7 +567,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -583,7 +583,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -601,7 +601,7 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -640,7 +640,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -649,7 +649,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -663,7 +663,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: nil,
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
@@ -680,7 +680,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDir"),
 									FileSystemID:  aws.String("mockFileSystem"),
@@ -692,7 +692,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -703,7 +703,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled:  aws.Bool(true),
 								Advanced: EFSVolumeConfiguration{},
 							},
@@ -717,7 +717,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(false),
 							},
 						},
@@ -726,7 +726,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -737,7 +737,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -750,7 +750,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -759,7 +759,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(false),
 							},
 						},
@@ -770,7 +770,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(false),
 							},
 						},
@@ -783,7 +783,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -799,7 +799,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -812,7 +812,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -823,7 +823,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -837,7 +837,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -853,7 +853,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -871,7 +871,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -886,7 +886,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -897,7 +897,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -910,7 +910,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: nil,
 									UID:          aws.Uint32(13),
@@ -926,7 +926,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -937,7 +937,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -950,7 +950,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 									UID:          nil,
@@ -966,7 +966,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirectory"),
 								},
@@ -977,7 +977,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -990,7 +990,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: nil,
 									UID:           aws.Uint32(13),
@@ -1006,7 +1006,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1017,7 +1017,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirectoryTest"),
 								},
@@ -1030,7 +1030,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirectoryTest"),
 									UID:           nil,
@@ -1046,7 +1046,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
@@ -1060,7 +1060,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1073,7 +1073,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID:        aws.Uint32(13),
 									AuthConfig: AuthorizationConfig{},
@@ -1089,7 +1089,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1100,7 +1100,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
@@ -1116,7 +1116,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: nil,
 									AuthConfig: AuthorizationConfig{
@@ -1135,7 +1135,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -1146,7 +1146,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1159,7 +1159,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: nil,
 									GID:          aws.Uint32(13),
@@ -1175,7 +1175,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1186,7 +1186,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -1199,7 +1199,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 									GID:          nil,
@@ -1215,7 +1215,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDir"),
 								},
@@ -1226,7 +1226,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1239,7 +1239,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: nil,
 									GID:           aws.Uint32(13),
@@ -1255,7 +1255,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1266,7 +1266,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 								},
@@ -1279,7 +1279,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									GID:           nil,
@@ -1295,7 +1295,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
@@ -1309,7 +1309,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1322,7 +1322,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{},
 									GID:        aws.Uint32(13),
@@ -1338,7 +1338,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1349,7 +1349,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
@@ -1365,7 +1365,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
@@ -1384,7 +1384,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1395,7 +1395,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockIDTest"),
 								},
@@ -1408,7 +1408,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockIDTest"),
 								},
@@ -1423,7 +1423,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1434,7 +1434,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String(""),
 								},
@@ -1447,7 +1447,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String(""),
 								},
@@ -1462,7 +1462,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1473,7 +1473,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1484,7 +1484,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1499,7 +1499,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1510,7 +1510,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDirTest"),
 								},
@@ -1523,7 +1523,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDirTest"),
 								},
@@ -1538,7 +1538,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1549,7 +1549,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String(""),
 								},
@@ -1562,7 +1562,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String(""),
 								},
@@ -1577,7 +1577,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1588,7 +1588,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1599,7 +1599,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1614,7 +1614,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1625,7 +1625,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(42),
 								},
@@ -1638,7 +1638,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(42),
 								},
@@ -1653,7 +1653,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1664,7 +1664,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(0),
 								},
@@ -1677,7 +1677,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(0),
 								},
@@ -1692,7 +1692,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1703,7 +1703,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1714,7 +1714,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1729,7 +1729,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1740,7 +1740,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(42),
 								},
@@ -1753,7 +1753,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(42),
 								},
@@ -1768,7 +1768,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1779,7 +1779,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(0),
 								},
@@ -1792,7 +1792,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(0),
 								},
@@ -1807,7 +1807,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1818,7 +1818,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1829,7 +1829,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1844,7 +1844,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
@@ -1857,7 +1857,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
@@ -1873,7 +1873,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
@@ -1891,7 +1891,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
@@ -1904,7 +1904,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1915,7 +1915,7 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
@@ -1956,7 +1956,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
@@ -1969,7 +1969,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
@@ -1984,7 +1984,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
@@ -2001,7 +2001,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
@@ -2014,7 +2014,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
@@ -2029,7 +2029,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
@@ -2046,7 +2046,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
@@ -2059,7 +2059,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{},
 								},
@@ -2072,7 +2072,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
@@ -2089,7 +2089,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
@@ -2102,7 +2102,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPointTest"),
@@ -2117,7 +2117,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPointTest"),
@@ -2134,7 +2134,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
@@ -2147,7 +2147,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String(""),
@@ -2162,7 +2162,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String(""),
@@ -2179,7 +2179,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
@@ -2192,7 +2192,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Environments["test"].Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{},
 								},
@@ -2205,7 +2205,7 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				svc.Storage = Storage{
 					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),

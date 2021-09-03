@@ -28,13 +28,13 @@ func (s *Storage) IsEmpty() bool {
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
-	EFS            *EFSConfigOrBool `yaml:"efs"`
+	EFS            EFSConfigOrBool `yaml:"efs"`
 	MountPointOpts `yaml:",inline"`
 }
 
 // EmptyVolume returns true if the EFS configuration is nil or explicitly/implicitly disabled.
 func (v *Volume) EmptyVolume() bool {
-	if v.EFS == nil {
+	if v.EFS.IsEmpty() {
 		return true
 	}
 	// Respect Bool value first: return true if EFS is explicitly disabled.
@@ -75,6 +75,11 @@ func (e *EFSVolumeConfiguration) IsEmpty() bool {
 type EFSConfigOrBool struct {
 	Advanced EFSVolumeConfiguration
 	Enabled  *bool
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (e *EFSConfigOrBool) IsEmpty() bool {
+	return e.Advanced.IsEmpty() && e.Enabled == nil
 }
 
 // UnmarshalYAML implements the yaml(v2) interface. It allows EFS to be specified as a

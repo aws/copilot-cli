@@ -330,7 +330,7 @@ func validateImageDependsOn(s convertSidecarOpts) error {
 func validateEFSConfig(in manifest.Volume) error {
 	// EFS is implicitly disabled. We don't use the attached EmptyVolume function here
 	// because it may hide invalid config.
-	if in.EFS == nil {
+	if in.EFS.IsEmpty() {
 		return nil
 	}
 
@@ -342,11 +342,6 @@ func validateEFSConfig(in manifest.Volume) error {
 	// EFS can be disabled explicitly.
 	if in.EFS.Disabled() {
 		return nil
-	}
-
-	// EFS cannot be an empty map.
-	if in.EFS.Enabled == nil && in.EFS.Advanced.IsEmpty() {
-		return errEmptyEFSConfig
 	}
 
 	// UID and GID are mutually exclusive with any other fields.

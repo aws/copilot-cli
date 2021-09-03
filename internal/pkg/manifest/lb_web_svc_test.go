@@ -233,7 +233,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
@@ -283,7 +283,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
@@ -341,7 +341,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 											AuthConfig: AuthorizationConfig{
@@ -399,7 +399,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Storage: Storage{
 								Volumes: map[string]*Volume{
 									"myEFSVolume": {
-										EFS: &EFSConfigOrBool{
+										EFS: EFSConfigOrBool{
 											Advanced: EFSVolumeConfiguration{
 												FileSystemID: aws.String("fs-5678"),
 												AuthConfig: AuthorizationConfig{
@@ -486,7 +486,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-5678"),
 											AuthConfig: AuthorizationConfig{

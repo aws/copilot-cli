@@ -743,7 +743,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 		"no managed config": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -756,7 +756,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 			wantManagedConfig: nil,
 			wantVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -770,7 +770,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 		"with managed config": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -789,7 +789,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 		"with custom UID": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							UID: aws.Uint32(10000),
 							GID: aws.Uint32(100000),
@@ -834,7 +834,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"minimal configuration": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -876,7 +876,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/scratch"),
 					},
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(false),
 					},
 				},
@@ -899,7 +899,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"container path not specified": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -911,7 +911,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification with access point renders correctly": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/"),
@@ -958,7 +958,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification without access point renders correctly": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/wordpress"),
@@ -1002,7 +1002,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"managed EFS": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1030,7 +1030,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"managed EFS with config": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							UID: aws.Uint32(1000),
 							GID: aws.Uint32(10000),
@@ -1061,7 +1061,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"error when multiple managed volumes specified": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1070,7 +1070,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1083,7 +1083,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"managed EFS and BYO": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1092,7 +1092,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 				"otherefs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -1103,7 +1103,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 				"ephemeral": {
-					EFS: nil,
+					EFS: manifest.EFSConfigOrBool{},
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/ephemeral"),
 						ReadOnly:      aws.Bool(false),
@@ -1158,7 +1158,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"efs specified with just ID": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
