@@ -15,13 +15,19 @@ exports.handler = async (event, context) => {
   setupClients();
   try {
     const runningCount = await getRunningTaskCount(process.env.CLUSTER_NAME, process.env.SERVICE_NAME);
-    const timestamp = Date.now();
-    const promises = convertQueueNames(process.env.QUEUE_NAMES).map(async (queueName) => {
+    const backlogs = await Promise.all(
+      convertQueueNames(process.env.QUEUE_NAMES).map(async (queueName) => {
         const queueUrl = await getQueueURL(queueName);
-        const backlogPerTask = await getBacklogPerTask(queueUrl, runningCount);
-        logBacklogPerTaskMetric(process.env.NAMESPACE, timestamp, queueName, backlogPerTask);
-    });
-    await Promise.all(promises);
+        return {
+          queueName: queueName,
+          backlogPerTask: await getBacklogPerTask(queueUrl, runningCount),
+        };
+      })
+    );
+    const timestamp = Date.now();
+    for (const {queueName, backlogPerTask} of backlogs) {
+      emitBacklogPerTaskMetric(process.env.NAMESPACE, timestamp, queueName, backlogPerTask);
+    }
   } catch(err) {
     // If there is any issue we won't log a metric.
     // This is okay because autoscaling will maintain the current number of running tasks if a data point is missing.
@@ -52,7 +58,7 @@ const getBacklogPerTask = async (queueUrl, runningTaskCount) => {
  * @param queueName The name of the queue.
  * @param backlogPerTask The number of messages in the queue divided by the number of running tasks.
  */
-const logBacklogPerTaskMetric = (namespace, timestamp, queueName, backlogPerTask) => {
+const emitBacklogPerTaskMetric = (namespace, timestamp, queueName, backlogPerTask) => {
   console.log(JSON.stringify({
     "_aws": {
       "Timestamp": timestamp,
