@@ -164,7 +164,7 @@ BacklogPerTaskCalculatorRole:
                 {{- range $topic := .Subscribe.Topics}}
                 {{- if $topic.Queue}}
                 - !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
-                {{- end}}
+                {{- end }}
                 {{- end }}
     ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
@@ -190,9 +190,11 @@ PermissionToInvokeBacklogPerTaskCalculatorLambda:
     Principal: events.amazonaws.com
     SourceArn: !GetAtt BacklogPerTaskScheduledRule.Arn
 
+{{- $acceptableBacklog := .Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
+
 AutoScalingPolicyEventsQueue:
   Metadata:
-    'aws:copilot:description': "An autoscaling policy to maintain {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask}} messages/task for EventsQueue"
+    'aws:copilot:description': "An autoscaling policy to maintain {{$acceptableBacklog}} messages/task for EventsQueue"
   Type: AWS::ApplicationAutoScaling::ScalingPolicy
   Properties:
     PolicyName: !Join ['-', [!Ref WorkloadName, BacklogPerTask, !GetAtt EventsQueue.QueueName]]
@@ -209,9 +211,8 @@ AutoScalingPolicyEventsQueue:
           - Name: QueueName
             Value: !GetAtt EventsQueue.QueueName
         Unit: Count
-      TargetValue: {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask}}
+      TargetValue: {{$acceptableBacklog}}
 
-{{- $acceptableBacklog := .Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
 {{- range $topic := .Subscribe.Topics}}
 {{- if $topic.Queue}}
 AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
@@ -234,7 +235,7 @@ AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}Ev
             Value: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName
         Unit: Count
       TargetValue: {{$acceptableBacklog}}
-{{- end }}
-{{- end }}
+{{- end }}{{/* range $topic := .Subscribe.Topics */}}
+{{- end }}{{/* if $topic.Queue */}}
 
-{{- end }}
+{{- end }}{{/* if (and .Subscribe .Autoscaling.QueueDelay) */}}
