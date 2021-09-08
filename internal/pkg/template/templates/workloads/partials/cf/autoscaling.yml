@@ -81,3 +81,146 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
       ScaleOutCooldown: 60
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
+{{- if (and .Subscribe .Autoscaling.QueueDelay) }}
+BacklogPerTaskCalculatorFunction:
+  Metadata:
+    'aws:copilot:description': "A Lambda function to emit BacklogPerTask metrics to CloudWatch"
+  Type: AWS::Lambda::Function
+  Properties:
+    Code:
+      ZipFile: |
+        {{.BacklogPerTaskCalculatorLambda}}
+    Handler: "index.handler"
+    Timeout: 600
+    MemorySize: 512
+    Role: !GetAtt BacklogPerTaskCalculatorRole.Arn
+    Runtime: nodejs12.x
+    Environment:
+      Variables:
+        CLUSTER_NAME:
+          Fn::ImportValue:
+            !Sub '${AppName}-${EnvName}-ClusterId'
+        SERVICE_NAME: !Ref Service
+        NAMESPACE: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+        QUEUE_NAMES:
+          Fn::Join:
+            - ','
+            - - !GetAtt EventsQueue.QueueName
+            {{- range $topic := .Subscribe.Topics }}
+            {{- if $topic.Queue }}
+              - !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName
+            {{- end }}
+            {{- end }}
+
+BacklogPerTaskCalculatorRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    Policies:
+      - PolicyName: "BacklogPerTaskCaclulatorAccess"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: ECS
+              Effect: Allow
+              Action:
+                - ecs:DescribeServices
+              Resource: "*"
+              Condition:
+                ArnEquals:
+                  'ecs:cluster':
+                    Fn::Sub:
+                      - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}
+                      - ClusterName:
+                          Fn::ImportValue:
+                            !Sub '${AppName}-${EnvName}-ClusterId'
+            - Sid: SQS
+              Effect: Allow
+              Action:
+                - sqs:GetQueueAttributes
+                - sqs:GetQueueUrl
+              Resource:
+                - !GetAtt EventsQueue.Arn
+                {{- range $topic := .Subscribe.Topics}}
+                {{- if $topic.Queue}}
+                - !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
+                {{- end}}
+                {{- end }}
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+BacklogPerTaskScheduledRule:
+  Metadata:
+    'aws:copilot:description': "A trigger to invoke the BacklogPerTaskCalculator Lambda function every minute"
+  Type: AWS::Events::Rule
+  Properties:
+    ScheduleExpression: "rate(1 minute)"
+    State: "ENABLED"
+    Targets:
+      - Arn: !GetAtt BacklogPerTaskCalculatorFunction.Arn
+        Id: "BacklogPerTaskCalculatorFunctionTrigger"
+
+PermissionToInvokeBacklogPerTaskCalculatorLambda:
+  Type: AWS::Lambda::Permission
+  Properties:
+    FunctionName: !Ref BacklogPerTaskCalculatorFunction
+    Action: lambda:InvokeFunction
+    Principal: events.amazonaws.com
+    SourceArn: !GetAtt BacklogPerTaskScheduledRule.Arn
+
+AutoScalingPolicyEventsQueue:
+  Metadata:
+    'aws:copilot:description': "An autoscaling policy to maintain {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask}} messages/task for EventsQueue"
+  Type: AWS::ApplicationAutoScaling::ScalingPolicy
+  Properties:
+    PolicyName: !Join ['-', [!Ref WorkloadName, BacklogPerTask, !GetAtt EventsQueue.QueueName]]
+    PolicyType: TargetTrackingScaling
+    ScalingTargetId: !Ref AutoScalingTarget
+    TargetTrackingScalingPolicyConfiguration:
+      ScaleInCooldown: 120
+      ScaleOutCooldown: 60
+      CustomizedMetricSpecification:
+        Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+        MetricName: BacklogPerTask
+        Statistic: Average
+        Dimensions:
+          - Name: QueueName
+            Value: !GetAtt EventsQueue.QueueName
+        Unit: Count
+      TargetValue: {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask}}
+
+{{- range $topic := .Subscribe.Topics}}
+{{- if $topic.Queue}}
+AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
+  Metadata:
+    'aws:copilot:description': "An autoscaling policy to maintain {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask}} messages/task for {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue"
+  Type: AWS::ApplicationAutoScaling::ScalingPolicy
+  Properties:
+    PolicyName: !Join ['-', [!Ref WorkloadName, BacklogPerTask, !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName]]
+    PolicyType: TargetTrackingScaling
+    ScalingTargetId: !Ref AutoScalingTarget
+    TargetTrackingScalingPolicyConfiguration:
+      ScaleInCooldown: 120
+      ScaleOutCooldown: 60
+      CustomizedMetricSpecification:
+        Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+        MetricName: BacklogPerTask
+        Statistic: Average
+        Dimensions:
+          - Name: QueueName
+            Value: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName
+        Unit: Count
+      TargetValue: {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
+{{- end }}
+{{- end }}
+
+{{- end }}
