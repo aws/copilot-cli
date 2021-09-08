@@ -38,7 +38,7 @@ AutoScalingRole:
 
 AutoScalingTarget:
   Metadata:
-    'aws:copilot:description': "An AutoScaling target to scale your service's desired count"
+    'aws:copilot:description': "An autoscaling target to scale your service's desired count"
   Type: AWS::ApplicationAutoScaling::ScalableTarget
   Properties:
     MinCapacity: {{.Autoscaling.MinCapacity}}
@@ -82,6 +82,17 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
 {{- if (and .Subscribe .Autoscaling.QueueDelay) }}
+BacklogPerTaskCalculatorLogGroup:
+  Type: AWS::Logs::LogGroup
+  Properties:
+    LogGroupName:
+      Fn::Join:
+        - '/'
+        - - '/aws'
+          - 'lambda'
+          - Fn::Sub: "${BacklogPerTaskCalculatorFunction}"
+    RetentionInDays: 3
+
 BacklogPerTaskCalculatorFunction:
   Metadata:
     'aws:copilot:description': "A Lambda function to emit BacklogPerTask metrics to CloudWatch"
@@ -161,6 +172,8 @@ BacklogPerTaskCalculatorRole:
 BacklogPerTaskScheduledRule:
   Metadata:
     'aws:copilot:description': "A trigger to invoke the BacklogPerTaskCalculator Lambda function every minute"
+  DependsOn:
+    - BacklogPerTaskCalculatorLogGroup # Ensure log group is created before invoking.
   Type: AWS::Events::Rule
   Properties:
     ScheduleExpression: "rate(1 minute)"
