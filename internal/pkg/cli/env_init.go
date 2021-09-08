@@ -467,13 +467,12 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		return fmt.Errorf("VPC %s has no DNS support enabled", o.importVPC.ID)
 	}
 	if o.importVPC.PublicSubnetIDs == nil {
-		input := selector.SubnetsInput{
+		publicSubnets, err := o.selVPC.Subnets(selector.SubnetsInput{
 			Msg:      envInitPublicSubnetsSelectPrompt,
 			Help:     "",
 			VPCID:    o.importVPC.ID,
 			IsPublic: true,
-		}
-		publicSubnets, err := o.selVPC.Subnets(input)
+		})
 		if err != nil {
 			if errors.Is(err, selector.ErrSubnetsNotFound) {
 				log.Warningf(`No existing subnets were found in VPC %s.
