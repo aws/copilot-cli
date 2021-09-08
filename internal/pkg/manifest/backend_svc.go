@@ -135,8 +135,9 @@ func newDefaultBackendService() *BackendService {
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: ImageWithPortAndHealthcheck{},
 			TaskConfig: TaskConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
+				CPU:      aws.Int(256),
+				Memory:   aws.Int(512),
+				Platform: &PlatformArgsOrString{},
 				Count: Count{
 					Value: aws.Int(1),
 				},
