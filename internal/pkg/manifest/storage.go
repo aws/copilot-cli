@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	errUnmarshalEFSOpts        = errors.New(`cannot unmarshal efs field into bool or map`)
-	errInvalidEFSConfiguration = errors.New(`must specify one, not both, of "uid/gid" and "id/root_dir/auth"`)
+	errUnmarshalEFSOpts = errors.New(`cannot unmarshal efs field into bool or map`)
 )
 
 // Storage represents the options for external and native storage.

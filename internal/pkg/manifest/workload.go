@@ -50,10 +50,6 @@ var (
 	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
 	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
 	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
-
-	errInvalidRangeOpts     = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
-	errInvalidAdvancedCount = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
-	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
 // WorkloadManifest represents a workload manifest.
