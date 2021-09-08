@@ -331,8 +331,7 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:     i.Port,
-		Platform: i.Platform,
+		Port: i.Port,
 	}
 	return manifest.NewRequestDrivenWebService(props)
 }
