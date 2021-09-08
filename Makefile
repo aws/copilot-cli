@@ -54,7 +54,8 @@ compile-linux:
 
 .PHONY: compile-darwin
 compile-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-darwin-amd64 ./cmd/copilot
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-darwin-arm64 ./cmd/copilot
 
 .PHONY: test
 test: run-unit-test custom-resource-tests
