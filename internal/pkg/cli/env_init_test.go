@@ -116,9 +116,11 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 			wantedErrMsg: "at least two private subnets must be imported",
 		},
-		"valid VPC resource import (no VPC, 1 public, 2 private)": {
+		"invalid VPC resource import (no VPC, 1 public, 2 private)": {
 			inPublicIDs:  []string{"mockID"},
 			inPrivateIDs: []string{"mockID", "anotherMockID"},
+
+			wantedErrMsg: "at least two public subnets must be imported to enable Load Balancing",
 		},
 		"valid VPC resource import (0 public, 3 private)": {
 			inVPCID:      "mockID",
