@@ -331,7 +331,7 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if o.importVPC.isSet() {
 		// Allow passing in VPC without subnets, but error out early for too few subnets-- we won't prompt the user to select more of one type if they pass in any.
 		if len(o.importVPC.PublicSubnetIDs) == 1 {
-			log.Warningf("At least two public subnets must be imported to enable Load Balancing.\n")
+			return errors.New("at least two public subnets must be imported to enable Load Balancing")
 		}
 		if len(o.importVPC.PrivateSubnetIDs) == 1 {
 			return fmt.Errorf("at least two private subnets must be imported")
