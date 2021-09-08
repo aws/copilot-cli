@@ -211,11 +211,12 @@ AutoScalingPolicyEventsQueue:
         Unit: Count
       TargetValue: {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask}}
 
+{{- $acceptableBacklog := .Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
 {{- range $topic := .Subscribe.Topics}}
 {{- if $topic.Queue}}
 AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
   Metadata:
-    'aws:copilot:description': "An autoscaling policy to maintain {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask}} messages/task for {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue"
+    'aws:copilot:description': "An autoscaling policy to maintain {{$acceptableBacklog}} messages/task for {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue"
   Type: AWS::ApplicationAutoScaling::ScalingPolicy
   Properties:
     PolicyName: !Join ['-', [!Ref WorkloadName, BacklogPerTask, !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName]]
@@ -232,7 +233,7 @@ AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}Ev
           - Name: QueueName
             Value: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName
         Unit: Count
-      TargetValue: {{.Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
+      TargetValue: {{$acceptableBacklog}}
 {{- end }}
 {{- end }}
 
