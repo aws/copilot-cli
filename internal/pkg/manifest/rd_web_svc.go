@@ -47,7 +47,8 @@ type AppRunnerInstanceConfig struct {
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
-	Port uint16
+	Port     uint16
+	Platform *PlatformArgsOrString
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -57,6 +58,9 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	if props.Platform != nil {
+		svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
+	}
 	svc.parser = template.New()
 	return svc
 }

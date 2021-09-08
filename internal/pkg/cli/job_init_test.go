@@ -525,7 +525,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 						Name:           "mailer",
 						Type:           "Scheduled Job",
 						DockerfilePath: "./Dockerfile",
-						Platform:       nil,
+						Platform:       &manifest.PlatformArgsOrString{PlatformString: nil},
 					},
 					Schedule: "@hourly",
 					HealthCheck: &manifest.ContainerHealthCheck{

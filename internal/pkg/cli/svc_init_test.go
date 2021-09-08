@@ -623,7 +623,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
-						Platform:       nil,
+						Platform:       &manifest.PlatformArgsOrString{PlatformString: nil},
 					},
 					Port: 80,
 				}).Return("manifest/path", nil)
@@ -650,7 +650,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Backend Service",
 						DockerfilePath: "./Dockerfile",
-						Platform:       nil,
+						Platform:       &manifest.PlatformArgsOrString{PlatformString: nil},
 					},
 				}).Return("manifest/path", nil)
 			},
@@ -676,7 +676,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Worker Service",
 						DockerfilePath: "./Dockerfile",
-						Platform:       nil,
+						Platform:       &manifest.PlatformArgsOrString{PlatformString: nil},
 					},
 				}).Return("manifest/path", nil)
 			},
@@ -715,7 +715,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:     "backend",
 						Type:     "Backend Service",
 						Image:    "nginx:latest",
-						Platform: nil,
+						Platform: &manifest.PlatformArgsOrString{PlatformString: nil},
 					},
 				}).Return("manifest/path", nil)
 			},
@@ -740,7 +740,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:     "frontend",
 						Type:     "Load Balanced Web Service",
 						Image:    "nginx:latest",
-						Platform: nil,
+						Platform: &manifest.PlatformArgsOrString{PlatformString: nil},
 					},
 				}).Return("manifest/path", nil)
 			},

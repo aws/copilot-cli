@@ -67,6 +67,7 @@ type DeadLetterQueue struct {
 type WorkerServiceProps struct {
 	WorkloadProps
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    *PlatformArgsOrString // Optional platform configuration.
 	Topics      []TopicSubscription   // Optional topics for subscriptions
 }
 
@@ -80,6 +81,9 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
+	if props.Platform != nil {
+		svc.WorkerServiceConfig.Platform = props.Platform
+	}
 	svc.parser = template.New()
 	return svc
 }

@@ -62,6 +62,7 @@ type LoadBalancedWebServiceProps struct {
 	Path        string
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    *PlatformArgsOrString // Optional platform configuration.
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
@@ -74,6 +75,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	if props.Platform != nil {
+		svc.LoadBalancedWebServiceConfig.Platform = props.Platform
+	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	return svc

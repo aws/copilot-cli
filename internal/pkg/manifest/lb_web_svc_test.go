@@ -164,6 +164,13 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 					Name:       "frontend",
 					Dockerfile: "./frontend/Dockerfile",
 				},
+				Platform: &PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
+				},
 			},
 			wantedTestdata: "lb-svc.yml",
 		},

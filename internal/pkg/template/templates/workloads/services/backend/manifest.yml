@@ -36,8 +36,8 @@ image:
 
 cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
-{{- if .Platform}}
-platform: {{.Platform}}     # See https://aws.github.io/copilot-cli/docs/manifest/backend-service/#platform
+{{- if .Platform.PlatformString}}
+platform: {{.Platform.PlatformString}}     # See https://aws.github.io/copilot-cli/docs/manifest/backend-service/#platform
 {{- end}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
