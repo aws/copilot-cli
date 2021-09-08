@@ -488,13 +488,12 @@ If you proceed without at least two public subnets, you will not be able to depl
 		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
 	if o.importVPC.PrivateSubnetIDs == nil {
-		input := selector.SubnetsInput{
+		privateSubnets, err := o.selVPC.Subnets(selector.SubnetsInput{
 			Msg:      envInitPrivateSubnetsSelectPrompt,
 			Help:     "",
 			VPCID:    o.importVPC.ID,
 			IsPublic: false,
-		}
-		privateSubnets, err := o.selVPC.Subnets(input)
+		})
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing subnets were found in VPC %s. You can either:
