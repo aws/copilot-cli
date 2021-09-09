@@ -58,9 +58,6 @@ func (i *ImageWithPortAndHealthcheck) Validate() error {
 	if err = i.ImageWithPort.Validate(); err != nil {
 		return err
 	}
-	if i.HealthCheck == nil {
-		return nil
-	}
 	if err = i.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
@@ -116,15 +113,11 @@ func (*ContainerHealthCheck) Validate() error {
 // Validate returns if ImageOverride is configured correctly.
 func (i *ImageOverride) Validate() error {
 	var err error
-	if i.EntryPoint != nil {
-		if err = i.EntryPoint.Validate(); err != nil {
-			return fmt.Errorf(`validate "entrypoint": %w`, err)
-		}
+	if err = i.EntryPoint.Validate(); err != nil {
+		return fmt.Errorf(`validate "entrypoint": %w`, err)
 	}
-	if i.Command != nil {
-		if err = i.Command.Validate(); err != nil {
-			return fmt.Errorf(`validate "command": %w`, err)
-		}
+	if err = i.Command.Validate(); err != nil {
+		return fmt.Errorf(`validate "command": %w`, err)
 	}
 	return nil
 }
@@ -145,10 +138,8 @@ func (r *RoutingRule) Validate() error {
 	if err = r.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
-	if r.Alias != nil {
-		if err = r.Alias.Validate(); err != nil {
-			return fmt.Errorf(`validate "alias": %w`, err)
-		}
+	if err = r.Alias.Validate(); err != nil {
+		return fmt.Errorf(`validate "alias": %w`, err)
 	}
 	if r.TargetContainer != nil && r.TargetContainerCamelCase != nil {
 		return &errFieldMutualExclusive{
@@ -188,10 +179,8 @@ func (t *TaskConfig) Validate() error {
 	if err = t.ExecuteCommand.Validate(); err != nil {
 		return fmt.Errorf(`validate "exec": %w`, err)
 	}
-	if t.Storage != nil {
-		if err = t.Storage.Validate(); err != nil {
-			return fmt.Errorf(`validate "storage": %w`, err)
-		}
+	if err = t.Storage.Validate(); err != nil {
+		return fmt.Errorf(`validate "storage": %w`, err)
 	}
 	return nil
 }
@@ -308,8 +297,8 @@ func (s *Storage) Validate() error {
 
 // Validate returns if Volume is configured correctly.
 func (v *Volume) Validate() error {
-	if v.EFS != nil {
-		return v.EFS.Validate()
+	if err := v.EFS.Validate(); err != nil {
+		return fmt.Errorf(`validate "efs": %w`, err)
 	}
 	return v.MountPointOpts.Validate()
 }
@@ -335,17 +324,15 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			secondField: "id/root_dir/auth",
 		}
 	}
-	if e.AuthConfig != nil {
-		if err := e.AuthConfig.Validate(); err != nil {
-			return fmt.Errorf(`validate "auth": %w`, err)
+	if err := e.AuthConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "auth": %w`, err)
+	}
+	if aws.StringValue(e.AuthConfig.AccessPointID) != "" {
+		if (aws.StringValue(e.RootDirectory) == "" || aws.StringValue(e.RootDirectory) == "/") &&
+			aws.BoolValue(e.AuthConfig.IAM) {
+			return nil
 		}
-		if aws.StringValue(e.AuthConfig.AccessPointID) != "" {
-			if (aws.StringValue(e.RootDirectory) == "" || aws.StringValue(e.RootDirectory) == "/") &&
-				aws.BoolValue(e.AuthConfig.IAM) {
-				return nil
-			}
-			return fmt.Errorf("root_dir must be either empty or / and auth.iam must be true when access_point_id is in used")
-		}
+		return fmt.Errorf("root_dir must be either empty or / and auth.iam must be true when access_point_id is in used")
 	}
 	return nil
 }
@@ -372,10 +359,8 @@ func (s *SidecarConfig) Validate() error {
 
 // Validate returns if NetworkConfig is configured correctly.
 func (n *NetworkConfig) Validate() error {
-	if n.VPC != nil {
-		if err := n.VPC.Validate(); err != nil {
-			return fmt.Errorf(`validate "vpc": %w`, err)
-		}
+	if err := n.VPC.Validate(); err != nil {
+		return fmt.Errorf(`validate "vpc": %w`, err)
 	}
 	return nil
 }

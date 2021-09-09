@@ -131,10 +131,10 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
 				TaskConfig: TaskConfig{
-					Storage: &Storage{
+					Storage: Storage{
 						Volumes: map[string]*Volume{
 							"foo": {
-								EFS: &EFSConfigOrBool{
+								EFS: EFSConfigOrBool{
 									Advanced: EFSVolumeConfiguration{
 										UID:          aws.Uint32(123),
 										FileSystemID: aws.String("mockID"),
@@ -145,18 +145,18 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "storage": validate "volumes[foo]": must specify one, not both, of "uid/gid" and "id/root_dir/auth"`),
+			wantedError: fmt.Errorf(`validate "storage": validate "volumes[foo]": validate "efs": must specify one, not both, of "uid/gid" and "id/root_dir/auth"`),
 		},
 		"error if EFS access point is invalid": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
 				TaskConfig: TaskConfig{
-					Storage: &Storage{
+					Storage: Storage{
 						Volumes: map[string]*Volume{
 							"foo": {
-								EFS: &EFSConfigOrBool{
+								EFS: EFSConfigOrBool{
 									Advanced: EFSVolumeConfiguration{
-										AuthConfig: &AuthorizationConfig{
+										AuthConfig: AuthorizationConfig{
 											AccessPointID: aws.String("mockID"),
 										},
 									},
@@ -166,7 +166,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "storage": validate "volumes[foo]": root_dir must be either empty or / and auth.iam must be true when access_point_id is in used`),
+			wantedError: fmt.Errorf(`validate "storage": validate "volumes[foo]": validate "efs": root_dir must be either empty or / and auth.iam must be true when access_point_id is in used`),
 		},
 	}
 	for name, tc := range testCases {
