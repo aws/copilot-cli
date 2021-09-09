@@ -18,7 +18,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe(t *testing.T) {
 	}{
 		"topics overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "topic1",
@@ -33,7 +33,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -54,7 +54,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe(t *testing.T) {
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -77,36 +77,36 @@ func TestWorkerSvc_ApplyEnv_Subscribe(t *testing.T) {
 		},
 		"topics overridden by zero slice": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 		},
 		"topics not overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{}
+				svc.Environments["test"].Subscribe = SubscribeConfig{}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -119,12 +119,12 @@ func TestWorkerSvc_ApplyEnv_Subscribe(t *testing.T) {
 			inSvc: func(svc *WorkerService) {
 				mockRetention := 50 * time.Second
 				mockDelay := 10 * time.Second
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
 						Retention: &mockRetention,
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
 						Delay: &mockDelay,
 					},
@@ -133,7 +133,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe(t *testing.T) {
 			wanted: func(svc *WorkerService) {
 				mockRetention := 50 * time.Second
 				mockDelay := 10 * time.Second
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
 						Retention: &mockRetention,
 						Delay:     &mockDelay,
@@ -144,16 +144,16 @@ func TestWorkerSvc_ApplyEnv_Subscribe(t *testing.T) {
 		"queue not overridden": {
 			inSvc: func(svc *WorkerService) {
 				mockRetention := 50 * time.Second
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
 						Retention: &mockRetention,
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{}
+				svc.Environments["test"].Subscribe = SubscribeConfig{}
 			},
 			wanted: func(svc *WorkerService) {
 				mockRetention := 50 * time.Second
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
 						Retention: &mockRetention,
 					},
@@ -186,7 +186,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 	}{
 		"retention overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "topic1",
@@ -201,7 +201,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -222,7 +222,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -245,36 +245,36 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 		},
 		"retention overridden by zero slice": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 		},
 		"retention not overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{}
+				svc.Environments["test"].Subscribe = SubscribeConfig{}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -285,7 +285,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 		},
 		"delay overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "topic1",
@@ -300,7 +300,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -321,7 +321,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -344,36 +344,36 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 		},
 		"delay overridden by zero slice": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 		},
 		"delay not overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{}
+				svc.Environments["test"].Subscribe = SubscribeConfig{}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -384,7 +384,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 		},
 		"timeout overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "topic1",
@@ -399,7 +399,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -420,7 +420,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -443,36 +443,36 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 		},
 		"timeout overridden by zero slice": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{},
 				}
 			},
 		},
 		"timeout not overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{}
+				svc.Environments["test"].Subscribe = SubscribeConfig{}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -483,7 +483,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 		},
 		"dead_letter overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "topic1",
@@ -498,7 +498,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -519,7 +519,7 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -542,17 +542,17 @@ func TestWorkerSvc_ApplyEnv_Subscribe_Queue(t *testing.T) {
 		},
 		"dead_letter not overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{}
+				svc.Environments["test"].Subscribe = SubscribeConfig{}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name: "topic1",
@@ -587,25 +587,25 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 	}{
 		"tries overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(42),
 						},
 					},
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(42),
 						},
 					},
@@ -614,25 +614,25 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 		},
 		"tries explicitly overridden by zero value": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(0),
 						},
 					},
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(0),
 						},
 					},
@@ -641,21 +641,21 @@ func TestWorkerSvc_ApplyEnv_DeadLetterQueue(t *testing.T) {
 		},
 		"tries not overridden": {
 			inSvc: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},
 				}
-				svc.Environments["test"].Subscribe = &SubscribeConfig{
+				svc.Environments["test"].Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{},
 				}
 			},
 			wanted: func(svc *WorkerService) {
-				svc.Subscribe = &SubscribeConfig{
+				svc.Subscribe = SubscribeConfig{
 					Queue: &SQSQueue{
-						DeadLetter: &DeadLetterQueue{
+						DeadLetter: DeadLetterQueue{
 							Tries: aws.Uint16(3),
 						},
 					},

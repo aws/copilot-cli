@@ -42,7 +42,7 @@ func TestNewWorkerSvc(t *testing.T) {
 							},
 						},
 					},
-					Subscribe: &SubscribeConfig{},
+					Subscribe: SubscribeConfig{},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
@@ -53,8 +53,8 @@ func TestNewWorkerSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -83,7 +83,7 @@ func TestNewWorkerSvc(t *testing.T) {
 							},
 						},
 					},
-					Subscribe: &SubscribeConfig{},
+					Subscribe: SubscribeConfig{},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
@@ -94,8 +94,8 @@ func TestNewWorkerSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -188,7 +188,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
 					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),
@@ -252,13 +252,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
-			Logging: &Logging{
+			Logging: Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
 				},
 			},
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
 						Name:    "topicName",
@@ -292,13 +292,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						CredsParam: aws.String("some arn"),
 					},
 				},
-				Logging: &Logging{
+				Logging: Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
 					},
 				},
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "topicName2",
@@ -417,7 +417,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
 						Name:    "name",
@@ -426,7 +426,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						},
 					},
 				},
@@ -434,7 +434,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: nil,
+				Subscribe: SubscribeConfig{},
 			},
 		},
 	}
@@ -444,11 +444,11 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: nil,
+			Subscribe: SubscribeConfig{},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "name",
@@ -457,7 +457,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
-								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 							},
 						},
 					},
@@ -471,7 +471,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
 						Name:    "name",
@@ -480,7 +480,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						},
 					},
 				},
@@ -488,7 +488,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{},
+				Subscribe: SubscribeConfig{},
 			},
 		},
 	}
@@ -498,13 +498,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Topics: nil,
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "name",
@@ -513,7 +513,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
-								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 							},
 						},
 					},
@@ -527,7 +527,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
 						Name:    "name",
@@ -536,7 +536,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						},
 					},
 				},
@@ -544,7 +544,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Topics: nil,
 				},
 			},
@@ -556,13 +556,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
 							Name:    "name",
@@ -571,7 +571,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
-								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 							},
 						},
 					},
@@ -585,18 +585,18 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Queue: nil,
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Queue: &SQSQueue{
 						Retention:  &duration111Seconds,
 						Delay:      &duration111Seconds,
 						Timeout:    &duration111Seconds,
-						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 					},
 				},
 			},
@@ -608,18 +608,18 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Queue: &SQSQueue{
 					Retention:  &duration111Seconds,
 					Delay:      &duration111Seconds,
 					Timeout:    &duration111Seconds,
-					DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+					DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 				},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Queue: nil,
 				},
 			},
@@ -631,18 +631,18 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Queue: &SQSQueue{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Queue: &SQSQueue{
 						Retention:  &duration111Seconds,
 						Delay:      &duration111Seconds,
 						Timeout:    &duration111Seconds,
-						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 					},
 				},
 			},
@@ -714,14 +714,14 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",
 							"exclude-pattern": "fe/",
 						},
 					},
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
 								Name:    "topicName2",
@@ -820,7 +820,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
 								Name:    "name",
@@ -829,7 +829,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 								},
 							},
 						},
@@ -848,7 +848,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
 								Name:    "name",
@@ -857,7 +857,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 								},
 							},
 						},
@@ -879,7 +879,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{},
 					},
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
 								Name:    "name",
@@ -888,7 +888,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 								},
 							},
 						},
@@ -907,7 +907,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
 								Name:    "name",
@@ -916,7 +916,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 								},
 							},
 						},
@@ -935,7 +935,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
 								Name:    "name",
@@ -944,7 +944,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 								},
 							},
 						},
@@ -966,7 +966,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{},
 					},
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
 								Name:    "name",
@@ -975,7 +975,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 								},
 							},
 						},
@@ -994,12 +994,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Queue: &SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						},
 					},
 				},
@@ -1016,12 +1016,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Queue: &SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						},
 					},
 				},
@@ -1041,12 +1041,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{},
 					},
-					Subscribe: &SubscribeConfig{
+					Subscribe: SubscribeConfig{
 						Queue: &SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
+							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						},
 					},
 				},
@@ -1269,7 +1269,7 @@ func TestWorkerSvc_Subscriptions(t *testing.T) {
 		// GIVEN
 		svc := WorkerService{
 			WorkerServiceConfig: WorkerServiceConfig{
-				Subscribe: &tc.inSubscription,
+				Subscribe: tc.inSubscription,
 			},
 		}
 		t.Run(name, func(t *testing.T) {
@@ -1278,6 +1278,33 @@ func TestWorkerSvc_Subscriptions(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestDeadLetterQueue_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     DeadLetterQueue
+		wanted bool
+	}{
+		"empty dead letter queue": {
+			in:     DeadLetterQueue{},
+			wanted: true,
+		},
+		"non empty dead letter queue": {
+			in: DeadLetterQueue{
+				Tries: aws.Uint16(3),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

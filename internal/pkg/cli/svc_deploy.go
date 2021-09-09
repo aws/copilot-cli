@@ -657,8 +657,8 @@ func (o *deploySvcOpts) forceDeploy() error {
 	return nil
 }
 
-func validateLBSvcAliasAndAppVersion(svcName string, aliases *manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
-	if aliases == nil {
+func validateLBSvcAliasAndAppVersion(svcName string, aliases manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
+	if aliases.IsEmpty() {
 		return nil
 	}
 	aliasList, err := aliases.ToStringSlice()

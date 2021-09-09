@@ -93,7 +93,7 @@ Outputs:
 		"failed parsing subscribe template": {
 			setUpManifest: func(svc *WorkerService) {
 				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
-				testWorkerSvcManifestWithBadSubscribe.Subscribe = &manifest.SubscribeConfig{
+				testWorkerSvcManifestWithBadSubscribe.Subscribe = manifest.SubscribeConfig{
 					Topics: []manifest.TopicSubscription{
 						{
 							Name:    "name",
@@ -177,7 +177,7 @@ Outputs:
 						Name:       testServiceName,
 						Dockerfile: testDockerfile,
 					},
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    &testInterval,
 						Retries:     &testRetries,
@@ -185,11 +185,11 @@ Outputs:
 						StartPeriod: &testStartPeriod,
 					},
 				})
-				svc.manifest.EntryPoint = &manifest.EntryPointOverride{
+				svc.manifest.EntryPoint = manifest.EntryPointOverride{
 					String:      nil,
 					StringSlice: []string{"enter", "from"},
 				}
-				svc.manifest.Command = &manifest.CommandOverride{
+				svc.manifest.Command = manifest.CommandOverride{
 					String:      nil,
 					StringSlice: []string{"here"},
 				}
@@ -290,7 +290,7 @@ func TestWorkerService_Parameters(t *testing.T) {
 			Name:       testServiceName,
 			Dockerfile: testDockerfile,
 		},
-		HealthCheck: &manifest.ContainerHealthCheck{
+		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,
 			Retries:     &testRetries,
