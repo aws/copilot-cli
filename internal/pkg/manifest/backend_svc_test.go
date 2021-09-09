@@ -45,8 +45,9 @@ func TestNewBackendSvc(t *testing.T) {
 						},
 					},
 					TaskConfig: TaskConfig{
-						CPU:    aws.Int(256),
-						Memory: aws.Int(512),
+						CPU:      aws.Int(256),
+						Memory:   aws.Int(512),
+						Platform: &PlatformArgsOrString{},
 						Count: Count{
 							Value: aws.Int(1),
 						},
@@ -91,8 +92,9 @@ func TestNewBackendSvc(t *testing.T) {
 						},
 					},
 					TaskConfig: TaskConfig{
-						CPU:    aws.Int(256),
-						Memory: aws.Int(512),
+						CPU:      aws.Int(256),
+						Memory:   aws.Int(512),
+						Platform: &PlatformArgsOrString{},
 						Count: Count{
 							Value: aws.Int(1),
 						},
@@ -137,13 +139,6 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
-				Platform: &PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
-				},
 			},
 			wantedTestdata: "backend-svc-nohealthcheck.yml",
 		},
@@ -152,13 +147,6 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:  "subscribers",
 					Image: "flask-sample",
-				},
-				Platform: &PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
 				},
 				HealthCheck: &ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},

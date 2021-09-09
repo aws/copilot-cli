@@ -62,8 +62,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						},
 					},
 					TaskConfig: TaskConfig{
-						CPU:    aws.Int(256),
-						Memory: aws.Int(512),
+						CPU:      aws.Int(256),
+						Memory:   aws.Int(512),
+						Platform: &PlatformArgsOrString{},
 						Count: Count{
 							Value: aws.Int(1),
 						},
@@ -163,13 +164,6 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./frontend/Dockerfile",
-				},
-				Platform: &PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
 				},
 			},
 			wantedTestdata: "lb-svc.yml",
