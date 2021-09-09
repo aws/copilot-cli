@@ -23,9 +23,9 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		lbConfig LoadBalancedWebServiceConfig
 
-		wantedError error
+		wantedErrorPrefix string
 	}{
-		"error if both build and location are specified": {
+		"error if fail to validate image": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
@@ -36,25 +36,9 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "image": must specify one, not both, not none, of "build" and "location"`),
+			wantedErrorPrefix: `validate "image": `,
 		},
-		"error if neither build nor location is specified": {
-			lbConfig:    LoadBalancedWebServiceConfig{},
-			wantedError: fmt.Errorf(`validate "image": must specify one, not both, not none, of "build" and "location"`),
-		},
-		"error if no image port": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
-						},
-					},
-				},
-			},
-			wantedError: fmt.Errorf(`validate "image": "port" must be specified`),
-		},
-		"error if both formats of target container are specified": {
+		"error if fail to validate http": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
 				RoutingRule: RoutingRule{
@@ -62,9 +46,9 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					TargetContainerCamelCase: aws.String("mockTargetContainer"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate "http": must specify one, not both, of "target_container" and "targetContainer"`),
+			wantedErrorPrefix: `validate "http": `,
 		},
-		"error if both spot and autoscaling fields are specified": {
+		"error if fail to validate count": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
 				TaskConfig: TaskConfig{
@@ -76,58 +60,9 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "count": must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
+			wantedErrorPrefix: `validate "count": `,
 		},
-		"error if range band is in invalid format": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskConfig: TaskConfig{
-					Count: Count{
-						AdvancedCount: AdvancedCount{
-							Range: &Range{
-								Value: (*IntRangeBand)(aws.String("badValue")),
-							},
-						},
-					},
-				},
-			},
-			wantedError: fmt.Errorf(`validate "count": validate "range": invalid range value badValue. Should be in format of ${min}-${max}`),
-		},
-		"error if range band min is greater than max": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskConfig: TaskConfig{
-					Count: Count{
-						AdvancedCount: AdvancedCount{
-							Range: &Range{
-								Value: (*IntRangeBand)(aws.String("4-2")),
-							},
-						},
-					},
-				},
-			},
-			wantedError: fmt.Errorf(`validate "count": validate "range": min value 4 cannot be greater than max value 2`),
-		},
-		"error if range config min is greater than max": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskConfig: TaskConfig{
-					Count: Count{
-						AdvancedCount: AdvancedCount{
-							Range: &Range{
-								Value: (*IntRangeBand)(aws.String("4-2")),
-								RangeConfig: RangeConfig{
-									Min: aws.Int(4),
-									Max: aws.Int(3),
-								},
-							},
-						},
-					},
-				},
-			},
-			wantedError: fmt.Errorf(`validate "count": validate "range": min value 4 cannot be greater than max value 2`),
-		},
-		"error if specify both BYO config and UID config": {
+		"error if fail to validate storage": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
 				TaskConfig: TaskConfig{
@@ -145,33 +80,338 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "storage": validate "volumes[foo]": validate "efs": must specify one, not both, of "uid/gid" and "id/root_dir/auth"`),
-		},
-		"error if EFS access point is invalid": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskConfig: TaskConfig{
-					Storage: Storage{
-						Volumes: map[string]*Volume{
-							"foo": {
-								EFS: EFSConfigOrBool{
-									Advanced: EFSVolumeConfiguration{
-										AuthConfig: AuthorizationConfig{
-											AccessPointID: aws.String("mockID"),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantedError: fmt.Errorf(`validate "storage": validate "volumes[foo]": validate "efs": root_dir must be either empty or / and auth.iam must be true when access_point_id is in used`),
+			wantedErrorPrefix: `validate "storage": `,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.lbConfig.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestImageWithPort_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		ImageWithPort ImageWithPort
+
+		wantedError error
+	}{
+		"error if port is not specified": {
+			ImageWithPort: ImageWithPort{
+				Image: Image{
+					Location: aws.String("mockLocation"),
+				},
+			},
+			wantedError: fmt.Errorf(`"port" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.ImageWithPort.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestImage_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		Image Image
+
+		wantedError error
+	}{
+		"error if build and location both specified": {
+			Image: Image{
+				Build: BuildArgsOrString{
+					BuildString: aws.String("mockBuild"),
+				},
+				Location: aws.String("mockLocation"),
+			},
+			wantedError: fmt.Errorf(`must specify one, not both, not none, of "build" and "location"`),
+		},
+		"error if neither build nor location is specified": {
+			Image:       Image{},
+			wantedError: fmt.Errorf(`must specify one, not both, not none, of "build" and "location"`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.Image.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestRoutingRule_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		RoutingRule RoutingRule
+
+		wantedError error
+	}{
+		"error if both target_container and targetContainer are specified": {
+			RoutingRule: RoutingRule{
+				TargetContainer:          aws.String("mockContainer"),
+				TargetContainerCamelCase: aws.String("mockContainer"),
+			},
+			wantedError: fmt.Errorf(`must specify one, not both, of "target_container" and "targetContainer"`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.RoutingRule.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestTaskConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		TaskConfig TaskConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate count": {
+			TaskConfig: TaskConfig{
+				Count: Count{
+					AdvancedCount: AdvancedCount{
+						Spot: aws.Int(123),
+						CPU:  aws.Int(123),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "count": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.TaskConfig.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestAdvancedCount_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		AdvancedCount AdvancedCount
+
+		wantedError          error
+		wantedErrorMsgPrefix string
+	}{
+		"error if both spot and autoscaling fields are specified": {
+			AdvancedCount: AdvancedCount{
+				Spot: aws.Int(123),
+				CPU:  aws.Int(123),
+			},
+			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
+		},
+		"error if fail to validate range": {
+			AdvancedCount: AdvancedCount{
+				Range: &Range{
+					Value: (*IntRangeBand)(aws.String("")),
+				},
+			},
+			wantedErrorMsgPrefix: `validate "range": `,
+		},
+		"error if range is missing when autoscaling fields are set": {
+			AdvancedCount: AdvancedCount{
+				Requests: aws.Int(123),
+			},
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests", "response_time" are specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.AdvancedCount.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestIntRangeBand_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		IntRangeBand IntRangeBand
+
+		wantedError error
+	}{
+		"error if range value is in invalid format": {
+			IntRangeBand: IntRangeBand(*aws.String("")),
+			wantedError:  fmt.Errorf("invalid range value . Should be in format of ${min}-${max}"),
+		},
+		"error if range min is greater than max": {
+			IntRangeBand: IntRangeBand(*aws.String("6-4")),
+			wantedError:  fmt.Errorf("min value 6 cannot be greater than max value 4"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.IntRangeBand.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestRangeConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		RangeConfig RangeConfig
+
+		wantedError error
+	}{
+		"error if range min is greater than max": {
+			RangeConfig: RangeConfig{
+				Min: aws.Int(2),
+				Max: aws.Int(1),
+			},
+			wantedError: fmt.Errorf("min value 2 cannot be greater than max value 1"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.RangeConfig.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestStorage_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		Storage Storage
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate volumes": {
+			Storage: Storage{
+				Volumes: map[string]*Volume{
+					"foo": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+					},
+					"bar": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID:           aws.Uint32(123),
+								RootDirectory: aws.String("mockDir"),
+							},
+						},
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "volumes[bar]": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.Storage.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestVolume_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		Volume Volume
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate efs": {
+			Volume: Volume{
+				EFS: EFSConfigOrBool{
+					Advanced: EFSVolumeConfiguration{
+						UID:           aws.Uint32(123),
+						RootDirectory: aws.String("mockDir"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "efs": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.Volume.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestEFSVolumeConfiguration_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		EFSVolumeConfiguration EFSVolumeConfiguration
+
+		wantedError error
+	}{
+		"error if uid/gid are specified with id/root_dir/auth": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				UID:        aws.Uint32(123),
+				AuthConfig: AuthorizationConfig{IAM: aws.Bool(true)},
+			},
+			wantedError: fmt.Errorf(`must specify one, not both, of "uid/gid" and "id/root_dir/auth"`),
+		},
+		"error if AuthorizationConfig is not configured correctly": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				AuthConfig: AuthorizationConfig{
+					AccessPointID: aws.String("mockID"),
+				},
+			},
+			wantedError: fmt.Errorf("root_dir must be either empty or / and auth.iam must be true when access_point_id is in used"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.EFSVolumeConfiguration.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
