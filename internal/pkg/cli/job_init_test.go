@@ -176,6 +176,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 		wantedImage          = "mockImage"
 		wantedCronSchedule   = "0 9-17 * * MON-FRI"
 	)
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		inJobType        string
 		inJobName        string
@@ -527,7 +528,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 						Platform:       nil,
 					},
 					Schedule: "@hourly",
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"mockCommand"},
 						Interval:    &second,
 						Retries:     &zero,

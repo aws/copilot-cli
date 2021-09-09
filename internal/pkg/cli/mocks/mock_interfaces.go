@@ -34,6 +34,71 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
+// Mockcmd is a mock of cmd interface.
+type Mockcmd struct {
+	ctrl     *gomock.Controller
+	recorder *MockcmdMockRecorder
+}
+
+// MockcmdMockRecorder is the mock recorder for Mockcmd.
+type MockcmdMockRecorder struct {
+	mock *Mockcmd
+}
+
+// NewMockcmd creates a new mock instance.
+func NewMockcmd(ctrl *gomock.Controller) *Mockcmd {
+	mock := &Mockcmd{ctrl: ctrl}
+	mock.recorder = &MockcmdMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockcmd) EXPECT() *MockcmdMockRecorder {
+	return m.recorder
+}
+
+// Ask mocks base method.
+func (m *Mockcmd) Ask() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ask")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ask indicates an expected call of Ask.
+func (mr *MockcmdMockRecorder) Ask() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ask", reflect.TypeOf((*Mockcmd)(nil).Ask))
+}
+
+// Execute mocks base method.
+func (m *Mockcmd) Execute() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Execute")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Execute indicates an expected call of Execute.
+func (mr *MockcmdMockRecorder) Execute() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*Mockcmd)(nil).Execute))
+}
+
+// Validate mocks base method.
+func (m *Mockcmd) Validate() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Validate")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Validate indicates an expected call of Validate.
+func (mr *MockcmdMockRecorder) Validate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*Mockcmd)(nil).Validate))
+}
+
 // MockactionCommand is a mock of actionCommand interface.
 type MockactionCommand struct {
 	ctrl     *gomock.Controller
@@ -85,18 +150,18 @@ func (mr *MockactionCommandMockRecorder) Execute() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockactionCommand)(nil).Execute))
 }
 
-// RecommendedActions mocks base method.
-func (m *MockactionCommand) RecommendedActions() []string {
+// RecommendActions mocks base method.
+func (m *MockactionCommand) RecommendActions() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecommendedActions")
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "RecommendActions")
+	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RecommendedActions indicates an expected call of RecommendedActions.
-func (mr *MockactionCommandMockRecorder) RecommendedActions() *gomock.Call {
+// RecommendActions indicates an expected call of RecommendActions.
+func (mr *MockactionCommandMockRecorder) RecommendActions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockactionCommand)(nil).RecommendedActions))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendActions", reflect.TypeOf((*MockactionCommand)(nil).RecommendActions))
 }
 
 // Validate mocks base method.
@@ -1243,6 +1308,21 @@ func (m *MockdeployedEnvironmentLister) ListEnvironmentsDeployedTo(appName, svcN
 func (mr *MockdeployedEnvironmentListerMockRecorder) ListEnvironmentsDeployedTo(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListEnvironmentsDeployedTo), appName, svcName)
+}
+
+// ListSNSTopics mocks base method.
+func (m *MockdeployedEnvironmentLister) ListSNSTopics(appName, envName string) ([]deploy.Topic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSNSTopics", appName, envName)
+	ret0, _ := ret[0].([]deploy.Topic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSNSTopics indicates an expected call of ListSNSTopics.
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListSNSTopics(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSNSTopics", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListSNSTopics), appName, envName)
 }
 
 // MocksecretsManager is a mock of secretsManager interface.

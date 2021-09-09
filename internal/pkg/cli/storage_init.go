@@ -714,7 +714,7 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 	return envNames, nil
 }
 
-func (o *initStorageOpts) RecommendedActions() []string {
+func (o *initStorageOpts) RecommendActions() error {
 	var (
 		retrieveEnvVarCode string
 		newVar             string
@@ -738,10 +738,11 @@ For example, in JavaScript you can write %s.`,
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
-	return []string{
+	logRecommendedActions([]string{
 		actionRetrieveEnvVar,
 		actionDeploy,
-	}
+	})
+	return nil
 }
 
 // buildStorageInitCmd builds the command and adds it to the CLI.
@@ -767,20 +768,7 @@ Resource names are injected into your containers as environment variables for ea
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)

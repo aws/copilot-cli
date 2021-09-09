@@ -49,24 +49,11 @@ type LoadBalancedWebServiceConfig struct {
 	ImageOverride    `yaml:",inline"`
 	RoutingRule      `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
-	*Logging         `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
-	Network          *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
-	Publish          *PublishConfig            `yaml:"publish"`
+	Logging          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig             `yaml:"network"`
+	Publish          PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
-}
-
-// RoutingRule holds the path to route requests to the service.
-type RoutingRule struct {
-	Path                *string                 `yaml:"path"`
-	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
-	Stickiness          *bool                   `yaml:"stickiness"`
-	Alias               *Alias                  `yaml:"alias"`
-	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
-	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string   `yaml:"target_container"`
-	TargetContainerCamelCase *string   `yaml:"targetContainer"`    // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         *[]string `yaml:"allowed_source_ips"` // TODO: the type needs to be updated after we upgrade mergo
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -74,30 +61,7 @@ type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
 	Path        string
 	Port        uint16
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-}
-
-// Alias is a custom type which supports unmarshaling "http.alias" yaml which
-// can either be of type string or type slice of string.
-type Alias stringSliceOrString
-
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (e *Alias) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
-		return errUnmarshalEntryPoint
-	}
-	return nil
-}
-
-// ToStringSlice converts an Alias to a slice of string using shell-style rules.
-func (e *Alias) ToStringSlice() ([]string, error) {
-	out, err := toStringSlice((*stringSliceOrString)(e))
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
@@ -110,6 +74,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	return svc
@@ -138,8 +103,8 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
@@ -157,17 +122,20 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// Port returns the exposed port in the manifest.
+// A LoadBalancedWebService always has a port exposed therefore the boolean is always true.
+func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
+	return aws.Uint16Value(s.ImageConfig.Port), true
+}
+
+// Publish returns the list of topics where notifications can be published.
+func (s *LoadBalancedWebService) Publish() []Topic {
+	return s.LoadBalancedWebServiceConfig.Publish.Topics
+}
+
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
-}
-
-// TaskPlatform returns the platform for the service.
-func (t *TaskConfig) TaskPlatform() (*string, error) {
-	if t.Platform == nil {
-		return nil, nil
-	}
-	return t.Platform.PlatformString, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -200,4 +168,45 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 
 	s.Environments = nil
 	return &s, nil
+}
+
+// RoutingRule holds the path to route requests to the service.
+type RoutingRule struct {
+	Path                *string                 `yaml:"path"`
+	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
+	Stickiness          *bool                   `yaml:"stickiness"`
+	Alias               Alias                   `yaml:"alias"`
+	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
+	// TargetContainer is the container load balancer routes traffic to.
+	TargetContainer          *string  `yaml:"target_container"`
+	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
+}
+
+// Alias is a custom type which supports unmarshaling "http.alias" yaml which
+// can either be of type string or type slice of string.
+type Alias stringSliceOrString
+
+// IsEmpty returns empty if Alias is empty.
+func (e *Alias) IsEmpty() bool {
+	return e.String == nil && e.StringSlice == nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (e *Alias) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
+		return errUnmarshalEntryPoint
+	}
+	return nil
+}
+
+// ToStringSlice converts an Alias to a slice of string using shell-style rules.
+func (e *Alias) ToStringSlice() ([]string, error) {
+	out, err := toStringSlice((*stringSliceOrString)(e))
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

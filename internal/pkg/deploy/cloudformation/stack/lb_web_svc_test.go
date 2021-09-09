@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +39,10 @@ func (m mockTemplater) Template() (string, error) {
 		return "", m.err
 	}
 	return m.tpl, nil
+}
+
+var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
+	return origTemp, nil
 }
 
 func TestLoadBalancedWebService_StackName(t *testing.T) {
@@ -102,15 +107,15 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
-	testLBWebServiceManifest.ImageConfig.HealthCheck = &manifest.ContainerHealthCheck{
+	testLBWebServiceManifest.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 		Retries: aws.Int(5),
 	}
-	testLBWebServiceManifest.Alias = &manifest.Alias{String: aws.String("mockAlias")}
-	testLBWebServiceManifest.EntryPoint = &manifest.EntryPointOverride{
+	testLBWebServiceManifest.Alias = manifest.Alias{String: aws.String("mockAlias")}
+	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
 	}
-	testLBWebServiceManifest.Command = &manifest.CommandOverride{
+	testLBWebServiceManifest.Command = manifest.CommandOverride{
 		String:      nil,
 		StringSlice: []string{"world"},
 	}

@@ -148,19 +148,18 @@ func (o *secretInitOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf("get application %s: %w", o.appName, err)
 		}
+		if o.values != nil {
+			for env := range o.values {
+				if _, err := o.targetEnv(env); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	if o.name != "" {
 		if err := validateSecretName(o.name); err != nil {
 			return err
-		}
-	}
-
-	if o.values != nil {
-		for env := range o.values {
-			if _, err := o.targetEnv(env); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -402,8 +401,8 @@ func (o *secretInitOpts) askForSecretValues() error {
 	return nil
 }
 
-// RecommendedActions shows recommended actions to do after running `secret init`.
-func (o *secretInitOpts) RecommendedActions() error {
+// RecommendActions shows recommended actions to do after running `secret init`.
+func (o *secretInitOpts) RecommendActions() error {
 	type secretInitOutput struct {
 		SecretsPerEnv map[string]map[string]string
 	}
@@ -515,7 +514,7 @@ Create secrets from input.yml. For the format of the YAML file, please see https
 				return err
 			}
 
-			if err := opts.RecommendedActions(); err != nil {
+			if err := opts.RecommendActions(); err != nil {
 				return err
 			}
 			return nil

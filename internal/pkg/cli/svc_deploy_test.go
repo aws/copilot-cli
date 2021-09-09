@@ -563,7 +563,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 		mockAddonsURL = "mockAddonsURL"
 	)
 	tests := map[string]struct {
-		inAliases      *manifest.Alias
+		inAliases      manifest.Alias
 		inApp          *config.Application
 		inEnvironment  *config.Environment
 		inBuildRequire bool
@@ -620,7 +620,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			wantErr: fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
 		"fail to get app version": {
-			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
+			inAliases: manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -637,7 +637,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
-			inAliases: &manifest.Alias{String: aws.String("mockAlias")},
+			inAliases: manifest.Alias{String: aws.String("mockAlias")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -654,7 +654,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
-			inAliases: &manifest.Alias{String: aws.String("v1.v2.mockDomain")},
+			inAliases: manifest.Alias{String: aws.String("v1.v2.mockDomain")},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -750,7 +750,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			wantErr: fmt.Errorf("force an update for service mockSvc: max retries 0 exceeded"),
 		},
 		"success": {
-			inAliases: &manifest.Alias{
+			inAliases: manifest.Alias{
 				StringSlice: []string{
 					"v1.mockDomain",
 					"mockDomain",
@@ -1117,6 +1117,140 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 					newS3Uploader: func() (Uploader, error) {
 						return nil, nil
 					},
+				},
+			}
+
+			_, gotErr := opts.stackConfiguration(mockAddonsURL)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
+	mockError := errors.New("some error")
+	topic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:0123456789012:mockApp-mockEnv-topicSvc-givesdogs", "mockApp", "mockEnv", "topicSvc")
+	const (
+		mockAppName   = "mockApp"
+		mockEnvName   = "mockEnv"
+		mockSvcName   = "mockSvc"
+		mockAddonsURL = "mockAddonsURL"
+	)
+	tests := map[string]struct {
+		inAlias        string
+		inApp          *config.Application
+		inEnvironment  *config.Environment
+		inBuildRequire bool
+
+		mockWorkspace          func(m *mocks.MockwsSvcDirReader)
+		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
+		mockAppVersionGetter   func(m *mocks.MockversionGetter)
+		mockEndpointGetter     func(m *mocks.MockendpointGetter)
+		mockDeployStore        func(m *mocks.MockdeployedEnvironmentLister)
+
+		wantErr error
+	}{
+		"fail to read service manifest": {
+			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return(nil, mockError)
+			},
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
+			mockEndpointGetter:     func(m *mocks.MockendpointGetter) {},
+			mockDeployStore:        func(m *mocks.MockdeployedEnvironmentLister) {},
+			wantErr:                fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
+		},
+		"fail to get deployed topics": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+			},
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
+				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
+			},
+			wantErr: fmt.Errorf("get SNS topics for app mockApp and environment mockEnv: %w", mockError),
+		},
+		"success": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+			},
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockEnv.mockApp.local", nil)
+			},
+			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
+				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
+					*topic,
+				}, nil)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
+			mockAppResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
+			mockAppVersionGetter := mocks.NewMockversionGetter(ctrl)
+			mockEndpointGetter := mocks.NewMockendpointGetter(ctrl)
+			mockDeployStore := mocks.NewMockdeployedEnvironmentLister(ctrl)
+			tc.mockWorkspace(mockWorkspace)
+			tc.mockAppResourcesGetter(mockAppResourcesGetter)
+			tc.mockAppVersionGetter(mockAppVersionGetter)
+			tc.mockEndpointGetter(mockEndpointGetter)
+			tc.mockDeployStore(mockDeployStore)
+
+			opts := deploySvcOpts{
+				deployWkldVars: deployWkldVars{
+					name:    mockSvcName,
+					appName: mockAppName,
+					envName: mockEnvName,
+				},
+				ws:            mockWorkspace,
+				buildRequired: tc.inBuildRequire,
+				appCFN:        mockAppResourcesGetter,
+				newAppVersionGetter: func(s string) (versionGetter, error) {
+					return mockAppVersionGetter, nil
+				},
+				newSvcUpdater:     func(f func(*session.Session) serviceUpdater) {},
+				endpointGetter:    mockEndpointGetter,
+				snsTopicGetter:    mockDeployStore,
+				targetApp:         tc.inApp,
+				targetEnvironment: tc.inEnvironment,
+				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+					return &manifest.WorkerService{
+						Workload: manifest.Workload{
+							Name: aws.String(mockSvcName),
+						},
+						WorkerServiceConfig: manifest.WorkerServiceConfig{},
+					}, nil
 				},
 			}
 

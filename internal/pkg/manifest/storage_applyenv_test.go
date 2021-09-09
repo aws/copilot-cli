@@ -17,67 +17,67 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 	}{
 		"ephemeral overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(1),
 				}
-				svc.Environments["test"].Storage = &Storage{
+				svc.Environments["test"].Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 			},
 		},
 		"ephemeral explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(1),
 				}
-				svc.Environments["test"].Storage = &Storage{
+				svc.Environments["test"].Storage = Storage{
 					Ephemeral: aws.Int(0),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(0),
 				}
 			},
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: ephemeral not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(1),
 				}
-				svc.Environments["test"].Storage = &Storage{}
+				svc.Environments["test"].Storage = Storage{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(1),
 				}
 			},
 		},
 		"FIXED_BUG: volumes overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						}, // Modify the value for mockVolume1.
@@ -90,10 +90,10 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 							MountPointOpts: MountPointOpts{
@@ -101,7 +101,7 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -116,34 +116,34 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 		},
 		"volumes not overridden by empty map": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{},
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -153,32 +153,165 @@ func Test_ApplyEnv_Storage(t *testing.T) {
 		},
 		"volumes not overridden by nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{}
+				svc.Environments["test"].Storage = Storage{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
 							},
 						},
 						"mockVolume2": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.ApplyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
+func Test_ApplyEnv_Storage_Volumes(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
+		"volume overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPathTest"),
+							},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPathTest"),
+							},
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+		},
+		"volume not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": nil,
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+		},
+		"nil volume overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": nil,
+					},
+				}
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -212,8 +345,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 	}{
 		"FAILED_AFTER_TRANSFORM_POINTER: path overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
@@ -221,8 +354,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPathTest"),
@@ -232,8 +365,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPathTest"),
@@ -245,8 +378,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		},
 		"FAILED_AFTER_TRANSFORM_POINTER： path explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
@@ -254,8 +387,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String(""),
@@ -265,8 +398,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String(""),
@@ -278,8 +411,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: path not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
@@ -287,8 +420,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{},
 						},
@@ -296,8 +429,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ContainerPath: aws.String("mockPath"),
@@ -309,8 +442,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		},
 		"read_only overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(false),
@@ -318,8 +451,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
@@ -329,8 +462,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
@@ -342,8 +475,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		},
 		"read_only explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(true),
@@ -351,8 +484,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(false),
@@ -362,8 +495,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(false),
@@ -375,8 +508,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: read_only not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(false),
@@ -384,8 +517,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{},
 						},
@@ -393,8 +526,8 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
 							MountPointOpts: MountPointOpts{
 								ReadOnly: aws.Bool(false),
@@ -406,10 +539,10 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		},
 		"efs overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -417,10 +550,10 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -431,10 +564,10 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -447,10 +580,10 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: efs not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -458,17 +591,17 @@ func Test_ApplyEnv_Storage_Volume(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -504,19 +637,19 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 	}{
 		"FIXED_BUG: composite fields: efs bool is overridden if efs config is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -527,10 +660,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: nil,
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
@@ -544,10 +677,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: composite fields: efs config is overridden if efs bool is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDir"),
 									FileSystemID:  aws.String("mockFileSystem"),
@@ -556,10 +689,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -567,10 +700,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled:  aws.Bool(true),
 								Advanced: EFSVolumeConfiguration{},
 							},
@@ -581,19 +714,19 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"efs bool overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(false),
 							},
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -601,10 +734,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -614,19 +747,19 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"efs bool explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(false),
 							},
 						},
@@ -634,10 +767,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(false),
 							},
 						},
@@ -647,26 +780,26 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: efs bool not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Enabled: aws.Bool(true),
 							},
 						},
@@ -676,10 +809,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"efs config overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -687,10 +820,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -701,10 +834,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									FileSystemID:  aws.String("mockFileSystemTest"),
@@ -717,10 +850,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: efs config not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -728,17 +861,17 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockFileSystem"),
 								},
@@ -750,10 +883,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: id overridden if uid is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -761,10 +894,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -774,10 +907,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: nil,
 									UID:          aws.Uint32(13),
@@ -790,10 +923,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: uid overridden if id is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -801,10 +934,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -814,10 +947,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 									UID:          nil,
@@ -830,10 +963,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: root_dir overridden if uid is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirectory"),
 								},
@@ -841,10 +974,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -854,10 +987,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: nil,
 									UID:           aws.Uint32(13),
@@ -870,10 +1003,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: udi overridden if root_dir is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -881,10 +1014,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirectoryTest"),
 								},
@@ -894,10 +1027,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirectoryTest"),
 									UID:           nil,
@@ -910,12 +1043,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: auth overridden if uid is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -924,10 +1057,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -937,13 +1070,13 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID:        aws.Uint32(13),
-									AuthConfig: nil,
+									AuthConfig: AuthorizationConfig{},
 								},
 							},
 						},
@@ -953,10 +1086,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: udi overridden if auth is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -964,12 +1097,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockIDTest"),
 									},
@@ -980,13 +1113,13 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: nil,
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockIDTest"),
 									},
@@ -999,10 +1132,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: id overridden if gid is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -1010,10 +1143,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1023,10 +1156,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: nil,
 									GID:          aws.Uint32(13),
@@ -1039,10 +1172,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: gid overridden if id is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1050,10 +1183,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 								},
@@ -1063,10 +1196,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("42"),
 									GID:          nil,
@@ -1079,10 +1212,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG exclusive fields: root_dir overridden if gid is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDir"),
 								},
@@ -1090,10 +1223,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1103,10 +1236,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: nil,
 									GID:           aws.Uint32(13),
@@ -1119,10 +1252,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: gid overridden if root_dir is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1130,10 +1263,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 								},
@@ -1143,10 +1276,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockRootDirTest"),
 									GID:           nil,
@@ -1159,12 +1292,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: auth overridden if gid is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -1173,10 +1306,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1186,12 +1319,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: nil,
+									AuthConfig: AuthorizationConfig{},
 									GID:        aws.Uint32(13),
 								},
 							},
@@ -1202,10 +1335,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FIXED_BUG: exclusive fields: gid overridden if auth is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1213,12 +1346,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -1229,12 +1362,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockID1"),
 									},
@@ -1248,10 +1381,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"id overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1259,10 +1392,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockIDTest"),
 								},
@@ -1272,10 +1405,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockIDTest"),
 								},
@@ -1287,10 +1420,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"id explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1298,10 +1431,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String(""),
 								},
@@ -1311,10 +1444,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String(""),
 								},
@@ -1326,10 +1459,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: id not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1337,10 +1470,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1348,10 +1481,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									FileSystemID: aws.String("mockID"),
 								},
@@ -1363,10 +1496,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"root_dir overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1374,10 +1507,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDirTest"),
 								},
@@ -1387,10 +1520,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDirTest"),
 								},
@@ -1402,10 +1535,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"root_dir explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1413,10 +1546,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String(""),
 								},
@@ -1426,10 +1559,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String(""),
 								},
@@ -1441,10 +1574,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: root_dir not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1452,10 +1585,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1463,10 +1596,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									RootDirectory: aws.String("mockDir"),
 								},
@@ -1478,10 +1611,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"uid overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1489,10 +1622,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(42),
 								},
@@ -1502,10 +1635,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(42),
 								},
@@ -1517,10 +1650,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"uid explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1528,10 +1661,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(0),
 								},
@@ -1541,10 +1674,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(0),
 								},
@@ -1556,10 +1689,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: uid not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1567,10 +1700,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1578,10 +1711,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									UID: aws.Uint32(13),
 								},
@@ -1593,10 +1726,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"gid overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1604,10 +1737,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(42),
 								},
@@ -1617,10 +1750,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(42),
 								},
@@ -1632,10 +1765,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"gid explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1643,10 +1776,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(0),
 								},
@@ -1656,10 +1789,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(0),
 								},
@@ -1671,10 +1804,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: gid not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1682,10 +1815,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1693,10 +1826,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
 									GID: aws.Uint32(13),
 								},
@@ -1708,12 +1841,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"auth overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -1721,12 +1854,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockPointTest"),
 									},
@@ -1737,12 +1870,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM:           aws.Bool(true),
 										AccessPointID: aws.String("mockPointTest"),
 									},
@@ -1755,12 +1888,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: auth not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -1768,10 +1901,10 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{},
 							},
 						},
@@ -1779,12 +1912,12 @@ func Test_ApplyEnv_Storage_Volume_EFS(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -1820,12 +1953,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 	}{
 		"iam overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
 									},
 								},
@@ -1833,12 +1966,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -1848,12 +1981,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -1865,12 +1998,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 		},
 		"iam explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -1878,12 +2011,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
 									},
 								},
@@ -1893,12 +2026,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(false),
 									},
 								},
@@ -1910,12 +2043,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: iam not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -1923,12 +2056,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{},
+									AuthConfig: AuthorizationConfig{},
 								},
 							},
 						},
@@ -1936,12 +2069,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										IAM: aws.Bool(true),
 									},
 								},
@@ -1953,12 +2086,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 		},
 		"access_point_id overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -1966,12 +2099,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPointTest"),
 									},
 								},
@@ -1981,12 +2114,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPointTest"),
 									},
 								},
@@ -1998,12 +2131,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 		},
 		"access_point_id explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -2011,12 +2144,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String(""),
 									},
 								},
@@ -2026,12 +2159,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String(""),
 									},
 								},
@@ -2043,12 +2176,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: access_point_id not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},
@@ -2056,12 +2189,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{},
+									AuthConfig: AuthorizationConfig{},
 								},
 							},
 						},
@@ -2069,12 +2202,12 @@ func Test_ApplyEnv_Storage_Volume_EFS_Auth(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Storage = &Storage{
-					Volumes: map[string]Volume{
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
 						"mockVolume1": {
-							EFS: &EFSConfigOrBool{
+							EFS: EFSConfigOrBool{
 								Advanced: EFSVolumeConfiguration{
-									AuthConfig: &AuthorizationConfig{
+									AuthConfig: AuthorizationConfig{
 										AccessPointID: aws.String("mockPoint"),
 									},
 								},

@@ -40,15 +40,23 @@ const (
 )
 
 var (
-	fmtSvcInitSvcTypePrompt     = "Which %s best represents your service's architecture?"
-	fmtSvcInitSvcTypeHelpPrompt = `A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
-To learn more see: https://git.io/Jt2UC
+	fmtSvcInitSvcTypePrompt  = "Which %s best represents your service's architecture?"
+	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
+To learn more see: https://git.io/JEEfb
 
 A %s is an internet-facing HTTP server managed by Amazon ECS on AWS Fargate behind a load balancer.
-To learn more see: https://git.io/JfIpv
+To learn more see: https://git.io/JEEJe
 
 A %s is a private, non internet-facing service accessible from other services in your VPC.
-To learn more see: https://git.io/JfIpT`
+To learn more see: https://git.io/JEEJt
+
+A %s is a private service that can consume messages published to topics in your application.
+To learn more see: https://git.io/JEEJY`,
+		manifest.RequestDrivenWebServiceType,
+		manifest.LoadBalancedWebServiceType,
+		manifest.BackendServiceType,
+		manifest.WorkerServiceType,
+	)
 
 	fmtWkldInitNamePrompt     = "What do you want to %s this %s?"
 	fmtWkldInitNameHelpPrompt = `The name will uniquely identify this %s within your app %s.
@@ -63,7 +71,7 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 
-	svcInitPublisherPrompt     = "Which publishers do you want to subscribe to?"
+	svcInitPublisherPrompt     = "Which topics do you want to subscribe to?"
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
 These messages can be consumed by the Worker Service.`
 )
@@ -237,7 +245,7 @@ func (o *initSvcOpts) Ask() error {
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
+	var hc manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.dockerfile(o.dockerfilePath))
@@ -253,9 +261,9 @@ func (o *initSvcOpts) Execute() error {
 	o.platform = platform
 	if o.platform != nil {
 		log.Warningf(`Your architecture type is currently unsupported. Setting platform %s instead.\n`, dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
-	}
-	if o.wkldType != manifest.RequestDrivenWebServiceType {
-		log.Warning("See 'platform' field in your manifest.\n")
+		if o.wkldType != manifest.RequestDrivenWebServiceType {
+			log.Warning("See 'platform' field in your manifest.\n")
+		}
 	}
 
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
@@ -278,14 +286,15 @@ func (o *initSvcOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initSvcOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initSvcOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
 			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
 			defaultEnvironmentName),
-	}
+	})
+	return nil
 }
 
 func (o *initSvcOpts) askSvcType() error {
@@ -293,15 +302,8 @@ func (o *initSvcOpts) askSvcType() error {
 		return nil
 	}
 
-	help := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
-		manifest.RequestDrivenWebServiceType,
-		manifest.LoadBalancedWebServiceType,
-		manifest.BackendServiceType,
-		manifest.WorkerServiceType,
-	)
 	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))
-
-	t, err := o.prompt.SelectOption(msg, help, svcTypePromptOpts(), prompt.WithFinalMessage("Service type:"))
+	t, err := o.prompt.SelectOption(msg, svcInitSvcTypeHelpPrompt, svcTypePromptOpts(), prompt.WithFinalMessage("Service type:"))
 	if err != nil {
 		return fmt.Errorf("select service type: %w", err)
 	}
@@ -496,15 +498,15 @@ func parseSerializedSubscription(input string) (manifest.TopicSubscription, erro
 	}, nil
 }
 
-func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, error) {
+func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error) {
 	hc, err := df.GetHealthCheck()
 	if err != nil {
-		return nil, fmt.Errorf("get healthcheck: %w", err)
+		return manifest.ContainerHealthCheck{}, fmt.Errorf("get healthcheck: %w", err)
 	}
 	if hc == nil {
-		return nil, nil
+		return manifest.ContainerHealthCheck{}, nil
 	}
-	return &manifest.ContainerHealthCheck{
+	return manifest.ContainerHealthCheck{
 		Interval:    &hc.Interval,
 		Timeout:     &hc.Timeout,
 		StartPeriod: &hc.StartPeriod,
@@ -553,9 +555,8 @@ This command is also run as part of "copilot init".`,
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
+			if err := opts.RecommendActions(); err != nil {
+				return err
 			}
 			return nil
 		}),

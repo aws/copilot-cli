@@ -15,9 +15,7 @@ import (
 )
 
 const (
-	manifestPath           = "autoscaling-svc-manifest.yml"
-	wantedCFNTemplatePath  = "autoscaling-svc-cf.yml"
-	wantedCFNParameterPath = "autoscaling-svc-cf.params.json"
+	autoScalingManifestPath = "manifest.yml"
 
 	appName  = "my-app"
 	envName  = "test"
@@ -25,8 +23,13 @@ const (
 	imageTag = "latest"
 )
 
-func Test_Autoscaling_Integration(t *testing.T) {
-	path := filepath.Join("testdata", "autoscaling", manifestPath)
+func Test_Stack_Local_Integration(t *testing.T) {
+	const (
+		wantedAutoScalingCFNTemplatePath  = "autoscaling-svc-cf.yml"
+		wantedAutoScalingCFNParameterPath = "cf.params.json"
+		wantedOverrideCFNTemplatePath     = "override-cf.yml"
+	)
+	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
@@ -44,7 +47,15 @@ func Test_Autoscaling_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("CloudFormation template must contain autoscaling resources", func(t *testing.T) {
-		path := filepath.Join("testdata", "autoscaling", wantedCFNTemplatePath)
+		path := filepath.Join("testdata", "stacklocal", wantedAutoScalingCFNTemplatePath)
+		wantedCFNBytes, err := ioutil.ReadFile(path)
+		require.NoError(t, err)
+
+		require.Contains(t, tpl, string(wantedCFNBytes))
+	})
+
+	t.Run("CloudFormation template must be overridden correctly", func(t *testing.T) {
+		path := filepath.Join("testdata", "stacklocal", wantedOverrideCFNTemplatePath)
 		wantedCFNBytes, err := ioutil.ReadFile(path)
 		require.NoError(t, err)
 
@@ -55,7 +66,7 @@ func Test_Autoscaling_Integration(t *testing.T) {
 		params, err := serializer.SerializedParameters()
 		require.NoError(t, err)
 
-		path := filepath.Join("testdata", "autoscaling", wantedCFNParameterPath)
+		path := filepath.Join("testdata", "stacklocal", wantedAutoScalingCFNParameterPath)
 		wantedCFNParamsBytes, err := ioutil.ReadFile(path)
 		require.NoError(t, err)
 

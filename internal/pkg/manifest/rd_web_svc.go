@@ -29,7 +29,7 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
-	Publish                           *PublishConfig          `yaml:"publish"`
+	Publish                           PublishConfig           `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {
@@ -37,17 +37,17 @@ type RequestDrivenWebServiceHttpConfig struct {
 	Alias                    *string                 `yaml:"alias"`
 }
 
-// RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
-type RequestDrivenWebServiceProps struct {
-	*WorkloadProps
-	Port uint16
-}
-
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
 	CPU      *int                  `yaml:"cpu"`
 	Memory   *int                  `yaml:"memory"`
 	Platform *PlatformArgsOrString `yaml:"platform,omitempty"`
+}
+
+// RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
+type RequestDrivenWebServiceProps struct {
+	*WorkloadProps
+	Port uint16
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -61,22 +61,6 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	return svc
 }
 
-// newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.
-func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
-	return &RequestDrivenWebService{
-		Workload: Workload{
-			Type: aws.String(RequestDrivenWebServiceType),
-		},
-		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-			ImageConfig: ImageWithPort{},
-			InstanceConfig: AppRunnerInstanceConfig{
-				CPU:    aws.Int(1024),
-				Memory: aws.Int(2048),
-			},
-		},
-	}
-}
-
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
@@ -85,6 +69,17 @@ func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return content.Bytes(), nil
+}
+
+// Port returns the exposed the exposed port in the manifest.
+// A RequestDrivenWebService always has a port exposed therefore the boolean is always true.
+func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {
+	return aws.Uint16Value(s.ImageConfig.Port), true
+}
+
+// Publish returns the list of topics where notifications can be published.
+func (s *RequestDrivenWebService) Publish() []Topic {
+	return s.RequestDrivenWebServiceConfig.Publish.Topics
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
@@ -124,4 +119,20 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 
 	s.Environments = nil
 	return &s, nil
+}
+
+// newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.
+func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
+	return &RequestDrivenWebService{
+		Workload: Workload{
+			Type: aws.String(RequestDrivenWebServiceType),
+		},
+		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+			ImageConfig: ImageWithPort{},
+			InstanceConfig: AppRunnerInstanceConfig{
+				CPU:    aws.Int(1024),
+				Memory: aws.Int(2048),
+			},
+		},
+	}
 }

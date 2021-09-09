@@ -91,7 +91,7 @@ environments:
 							}, Port: aws.Uint16(80)},
 						},
 						RoutingRule: RoutingRule{
-							Alias: &Alias{
+							Alias: Alias{
 								StringSlice: []string{
 									"foobar.com",
 									"v1.foobar.com",
@@ -127,7 +127,7 @@ environments:
 								CredsParam: aws.String("some arn"),
 							},
 						},
-						Logging: &Logging{
+						Logging: Logging{
 							Destination: map[string]string{
 								"exclude-pattern": "^.*[aeiou]$",
 								"include-pattern": "^[a-z][aeiou].*$",
@@ -139,8 +139,8 @@ environments:
 								"LOG_TOKEN": "LOG_TOKEN",
 							},
 						},
-						Network: &NetworkConfig{
-							VPC: &vpcConfig{
+						Network: NetworkConfig{
+							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},
 						},
@@ -238,7 +238,7 @@ secrets:
 								},
 								Port: aws.Uint16(8080),
 							},
-							HealthCheck: &ContainerHealthCheck{
+							HealthCheck: ContainerHealthCheck{
 								Command: []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
 							},
 						},
@@ -256,8 +256,8 @@ secrets:
 								"API_TOKEN": "SUBS_API_TOKEN",
 							},
 						},
-						Network: &NetworkConfig{
-							VPC: &vpcConfig{
+						Network: NetworkConfig{
+							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},
 						},
@@ -317,12 +317,12 @@ subscribe:
 								Enable: aws.Bool(true),
 							},
 						},
-						Network: &NetworkConfig{
-							VPC: &vpcConfig{
+						Network: NetworkConfig{
+							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},
 						},
-						Subscribe: &SubscribeConfig{
+						Subscribe: SubscribeConfig{
 							Topics: []TopicSubscription{
 								{
 									Name:    "publisher1",
@@ -338,7 +338,7 @@ subscribe:
 							},
 							Queue: &SQSQueue{
 								Delay: &duration15Seconds,
-								DeadLetter: &DeadLetterQueue{
+								DeadLetter: DeadLetterQueue{
 									Tries: aws.Uint16(5),
 								},
 							},

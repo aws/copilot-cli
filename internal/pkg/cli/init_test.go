@@ -18,6 +18,7 @@ import (
 func TestInitOpts_Run(t *testing.T) {
 	mockSchedule := "@hourly"
 	var mockPort uint16 = 80
+	var mockAppName = "demo"
 	testCases := map[string]struct {
 		inShouldDeploy          bool
 		inPromptForShouldDeploy bool
@@ -102,6 +103,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initEnvCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().RecommendActions().Return(nil)
 			},
 		},
 		"deploy workload happy path": {
@@ -142,6 +144,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initEnvCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.deploySvcCmd.(*climocks.MockactionCommand).EXPECT().RecommendActions().Return(nil)
 			},
 		},
 		"should not deploy the svc if shouldDeploy is false": {

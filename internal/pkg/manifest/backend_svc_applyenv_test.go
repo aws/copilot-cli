@@ -26,7 +26,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 					},
 				}
 				svc.Environments["test"].ImageConfig = ImageWithPortAndHealthcheck{
-					HealthCheck: &ContainerHealthCheck{
+					HealthCheck: ContainerHealthCheck{
 						Retries: aws.Int(3),
 					},
 				}
@@ -38,7 +38,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 							Location: aws.String("mockLocation"),
 						},
 					},
-					HealthCheck: &ContainerHealthCheck{
+					HealthCheck: ContainerHealthCheck{
 						Retries: aws.Int(3),
 					},
 				}
@@ -67,56 +67,56 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"entrypoint overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
+				svc.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *BackendService) {
-				svc.EntryPoint = &EntryPointOverride{
+				svc.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 			},
 		},
 		"command overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
-				svc.Environments["test"].Command = &CommandOverride{
+				svc.Environments["test"].Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 				svc.Environments["test"].ImageOverride = ImageOverride{}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Command = &CommandOverride{
+				svc.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 			},
@@ -276,20 +276,20 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"network overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
@@ -297,15 +297,15 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
@@ -411,55 +411,55 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"storage overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
-				svc.Environments["test"].Storage = &Storage{
+				svc.Environments["test"].Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: storage not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 				svc.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Storage = &Storage{
+				svc.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 			},
 		},
 		"logging overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
-				svc.Environments["test"].Logging = &Logging{
+				svc.Environments["test"].Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: logging not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Logging = &Logging{
+				svc.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},

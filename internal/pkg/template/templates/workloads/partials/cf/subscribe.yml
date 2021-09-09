@@ -1,5 +1,6 @@
-{{- if .Subscribe}}
 EventsKMSKey:
+  Metadata:
+    'aws:copilot:description': 'A KMS key to encrypt messages in your queues'
   Type: AWS::KMS::Key
   Properties:
     KeyPolicy:
@@ -58,10 +59,13 @@ EventsKMSKey:
           Resource: '*'
 
 EventsQueue:
+  Metadata:
+    'aws:copilot:description': 'An events SQS queue to buffer messages'
   Type: AWS::SQS::Queue
-  {{- if .Subscribe.Queue}}
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
+{{- if .Subscribe}}
+  {{- if .Subscribe.Queue}}
     {{- if .Subscribe.Queue.Retention}}
     MessageRetentionPeriod: {{.Subscribe.Queue.Retention}}
     {{- end}}
@@ -70,13 +74,6 @@ EventsQueue:
     {{- end}}
     {{- if .Subscribe.Queue.Timeout}}
     VisibilityTimeout: {{.Subscribe.Queue.Timeout}}
-    {{- end}}
-    {{- if .Subscribe.Queue.FIFO}}
-    FifoQueue: true
-    {{- if .Subscribe.Queue.FIFO.HighThroughput}}
-    FifoThroughputLimit: 'perMessageGroupId'
-    DeduplicationScope: 'messageGroup'
-    {{- end}}
     {{- end}}
     {{- if .Subscribe.Queue.DeadLetter}}
     RedrivePolicy:
@@ -87,6 +84,8 @@ EventsQueue:
 
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetterQueue:
+  Metadata:
+    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the events queue'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -109,6 +108,8 @@ DeadLetterPolicy:
           Resource: !GetAtt DeadLetterQueue.Arn
 {{- end}}{{- end}}
 
+{{- end }}{{/* endif .Subscribe */}}
+
 QueuePolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
@@ -124,6 +125,7 @@ QueuePolicy:
             - sqs:ReceiveMessage
             - sqs:DeleteMessage
           Resource: !GetAtt EventsQueue.Arn
+{{- if .Subscribe }}
         {{- range $topic := .Subscribe.Topics}}
         {{- if not $topic.Queue}}
         - Effect: Allow
@@ -140,6 +142,8 @@ QueuePolicy:
 
 {{- range $topic := .Subscribe.Topics}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}SNSTopicSubscription:
+  Metadata:
+    'aws:copilot:description': 'A SNS subscription to topic {{$topic.Name}} from service {{$topic.Service}}'
   Type: AWS::SNS::Subscription
   Properties:
     TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
@@ -152,6 +156,8 @@ QueuePolicy:
 
 {{- if $topic.Queue}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
+  Metadata:
+    'aws:copilot:description': 'A SQS queue to buffer messages from the topic {{logicalIDSafe $topic.Name}}'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -164,13 +170,6 @@ QueuePolicy:
     {{- if $topic.Queue.Timeout}}
     VisibilityTimeout: {{$topic.Queue.Timeout}}
     {{- end}}
-    {{- if $topic.Queue.FIFO}}
-    FifoQueue: true
-    {{- if $topic.Queue.FIFO.HighThroughput}}
-    FifoThroughputLimit: 'perMessageGroupId'
-    DeduplicationScope: 'messageGroup'
-    {{- end}}
-    {{- end}}
     {{- if $topic.Queue.DeadLetter}}
     RedrivePolicy:
       deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
@@ -179,6 +178,8 @@ QueuePolicy:
 
 {{- if $topic.Queue.DeadLetter}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
+  Metadata:
+    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the topic {{logicalIDSafe $topic.Name}}'
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey

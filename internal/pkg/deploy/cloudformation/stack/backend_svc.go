@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Parameter logical IDs for a backend service.
@@ -56,7 +57,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 				addons: addons,
 			},
 			tc:                  mft.TaskConfig,
-			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: mft,
 
@@ -91,7 +92,7 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
-	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}

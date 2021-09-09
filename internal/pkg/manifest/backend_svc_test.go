@@ -54,8 +54,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -68,7 +68,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Name:  "subscribers",
 					Image: "mockImage",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Port: 8080,
@@ -86,7 +86,7 @@ func TestNewBackendSvc(t *testing.T) {
 							},
 							Port: aws.Uint16(8080),
 						},
-						HealthCheck: &ContainerHealthCheck{
+						HealthCheck: ContainerHealthCheck{
 							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
@@ -100,8 +100,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -146,7 +146,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 					Name:  "subscribers",
 					Image: "flask-sample",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
 					Interval:    durationp(6 * time.Second),
 					Retries:     aws.Int(0),
@@ -177,6 +177,83 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 	}
 }
 
+func TestBackendService_Port(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wantedPort uint16
+		wantedOK   bool
+	}{
+		"sets ok to false if no port is exposed": {
+			mft: &BackendService{},
+		},
+		"returns the port value and sets ok to true if a port is exposed": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Port: uint16P(80),
+						},
+					},
+				},
+			},
+			wantedPort: 80,
+			wantedOK:   true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, ok := tc.mft.Port()
+
+			// THEN
+			require.Equal(t, tc.wantedOK, ok)
+			require.Equal(t, tc.wantedPort, actual)
+		})
+	}
+}
+
+func TestBackendService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &BackendService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					Publish: PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
+		})
+	}
+}
+
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{
@@ -195,7 +272,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 					Port: aws.Uint16(8080),
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
 					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),
@@ -268,7 +345,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
-			Logging: &Logging{
+			Logging: Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
@@ -302,7 +379,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						CredsParam: aws.String("some arn"),
 					},
 				},
-				Logging: &Logging{
+				Logging: Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
@@ -499,7 +576,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",

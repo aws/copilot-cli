@@ -428,7 +428,6 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 }
 
 func TestWorkloadInitializer_Service(t *testing.T) {
-
 	var (
 		testInterval    = 10 * time.Second
 		testRetries     = 2
@@ -443,7 +442,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		inDockerfilePath string
 		inAppName        string
 		inImage          string
-		inHealthCheck    *manifest.ContainerHealthCheck
+		inHealthCheck    manifest.ContainerHealthCheck
 		inTopics         []manifest.TopicSubscription
 
 		mockWriter      func(m *mocks.MockWorkspace)
@@ -590,7 +589,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
 						require.Equal(t, *m.ImageConfig.Location, "mockImage")
-						require.Nil(t, m.ImageConfig.HealthCheck)
+						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -632,7 +631,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
-						require.Nil(t, m.ImageConfig.HealthCheck)
+						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -668,7 +667,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcName:        "backend",
 			inDockerfilePath: "backend/Dockerfile",
 			inSvcPort:        80,
-			inHealthCheck: &manifest.ContainerHealthCheck{
+			inHealthCheck: manifest.ContainerHealthCheck{
 				Interval:    &testInterval,
 				Retries:     &testRetries,
 				Timeout:     &testTimeout,
@@ -681,7 +680,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
-						require.Equal(t, *m.ImageConfig.HealthCheck, manifest.ContainerHealthCheck{
+						require.Equal(t, m.ImageConfig.HealthCheck, manifest.ContainerHealthCheck{
 							Interval:    &testInterval,
 							Retries:     &testRetries,
 							Timeout:     &testTimeout,
@@ -733,7 +732,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
 					Do(func(m *manifest.WorkerService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.WorkerServiceType)
-						require.Nil(t, m.ImageConfig.HealthCheck)
+						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/worker/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {

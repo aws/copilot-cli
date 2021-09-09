@@ -39,12 +39,12 @@ type ScheduledJobConfig struct {
 	ImageConfig             ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride           `yaml:",inline"`
 	TaskConfig              `yaml:",inline"`
-	*Logging                `yaml:"logging,flow"`
-	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
+	Logging                 `yaml:"logging,flow"`
+	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
-	Network                 *NetworkConfig `yaml:"network"`
-	Publish                 *PublishConfig `yaml:"publish"`
+	Network                 NetworkConfig  `yaml:"network"`
+	Publish                 PublishConfig  `yaml:"publish"`
 	TaskDefOverrides        []OverrideRule `yaml:"taskdef_overrides"`
 }
 
@@ -64,32 +64,8 @@ type ScheduledJobProps struct {
 	*WorkloadProps
 	Schedule    string
 	Timeout     string
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Retries     int
-}
-
-// newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
-func newDefaultScheduledJob() *ScheduledJob {
-	return &ScheduledJob{
-		Workload: Workload{
-			Type: aws.String(ScheduledJobType),
-		},
-		ScheduledJobConfig: ScheduledJobConfig{
-			ImageConfig: ImageWithHealthcheck{},
-			TaskConfig: TaskConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
-				Count: Count{
-					Value: aws.Int(1),
-				},
-			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
-				},
-			},
-		},
-	}
 }
 
 // NewScheduledJob creates a new scheduled job object.
@@ -139,6 +115,11 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &j, nil
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (j *ScheduledJob) Publish() []Topic {
+	return j.ScheduledJobConfig.Publish.Topics
+}
+
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
 func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return j.ImageConfig.BuildConfig(wsRoot)
@@ -152,4 +133,28 @@ func (j *ScheduledJob) BuildRequired() (bool, error) {
 // JobDockerfileBuildRequired returns if the job container image should be built from local Dockerfile.
 func JobDockerfileBuildRequired(job interface{}) (bool, error) {
 	return dockerfileBuildRequired("job", job)
+}
+
+// newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
+func newDefaultScheduledJob() *ScheduledJob {
+	return &ScheduledJob{
+		Workload: Workload{
+			Type: aws.String(ScheduledJobType),
+		},
+		ScheduledJobConfig: ScheduledJobConfig{
+			ImageConfig: ImageWithHealthcheck{},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count: Count{
+					Value: aws.Int(1),
+				},
+			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
+				},
+			},
+		},
+	}
 }

@@ -322,12 +322,13 @@ func (o *deleteSvcOpts) deleteSSMParam() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deleteSvcOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deleteSvcOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
 			color.HighlightCode("copilot pipeline update")),
-	}
+	})
+	return nil
 }
 
 // buildSvcDeleteCmd builds the command to delete application(s).
@@ -353,21 +354,7 @@ func buildSvcDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 

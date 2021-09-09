@@ -37,7 +37,8 @@ executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
 jobs or those which require specific execution schedules.`
 
-	fmtJobInitTypeHelp = "A %s is a task which is invoked on a set schedule, with optional retry logic."
+	jobInitTypeHelp = fmt.Sprintf(`A %s is a task which is invoked on a set schedule, with optional retry logic.
+To learn more see: https://git.io/JEEU4`, manifest.ScheduledJobType)
 )
 
 var jobTypeHints = map[string]string{
@@ -179,7 +180,7 @@ func (o *initJobOpts) Ask() error {
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
+	var hc manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.initParser(o.dockerfilePath))
@@ -216,14 +217,15 @@ func (o *initJobOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initJobOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initJobOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your job to a %s environment.",
 			color.HighlightCode(fmt.Sprintf("copilot job deploy --name %s --env %s", o.name, defaultEnvironmentName)),
 			defaultEnvironmentName),
-	}
+	})
+	return nil
 }
 
 func (o *initJobOpts) askJobType() error {
@@ -351,20 +353,7 @@ func buildJobInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

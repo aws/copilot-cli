@@ -18,7 +18,7 @@ import (
 )
 
 func TestAutoscalingIntegration_Validate(t *testing.T) {
-	path := filepath.Join("testdata", "autoscaling", manifestPath)
+	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)

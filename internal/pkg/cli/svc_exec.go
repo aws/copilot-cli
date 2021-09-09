@@ -90,15 +90,15 @@ func (o *svcExecOpts) Validate() error {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
+		if o.envName != "" {
+			if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+				return err
+			}
 		}
-	}
-	if o.name != "" {
-		if _, err := o.store.GetService(o.appName, o.name); err != nil {
-			return err
+		if o.name != "" {
+			if _, err := o.store.GetService(o.appName, o.name); err != nil {
+				return err
+			}
 		}
 	}
 	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
@@ -289,13 +289,7 @@ func buildSvcExecCmd() *cobra.Command {
 					opts.skipConfirmation = aws.Bool(true)
 				}
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

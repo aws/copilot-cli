@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/robfig/cron/v3"
 )
 
@@ -107,7 +108,7 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				addons: addons,
 			},
 			tc:                  mft.TaskConfig,
-			taskDefOverrideFunc: mockCloudFormationOverrideFunc,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: mft,
 
@@ -134,7 +135,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
 	}
-	publishers, err := convertPublish(j.manifest.Publish, j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
+	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for job %s: %w`, j.name, err)
 	}

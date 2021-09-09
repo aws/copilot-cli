@@ -74,7 +74,7 @@ type WorkloadProps struct {
 type JobProps struct {
 	WorkloadProps
 	Schedule    string
-	HealthCheck *manifest.ContainerHealthCheck
+	HealthCheck manifest.ContainerHealthCheck
 	Timeout     string
 	Retries     int
 }
@@ -83,7 +83,7 @@ type JobProps struct {
 type ServiceProps struct {
 	WorkloadProps
 	Port        uint16
-	HealthCheck *manifest.ContainerHealthCheck
+	HealthCheck manifest.ContainerHealthCheck
 	appDomain   *string
 }
 

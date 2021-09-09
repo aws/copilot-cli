@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"regexp"
 	"strings"
 	"time"
 
@@ -59,6 +60,9 @@ const (
 var (
 	errEphemeralBadSize  = errors.New("ephemeral storage must be between 20 GiB and 200 GiB")
 	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
+
+	taskDefOverrideRulePrefixes      = []string{"Resources", "TaskDefinition", "Properties"}
+	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
 type convertSidecarOpts struct {
@@ -314,14 +318,10 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 	return &template.ExecuteCommandOpts{}
 }
 
-func convertLogging(lc *manifest.Logging) *template.LogConfigOpts {
-	if lc == nil {
+func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
+	if lc.IsEmpty() {
 		return nil
 	}
-	return logConfigOpts(lc)
-}
-
-func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 	return &template.LogConfigOpts{
 		Image:          lc.LogImage(),
 		ConfigFile:     lc.ConfigFile,
@@ -333,19 +333,33 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 
 func convertTaskDefOverrideRules(inRules []manifest.OverrideRule) []override.Rule {
 	var res []override.Rule
+	suffixStr := strings.Join(taskDefOverrideRulePrefixes, override.PathSegmentSeparator)
 	for _, r := range inRules {
+		if !isValidTaskDefOverridePath(r.Path) {
+			continue
+		}
 		res = append(res, override.Rule{
-			Path:  r.Path,
+			Path:  strings.Join([]string{suffixStr, r.Path}, override.PathSegmentSeparator),
 			Value: r.Value,
 		})
 	}
 	return res
 }
 
+func isValidTaskDefOverridePath(path string) bool {
+	for _, s := range invalidTaskDefOverridePathRegexp {
+		re := regexp.MustCompile(fmt.Sprintf(`^%s$`, s))
+		if re.MatchString(path) {
+			return false
+		}
+	}
+	return true
+}
+
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(wlName *string, in *manifest.Storage) (*template.StorageOpts, error) {
-	if in == nil {
+func convertStorageOpts(wlName *string, in manifest.Storage) (*template.StorageOpts, error) {
+	if in.IsEmpty() {
 		return nil, nil
 	}
 	if err := validateStorageConfig(in); err != nil {
@@ -423,7 +437,7 @@ func convertMountPoint(sourceVolume, containerPath *string, readOnly *bool) *tem
 	}
 }
 
-func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
+func convertMountPoints(input map[string]*manifest.Volume) ([]*template.MountPoint, error) {
 	if len(input) == 0 {
 		return nil, nil
 	}
@@ -434,7 +448,7 @@ func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoin
 	return output, nil
 }
 
-func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
+func convertEFSPermissions(input map[string]*manifest.Volume) ([]*template.EFSPermission, error) {
 	var output []*template.EFSPermission
 	for _, volume := range input {
 		// If there's no EFS configuration, we don't need to generate any permissions.
@@ -455,10 +469,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 		if volume.ReadOnly != nil {
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
-		var accessPointID *string
-		if volume.EFS.Advanced.AuthConfig != nil {
-			accessPointID = volume.EFS.Advanced.AuthConfig.AccessPointID
-		}
+		accessPointID := volume.EFS.Advanced.AuthConfig.AccessPointID
 		output = append(output, &template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
@@ -468,7 +479,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 	return output, nil
 }
 
-func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
+func convertManagedFSInfo(wlName *string, input map[string]*manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
 	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
 		if volume.EmptyVolume() {
@@ -507,7 +518,7 @@ func getRandomUIDGID(name *string) uint32 {
 	return crc32.ChecksumIEEE([]byte(aws.StringValue(name)))
 }
 
-func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
+func convertVolumes(input map[string]*manifest.Volume) ([]*template.Volume, error) {
 	var output []*template.Volume
 	for name, volume := range input {
 		// Volumes can contain either:
@@ -551,7 +562,7 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 	// Set default values for IAM and AccessPointID
 	iam := aws.String(defaultIAM)
-	if in.AuthConfig == nil {
+	if in.AuthConfig.IsEmpty() {
 		return &template.EFSVolumeConfiguration{
 			Filesystem:    in.FileSystemID,
 			RootDirectory: rootDir,
@@ -571,8 +582,8 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 }
 
-func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts {
-	if network == nil || network.VPC == nil {
+func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
+	if network.IsEmpty() {
 		return &template.NetworkOpts{
 			AssignPublicIP: template.EnablePublicIP,
 			SubnetsType:    template.PublicSubnetsPlacement,
@@ -590,11 +601,7 @@ func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts
 	return opts
 }
 
-func convertAlias(alias *manifest.Alias) ([]string, error) {
-	if alias == nil {
-		return nil, nil
-	}
-
+func convertAlias(alias manifest.Alias) ([]string, error) {
 	out, err := alias.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
@@ -602,11 +609,7 @@ func convertAlias(alias *manifest.Alias) ([]string, error) {
 	return out, nil
 }
 
-func convertEntryPoint(entrypoint *manifest.EntryPointOverride) ([]string, error) {
-	if entrypoint == nil {
-		return nil, nil
-	}
-
+func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error) {
 	out, err := entrypoint.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
@@ -614,10 +617,7 @@ func convertEntryPoint(entrypoint *manifest.EntryPointOverride) ([]string, error
 	return out, nil
 }
 
-func convertCommand(command *manifest.CommandOverride) ([]string, error) {
-	if command == nil {
-		return nil, nil
-	}
+func convertCommand(command manifest.CommandOverride) ([]string, error) {
 	out, err := command.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'command' to string slice: %w`, err)
@@ -625,8 +625,8 @@ func convertCommand(command *manifest.CommandOverride) ([]string, error) {
 	return out, nil
 }
 
-func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
-	if p == nil || len(p.Topics) == 0 {
+func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
+	if len(topics) == 0 {
 		return nil, nil
 	}
 	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
@@ -635,7 +635,7 @@ func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc 
 	}
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
-	for _, topic := range p.Topics {
+	for _, topic := range topics {
 		t, err := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
 		if err != nil {
 			return nil, err
@@ -668,8 +668,8 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	}, nil
 }
 
-func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
-	if s == nil || s.Topics == nil {
+func convertSubscribe(s manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
+	if s.Topics == nil {
 		return nil, nil
 	}
 
@@ -680,14 +680,14 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 
 	var subscriptions template.SubscribeOpts
 	for _, sb := range s.Topics {
-		ts, err := convertTopicSubscription(sb, validTopicARNs, sqsEndpoint.URL, accountID, app, env, svc)
+		ts, err := convertTopicSubscription(sb, sqsEndpoint.URL, accountID, app, env, svc)
 		if err != nil {
 			return nil, err
 		}
 
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	queue, err := convertQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
+	queue, err := convertQueue(s.Queue)
 	if err != nil {
 		return nil, err
 	}
@@ -696,12 +696,12 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
-	err := validateTopicSubscription(t, validTopicARNs, app, env)
+func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
+	err := validateTopicSubscription(t)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
-	queue, err := convertQueue(t.Queue, url, accountID, app, env, svc)
+	queue, err := convertQueue(t.Queue)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -713,7 +713,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []str
 	}, nil
 }
 
-func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
+func convertQueue(q *manifest.SQSQueue) (*template.SQSQueue, error) {
 	if q == nil {
 		return nil, nil
 	}
@@ -739,7 +739,6 @@ func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*
 		Delay:      delay,
 		Timeout:    timeout,
 		DeadLetter: deadletter,
-		FIFO:       convertFIFO(q.FIFO),
 	}, nil
 }
 
@@ -767,18 +766,8 @@ func convertTimeout(t *time.Duration) (*int64, error) {
 	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
 }
 
-func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
-	if f == nil || !aws.BoolValue(f.Enabled) {
-		return nil
-	}
-
-	return &template.FIFOQueue{
-		HighThroughput: aws.BoolValue(f.FIFO.HighThroughput),
-	}
-}
-
-func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
-	if d == nil {
+func convertDeadLetter(d manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
+	if d.IsEmpty() {
 		return nil, nil
 	}
 	if err := validateDeadLetter(d); err != nil {
