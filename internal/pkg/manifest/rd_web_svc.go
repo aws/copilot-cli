@@ -29,7 +29,7 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
-	Publish                           PublishConfig           `yaml:"publish"`
+	PublishConfig                     PublishConfig           `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {
@@ -79,7 +79,7 @@ func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *RequestDrivenWebService) Publish() []Topic {
-	return s.RequestDrivenWebServiceConfig.Publish.Topics
+	return s.RequestDrivenWebServiceConfig.PublishConfig.Topics
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
