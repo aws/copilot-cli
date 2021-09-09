@@ -58,6 +58,9 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	if props.Platform != nil {
+		svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
+	}
 	svc.parser = template.New()
 	return svc
 }
