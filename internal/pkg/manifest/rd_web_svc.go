@@ -47,7 +47,8 @@ type AppRunnerInstanceConfig struct {
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
-	Port uint16
+	Port     uint16
+	Platform *PlatformArgsOrString
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
