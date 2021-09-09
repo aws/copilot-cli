@@ -204,7 +204,13 @@ func TestEc2Select_Subnets(t *testing.T) {
 				prompt: mockprompt,
 				ec2Svc: mockec2Svc,
 			}
-			subnets, err := sel.selectPublicSubnets("Select a subnet", "Help text", mockVPC)
+			mockInput := SubnetsInput{
+				Msg:      "Select a subnet",
+				Help:     "Help text",
+				VPCID:    mockVPC,
+				IsPublic: true,
+			}
+			subnets, err := sel.selectFromVPCSubnets(mockInput)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
