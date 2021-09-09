@@ -29,7 +29,7 @@ type BackendServiceConfig struct {
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	Network          NetworkConfig             `yaml:"network"`
 	Publish          PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`

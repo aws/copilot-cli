@@ -18,7 +18,7 @@ var (
 // Storage represents the options for external and native storage.
 type Storage struct {
 	Ephemeral *int               `yaml:"ephemeral"`
-	Volumes   map[string]*Volume `yaml:"volumes"`
+	Volumes   map[string]*Volume `yaml:"volumes"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 }
 
 // IsEmpty returns empty if the struct has all zero members.
