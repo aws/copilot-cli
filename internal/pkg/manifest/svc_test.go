@@ -477,13 +477,19 @@ func TestCount_UnmarshalYAML(t *testing.T) {
   range: 1-10
   spot: 3
 `),
-			wantedError: errInvalidAdvancedCount,
+			wantedError: &errFieldMutualExclusive{
+				firstField:  "spot",
+				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			},
 		},
 		"Error if autoscaling specified without range": {
 			inContent: []byte(`count:
   cpu_percentage: 30
 `),
-			wantedError: errInvalidAutoscaling,
+			wantedError: &errFieldMustBeSpecified{
+				missingField:      "range",
+				conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+			},
 		},
 		"Error if unmarshalable": {
 			inContent: []byte(`count: badNumber
@@ -576,7 +582,10 @@ func TestRange_Parse(t *testing.T) {
 				},
 			},
 
-			wantedErr: errInvalidRangeOpts,
+			wantedErr: &errFieldMutualExclusive{
+				firstField:  "range",
+				secondField: "min/max",
+			},
 		},
 		"success": {
 			input: Range{
@@ -817,7 +826,10 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 				Requests: aws.Int(1000),
 			},
 
-			expectedErr: errInvalidAdvancedCount,
+			expectedErr: &errFieldMutualExclusive{
+				firstField:  "spot",
+				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			},
 		},
 		"invalid with spot count and range": {
 			input: &AdvancedCount{
@@ -827,7 +839,10 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 				},
 			},
 
-			expectedErr: errInvalidAdvancedCount,
+			expectedErr: &errFieldMutualExclusive{
+				firstField:  "spot",
+				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			},
 		},
 		"invalid with spot count and range config": {
 			input: &AdvancedCount{
@@ -841,7 +856,10 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 				},
 			},
 
-			expectedErr: errInvalidAdvancedCount,
+			expectedErr: &errFieldMutualExclusive{
+				firstField:  "spot",
+				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			},
 		},
 		"invalid with autoscaling fields and no range": {
 			input: &AdvancedCount{
@@ -850,7 +868,10 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 				Requests: aws.Int(1000),
 			},
 
-			expectedErr: errInvalidAutoscaling,
+			expectedErr: &errFieldMustBeSpecified{
+				missingField:      "range",
+				conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+			},
 		},
 	}
 	for name, tc := range testCases {

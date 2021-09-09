@@ -73,7 +73,9 @@ func (i ImageWithPort) Validate() error {
 		return err
 	}
 	if i.Port == nil {
-		return errEmptyContainerPort
+		return &errFieldMustBeSpecified{
+			missingField: "port",
+		}
 	}
 	return nil
 }
@@ -87,7 +89,11 @@ func (i Image) Validate() error {
 		}
 	}
 	if i.Build.isEmpty() == (i.Location == nil) {
-		return errInvalidBuildAndLocation
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
 	}
 	return nil
 }
@@ -145,7 +151,10 @@ func (r RoutingRule) Validate() error {
 		}
 	}
 	if r.TargetContainer != nil && r.TargetContainerCamelCase != nil {
-		return errDuplicatedTargetContainer
+		return &errFieldMutualExclusive{
+			firstField:  "target_container",
+			secondField: "targetContainer",
+		}
 	}
 	return nil
 }
@@ -209,7 +218,10 @@ func (c Count) Validate() error {
 // Validate returns if AdvancedCount is configured correctly.
 func (a AdvancedCount) Validate() error {
 	if a.Spot != nil && a.hasAutoscaling() {
-		return errInvalidAdvancedCount
+		return &errFieldMutualExclusive{
+			firstField:  "spot",
+			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+		}
 	}
 	if a.Range != nil {
 		if err := a.Range.Validate(); err != nil {
@@ -217,7 +229,10 @@ func (a AdvancedCount) Validate() error {
 		}
 	}
 	if a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil {
-		return errInvalidAutoscaling
+		return &errFieldMustBeSpecified{
+			missingField:      "range",
+			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+		}
 	}
 	return nil
 }
@@ -236,7 +251,7 @@ func (r IntRangeBand) Validate() error {
 	minMax := intRangeBandRegexp.FindStringSubmatch(str)
 	// Valid minMax example: ["1-2", "1", "2"]
 	if len(minMax) != 3 {
-		return &errInvalidIntRangeBand{value: str}
+		return fmt.Errorf("invalid range value %s. Should be in format of ${min}-${max}", str)
 	}
 	// Guaranteed by intRangeBandRegexp.
 	min, err := strconv.Atoi(minMax[1])
@@ -315,7 +330,10 @@ func (e EFSConfigOrBool) Validate() error {
 // Validate returns if EFSVolumeConfiguration is configured correctly.
 func (e EFSVolumeConfiguration) Validate() error {
 	if !e.EmptyBYOConfig() && !e.EmptyUIDConfig() {
-		return errInvalidEFSConfiguration
+		return &errFieldMutualExclusive{
+			firstField:  "uid/gid",
+			secondField: "id/root_dir/auth",
+		}
 	}
 	if e.AuthConfig != nil {
 		if err := e.AuthConfig.Validate(); err != nil {
@@ -326,7 +344,7 @@ func (e EFSVolumeConfiguration) Validate() error {
 				aws.BoolValue(e.AuthConfig.IAM) {
 				return nil
 			}
-			return errInvalidEFSAccessPoint
+			return fmt.Errorf("root_dir must be either empty or / and auth.iam must be true when access_point_id is in used")
 		}
 	}
 	return nil

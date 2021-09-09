@@ -42,7 +42,10 @@ type Range struct {
 // Parse extracts the min and max from RangeOpts
 func (r Range) Parse() (min int, max int, err error) {
 	if r.Value != nil && !r.RangeConfig.IsEmpty() {
-		return 0, 0, errInvalidRangeOpts
+		return 0, 0, &errFieldMutualExclusive{
+			firstField:  "range",
+			secondField: "min/max",
+		}
 	}
 
 	if r.Value != nil {
@@ -201,12 +204,18 @@ func (a *AdvancedCount) hasAutoscaling() bool {
 func (a *AdvancedCount) IsValid() error {
 	// Spot translates to desiredCount; cannot specify with autoscaling
 	if a.Spot != nil && a.hasAutoscaling() {
-		return errInvalidAdvancedCount
+		return &errFieldMutualExclusive{
+			firstField:  "spot",
+			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+		}
 	}
 
 	// Range must be specified if using autoscaling
 	if a.Range == nil && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
-		return errInvalidAutoscaling
+		return &errFieldMustBeSpecified{
+			missingField:      "range",
+			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+		}
 	}
 
 	return nil

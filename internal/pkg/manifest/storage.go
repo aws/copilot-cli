@@ -143,7 +143,10 @@ func (e *EFSVolumeConfiguration) unsetUIDConfig() {
 
 func (e *EFSVolumeConfiguration) isValid() error {
 	if !e.EmptyBYOConfig() && !e.EmptyUIDConfig() {
-		return errInvalidEFSConfiguration
+		return &errFieldMutualExclusive{
+			firstField:  "uid/gid",
+			secondField: "id/root_dir/auth",
+		}
 	}
 	return nil
 }

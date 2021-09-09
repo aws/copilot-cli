@@ -4,19 +4,10 @@
 package manifest
 
 import (
-	"errors"
 	"fmt"
-)
+	"strings"
 
-var (
-	errEmptyContainerPort        = errors.New(`"port" must be specified`)
-	errInvalidBuildAndLocation   = errors.New(`must specify one, not both, not none, of "build" and "location"`)
-	errDuplicatedTargetContainer = errors.New(`must specify one, not both, of "target_container" and "targetContainer"`)
-	errInvalidRangeOpts          = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
-	errInvalidAdvancedCount      = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
-	errInvalidAutoscaling        = errors.New(`must specify "range" if using autoscaling`)
-	errInvalidEFSConfiguration   = errors.New(`must specify one, not both, of "uid/gid" and "id/root_dir/auth"`)
-	errInvalidEFSAccessPoint     = errors.New("root_dir must be either empty or / and auth.iam must be true when access_point_id is in used")
+	"github.com/dustin/go-humanize/english"
 )
 
 // ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.
@@ -63,12 +54,32 @@ func (e *ErrUnknownProvider) Is(target error) bool {
 	return ok
 }
 
-type errInvalidIntRangeBand struct {
-	value string
+type errFieldMustBeSpecified struct {
+	missingField      string
+	conditionalFields []string
 }
 
-func (e *errInvalidIntRangeBand) Error() string {
-	return fmt.Sprintf("invalid range value %s. Should be in format of ${min}-${max}", string(e.value))
+func (e *errFieldMustBeSpecified) Error() string {
+	fmtErrMsg := `"%s" must be specified`
+	if len(e.conditionalFields) == 0 {
+		return fmt.Sprintf(fmtErrMsg, e.missingField)
+	}
+	return fmt.Sprintf("%s if %s %s specified", fmtErrMsg, strings.Join(e.conditionalFields, ","),
+		english.PluralWord(len(e.conditionalFields), "is", "are"))
+}
+
+type errFieldMutualExclusive struct {
+	firstField  string
+	secondField string
+	mustExist   bool
+}
+
+func (e *errFieldMutualExclusive) Error() string {
+	var s string
+	if e.mustExist {
+		s = " not none,"
+	}
+	return fmt.Sprintf(`must specify one, not both,%s of "%s" and "%s"`, s, e.firstField, e.secondField)
 }
 
 type errMinGreaterThanMax struct {

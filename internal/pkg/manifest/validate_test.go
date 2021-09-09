@@ -76,7 +76,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`validate "count": must specify one, not both, of "spot" and autoscaling fields`),
+			wantedError: fmt.Errorf(`validate "count": must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
 		},
 		"error if range band is in invalid format": {
 			lbConfig: LoadBalancedWebServiceConfig{
