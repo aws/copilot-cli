@@ -6,6 +6,7 @@ package sessions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -28,6 +29,8 @@ const (
 	credsTimeout                    = 10 * time.Second
 	clientTimeout                   = 30 * time.Second
 )
+
+var errMissingRegion = errors.New("missing region configuration")
 
 // Provider provides methods to create sessions.
 // Once a session is created, it's cached locally so that the same session is not re-created.
@@ -59,6 +62,10 @@ func (p *Provider) Default() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	if isRegionMissing(sess) {
+		return nil, errMissingRegion
+	}
+
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	p.defaultSess = sess
 	return sess, nil
@@ -86,6 +93,9 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if isRegionMissing(sess) {
+		return nil, errMissingRegion
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, nil
@@ -168,4 +178,8 @@ func userAgentHandler() request.NamedHandler {
 				fmt.Sprintf("aws-ecs-cli-v2/%s (%s) %s", version.Version, runtime.GOOS, userAgent))
 		},
 	}
+}
+
+func isRegionMissing(sess *session.Session) bool {
+	return sess.Config.Region == nil || *sess.Config.Region == ""
 }
