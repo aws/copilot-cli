@@ -64,7 +64,7 @@ type ScheduledJobProps struct {
 	*WorkloadProps
 	Schedule    string
 	Timeout     string
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Retries     int
 }
 

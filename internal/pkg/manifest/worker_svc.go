@@ -71,8 +71,8 @@ func (q *DeadLetterQueue) IsEmpty() bool {
 // WorkerServiceProps represents the configuration needed to create a worker service.
 type WorkerServiceProps struct {
 	WorkloadProps
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	Topics      []TopicSubscription   // Optional topics for subscriptions
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Topics      []TopicSubscription  // Optional topics for subscriptions
 }
 
 // NewWorkerService applies the props to a default Worker service configuration with

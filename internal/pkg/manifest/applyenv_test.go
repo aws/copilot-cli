@@ -294,19 +294,19 @@ func TestApplyEnv_Image(t *testing.T) {
 		},
 		"healthcheck overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(3),
 				}
 
 				mockInterval1Minute := 60 * time.Second
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockInterval1Minute,
 					Retries:  aws.Int(5),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockInterval1Minute := 60 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockInterval1Minute,
 					Retries:  aws.Int(5),
 				}
@@ -314,13 +314,13 @@ func TestApplyEnv_Image(t *testing.T) {
 		},
 		"FIXED_AFTER_TRANSFORM_STRUCT: healthcheck not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(3),
 				}
 				svc.Environments["test"].ImageConfig.Image = Image{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command:     nil,
 					Interval:    nil,
 					Retries:     aws.Int(3),
@@ -332,12 +332,12 @@ func TestApplyEnv_Image(t *testing.T) {
 		"empty healthcheck overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.Image = Image{}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(3),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command:     nil,
 					Interval:    nil,
 					Retries:     aws.Int(3),
@@ -870,43 +870,43 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 	}{
 		"command overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{"mock", "command"},
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{"mock", "command_test", "test"},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{"mock", "command_test", "test"},
 				}
 			},
 		},
 		"command overridden by zero slice": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{"mock", "command"},
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{},
 				}
 			},
 		},
 		"FIXED BUG: command not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{"mock", "command"},
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Command: []string{"mock", "command"},
 				}
 			},
@@ -915,16 +915,16 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockInterval := 600 * time.Second
 				mockIntervalTest := 50 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockInterval,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockIntervalTest,
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockIntervalTest := 50 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockIntervalTest,
 				}
 			},
@@ -933,16 +933,16 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockInterval := 600 * time.Second
 				mockIntervalTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockInterval,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockIntervalTest,
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockIntervalTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockIntervalTest,
 				}
 			},
@@ -950,57 +950,57 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 		"FIXED_AFTER_TRANSFORM_POINTER: interval not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockInterval := 600 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockInterval,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockIntervalTest := 600 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Interval: &mockIntervalTest,
 				}
 			},
 		},
 		"retries overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(13),
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(42),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(42),
 				}
 			},
 		},
 		"retries explicitly overridden by empty value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(13),
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(0),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(0),
 				}
 			},
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: retries not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(13),
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Retries: aws.Int(13),
 				}
 			},
@@ -1009,16 +1009,16 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockTimeout := 60 * time.Second
 				mockTimeoutTest := 400 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeout,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeoutTest,
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockTimeoutTest := 400 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeoutTest,
 				}
 			},
@@ -1027,16 +1027,16 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockTimeout := 60 * time.Second
 				mockTimeoutTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeout,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeoutTest,
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockTimeoutTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeoutTest,
 				}
 			},
@@ -1044,14 +1044,14 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 		"FIXED_AFTER_TRANSFORM_POINTER: timeout not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockTimeout := 60 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeout,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockTimeoutTest := 60 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					Timeout: &mockTimeoutTest,
 				}
 			},
@@ -1060,16 +1060,16 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockStartPeriod := 10 * time.Second
 				mockStartPeriodTest := 300 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriod,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriodTest,
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockStartPeriod := 300 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriod,
 				}
 			},
@@ -1078,16 +1078,16 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockStartPeriod := 10 * time.Second
 				mockStartPeriodTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriod,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriodTest,
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockStartPeriod := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriod,
 				}
 			},
@@ -1095,14 +1095,14 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 		"FIXED_AFTER_TRANSFORM_POINTER: start_period not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
 				mockStartPeriod := 10 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriod,
 				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
+				svc.Environments["test"].ImageConfig.HealthCheck = ContainerHealthCheck{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				mockStartPeriod := 10 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
+				svc.ImageConfig.HealthCheck = ContainerHealthCheck{
 					StartPeriod: &mockStartPeriod,
 				}
 			},

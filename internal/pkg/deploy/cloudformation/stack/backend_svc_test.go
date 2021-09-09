@@ -161,7 +161,7 @@ Outputs:
 						Dockerfile: testDockerfile,
 					},
 					Port: 8080,
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    &testInterval,
 						Retries:     &testRetries,
@@ -273,7 +273,7 @@ func TestBackendService_Parameters(t *testing.T) {
 			Dockerfile: testDockerfile,
 		},
 		Port: 8080,
-		HealthCheck: &manifest.ContainerHealthCheck{
+		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,
 			Retries:     &testRetries,

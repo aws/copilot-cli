@@ -177,7 +177,7 @@ Outputs:
 						Name:       testServiceName,
 						Dockerfile: testDockerfile,
 					},
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    &testInterval,
 						Retries:     &testRetries,
@@ -290,7 +290,7 @@ func TestWorkerService_Parameters(t *testing.T) {
 			Name:       testServiceName,
 			Dockerfile: testDockerfile,
 		},
-		HealthCheck: &manifest.ContainerHealthCheck{
+		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,
 			Retries:     &testRetries,

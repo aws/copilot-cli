@@ -238,7 +238,7 @@ secrets:
 								},
 								Port: aws.Uint16(8080),
 							},
-							HealthCheck: &ContainerHealthCheck{
+							HealthCheck: ContainerHealthCheck{
 								Command: []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
 							},
 						},

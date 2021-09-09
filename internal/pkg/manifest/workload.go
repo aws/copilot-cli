@@ -92,13 +92,13 @@ type Image struct {
 // ImageWithHealthcheck represents a container image with health check.
 type ImageWithHealthcheck struct {
 	Image       `yaml:",inline"`
-	HealthCheck *ContainerHealthCheck `yaml:"healthcheck"` // This is used as a pointer so that we can use `{{- if .ContainerHealthCheck}}` for manifest rendering.
+	HealthCheck ContainerHealthCheck `yaml:"healthcheck"` // This is used as a pointer so that we can use `{{- if .ContainerHealthCheck}}` for manifest rendering.
 }
 
 // ImageWithPortAndHealthcheck represents a container image with an exposed port and health check.
 type ImageWithPortAndHealthcheck struct {
 	ImageWithPort `yaml:",inline"`
-	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"` // This is used as a pointer so that we can use `{{- if .ContainerHealthCheck}}` for manifest rendering.
+	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"` // This is used as a pointer so that we can use `{{- if .ContainerHealthCheck}}` for manifest rendering.
 }
 
 // ImageWithPort represents a container image with an exposed port.
@@ -560,6 +560,8 @@ type ContainerHealthCheck struct {
 	Retries     *int           `yaml:"retries"`
 	Timeout     *time.Duration `yaml:"timeout"`
 	StartPeriod *time.Duration `yaml:"start_period"`
+
+	//IsEmpty func() bool
 }
 
 // newDefaultContainerHealthCheck returns container health check configuration
@@ -572,6 +574,11 @@ func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 		Timeout:     durationp(5 * time.Second),
 		StartPeriod: durationp(0 * time.Second),
 	}
+}
+
+// IsEmpty checks if the health check is empty.
+func (hc ContainerHealthCheck) IsEmpty() bool {
+	return hc.Command == nil && hc.Interval == nil && hc.Retries == nil && hc.Timeout == nil && hc.StartPeriod == nil
 }
 
 // applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
@@ -607,14 +614,14 @@ func (hc *ContainerHealthCheck) healthCheckOpts() *ecs.HealthCheck {
 
 // HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
 func (i ImageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck == nil {
+	if i.HealthCheck.IsEmpty() {
 		return nil
 	}
 	return i.HealthCheck.healthCheckOpts()
 }
 
 func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck == nil {
+	if i.HealthCheck.IsEmpty() {
 		return nil
 	}
 	return i.HealthCheck.healthCheckOpts()

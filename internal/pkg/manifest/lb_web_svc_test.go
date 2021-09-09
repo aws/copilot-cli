@@ -28,7 +28,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					Dockerfile: "./Dockerfile",
 				},
 				Path: "/",
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Port: 80,
@@ -51,7 +51,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 							},
 							Port: aws.Uint16(80),
 						},
-						HealthCheck: &ContainerHealthCheck{
+						HealthCheck: ContainerHealthCheck{
 							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
@@ -1248,7 +1248,7 @@ func Test_Temp(t *testing.T) {
 			},
 			Port: aws.Uint16(5000),
 		},
-		HealthCheck: newDefaultContainerHealthCheck(),
+		HealthCheck: *newDefaultContainerHealthCheck(),
 	}
 	t.Run("temporary", func(t *testing.T) {
 		// WHEN
@@ -1292,7 +1292,7 @@ func Test_Temp(t *testing.T) {
 							},
 							Port: aws.Uint16(5000),
 						},
-						HealthCheck: newDefaultContainerHealthCheck(),
+						HealthCheck: *newDefaultContainerHealthCheck(),
 					},
 				},
 			},

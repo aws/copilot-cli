@@ -39,7 +39,7 @@ type BackendServiceConfig struct {
 type BackendServiceProps struct {
 	WorkloadProps
 	Port        uint16
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 }
 
 // NewBackendService applies the props to a default backend service configuration with

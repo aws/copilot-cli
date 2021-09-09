@@ -68,7 +68,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Name:  "subscribers",
 					Image: "mockImage",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Port: 8080,
@@ -86,7 +86,7 @@ func TestNewBackendSvc(t *testing.T) {
 							},
 							Port: aws.Uint16(8080),
 						},
-						HealthCheck: &ContainerHealthCheck{
+						HealthCheck: ContainerHealthCheck{
 							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
@@ -146,7 +146,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 					Name:  "subscribers",
 					Image: "flask-sample",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
 					Interval:    durationp(6 * time.Second),
 					Retries:     aws.Int(0),
@@ -272,7 +272,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 					Port: aws.Uint16(8080),
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
 					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),

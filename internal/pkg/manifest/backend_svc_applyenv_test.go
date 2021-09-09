@@ -26,7 +26,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 					},
 				}
 				svc.Environments["test"].ImageConfig = ImageWithPortAndHealthcheck{
-					HealthCheck: &ContainerHealthCheck{
+					HealthCheck: ContainerHealthCheck{
 						Retries: aws.Int(3),
 					},
 				}
@@ -38,7 +38,7 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 							Location: aws.String("mockLocation"),
 						},
 					},
-					HealthCheck: &ContainerHealthCheck{
+					HealthCheck: ContainerHealthCheck{
 						Retries: aws.Int(3),
 					},
 				}

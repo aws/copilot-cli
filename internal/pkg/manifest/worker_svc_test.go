@@ -188,7 +188,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
 					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),
