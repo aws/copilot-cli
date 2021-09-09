@@ -528,7 +528,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 						Platform:       nil,
 					},
 					Schedule: "@hourly",
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"mockCommand"},
 						Interval:    &second,
 						Retries:     &zero,

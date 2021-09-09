@@ -247,7 +247,7 @@ Resources:
   
   AutoScalingTarget:
     Metadata:
-      'aws:copilot:description': "An AutoScaling target to scale your service's desired count"
+      'aws:copilot:description': "An autoscaling target to scale your service's desired count"
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
       MinCapacity: 2

@@ -318,14 +318,10 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 	return &template.ExecuteCommandOpts{}
 }
 
-func convertLogging(lc *manifest.Logging) *template.LogConfigOpts {
-	if lc == nil {
+func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
+	if lc.IsEmpty() {
 		return nil
 	}
-	return logConfigOpts(lc)
-}
-
-func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 	return &template.LogConfigOpts{
 		Image:          lc.LogImage(),
 		ConfigFile:     lc.ConfigFile,
@@ -362,8 +358,8 @@ func isValidTaskDefOverridePath(path string) bool {
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(wlName *string, in *manifest.Storage) (*template.StorageOpts, error) {
-	if in == nil {
+func convertStorageOpts(wlName *string, in manifest.Storage) (*template.StorageOpts, error) {
+	if in.IsEmpty() {
 		return nil, nil
 	}
 	if err := validateStorageConfig(in); err != nil {
@@ -473,10 +469,7 @@ func convertEFSPermissions(input map[string]*manifest.Volume) ([]*template.EFSPe
 		if volume.ReadOnly != nil {
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
-		var accessPointID *string
-		if volume.EFS.Advanced.AuthConfig != nil {
-			accessPointID = volume.EFS.Advanced.AuthConfig.AccessPointID
-		}
+		accessPointID := volume.EFS.Advanced.AuthConfig.AccessPointID
 		output = append(output, &template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
@@ -569,7 +562,7 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 	// Set default values for IAM and AccessPointID
 	iam := aws.String(defaultIAM)
-	if in.AuthConfig == nil {
+	if in.AuthConfig.IsEmpty() {
 		return &template.EFSVolumeConfiguration{
 			Filesystem:    in.FileSystemID,
 			RootDirectory: rootDir,
@@ -589,8 +582,8 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 }
 
-func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts {
-	if network == nil || network.VPC == nil {
+func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
+	if network.IsEmpty() {
 		return &template.NetworkOpts{
 			AssignPublicIP: template.EnablePublicIP,
 			SubnetsType:    template.PublicSubnetsPlacement,
@@ -608,11 +601,7 @@ func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts
 	return opts
 }
 
-func convertAlias(alias *manifest.Alias) ([]string, error) {
-	if alias == nil {
-		return nil, nil
-	}
-
+func convertAlias(alias manifest.Alias) ([]string, error) {
 	out, err := alias.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
@@ -620,11 +609,7 @@ func convertAlias(alias *manifest.Alias) ([]string, error) {
 	return out, nil
 }
 
-func convertEntryPoint(entrypoint *manifest.EntryPointOverride) ([]string, error) {
-	if entrypoint == nil {
-		return nil, nil
-	}
-
+func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error) {
 	out, err := entrypoint.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
@@ -632,10 +617,7 @@ func convertEntryPoint(entrypoint *manifest.EntryPointOverride) ([]string, error
 	return out, nil
 }
 
-func convertCommand(command *manifest.CommandOverride) ([]string, error) {
-	if command == nil {
-		return nil, nil
-	}
+func convertCommand(command manifest.CommandOverride) ([]string, error) {
 	out, err := command.ToStringSlice()
 	if err != nil {
 		return nil, fmt.Errorf(`convert 'command' to string slice: %w`, err)
@@ -686,8 +668,8 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	}, nil
 }
 
-func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
-	if s == nil || s.Topics == nil {
+func convertSubscribe(s manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
+	if s.Topics == nil {
 		return nil, nil
 	}
 
@@ -705,7 +687,7 @@ func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, acco
 
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	queue, err := convertQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
+	queue, err := convertQueue(s.Queue)
 	if err != nil {
 		return nil, err
 	}
@@ -719,7 +701,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app,
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
-	queue, err := convertQueue(t.Queue, url, accountID, app, env, svc)
+	queue, err := convertQueue(t.Queue)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
 	}
@@ -731,7 +713,7 @@ func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app,
 	}, nil
 }
 
-func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
+func convertQueue(q *manifest.SQSQueue) (*template.SQSQueue, error) {
 	if q == nil {
 		return nil, nil
 	}
@@ -784,8 +766,8 @@ func convertTimeout(t *time.Duration) (*int64, error) {
 	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
 }
 
-func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
-	if d == nil {
+func convertDeadLetter(d manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
+	if d.IsEmpty() {
 		return nil, nil
 	}
 	if err := validateDeadLetter(d); err != nil {

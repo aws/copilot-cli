@@ -17,18 +17,23 @@ var (
 // Storage represents the options for external and native storage.
 type Storage struct {
 	Ephemeral *int               `yaml:"ephemeral"`
-	Volumes   map[string]*Volume `yaml:"volumes"`
+	Volumes   map[string]*Volume `yaml:"volumes"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (s *Storage) IsEmpty() bool {
+	return s.Ephemeral == nil && s.Volumes == nil
 }
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
-	EFS            *EFSConfigOrBool `yaml:"efs"`
+	EFS            EFSConfigOrBool `yaml:"efs"`
 	MountPointOpts `yaml:",inline"`
 }
 
 // EmptyVolume returns true if the EFS configuration is nil or explicitly/implicitly disabled.
 func (v *Volume) EmptyVolume() bool {
-	if v.EFS == nil {
+	if v.EFS.IsEmpty() {
 		return true
 	}
 	// Respect Bool value first: return true if EFS is explicitly disabled.
@@ -53,22 +58,27 @@ type SidecarMountPoint struct {
 
 // EFSVolumeConfiguration holds options which tell ECS how to reach out to the EFS filesystem.
 type EFSVolumeConfiguration struct {
-	FileSystemID  *string              `yaml:"id"`       // Required. Can be specified as "copilot" or "managed" magic keys.
-	RootDirectory *string              `yaml:"root_dir"` // Default "/". For BYO EFS.
-	AuthConfig    *AuthorizationConfig `yaml:"auth"`     // Auth config for BYO EFS.
-	UID           *uint32              `yaml:"uid"`      // UID for managed EFS.
-	GID           *uint32              `yaml:"gid"`      // GID for managed EFS.
+	FileSystemID  *string             `yaml:"id"`       // Required. Can be specified as "copilot" or "managed" magic keys.
+	RootDirectory *string             `yaml:"root_dir"` // Default "/". For BYO EFS.
+	AuthConfig    AuthorizationConfig `yaml:"auth"`     // Auth config for BYO EFS.
+	UID           *uint32             `yaml:"uid"`      // UID for managed EFS.
+	GID           *uint32             `yaml:"gid"`      // GID for managed EFS.
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (e *EFSVolumeConfiguration) IsEmpty() bool {
-	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig == nil && e.UID == nil && e.GID == nil
+	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig.IsEmpty() && e.UID == nil && e.GID == nil
 }
 
 // EFSConfigOrBool contains custom unmarshaling logic for the `efs` field in the manifest.
 type EFSConfigOrBool struct {
 	Advanced EFSVolumeConfiguration
 	Enabled  *bool
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (e *EFSConfigOrBool) IsEmpty() bool {
+	return e.Advanced.IsEmpty() && e.Enabled == nil
 }
 
 // UnmarshalYAML implements the yaml(v2) interface. It allows EFS to be specified as a
@@ -121,7 +131,7 @@ func (e *EFSConfigOrBool) Disabled() bool {
 // EmptyBYOConfig returns true if the `id`, `root_directory`, and `auth` fields are all empty.
 // This would mean that no custom EFS information has been specified.
 func (e *EFSVolumeConfiguration) EmptyBYOConfig() bool {
-	return e.FileSystemID == nil && e.AuthConfig == nil && e.RootDirectory == nil
+	return e.FileSystemID == nil && e.AuthConfig.IsEmpty() && e.RootDirectory == nil
 }
 
 // EmptyUIDConfig returns true if the `uid` and `gid` fields are empty. These fields are mutually exclusive
@@ -132,7 +142,7 @@ func (e *EFSVolumeConfiguration) EmptyUIDConfig() bool {
 
 func (e *EFSVolumeConfiguration) unsetBYOConfig() {
 	e.FileSystemID = nil
-	e.AuthConfig = nil
+	e.AuthConfig = AuthorizationConfig{}
 	e.RootDirectory = nil
 }
 
@@ -155,4 +165,9 @@ func (e *EFSVolumeConfiguration) isValid() error {
 type AuthorizationConfig struct {
 	IAM           *bool   `yaml:"iam"`             // Default true
 	AccessPointID *string `yaml:"access_point_id"` // Default ""
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (a *AuthorizationConfig) IsEmpty() bool {
+	return a.IAM == nil && a.AccessPointID == nil
 }

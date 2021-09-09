@@ -151,54 +151,54 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"entrypoint overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
-				job.Environments["test"].EntryPoint = &EntryPointOverride{
+				job.Environments["test"].EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: entrypoint not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.EntryPoint = &EntryPointOverride{
+				job.EntryPoint = EntryPointOverride{
 					String: aws.String("mock entrypoint"),
 				}
 			},
 		},
 		"command overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
-				job.Environments["test"].Command = &CommandOverride{
+				job.Environments["test"].Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: command not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Command = &CommandOverride{
+				job.Command = CommandOverride{
 					String: aws.String("mock command"),
 				}
 			},
@@ -384,20 +384,20 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"network overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
-				job.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Environments["test"].Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacementTest"),
 					},
 				}
@@ -405,15 +405,15 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: network not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Network = &NetworkConfig{
-					VPC: &vpcConfig{
+				job.Network = NetworkConfig{
+					VPC: vpcConfig{
 						Placement: aws.String("mockPlacement"),
 					},
 				}
@@ -519,55 +519,55 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"storage overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
-				job.Environments["test"].Storage = &Storage{
+				job.Environments["test"].Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(5),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: storage not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 				job.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Storage = &Storage{
+				job.Storage = Storage{
 					Ephemeral: aws.Int(3),
 				}
 			},
 		},
 		"logging overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
-				job.Environments["test"].Logging = &Logging{
+				job.Environments["test"].Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImageTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: logging not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Logging = &Logging{
+				job.Logging = Logging{
 					Image: aws.String("mockImage"),
 				}
 			},
