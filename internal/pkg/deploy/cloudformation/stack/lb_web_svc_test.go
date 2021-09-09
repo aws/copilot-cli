@@ -107,15 +107,15 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
-	testLBWebServiceManifest.ImageConfig.HealthCheck = &manifest.ContainerHealthCheck{
+	testLBWebServiceManifest.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 		Retries: aws.Int(5),
 	}
-	testLBWebServiceManifest.Alias = &manifest.Alias{String: aws.String("mockAlias")}
-	testLBWebServiceManifest.EntryPoint = &manifest.EntryPointOverride{
+	testLBWebServiceManifest.Alias = manifest.Alias{String: aws.String("mockAlias")}
+	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
 	}
-	testLBWebServiceManifest.Command = &manifest.CommandOverride{
+	testLBWebServiceManifest.Command = manifest.CommandOverride{
 		String:      nil,
 		StringSlice: []string{"world"},
 	}

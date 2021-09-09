@@ -245,7 +245,7 @@ func (o *initSvcOpts) Ask() error {
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
+	var hc manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.dockerfile(o.dockerfilePath))
@@ -500,15 +500,15 @@ func parseSerializedSubscription(input string) (manifest.TopicSubscription, erro
 	}, nil
 }
 
-func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, error) {
+func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error) {
 	hc, err := df.GetHealthCheck()
 	if err != nil {
-		return nil, fmt.Errorf("get healthcheck: %w", err)
+		return manifest.ContainerHealthCheck{}, fmt.Errorf("get healthcheck: %w", err)
 	}
 	if hc == nil {
-		return nil, nil
+		return manifest.ContainerHealthCheck{}, nil
 	}
-	return &manifest.ContainerHealthCheck{
+	return manifest.ContainerHealthCheck{
 		Interval:    &hc.Interval,
 		Timeout:     &hc.Timeout,
 		StartPeriod: &hc.StartPeriod,
