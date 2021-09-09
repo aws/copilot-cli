@@ -15,7 +15,7 @@ image:
 {{- if .ImageConfig.Image.Location}}
   location: {{.ImageConfig.Image.Location}}
 {{- end}}
-{{- if .ImageConfig.HealthCheck}}
+{{- if not .ImageConfig.HealthCheck.IsEmpty}}
   healthcheck:
     # Container health checks
     command: {{fmtSlice (quoteSlice .ImageConfig.HealthCheck.Command)}}

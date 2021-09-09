@@ -28,7 +28,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					Dockerfile: "./Dockerfile",
 				},
 				Path: "/",
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Port: 80,
@@ -51,7 +51,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 							},
 							Port: aws.Uint16(80),
 						},
-						HealthCheck: &ContainerHealthCheck{
+						HealthCheck: ContainerHealthCheck{
 							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
@@ -72,8 +72,8 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -227,14 +227,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
@@ -277,14 +277,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
@@ -335,17 +335,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
-											AuthConfig: &AuthorizationConfig{
+											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-1234"),
 											},
@@ -362,11 +362,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-123"},
 						},
@@ -397,13 +397,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
-							Storage: &Storage{
+							Storage: Storage{
 								Volumes: map[string]*Volume{
 									"myEFSVolume": {
-										EFS: &EFSConfigOrBool{
+										EFS: EFSConfigOrBool{
 											Advanced: EFSVolumeConfiguration{
 												FileSystemID: aws.String("fs-5678"),
-												AuthConfig: &AuthorizationConfig{
+												AuthConfig: AuthorizationConfig{
 													AccessPointID: aws.String("ap-5678"),
 												},
 											},
@@ -426,13 +426,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								},
 							},
 						},
-						Logging: &Logging{
+						Logging: Logging{
 							SecretOptions: map[string]string{
 								"FOO": "BAR",
 							},
 						},
-						Network: &NetworkConfig{
-							VPC: &vpcConfig{
+						Network: NetworkConfig{
+							VPC: vpcConfig{
 								SecurityGroups: []string{"sg-456", "sg-789"},
 							},
 						},
@@ -480,17 +480,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-						Storage: &Storage{
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrBool{
+									EFS: EFSConfigOrBool{
 										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-5678"),
-											AuthConfig: &AuthorizationConfig{
+											AuthConfig: AuthorizationConfig{
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-5678"),
 											},
@@ -516,14 +516,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
@@ -543,10 +543,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "default"},
 						},
-						EntryPoint: &EntryPointOverride{
+						EntryPoint: EntryPointOverride{
 							StringSlice: []string{"entrypoint", "default"},
 						},
 					},
@@ -569,10 +569,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 					},
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "default"},
 						},
-						EntryPoint: &EntryPointOverride{
+						EntryPoint: EntryPointOverride{
 							StringSlice: []string{"entrypoint", "default"},
 						},
 					},
@@ -593,8 +593,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
@@ -617,8 +617,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
@@ -1007,7 +1007,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "default"},
 						},
 					},
@@ -1015,7 +1015,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						ImageOverride: ImageOverride{
-							Command: &CommandOverride{
+							Command: CommandOverride{
 								StringSlice: []string{"command", "prod"},
 							},
 						},
@@ -1031,7 +1031,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageOverride: ImageOverride{
-						Command: &CommandOverride{
+						Command: CommandOverride{
 							StringSlice: []string{"command", "prod"},
 						},
 					},
@@ -1049,13 +1049,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						RoutingRule: RoutingRule{
-							AllowedSourceIps: &[]string{"ip1", "ip3"},
+							AllowedSourceIps: []string{"ip1", "ip3"},
 						},
 					},
 				},
@@ -1072,7 +1072,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip3"},
+						AllowedSourceIps: []string{"ip1", "ip3"},
 					},
 				},
 			},
@@ -1088,7 +1088,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
@@ -1113,7 +1113,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("another-path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 			},
@@ -1129,7 +1129,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: &[]string{"ip1", "ip2"},
+						AllowedSourceIps: []string{"ip1", "ip2"},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
@@ -1138,7 +1138,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							HealthCheck: HealthCheckArgsOrString{
 								HealthCheckPath: aws.String("another-path"),
 							},
-							AllowedSourceIps: &[]string{},
+							AllowedSourceIps: []string{},
 						},
 					},
 				},
@@ -1155,7 +1155,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("another-path"),
 						},
-						AllowedSourceIps: &[]string{},
+						AllowedSourceIps: []string{},
 					},
 				},
 			},
@@ -1205,7 +1205,7 @@ func TestLoadBalancedWebService_Publish(t *testing.T) {
 		"returns the list of topics if manifest publishes notifications": {
 			mft: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Publish: &PublishConfig{
+					Publish: PublishConfig{
 						Topics: []Topic{
 							{
 								Name: stringP("hello"),
@@ -1249,7 +1249,7 @@ func Test_Temp(t *testing.T) {
 			},
 			Port: aws.Uint16(5000),
 		},
-		HealthCheck: newDefaultContainerHealthCheck(),
+		HealthCheck: *newDefaultContainerHealthCheck(),
 	}
 	t.Run("temporary", func(t *testing.T) {
 		// WHEN
@@ -1293,7 +1293,7 @@ func Test_Temp(t *testing.T) {
 							},
 							Port: aws.Uint16(5000),
 						},
-						HealthCheck: newDefaultContainerHealthCheck(),
+						HealthCheck: *newDefaultContainerHealthCheck(),
 					},
 				},
 			},
@@ -1358,6 +1358,33 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 			} else {
 				require.Equal(t, tc.want, got)
 			}
+		})
+	}
+}
+
+func TestAlias_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     Alias
+		wanted bool
+	}{
+		"empty alias": {
+			in:     Alias{},
+			wanted: true,
+		},
+		"non empty alias": {
+			in: Alias{
+				String: aws.String("alias test"),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }
