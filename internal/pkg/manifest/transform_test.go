@@ -523,14 +523,14 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Spot = aws.Int(24)
 			},
 			override: func(a *AdvancedCount) {
-				a.Range = &Range{
+				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
 				a.CPU = aws.Int(1024)
 				a.Requests = aws.Int(42)
 			},
 			wanted: func(a *AdvancedCount) {
-				a.Range = &Range{
+				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
 				a.CPU = aws.Int(1024)
@@ -539,7 +539,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 		},
 		"auto scaling set to empty if spot is not nil": {
 			original: func(a *AdvancedCount) {
-				a.Range = &Range{
+				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
 				a.CPU = aws.Int(1024)

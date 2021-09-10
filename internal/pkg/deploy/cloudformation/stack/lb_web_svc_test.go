@@ -341,7 +341,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	testLBWebServiceManifest.Count = manifest.Count{
 		Value: aws.Int(1),
 		AdvancedCount: manifest.AdvancedCount{
-			Range: &manifest.Range{
+			Range: manifest.Range{
 				Value: &testLBWebServiceManifestRange,
 			},
 		},
@@ -350,7 +350,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	testLBWebServiceManifestWithBadCountRange := manifest.IntRangeBand("badCount")
 	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
 		AdvancedCount: manifest.AdvancedCount{
-			Range: &manifest.Range{
+			Range: manifest.Range{
 				Value: &testLBWebServiceManifestWithBadCountRange,
 			},
 		},
