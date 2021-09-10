@@ -178,7 +178,7 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									AdvancedCount: AdvancedCount{
-										Range: &Range{
+										Range: Range{
 											RangeConfig: RangeConfig{
 												Min:      aws.Int(2),
 												Max:      aws.Int(8),
@@ -193,7 +193,7 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									AdvancedCount: AdvancedCount{
-										Range: &Range{
+										Range: Range{
 											Value: &mockRange,
 										},
 										CPU: aws.Int(70),
@@ -394,7 +394,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
-					Range:        &Range{Value: &mockRange},
+					Range:        Range{Value: &mockRange},
 					CPU:          aws.Int(70),
 					Memory:       aws.Int(80),
 					Requests:     aws.Int(1000),
@@ -420,7 +420,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(5),
 							Max: aws.Int(15),
@@ -438,7 +438,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min:      aws.Int(2),
 							Max:      aws.Int(8),
@@ -458,7 +458,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min:      aws.Int(2),
 							Max:      aws.Int(8),
@@ -690,7 +690,7 @@ func TestCount_Desired(t *testing.T) {
 		"with autoscaling range on dedicated capacity": {
 			input: &Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						Value: &mockRange,
 					},
 				},
@@ -700,7 +700,7 @@ func TestCount_Desired(t *testing.T) {
 		"with autoscaling range with spot capacity": {
 			input: &Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(5),
 							Max: aws.Int(10),
@@ -743,7 +743,7 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		},
 		"with range value": {
 			input: &AdvancedCount{
-				Range: &Range{
+				Range: Range{
 					Value: &mockRange,
 				},
 			},
@@ -752,7 +752,7 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		},
 		"with range config": {
 			input: &AdvancedCount{
-				Range: &Range{
+				Range: Range{
 					RangeConfig: RangeConfig{
 						Min:      aws.Int(1),
 						Max:      aws.Int(10),
@@ -765,7 +765,7 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		},
 		"with range and autoscaling config": {
 			input: &AdvancedCount{
-				Range: &Range{
+				Range: Range{
 					Value: &mockRange,
 				},
 				CPU:      aws.Int(512),
@@ -777,7 +777,7 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		},
 		"with range config and autoscaling config": {
 			input: &AdvancedCount{
-				Range: &Range{
+				Range: Range{
 					RangeConfig: RangeConfig{
 						Min: aws.Int(1),
 						Max: aws.Int(10),
@@ -792,7 +792,7 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		},
 		"with range config with spot and autoscaling config": {
 			input: &AdvancedCount{
-				Range: &Range{
+				Range: Range{
 					RangeConfig: RangeConfig{
 						Min:      aws.Int(1),
 						Max:      aws.Int(10),
@@ -819,7 +819,7 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		"invalid with spot count and range": {
 			input: &AdvancedCount{
 				Spot: aws.Int(42),
-				Range: &Range{
+				Range: Range{
 					Value: &mockRange,
 				},
 			},
@@ -829,7 +829,7 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		"invalid with spot count and range config": {
 			input: &AdvancedCount{
 				Spot: aws.Int(42),
-				Range: &Range{
+				Range: Range{
 					RangeConfig: RangeConfig{
 						Min:      aws.Int(1),
 						Max:      aws.Int(10),

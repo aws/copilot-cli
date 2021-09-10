@@ -698,7 +698,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"empty env advanced count override": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 					CPU:   aws.Int(80),
 				},
 			},
@@ -708,7 +708,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
@@ -749,7 +749,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by spot count": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
@@ -772,12 +772,12 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by range config": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(2),
 							Max: aws.Int(8),
@@ -790,7 +790,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{
+								Range: Range{
 									RangeConfig: RangeConfig{
 										Min: aws.Int(2),
 										Max: aws.Int(8),
