@@ -65,7 +65,7 @@ type ScheduledJobProps struct {
 	Schedule    string
 	Timeout     string
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
-	Platform    *PlatformArgsOrString // Optional platform configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 	Retries     int
 }
 
@@ -82,9 +82,7 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 		job.Retries = aws.Int(props.Retries)
 	}
 	job.Timeout = stringP(props.Timeout)
-	if props.Platform != nil {
-		job.Platform = props.Platform
-	}
+	job.Platform = props.Platform
 	job.parser = template.New()
 	return job
 }
@@ -150,7 +148,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 			TaskConfig: TaskConfig{
 				CPU:      aws.Int(256),
 				Memory:   aws.Int(512),
-				Platform: &PlatformArgsOrString{},
+				Platform: PlatformArgsOrString{},
 				Count: Count{
 					Value: aws.Int(1),
 				},

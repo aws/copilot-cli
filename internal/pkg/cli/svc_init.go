@@ -273,7 +273,7 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform: &manifest.PlatformArgsOrString{
+			Platform: manifest.PlatformArgsOrString{
 				PlatformString: o.platform,
 			},
 			Topics: o.topics,

@@ -39,16 +39,16 @@ type RequestDrivenWebServiceHttpConfig struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU      *int                  `yaml:"cpu"`
-	Memory   *int                  `yaml:"memory"`
-	Platform *PlatformArgsOrString `yaml:"platform,omitempty"`
+	CPU      *int                 `yaml:"cpu"`
+	Memory   *int                 `yaml:"memory"`
+	Platform PlatformArgsOrString `yaml:"platform,omitempty"`
 }
 
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
 	Port     uint16
-	Platform *PlatformArgsOrString
+	Platform PlatformArgsOrString
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -58,9 +58,7 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
-	if props.Platform != nil {
-		svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
-	}
+	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -93,7 +91,7 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 
 // TaskPlatform returns the platform for the service.
 func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if s.InstanceConfig.Platform == nil {
+	if s.InstanceConfig.Platform.PlatformString == nil {
 		return nil, nil
 	}
 	return s.InstanceConfig.Platform.PlatformString, nil

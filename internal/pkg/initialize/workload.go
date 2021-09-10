@@ -66,7 +66,7 @@ type WorkloadProps struct {
 	Name           string
 	DockerfilePath string
 	Image          string
-	Platform       *manifest.PlatformArgsOrString
+	Platform       manifest.PlatformArgsOrString
 	Topics         []manifest.TopicSubscription
 }
 

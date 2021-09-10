@@ -46,7 +46,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:      aws.Int(256),
 						Memory:   aws.Int(512),
-						Platform: &PlatformArgsOrString{},
+						Platform: PlatformArgsOrString{},
 						Count: Count{
 							Value: aws.Int(1),
 						},
@@ -88,7 +88,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:      aws.Int(256),
 						Memory:   aws.Int(512),
-						Platform: &PlatformArgsOrString{},
+						Platform: PlatformArgsOrString{},
 						Count: Count{
 							Value: aws.Int(1),
 						},
@@ -133,7 +133,7 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
 				},
-				Platform: &PlatformArgsOrString{
+				Platform: PlatformArgsOrString{
 					PlatformString: nil,
 					PlatformArgs: PlatformArgs{
 						OSFamily: nil,
@@ -149,7 +149,7 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
 				},
-				Platform: &PlatformArgsOrString{
+				Platform: PlatformArgsOrString{
 					PlatformString: nil,
 					PlatformArgs: PlatformArgs{
 						OSFamily: nil,

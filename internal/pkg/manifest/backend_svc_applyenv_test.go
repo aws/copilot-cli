@@ -177,28 +177,28 @@ func TestBackendSvc_ApplyEnv_New(t *testing.T) {
 		},
 		"platform overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform test"),
 				}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: platform not overridden": {
 			inSvc: func(svc *BackendService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
 				}
 				svc.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(svc *BackendService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
 				}
 			},

@@ -73,8 +73,8 @@ type WorkerServiceProps struct {
 	WorkloadProps
 
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
-	Platform    *PlatformArgsOrString // Optional platform configuration.
-	Topics      []TopicSubscription   // Optional topics for subscriptions
+	Platform    PlatformArgsOrString // Optional platform configuration.
+	Topics      []TopicSubscription  // Optional topics for subscriptions
 }
 
 // NewWorkerService applies the props to a default Worker service configuration with
@@ -87,9 +87,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
-	if props.Platform != nil {
-		svc.WorkerServiceConfig.Platform = props.Platform
-	}
+	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -161,7 +159,7 @@ func newDefaultWorkerService() *WorkerService {
 			TaskConfig: TaskConfig{
 				CPU:      aws.Int(256),
 				Memory:   aws.Int(512),
-				Platform: &PlatformArgsOrString{},
+				Platform: PlatformArgsOrString{},
 				Count: Count{
 					Value: aws.Int(1),
 				},

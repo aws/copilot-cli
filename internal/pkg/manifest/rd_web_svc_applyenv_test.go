@@ -226,28 +226,28 @@ func TestRequestDrivenWebService_ApplyEnv_New(t *testing.T) {
 		},
 		"platform overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
-				svc.InstanceConfig.Platform = &PlatformArgsOrString{
+				svc.InstanceConfig.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
-				svc.Environments["test"].InstanceConfig.Platform = &PlatformArgsOrString{
+				svc.Environments["test"].InstanceConfig.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatformTest"),
 				}
 			},
 			wanted: func(svc *RequestDrivenWebService) {
-				svc.InstanceConfig.Platform = &PlatformArgsOrString{
+				svc.InstanceConfig.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatformTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: platform not overridden": {
 			inSvc: func(svc *RequestDrivenWebService) {
-				svc.InstanceConfig.Platform = &PlatformArgsOrString{
+				svc.InstanceConfig.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 				svc.Environments["test"].InstanceConfig = AppRunnerInstanceConfig{}
 			},
 			wanted: func(svc *RequestDrivenWebService) {
-				svc.InstanceConfig.Platform = &PlatformArgsOrString{
+				svc.InstanceConfig.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 			},

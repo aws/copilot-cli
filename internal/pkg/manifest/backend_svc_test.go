@@ -47,7 +47,7 @@ func TestNewBackendSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:      aws.Int(256),
 						Memory:   aws.Int(512),
-						Platform: &PlatformArgsOrString{},
+						Platform: PlatformArgsOrString{},
 						Count: Count{
 							Value: aws.Int(1),
 						},
@@ -94,7 +94,7 @@ func TestNewBackendSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:      aws.Int(256),
 						Memory:   aws.Int(512),
-						Platform: &PlatformArgsOrString{},
+						Platform: PlatformArgsOrString{},
 						Count: Count{
 							Value: aws.Int(1),
 						},

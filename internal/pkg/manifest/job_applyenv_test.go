@@ -259,28 +259,28 @@ func TestScheduledJob_ApplyEnv_New(t *testing.T) {
 		},
 		"platform overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Platform = &PlatformArgsOrString{
+				job.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
 				}
-				job.Environments["test"].Platform = &PlatformArgsOrString{
+				job.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform test"),
 				}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Platform = &PlatformArgsOrString{
+				job.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform test"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: platform not overridden": {
 			inJob: func(job *ScheduledJob) {
-				job.Platform = &PlatformArgsOrString{
+				job.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
 				}
 				job.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(job *ScheduledJob) {
-				job.Platform = &PlatformArgsOrString{
+				job.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mock platform"),
 				}
 			},

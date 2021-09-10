@@ -1134,10 +1134,10 @@ func TestApplyEnv_Platform(t *testing.T) {
 	}{
 		"FIXED_BUG: composite fields: platform string is overridden if platform args is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mock"),
 						Arch:     aws.String("platformTest"),
@@ -1145,7 +1145,7 @@ func TestApplyEnv_Platform(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mock"),
 						Arch:     aws.String("platformTest"),
@@ -1155,81 +1155,81 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"FIXED_BUG: composite fields: platform args is overridden if platform string is not nil": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mock"),
 						Arch:     aws.String("platformTest"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 			},
 		},
 		"platform string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatformTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatformTest"),
 				}
 			},
 		},
 		"platform string explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformString: aws.String(""),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String(""),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: platform string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 				svc.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 			},
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: platform args overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mock"),
 						Arch:     aws.String("platform"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String("platformTest"),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mock"),
 						Arch:     aws.String("platformTest"),
@@ -1239,7 +1239,7 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"FAILED_AFTER_UPGRADE: platform args not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mock"),
 						Arch:     aws.String("platform"),
@@ -1248,7 +1248,7 @@ func TestApplyEnv_Platform(t *testing.T) {
 				svc.Environments["test"].TaskConfig = TaskConfig{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mock"),
 						Arch:     aws.String("platform"),
@@ -1258,19 +1258,19 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"osfamily string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mockOSFamily"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mockOSFamilyTest"),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mockOSFamilyTest"),
 					},
@@ -1279,19 +1279,19 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"osfamily string explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mockOSFamily"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String(""),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String(""),
 					},
@@ -1300,17 +1300,17 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: osfamily string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mockOSFamily"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						OSFamily: aws.String("mockOSFamily"),
 					},
@@ -1319,19 +1319,19 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"architecture string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String("mockArch"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String("mockArchTest"),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String("mockArchTest"),
 					},
@@ -1340,19 +1340,19 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"architecture string explicitly overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String("mockArch"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String(""),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String(""),
 					},
@@ -1361,17 +1361,17 @@ func TestApplyEnv_Platform(t *testing.T) {
 		},
 		"FIXED_AFTER_TRANSFORM_POINTER: architecture string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String("mockArch"),
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformArgs: PlatformArgs{
 						Arch: aws.String("mockArch"),
 					},

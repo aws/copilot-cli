@@ -40,7 +40,7 @@ type BackendServiceProps struct {
 	WorkloadProps
 	Port        uint16
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
-	Platform    *PlatformArgsOrString // Optional platform configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 }
 
 // NewBackendService applies the props to a default backend service configuration with
@@ -53,9 +53,7 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
-	if props.Platform != nil {
-		svc.BackendServiceConfig.Platform = props.Platform
-	}
+	svc.BackendServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -134,7 +132,7 @@ func newDefaultBackendService() *BackendService {
 			TaskConfig: TaskConfig{
 				CPU:      aws.Int(256),
 				Memory:   aws.Int(512),
-				Platform: &PlatformArgsOrString{},
+				Platform: PlatformArgsOrString{},
 				Count: Count{
 					Value: aws.Int(1),
 				},

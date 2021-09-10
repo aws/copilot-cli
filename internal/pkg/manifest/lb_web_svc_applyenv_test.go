@@ -1229,27 +1229,27 @@ func TestLoadBalancedWebService_ApplyEnv_New(t *testing.T) {
 		},
 		"platform overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
+				svc.Environments["test"].Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatformTest"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatformTest"),
 				}
 			},
 		},
 		"FAILED_AFTER_UPGRADE: platform not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
+				svc.Platform = PlatformArgsOrString{
 					PlatformString: aws.String("mockPlatform"),
 				}
 			},
