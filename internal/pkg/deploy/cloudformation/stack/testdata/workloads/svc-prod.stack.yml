@@ -107,9 +107,26 @@ Resources:
               ReadOnly: true
               SourceVolume: persistence
           PortMappings:
-            - ContainerPort: !Ref ContainerPort        
-
-      
+            - ContainerPort: !Ref ContainerPort 
+        - Name: nginx
+          Image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
+          PortMappings:
+            - ContainerPort: 80
+          HealthCheck:
+            Command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+            Interval: 10
+            Retries: 2
+            StartPeriod: 0
+            Timeout: 5
+          Environment:
+            - Name: NGINX_PORT
+              Value: "80"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: copilot     
       Volumes:
         - Name: persistence
   ExecutionRole:

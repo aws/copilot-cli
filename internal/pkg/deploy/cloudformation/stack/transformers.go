@@ -18,6 +18,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -118,10 +119,26 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 			DockerLabels: config.DockerLabels,
 			DependsOn:    config.DependsOn,
 			EntryPoint:   entrypoint,
+			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
 		})
 	}
 	return sidecars, nil
+}
+
+func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *ecs.HealthCheck {
+	if hc.IsEmpty() {
+		return nil
+	}
+	// Make sure that unset fields in the healthcheck gets a default value.
+	hc.ApplyIfNotSet(manifest.NewDefaultContainerHealthCheck())
+	return &ecs.HealthCheck{
+		Command:     aws.StringSlice(hc.Command),
+		Interval:    aws.Int64(int64(hc.Interval.Seconds())),
+		Retries:     aws.Int64(int64(aws.IntValue(hc.Retries))),
+		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
+		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
+	}
 }
 
 // convertDependsOnStatus converts image and sidecar depends on fields to have upper case statuses

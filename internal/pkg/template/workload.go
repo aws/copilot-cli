@@ -104,6 +104,7 @@ type SidecarOpts struct {
 	DependsOn    map[string]string
 	EntryPoint   []string
 	Command      []string
+	HealthCheck  *ecs.HealthCheck
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
