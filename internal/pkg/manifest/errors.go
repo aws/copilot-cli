@@ -5,6 +5,8 @@ package manifest
 
 import (
 	"fmt"
+
+	"github.com/dustin/go-humanize/english"
 )
 
 // ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.
@@ -49,4 +51,40 @@ func (e *ErrUnknownProvider) Error() string {
 func (e *ErrUnknownProvider) Is(target error) bool {
 	_, ok := target.(*ErrUnknownProvider)
 	return ok
+}
+
+type errFieldMustBeSpecified struct {
+	missingField      string
+	conditionalFields []string
+}
+
+func (e *errFieldMustBeSpecified) Error() string {
+	errMsg := fmt.Sprintf(`"%s" must be specified`, e.missingField)
+	if len(e.conditionalFields) == 0 {
+		return errMsg
+	}
+	return fmt.Sprintf(`%s if "%s" %s specified`, errMsg, english.WordSeries(e.conditionalFields, "or"),
+		english.PluralWord(len(e.conditionalFields), "is", "are"))
+}
+
+type errFieldMutualExclusive struct {
+	firstField  string
+	secondField string
+	mustExist   bool
+}
+
+func (e *errFieldMutualExclusive) Error() string {
+	if e.mustExist {
+		return fmt.Sprintf(`must specify one of "%s" and "%s"`, e.firstField, e.secondField)
+	}
+	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
+}
+
+type errMinGreaterThanMax struct {
+	min int
+	max int
+}
+
+func (e *errMinGreaterThanMax) Error() string {
+	return fmt.Sprintf("min value %d cannot be greater than max value %d", e.min, e.max)
 }
