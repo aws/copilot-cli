@@ -297,17 +297,11 @@ func TestRangeConfig_Validate(t *testing.T) {
 
 		wantedError error
 	}{
-		"error if min is set but max is not": {
+		"error if max is not set": {
 			RangeConfig: RangeConfig{
 				Min: aws.Int(2),
 			},
-			wantedError: fmt.Errorf(`"max" must be specified if "min" is specified`),
-		},
-		"error if max is set but min is not": {
-			RangeConfig: RangeConfig{
-				Max: aws.Int(1),
-			},
-			wantedError: fmt.Errorf(`"min" must be specified if "max" is specified`),
+			wantedError: fmt.Errorf(`"min/max" must be specified`),
 		},
 		"error if range min is greater than max": {
 			RangeConfig: RangeConfig{
@@ -431,6 +425,7 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 				AuthConfig: AuthorizationConfig{
 					AccessPointID: aws.String("mockID"),
 				},
+				RootDirectory: aws.String("mockDir"),
 			},
 			wantedError: fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`),
 		},

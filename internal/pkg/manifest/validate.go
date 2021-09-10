@@ -269,16 +269,9 @@ func (r *IntRangeBand) Validate() error {
 
 // Validate returns if RangeConfig is configured correctly.
 func (r *RangeConfig) Validate() error {
-	if r.Min == nil && r.Max != nil {
+	if r.Min == nil || r.Max == nil {
 		return &errFieldMustBeSpecified{
-			missingField:      "min",
-			conditionalFields: []string{"max"},
-		}
-	}
-	if r.Min != nil && r.Max == nil {
-		return &errFieldMustBeSpecified{
-			missingField:      "max",
-			conditionalFields: []string{"min"},
+			missingField: "min/max",
 		}
 	}
 	min, max := aws.IntValue(r.Min), aws.IntValue(r.Max)
@@ -360,7 +353,7 @@ func (e *EFSVolumeConfiguration) Validate() error {
 	}
 	if e.AuthConfig.AccessPointID != nil {
 		if (aws.StringValue(e.RootDirectory) == "" || aws.StringValue(e.RootDirectory) == "/") &&
-			aws.BoolValue(e.AuthConfig.IAM) {
+			(e.AuthConfig.IAM == nil || aws.BoolValue(e.AuthConfig.IAM)) {
 			return nil
 		}
 		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
