@@ -168,10 +168,8 @@ func (a *Alias) Validate() error {
 // Validate returns if TaskConfig is configured correctly.
 func (t *TaskConfig) Validate() error {
 	var err error
-	if t.Platform != nil {
-		if err = t.Platform.Validate(); err != nil {
-			return fmt.Errorf(`validate "platform": %w`, err)
-		}
+	if err = t.Platform.Validate(); err != nil {
+		return fmt.Errorf(`validate "platform": %w`, err)
 	}
 	if err = t.Count.Validate(); err != nil {
 		return fmt.Errorf(`validate "count": %w`, err)

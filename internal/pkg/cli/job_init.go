@@ -194,6 +194,9 @@ func (o *initJobOpts) Execute() error {
 		return err
 	}
 	o.platform = platform
+	if o.platform != nil {
+		log.Warningf("Your architecture type is currently unsupported. Setting platform to %s in your manifest.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
+	}
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -202,7 +205,9 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
+			Platform: manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
 		},
 
 		Schedule:    o.schedule,
