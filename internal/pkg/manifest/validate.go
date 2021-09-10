@@ -41,7 +41,7 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	if err = l.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
-	if err = l.Publish.Validate(); err != nil {
+	if err = l.PublishConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "publish": %w`, err)
 	}
 	for i := 0; i < len(l.TaskDefOverrides); i++ {

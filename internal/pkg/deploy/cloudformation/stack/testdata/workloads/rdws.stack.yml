@@ -172,8 +172,6 @@ Resources:
       TopicName: !Sub '${AWS::StackName}-customers'
       KmsMasterKeyId: 'alias/aws/sns'
   customersSNSTopicPolicy:
-    Metadata:
-      'aws:copilot:description': 'A SNS topic policy to allow worker service to consume customers events'
     Type: AWS::SNS::TopicPolicy
     DependsOn: customersSNSTopic
     Properties:
@@ -184,14 +182,10 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: sqs.amazonaws.com
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
             Action:
               - sns:Subscribe
-            Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
+            Resource: !Ref customersSNSTopic
             Condition:
               StringEquals:
-                'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
-                'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
-              ForAnyValue:StringEquals:
-                'sqs:ResourceTag/copilot-service':
-                  - 'worker'
+                "sns:Protocol": "sqs"

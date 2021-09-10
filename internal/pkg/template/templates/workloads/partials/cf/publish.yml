@@ -8,33 +8,23 @@
       TopicName: !Sub '${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
       KmsMasterKeyId: 'alias/aws/sns'
 
-{{- if $topic.AllowedWorkers}}
 {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
-    Metadata:
-      'aws:copilot:description': 'A SNS topic policy to allow {{wordSeries $topic.AllowedWorkers "and"}} {{pluralWord (len $topic.AllowedWorkers) "service" "services"}} to consume {{$topic.Name}} events'
     Type: AWS::SNS::TopicPolicy
     DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
     Properties:
-      Topics: 
+      Topics:
         - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service: sqs.amazonaws.com
-            Action: 
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
               - sns:Subscribe
-            Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
+            Resource: !Ref {{logicalIDSafe $topic.Name}}SNSTopic
             Condition:
               StringEquals:
-                'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
-                'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
-              ForAnyValue:StringEquals:
-                'sqs:ResourceTag/copilot-service': 
-                {{- range $worker := $topic.AllowedWorkers}}
-                  - '{{$worker}}'
-                {{- end}}
-  {{- end}}
+                "sns:Protocol": "sqs"
 {{- end}}
 {{- end}}

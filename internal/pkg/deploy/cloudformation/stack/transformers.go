@@ -652,19 +652,15 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
 		return nil, err
 	}
-	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
-		return nil, err
-	}
 
 	return &template.Topic{
-		Name:           t.Name,
-		AllowedWorkers: t.AllowedWorkers,
-		AccountID:      accountID,
-		Partition:      partition,
-		Region:         region,
-		App:            app,
-		Env:            env,
-		Svc:            svc,
+		Name:      t.Name,
+		AccountID: accountID,
+		Partition: partition,
+		Region:    region,
+		App:       app,
+		Env:       env,
+		Svc:       svc,
 	}, nil
 }
 
