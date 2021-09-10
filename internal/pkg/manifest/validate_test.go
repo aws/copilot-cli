@@ -54,8 +54,10 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 				TaskConfig: TaskConfig{
 					Count: Count{
 						AdvancedCount: AdvancedCount{
-							Spot:  aws.Int(0),
-							Range: &Range{},
+							Spot: aws.Int(0),
+							Range: Range{
+								Value: (*IntRangeBand)(aws.String("mockRange")),
+							},
 						},
 					},
 				},
@@ -231,7 +233,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		},
 		"error if fail to validate range": {
 			AdvancedCount: AdvancedCount{
-				Range: &Range{
+				Range: Range{
 					Value: (*IntRangeBand)(aws.String("")),
 				},
 			},

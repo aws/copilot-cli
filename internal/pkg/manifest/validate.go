@@ -210,7 +210,7 @@ func (a *AdvancedCount) Validate() error {
 			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
 		}
 	}
-	if a.Range != nil {
+	if !a.Range.IsEmpty() {
 		if err := a.Range.Validate(); err != nil {
 			return fmt.Errorf(`validate "range": %w`, err)
 		}
