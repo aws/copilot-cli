@@ -1523,10 +1523,13 @@ func Test_convertPublish(t *testing.T) {
 			inTopics:    []manifest.Topic{{}},
 			wantedError: errMissingPublishTopicField,
 		},
-		"publish with no workers": {
+		"valid publish": {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
+				},
+				{
+					Name: aws.String("topic2"),
 				},
 			},
 			wanted: &template.PublishOpts{
@@ -1540,45 +1543,23 @@ func Test_convertPublish(t *testing.T) {
 						Env:       env,
 						Svc:       svc,
 					},
-				},
-			},
-		},
-		"publish with workers": {
-			inTopics: []manifest.Topic{
-				{
-					Name:           aws.String("topic1"),
-					AllowedWorkers: []string{"worker1"},
-				},
-			},
-			wanted: &template.PublishOpts{
-				Topics: []*template.Topic{
 					{
-						Name:           aws.String("topic1"),
-						AllowedWorkers: []string{"worker1"},
-						AccountID:      accountId,
-						Partition:      partition,
-						Region:         region,
-						App:            app,
-						Env:            env,
-						Svc:            svc,
+
+						Name:      aws.String("topic2"),
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
 					},
 				},
 			},
 		},
-		"invalid worker name": {
-			inTopics: []manifest.Topic{
-				{
-					Name:           aws.String("topic1"),
-					AllowedWorkers: []string{"worker1~~@#$"},
-				},
-			},
-			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errSvcNameBadFormat),
-		},
 		"invalid topic name": {
 			inTopics: []manifest.Topic{
 				{
-					Name:           aws.String("topic1~~@#$"),
-					AllowedWorkers: []string{"worker1"},
+					Name: aws.String("topic1~~@#$"),
 				},
 			},
 			wantedError: errInvalidPubSubTopicName,
