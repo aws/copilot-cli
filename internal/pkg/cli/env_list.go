@@ -39,6 +39,7 @@ type listEnvOpts struct {
 func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, err
 	}
 

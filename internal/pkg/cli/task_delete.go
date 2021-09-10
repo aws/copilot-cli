@@ -69,6 +69,7 @@ type deleteTaskOpts struct {
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 

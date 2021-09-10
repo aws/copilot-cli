@@ -116,6 +116,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 
 	secretsmanager, err := secretsmanager.New()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new secretsmanager client: %w", err)
 	}
 

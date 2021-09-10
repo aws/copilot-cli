@@ -152,6 +152,7 @@ func (o *resumeSvcOpts) askSvcEnvName() error {
 func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	deployStore, err := deploy.NewStore(store)

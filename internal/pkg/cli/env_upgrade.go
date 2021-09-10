@@ -66,6 +66,7 @@ type envUpgradeOpts struct {
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to config store: %v", err)
 	}
 	defaultSession, err := sessions.NewProvider().Default()

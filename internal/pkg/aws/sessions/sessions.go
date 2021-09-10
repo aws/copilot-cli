@@ -30,7 +30,7 @@ const (
 	clientTimeout                   = 30 * time.Second
 )
 
-var errMissingRegion = errors.New("missing region configuration")
+var ErrMissingRegion = errors.New("missing region configuration")
 
 // Provider provides methods to create sessions.
 // Once a session is created, it's cached locally so that the same session is not re-created.
@@ -63,7 +63,7 @@ func (p *Provider) Default() (*session.Session, error) {
 		return nil, err
 	}
 	if isRegionMissing(sess) {
-		return nil, errMissingRegion
+		return nil, ErrMissingRegion
 	}
 
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
@@ -95,7 +95,7 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 		return nil, err
 	}
 	if isRegionMissing(sess) {
-		return nil, errMissingRegion
+		return nil, ErrMissingRegion
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, nil

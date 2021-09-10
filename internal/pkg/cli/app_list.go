@@ -45,6 +45,7 @@ func buildAppListCommand() *cobra.Command {
 			}
 			ssmStore, err := config.NewStore()
 			if err != nil {
+				logFriendlyTextIfRegionIsMissing(err)
 				return err
 			}
 			opts.store = ssmStore

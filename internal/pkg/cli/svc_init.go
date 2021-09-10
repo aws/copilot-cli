@@ -125,6 +125,7 @@ type initSvcOpts struct {
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
 	}
 

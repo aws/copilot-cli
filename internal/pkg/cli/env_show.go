@@ -44,6 +44,7 @@ type showEnvOpts struct {
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 	configStore, err := config.NewStore()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to copilot config store: %w", err)
 	}
 	deployStore, err := deploy.NewStore(configStore)

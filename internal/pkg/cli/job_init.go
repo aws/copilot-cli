@@ -75,6 +75,7 @@ type initJobOpts struct {
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
 	}
 

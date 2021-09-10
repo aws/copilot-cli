@@ -62,6 +62,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 
 	secretsmanager, err := secretsmanager.New()
 	if err != nil {
+		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new secrets manager client: %w", err)
 	}
 

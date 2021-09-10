@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -129,4 +131,17 @@ func logRecommendedActions(actions []string) {
 	for _, followup := range actions {
 		log.Infof("%s %s\n", prefix, followup)
 	}
+}
+
+func logFriendlyTextIfRegionIsMissing(err error) {
+	if !isMissingRegionErrorInChain(err) {
+		return
+	}
+
+	log.Infoln("Friendly text being logged") // TODO
+}
+
+func isMissingRegionErrorInChain(err error) bool {
+	errMissingRegion := sessions.ErrMissingRegion
+	return errors.As(err, &errMissingRegion)
 }
