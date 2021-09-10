@@ -97,7 +97,10 @@ func (i *Image) Validate() error {
 
 // Validate returns if BuildArgsOrString is configured correctly.
 func (b *BuildArgsOrString) Validate() error {
-	return b.BuildArgs.Validate()
+	if !b.BuildArgs.isEmpty() {
+		return b.BuildArgs.Validate()
+	}
+	return nil
 }
 
 // Validate returns if DockerBuildArgs is configured correctly.
@@ -221,8 +224,7 @@ func (a *AdvancedCount) Validate() error {
 		if err := a.Range.Validate(); err != nil {
 			return fmt.Errorf(`validate "range": %w`, err)
 		}
-	}
-	if a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil {
+	} else if a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "range",
 			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
@@ -267,6 +269,18 @@ func (r *IntRangeBand) Validate() error {
 
 // Validate returns if RangeConfig is configured correctly.
 func (r *RangeConfig) Validate() error {
+	if r.Min == nil && r.Max != nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "min",
+			conditionalFields: []string{"max"},
+		}
+	}
+	if r.Min != nil && r.Max == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "max",
+			conditionalFields: []string{"min"},
+		}
+	}
 	min, max := aws.IntValue(r.Min), aws.IntValue(r.Max)
 	if min <= max {
 		return nil
@@ -344,12 +358,12 @@ func (e *EFSVolumeConfiguration) Validate() error {
 	if err := e.AuthConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "auth": %w`, err)
 	}
-	if aws.StringValue(e.AuthConfig.AccessPointID) != "" {
+	if e.AuthConfig.AccessPointID != nil {
 		if (aws.StringValue(e.RootDirectory) == "" || aws.StringValue(e.RootDirectory) == "/") &&
 			aws.BoolValue(e.AuthConfig.IAM) {
 			return nil
 		}
-		return fmt.Errorf("root_dir must be either empty or / and auth.iam must be true when access_point_id is in used")
+		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
 	}
 	return nil
 }

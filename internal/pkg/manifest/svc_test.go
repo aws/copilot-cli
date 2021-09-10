@@ -568,23 +568,16 @@ func TestRange_Parse(t *testing.T) {
 
 		wantedMin int
 		wantedMax int
-		wantedErr error
 	}{
-		"error when both range and RangeConfig specified": {
+		"success with range value": {
 			input: Range{
 				Value: &mockRange,
-				RangeConfig: RangeConfig{
-					Min: aws.Int(1),
-					Max: aws.Int(3),
-				},
 			},
 
-			wantedErr: &errFieldMutualExclusive{
-				firstField:  "range",
-				secondField: "min/max",
-			},
+			wantedMin: 1,
+			wantedMax: 10,
 		},
-		"success": {
+		"success with range config": {
 			input: Range{
 				RangeConfig: RangeConfig{
 					Min: aws.Int(2),
@@ -600,13 +593,9 @@ func TestRange_Parse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gotMin, gotMax, err := tc.input.Parse()
 
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedMin, gotMin)
-				require.Equal(t, tc.wantedMax, gotMax)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedMin, gotMin)
+			require.Equal(t, tc.wantedMax, gotMax)
 		})
 	}
 }

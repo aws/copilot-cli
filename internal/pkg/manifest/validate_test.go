@@ -243,7 +243,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			AdvancedCount: AdvancedCount{
 				Requests: aws.Int(123),
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests", "response_time" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests or response_time" are specified`),
 		},
 	}
 	for name, tc := range testCases {
@@ -297,6 +297,18 @@ func TestRangeConfig_Validate(t *testing.T) {
 
 		wantedError error
 	}{
+		"error if min is set but max is not": {
+			RangeConfig: RangeConfig{
+				Min: aws.Int(2),
+			},
+			wantedError: fmt.Errorf(`"max" must be specified if "min" is specified`),
+		},
+		"error if max is set but min is not": {
+			RangeConfig: RangeConfig{
+				Max: aws.Int(1),
+			},
+			wantedError: fmt.Errorf(`"min" must be specified if "max" is specified`),
+		},
 		"error if range min is greater than max": {
 			RangeConfig: RangeConfig{
 				Min: aws.Int(2),
@@ -420,7 +432,7 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 					AccessPointID: aws.String("mockID"),
 				},
 			},
-			wantedError: fmt.Errorf("root_dir must be either empty or / and auth.iam must be true when access_point_id is in used"),
+			wantedError: fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`),
 		},
 	}
 	for name, tc := range testCases {

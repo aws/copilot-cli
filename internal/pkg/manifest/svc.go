@@ -33,7 +33,7 @@ var ServiceTypes = []string{
 	WorkerServiceType,
 }
 
-// Range contains either a Range or a range configuration for Autoscaling ranges
+// Range contains either a Range or a range configuration for Autoscaling ranges.
 type Range struct {
 	Value       *IntRangeBand // Mutually exclusive with RangeConfig
 	RangeConfig RangeConfig
@@ -44,20 +44,12 @@ func (r *Range) IsEmpty() bool {
 	return r.Value == nil && r.RangeConfig.IsEmpty()
 }
 
-// Parse extracts the min and max from RangeOpts
+// Parse extracts the min and max from RangeOpts.
 func (r *Range) Parse() (min int, max int, err error) {
-	if r.Value != nil && !r.RangeConfig.IsEmpty() {
-		return 0, 0, &errFieldMutualExclusive{
-			firstField:  "range",
-			secondField: "min/max",
-		}
-	}
-
 	if r.Value != nil {
 		return r.Value.Parse()
 	}
-
-	return *r.RangeConfig.Min, *r.RangeConfig.Max, nil
+	return aws.IntValue(r.RangeConfig.Min), aws.IntValue(r.RangeConfig.Max), nil
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the RangeOpts

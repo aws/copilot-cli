@@ -5,7 +5,6 @@ package manifest
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/dustin/go-humanize/english"
 )
@@ -64,7 +63,7 @@ func (e *errFieldMustBeSpecified) Error() string {
 	if len(e.conditionalFields) == 0 {
 		return errMsg
 	}
-	return fmt.Sprintf(`%s if "%s" %s specified`, errMsg, strings.Join(e.conditionalFields, `", "`),
+	return fmt.Sprintf(`%s if "%s" %s specified`, errMsg, english.WordSeries(e.conditionalFields, "or"),
 		english.PluralWord(len(e.conditionalFields), "is", "are"))
 }
 

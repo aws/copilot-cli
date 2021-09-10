@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	errUnmarshalEFSOpts = errors.New(`cannot unmarshal efs field into bool or map`)
+	errUnmarshalEFSOpts = errors.New(`cannot unmarshal "efs" field into bool or map`)
 )
 
 // Storage represents the options for external and native storage.
