@@ -157,9 +157,8 @@ func newDefaultWorkerService() *WorkerService {
 			ImageConfig: ImageWithHealthcheck{},
 			Subscribe:   SubscribeConfig{},
 			TaskConfig: TaskConfig{
-				CPU:      aws.Int(256),
-				Memory:   aws.Int(512),
-				Platform: PlatformArgsOrString{},
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
 				},

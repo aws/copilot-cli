@@ -146,9 +146,8 @@ func newDefaultScheduledJob() *ScheduledJob {
 		ScheduledJobConfig: ScheduledJobConfig{
 			ImageConfig: ImageWithHealthcheck{},
 			TaskConfig: TaskConfig{
-				CPU:      aws.Int(256),
-				Memory:   aws.Int(512),
-				Platform: PlatformArgsOrString{},
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
 				},
