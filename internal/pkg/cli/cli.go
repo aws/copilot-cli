@@ -137,11 +137,13 @@ func logFriendlyTextIfRegionIsMissing(err error) {
 	if !isMissingRegionErrorInChain(err) {
 		return
 	}
-
-	log.Infoln("Friendly text being logged") // TODO
+	log.Infof(`It looks like your AWS region configuration is missing.
+- We recommend including your region configuration in the "~/.aws/config" file.
+- Alternatively, you can run %s to set the environment variable.
+More information: https://aws.github.io/copilot-cli/docs/credentials/
+`, color.HighlightCode("export AWS_REGION=<application region>"))
 }
 
 func isMissingRegionErrorInChain(err error) bool {
-	errMissingRegion := sessions.ErrMissingRegion
-	return errors.As(err, &errMissingRegion)
+	return errors.As(err, &sessions.ErrMissingRegion)
 }
