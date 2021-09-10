@@ -135,11 +135,15 @@ func (*CommandOverride) Validate() error {
 // Validate returns if RoutingRule is configured correctly.
 func (r *RoutingRule) Validate() error {
 	var err error
-	if err = r.HealthCheck.Validate(); err != nil {
-		return fmt.Errorf(`validate "healthcheck": %w`, err)
+	if !r.HealthCheck.IsEmpty() {
+		if err = r.HealthCheck.Validate(); err != nil {
+			return fmt.Errorf(`validate "healthcheck": %w`, err)
+		}
 	}
-	if err = r.Alias.Validate(); err != nil {
-		return fmt.Errorf(`validate "alias": %w`, err)
+	if !r.Alias.IsEmpty() {
+		if err = r.Alias.Validate(); err != nil {
+			return fmt.Errorf(`validate "alias": %w`, err)
+		}
 	}
 	if r.TargetContainer != nil && r.TargetContainerCamelCase != nil {
 		return &errFieldMutualExclusive{
@@ -156,12 +160,12 @@ func (h *HealthCheckArgsOrString) Validate() error {
 }
 
 // Validate returns if HTTPHealthCheckArgs is configured correctly.
-func (h *HTTPHealthCheckArgs) Validate() error {
+func (*HTTPHealthCheckArgs) Validate() error {
 	return nil
 }
 
 // Validate returns if Alias is configured correctly.
-func (a *Alias) Validate() error {
+func (*Alias) Validate() error {
 	return nil
 }
 
@@ -185,7 +189,10 @@ func (t *TaskConfig) Validate() error {
 
 // Validate returns if PlatformArgsOrString is configured correctly.
 func (p *PlatformArgsOrString) Validate() error {
-	return p.PlatformArgs.Validate()
+	if !p.PlatformArgs.isEmpty() {
+		return p.PlatformArgs.Validate()
+	}
+	return nil
 }
 
 // Validate returns if PlatformArgsOrString is configured correctly.
@@ -196,10 +203,10 @@ func (*PlatformArgs) Validate() error {
 
 // Validate returns if Count is configured correctly.
 func (c *Count) Validate() error {
-	if c.Value != nil {
-		return nil
+	if !c.AdvancedCount.IsEmpty() {
+		return c.AdvancedCount.Validate()
 	}
-	return c.AdvancedCount.Validate()
+	return nil
 }
 
 // Validate returns if AdvancedCount is configured correctly.
@@ -226,10 +233,10 @@ func (a *AdvancedCount) Validate() error {
 
 // Validate returns if Range is configured correctly.
 func (r *Range) Validate() error {
-	if r.Value != nil {
-		return r.Value.Validate()
+	if !r.RangeConfig.IsEmpty() {
+		return r.RangeConfig.Validate()
 	}
-	return r.RangeConfig.Validate()
+	return r.Value.Validate()
 }
 
 // Validate returns if IntRangeBand is configured correctly.
@@ -272,10 +279,10 @@ func (r *RangeConfig) Validate() error {
 
 // Validate returns if ExecuteCommand is configured correctly.
 func (e *ExecuteCommand) Validate() error {
-	if e.Enable != nil {
-		return nil
+	if !e.Config.IsEmpty() {
+		return e.Config.Validate()
 	}
-	return e.Config.Validate()
+	return nil
 }
 
 // Validate returns if ExecuteCommandConfig is configured correctly.
@@ -302,16 +309,16 @@ func (v *Volume) Validate() error {
 }
 
 // Validate returns if MountPointOpts is configured correctly.
-func (e *MountPointOpts) Validate() error {
+func (*MountPointOpts) Validate() error {
 	return nil
 }
 
 // Validate returns if EFSConfigOrBool is configured correctly.
 func (e *EFSConfigOrBool) Validate() error {
-	if e.Enabled != nil {
-		return nil
+	if !e.Advanced.IsEmpty() {
+		return e.Advanced.Validate()
 	}
-	return e.Advanced.Validate()
+	return nil
 }
 
 // Validate returns if EFSVolumeConfiguration is configured correctly.
@@ -369,8 +376,10 @@ func (s *SidecarConfig) Validate() error {
 
 // Validate returns if NetworkConfig is configured correctly.
 func (n *NetworkConfig) Validate() error {
-	if err := n.VPC.Validate(); err != nil {
-		return fmt.Errorf(`validate "vpc": %w`, err)
+	if !n.VPC.isEmpty() {
+		if err := n.VPC.Validate(); err != nil {
+			return fmt.Errorf(`validate "vpc": %w`, err)
+		}
 	}
 	return nil
 }
@@ -396,6 +405,6 @@ func (*Topic) Validate() error {
 }
 
 // Validate returns if OverrideRule is configured correctly.
-func (o *OverrideRule) Validate() error {
+func (*OverrideRule) Validate() error {
 	return nil
 }
