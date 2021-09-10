@@ -75,11 +75,10 @@ type errFieldMutualExclusive struct {
 }
 
 func (e *errFieldMutualExclusive) Error() string {
-	var s string
 	if e.mustExist {
-		s = " not none,"
+		return fmt.Sprintf(`must specify one, not both, not none, of "%s" and "%s"`, e.firstField, e.secondField)
 	}
-	return fmt.Sprintf(`must specify one, not both,%s of "%s" and "%s"`, s, e.firstField, e.secondField)
+	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
 }
 
 type errMinGreaterThanMax struct {

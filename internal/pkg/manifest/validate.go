@@ -324,6 +324,18 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			secondField: "id/root_dir/auth",
 		}
 	}
+	if e.UID != nil && e.GID == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "gid",
+			conditionalFields: []string{"uid"},
+		}
+	}
+	if e.UID == nil && e.GID != nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "uid",
+			conditionalFields: []string{"gid"},
+		}
+	}
 	if err := e.AuthConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "auth": %w`, err)
 	}

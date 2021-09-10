@@ -400,6 +400,18 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`must specify one, not both, of "uid/gid" and "id/root_dir/auth"`),
 		},
+		"error if uid is set but gid is not": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				UID: aws.Uint32(123),
+			},
+			wantedError: fmt.Errorf(`"gid" must be specified if "uid" is specified`),
+		},
+		"error if gid is set but uid is not": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				GID: aws.Uint32(123),
+			},
+			wantedError: fmt.Errorf(`"uid" must be specified if "gid" is specified`),
+		},
 		"error if AuthorizationConfig is not configured correctly": {
 			EFSVolumeConfiguration: EFSVolumeConfiguration{
 				AuthConfig: AuthorizationConfig{
