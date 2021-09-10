@@ -226,7 +226,7 @@ func TestBackendService_Publish(t *testing.T) {
 		"returns the list of topics if manifest publishes notifications": {
 			mft: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					Publish: PublishConfig{
+					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{
 								Name: stringP("hello"),
