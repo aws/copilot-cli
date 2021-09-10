@@ -63,7 +63,7 @@ func (p *Provider) Default() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	if isRegionMissing(sess) {
+	if aws.StringValue(sess.Config.Region) == "" {
 		return sess, ErrMissingRegion
 	}
 
@@ -95,7 +95,7 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	if isRegionMissing(sess) {
+	if aws.StringValue(sess.Config.Region) == "" {
 		return nil, ErrMissingRegion
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
@@ -179,8 +179,4 @@ func userAgentHandler() request.NamedHandler {
 				fmt.Sprintf("aws-ecs-cli-v2/%s (%s) %s", version.Version, runtime.GOOS, userAgent))
 		},
 	}
-}
-
-func isRegionMissing(sess *session.Session) bool {
-	return sess.Config.Region == nil || *sess.Config.Region == ""
 }
