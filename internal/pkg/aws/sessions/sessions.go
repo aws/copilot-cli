@@ -30,6 +30,7 @@ const (
 	clientTimeout                   = 30 * time.Second
 )
 
+// ErrMissingRegion is returned when the region information is missing from AWS configuration.
 var ErrMissingRegion = errors.New("missing region configuration")
 
 // Provider provides methods to create sessions.
@@ -63,7 +64,7 @@ func (p *Provider) Default() (*session.Session, error) {
 		return nil, err
 	}
 	if isRegionMissing(sess) {
-		return nil, ErrMissingRegion
+		return sess, ErrMissingRegion
 	}
 
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
@@ -104,7 +105,7 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 // FromRole returns a session configured against the input role and region.
 func (p *Provider) FromRole(roleARN string, region string) (*session.Session, error) {
 	defaultSession, err := p.Default()
-	if err != nil {
+	if err != nil && !errors.As(err, &ErrMissingRegion) {
 		return nil, fmt.Errorf("error creating default session: %w", err)
 	}
 
