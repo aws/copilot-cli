@@ -577,14 +577,12 @@ func TestApplyEnv_StructSlice(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.PublishConfig.Topics = []Topic{
 					{
-						Name:           aws.String("walk like an egyptian"),
-						AllowedWorkers: []string{"wey", "oh", "wey", "oh"},
+						Name: aws.String("walk like an egyptian"),
 					},
 				}
 				svc.Environments["test"].PublishConfig.Topics = []Topic{
 					{
-						Name:           aws.String("walk on the wild side"),
-						AllowedWorkers: []string{"hitchhike", "across", "the", "USA"},
+						Name: aws.String("walk on the wild side"),
 					},
 				}
 
@@ -592,8 +590,7 @@ func TestApplyEnv_StructSlice(t *testing.T) {
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.PublishConfig.Topics = []Topic{
 					{
-						Name:           aws.String("walk on the wild side"),
-						AllowedWorkers: []string{"hitchhike", "across", "the", "USA"},
+						Name: aws.String("walk on the wild side"),
 					},
 				}
 			},
@@ -602,8 +599,7 @@ func TestApplyEnv_StructSlice(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.PublishConfig.Topics = []Topic{
 					{
-						Name:           aws.String("walk like an egyptian"),
-						AllowedWorkers: []string{"wey", "oh", "wey", "oh"},
+						Name: aws.String("walk like an egyptian"),
 					},
 				}
 				svc.Environments["test"].PublishConfig.Topics = []Topic{}
@@ -617,16 +613,14 @@ func TestApplyEnv_StructSlice(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.PublishConfig.Topics = []Topic{
 					{
-						Name:           aws.String("walk like an egyptian"),
-						AllowedWorkers: []string{"wey", "oh", "wey", "oh"},
+						Name: aws.String("walk like an egyptian"),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.PublishConfig.Topics = []Topic{
 					{
-						Name:           aws.String("walk like an egyptian"),
-						AllowedWorkers: []string{"wey", "oh", "wey", "oh"},
+						Name: aws.String("walk like an egyptian"),
 					},
 				}
 			},
