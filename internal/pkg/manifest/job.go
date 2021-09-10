@@ -44,7 +44,7 @@ type ScheduledJobConfig struct {
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
 	Network                 NetworkConfig  `yaml:"network"`
-	Publish                 PublishConfig  `yaml:"publish"`
+	PublishConfig           PublishConfig  `yaml:"publish"`
 	TaskDefOverrides        []OverrideRule `yaml:"taskdef_overrides"`
 }
 
@@ -119,7 +119,7 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 
 // Publish returns the list of topics where notifications can be published.
 func (j *ScheduledJob) Publish() []Topic {
-	return j.ScheduledJobConfig.Publish.Topics
+	return j.ScheduledJobConfig.PublishConfig.Topics
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.

@@ -1205,7 +1205,7 @@ func TestLoadBalancedWebService_Publish(t *testing.T) {
 		"returns the list of topics if manifest publishes notifications": {
 			mft: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Publish: PublishConfig{
+					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{
 								Name: stringP("hello"),

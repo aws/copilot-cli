@@ -10,7 +10,8 @@ The combination of these two services effectively decouples the sending and rece
 
 ## Sending Messages from a Publisher
 
-To allow an existing service to publish messages to SNS, simply set the `publish` field in its manifest. You'll need a name for the topic which describes its function, and an optional list of the worker services you'd like to grant permission to subscribe to this topic. These services don't necessarily have to exist when you write them down in the publisher's manifest.
+To allow an existing service to publish messages to SNS, simply set the `publish` field in its manifest.
+You'll need a name for the topic which describes its function.
 
 ```yaml
 # manifest.yml for api service
@@ -19,11 +20,10 @@ type: Backend Service
 
 publish:
   topics:
-    - name: orders
-      allowed_workers: [orders-worker, receipts-worker]
+    - name: ordersTopic
 ```
 
-This will create an [SNS topic](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) and set a resource policy on the topic to allow Copilot services called `orders-worker` and `receipts-worker` to create subscriptions.
+This will create an [SNS topic](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) and set a resource policy on the topic to allow SQS queues in your AWS account to create subscriptions.
 
 Copilot also injects the ARNs of any SNS topics into your container under the environment variable `COPILOT_SNS_TOPIC_ARNS`. 
 
@@ -33,16 +33,20 @@ Once the publishing service has been deployed, you can send messages to SNS via 
 ```javascript
 const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
 const client = new SNSClient({ region: "us-west-2" });
-const {orders} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS);
+const {ordersTopic} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS);
 const out = await client.send(new PublishCommand({
    Message: "hello",
-   TopicArn: orders,
+   TopicArn: ordersTopic,
  }));
 ```
 
 ## Subscribing to a topic with a Worker Service
 
-To subscribe to an existing SNS topic with a worker service, you'll need to edit the worker service's manifest. Using the [`subscribe`](../manifest/worker-service/#subscribe) field in the manifest, you can define subscriptions to existing SNS topics exposed by other services in your environment.  In this example, we'll use the `orders` topic which the `api` service from the last section exposed. We'll also customize the worker service's queue to enable a dead-letter queue. The `tries` field tells SQS how many times to try redelivering a failed message before sending it to the DLQ for further inspection.
+To subscribe to an existing SNS topic with a worker service, you'll need to edit the worker service's manifest.
+Using the [`subscribe`](../manifest/worker-service/#subscribe) field in the manifest, you can define subscriptions to 
+existing SNS topics exposed by other services in your environment.  In this example, we'll use the `orders` topic 
+which the `api` service from the last section exposed. We'll also customize the worker service's queue to enable a dead-letter queue. 
+The `tries` field tells SQS how many times to try redelivering a failed message before sending it to the DLQ for further inspection.
 
 ```yaml
 name: orders-worker
@@ -50,7 +54,7 @@ type: Worker Service
 
 subscribe:
   topics:
-    - name: orders
+    - name: ordersTopic
       service: api
   queue:
     dead_letter:
