@@ -657,14 +657,13 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	}
 
 	return &template.Topic{
-		Name:           t.Name,
-		AllowedWorkers: t.AllowedWorkers,
-		AccountID:      accountID,
-		Partition:      partition,
-		Region:         region,
-		App:            app,
-		Env:            env,
-		Svc:            svc,
+		Name:      t.Name,
+		AccountID: accountID,
+		Partition: partition,
+		Region:    region,
+		App:       app,
+		Env:       env,
+		Svc:       svc,
 	}, nil
 }
 
