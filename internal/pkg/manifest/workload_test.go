@@ -355,15 +355,7 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			p := TaskConfig{
-				Platform: &PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
-				},
-			}
+			p := TaskConfig{}
 			err := yaml.Unmarshal(tc.inContent, &p)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

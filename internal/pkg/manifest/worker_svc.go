@@ -71,7 +71,9 @@ func (q *DeadLetterQueue) IsEmpty() bool {
 // WorkerServiceProps represents the configuration needed to create a worker service.
 type WorkerServiceProps struct {
 	WorkloadProps
+
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 	Topics      []TopicSubscription  // Optional topics for subscriptions
 }
 
@@ -85,6 +87,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
+	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }

@@ -422,19 +422,19 @@ type SidecarConfig struct {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU            *int                  `yaml:"cpu"`
-	Memory         *int                  `yaml:"memory"`
-	Platform       *PlatformArgsOrString `yaml:"platform,omitempty"`
-	Count          Count                 `yaml:"count"`
-	ExecuteCommand ExecuteCommand        `yaml:"exec"`
-	Variables      map[string]string     `yaml:"variables"`
-	Secrets        map[string]string     `yaml:"secrets"`
-	Storage        Storage               `yaml:"storage"`
+	CPU            *int                 `yaml:"cpu"`
+	Memory         *int                 `yaml:"memory"`
+	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
+	Count          Count                `yaml:"count"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec"`
+	Variables      map[string]string    `yaml:"variables"`
+	Secrets        map[string]string    `yaml:"secrets"`
+	Storage        Storage              `yaml:"storage"`
 }
 
 // TaskPlatform returns the platform for the service.
 func (t *TaskConfig) TaskPlatform() (*string, error) {
-	if t.Platform == nil {
+	if t.Platform.PlatformString == nil {
 		return nil, nil
 	}
 	return t.Platform.PlatformString, nil
