@@ -9,6 +9,8 @@ import (
 	io "io"
 	reflect "reflect"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -4324,10 +4326,10 @@ func (mr *MockdockerfileParserMockRecorder) GetExposedPorts() *gomock.Call {
 }
 
 // GetHealthCheck mocks base method.
-func (m *MockdockerfileParser) GetHealthCheck() (*exec.HealthCheck, error) {
+func (m *MockdockerfileParser) GetHealthCheck() (*dockerfile.HealthCheck, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHealthCheck")
-	ret0, _ := ret[0].(*exec.HealthCheck)
+	ret0, _ := ret[0].(*dockerfile.HealthCheck)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -110,7 +112,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		sel:          sel,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		initParser: func(path string) dockerfileParser {
-			return exec.NewDockerfile(fs, path)
+			return dockerfile.NewDockerfile(fs, path)
 		},
 	}, nil
 }
