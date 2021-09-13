@@ -6,6 +6,7 @@ package manifest
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
@@ -331,12 +332,29 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
+		"valid if only spot is specified": {
+			AdvancedCount: AdvancedCount{
+				Spot: aws.Int(42),
+			},
+		},
+		"valid when range and and at least one autoscaling fields are specified": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(aws.String("1-10")),
+				},
+				CPU: aws.Int(70),
+				QueueScaling: queueScaling{
+					AcceptableLatency: durationp(10 * time.Second),
+					AvgProcessingTime: durationp(1 * time.Second),
+				},
+			},
+		},
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
 				Spot: aws.Int(123),
-				CPU:  aws.Int(123),
+				CPU:  aws.Int(70),
 			},
-			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
+			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay"`),
 		},
 		"error if fail to validate range": {
 			AdvancedCount: AdvancedCount{
@@ -350,7 +368,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			AdvancedCount: AdvancedCount{
 				Requests: aws.Int(123),
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests or response_time" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests, response_time or queue_delay" are specified`),
 		},
 	}
 	for name, tc := range testCases {

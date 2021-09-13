@@ -179,12 +179,13 @@ type AdvancedCount struct {
 	Memory       *int           `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
+	QueueScaling queueScaling   `yaml:"queue_delay"`
 }
 
 // IsEmpty returns whether AdvancedCount is empty.
 func (a *AdvancedCount) IsEmpty() bool {
 	return a.Range.IsEmpty() && a.CPU == nil && a.Memory == nil &&
-		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil
+		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil && a.QueueScaling.IsEmpty()
 }
 
 // IgnoreRange returns whether desiredCount is specified on spot capacity
@@ -194,7 +195,7 @@ func (a *AdvancedCount) IgnoreRange() bool {
 
 func (a *AdvancedCount) hasAutoscaling() bool {
 	return !a.Range.IsEmpty() || a.CPU != nil || a.Memory != nil ||
-		a.Requests != nil || a.ResponseTime != nil
+		a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
 }
 
 // IsValid checks to make sure Spot fields are compatible with other values in AdvancedCount
@@ -203,18 +204,17 @@ func (a *AdvancedCount) IsValid() error {
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
 			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
 		}
 	}
 
 	// Range must be specified if using autoscaling
-	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
+	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()) {
 		return &errFieldMustBeSpecified{
 			missingField:      "range",
-			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "queue_delay"},
 		}
 	}
-
 	return nil
 }
 
@@ -224,6 +224,18 @@ func (a *AdvancedCount) unsetAutoscaling() {
 	a.Memory = nil
 	a.Requests = nil
 	a.ResponseTime = nil
+	a.QueueScaling = queueScaling{}
+}
+
+// queueScaling represents the configuration to scale a service based on a SQS queue.
+type queueScaling struct {
+	AcceptableLatency *time.Duration `yaml:"acceptable_latency"`
+	AvgProcessingTime *time.Duration `yaml:"msg_processing_time"`
+}
+
+// IsEmpty returns true if the queueScaling is set.
+func (qs *queueScaling) IsEmpty() bool {
+	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.

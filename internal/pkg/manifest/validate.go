@@ -351,16 +351,16 @@ func (a *AdvancedCount) Validate() error {
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
 			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
 		}
 	}
 	if err := a.Range.Validate(); err != nil {
 		return fmt.Errorf(`validate "range": %w`, err)
 	}
-	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
+	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()) {
 		return &errFieldMustBeSpecified{
 			missingField:      "range",
-			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "queue_delay"},
 		}
 	}
 	return nil
