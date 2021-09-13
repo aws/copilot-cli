@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -167,7 +169,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		if opts.df != nil {
 			return opts.df
 		}
-		opts.df = exec.NewDockerfile(opts.fs, opts.dockerfilePath)
+		opts.df = dockerfile.NewDockerfile(opts.fs, opts.dockerfilePath)
 		return opts.df
 	}
 	return opts, nil
