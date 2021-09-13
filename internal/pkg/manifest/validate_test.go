@@ -344,7 +344,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
 				CPU: aws.Int(70),
-				QueueScaling: queueScaling{
+				QueueScaling: QueueScaling{
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
@@ -380,7 +380,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 						SpotFrom: aws.Int(6),
 					},
 				},
-				QueueScaling: queueScaling{
+				QueueScaling: QueueScaling{
 					AcceptableLatency: nil,
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
@@ -407,28 +407,35 @@ func TestAdvancedCount_Validate(t *testing.T) {
 
 func TestQueueScaling_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		in     queueScaling
+		in     QueueScaling
 		wanted error
 	}{
 		"should not error if queue scaling is empty": {},
-		"should throw an error if only msg_processing_time is specified": {
-			in: queueScaling{
+		"should return an error if only msg_processing_time is specified": {
+			in: QueueScaling{
 				AvgProcessingTime: durationp(1 * time.Second),
 			},
 			wanted: errors.New(`"acceptable_latency" must be specified if "msg_processing_time" is specified`),
 		},
-		"should throw an error if only acceptable_latency is specified": {
-			in: queueScaling{
+		"should return an error if only acceptable_latency is specified": {
+			in: QueueScaling{
 				AcceptableLatency: durationp(1 * time.Second),
 			},
 			wanted: errors.New(`"msg_processing_time" must be specified if "acceptable_latency" is specified`),
 		},
-		"should throw an error if the msg_processing_time is 0": {
-			in: queueScaling{
+		"should return an error if the msg_processing_time is 0": {
+			in: QueueScaling{
 				AcceptableLatency: durationp(1 * time.Second),
 				AvgProcessingTime: durationp(0 * time.Second),
 			},
 			wanted: errors.New(`"msg_processing_time" cannot be 0`),
+		},
+		"should return an error if the msg_processing_time is longer than acceptable_latency": {
+			in: QueueScaling{
+				AcceptableLatency: durationp(500 * time.Millisecond),
+				AvgProcessingTime: durationp(1 * time.Second),
+			},
+			wanted: errors.New(`"msg_processing_time" cannot be longer than "acceptable_latency"`),
 		},
 	}
 	for name, tc := range testCases {

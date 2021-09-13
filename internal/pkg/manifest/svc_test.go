@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -758,16 +759,16 @@ func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
 
 func TestQueueScaling_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		in     queueScaling
+		in     QueueScaling
 		wanted bool
 	}{
 		"should return false if msg_processing_time is not nil": {
-			in: queueScaling{
+			in: QueueScaling{
 				AvgProcessingTime: durationp(5 * time.Second),
 			},
 		},
 		"should return false if acceptable_latency is not nil": {
-			in: queueScaling{
+			in: QueueScaling{
 				AcceptableLatency: durationp(1 * time.Minute),
 			},
 		},
@@ -779,6 +780,40 @@ func TestQueueScaling_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.IsEmpty())
+		})
+	}
+}
+
+func TestQueueScaling_AcceptableBacklogPerTask(t *testing.T) {
+	testCases := map[string]struct {
+		in            QueueScaling
+		wantedBacklog int
+		wantedErr     error
+	}{
+		"should return an error if queue scaling is invalid": {
+			in: QueueScaling{
+				AcceptableLatency: durationp(1 * time.Second),
+				AvgProcessingTime: durationp(0 * time.Second),
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should round up to an integer if backlog number has a decimal": {
+			in: QueueScaling{
+				AcceptableLatency: durationp(10 * time.Second),
+				AvgProcessingTime: durationp(300 * time.Millisecond),
+			},
+			wantedBacklog: 34,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual, err := tc.in.AcceptableBacklogPerTask()
+			if tc.wantedErr != nil {
+				require.NotNil(t, err)
+			} else {
+				require.Equal(t, tc.wantedBacklog, actual)
+			}
 		})
 	}
 }

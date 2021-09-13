@@ -370,8 +370,8 @@ func (a *AdvancedCount) Validate() error {
 	return nil
 }
 
-// Validate returns if queueScaling is configured correctly.
-func (qs *queueScaling) Validate() error {
+// Validate returns if QueueScaling is configured correctly.
+func (qs *QueueScaling) Validate() error {
 	if qs.IsEmpty() {
 		return nil
 	}
@@ -393,6 +393,9 @@ func (qs *queueScaling) Validate() error {
 	}
 	if process == 0 {
 		return errors.New(`"msg_processing_time" cannot be 0`)
+	}
+	if process > latency {
+		return errors.New(`"msg_processing_time" cannot be longer than "acceptable_latency"`)
 	}
 	return nil
 }

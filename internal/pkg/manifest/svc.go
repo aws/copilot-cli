@@ -6,6 +6,7 @@ package manifest
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -179,7 +180,7 @@ type AdvancedCount struct {
 	Memory       *int           `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
-	QueueScaling queueScaling   `yaml:"queue_delay"`
+	QueueScaling QueueScaling   `yaml:"queue_delay"`
 }
 
 // IsEmpty returns whether AdvancedCount is empty.
@@ -224,27 +225,28 @@ func (a *AdvancedCount) unsetAutoscaling() {
 	a.Memory = nil
 	a.Requests = nil
 	a.ResponseTime = nil
-	a.QueueScaling = queueScaling{}
+	a.QueueScaling = QueueScaling{}
 }
 
-// queueScaling represents the configuration to scale a service based on a SQS queue.
-type queueScaling struct {
+// QueueScaling represents the configuration to scale a service based on a SQS queue.
+type QueueScaling struct {
 	AcceptableLatency *time.Duration `yaml:"acceptable_latency"`
 	AvgProcessingTime *time.Duration `yaml:"msg_processing_time"`
 }
 
-// IsEmpty returns true if the queueScaling is set.
-func (qs *queueScaling) IsEmpty() bool {
+// IsEmpty returns true if the QueueScaling is set.
+func (qs *QueueScaling) IsEmpty() bool {
 	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil
 }
 
 // AcceptableBacklogPerTask returns the total number of messages that each task can accumulate in the queue
 // while maintaining the AcceptableLatency given the AvgProcessingTime.
-func (qs *queueScaling) AcceptableBacklogPerTask() (int, error) {
+func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
 	if err := qs.Validate(); err != nil {
 		return 0, err
 	}
-	return 0, nil
+	v := math.Ceil(float64(*qs.AcceptableLatency) / float64(*qs.AvgProcessingTime))
+	return int(v), nil
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
