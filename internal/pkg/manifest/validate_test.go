@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -370,6 +371,22 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests, response_time or queue_delay" are specified`),
 		},
+		"wrap error from queue_delay on failure": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					RangeConfig: RangeConfig{
+						Min:      aws.Int(1),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(6),
+					},
+				},
+				QueueScaling: queueScaling{
+					AcceptableLatency: nil,
+					AvgProcessingTime: durationp(1 * time.Second),
+				},
+			},
+			wantedErrorMsgPrefix: `validate "queue_delay": `,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -384,6 +401,45 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				return
 			}
 			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestQueueScaling_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     queueScaling
+		wanted error
+	}{
+		"should not error if queue scaling is empty": {},
+		"should throw an error if only msg_processing_time is specified": {
+			in: queueScaling{
+				AvgProcessingTime: durationp(1 * time.Second),
+			},
+			wanted: errors.New(`"acceptable_latency" must be specified if "msg_processing_time" is specified`),
+		},
+		"should throw an error if only acceptable_latency is specified": {
+			in: queueScaling{
+				AcceptableLatency: durationp(1 * time.Second),
+			},
+			wanted: errors.New(`"msg_processing_time" must be specified if "acceptable_latency" is specified`),
+		},
+		"should throw an error if the msg_processing_time is 0": {
+			in: queueScaling{
+				AcceptableLatency: durationp(1 * time.Second),
+				AvgProcessingTime: durationp(0 * time.Second),
+			},
+			wanted: errors.New(`"msg_processing_time" cannot be 0`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

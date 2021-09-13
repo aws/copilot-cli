@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -362,6 +363,36 @@ func (a *AdvancedCount) Validate() error {
 			missingField:      "range",
 			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "queue_delay"},
 		}
+	}
+	if err := a.QueueScaling.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue_delay": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns if queueScaling is configured correctly.
+func (qs *queueScaling) Validate() error {
+	if qs.IsEmpty() {
+		return nil
+	}
+	if qs.AcceptableLatency == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "acceptable_latency",
+			conditionalFields: []string{"msg_processing_time"},
+		}
+	}
+	if qs.AvgProcessingTime == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "msg_processing_time",
+			conditionalFields: []string{"acceptable_latency"},
+		}
+	}
+	latency, process := *qs.AcceptableLatency, *qs.AvgProcessingTime
+	if latency == 0 {
+		return errors.New(`"acceptable_latency" cannot be 0`)
+	}
+	if process == 0 {
+		return errors.New(`"msg_processing_time" cannot be 0`)
 	}
 	return nil
 }

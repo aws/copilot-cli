@@ -238,6 +238,15 @@ func (qs *queueScaling) IsEmpty() bool {
 	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil
 }
 
+// AcceptableBacklogPerTask returns the total number of messages that each task can accumulate in the queue
+// while maintaining the AcceptableLatency given the AvgProcessingTime.
+func (qs *queueScaling) AcceptableBacklogPerTask() (int, error) {
+	if err := qs.Validate(); err != nil {
+		return 0, err
+	}
+	return 0, nil
+}
+
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
 func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
 	return dockerfileBuildRequired("service", svc)
