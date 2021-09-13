@@ -48,46 +48,136 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorPrefix: `validate "http": `,
 		},
-		"error if fail to validate count": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskConfig: TaskConfig{
-					Count: Count{
-						AdvancedCount: AdvancedCount{
-							Spot: aws.Int(0),
-							Range: Range{
-								Value: (*IntRangeBand)(aws.String("mockRange")),
-							},
-						},
-					},
-				},
-			},
-			wantedErrorPrefix: `validate "count": `,
-		},
-		"error if fail to validate storage": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskConfig: TaskConfig{
-					Storage: Storage{
-						Volumes: map[string]*Volume{
-							"foo": {
-								EFS: EFSConfigOrBool{
-									Advanced: EFSVolumeConfiguration{
-										UID:          aws.Uint32(123),
-										FileSystemID: aws.String("mockID"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantedErrorPrefix: `validate "storage": `,
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.lbConfig.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestBackendServiceConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config BackendServiceConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate image": {
+			config: BackendServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							Location: aws.String("mockLocation"),
+						},
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "image": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config RequestDrivenWebServiceConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate image": {
+			config: RequestDrivenWebServiceConfig{
+				ImageConfig: ImageWithPort{
+					Image: Image{
+						Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+						Location: aws.String("mockLocation"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "image": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestWorkerServiceConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config WorkerServiceConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate image": {
+			config: WorkerServiceConfig{
+				ImageConfig: ImageWithHealthcheck{
+					Image: Image{
+						Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+						Location: aws.String("mockLocation"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "image": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestScheduledJobConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config ScheduledJobConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate image": {
+			config: ScheduledJobConfig{
+				ImageConfig: ImageWithHealthcheck{
+					Image: Image{
+						Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+						Location: aws.String("mockLocation"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "image": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -202,6 +292,23 @@ func TestTaskConfig_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorPrefix: `validate "count": `,
+		},
+		"error if fail to validate storage": {
+			TaskConfig: TaskConfig{
+				Storage: Storage{
+					Volumes: map[string]*Volume{
+						"foo": {
+							EFS: EFSConfigOrBool{
+								Advanced: EFSVolumeConfiguration{
+									UID:          aws.Uint32(123),
+									FileSystemID: aws.String("mockID"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "storage": `,
 		},
 	}
 	for name, tc := range testCases {

@@ -15,7 +15,7 @@ var (
 	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
 )
 
-// Validate returns if LoadBalancedWebServiceConfig is configured correctly.
+// Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l *LoadBalancedWebServiceConfig) Validate() error {
 	var err error
 	if err = l.ImageConfig.Validate(); err != nil {
@@ -44,15 +44,138 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	if err = l.PublishConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "publish": %w`, err)
 	}
-	for i := 0; i < len(l.TaskDefOverrides); i++ {
-		if err = l.TaskDefOverrides[i].Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, i, err)
+	for ind, taskDefOverride := range l.TaskDefOverrides {
+		if err = taskDefOverride.Validate(); err != nil {
+			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
 		}
 	}
 	return nil
 }
 
-// Validate returns if ImageWithPortAndHealthcheck is configured correctly.
+// Validate returns nil if BackendServiceConfig is configured correctly.
+func (b *BackendServiceConfig) Validate() error {
+	var err error
+	if err = b.ImageConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "image": %w`, err)
+	}
+	if err = b.ImageOverride.Validate(); err != nil {
+		return err
+	}
+	if err = b.TaskConfig.Validate(); err != nil {
+		return err
+	}
+	if err = b.Logging.Validate(); err != nil {
+		return fmt.Errorf(`validate "logging": %w`, err)
+	}
+	for k, v := range b.Sidecars {
+		if err = v.Validate(); err != nil {
+			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+		}
+	}
+	if err = b.Network.Validate(); err != nil {
+		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if err = b.PublishConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "publish": %w`, err)
+	}
+	for ind, taskDefOverride := range b.TaskDefOverrides {
+		if err = taskDefOverride.Validate(); err != nil {
+			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if RequestDrivenWebService is configured correctly.
+func (r *RequestDrivenWebServiceConfig) Validate() error {
+	var err error
+	if err = r.ImageConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "image": %w`, err)
+	}
+	if err = r.RequestDrivenWebServiceHttpConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "http": %w`, err)
+	}
+	if err = r.PublishConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "publish": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if WorkerServiceConfig is configured correctly.
+func (w *WorkerServiceConfig) Validate() error {
+	var err error
+	if err = w.ImageConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "image": %w`, err)
+	}
+	if err = w.ImageOverride.Validate(); err != nil {
+		return err
+	}
+	if err = w.TaskConfig.Validate(); err != nil {
+		return err
+	}
+	if err = w.Logging.Validate(); err != nil {
+		return fmt.Errorf(`validate "logging": %w`, err)
+	}
+	for k, v := range w.Sidecars {
+		if err = v.Validate(); err != nil {
+			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+		}
+	}
+	if err = w.Network.Validate(); err != nil {
+		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if err = w.Subscribe.Validate(); err != nil {
+		return fmt.Errorf(`validate "subscribe": %w`, err)
+	}
+	for ind, taskDefOverride := range w.TaskDefOverrides {
+		if err = taskDefOverride.Validate(); err != nil {
+			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if ScheduledJobConfig is configured correctly.
+func (s *ScheduledJobConfig) Validate() error {
+	var err error
+	if err = s.ImageConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "image": %w`, err)
+	}
+	if err = s.ImageOverride.Validate(); err != nil {
+		return err
+	}
+	if err = s.TaskConfig.Validate(); err != nil {
+		return err
+	}
+	if err = s.Logging.Validate(); err != nil {
+		return fmt.Errorf(`validate "logging": %w`, err)
+	}
+	for k, v := range s.Sidecars {
+		if err = v.Validate(); err != nil {
+			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+		}
+	}
+	if err = s.Network.Validate(); err != nil {
+		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if err = s.On.Validate(); err != nil {
+		return fmt.Errorf(`validate "on": %w`, err)
+	}
+	if err = s.JobFailureHandlerConfig.Validate(); err != nil {
+		return err
+	}
+	if err = s.PublishConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "publish": %w`, err)
+	}
+	for ind, taskDefOverride := range s.TaskDefOverrides {
+		if err = taskDefOverride.Validate(); err != nil {
+			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if ImageWithPortAndHealthcheck is configured correctly.
 func (i *ImageWithPortAndHealthcheck) Validate() error {
 	var err error
 	if err = i.ImageWithPort.Validate(); err != nil {
@@ -64,7 +187,15 @@ func (i *ImageWithPortAndHealthcheck) Validate() error {
 	return nil
 }
 
-// Validate returns if ImageWithPort is configured correctly.
+// Validate returns nil if ImageWithHealthcheck is configured correctly.
+func (i *ImageWithHealthcheck) Validate() error {
+	if err := i.Image.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate returns nil if ImageWithPort is configured correctly.
 func (i *ImageWithPort) Validate() error {
 	if err := i.Image.Validate(); err != nil {
 		return err
@@ -77,13 +208,11 @@ func (i *ImageWithPort) Validate() error {
 	return nil
 }
 
-// Validate returns if Image is configured correctly.
+// Validate returns nil if Image is configured correctly.
 func (i *Image) Validate() error {
 	var err error
-	if !i.Build.isEmpty() {
-		if err = i.Build.Validate(); err != nil {
-			return fmt.Errorf(`validate "build": %w`, err)
-		}
+	if err = i.Build.Validate(); err != nil {
+		return fmt.Errorf(`validate "build": %w`, err)
 	}
 	if i.Build.isEmpty() == (i.Location == nil) {
 		return &errFieldMutualExclusive{
@@ -95,25 +224,28 @@ func (i *Image) Validate() error {
 	return nil
 }
 
-// Validate returns if BuildArgsOrString is configured correctly.
+// Validate returns nil if BuildArgsOrString is configured correctly.
 func (b *BuildArgsOrString) Validate() error {
+	if b.isEmpty() {
+		return nil
+	}
 	if !b.BuildArgs.isEmpty() {
 		return b.BuildArgs.Validate()
 	}
 	return nil
 }
 
-// Validate returns if DockerBuildArgs is configured correctly.
+// Validate returns nil if DockerBuildArgs is configured correctly.
 func (*DockerBuildArgs) Validate() error {
 	return nil
 }
 
-// Validate returns if ContainerHealthCheck is configured correctly.
+// Validate returns nil if ContainerHealthCheck is configured correctly.
 func (*ContainerHealthCheck) Validate() error {
 	return nil
 }
 
-// Validate returns if ImageOverride is configured correctly.
+// Validate returns nil if ImageOverride is configured correctly.
 func (i *ImageOverride) Validate() error {
 	var err error
 	if err = i.EntryPoint.Validate(); err != nil {
@@ -125,28 +257,24 @@ func (i *ImageOverride) Validate() error {
 	return nil
 }
 
-// Validate returns if EntryPointOverride is configured correctly.
+// Validate returns nil if EntryPointOverride is configured correctly.
 func (*EntryPointOverride) Validate() error {
 	return nil
 }
 
-// Validate returns if CommandOverride is configured correctly.
+// Validate returns nil if CommandOverride is configured correctly.
 func (*CommandOverride) Validate() error {
 	return nil
 }
 
-// Validate returns if RoutingRule is configured correctly.
+// Validate returns nil if RoutingRule is configured correctly.
 func (r *RoutingRule) Validate() error {
 	var err error
-	if !r.HealthCheck.IsEmpty() {
-		if err = r.HealthCheck.Validate(); err != nil {
-			return fmt.Errorf(`validate "healthcheck": %w`, err)
-		}
+	if err = r.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
-	if !r.Alias.IsEmpty() {
-		if err = r.Alias.Validate(); err != nil {
-			return fmt.Errorf(`validate "alias": %w`, err)
-		}
+	if err = r.Alias.Validate(); err != nil {
+		return fmt.Errorf(`validate "alias": %w`, err)
 	}
 	if r.TargetContainer != nil && r.TargetContainerCamelCase != nil {
 		return &errFieldMutualExclusive{
@@ -157,22 +285,28 @@ func (r *RoutingRule) Validate() error {
 	return nil
 }
 
-// Validate returns if HealthCheckArgsOrString is configured correctly.
+// Validate returns nil if HealthCheckArgsOrString is configured correctly.
 func (h *HealthCheckArgsOrString) Validate() error {
+	if h.IsEmpty() {
+		return nil
+	}
 	return h.HealthCheckArgs.Validate()
 }
 
-// Validate returns if HTTPHealthCheckArgs is configured correctly.
-func (*HTTPHealthCheckArgs) Validate() error {
+// Validate returns nil if HTTPHealthCheckArgs is configured correctly.
+func (h *HTTPHealthCheckArgs) Validate() error {
+	if h.isEmpty() {
+		return nil
+	}
 	return nil
 }
 
-// Validate returns if Alias is configured correctly.
+// Validate returns nil if Alias is configured correctly.
 func (*Alias) Validate() error {
 	return nil
 }
 
-// Validate returns if TaskConfig is configured correctly.
+// Validate returns nil if TaskConfig is configured correctly.
 func (t *TaskConfig) Validate() error {
 	var err error
 	if err = t.Platform.Validate(); err != nil {
@@ -190,41 +324,40 @@ func (t *TaskConfig) Validate() error {
 	return nil
 }
 
-// Validate returns if PlatformArgsOrString is configured correctly.
+// Validate returns nil if PlatformArgsOrString is configured correctly.
 func (p *PlatformArgsOrString) Validate() error {
-	if !p.PlatformArgs.isEmpty() {
-		return p.PlatformArgs.Validate()
-	}
-	return nil
+	return p.PlatformArgs.Validate()
 }
 
-// Validate returns if PlatformArgsOrString is configured correctly.
+// Validate returns nil if PlatformArgsOrString is configured correctly.
 // TODO: add validation once "feat/pencere" is merged.
-func (*PlatformArgs) Validate() error {
-	return nil
-}
-
-// Validate returns if Count is configured correctly.
-func (c *Count) Validate() error {
-	if !c.AdvancedCount.IsEmpty() {
-		return c.AdvancedCount.Validate()
+func (p *PlatformArgs) Validate() error {
+	if p.isEmpty() {
+		return nil
 	}
 	return nil
 }
 
-// Validate returns if AdvancedCount is configured correctly.
+// Validate returns nil if Count is configured correctly.
+func (c *Count) Validate() error {
+	return c.AdvancedCount.Validate()
+}
+
+// Validate returns nil if AdvancedCount is configured correctly.
 func (a *AdvancedCount) Validate() error {
+	if a.IsEmpty() {
+		return nil
+	}
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
 			firstField:  "spot",
 			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
 		}
 	}
-	if !a.Range.IsEmpty() {
-		if err := a.Range.Validate(); err != nil {
-			return fmt.Errorf(`validate "range": %w`, err)
-		}
-	} else if a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil {
+	if err := a.Range.Validate(); err != nil {
+		return fmt.Errorf(`validate "range": %w`, err)
+	}
+	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
 		return &errFieldMustBeSpecified{
 			missingField:      "range",
 			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
@@ -233,15 +366,18 @@ func (a *AdvancedCount) Validate() error {
 	return nil
 }
 
-// Validate returns if Range is configured correctly.
+// Validate returns nil if Range is configured correctly.
 func (r *Range) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
 	if !r.RangeConfig.IsEmpty() {
 		return r.RangeConfig.Validate()
 	}
 	return r.Value.Validate()
 }
 
-// Validate returns if IntRangeBand is configured correctly.
+// Validate returns nil if IntRangeBand is configured correctly.
 func (r *IntRangeBand) Validate() error {
 	str := string(*r)
 	minMax := intRangeBandRegexp.FindStringSubmatch(str)
@@ -267,7 +403,7 @@ func (r *IntRangeBand) Validate() error {
 	}
 }
 
-// Validate returns if RangeConfig is configured correctly.
+// Validate returns nil if RangeConfig is configured correctly.
 func (r *RangeConfig) Validate() error {
 	if r.Min == nil || r.Max == nil {
 		return &errFieldMustBeSpecified{
@@ -284,7 +420,7 @@ func (r *RangeConfig) Validate() error {
 	}
 }
 
-// Validate returns if ExecuteCommand is configured correctly.
+// Validate returns nil if ExecuteCommand is configured correctly.
 func (e *ExecuteCommand) Validate() error {
 	if !e.Config.IsEmpty() {
 		return e.Config.Validate()
@@ -292,12 +428,12 @@ func (e *ExecuteCommand) Validate() error {
 	return nil
 }
 
-// Validate returns if ExecuteCommandConfig is configured correctly.
+// Validate returns nil if ExecuteCommandConfig is configured correctly.
 func (*ExecuteCommandConfig) Validate() error {
 	return nil
 }
 
-// Validate returns if Storage is configured correctly.
+// Validate returns nil if Storage is configured correctly.
 func (s *Storage) Validate() error {
 	for k, v := range s.Volumes {
 		if err := v.Validate(); err != nil {
@@ -307,7 +443,7 @@ func (s *Storage) Validate() error {
 	return nil
 }
 
-// Validate returns if Volume is configured correctly.
+// Validate returns nil if Volume is configured correctly.
 func (v *Volume) Validate() error {
 	if err := v.EFS.Validate(); err != nil {
 		return fmt.Errorf(`validate "efs": %w`, err)
@@ -315,21 +451,24 @@ func (v *Volume) Validate() error {
 	return v.MountPointOpts.Validate()
 }
 
-// Validate returns if MountPointOpts is configured correctly.
+// Validate returns nil if MountPointOpts is configured correctly.
 func (*MountPointOpts) Validate() error {
 	return nil
 }
 
-// Validate returns if EFSConfigOrBool is configured correctly.
+// Validate returns nil if EFSConfigOrBool is configured correctly.
 func (e *EFSConfigOrBool) Validate() error {
-	if !e.Advanced.IsEmpty() {
-		return e.Advanced.Validate()
+	if e.IsEmpty() {
+		return nil
 	}
-	return nil
+	return e.Advanced.Validate()
 }
 
-// Validate returns if EFSVolumeConfiguration is configured correctly.
+// Validate returns nil if EFSVolumeConfiguration is configured correctly.
 func (e *EFSVolumeConfiguration) Validate() error {
+	if e.IsEmpty() {
+		return nil
+	}
 	if !e.EmptyBYOConfig() && !e.EmptyUIDConfig() {
 		return &errFieldMutualExclusive{
 			firstField:  "uid/gid",
@@ -361,17 +500,23 @@ func (e *EFSVolumeConfiguration) Validate() error {
 	return nil
 }
 
-// Validate returns if AuthorizationConfig is configured correctly.
-func (*AuthorizationConfig) Validate() error {
+// Validate returns nil if AuthorizationConfig is configured correctly.
+func (a *AuthorizationConfig) Validate() error {
+	if a.IsEmpty() {
+		return nil
+	}
 	return nil
 }
 
-// Validate returns if Logging is configured correctly.
-func (*Logging) Validate() error {
+// Validate returns nil if Logging is configured correctly.
+func (l *Logging) Validate() error {
+	if l.IsEmpty() {
+		return nil
+	}
 	return nil
 }
 
-// Validate returns if SidecarConfig is configured correctly.
+// Validate returns nil if SidecarConfig is configured correctly.
 func (s *SidecarConfig) Validate() error {
 	for ind, mp := range s.MountPoints {
 		if err := mp.Validate(); err != nil {
@@ -381,22 +526,41 @@ func (s *SidecarConfig) Validate() error {
 	return s.ImageOverride.Validate()
 }
 
-// Validate returns if NetworkConfig is configured correctly.
+// Validate returns nil if NetworkConfig is configured correctly.
 func (n *NetworkConfig) Validate() error {
-	if !n.VPC.isEmpty() {
-		if err := n.VPC.Validate(); err != nil {
-			return fmt.Errorf(`validate "vpc": %w`, err)
-		}
+	if n.IsEmpty() {
+		return nil
+	}
+	if err := n.VPC.Validate(); err != nil {
+		return fmt.Errorf(`validate "vpc": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns if vpcConfig is configured correctly.
-func (*vpcConfig) Validate() error {
+// Validate returns nil if vpcConfig is configured correctly.
+func (v *vpcConfig) Validate() error {
+	if v.isEmpty() {
+		return nil
+	}
 	return nil
 }
 
-// Validate returns if PublishConfig is configured correctly.
+// Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
+func (r *RequestDrivenWebServiceHttpConfig) Validate() error {
+	return r.HealthCheckConfiguration.Validate()
+}
+
+// Validate returns nil if JobTriggerConfig is configured correctly.
+func (*JobTriggerConfig) Validate() error {
+	return nil
+}
+
+// Validate returns nil if JobFailureHandlerConfig is configured correctly.
+func (*JobFailureHandlerConfig) Validate() error {
+	return nil
+}
+
+// Validate returns nil if PublishConfig is configured correctly.
 func (p *PublishConfig) Validate() error {
 	for ind, topic := range p.Topics {
 		if err := topic.Validate(); err != nil {
@@ -406,12 +570,46 @@ func (p *PublishConfig) Validate() error {
 	return nil
 }
 
-// Validate returns if Topic is configured correctly.
+// Validate returns nil if Topic is configured correctly.
 func (*Topic) Validate() error {
 	return nil
 }
 
-// Validate returns if OverrideRule is configured correctly.
+// Validate returns nil if SubscribeConfig is configured correctly.
+func (p *SubscribeConfig) Validate() error {
+	for ind, topic := range p.Topics {
+		if err := topic.Validate(); err != nil {
+			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if TopicSubscription is configured correctly.
+func (t *TopicSubscription) Validate() error {
+	if err := t.Queue.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if SQSQueue is configured correctly.
+func (s *SQSQueue) Validate() error {
+	if err := s.DeadLetter.Validate(); err != nil {
+		return fmt.Errorf(`validate "dead_letter": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if DeadLetterQueue is configured correctly.
+func (d *DeadLetterQueue) Validate() error {
+	if d.IsEmpty() {
+		return nil
+	}
+	return nil
+}
+
+// Validate returns nil if OverrideRule is configured correctly.
 func (*OverrideRule) Validate() error {
 	return nil
 }
