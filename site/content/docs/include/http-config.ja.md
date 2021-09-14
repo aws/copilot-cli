@@ -65,10 +65,10 @@ http:
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings</span>  
 サービスの HTTPS ドメインエイリアス
 ```yaml
-# String version.
+# 文字列で指定する場合
 http:
   alias: example.com
-# Alteratively, as an array of strings.
+# 別の方法として、文字列配列の場合
 http:
   alias: ["example.com", "v1.example.com"]
 ```
