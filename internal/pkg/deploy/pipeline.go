@@ -110,9 +110,10 @@ type GitHubURL string
 
 // CodeCommitSource defines the (CC) source of the artifacts to be built and deployed.
 type CodeCommitSource struct {
-	ProviderName  string
-	Branch        string
-	RepositoryURL string
+	ProviderName         string
+	Branch               string
+	RepositoryURL        string
+	OutputArtifactFormat string
 }
 
 // BitbucketSource defines the (BB) source of the artifacts to be built and deployed.
@@ -160,10 +161,15 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			return repo, false, nil
 		}
 	case manifest.CodeCommitProviderName:
+		outputFormat, ok := mfSource.Properties["output_artifact_format"]
+		if !ok {
+			outputFormat = ""
+		}
 		return &CodeCommitSource{
-			ProviderName:  manifest.CodeCommitProviderName,
-			Branch:        (mfSource.Properties["branch"]).(string),
-			RepositoryURL: (mfSource.Properties["repository"]).(string),
+			ProviderName:         manifest.CodeCommitProviderName,
+			Branch:               (mfSource.Properties["branch"]).(string),
+			RepositoryURL:        (mfSource.Properties["repository"]).(string),
+			OutputArtifactFormat: (outputFormat).(string),
 		}, false, nil
 	case manifest.BitbucketProviderName:
 		// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.

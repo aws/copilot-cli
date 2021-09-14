@@ -111,12 +111,15 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 				Properties: map[string]interface{}{
 					"branch":     "test",
 					"repository": "some/repository/URL",
+					//"output_artifact_format": "testFormat",
 				},
 			},
 			expectedDeploySource: &CodeCommitSource{
 				ProviderName:  manifest.CodeCommitProviderName,
 				Branch:        "test",
 				RepositoryURL: "some/repository/URL",
+				//OutputArtifactFormat: "testFormat",
+				OutputArtifactFormat: "",
 			},
 			expectedShouldPrompt: false,
 			expectedErr:          nil,

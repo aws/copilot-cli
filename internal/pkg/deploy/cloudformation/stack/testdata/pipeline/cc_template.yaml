@@ -93,6 +93,10 @@ Resources:
               - ecr:CompleteLayerUpload
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': phonetool}}
+          - Effect: Allow
+            Resource: "*"
+            Action:
+              - codecommit:GitPull
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -191,6 +195,10 @@ Resources:
               - sts:AssumeRole
             Resource:
               - arn:aws:iam::1111:role/phonetool-staging-test-EnvManagerRole
+          - Effect: Allow
+            Resource: "*"
+            Action:
+              - codecommit:GetRepository
       Roles:
         - !Ref PipelineRole
   BuildTestCommandsstagingDASHtest:
@@ -244,6 +252,7 @@ Resources:
               Configuration:
                 RepositoryName: aws-sample
                 BranchName: main
+                OutputArtifactFormat: CODEBUILD_CLONE_REF
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1

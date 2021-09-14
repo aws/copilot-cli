@@ -1,5 +1,5 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
@@ -104,6 +104,14 @@ Resources:
               - ecr:CompleteLayerUpload
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.AppName}}}}
+          {{- if eq .Source.ProviderName "CodeCommit" }}
+          {{- if ne .Source.OutputArtifactFormat "" }}
+          - Effect: Allow
+            Resource: "*"
+            Action:
+              - codecommit:GitPull
+          {{- end }}
+          {{- end }}
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -232,6 +240,14 @@ Resources:
               - sts:AssumeRole
             Resource:{{range $stage := .Stages}}
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
+          {{- if eq .Source.ProviderName "CodeCommit" }}
+          {{- if ne .Source.OutputArtifactFormat "" }}
+          - Effect: Allow
+            Resource: "*"
+            Action:
+              - codecommit:GetRepository
+          {{- end }}
+          {{- end }}
       Roles:
         - !Ref PipelineRole
 {{- range $index, $stage := .Stages}}
@@ -334,6 +350,9 @@ Resources:
               Configuration:
                 RepositoryName: {{$.Source.Repository}}
                 BranchName: {{$.Source.Branch}}
+                {{- if ne .Source.OutputArtifactFormat "" }}
+                OutputArtifactFormat: {{$.Source.OutputArtifactFormat}}
+                {{- end}}
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
