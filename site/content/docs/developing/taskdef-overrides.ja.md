@@ -67,7 +67,7 @@ taskdef_overrides:
     value: "udp"
 ```
 
-### ルートファイルシステムに読み取り専用のアクセス権を与える
+### ルートファイルシステムを読み取り専用にする
 
 ``` yaml
 taskdef_overrides:
