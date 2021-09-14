@@ -370,7 +370,7 @@ func (a *AdvancedCount) Validate() error {
 	return nil
 }
 
-// Validate returns if QueueScaling is configured correctly.
+// Validate returns nil if QueueScaling is configured correctly.
 func (qs *QueueScaling) Validate() error {
 	if qs.IsEmpty() {
 		return nil
