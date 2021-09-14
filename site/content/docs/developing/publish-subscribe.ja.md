@@ -4,7 +4,7 @@ Copilot [Worker Services](../manifest/worker-service.ja.md)は、すべてのサ
 
 AWS の一般的なパターンは、メッセージの配信と処理を行うための SNS と SQS の組み合わせです。[SNS](https://docs.aws.amazon.com/ja_jp/sns/latest/dg/welcome.html) は堅牢なメッセージ配信システムで、メッセージの配信を保証しながら複数のサブスクライブしたエンドポイントにメッセージを送ることができます。
 
-[SQS](https://docs.aws.amazon.com/ja_jp/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html)は、メッセージの非同期処理を可能にするメッセージキューです。キューには 1 つまたは複数の SNS トピックや、AWS EventBridge からのイベントを投入をすることができます。
+[SQS](https://docs.aws.amazon.com/ja_jp/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html)は、メッセージの非同期処理を可能にするメッセージキューです。キューには 1 つまたは複数の SNS トピックや、AWS EventBridge からのイベントを投入することができます。
 
 この 2 つのサービスを組み合わせることで、メッセージの送受信を効果的に切り離すことができます。つまり、パブリッシャーは自分のトピックをサブスクライブしているキューを意識する必要がなく、また Worker Service のコードはメッセージがどこから来るかを気にする必要がありません。
 
