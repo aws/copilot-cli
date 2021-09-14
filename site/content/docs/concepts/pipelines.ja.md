@@ -65,7 +65,7 @@ Service がシンプルな Manifest ファイルを持つのと同様に、Pipel
 ```yaml
 # Pipeline 名 "pipeline-ecs-kudos-kohidave-demo-api-frontend" の Manifest
 # この YAML ファイルは Pipeline を定義します。追跡するソースリポジトリと、Environment のデプロイ順序を指定します
-# 詳細はこちら: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
+# 詳細はこちら: https://aws.github.io/copilot-cli/ja/docs/manifest/pipeline/
 
 # Pipeline 名
 name: pipeline-ecs-kudos-kohidave-demo-api-frontend
