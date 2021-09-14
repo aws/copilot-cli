@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -60,6 +62,11 @@ const (
 )
 
 var (
+	validOS   = []string{manifest.OSLinux, manifest.OSWindows, manifest.OSWindowsServer2019Full, manifest.OSWindowsServer2019Core}
+	validArch = []string{manifest.ArchAMD64, manifest.ArchX86}
+)
+
+var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCPUNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
@@ -104,6 +111,9 @@ type runTaskVars struct {
 
 	follow                bool
 	generateCommandTarget string
+
+	os   string
+	arch string
 }
 
 type runTaskOpts struct {
@@ -215,13 +225,15 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			App: o.appName,
 			Env: o.env,
 
+			OS:   o.os,
+			Arch: o.arch,
+
 			VPCGetter:            vpcGetter,
 			ClusterGetter:        ecs.New(o.sess),
 			Starter:              ecsService,
 			EnvironmentDescriber: d,
 		}, nil
 	}
-
 	return &task.ConfigRunner{
 		Count:     o.count,
 		GroupName: o.groupName,
@@ -229,6 +241,8 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		Cluster:        o.cluster,
 		Subnets:        o.subnets,
 		SecurityGroups: o.securityGroups,
+		OS:             o.os,
+		Arch:           o.arch,
 
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
@@ -278,14 +292,6 @@ func (o *runTaskOpts) Validate() error {
 		return errNumNotPositive
 	}
 
-	if o.cpu <= 0 {
-		return errCPUNotPositive
-	}
-
-	if o.memory <= 0 {
-		return errMemNotPositive
-	}
-
 	if o.groupName != "" {
 		if err := basicNameValidation(o.groupName); err != nil {
 			return err
@@ -300,6 +306,39 @@ func (o *runTaskOpts) Validate() error {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
 		}
+	}
+
+	if noOS, noArch := o.os == "", o.arch == ""; noOS != noArch {
+		return fmt.Errorf("must specify either both `--%s` and `--%s` or neither", osFlag, archFlag)
+	}
+	if err := o.validateOS(); err != nil {
+		return err
+	}
+	if err := o.validateArch(); err != nil {
+		return err
+	}
+
+	// Set default values for CPU and memory based on the operating system.
+	// The flag default value is 0. If a user sets `--cpu 0` or `--memory 0`, then the 0 value will be replaced by 256/1024 for cpu and 512/2048 for mem, depending on OS, instead of erroring out.
+	if o.cpu == 0 {
+		o.cpu = 256
+		if isWindowsOS(o.os) {
+			o.cpu = manifest.WindowsTaskCPU
+		}
+	}
+	if o.memory == 0 {
+		o.memory = 512
+		if isWindowsOS(o.os) {
+			o.memory = manifest.WindowsTaskMemory
+		}
+	}
+
+	if o.cpu < 0 {
+		return errCPUNotPositive
+	}
+
+	if o.memory < 0 {
+		return errMemNotPositive
 	}
 
 	if err := o.validateFlagsWithCluster(); err != nil {
@@ -318,6 +357,10 @@ func (o *runTaskOpts) Validate() error {
 		return err
 	}
 
+	if err := o.validateFlagsWithWindows(); err != nil {
+		return err
+	}
+
 	if o.appName != "" {
 		if err := o.validateAppName(); err != nil {
 			return err
@@ -331,6 +374,32 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	return nil
+}
+
+func (o *runTaskOpts) validateOS() error {
+	if o.os == "" {
+		return nil
+	}
+	o.os = strings.ToLower(o.os)
+	for _, os := range validOS {
+		if o.os == os {
+			return nil
+		}
+	}
+	return fmt.Errorf("OS %s is invalid; %s: %s", o.os, english.PluralWord(len(validOS), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOS, "and"))
+}
+
+func (o *runTaskOpts) validateArch() error {
+	if o.arch == "" {
+		return nil
+	}
+	o.arch = strings.ToLower(o.arch)
+	for _, arch := range validArch {
+		if o.arch == arch {
+			return nil
+		}
+	}
+	return fmt.Errorf("arch %s is invalid; %s: %s", o.arch, english.PluralWord(len(validArch), "the valid architecture is", "valid architectures are"), english.WordSeries(validArch, "and"))
 }
 
 func (o *runTaskOpts) validateFlagsWithCluster() error {
@@ -406,6 +475,28 @@ func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
 		return fmt.Errorf("cannot specify both `--security-groups` and `--env`")
 	}
 	return nil
+}
+
+func (o *runTaskOpts) validateFlagsWithWindows() error {
+	if !isWindowsOS(o.os) {
+		return nil
+	}
+	if o.cpu < manifest.WindowsTaskCPU {
+		return fmt.Errorf("CPU %d must be at least %d for a Windows-based task", o.cpu, manifest.WindowsTaskCPU)
+	}
+	if o.memory < manifest.WindowsTaskMemory {
+		return fmt.Errorf("memory %d must be at least %d for a Windows-based task", o.memory, manifest.WindowsTaskMemory)
+	}
+	return nil
+}
+
+func isWindowsOS(os string) bool {
+	for _, windowsOS := range manifest.WindowsOSFamilies {
+		if os == windowsOS {
+			return true
+		}
+	}
+	return false
 }
 
 // Ask prompts the user for any required or important fields that are not provided.
@@ -739,6 +830,8 @@ func (o *runTaskOpts) deploy() error {
 		EntryPoint:     entrypoint,
 		EnvVars:        o.envVars,
 		Secrets:        o.secrets,
+		OS:             o.os,
+		Arch:           o.arch,
 		App:            o.appName,
 		Env:            o.env,
 		AdditionalTags: o.resourceTags,
@@ -861,8 +954,8 @@ Run a task with a command.
 	}
 
 	cmd.Flags().IntVar(&vars.count, countFlag, 1, countFlagDescription)
-	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
-	cmd.Flags().IntVar(&vars.memory, memoryFlag, 512, memoryFlagDescription)
+	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 0, cpuFlagDescription)
+	cmd.Flags().IntVar(&vars.memory, memoryFlag, 0, memoryFlagDescription)
 
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
@@ -879,6 +972,8 @@ Run a task with a command.
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
+	cmd.Flags().StringVar(&vars.os, osFlag, "", osFlagDescription)
+	cmd.Flags().StringVar(&vars.arch, archFlag, "", archFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.secrets, secretsFlag, nil, secretsFlagDescription)

@@ -57,13 +57,8 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	if props.Platform != nil {
 		svc.BackendServiceConfig.Platform = props.Platform
 		if isWindowsPlatform(props.Platform) {
-<<<<<<< HEAD
-			svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(1024)
-			svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(2048)
-=======
-			svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(windowsTaskCPU)
-			svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(windowsTaskMemory)
->>>>>>> archer/feat/pencere
+			svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(WindowsTaskCPU)
+			svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(WindowsTaskMemory)
 		}
 	}
 	svc.parser = template.New()

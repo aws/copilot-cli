@@ -21,6 +21,10 @@ Parameters:
     Type: CommaDelimitedList
   EntryPoint:
     Type: CommaDelimitedList
+  OS:
+    Type: String
+  Arch:
+    Type: String
 Conditions:
   # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
@@ -33,6 +37,8 @@ Conditions:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
   HasEntryPoint:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
+  HasPlatform:
+    !Not [!Equals [!Ref OS, ""]]
 Resources:
   TaskDefinition:
     Metadata:
@@ -62,6 +68,9 @@ Resources:
             ValueFrom: {{$valueFrom}}{{end}}
           {{- end}}
       Family: !Join ['-', ["copilot", !Ref TaskName]]
+      RuntimePlatform:
+        OperatingSystemFamily: !If [HasPlatform, !Ref OS, "LINUX"]
+        CpuArchitecture: !If [HasPlatform, !Ref Arch, "X86_64"]
       RequiresCompatibilities:
         - "FARGATE"
       NetworkMode: awsvpc

@@ -72,10 +72,10 @@ var (
 
 	defaultPlatform = platformString(OSLinux, ArchAMD64)
 
-	windowsTaskCPU    = 1024
-	windowsTaskMemory = 2048
+	WindowsTaskCPU    = 1024
+	WindowsTaskMemory = 2048
 
-	windowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
+	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
@@ -786,7 +786,7 @@ func validateAdvancedPlatform(platform PlatformArgs) error {
 }
 
 func isWindowsPlatform(platform *PlatformArgsOrString) bool {
-	for _, win := range windowsOSFamilies {
+	for _, win := range WindowsOSFamilies {
 		if platform.OS() == win {
 			return true
 		}

@@ -61,6 +61,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inSecrets    map[string]string
 		inCommand    string
 		inEntryPoint string
+		inOS         string
+		inArch       string
 
 		inDefault               bool
 		inGenerateCommandTarget string
@@ -134,6 +136,28 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			},
 			wantedError: nil,
 		},
+		"invalid with os but not arch": {
+			basicOpts:   defaultOpts,
+			inOS:        "windows",
+			wantedError: errors.New("must specify either both `--platform-os` and `--platform-arch` or neither"),
+		},
+		"invalid with arch but not os": {
+			basicOpts:   defaultOpts,
+			inArch:      "amd64",
+			wantedError: errors.New("must specify either both `--platform-os` and `--platform-arch` or neither"),
+		},
+		"invalid os": {
+			basicOpts:   defaultOpts,
+			inOS:        "OStrich",
+			inArch:      "amd64",
+			wantedError: errors.New("OS ostrich is invalid; valid operating systems are: linux, windows, windows_server_2019_full and windows_server_2019_core"),
+		},
+		"invalid arch": {
+			basicOpts:   defaultOpts,
+			inOS:        "windows",
+			inArch:      "MAD666",
+			wantedError: errors.New("arch mad666 is invalid; valid architectures are: amd64 and x86_64"),
+		},
 		"invalid number of tasks": {
 			basicOpts: basicOpts{
 				inCount:  -1,
@@ -150,6 +174,16 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			},
 			wantedError: errCPUNotPositive,
 		},
+		"invalid number of CPU units for Windows task": {
+			basicOpts: basicOpts{
+				inCount:  1,
+				inCPU:    260,
+				inMemory: 512,
+			},
+			inOS:        "windows",
+			inArch:      "amd64",
+			wantedError: errors.New("CPU 260 must be at least 1024 for a Windows-based task"),
+		},
 		"invalid memory": {
 			basicOpts: basicOpts{
 				inCount:  1,
@@ -157,6 +191,16 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inMemory: -1024,
 			},
 			wantedError: errMemNotPositive,
+		},
+		"invalid memory for Windows task": {
+			basicOpts: basicOpts{
+				inCount:  1,
+				inCPU:    1024,
+				inMemory: 2000,
+			},
+			inOS:        "windows",
+			inArch:      "x86_64",
+			wantedError: errors.New("memory 2000 must be at least 2048 for a Windows-based task"),
 		},
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,
@@ -341,6 +385,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					entrypoint:                  tc.inEntryPoint,
 					useDefaultSubnetsAndCluster: tc.inDefault,
 					generateCommandTarget:       tc.inGenerateCommandTarget,
+					os:                          tc.inOS,
+					arch:                        tc.inArch,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
 				nFlag:           2,
@@ -358,7 +404,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 			err := opts.Validate()
 			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 			}
