@@ -1,0 +1,74 @@
+name: homebrew
+on:
+  release:
+    types: [released]
+
+jobs:
+  download-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: macOS/amd64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-darwin-amd64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-darwin-amd64
+          cp copilot-darwin-amd64 copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_macOS_amd64.tar.gz copilot
+      - name: macOS/arm64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-darwin-arm64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-darwin-arm64
+          cp copilot-darwin-arm64 copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_macOS_arm64.tar.gz copilot
+      - name: linux/amd64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-linux https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-linux
+          cp copilot-linux copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_linux_amd64.tar.gz copilot
+      - name: linux/arm64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-linux-arm64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-linux-arm64
+          cp copilot-linux-arm64 copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_linux_arm64.tar.gz copilot
+      - name: Save archive files
+        uses: actions/upload-artifact@v2
+        with:
+          name: save tar files
+          path: '*.tar.gz'
+          retention-days: 7
+
+  update-release:
+    runs-on: ubuntu-latest
+    needs: download-and-archive
+    steps:
+      - name: Download archive files
+        uses: actions/download-artifact@v2
+        with:
+          name: save tar files
+      - name: Update release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: '*.tar.gz'
+
+  print-shas: # TODO replace this action with creating the PR against aws/homebrew-tap but it'll do for now.
+    runs-on: ubuntu-latest
+    needs: update-release
+    steps:
+      - name: Download archive files
+        uses: actions/download-artifact@v2
+        with:
+          name: save tar files
+      - name: macOS/amd64 binary
+        run: openssl dgst -sha256 copilot_${GITHUB_REF##*/}_macOS_amd64.tar.gz
+      - name: macOS/arm64 binary
+        run: openssl dgst -sha256 copilot_${GITHUB_REF##*/}_macOS_arm64.tar.gz
+      - name: linux/amd64 binary
+        run: openssl dgst -sha256 copilot_${GITHUB_REF##*/}_linux_amd64.tar.gz
+      - name: linux/arm64 binary
+        run: openssl dgst -sha256 copilot_${GITHUB_REF##*/}_linux_arm64.tar.gz
