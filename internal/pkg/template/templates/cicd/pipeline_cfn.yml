@@ -106,7 +106,7 @@ Resources:
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.AppName}}}}
           {{- if eq .Source.ProviderName "CodeCommit" }}
           {{- if ne .Source.OutputArtifactFormat "" }}
-          - Effect: Allow
+          - Effect: Allow # The policy needed to use CODEBUILD_CLONE_REF for CodeCommit OutputArtifactFormat.
             Resource: "*"
             Action:
               - codecommit:GitPull
@@ -242,7 +242,7 @@ Resources:
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
           {{- if eq .Source.ProviderName "CodeCommit" }}
           {{- if ne .Source.OutputArtifactFormat "" }}
-          - Effect: Allow
+          - Effect: Allow # The policy needed to use CODEBUILD_CLONE_REF for CodeCommit OutputArtifactFormat.
             Resource: "*"
             Action:
               - codecommit:GetRepository
