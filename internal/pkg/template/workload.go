@@ -440,7 +440,7 @@ func withSvcParsingFuncs() ParseOption {
 			"toSnakeCase":         ToSnakeCaseFunc,
 			"hasSecrets":          hasSecrets,
 			"fmtSlice":            FmtSliceFunc,
-			"quoteSlice":          QuotePSliceFunc,
+			"quoteSlice":          QuoteSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
 			"jsonSNSTopics":       generateSNSJSON,
