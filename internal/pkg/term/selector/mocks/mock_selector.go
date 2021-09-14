@@ -587,6 +587,21 @@ func (mr *MockDeployStoreClientMockRecorder) ListDeployedServices(appName, envNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployStoreClient)(nil).ListDeployedServices), appName, envName)
 }
 
+// ListSNSTopics mocks base method.
+func (m *MockDeployStoreClient) ListSNSTopics(appName, envName string) ([]deploy.Topic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSNSTopics", appName, envName)
+	ret0, _ := ret[0].([]deploy.Topic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSNSTopics indicates an expected call of ListSNSTopics.
+func (mr *MockDeployStoreClientMockRecorder) ListSNSTopics(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSNSTopics", reflect.TypeOf((*MockDeployStoreClient)(nil).ListSNSTopics), appName, envName)
+}
+
 // MockTaskStackDescriber is a mock of TaskStackDescriber interface.
 type MockTaskStackDescriber struct {
 	ctrl     *gomock.Controller

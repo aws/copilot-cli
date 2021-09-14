@@ -34,6 +34,11 @@ func TestEnvShow_Validate(t *testing.T) {
 
 		wantedError error
 	}{
+		"skip validation is app flag is not set": {
+			inputEnvironment: "my-env",
+
+			setupMocks: func(m showEnvMocks) {},
+		},
 		"valid app name and environment name": {
 			inputApp:         "my-app",
 			inputEnvironment: "my-env",

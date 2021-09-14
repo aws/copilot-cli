@@ -18,12 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	mockError        = errors.New("mock error")
-	mockAppName      = "dinder"
-	mockPipelineName = "pipeline-dinder-badgoose-repo"
-)
-
 type showPipelineMocks struct {
 	store       *mocks.Mockstore
 	ws          *mocks.MockwsPipelineReader
@@ -33,6 +27,11 @@ type showPipelineMocks struct {
 }
 
 func TestPipelineShow_Validate(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		inAppName      string
 		inPipelineName string
@@ -117,6 +116,11 @@ func TestPipelineShow_Validate(t *testing.T) {
 }
 
 func TestPipelineShow_Ask(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
 	pipelineData := `
 name: pipeline-dinder-badgoose-repo
@@ -297,6 +301,10 @@ stages:
 	}
 }
 func TestPipelineShow_Execute(t *testing.T) {
+	const (
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	mockPipeline := mockDescribeData{
 		data: "mockData",
 		err:  mockError,

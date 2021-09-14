@@ -17,3 +17,33 @@ InstanceRole:
           Principal:
             Service: tasks.apprunner.amazonaws.com
           Action: 'sts:AssumeRole'
+    Policies:
+      - PolicyName: 'DenyIAMExceptTaggedRoles'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Deny'
+              Action: 'iam:*'
+              Resource: '*'
+            - Effect: 'Allow'
+              Action: 'sts:AssumeRole'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
+              Condition:
+                StringEquals:
+                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      {{- if .Publish }}
+      {{- if .Publish.Topics }}
+      - PolicyName: 'Publish2SNS'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action: 'sns:Publish'
+              Resource:
+              {{- range $topic := .Publish.Topics }}
+              - !Ref {{$topic.Name}}SNSTopic
+              {{- end }}
+      {{- end }}
+      {{- end }}

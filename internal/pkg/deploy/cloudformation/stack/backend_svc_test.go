@@ -108,7 +108,7 @@ Outputs:
 				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
 				badRange := manifest.IntRangeBand("badRange")
 				testBackendSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
-					Range: &manifest.Range{
+					Range: manifest.Range{
 						Value: &badRange,
 					},
 				}
@@ -161,7 +161,7 @@ Outputs:
 						Dockerfile: testDockerfile,
 					},
 					Port: 8080,
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    &testInterval,
 						Retries:     &testRetries,
@@ -169,11 +169,11 @@ Outputs:
 						StartPeriod: &testStartPeriod,
 					},
 				})
-				svc.manifest.EntryPoint = &manifest.EntryPointOverride{
+				svc.manifest.EntryPoint = manifest.EntryPointOverride{
 					String:      nil,
 					StringSlice: []string{"enter", "from"},
 				}
-				svc.manifest.Command = &manifest.CommandOverride{
+				svc.manifest.Command = manifest.CommandOverride{
 					String:      nil,
 					StringSlice: []string{"here"},
 				}
@@ -240,6 +240,7 @@ Outputs:
 							},
 						},
 					},
+					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
 			}
 
@@ -272,7 +273,7 @@ func TestBackendService_Parameters(t *testing.T) {
 			Dockerfile: testDockerfile,
 		},
 		Port: 8080,
-		HealthCheck: &manifest.ContainerHealthCheck{
+		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,
 			Retries:     &testRetries,

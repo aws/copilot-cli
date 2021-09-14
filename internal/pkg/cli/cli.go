@@ -10,6 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/dustin/go-humanize/english"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -93,4 +97,36 @@ func relPath(fullPath string) (string, error) {
 		return "", fmt.Errorf("get relative path of file: %w", err)
 	}
 	return path, nil
+}
+
+func run(cmd cmd) error {
+	if err := cmd.Validate(); err != nil {
+		return err
+	}
+	if err := cmd.Ask(); err != nil {
+		return err
+	}
+	if err := cmd.Execute(); err != nil {
+		return err
+	}
+	if actionCmd, ok := cmd.(actionCommand); ok {
+		if err := actionCmd.RecommendActions(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func logRecommendedActions(actions []string) {
+	if len(actions) == 0 {
+		return
+	}
+	log.Infoln(fmt.Sprintf("Recommended follow-up %s:", english.PluralWord(len(actions), "action", "actions")))
+	prefix := "  -"
+	if len(actions) == 1 {
+		prefix = "   "
+	}
+	for _, followup := range actions {
+		log.Infof("%s %s\n", prefix, followup)
+	}
 }

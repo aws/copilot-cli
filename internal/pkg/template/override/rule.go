@@ -6,15 +6,17 @@ package override
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 const (
+	// PathSegmentSeparator is the separator for path segments.
+	PathSegmentSeparator = "."
 	// seqAppendToLastSymbol is the symbol used to add a node to the tail of a list.
 	seqAppendToLastSymbol = "-"
-	pathSegmentSeparator  = "."
 )
 
 // Subset of YAML tag values: http://yaml.org/type/
@@ -30,7 +32,8 @@ const (
 var (
 	// pathSegmentRegexp checks for map key or single sequence reference.
 	// For example: ContainerDefinitions[0], PortMapping[-], or Ulimits.
-	pathSegmentRegexp = regexp.MustCompile(fmt.Sprintf(`^[a-zA-Z0-9_-]+(\[(\d+|%s)\])?$`, seqAppendToLastSymbol))
+	// There are three capture groups in this regex: ([a-zA-Z0-9_-]+), (\[(\d+|%s)\]), and (\d+|%s).
+	pathSegmentRegexp = regexp.MustCompile(fmt.Sprintf(`^([a-zA-Z0-9_-]+)(\[(\d+|%s)\])?$`, seqAppendToLastSymbol))
 )
 
 // nodeUpserter is the interface to insert or update a series of nodes to a YAML file.
@@ -42,14 +45,14 @@ type nodeUpserter interface {
 // Rule is the override rule override package uses.
 type Rule struct {
 	Path  string // example: "ContainerDefinitions[0].Ulimits[-].HardLimit"
-	Value *yaml.Node
+	Value yaml.Node
 }
 
 func (r Rule) validate() error {
 	if r.Path == "" {
 		return fmt.Errorf("rule path is empty")
 	}
-	pathSegments := strings.Split(r.Path, pathSegmentSeparator)
+	pathSegments := strings.Split(r.Path, PathSegmentSeparator)
 	for _, pathSegment := range pathSegments {
 		if !pathSegmentRegexp.MatchString(pathSegment) {
 			return fmt.Errorf(`invalid override path segment "%s": segments must be of the form "array[0]", "array[%s]" or "key"`,
@@ -60,7 +63,75 @@ func (r Rule) validate() error {
 }
 
 func (r Rule) parse() (nodeUpserter, error) {
-	return nil, nil
+	pathSegments := strings.SplitN(r.Path, PathSegmentSeparator, 2)
+	segment, err := parsePathSegment(pathSegments[0])
+	if err != nil {
+		return nil, err
+	}
+	baseNode := upsertNode{
+		key: segment.key,
+	}
+	if len(pathSegments) < 2 {
+		// This is the last segment.
+		baseNode.valueToInsert = &r.Value
+		return newNodeUpserter(baseNode, segment)
+	}
+
+	subRule := Rule{
+		Path:  pathSegments[1],
+		Value: r.Value,
+	}
+	nextNode, err := subRule.parse()
+	if err != nil {
+		return nil, err
+	}
+	baseNode.next = nextNode
+	return newNodeUpserter(baseNode, segment)
+}
+
+func newNodeUpserter(baseNode upsertNode, segment pathSegment) (nodeUpserter, error) {
+	if segment.index == "" {
+		// The indexMatch capture group is empty string, meaning that the path segment doesn't contain "[<index>]".
+		return &mapUpsertNode{
+			upsertNode: baseNode,
+		}, nil
+	}
+
+	if segment.index == seqAppendToLastSymbol {
+		return &seqIdxUpsertNode{
+			appendToLast: true,
+			upsertNode:   baseNode,
+		}, nil
+	}
+	index, err := strconv.Atoi(segment.index)
+	if err != nil {
+		// This error also shouldn't occur given that `validate()` has passed.
+		return nil, fmt.Errorf("convert index %s to integer: %w", segment.raw, err)
+	}
+	return &seqIdxUpsertNode{
+		index:      index,
+		upsertNode: baseNode,
+	}, nil
+}
+
+type pathSegment struct {
+	raw   string // The raw path segment, e.g. ContainerDefinitions[0].
+	key   string // The key of the segment, e.g. ContainerDefinitions.
+	index string // The index, if any, of the segment, e.g. 0. It is an empty string if the path is not a slice segment.
+}
+
+func parsePathSegment(rawPathSegment string) (pathSegment, error) {
+	subMatches := pathSegmentRegexp.FindStringSubmatch(rawPathSegment)
+	if len(subMatches) == 0 {
+		// This error shouldn't occur given that `validate()` has passed.
+		return pathSegment{}, fmt.Errorf(`invalid path segment "%s"`, rawPathSegment)
+	}
+	// https://pkg.go.dev/regexp#Regexp.FindStringSubmatch
+	return pathSegment{
+		raw:   rawPathSegment,
+		key:   subMatches[1], // The first capture group - "([a-zA-Z0-9_-]+)". Example match: "ContainerDefinitions".
+		index: subMatches[3], // The third capture group -  "(\d+|%s)". Example matches: "1", "-".
+	}, nil
 }
 
 // upsertNode represents a node that needs to be upserted at the given key.
@@ -71,7 +142,7 @@ type upsertNode struct {
 	next          nodeUpserter
 }
 
-// NextNode returns the next node.
+// Next returns the next node.
 func (m *upsertNode) Next() nodeUpserter {
 	return m.next
 }

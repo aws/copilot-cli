@@ -148,6 +148,7 @@ type SvcDeployInput struct {
 	Name     string
 	EnvName  string
 	ImageTag string
+	Force    bool
 }
 
 // TaskRunInput contains the parameters for calling copilot task run.
@@ -211,7 +212,7 @@ type PackageInput struct {
 	Tag     string
 }
 
-// NewCLI returns a wrapper around CLI
+// NewCLI returns a wrapper around CLI.
 func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
 	// your file system and docker image repo isn't polluted
@@ -408,11 +409,16 @@ copilot svc deploy
 	--tag $t
 */
 func (cli *CLI) SvcDeploy(opts *SvcDeployInput) (string, error) {
+	arguments := []string{
+		"svc", "deploy",
+		"--name", opts.Name,
+		"--env", opts.EnvName,
+		"--tag", opts.ImageTag}
+	if opts.Force {
+		arguments = append(arguments, "--force")
+	}
 	return cli.exec(
-		exec.Command(cli.path, "svc", "deploy",
-			"--name", opts.Name,
-			"--env", opts.EnvName,
-			"--tag", opts.ImageTag))
+		exec.Command(cli.path, arguments...))
 }
 
 /*SvcList runs:

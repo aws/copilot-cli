@@ -12,7 +12,7 @@ import (
 )
 
 type testVolume struct {
-	EFS *EFSConfigOrBool `yaml:"efs"`
+	EFS EFSConfigOrBool `yaml:"efs"`
 }
 
 func Test_UnmarshalEFS(t *testing.T) {
@@ -26,7 +26,7 @@ func Test_UnmarshalEFS(t *testing.T) {
 efs: 
   id: fs-12345`),
 			want: testVolume{
-				EFS: &EFSConfigOrBool{
+				EFS: EFSConfigOrBool{
 					Advanced: EFSVolumeConfiguration{
 						FileSystemID: aws.String("fs-12345"),
 					},
@@ -39,7 +39,7 @@ efs:
   uid: 1000
   gid: 10000`),
 			want: testVolume{
-				EFS: &EFSConfigOrBool{
+				EFS: EFSConfigOrBool{
 					Advanced: EFSVolumeConfiguration{
 						UID: aws.Uint32(1000),
 						GID: aws.Uint32(10000),
@@ -51,7 +51,7 @@ efs:
 			manifest: []byte(`
 efs: true`),
 			want: testVolume{
-				EFS: &EFSConfigOrBool{
+				EFS: EFSConfigOrBool{
 					Enabled: aws.Bool(true),
 				},
 			},
@@ -65,11 +65,11 @@ efs:
     iam: true
     access_point_id: fsap-1234`),
 			want: testVolume{
-				EFS: &EFSConfigOrBool{
+				EFS: EFSConfigOrBool{
 					Advanced: EFSVolumeConfiguration{
 						FileSystemID:  aws.String("fs-12345"),
 						RootDirectory: aws.String("/"),
-						AuthConfig: &AuthorizationConfig{
+						AuthConfig: AuthorizationConfig{
 							IAM:           aws.Bool(true),
 							AccessPointID: aws.String("fsap-1234"),
 						},
@@ -77,12 +77,20 @@ efs:
 				},
 			},
 		},
+		"invalid": {
+			manifest: []byte(`
+efs: 
+  uid: 1000
+  gid: 10000
+  id: 1`),
+			wantErr: `must specify one, not both, of "uid/gid" and "id/root_dir/auth"`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			v := testVolume{
-				EFS: &EFSConfigOrBool{},
+				EFS: EFSConfigOrBool{},
 			}
 
 			// WHEN
@@ -104,23 +112,23 @@ efs:
 
 func Test_EmptyVolume(t *testing.T) {
 	testCases := map[string]struct {
-		in   *EFSConfigOrBool
+		in   EFSConfigOrBool
 		want bool
 	}{
 		"with bool set": {
-			in: &EFSConfigOrBool{
+			in: EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 			},
 			want: false,
 		},
 		"with bool set to false": {
-			in: &EFSConfigOrBool{
+			in: EFSConfigOrBool{
 				Enabled: aws.Bool(false),
 			},
 			want: true,
 		},
 		"with uid/gid set": {
-			in: &EFSConfigOrBool{
+			in: EFSConfigOrBool{
 				Advanced: EFSVolumeConfiguration{
 					UID: aws.Uint32(1000),
 					GID: aws.Uint32(10000),
@@ -129,11 +137,11 @@ func Test_EmptyVolume(t *testing.T) {
 			want: false,
 		},
 		"empty": {
-			in:   nil,
+			in:   EFSConfigOrBool{},
 			want: true,
 		},
 		"misconfigured with boolean enabled": {
-			in: &EFSConfigOrBool{
+			in: EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 				Advanced: EFSVolumeConfiguration{
 					FileSystemID: aws.String("fs-1234"),
@@ -142,7 +150,7 @@ func Test_EmptyVolume(t *testing.T) {
 			want: false,
 		},
 		"misconfigured with FSID and UID": {
-			in: &EFSConfigOrBool{
+			in: EFSConfigOrBool{
 				Advanced: EFSVolumeConfiguration{
 					FileSystemID: aws.String("fs-12345"),
 					UID:          aws.Uint32(6777),
@@ -152,7 +160,7 @@ func Test_EmptyVolume(t *testing.T) {
 			want: false,
 		},
 		"misconfigured with bool set to false and extra config (should respect bool)": {
-			in: &EFSConfigOrBool{
+			in: EFSConfigOrBool{
 				Enabled: aws.Bool(false),
 				Advanced: EFSVolumeConfiguration{
 					UID: aws.Uint32(6777),
@@ -236,6 +244,62 @@ func Test_UseManagedFS(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.want, tc.in.UseManagedFS())
+		})
+	}
+}
+
+func TestStorage_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     Storage
+		wanted bool
+	}{
+		"empty storage": {
+			in:     Storage{},
+			wanted: true,
+		},
+		"non empty storage": {
+			in: Storage{
+				Volumes: map[string]*Volume{
+					"volume1": nil,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestAuthorizationConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     AuthorizationConfig
+		wanted bool
+	}{
+		"empty auth": {
+			in:     AuthorizationConfig{},
+			wanted: true,
+		},
+		"non empty auth": {
+			in: AuthorizationConfig{
+				IAM: aws.Bool(false),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

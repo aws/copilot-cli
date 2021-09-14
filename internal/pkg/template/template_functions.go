@@ -155,15 +155,13 @@ func generateSNSJSON(topics []*Topic) string {
 }
 
 // generateQueueURIJSON turns a list of Topic Subscription objects into a JSON string of their corresponding queues:
-// `{"eventsQueue": "${mainURL}", "svcTopicEventsQueue": "${svctopicURL}"}`
+// `{"svcTopicEventsQueue": "${svctopicURL}"}`
 // This function must be called on an array of correctly constructed Topic objects.
 func generateQueueURIJSON(ts []*TopicSubscription) string {
 	if ts == nil {
 		return ""
 	}
 	urlMap := make(map[string]string)
-	urlMap["eventsQueue"] = "${mainURL}"
-
 	for _, sub := range ts {
 		// TopicSubscriptions with no name, service, or queue will not be included in the json
 		if sub.Name == nil || sub.Service == nil || sub.Queue == nil {

@@ -66,11 +66,12 @@ Resources:
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
-          - Name: COPILOT_QUEUE_URIS
+          - Name: COPILOT_QUEUE_URI
+            Value: !Ref EventsQueue
+          - Name: COPILOT_TOPIC_QUEUE_URIS
             Value: !Sub 
-              - '{"eventsQueue":"${mainURL}","dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}"}'
-              - mainURL: !Ref EventsQueue
-                dogsvcgiveshuskiesURL: !Ref dogsvcgiveshuskiesEventsQueue
+              - '{"dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}"}'
+              - dogsvcgiveshuskiesURL: !Ref dogsvcgiveshuskiesEventsQueue
           
           LogConfiguration:
             LogDriver: awslogs
@@ -283,6 +284,8 @@ Resources:
         - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   EventsKMSKey:
+    Metadata:
+      'aws:copilot:description': 'A KMS key to encrypt messages in your queues'
     Type: AWS::KMS::Key
     Properties:
       KeyPolicy:
@@ -341,6 +344,8 @@ Resources:
             Resource: '*'
             
   EventsQueue:
+    Metadata:
+      'aws:copilot:description': 'An events SQS queue to buffer messages'
     Type: AWS::SQS::Queue
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey
@@ -350,6 +355,8 @@ Resources:
         maxReceiveCount: 5
   
   DeadLetterQueue:
+    Metadata:
+      'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the events queue'
     Type: AWS::SQS::Queue
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey
@@ -398,6 +405,8 @@ Resources:
 
 
   dogsvcgivesdogsSNSTopicSubscription:
+    Metadata:
+      'aws:copilot:description': 'A SNS subscription to topic givesdogs from service dogsvc'
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-givesdogs']]
@@ -405,6 +414,8 @@ Resources:
       Endpoint: !GetAtt EventsQueue.Arn
   
   dogsvcgiveshuskiesSNSTopicSubscription:
+    Metadata:
+      'aws:copilot:description': 'A SNS subscription to topic giveshuskies from service dogsvc'
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-giveshuskies']]
@@ -412,6 +423,8 @@ Resources:
       Endpoint: !GetAtt dogsvcgiveshuskiesEventsQueue.Arn
  
   dogsvcgiveshuskiesEventsQueue:
+    Metadata:
+      'aws:copilot:description': 'A SQS queue to buffer messages from the topic giveshuskies'
     Type: AWS::SQS::Queue
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey

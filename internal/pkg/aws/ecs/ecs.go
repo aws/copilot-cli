@@ -7,6 +7,7 @@ package ecs
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -17,7 +18,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 )
 
-const clusterStatusActive = "ACTIVE"
+const (
+	clusterStatusActive              = "ACTIVE"
+	waitServiceStablePollingInterval = 15 * time.Second
+	waitServiceStableMaxTry          = 80
+	stableServiceDeploymentNum       = 1
+)
 
 type api interface {
 	DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error)
@@ -28,6 +34,7 @@ type api interface {
 	ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error)
 	RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error)
 	StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error)
+	UpdateService(input *ecs.UpdateServiceInput) (*ecs.UpdateServiceOutput, error)
 	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
 }
 
@@ -39,6 +46,9 @@ type ssmSessionStarter interface {
 type ECS struct {
 	client         api
 	newSessStarter func() ssmSessionStarter
+
+	maxServiceStableTries int
+	pollIntervalDuration  time.Duration
 }
 
 // RunTaskInput holds the fields needed to run tasks.
@@ -66,6 +76,8 @@ func New(s *session.Session) *ECS {
 		newSessStarter: func() ssmSessionStarter {
 			return exec.NewSSMPluginCommand(s)
 		},
+		maxServiceStableTries: waitServiceStableMaxTry,
+		pollIntervalDuration:  waitServiceStablePollingInterval,
 	}
 }
 
@@ -97,6 +109,63 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 		}
 	}
 	return nil, fmt.Errorf("cannot find service %s", serviceName)
+}
+
+// UpdateServiceOpts sets the optional parameter for UpdateService.
+type UpdateServiceOpts func(*ecs.UpdateServiceInput)
+
+// WithForceUpdate sets ForceNewDeployment to force an update.
+func WithForceUpdate() UpdateServiceOpts {
+	return func(in *ecs.UpdateServiceInput) {
+		in.ForceNewDeployment = aws.Bool(true)
+	}
+}
+
+// UpdateService calls ECS API and updates the specific service running in the cluster.
+func (e *ECS) UpdateService(clusterName, serviceName string, opts ...UpdateServiceOpts) error {
+	in := &ecs.UpdateServiceInput{
+		Cluster: aws.String(clusterName),
+		Service: aws.String(serviceName),
+	}
+	for _, opt := range opts {
+		opt(in)
+	}
+	svc, err := e.client.UpdateService(in)
+	if err != nil {
+		return fmt.Errorf("update service %s from cluster %s: %w", serviceName, clusterName, err)
+	}
+	s := Service(*svc.Service)
+	if err := e.waitUntilServiceStable(&s); err != nil {
+		return fmt.Errorf("wait until service %s becomes stable: %w", serviceName, err)
+	}
+	return nil
+}
+
+// waitUntilServiceStable waits until the service is stable.
+// See https://docs.aws.amazon.com/cli/latest/reference/ecs/wait/services-stable.html
+func (e *ECS) waitUntilServiceStable(svc *Service) error {
+	var err error
+	var tryNum int
+	for {
+		if len(svc.Deployments) == stableServiceDeploymentNum &&
+			aws.Int64Value(svc.DesiredCount) == aws.Int64Value(svc.RunningCount) {
+			// This conditional is sufficient to determine that the service is stable AND has successfully updated (hence not rolled-back).
+			// The stable service cannot be a rolled-back service because a rollback can only be triggered by circuit breaker after ~1hr,
+			// by which time we would have already timed out.
+			return nil
+		}
+		if tryNum >= e.maxServiceStableTries {
+			return &ErrWaitServiceStableTimeout{
+				maxRetries: e.maxServiceStableTries,
+			}
+		}
+		svc, err = e.Service(aws.StringValue(svc.ClusterArn), aws.StringValue(svc.ServiceName))
+		if err != nil {
+			return err
+		}
+		tryNum++
+		time.Sleep(e.pollIntervalDuration)
+	}
 }
 
 // ServiceRunningTasks calls ECS API and returns the ECS tasks spun up by the service, with the desired status to be set to be RUNNING.
