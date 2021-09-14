@@ -94,7 +94,7 @@ Resources:
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': phonetool}}
           - Effect: Allow
-            Resource: "*"
+            Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:aws-sample'
             Action:
               - codecommit:GitPull
       Roles:
@@ -154,6 +154,7 @@ Resources:
               - codecommit:UploadArchive
               - codecommit:GetUploadArchiveStatus
               - codecommit:CancelUploadArchive
+              - codecommit:GetRepository
               - iam:ListRoles
               - cloudformation:Describe*
               - cloudFormation:List*
@@ -195,10 +196,6 @@ Resources:
               - sts:AssumeRole
             Resource:
               - arn:aws:iam::1111:role/phonetool-staging-test-EnvManagerRole
-          - Effect: Allow
-            Resource: "*"
-            Action:
-              - codecommit:GetRepository
       Roles:
         - !Ref PipelineRole
   BuildTestCommandsstagingDASHtest:

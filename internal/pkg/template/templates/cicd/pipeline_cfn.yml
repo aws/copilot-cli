@@ -107,7 +107,7 @@ Resources:
           {{- if eq .Source.ProviderName "CodeCommit" }}
           {{- if ne .Source.OutputArtifactFormat "" }}
           - Effect: Allow # The policy needed to use CODEBUILD_CLONE_REF for CodeCommit OutputArtifactFormat.
-            Resource: "*"
+            Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:{{.Source.Repository}}'
             Action:
               - codecommit:GitPull
           {{- end }}
@@ -169,6 +169,11 @@ Resources:
               - codecommit:UploadArchive
               - codecommit:GetUploadArchiveStatus
               - codecommit:CancelUploadArchive
+{{- if eq .Source.ProviderName "CodeCommit" }}
+{{- if ne .Source.OutputArtifactFormat "" }}
+              - codecommit:GetRepository
+{{- end }}
+{{- end }}
               - iam:ListRoles
               - cloudformation:Describe*
               - cloudFormation:List*
@@ -240,14 +245,6 @@ Resources:
               - sts:AssumeRole
             Resource:{{range $stage := .Stages}}
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
-          {{- if eq .Source.ProviderName "CodeCommit" }}
-          {{- if ne .Source.OutputArtifactFormat "" }}
-          - Effect: Allow # The policy needed to use CODEBUILD_CLONE_REF for CodeCommit OutputArtifactFormat.
-            Resource: "*"
-            Action:
-              - codecommit:GetRepository
-          {{- end }}
-          {{- end }}
       Roles:
         - !Ref PipelineRole
 {{- range $index, $stage := .Stages}}
