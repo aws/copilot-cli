@@ -26,7 +26,6 @@ var (
 	errNoFSID                   = errors.New("volume field `efs.id` cannot be empty")
 	errNoContainerPath          = errors.New("`path` cannot be empty")
 	errNoSourceVolume           = errors.New("`source_volume` cannot be empty")
-	errEmptyEFSConfig           = errors.New("bad EFS configuration: `efs` cannot be empty")
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
 	errDeadLetterQueueTries     = fmt.Errorf("DeadLetter `tries` field cannot exceed %d", deadLetterTriesMaxValue)
 )
@@ -86,8 +85,8 @@ func validatePath(input string, maxLength int) error {
 	return nil
 }
 
-func validateStorageConfig(in *manifest.Storage) error {
-	if in == nil {
+func validateStorageConfig(in manifest.Storage) error {
+	if in.IsEmpty() {
 		return nil
 	}
 	return validateVolumes(in.Volumes)
@@ -330,7 +329,7 @@ func validateImageDependsOn(s convertSidecarOpts) error {
 func validateEFSConfig(in manifest.Volume) error {
 	// EFS is implicitly disabled. We don't use the attached EmptyVolume function here
 	// because it may hide invalid config.
-	if in.EFS == nil {
+	if in.EFS.IsEmpty() {
 		return nil
 	}
 
@@ -342,11 +341,6 @@ func validateEFSConfig(in manifest.Volume) error {
 	// EFS can be disabled explicitly.
 	if in.EFS.Disabled() {
 		return nil
-	}
-
-	// EFS cannot be an empty map.
-	if in.EFS.Enabled == nil && in.EFS.Advanced.IsEmpty() {
-		return errEmptyEFSConfig
 	}
 
 	// UID and GID are mutually exclusive with any other fields.
@@ -377,7 +371,7 @@ func validateEFSConfig(in manifest.Volume) error {
 }
 
 func validateAuthConfig(in manifest.EFSVolumeConfiguration) error {
-	if in.AuthConfig == nil {
+	if in.AuthConfig.IsEmpty() {
 		return nil
 	}
 	rd := aws.StringValue(in.RootDirectory)
@@ -432,16 +426,6 @@ func validatePubSubName(name string) error {
 	return nil
 }
 
-func validateWorkerNames(names []string) error {
-	for _, name := range names {
-		err := validateSvcName(name)
-		if err != nil {
-			return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
-		}
-	}
-	return nil
-}
-
 func validateSvcName(name string) error {
 	if name == "" {
 		return errInvalidSvcName
@@ -491,7 +475,7 @@ func validateTime(t, floor, ceiling time.Duration) error {
 	return nil
 }
 
-func validateDeadLetter(dl *manifest.DeadLetterQueue) error {
+func validateDeadLetter(dl manifest.DeadLetterQueue) error {
 	if aws.Uint16Value(dl.Tries) > uint16(deadLetterTriesMaxValue) {
 		return errDeadLetterQueueTries
 	}

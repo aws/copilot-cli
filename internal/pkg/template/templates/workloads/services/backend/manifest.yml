@@ -24,7 +24,7 @@ image:
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}
 {{- end}}
-{{- if .ImageConfig.HealthCheck}}
+{{- if not .ImageConfig.HealthCheck.IsEmpty}}
   healthcheck:
     # Container health checks: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-healthcheck
     command: {{fmtSlice (quoteSlice .ImageConfig.HealthCheck.Command)}}
@@ -36,8 +36,8 @@ image:
 
 cpu: {{.CPU}}       # Number of CPU units for the task.
 memory: {{.Memory}}    # Amount of memory in MiB used by the task.
-{{- if .Platform}}
-platform: {{.Platform}}     # See https://aws.github.io/copilot-cli/docs/manifest/backend-service/#platform
+{{- if .Platform.PlatformString}}
+platform: {{.Platform.PlatformString}}     # See https://aws.github.io/copilot-cli/docs/manifest/backend-service/#platform
 {{- end}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.

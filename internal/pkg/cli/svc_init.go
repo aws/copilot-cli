@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -167,7 +169,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		if opts.df != nil {
 			return opts.df
 		}
-		opts.df = exec.NewDockerfile(opts.fs, opts.dockerfilePath)
+		opts.df = dockerfile.NewDockerfile(opts.fs, opts.dockerfilePath)
 		return opts.df
 	}
 	return opts, nil
@@ -245,7 +247,7 @@ func (o *initSvcOpts) Ask() error {
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
+	var hc manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.dockerfile(o.dockerfilePath))
@@ -260,7 +262,7 @@ func (o *initSvcOpts) Execute() error {
 	}
 	o.platform = platform
 	if o.platform != nil {
-		log.Warningf(`Your architecture type is currently unsupported. Setting platform %s instead.\n`, dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
+		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
 		if o.wkldType != manifest.RequestDrivenWebServiceType {
 			log.Warning("See 'platform' field in your manifest.\n")
 		}
@@ -273,8 +275,10 @@ func (o *initSvcOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
-			Topics:         o.topics,
+			Platform: manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
+			Topics: o.topics,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -498,15 +502,15 @@ func parseSerializedSubscription(input string) (manifest.TopicSubscription, erro
 	}, nil
 }
 
-func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, error) {
+func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error) {
 	hc, err := df.GetHealthCheck()
 	if err != nil {
-		return nil, fmt.Errorf("get healthcheck: %w", err)
+		return manifest.ContainerHealthCheck{}, fmt.Errorf("get healthcheck: %w", err)
 	}
 	if hc == nil {
-		return nil, nil
+		return manifest.ContainerHealthCheck{}, nil
 	}
-	return &manifest.ContainerHealthCheck{
+	return manifest.ContainerHealthCheck{
 		Interval:    &hc.Interval,
 		Timeout:     &hc.Timeout,
 		StartPeriod: &hc.StartPeriod,

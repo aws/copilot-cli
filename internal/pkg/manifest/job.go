@@ -39,12 +39,12 @@ type ScheduledJobConfig struct {
 	ImageConfig             ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride           `yaml:",inline"`
 	TaskConfig              `yaml:",inline"`
-	*Logging                `yaml:"logging,flow"`
-	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
+	Logging                 `yaml:"logging,flow"`
+	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
-	Network                 *NetworkConfig `yaml:"network"`
-	Publish                 *PublishConfig `yaml:"publish"`
+	Network                 NetworkConfig  `yaml:"network"`
+	PublishConfig           PublishConfig  `yaml:"publish"`
 	TaskDefOverrides        []OverrideRule `yaml:"taskdef_overrides"`
 }
 
@@ -64,7 +64,8 @@ type ScheduledJobProps struct {
 	*WorkloadProps
 	Schedule    string
 	Timeout     string
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 	Retries     int
 }
 
@@ -81,6 +82,7 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 		job.Retries = aws.Int(props.Retries)
 	}
 	job.Timeout = stringP(props.Timeout)
+	job.Platform = props.Platform
 	job.parser = template.New()
 	return job
 }
@@ -117,10 +119,7 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 
 // Publish returns the list of topics where notifications can be published.
 func (j *ScheduledJob) Publish() []Topic {
-	if j.ScheduledJobConfig.Publish == nil {
-		return nil
-	}
-	return j.ScheduledJobConfig.Publish.Topics
+	return j.ScheduledJobConfig.PublishConfig.Topics
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
@@ -153,8 +152,8 @@ func newDefaultScheduledJob() *ScheduledJob {
 					Value: aws.Int(1),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},

@@ -28,10 +28,10 @@ type BackendServiceConfig struct {
 	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	*Logging         `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
-	Network          *NetworkConfig            `yaml:"network"`
-	Publish          *PublishConfig            `yaml:"publish"`
+	Logging          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig             `yaml:"network"`
+	PublishConfig    PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
@@ -39,7 +39,8 @@ type BackendServiceConfig struct {
 type BackendServiceProps struct {
 	WorkloadProps
 	Port        uint16
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 }
 
 // NewBackendService applies the props to a default backend service configuration with
@@ -52,6 +53,7 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	svc.BackendServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -81,10 +83,7 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *BackendService) Publish() []Topic {
-	if s.BackendServiceConfig.Publish == nil {
-		return nil
-	}
-	return s.BackendServiceConfig.Publish.Topics
+	return s.BackendServiceConfig.PublishConfig.Topics
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
@@ -140,8 +139,8 @@ func newDefaultBackendService() *BackendService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},

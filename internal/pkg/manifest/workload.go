@@ -50,10 +50,6 @@ var (
 	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
 	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
 	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
-
-	errInvalidRangeOpts     = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
-	errInvalidAdvancedCount = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
-	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -92,13 +88,13 @@ type Image struct {
 // ImageWithHealthcheck represents a container image with health check.
 type ImageWithHealthcheck struct {
 	Image       `yaml:",inline"`
-	HealthCheck *ContainerHealthCheck `yaml:"healthcheck"`
+	HealthCheck ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ImageWithPortAndHealthcheck represents a container image with an exposed port and health check.
 type ImageWithPortAndHealthcheck struct {
 	ImageWithPort `yaml:",inline"`
-	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"`
+	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ImageWithPort represents a container image with an exposed port.
@@ -186,8 +182,8 @@ func (i *Image) cacheFrom() []string {
 
 // ImageOverride holds fields that override Dockerfile image defaults.
 type ImageOverride struct {
-	EntryPoint *EntryPointOverride `yaml:"entrypoint"` // TODO: the type needs to be updated after we upgrade mergo
-	Command    *CommandOverride    `yaml:"command"`    // TODO: the type needs to be updated after we upgrade mergo
+	EntryPoint EntryPointOverride `yaml:"entrypoint"`
+	Command    CommandOverride    `yaml:"command"`
 }
 
 // EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
@@ -384,6 +380,11 @@ type Logging struct {
 	ConfigFile     *string           `yaml:"configFilePath"`
 }
 
+// IsEmpty returns empty if the struct has all zero members.
+func (lc *Logging) IsEmpty() bool {
+	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil && lc.SecretOptions == nil && lc.ConfigFile == nil
+}
+
 // LogImage returns the default Fluent Bit image if not otherwise configured.
 func (lc *Logging) LogImage() *string {
 	if lc.Image == nil {
@@ -417,19 +418,19 @@ type SidecarConfig struct {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU            *int                  `yaml:"cpu"`
-	Memory         *int                  `yaml:"memory"`
-	Platform       *PlatformArgsOrString `yaml:"platform,omitempty"`
-	Count          Count                 `yaml:"count"`
-	ExecuteCommand ExecuteCommand        `yaml:"exec"`
-	Variables      map[string]string     `yaml:"variables"`
-	Secrets        map[string]string     `yaml:"secrets"`
-	Storage        *Storage              `yaml:"storage"`
+	CPU            *int                 `yaml:"cpu"`
+	Memory         *int                 `yaml:"memory"`
+	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
+	Count          Count                `yaml:"count"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec"`
+	Variables      map[string]string    `yaml:"variables"`
+	Secrets        map[string]string    `yaml:"secrets"`
+	Storage        Storage              `yaml:"storage"`
 }
 
 // TaskPlatform returns the platform for the service.
 func (t *TaskConfig) TaskPlatform() (*string, error) {
-	if t.Platform == nil {
+	if t.Platform.PlatformString == nil {
 		return nil, nil
 	}
 	return t.Platform.PlatformString, nil
@@ -442,20 +443,24 @@ type PublishConfig struct {
 
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
-	Name           *string  `yaml:"name"`
-	AllowedWorkers []string `yaml:"allowed_workers"`
+	Name *string `yaml:"name"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
-	VPC *vpcConfig `yaml:"vpc"`
+	VPC vpcConfig `yaml:"vpc"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (c *NetworkConfig) IsEmpty() bool {
+	return c.VPC.isEmpty()
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
 // If the user specified a placement that's not valid then throw an error.
 func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type networkWithDefaults NetworkConfig
-	defaultVPCConf := &vpcConfig{
+	defaultVPCConf := vpcConfig{
 		Placement: stringP(PublicSubnetPlacement),
 	}
 	conf := networkWithDefaults{
@@ -464,7 +469,7 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&conf); err != nil {
 		return err
 	}
-	if conf.VPC == nil { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
+	if conf.VPC.isEmpty() { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
 		conf.VPC = defaultVPCConf
 	}
 	if !conf.VPC.isValidPlacement() {
@@ -478,6 +483,10 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type vpcConfig struct {
 	Placement      *string  `yaml:"placement"`
 	SecurityGroups []string `yaml:"security_groups"`
+}
+
+func (c *vpcConfig) isEmpty() bool {
+	return c.Placement == nil && c.SecurityGroups == nil
 }
 
 func (c *vpcConfig) isValidPlacement() bool {
@@ -560,6 +569,11 @@ func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 	}
 }
 
+// IsEmpty checks if the health check is empty.
+func (hc ContainerHealthCheck) IsEmpty() bool {
+	return hc.Command == nil && hc.Interval == nil && hc.Retries == nil && hc.Timeout == nil && hc.StartPeriod == nil
+}
+
 // applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
 func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
 	if hc.Command == nil && other.Command != nil {
@@ -593,14 +607,14 @@ func (hc *ContainerHealthCheck) healthCheckOpts() *ecs.HealthCheck {
 
 // HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
 func (i ImageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck == nil {
+	if i.HealthCheck.IsEmpty() {
 		return nil
 	}
 	return i.HealthCheck.healthCheckOpts()
 }
 
 func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck == nil {
+	if i.HealthCheck.IsEmpty() {
 		return nil
 	}
 	return i.HealthCheck.healthCheckOpts()

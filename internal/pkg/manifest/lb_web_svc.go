@@ -49,10 +49,10 @@ type LoadBalancedWebServiceConfig struct {
 	ImageOverride    `yaml:",inline"`
 	RoutingRule      `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
-	*Logging         `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
-	Network          *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
-	Publish          *PublishConfig            `yaml:"publish"`
+	Logging          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig             `yaml:"network"`
+	PublishConfig    PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
@@ -61,7 +61,8 @@ type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
 	Path        string
 	Port        uint16
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
@@ -74,6 +75,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	svc.LoadBalancedWebServiceConfig.Platform = props.Platform
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	return svc
@@ -102,8 +104,8 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
@@ -129,10 +131,7 @@ func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *LoadBalancedWebService) Publish() []Topic {
-	if s.LoadBalancedWebServiceConfig.Publish == nil {
-		return nil
-	}
-	return s.LoadBalancedWebServiceConfig.Publish.Topics
+	return s.LoadBalancedWebServiceConfig.PublishConfig.Topics
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
@@ -177,17 +176,22 @@ type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness          *bool                   `yaml:"stickiness"`
-	Alias               *Alias                  `yaml:"alias"`
+	Alias               Alias                   `yaml:"alias"`
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string   `yaml:"target_container"`
-	TargetContainerCamelCase *string   `yaml:"targetContainer"`    // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         *[]string `yaml:"allowed_source_ips"` // TODO: the type needs to be updated after we upgrade mergo
+	TargetContainer          *string  `yaml:"target_container"`
+	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
 }
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
 // can either be of type string or type slice of string.
 type Alias stringSliceOrString
+
+// IsEmpty returns empty if Alias is empty.
+func (e *Alias) IsEmpty() bool {
+	return e.String == nil && e.StringSlice == nil
+}
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
 // struct, allowing it to perform more complex unmarshaling behavior.

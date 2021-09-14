@@ -104,7 +104,12 @@ func (o *initAppOpts) Validate() error {
 
 // Ask prompts the user for any required arguments that they didn't provide.
 func (o *initAppOpts) Ask() error {
-	if ok, _ := o.isSessionFromEnvVars(); ok { // Ignore the error, we do not want to crash for a warning.
+	ok, err := o.isSessionFromEnvVars()
+	if err != nil {
+		return err
+	}
+
+	if ok {
 		log.Warningln(`Looks like you're creating an application using credentials set by environment variables.
 Copilot will store your application metadata in this account.
 We recommend using credentials from named profiles. To learn more:

@@ -30,10 +30,10 @@ type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	*Logging         `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"`
-	Subscribe        *SubscribeConfig          `yaml:"subscribe"`
-	Network          *NetworkConfig            `yaml:"network"`
+	Logging          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Subscribe        SubscribeConfig           `yaml:"subscribe"`
+	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
@@ -52,10 +52,10 @@ type TopicSubscription struct {
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Retention  *time.Duration   `yaml:"retention"`
-	Delay      *time.Duration   `yaml:"delay"`
-	Timeout    *time.Duration   `yaml:"timeout"`
-	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
+	Retention  *time.Duration  `yaml:"retention"`
+	Delay      *time.Duration  `yaml:"delay"`
+	Timeout    *time.Duration  `yaml:"timeout"`
+	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
@@ -63,11 +63,18 @@ type DeadLetterQueue struct {
 	Tries *uint16 `yaml:"tries"`
 }
 
+// IsEmpty returns empty if the struct has all zero members.
+func (q *DeadLetterQueue) IsEmpty() bool {
+	return q.Tries == nil
+}
+
 // WorkerServiceProps represents the configuration needed to create a worker service.
 type WorkerServiceProps struct {
 	WorkloadProps
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	Topics      []TopicSubscription   // Optional topics for subscriptions
+
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
+	Topics      []TopicSubscription  // Optional topics for subscriptions
 }
 
 // NewWorkerService applies the props to a default Worker service configuration with
@@ -80,6 +87,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
+	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -110,10 +118,7 @@ func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
 // receives messages from.
 func (s *WorkerService) Subscriptions() []TopicSubscription {
-	if s.Subscribe != nil {
-		return s.Subscribe.Topics
-	}
-	return nil
+	return s.Subscribe.Topics
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -150,7 +155,7 @@ func newDefaultWorkerService() *WorkerService {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			ImageConfig: ImageWithHealthcheck{},
-			Subscribe:   &SubscribeConfig{},
+			Subscribe:   SubscribeConfig{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
@@ -161,8 +166,8 @@ func newDefaultWorkerService() *WorkerService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: aws.String(PublicSubnetPlacement),
 				},
 			},

@@ -34,10 +34,6 @@ storage:
 publish:
   topics:
     - name: givesdogs
-      allowed_workers:
-        - takes-dogs
-        - takes-animals
-        - takes-all
 
 # Optional fields for more advanced use-cases.
 #

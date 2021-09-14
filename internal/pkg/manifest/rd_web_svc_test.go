@@ -332,7 +332,7 @@ func TestRequestDrivenWebService_Publish(t *testing.T) {
 		"returns the list of topics if manifest publishes notifications": {
 			mft: &RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					Publish: &PublishConfig{
+					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{
 								Name: stringP("hello"),

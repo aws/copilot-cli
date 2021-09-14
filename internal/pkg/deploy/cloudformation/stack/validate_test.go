@@ -16,26 +16,26 @@ import (
 
 func Test_validateEFSConfig(t *testing.T) {
 	testCases := map[string]struct {
-		inConfig *manifest.EFSConfigOrBool
+		inConfig manifest.EFSConfigOrBool
 
 		wantErr error
 	}{
-		"no EFS config": {
-			inConfig: nil,
+		"no EFS config (EFS is implicitly disabled)": {
+			inConfig: manifest.EFSConfigOrBool{},
 			wantErr:  nil,
 		},
 		"managed EFS config": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 			},
 		},
 		"EFS explicitly disabled": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Enabled: aws.Bool(false),
 			},
 		},
 		"advanced managed EFS config": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					UID: aws.Uint32(12345),
 					GID: aws.Uint32(12345),
@@ -43,22 +43,22 @@ func Test_validateEFSConfig(t *testing.T) {
 			},
 		},
 		"BYO EFS": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					FileSystemID:  aws.String("fs-1234"),
 					RootDirectory: aws.String("/files"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM: aws.Bool(true),
 					},
 				},
 			},
 		},
 		"error when access point specified with root dir": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					FileSystemID:  aws.String("fs-1234"),
 					RootDirectory: aws.String("/files"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM:           aws.Bool(true),
 						AccessPointID: aws.String("fsap-12345"),
 					},
@@ -67,10 +67,10 @@ func Test_validateEFSConfig(t *testing.T) {
 			wantErr: errAccessPointWithRootDirectory,
 		},
 		"error when access point specified without IAM": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					FileSystemID: aws.String("fs-1234"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM:           aws.Bool(false),
 						AccessPointID: aws.String("fsap-12345"),
 					},
@@ -79,7 +79,7 @@ func Test_validateEFSConfig(t *testing.T) {
 			wantErr: errAccessPointWithoutIAM,
 		},
 		"Enabled with advanced config": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 				Advanced: manifest.EFSVolumeConfiguration{
 					UID: aws.Uint32(12345),
@@ -89,7 +89,7 @@ func Test_validateEFSConfig(t *testing.T) {
 			wantErr: errInvalidEFSConfig,
 		},
 		"UID with BYO": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					FileSystemID: aws.String("fs-1234"),
 					UID:          aws.Uint32(12345),
@@ -99,7 +99,7 @@ func Test_validateEFSConfig(t *testing.T) {
 			wantErr: errUIDWithNonManagedFS,
 		},
 		"invalid UID config": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					UID: aws.Uint32(12345),
 				},
@@ -107,7 +107,7 @@ func Test_validateEFSConfig(t *testing.T) {
 			wantErr: errInvalidUIDGIDConfig,
 		},
 		"invalid GID config": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					GID: aws.Uint32(12345),
 				},
@@ -115,7 +115,7 @@ func Test_validateEFSConfig(t *testing.T) {
 			wantErr: errInvalidUIDGIDConfig,
 		},
 		"error when UID is 0": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					UID: aws.Uint32(0),
 					GID: aws.Uint32(12345),
@@ -123,17 +123,11 @@ func Test_validateEFSConfig(t *testing.T) {
 			},
 			wantErr: errReservedUID,
 		},
-		"empty EFS config should be invalid": {
-			inConfig: &manifest.EFSConfigOrBool{
-				Advanced: manifest.EFSVolumeConfiguration{},
-			},
-			wantErr: errEmptyEFSConfig,
-		},
 		"FSID not specified for BYO": {
-			inConfig: &manifest.EFSConfigOrBool{
+			inConfig: manifest.EFSConfigOrBool{
 				Advanced: manifest.EFSVolumeConfiguration{
 					RootDirectory: aws.String("/storage"),
-					AuthConfig: &manifest.AuthorizationConfig{
+					AuthConfig: manifest.AuthorizationConfig{
 						IAM: aws.Bool(true),
 					},
 				},
@@ -531,43 +525,6 @@ func Test_validatePubSubTopicName(t *testing.T) {
 	}
 }
 
-func TestValidateWorkerName(t *testing.T) {
-	testCases := map[string]struct {
-		inName []string
-
-		wantErr error
-	}{
-		"good case": {
-			inName:  []string{"good-name"},
-			wantErr: nil,
-		},
-		"empty name": {
-			inName:  []string{""},
-			wantErr: fmt.Errorf("worker name `` is invalid: %s", errInvalidSvcName),
-		},
-		"contains spaces": {
-			inName:  []string{"a re@!!y b#d n&me"},
-			wantErr: fmt.Errorf("worker name `a re@!!y b#d n&me` is invalid: %s", errSvcNameBadFormat),
-		},
-		"too long": {
-			inName:  []string{"this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long"},
-			wantErr: fmt.Errorf("worker name `this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long` is invalid: %s", errSvcNameTooLong),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := validateWorkerNames(tc.inName)
-
-			if tc.wantErr == nil {
-				require.NoError(t, err)
-			} else {
-				require.EqualError(t, err, tc.wantErr.Error())
-			}
-		})
-	}
-}
-
 func TestValidateTopicSubscription(t *testing.T) {
 	testCases := map[string]struct {
 		inTS manifest.TopicSubscription
@@ -645,18 +602,18 @@ func TestValidateTime(t *testing.T) {
 
 func TestValidateDeadLetter(t *testing.T) {
 	testCases := map[string]struct {
-		inDL *manifest.DeadLetterQueue
+		inDL manifest.DeadLetterQueue
 
 		wantErr error
 	}{
 		"good case": {
-			inDL: &manifest.DeadLetterQueue{
+			inDL: manifest.DeadLetterQueue{
 				Tries: aws.Uint16(35),
 			},
 			wantErr: nil,
 		},
 		"wrong number of tries": {
-			inDL: &manifest.DeadLetterQueue{
+			inDL: manifest.DeadLetterQueue{
 				Tries: aws.Uint16(9999),
 			},
 			wantErr: errDeadLetterQueueTries,

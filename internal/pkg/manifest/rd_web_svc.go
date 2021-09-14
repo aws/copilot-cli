@@ -29,7 +29,7 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
-	Publish                           *PublishConfig          `yaml:"publish"`
+	PublishConfig                     PublishConfig           `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {
@@ -39,15 +39,16 @@ type RequestDrivenWebServiceHttpConfig struct {
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
 type AppRunnerInstanceConfig struct {
-	CPU      *int                  `yaml:"cpu"`
-	Memory   *int                  `yaml:"memory"`
-	Platform *PlatformArgsOrString `yaml:"platform,omitempty"`
+	CPU      *int                 `yaml:"cpu"`
+	Memory   *int                 `yaml:"memory"`
+	Platform PlatformArgsOrString `yaml:"platform,omitempty"`
 }
 
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
-	Port uint16
+	Port     uint16
+	Platform PlatformArgsOrString
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -57,6 +58,7 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
 }
@@ -79,10 +81,7 @@ func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *RequestDrivenWebService) Publish() []Topic {
-	if s.RequestDrivenWebServiceConfig.Publish == nil {
-		return nil
-	}
-	return s.RequestDrivenWebServiceConfig.Publish.Topics
+	return s.RequestDrivenWebServiceConfig.PublishConfig.Topics
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
@@ -92,7 +91,7 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 
 // TaskPlatform returns the platform for the service.
 func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if s.InstanceConfig.Platform == nil {
+	if s.InstanceConfig.Platform.PlatformString == nil {
 		return nil, nil
 	}
 	return s.InstanceConfig.Platform.PlatformString, nil

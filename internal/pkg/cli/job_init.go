@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -110,7 +112,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		sel:          sel,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		initParser: func(path string) dockerfileParser {
-			return exec.NewDockerfile(fs, path)
+			return dockerfile.NewDockerfile(fs, path)
 		},
 	}, nil
 }
@@ -180,7 +182,7 @@ func (o *initJobOpts) Ask() error {
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
+	var hc manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.initParser(o.dockerfilePath))
@@ -194,6 +196,9 @@ func (o *initJobOpts) Execute() error {
 		return err
 	}
 	o.platform = platform
+	if o.platform != nil {
+		log.Warningf("Your architecture type is currently unsupported. Setting platform to %s in your manifest.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
+	}
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -202,7 +207,9 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
+			Platform: manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
 		},
 
 		Schedule:    o.schedule,

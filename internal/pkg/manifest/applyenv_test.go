@@ -11,343 +11,172 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-/** How to add `ApplyEnv` unit test to a new manifest field:
-
-When writing tests for a field F (e.g. When writing `TestApplyEnv_Image`, where F would be the `image` field):
-	For each subfield f in F:
-		- If f has subfields || f is a composite type (e.g. `StringOrStringSlice`, `BuildStringOrArgs`) ->
-			1. Write a test case when f field is nil.
-			2. Write a test case when f field is non-nil.
-		- Otherwise, write three test cases for f ->
-			1. Write a test case when f field is nil.
-			2. Write a test case when f field is non-nil, and the referenced value is empty (e.g., it is "", {}, 0).
-			3. Write a test case when f field is non-nil, and the referenced value is NOT empty.
-
-	For each subfield f in F:
-		- If f is mutually exclusive with another subfield g of F (e.g. `image.location` and `image.build` are mutually exclusive) ->
-			1. Write a test case that make sure f is nil when g is non-nil
-			2. Write a test case that make sure g is nil when f is non-nil
-
-	For each subfield f in F:
-		- If f has subfields || if f is a composite field ->
-			Write another test group for this field (e.g. F is `image` and f is `image.build`, write another test functions named `TestApplyEnv_Image_Build`)
-
-Expected Behaviors:
-	- Slice type: override-only.
-		Take `security_groups` (which takes []string) as an example. If original is `[]string{1, 2}`, and environment override
-		is `[]string{3}`, the result should be `[]string{3}`.
-	- Map: override value of existing keys, append non-existing keys.
-*/
-
 func TestEnsureTransformersOrder(t *testing.T) {
-	t.Run("ensure we transform volumes first", func(t *testing.T) {
+	t.Run("ensure we call basic transformer first", func(t *testing.T) {
 		_, ok := defaultTransformers[0].(basicTransformer)
 		require.True(t, ok, "basicTransformer needs to used before the rest of the custom transformers, because the other transformers do not merge anything - they just unset the fields that do not get specified in source manifest.")
 	})
 }
 
-func TestApplyEnv_Image(t *testing.T) {
+func TestApplyEnv_Bool(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"exclusive fields: build overridden if location is not nil": {
+		"bool value overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
-				svc.Environments["test"].ImageConfig.Location = aws.String("mockLocation")
+				svc.RoutingRule.Stickiness = aws.Bool(false)
+				svc.Environments["test"].RoutingRule.Stickiness = aws.Bool(true)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("mockLocation")
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs:   DockerBuildArgs{},
-				}
+				svc.RoutingRule.Stickiness = aws.Bool(true)
 			},
 		},
-		"exclusive fields: location overridden if build is not nil": {
+		"bool value overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("mockLocation")
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
+				svc.RoutingRule.Stickiness = aws.Bool(true)
+				svc.Environments["test"].RoutingRule.Stickiness = aws.Bool(false)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = nil
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
+				svc.RoutingRule.Stickiness = aws.Bool(false)
 			},
 		},
-		"build overridden": {
+		"bool value not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuildTest"),
-				}
+				svc.RoutingRule.Stickiness = aws.Bool(true)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuildTest"),
-				}
+				svc.RoutingRule.Stickiness = aws.Bool(true)
 			},
 		},
-		"build not overridden": {
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.ApplyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
+func TestApplyEnv_Int(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
+		"int overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{}
+				svc.TaskConfig.CPU = aws.Int(24)
+				svc.Environments["test"].TaskConfig.CPU = aws.Int(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
+				svc.TaskConfig.CPU = aws.Int(42)
 			},
 		},
-		"location overridden": {
+		"int overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("mockLocation")
-				svc.Environments["test"].ImageConfig.Location = aws.String("mockLocationTest")
+				svc.TaskConfig.CPU = aws.Int(24)
+				svc.Environments["test"].TaskConfig.CPU = aws.Int(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("mockLocationTest")
+				svc.TaskConfig.CPU = aws.Int(0)
 			},
 		},
-		"location explicitly overridden by zero value": {
+		"int not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("mockLocation")
-				svc.Environments["test"].ImageConfig.Location = aws.String("")
+				svc.TaskConfig.CPU = aws.Int(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("")
+				svc.TaskConfig.CPU = aws.Int(24)
 			},
 		},
-		"location not overridden": {
+		"int64 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("mockLocation")
-				svc.Environments["test"].ImageConfig.Image = Image{}
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("mockLocation")
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
 			},
 		},
-		"credentials overridden": {
+		"int64 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Credentials = aws.String("mockCredentials")
-				svc.Environments["test"].ImageConfig.Credentials = aws.String("mockCredentialsTest")
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Credentials = aws.String("mockCredentialsTest")
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
 			},
 		},
-		"credentials explicitly overridden by zero value": {
+		"int64 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Credentials = aws.String("mockCredentials")
-				svc.Environments["test"].ImageConfig.Credentials = aws.String("")
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Credentials = aws.String("")
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
 			},
 		},
-		"credentials not overridden": {
+		"uint16 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Credentials = aws.String("mockCredentials")
-				svc.Environments["test"].ImageConfig.Image = Image{}
+				svc.ImageConfig.Port = aws.Uint16(24)
+				svc.Environments["test"].ImageConfig.Port = aws.Uint16(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Credentials = aws.String("mockCredentials")
+				svc.ImageConfig.Port = aws.Uint16(42)
 			},
 		},
-		"labels overridden": {
+		"uint16 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DockerLabels = map[string]string{
-					"mockLabel1": "1",
-					"mockLabel2": "2",
-				}
-				svc.Environments["test"].ImageConfig.DockerLabels = map[string]string{
-					"mockLabel1": "3", // Override the value of mockLabel1
-					"mockLabel3": "3", // Append a new label mockLabel3
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DockerLabels = map[string]string{
-					"mockLabel1": "3",
-					"mockLabel2": "2",
-					"mockLabel3": "3",
-				}
-			},
-		},
-		"labels not overridden by empty map": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DockerLabels = map[string]string{
-					"mockLabel1": "mockValue1",
-					"mockLabel2": "mockValue2",
-				}
-				svc.Environments["test"].ImageConfig.DockerLabels = map[string]string{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DockerLabels = map[string]string{
-					"mockLabel1": "mockValue1",
-					"mockLabel2": "mockValue2",
-				}
-			},
-		},
-		"labels not overridden by nil": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DockerLabels = map[string]string{
-					"mockLabel1": "mockValue1",
-					"mockLabel2": "mockValue2",
-				}
-				svc.Environments["test"].ImageConfig.Image = Image{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DockerLabels = map[string]string{
-					"mockLabel1": "mockValue1",
-					"mockLabel2": "mockValue2",
-				}
-			},
-		},
-		"depends_on overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DependsOn = map[string]string{
-					"mockContainer1": "1",
-					"mockContainer2": "2",
-				}
-				svc.Environments["test"].ImageConfig.DependsOn = map[string]string{
-					"mockContainer1": "3", // Override the condition of mockContainer1
-					"mockContainer3": "3", // Append a new dependency on mockContainer3
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DependsOn = map[string]string{
-					"mockContainer1": "3",
-					"mockContainer2": "2",
-					"mockContainer3": "3",
-				}
-			},
-		},
-		"depends_on not overridden by empty map": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DependsOn = map[string]string{
-					"mockContainer1": "1",
-					"mockContainer2": "2",
-				}
-				svc.Environments["test"].ImageConfig.DependsOn = map[string]string{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DependsOn = map[string]string{
-					"mockContainer1": "1",
-					"mockContainer2": "2",
-				}
-			},
-		},
-		"depends_on not overridden by nil": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DependsOn = map[string]string{
-					"mockContainer1": "1",
-					"mockContainer2": "2",
-				}
-				svc.Environments["test"].ImageConfig.Image = Image{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.DependsOn = map[string]string{
-					"mockContainer1": "1",
-					"mockContainer2": "2",
-				}
-			},
-		},
-		"port overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(1)
-				svc.Environments["test"].ImageConfig.Port = aws.Uint16(2)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(2)
-			},
-		},
-		"port explicitly overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(1)
+				svc.ImageConfig.Port = aws.Uint16(24)
 				svc.Environments["test"].ImageConfig.Port = aws.Uint16(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.ImageConfig.Port = aws.Uint16(0)
 			},
 		},
-		"FIXED_AFTER_TRANSFORM_POINTER: port not overridden": {
+		"uint16 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(1)
-				svc.Environments["test"].ImageConfig.Image = Image{}
+				svc.ImageConfig.Port = aws.Uint16(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(1)
+				svc.ImageConfig.Port = aws.Uint16(24)
 			},
 		},
-		"healthcheck overridden": {
+		"uint32 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(3),
-				}
-
-				mockInterval1Minute := 60 * time.Second
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockInterval1Minute,
-					Retries:  aws.Int(5),
-				}
+				svc.Environments["test"].ImageConfig.Port = aws.Uint16(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				mockInterval1Minute := 60 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockInterval1Minute,
-					Retries:  aws.Int(5),
-				}
+				svc.ImageConfig.Port = aws.Uint16(42)
 			},
 		},
-		"FIXED_AFTER_TRANSFORM_STRUCT: healthcheck not overridden": {
+		"uint32 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(3),
-				}
-				svc.Environments["test"].ImageConfig.Image = Image{}
+				svc.ImageConfig.Port = aws.Uint16(24)
+				svc.Environments["test"].ImageConfig.Port = aws.Uint16(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command:     nil,
-					Interval:    nil,
-					Retries:     aws.Int(3),
-					Timeout:     nil,
-					StartPeriod: nil,
-				}
+				svc.ImageConfig.Port = aws.Uint16(0)
 			},
 		},
-		"empty healthcheck overridden": {
+		"uint32 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Image = Image{}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(3),
-				}
+				svc.ImageConfig.Port = aws.Uint16(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command:     nil,
-					Interval:    nil,
-					Retries:     aws.Int(3),
-					Timeout:     nil,
-					StartPeriod: nil,
-				}
+				svc.ImageConfig.Port = aws.Uint16(24)
 			},
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			var inSvc, wantedSvc LoadBalancedWebService
@@ -366,485 +195,38 @@ func TestApplyEnv_Image(t *testing.T) {
 	}
 }
 
-func TestApplyEnv_Image_Build(t *testing.T) {
+func TestApplyEnv_UInt16(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"composite fields: build string is overridden if build args is not nil": {
+		"uint16 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context:    aws.String("mockContext"),
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
+				svc.ImageConfig.Port = aws.Uint16(24)
+				svc.Environments["test"].ImageConfig.Port = aws.Uint16(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Context:    aws.String("mockContext"),
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
+				svc.ImageConfig.Port = aws.Uint16(42)
 			},
 		},
-		"composite fields: build args is overridden if build string is not nil": {
+		"uint16 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Context:    aws.String("mockContext"),
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
+				svc.ImageConfig.Port = aws.Uint16(24)
+				svc.Environments["test"].ImageConfig.Port = aws.Uint16(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-					BuildArgs:   DockerBuildArgs{},
-				}
+				svc.ImageConfig.Port = aws.Uint16(0)
 			},
 		},
-		"build string overridden": {
+		"uint16 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuildTest"),
-				}
+				svc.ImageConfig.Port = aws.Uint16(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuildTest"),
-					BuildArgs:   DockerBuildArgs{},
-				}
-			},
-		},
-		"build string explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String(""),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String(""),
-					BuildArgs:   DockerBuildArgs{},
-				}
-			},
-		},
-		"build string not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: aws.String("mockBuild"),
-					BuildArgs:   DockerBuildArgs{},
-				}
-			},
-		},
-		"build arg overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContext"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context:    aws.String("mockContextTest"),
-						Dockerfile: aws.String("mockDockerfileTest"),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Context:    aws.String("mockContextTest"),
-						Dockerfile: aws.String("mockDockerfileTest"),
-					},
-				}
-			},
-		},
-		"build arg not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContext"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContext"),
-					},
-				}
-			},
-		},
-		"context overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContext"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContextTest"),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContextTest"),
-					},
-				}
-			},
-		},
-		"context explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContext"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String(""),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String(""),
-					},
-				}
-			},
-		},
-		"context not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContext"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Context: aws.String("mockContext"),
-					},
-				}
-			},
-		},
-		"dockerfile overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfileTest"),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfileTest"),
-					},
-				}
-			},
-		},
-		"dockerfile explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String(""),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String(""),
-					},
-				}
-			},
-		},
-		"dockerfile not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Dockerfile: aws.String("mockDockerfile"),
-					},
-				}
-			},
-		},
-		"FIXED_BUG: args overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{
-							"mockArg1": "1",
-							"mockArg2": "2",
-						},
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{
-							"mockArg1": "3", // Override value for mockArg1
-							"mockArg3": "3", // Append an arg mockArg3
-						},
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{
-							"mockArg1": "3",
-							"mockArg2": "2",
-							"mockArg3": "3",
-						},
-					},
-				}
-			},
-		},
-		"FIXED_BUG: args not overridden by empty map": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{
-							"mockArg1": "1",
-							"mockArg2": "2",
-						},
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{},
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{
-							"mockArg1": "1",
-							"mockArg2": "2",
-						},
-					},
-				}
-			},
-		},
-		"args not overridden by nil": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{
-							"mockArg1": "1",
-							"mockArg2": "2",
-						},
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Args: map[string]string{
-							"mockArg1": "1",
-							"mockArg2": "2",
-						},
-					},
-				}
-			},
-		},
-		"target overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String("mockTarget"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String("mockTargetTest"),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String("mockTargetTest"),
-					},
-				}
-			},
-		},
-		"target explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String("mockTarget"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String(""),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String(""),
-					},
-				}
-			},
-		},
-		"target not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String("mockTarget"),
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						Target: aws.String("mockTarget"),
-					},
-				}
-			},
-		},
-		"cacheFrom overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{"mock", "Cache"},
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{"mock", "CacheTest", "Test"},
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{"mock", "CacheTest", "Test"},
-					},
-				}
-			},
-		},
-		"cacheFrom overridden by zero slice": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{"mock", "Cache"},
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{},
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{},
-					},
-				}
-			},
-		},
-		"cacheFrom not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{"mock", "Cache"},
-					},
-				}
-				svc.Environments["test"].ImageConfig.Build = BuildArgsOrString{
-					BuildArgs: DockerBuildArgs{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Build = BuildArgsOrString{
-					BuildString: nil,
-					BuildArgs: DockerBuildArgs{
-						CacheFrom: []string{"mock", "Cache"},
-					},
-				}
+				svc.ImageConfig.Port = aws.Uint16(24)
 			},
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			var inSvc, wantedSvc LoadBalancedWebService
@@ -863,252 +245,38 @@ func TestApplyEnv_Image_Build(t *testing.T) {
 	}
 }
 
-func TestApplyEnv_Image_HealthCheck(t *testing.T) {
+func TestApplyEnv_Int64(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"command overridden": {
+		"int64 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{"mock", "command"},
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{"mock", "command_test", "test"},
-				}
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{"mock", "command_test", "test"},
-				}
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
 			},
 		},
-		"command overridden by zero slice": {
+		"int64 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{"mock", "command"},
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{},
-				}
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{},
-				}
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
 			},
 		},
-		"FIXED BUG: command not overridden": {
+		"int64 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{"mock", "command"},
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Command: []string{"mock", "command"},
-				}
-			},
-		},
-		"interval overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockInterval := 600 * time.Second
-				mockIntervalTest := 50 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockInterval,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockIntervalTest,
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockIntervalTest := 50 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockIntervalTest,
-				}
-			},
-		},
-		"interval explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockInterval := 600 * time.Second
-				mockIntervalTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockInterval,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockIntervalTest,
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockIntervalTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockIntervalTest,
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: interval not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockInterval := 600 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockInterval,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockIntervalTest := 600 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Interval: &mockIntervalTest,
-				}
-			},
-		},
-		"retries overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(13),
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(42),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(42),
-				}
-			},
-		},
-		"retries explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(13),
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(0),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(0),
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: retries not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(13),
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Retries: aws.Int(13),
-				}
-			},
-		},
-		"timeout overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockTimeout := 60 * time.Second
-				mockTimeoutTest := 400 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeout,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeoutTest,
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockTimeoutTest := 400 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeoutTest,
-				}
-			},
-		},
-		"timeout explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockTimeout := 60 * time.Second
-				mockTimeoutTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeout,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeoutTest,
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockTimeoutTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeoutTest,
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: timeout not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockTimeout := 60 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeout,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockTimeoutTest := 60 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					Timeout: &mockTimeoutTest,
-				}
-			},
-		},
-		"start_period overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockStartPeriod := 10 * time.Second
-				mockStartPeriodTest := 300 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriod,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriodTest,
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockStartPeriod := 300 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriod,
-				}
-			},
-		},
-		"start_period explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockStartPeriod := 10 * time.Second
-				mockStartPeriodTest := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriod,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriodTest,
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockStartPeriod := 0 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriod,
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: start_period not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				mockStartPeriod := 10 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriod,
-				}
-				svc.Environments["test"].ImageConfig.HealthCheck = &ContainerHealthCheck{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				mockStartPeriod := 10 * time.Second
-				svc.ImageConfig.HealthCheck = &ContainerHealthCheck{
-					StartPeriod: &mockStartPeriod,
-				}
+				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
 			},
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			var inSvc, wantedSvc LoadBalancedWebService
@@ -1127,253 +295,100 @@ func TestApplyEnv_Image_HealthCheck(t *testing.T) {
 	}
 }
 
-func TestApplyEnv_Platform(t *testing.T) {
+func TestApplyEnv_Uint32(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"FIXED_BUG: composite fields: platform string is overridden if platform args is not nil": {
+		"uint32 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatform"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(24),
+							},
+						},
+					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mock"),
-						Arch:     aws.String("platformTest"),
+				svc.Environments["test"].Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(42),
+							},
+						},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mock"),
-						Arch:     aws.String("platformTest"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(42),
+							},
+						},
 					},
 				}
 			},
 		},
-		"FIXED_BUG: composite fields: platform args is overridden if platform string is not nil": {
+		"uint32 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mock"),
-						Arch:     aws.String("platformTest"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(24),
+							},
+						},
 					},
 				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatform"),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatform"),
-				}
-			},
-		},
-		"platform string overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatform"),
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatformTest"),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatformTest"),
-				}
-			},
-		},
-		"platform string explicitly overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatform"),
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformString: aws.String(""),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String(""),
-				}
-			},
-		},
-		"FAILED_AFTER_UPGRADE: platform string not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatform"),
-				}
-				svc.Environments["test"].TaskConfig = TaskConfig{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformString: aws.String("mockPlatform"),
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: platform args overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mock"),
-						Arch:     aws.String("platform"),
-					},
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String("platformTest"),
+				svc.Environments["test"].Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(0),
+							},
+						},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mock"),
-						Arch:     aws.String("platformTest"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(0),
+							},
+						},
 					},
 				}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: platform args not overridden": {
+		"uint32 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mock"),
-						Arch:     aws.String("platform"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(24),
+							},
+						},
 					},
 				}
-				svc.Environments["test"].TaskConfig = TaskConfig{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mock"),
-						Arch:     aws.String("platform"),
-					},
-				}
-			},
-		},
-		"osfamily string overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mockOSFamily"),
-					},
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mockOSFamilyTest"),
-					},
+				svc.Environments["test"].Storage.Volumes = map[string]*Volume{
+					"volume1": {},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mockOSFamilyTest"),
-					},
-				}
-			},
-		},
-		"osfamily string explicitly overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mockOSFamily"),
-					},
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String(""),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String(""),
-					},
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: osfamily string not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mockOSFamily"),
-					},
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("mockOSFamily"),
-					},
-				}
-			},
-		},
-		"architecture string overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String("mockArch"),
-					},
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String("mockArchTest"),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String("mockArchTest"),
-					},
-				}
-			},
-		},
-		"architecture string explicitly overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String("mockArch"),
-					},
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String(""),
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String(""),
-					},
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: architecture string not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String("mockArch"),
-					},
-				}
-				svc.Environments["test"].Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Platform = &PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						Arch: aws.String("mockArch"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								UID: aws.Uint32(24),
+							},
+						},
 					},
 				}
 			},
@@ -1397,125 +412,141 @@ func TestApplyEnv_Platform(t *testing.T) {
 	}
 }
 
-func TestApplyEnv_Entrypoint(t *testing.T) {
+func TestApplyEnv_Duration(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"composite fields: string slice is overridden if string is not nil": {
+		"duration overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint"},
-				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint test"),
-				}
+				mockDuration, mockDurationTest := 24*time.Second, 42*time.Second
+				svc.RoutingRule.DeregistrationDelay = &mockDuration
+				svc.Environments["test"].RoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint test"),
-				}
+				mockDurationTest := 42 * time.Second
+				svc.RoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 		},
-		"FIXED_BUG: composite fields: string is overridden if string slice is not nil": {
+		"duration overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint"),
-				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint_test", "test"},
-				}
+				mockDuration, mockDurationTest := 24*time.Second, 0*time.Second
+				svc.RoutingRule.DeregistrationDelay = &mockDuration
+				svc.Environments["test"].RoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint_test", "test"},
-				}
+				mockDurationTest := 0 * time.Second
+				svc.RoutingRule.DeregistrationDelay = &mockDurationTest
 			},
 		},
+		"duration not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				mockDuration := 24 * time.Second
+				svc.RoutingRule.DeregistrationDelay = &mockDuration
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				mockDurationTest := 24 * time.Second
+				svc.RoutingRule.DeregistrationDelay = &mockDurationTest
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.ApplyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
+func TestApplyEnv_String(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
 		"string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint"),
-				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint test"),
-				}
+				svc.ImageConfig.Location = aws.String("cairo")
+				svc.Environments["test"].ImageConfig.Location = aws.String("nerac")
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint test"),
-				}
+				svc.ImageConfig.Location = aws.String("nerac")
 			},
 		},
-		"string explicitly overridden by empty value": {
+		"string overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint"),
-				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
-					String: aws.String(""),
-				}
+				svc.ImageConfig.Location = aws.String("cairo")
+				svc.Environments["test"].ImageConfig.Location = aws.String("")
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String(""),
-				}
+				svc.ImageConfig.Location = aws.String("")
 			},
 		},
-		"FAILED_AFTER_UPGRADE: string not overridden": {
+		"string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint"),
-				}
-				svc.Environments["test"].ImageOverride = ImageOverride{}
+				svc.ImageConfig.Location = aws.String("cairo")
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					String: aws.String("mock entrypoint"),
-				}
+				svc.ImageConfig.Location = aws.String("cairo")
 			},
 		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.ApplyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
+func TestApplyEnv_StringSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
 		"string slice overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint"},
-				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint_test", "test"},
-				}
+				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
+				svc.Environments["test"].RoutingRule.AllowedSourceIps = []string{"walk", "on", "the", "wild", "side"}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint_test", "test"},
-				}
+				svc.RoutingRule.AllowedSourceIps = []string{"walk", "on", "the", "wild", "side"}
 			},
 		},
-		"string slice explicitly overridden by zero slice": {
+		"string slice overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint"},
-				}
-				svc.Environments["test"].EntryPoint = &EntryPointOverride{
-					StringSlice: []string{},
-				}
+				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
+				svc.Environments["test"].RoutingRule.AllowedSourceIps = []string{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{},
-				}
+				svc.RoutingRule.AllowedSourceIps = []string{}
 			},
 		},
-		"FAILED_AFTER_UPGRADE: string slice not overridden": {
+		"string slice not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint"},
-				}
-				svc.Environments["test"].ImageOverride = ImageOverride{}
+				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.EntryPoint = &EntryPointOverride{
-					StringSlice: []string{"mock", "entrypoint"},
-				}
+				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
 			},
 		},
 	}
@@ -1537,470 +568,59 @@ func TestApplyEnv_Entrypoint(t *testing.T) {
 	}
 }
 
-func TestApplyEnv_Command(t *testing.T) {
+func TestApplyEnv_StructSlice(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"composite fields: string slice is overridden if string is not nil": {
+		"struct slice overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{"mock", "command"},
+				svc.PublishConfig.Topics = []Topic{
+					{
+						Name: aws.String("walk like an egyptian"),
+					},
 				}
-				svc.Environments["test"].Command = &CommandOverride{
-					String: aws.String("mock command test"),
+				svc.Environments["test"].PublishConfig.Topics = []Topic{
+					{
+						Name: aws.String("walk on the wild side"),
+					},
 				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String("mock command test"),
-				}
-			},
-		},
-		"FIXED_BUG: composite fields: string is overridden if string slice is not nil": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String("mock command"),
-				}
-				svc.Environments["test"].Command = &CommandOverride{
-					StringSlice: []string{"mock", "command_test", "test"},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{"mock", "command_test", "test"},
-				}
-			},
-		},
-		"string overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String("mock command"),
-				}
-				svc.Environments["test"].Command = &CommandOverride{
-					String: aws.String("mock command test"),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String("mock command test"),
-				}
-			},
-		},
-		"string explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String("mock command"),
-				}
-				svc.Environments["test"].Command = &CommandOverride{
-					String: aws.String(""),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String(""),
-				}
-			},
-		},
-		"FAILED_AFTER_UPGRADE: string not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String("mock command"),
-				}
-				svc.Environments["test"].ImageOverride = ImageOverride{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					String: aws.String("mock command"),
-				}
-			},
-		},
-		"string slice overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{"mock", "command"},
-				}
-				svc.Environments["test"].Command = &CommandOverride{
-					StringSlice: []string{"mock", "command_test", "test"},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{"mock", "command_test", "test"},
-				}
-			},
-		},
-		"string slice explicitly overridden by zero slice": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{"mock", "command"},
-				}
-				svc.Environments["test"].Command = &CommandOverride{
-					StringSlice: []string{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{},
-				}
-			},
-		},
-		"FAILED_AFTER_UPGRADE: string slice not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{"mock", "command"},
-				}
-				svc.Environments["test"].ImageOverride = ImageOverride{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Command = &CommandOverride{
-					StringSlice: []string{"mock", "command"},
-				}
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			var inSvc, wantedSvc LoadBalancedWebService
-			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
-				"test": {},
-			}
 
-			tc.inSvc(&inSvc)
-			tc.wanted(&wantedSvc)
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.PublishConfig.Topics = []Topic{
+					{
+						Name: aws.String("walk on the wild side"),
+					},
+				}
+			},
+		},
+		"string slice overridden by zero value": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.PublishConfig.Topics = []Topic{
+					{
+						Name: aws.String("walk like an egyptian"),
+					},
+				}
+				svc.Environments["test"].PublishConfig.Topics = []Topic{}
 
-			got, err := inSvc.ApplyEnv("test")
-
-			require.NoError(t, err)
-			require.Equal(t, &wantedSvc, got)
-		})
-	}
-}
-
-func TestApplyEnv_Logging(t *testing.T) {
-	testCases := map[string]struct {
-		inSvc  func(svc *LoadBalancedWebService)
-		wanted func(svc *LoadBalancedWebService)
-	}{
-		"image overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Image: aws.String("mockImage"),
-				}
-				svc.Environments["test"].Logging = &Logging{
-					Image: aws.String("mockImageTest"),
-				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Image: aws.String("mockImageTest"),
-				}
+				svc.PublishConfig.Topics = []Topic{}
 			},
 		},
-		"image explicitly overridden by empty value": {
+		"string slice not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Image: aws.String("mockImage"),
-				}
-				svc.Environments["test"].Logging = &Logging{
-					Image: aws.String(""),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Image: aws.String(""),
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: image not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Image: aws.String("mockImage"),
-				}
-				svc.Environments["test"].Logging = &Logging{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Image: aws.String("mockImage"),
-				}
-			},
-		},
-		"destination overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Destination: map[string]string{
-						"mockDestination1": "1",
-						"mockDestination2": "2",
-					},
-				}
-				svc.Environments["test"].Logging = &Logging{
-					Destination: map[string]string{
-						"mockDestination1": "3", // Modify the value of mockDestination1.
-						"mockDestination3": "3", // Append mockDestination3.
+				svc.PublishConfig.Topics = []Topic{
+					{
+						Name: aws.String("walk like an egyptian"),
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Destination: map[string]string{
-						"mockDestination1": "3",
-						"mockDestination2": "2",
-						"mockDestination3": "3",
-					},
-				}
-			},
-		},
-		"destination not overridden by empty map": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Destination: map[string]string{
-						"mockDestination1": "1",
-						"mockDestination2": "2",
-					},
-				}
-				svc.Environments["test"].Logging = &Logging{
-					Destination: map[string]string{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Destination: map[string]string{
-						"mockDestination1": "1",
-						"mockDestination2": "2",
-					},
-				}
-			},
-		},
-		"destination not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Destination: map[string]string{
-						"mockDestination1": "1",
-						"mockDestination2": "2",
-					},
-				}
-				svc.Environments["test"].Logging = &Logging{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					Destination: map[string]string{
-						"mockDestination1": "1",
-						"mockDestination2": "2",
-					},
-				}
-			},
-		},
-		"enableMetadata overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					EnableMetadata: aws.Bool(false),
-				}
-				svc.Environments["test"].Logging = &Logging{
-					EnableMetadata: aws.Bool(true),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					EnableMetadata: aws.Bool(true),
-				}
-			},
-		},
-		"enableMetadata explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					EnableMetadata: aws.Bool(true),
-				}
-				svc.Environments["test"].Logging = &Logging{
-					EnableMetadata: aws.Bool(false),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					EnableMetadata: aws.Bool(false),
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: enableMetadata not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					EnableMetadata: aws.Bool(true),
-				}
-				svc.Environments["test"].Logging = &Logging{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					EnableMetadata: aws.Bool(true),
-				}
-			},
-		},
-		"secretOptions overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					SecretOptions: map[string]string{
-						"mockSecretOption1": "1",
-						"mockSecretOption2": "2",
-					},
-				}
-				svc.Environments["test"].Logging = &Logging{
-					SecretOptions: map[string]string{
-						"mockSecretOption1": "3", // Modify the value of mockSecretOption1.
-						"mockSecretOption3": "3", // Append mockSecretOption3.
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					SecretOptions: map[string]string{
-						"mockSecretOption1": "3",
-						"mockSecretOption2": "2",
-						"mockSecretOption3": "3",
-					},
-				}
-			},
-		},
-		"secretOptions not overridden by empty map": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					SecretOptions: map[string]string{
-						"mockSecretOption1": "1",
-						"mockSecretOption2": "2",
-					},
-				}
-				svc.Environments["test"].Logging = &Logging{
-					SecretOptions: map[string]string{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					SecretOptions: map[string]string{
-						"mockSecretOption1": "1",
-						"mockSecretOption2": "2",
-					},
-				}
-			},
-		},
-		"secretOptions not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					SecretOptions: map[string]string{
-						"mockSecretOption1": "1",
-						"mockSecretOption2": "2",
-					},
-				}
-				svc.Environments["test"].Logging = &Logging{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					SecretOptions: map[string]string{
-						"mockSecretOption1": "1",
-						"mockSecretOption2": "2",
-					},
-				}
-			},
-		},
-		"configFilePath overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					ConfigFile: aws.String("mockPath"),
-				}
-				svc.Environments["test"].Logging = &Logging{
-					ConfigFile: aws.String("mockPathTest"),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					ConfigFile: aws.String("mockPathTest"),
-				}
-			},
-		},
-		"configFilePath explicitly overridden by empty value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					ConfigFile: aws.String("mockPath"),
-				}
-				svc.Environments["test"].Logging = &Logging{
-					ConfigFile: aws.String(""),
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					ConfigFile: aws.String(""),
-				}
-			},
-		},
-		"FIXED_AFTER_TRANSFORM_POINTER: configFilePath not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					ConfigFile: aws.String("mockPath"),
-				}
-				svc.Environments["test"].Logging = &Logging{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Logging = &Logging{
-					ConfigFile: aws.String("mockPath"),
-				}
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			var inSvc, wantedSvc LoadBalancedWebService
-			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
-				"test": {},
-			}
-
-			tc.inSvc(&inSvc)
-			tc.wanted(&wantedSvc)
-
-			got, err := inSvc.ApplyEnv("test")
-
-			require.NoError(t, err)
-			require.Equal(t, &wantedSvc, got)
-		})
-	}
-}
-
-func TestApplyEnv_Network(t *testing.T) {
-	testCases := map[string]struct {
-		inSvc  func(svc *LoadBalancedWebService)
-		wanted func(svc *LoadBalancedWebService)
-	}{
-		"vpc overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacement"),
-					},
-				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement:      aws.String("mockPlacementTest"),
-						SecurityGroups: []string{"mock", "security", "group"},
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement:      aws.String("mockPlacementTest"),
-						SecurityGroups: []string{"mock", "security", "group"},
-					},
-				}
-			},
-		},
-		"FAILED_AFTER_UPGRADE: vpc not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacement"),
-					},
-				}
-				svc.Environments["test"].Network = &NetworkConfig{}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacement"),
+				svc.PublishConfig.Topics = []Topic{
+					{
+						Name: aws.String("walk like an egyptian"),
 					},
 				}
 			},
@@ -2024,129 +644,228 @@ func TestApplyEnv_Network(t *testing.T) {
 	}
 }
 
-func TestApplyEnv_Network_VPC(t *testing.T) {
+func TestApplyEnv_MapToString(t *testing.T) {
 	testCases := map[string]struct {
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
-		"placement overridden": {
+		"map upserted": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacement"),
+				svc.Secrets = map[string]string{
+					"secret1": "the secret sauce is mole",
+					"secret2": "the secret agent is johnny rivers",
+				}
+				svc.Environments["test"].Secrets = map[string]string{
+					"secret1": "the secret sauce is blue cheese which has mold in it",
+					"secret3": "the secret route is through egypt",
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Secrets = map[string]string{
+					"secret1": "the secret sauce is blue cheese which has mold in it", // Overridden.
+					"secret2": "the secret agent is johnny rivers",                    // Kept.
+					"secret3": "the secret route is through egypt",                    // Appended
+				}
+			},
+		},
+		"map not overridden by zero map": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Secrets = map[string]string{
+					"secret1": "the secret sauce is mole",
+					"secret2": "the secret agent man is johnny rivers",
+				}
+				svc.Environments["test"].Secrets = map[string]string{}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Secrets = map[string]string{
+					"secret1": "the secret sauce is mole",
+					"secret2": "the secret agent man is johnny rivers",
+				}
+			},
+		},
+		"map not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Secrets = map[string]string{
+					"secret1": "the secret sauce is mole",
+					"secret2": "the secret agent man is johnny rivers",
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Secrets = map[string]string{
+					"secret1": "the secret sauce is mole",
+					"secret2": "the secret agent man is johnny rivers",
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.ApplyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
+func TestApplyEnv_MapToPStruct(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
+		"map upserted": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+					"volume2": {
+						MountPointOpts: MountPointOpts{
+							ReadOnly: aws.Bool(true),
+						},
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacementTest"),
+				svc.Environments["test"].Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPathTest"),
+						},
+					},
+					"volume3": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacementTest"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPathTest"),
+						},
+					}, // Overridden.
+					"volume2": {
+						MountPointOpts: MountPointOpts{
+							ReadOnly: aws.Bool(true),
+						},
+					}, // Kept.
+					"volume3": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+					}, // Appended.
+				}
+			},
+		},
+		"map not overridden by zero map": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+					"volume2": {
+						MountPointOpts: MountPointOpts{
+							ReadOnly: aws.Bool(true),
+						},
+					},
+				}
+				svc.Environments["test"].Storage.Volumes = map[string]*Volume{}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+					"volume2": {
+						MountPointOpts: MountPointOpts{
+							ReadOnly: aws.Bool(true),
+						},
 					},
 				}
 			},
 		},
-		"placement explicitly overridden by empty value": {
+		"map not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacement"),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
 					},
-				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String(""),
+					"volume2": {
+						MountPointOpts: MountPointOpts{
+							ReadOnly: aws.Bool(true),
+						},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String(""),
+				svc.Storage.Volumes = map[string]*Volume{
+					"volume1": {
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+					"volume2": {
+						MountPointOpts: MountPointOpts{
+							ReadOnly: aws.Bool(true),
+						},
 					},
 				}
 			},
 		},
-		"FIXED_AFTER_TRANSFORM_POINTER: placement not overridden": {
+		"override a nil value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacement"),
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": nil,
 					},
 				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						Placement: aws.String("mockPlacement"),
-					},
-				}
-			},
-		},
-		"security_groups overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{"mock", "security_group"},
-					},
-				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{"mock", "security_group_test", "test"},
+				svc.Environments["test"].Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
 					},
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{"mock", "security_group_test", "test"},
-					},
-				}
-			},
-		},
-		"security_groups overridden by zero slice": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{"mock", "security_group"},
-					},
-				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{},
-					},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{},
-					},
-				}
-			},
-		},
-		"FIXED_BUG: security_groups not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{"mock", "security_group"},
-					},
-				}
-				svc.Environments["test"].Network = &NetworkConfig{
-					VPC: &vpcConfig{},
-				}
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.Network = &NetworkConfig{
-					VPC: &vpcConfig{
-						SecurityGroups: []string{"mock", "security_group"},
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mockVolume1": {
+							MountPointOpts: MountPointOpts{
+								ContainerPath: aws.String("mockPath"),
+							},
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
 					},
 				}
 			},

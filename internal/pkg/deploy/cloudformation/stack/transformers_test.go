@@ -179,7 +179,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify entrypoint as a string": {
 			inImageOverride: manifest.ImageOverride{
-				EntryPoint: &manifest.EntryPointOverride{String: aws.String("bin")},
+				EntryPoint: manifest.EntryPointOverride{String: aws.String("bin")},
 			},
 
 			wanted: &template.SidecarOpts{
@@ -195,7 +195,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify entrypoint as a string slice": {
 			inImageOverride: manifest.ImageOverride{
-				EntryPoint: &manifest.EntryPointOverride{StringSlice: []string{"bin", "arg"}},
+				EntryPoint: manifest.EntryPointOverride{StringSlice: []string{"bin", "arg"}},
 			},
 
 			wanted: &template.SidecarOpts{
@@ -211,7 +211,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify command as a string": {
 			inImageOverride: manifest.ImageOverride{
-				Command: &manifest.CommandOverride{String: aws.String("arg")},
+				Command: manifest.CommandOverride{String: aws.String("arg")},
 			},
 
 			wanted: &template.SidecarOpts{
@@ -227,7 +227,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"specify command as a string slice": {
 			inImageOverride: manifest.ImageOverride{
-				Command: &manifest.CommandOverride{StringSlice: []string{"arg1", "arg2"}},
+				Command: manifest.CommandOverride{StringSlice: []string{"arg1", "arg2"}},
 			},
 
 			wanted: &template.SidecarOpts{
@@ -309,7 +309,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 		},
 		"success with fargate autoscaling": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 				CPU: aws.Int(70),
@@ -324,7 +324,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 		},
 		"success with spot autoscaling": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(2),
 						Max:      aws.Int(20),
@@ -390,7 +390,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"with scaling only on spot": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
 						Max:      aws.Int(10),
@@ -408,7 +408,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"with scaling into spot": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
 						Max:      aws.Int(10),
@@ -431,7 +431,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"returns nil if no spot config specified": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 			},
@@ -439,7 +439,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"errors if spot specified with range": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 				Spot: aws.Int(3),
@@ -475,7 +475,7 @@ func Test_convertAutoscaling(t *testing.T) {
 	}{
 		"invalid range": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &badRange,
 				},
 			},
@@ -484,7 +484,7 @@ func Test_convertAutoscaling(t *testing.T) {
 		},
 		"success": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 				CPU:          aws.Int(70),
@@ -504,7 +504,7 @@ func Test_convertAutoscaling(t *testing.T) {
 		},
 		"success with range subfields": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(5),
 						Max:      aws.Int(10),
@@ -743,7 +743,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 		"no managed config": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -756,7 +756,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 			wantManagedConfig: nil,
 			wantVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -770,7 +770,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 		"with managed config": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -789,7 +789,7 @@ func Test_convertManagedFSInfo(t *testing.T) {
 		"with custom UID": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							UID: aws.Uint32(10000),
 							GID: aws.Uint32(100000),
@@ -834,7 +834,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"minimal configuration": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -876,7 +876,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/scratch"),
 					},
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(false),
 					},
 				},
@@ -899,7 +899,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"container path not specified": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -911,11 +911,11 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification with access point renders correctly": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/"),
-							AuthConfig: &manifest.AuthorizationConfig{
+							AuthConfig: manifest.AuthorizationConfig{
 								IAM:           aws.Bool(true),
 								AccessPointID: aws.String("ap-1234"),
 							},
@@ -958,11 +958,11 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification without access point renders correctly": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/wordpress"),
-							AuthConfig: &manifest.AuthorizationConfig{
+							AuthConfig: manifest.AuthorizationConfig{
 								IAM: aws.Bool(true),
 							},
 						},
@@ -1002,7 +1002,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"managed EFS": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1030,7 +1030,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"managed EFS with config": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							UID: aws.Uint32(1000),
 							GID: aws.Uint32(10000),
@@ -1061,7 +1061,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"error when multiple managed volumes specified": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1070,7 +1070,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1083,7 +1083,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"managed EFS and BYO": {
 			inVolumes: map[string]*manifest.Volume{
 				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Enabled: aws.Bool(true),
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -1092,7 +1092,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 				"otherefs": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -1103,7 +1103,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 				"ephemeral": {
-					EFS: nil,
+					EFS: manifest.EFSConfigOrBool{},
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/ephemeral"),
 						ReadOnly:      aws.Bool(false),
@@ -1158,7 +1158,7 @@ func Test_convertStorageOpts(t *testing.T) {
 		"efs specified with just ID": {
 			inVolumes: map[string]*manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
+					EFS: manifest.EFSConfigOrBool{
 						Advanced: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
@@ -1205,7 +1205,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			}
 
 			// WHEN
-			got, err := convertStorageOpts(aws.String("fe"), &s)
+			got, err := convertStorageOpts(aws.String("fe"), s)
 
 			// THEN
 			if tc.wantErr != "" {
@@ -1523,10 +1523,13 @@ func Test_convertPublish(t *testing.T) {
 			inTopics:    []manifest.Topic{{}},
 			wantedError: errMissingPublishTopicField,
 		},
-		"publish with no workers": {
+		"valid publish": {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
+				},
+				{
+					Name: aws.String("topic2"),
 				},
 			},
 			wanted: &template.PublishOpts{
@@ -1540,45 +1543,23 @@ func Test_convertPublish(t *testing.T) {
 						Env:       env,
 						Svc:       svc,
 					},
-				},
-			},
-		},
-		"publish with workers": {
-			inTopics: []manifest.Topic{
-				{
-					Name:           aws.String("topic1"),
-					AllowedWorkers: []string{"worker1"},
-				},
-			},
-			wanted: &template.PublishOpts{
-				Topics: []*template.Topic{
 					{
-						Name:           aws.String("topic1"),
-						AllowedWorkers: []string{"worker1"},
-						AccountID:      accountId,
-						Partition:      partition,
-						Region:         region,
-						App:            app,
-						Env:            env,
-						Svc:            svc,
+
+						Name:      aws.String("topic2"),
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
 					},
 				},
 			},
 		},
-		"invalid worker name": {
-			inTopics: []manifest.Topic{
-				{
-					Name:           aws.String("topic1"),
-					AllowedWorkers: []string{"worker1~~@#$"},
-				},
-			},
-			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errSvcNameBadFormat),
-		},
 		"invalid topic name": {
 			inTopics: []manifest.Topic{
 				{
-					Name:           aws.String("topic1~~@#$"),
-					AllowedWorkers: []string{"worker1"},
+					Name: aws.String("topic1~~@#$"),
 				},
 			},
 			wantedError: errInvalidPubSubTopicName,
@@ -1606,17 +1587,17 @@ func Test_convertSubscribe(t *testing.T) {
 	duration111Seconds := 111 * time.Second
 	duration5Days := 120 * time.Hour
 	testCases := map[string]struct {
-		inSubscribe *manifest.SubscribeConfig
+		inSubscribe manifest.SubscribeConfig
 
 		wanted      *template.SubscribeOpts
 		wantedError error
 	}{
 		"empty subscription": {
-			inSubscribe: &manifest.SubscribeConfig{},
+			inSubscribe: manifest.SubscribeConfig{},
 			wanted:      nil,
 		},
 		"subscription with empty topic subscriptions": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{},
 				},
@@ -1624,7 +1605,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wantedError: fmt.Errorf(`invalid topic subscription "": %w`, errMissingPublishTopicField),
 		},
 		"valid subscribe": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "name",
@@ -1635,7 +1616,7 @@ func Test_convertSubscribe(t *testing.T) {
 					Retention: &duration111Seconds,
 					Delay:     &duration111Seconds,
 					Timeout:   &duration111Seconds,
-					DeadLetter: &manifest.DeadLetterQueue{
+					DeadLetter: manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
 				},
@@ -1658,7 +1639,7 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with minimal queue": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "name",
@@ -1678,7 +1659,7 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"invalid topic name": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "t@p!c1~",
@@ -1689,7 +1670,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wantedError: fmt.Errorf(`invalid topic subscription "t@p!c1~": %w`, errInvalidPubSubTopicName),
 		},
 		"invalid service name": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "topic1",
@@ -1700,7 +1681,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wantedError: fmt.Errorf(`invalid topic subscription "topic1": %w`, errSvcNameBadFormat),
 		},
 		"subscribe queue delay invalid": {
-			inSubscribe: &manifest.SubscribeConfig{
+			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
 						Name:    "name",

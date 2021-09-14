@@ -54,8 +54,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -68,7 +68,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Name:  "subscribers",
 					Image: "mockImage",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Port: 8080,
@@ -86,7 +86,7 @@ func TestNewBackendSvc(t *testing.T) {
 							},
 							Port: aws.Uint16(8080),
 						},
-						HealthCheck: &ContainerHealthCheck{
+						HealthCheck: ContainerHealthCheck{
 							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
@@ -100,8 +100,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -146,7 +146,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 					Name:  "subscribers",
 					Image: "flask-sample",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
 					Interval:    durationp(6 * time.Second),
 					Retries:     aws.Int(0),
@@ -226,7 +226,7 @@ func TestBackendService_Publish(t *testing.T) {
 		"returns the list of topics if manifest publishes notifications": {
 			mft: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					Publish: &PublishConfig{
+					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{
 								Name: stringP("hello"),
@@ -272,7 +272,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 					Port: aws.Uint16(8080),
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
 					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),
@@ -345,7 +345,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
-			Logging: &Logging{
+			Logging: Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
@@ -379,7 +379,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						CredsParam: aws.String("some arn"),
 					},
 				},
-				Logging: &Logging{
+				Logging: Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
@@ -576,7 +576,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",
@@ -698,7 +698,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"empty env advanced count override": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 					CPU:   aws.Int(80),
 				},
 			},
@@ -708,7 +708,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
@@ -749,7 +749,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by spot count": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
@@ -772,12 +772,12 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by range config": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(2),
 							Max: aws.Int(8),
@@ -790,7 +790,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{
+								Range: Range{
 									RangeConfig: RangeConfig{
 										Min: aws.Int(2),
 										Max: aws.Int(8),

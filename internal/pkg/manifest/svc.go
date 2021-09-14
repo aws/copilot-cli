@@ -33,23 +33,23 @@ var ServiceTypes = []string{
 	WorkerServiceType,
 }
 
-// Range contains either a Range or a range configuration for Autoscaling ranges
+// Range contains either a Range or a range configuration for Autoscaling ranges.
 type Range struct {
 	Value       *IntRangeBand // Mutually exclusive with RangeConfig
 	RangeConfig RangeConfig
 }
 
-// Parse extracts the min and max from RangeOpts
-func (r Range) Parse() (min int, max int, err error) {
-	if r.Value != nil && !r.RangeConfig.IsEmpty() {
-		return 0, 0, errInvalidRangeOpts
-	}
+// IsEmpty returns whether Range is empty.
+func (r *Range) IsEmpty() bool {
+	return r.Value == nil && r.RangeConfig.IsEmpty()
+}
 
+// Parse extracts the min and max from RangeOpts.
+func (r *Range) Parse() (min int, max int, err error) {
 	if r.Value != nil {
 		return r.Value.Parse()
 	}
-
-	return *r.RangeConfig.Min, *r.RangeConfig.Max, nil
+	return aws.IntValue(r.RangeConfig.Min), aws.IntValue(r.RangeConfig.Max), nil
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the RangeOpts
@@ -174,7 +174,7 @@ func (c *Count) Desired() (*int, error) {
 // Capacity configuration (spot).
 type AdvancedCount struct {
 	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
-	Range        *Range         `yaml:"range"`
+	Range        Range          `yaml:"range"`
 	CPU          *int           `yaml:"cpu_percentage"`
 	Memory       *int           `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
@@ -183,7 +183,7 @@ type AdvancedCount struct {
 
 // IsEmpty returns whether AdvancedCount is empty.
 func (a *AdvancedCount) IsEmpty() bool {
-	return a.Range == nil && a.CPU == nil && a.Memory == nil &&
+	return a.Range.IsEmpty() && a.CPU == nil && a.Memory == nil &&
 		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil
 }
 
@@ -193,7 +193,7 @@ func (a *AdvancedCount) IgnoreRange() bool {
 }
 
 func (a *AdvancedCount) hasAutoscaling() bool {
-	return a.Range != nil || a.CPU != nil || a.Memory != nil ||
+	return !a.Range.IsEmpty() || a.CPU != nil || a.Memory != nil ||
 		a.Requests != nil || a.ResponseTime != nil
 }
 
@@ -201,19 +201,25 @@ func (a *AdvancedCount) hasAutoscaling() bool {
 func (a *AdvancedCount) IsValid() error {
 	// Spot translates to desiredCount; cannot specify with autoscaling
 	if a.Spot != nil && a.hasAutoscaling() {
-		return errInvalidAdvancedCount
+		return &errFieldMutualExclusive{
+			firstField:  "spot",
+			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+		}
 	}
 
 	// Range must be specified if using autoscaling
-	if a.Range == nil && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
-		return errInvalidAutoscaling
+	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
+		return &errFieldMustBeSpecified{
+			missingField:      "range",
+			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+		}
 	}
 
 	return nil
 }
 
 func (a *AdvancedCount) unsetAutoscaling() {
-	a.Range = nil
+	a.Range = Range{}
 	a.CPU = nil
 	a.Memory = nil
 	a.Requests = nil

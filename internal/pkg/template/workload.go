@@ -206,6 +206,12 @@ type AutoscalingOpts struct {
 	Memory       *float64
 	Requests     *float64
 	ResponseTime *float64
+	QueueDelay   *AutoscalingQueueDelayOpts
+}
+
+// AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
+type AutoscalingQueueDelayOpts struct {
+	AcceptableBacklogPerTask int
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
@@ -224,8 +230,7 @@ type PublishOpts struct {
 
 // Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name           *string
-	AllowedWorkers []string
+	Name *string
 
 	Region    string
 	Partition string
@@ -310,15 +315,18 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 
 	// Additional options for service templates.
-	WorkloadType         string
-	HealthCheck          *ecs.HealthCheck
-	HTTPHealthCheck      HTTPHealthCheckOpts
-	DeregistrationDelay  *int64
-	AllowedSourceIps     []string
-	RulePriorityLambda   string
-	DesiredCountLambda   string
-	EnvControllerLambda  string
-	CredentialsParameter string
+	WorkloadType        string
+	HealthCheck         *ecs.HealthCheck
+	HTTPHealthCheck     HTTPHealthCheckOpts
+	DeregistrationDelay *int64
+	AllowedSourceIps    []string
+
+	// Lambda functions.
+	RulePriorityLambda             string
+	DesiredCountLambda             string
+	EnvControllerLambda            string
+	CredentialsParameter           string
+	BacklogPerTaskCalculatorLambda string
 
 	// Additional options for job templates.
 	ScheduleExpression string

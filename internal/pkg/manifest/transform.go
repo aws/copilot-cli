@@ -300,54 +300,36 @@ func (t efsVolumeConfigurationTransformer) Transformer(typ reflect.Type) func(ds
 	}
 }
 
-func transformPBasic() func(dst, src reflect.Value) error {
-	// NOTE: `dst` must be of kind reflect.Ptr.
-	return func(dst, src reflect.Value) error {
-		// This condition shouldn't ever be true. It's merely here for extra safety so that `src.IsNil` won't panic.
-		if src.Kind() != reflect.Ptr {
-			return nil
-		}
-
-		if src.IsNil() {
-			return nil
-		}
-
-		if dst.CanSet() {
-			dst.Set(src)
-		}
-		return nil
-	}
-}
-
 type basicTransformer struct{}
 
 // Transformer returns custom merge logic for volume's fields.
 func (t basicTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ.Kind() == reflect.Slice {
-		return func(dst, src reflect.Value) error {
-			// This condition shouldn't ever be true. It's merely here for extra safety so that `src.IsNil` won't panic.
-			if src.Kind() != reflect.Slice {
-				return nil
-			}
-
-			if src.IsNil() {
-				return nil
-			}
-
-			if dst.CanSet() {
-				dst.Set(src)
-			}
-
-			return nil
-		}
+		return transformPBasicOrSlice
 	}
 
 	if typ.Kind() == reflect.Ptr {
 		for _, k := range basicKinds {
 			if typ.Elem().Kind() == k {
-				return transformPBasic()
+				return transformPBasicOrSlice
 			}
 		}
+	}
+	return nil
+}
+
+func transformPBasicOrSlice(dst, src reflect.Value) error {
+	// This condition shouldn't ever be true. It's merely here for extra safety so that `src.IsNil` won't panic.
+	if src.Kind() != reflect.Ptr && src.Kind() != reflect.Slice {
+		return nil
+	}
+
+	if src.IsNil() {
+		return nil
+	}
+
+	if dst.CanSet() {
+		dst.Set(src)
 	}
 	return nil
 }

@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -507,7 +508,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			wantedManifestPath: "manifest/path",
 
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetHealthCheck().Return(&exec.HealthCheck{
+				m.EXPECT().GetHealthCheck().Return(&dockerfile.HealthCheck{
 					Cmd:         []string{"mockCommand"},
 					Interval:    second,
 					Timeout:     second,
@@ -525,10 +526,10 @@ func TestJobInitOpts_Execute(t *testing.T) {
 						Name:           "mailer",
 						Type:           "Scheduled Job",
 						DockerfilePath: "./Dockerfile",
-						Platform:       nil,
+						Platform:       manifest.PlatformArgsOrString{},
 					},
 					Schedule: "@hourly",
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"mockCommand"},
 						Interval:    &second,
 						Retries:     &zero,
