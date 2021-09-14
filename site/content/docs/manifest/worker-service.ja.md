@@ -85,7 +85,7 @@ Retention はメッセージが削除される前にキューに残っている�
 Timeout はメッセージが配信された後に利用できない時間の長さを定義します。デフォルトは 30 秒です。範囲は 0 秒 - 12 時間です。
 
 <span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>
-指定された場合、DLQ(デッドレターキュー)を作成し、メッセージを `tries` 回試行した後に DLQ にルーティングするリドライブポリシーを設定します。つまり、Worker Service がメッセージの処理に `tries` 回成功しなかった場合、メッセージは再駆動されずに DLQ にルーティングされて、失敗についての詳細な分析対象となります。
+指定された場合、DLQ(デッドレターキュー)を作成し、メッセージを `tries` 回試行した後に DLQ にルーティングするリドライブポリシーを設定します。つまり、Worker Service がメッセージの処理に `tries` 回成功しなかった場合、メッセージ送信はリトライされずに DLQ にルーティングされて、失敗についての詳細な分析対象となります。
 
 <span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>
 Worker Service がサブスクライブすべき SNS トピックの情報が含まれています。
@@ -96,8 +96,8 @@ Worker Service がサブスクライブすべき SNS トピックの情報が含
 <span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>
 必須項目。この SNS トピックが公開されているサービスです。トピック名と合わせて、Copilot Environment 内で SNS トピックを一意に識別します。
 
-{% include 'image-config.en.md' %}
+{% include 'image-config.ja.md' %}
 
-{% include 'image-healthcheck.en.md' %}
+{% include 'image-healthcheck.ja.md' %}
 
-{% include 'common-svc-fields.en.md' %}
+{% include 'common-svc-fields.ja.md' %}
