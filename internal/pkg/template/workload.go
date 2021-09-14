@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -104,7 +103,7 @@ type SidecarOpts struct {
 	DependsOn    map[string]string
 	EntryPoint   []string
 	Command      []string
-	HealthCheck  *ecs.HealthCheck
+	HealthCheck  *ContainerHealthCheck
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -189,6 +188,15 @@ type AdvancedCount struct {
 	Spot        *int
 	Autoscaling *AutoscalingOpts
 	Cps         []*CapacityProviderStrategy
+}
+
+// ContainerHealthCheck holds configuration for container health check.
+type ContainerHealthCheck struct {
+	Command     []string
+	Interval    *int64
+	Retries     *int64
+	StartPeriod *int64
+	Timeout     *int64
 }
 
 // CapacityProviderStrategy holds the configuration needed for a
@@ -317,7 +325,7 @@ type WorkloadOpts struct {
 
 	// Additional options for service templates.
 	WorkloadType        string
-	HealthCheck         *ecs.HealthCheck
+	HealthCheck         *ContainerHealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	DeregistrationDelay *int64
 	AllowedSourceIps    []string

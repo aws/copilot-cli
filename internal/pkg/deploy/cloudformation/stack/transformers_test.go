@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -255,8 +254,8 @@ func Test_convertSidecar(t *testing.T) {
 				Secrets:    mockMap,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
-				HealthCheck: &ecs.HealthCheck{
-					Command:     aws.StringSlice([]string{"foo", "bar"}),
+				HealthCheck: &template.ContainerHealthCheck{
+					Command:     []string{"foo", "bar"},
 					Interval:    aws.Int64(10),
 					Retries:     aws.Int64(2),
 					StartPeriod: aws.Int64(0),
