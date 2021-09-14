@@ -62,7 +62,7 @@ taskdef_overrides:
 taskdef_overrides:
   - path: "ContainerDefinitions[0].PortMappings[-].ContainerPort"
     value: 2056
-  // PortMappings[1] gets the port mapping added by the previous rule, since by default Copilot creates a port mapping.
+  // Copilot はデフォルトでポートマッピングを作成するため、PortMappings[1] とすることで、上記ルールで追加されたポートマッピングを取得します。
   - path: "ContainerDefinitions[0].PortMappings[1].Protocol"
     value: "udp"
 ```
