@@ -47,7 +47,9 @@ Service の名前。
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-Service のアーキテクチャタイプ。[Worker Service](../concepts/services.ja.md#worker-service) は、インターネットや VPC 外からはアクセスできません。これは、他のCopilot Service の `publish` フィールドで作成された SNS トピックへのサブスクリプションによって生成されます。
+The architecture type for your service. [Worker Services](../concepts/services.en.md#worker-service) are not reachable from the internet or elsewhere in the VPC. They are designed to pull messages from their associated SQS queues, which are populated by their subscriptions to SNS topics created by other Copilot services' `publish` fields.
+
+Service のアーキテクチャタイプ。[Worker Service](../concepts/services.ja.md#worker-service) は、インターネットや VPC 外からはアクセスできません。Worker Service は関連する SQS キューからメッセージをプルするように設計されています。SQS キューは、他 のCopilot Service の `publish` フィールドで作成された SNS トピックへのサブスクリプションによって生成されます。
 
 
 <div class="separator"></div>
