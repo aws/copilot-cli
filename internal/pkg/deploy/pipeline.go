@@ -19,6 +19,7 @@ const (
 	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
 
 	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+	defaultPipelineBranch     = "main"
 )
 
 var (
@@ -124,16 +125,36 @@ type BitbucketSource struct {
 	ConnectionARN string
 }
 
+func convertProperty(properties map[string]interface{}, key string) (string, bool) {
+	v, ok := properties[key]
+	if !ok {
+		return "", false
+	}
+	return v.(string), true
+}
+
 // PipelineSourceFromManifest processes manifest info about the source based on provider type.
 // The return boolean is true for CodeStar Connections sources that require a polling prompt.
 func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, shouldPrompt bool, err error) {
+	branch, ok := convertProperty(mfSource.Properties, "branch")
+	if !ok {
+		branch = defaultPipelineBranch
+	}
+	repository, ok := convertProperty(mfSource.Properties, "repository")
+	if !ok {
+		return nil, false, errors.New("missing `repository` in properties")
+	}
 	switch mfSource.ProviderName {
 	case manifest.GithubV1ProviderName:
+		token, ok := convertProperty(mfSource.Properties, "access_token_secret")
+		if !ok {
+			return nil, false, errors.New("missing `access_token_secret` in properties")
+		}
 		return &GitHubV1Source{
 			ProviderName:                manifest.GithubV1ProviderName,
-			Branch:                      (mfSource.Properties["branch"]).(string),
-			RepositoryURL:               GitHubURL((mfSource.Properties["repository"]).(string)),
-			PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
+			Branch:                      branch,
+			RepositoryURL:               GitHubURL(repository),
+			PersonalAccessTokenSecretID: token,
 		}, false, nil
 	case manifest.GithubProviderName:
 		// If the creation of the user's pipeline manifest predates Copilot's conversion to GHv2/CSC, the provider
@@ -142,8 +163,8 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 		if mfSource.Properties["access_token_secret"] != nil {
 			return &GitHubV1Source{
 				ProviderName:                manifest.GithubV1ProviderName,
-				Branch:                      (mfSource.Properties["branch"]).(string),
-				RepositoryURL:               GitHubURL((mfSource.Properties["repository"]).(string)),
+				Branch:                      branch,
+				RepositoryURL:               GitHubURL(repository),
 				PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
 			}, false, nil
 		} else {
@@ -151,8 +172,8 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			connection, ok := mfSource.Properties["connection_arn"]
 			repo := &GitHubSource{
 				ProviderName:  manifest.GithubProviderName,
-				Branch:        (mfSource.Properties["branch"]).(string),
-				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
+				Branch:        branch,
+				RepositoryURL: GitHubURL(repository),
 			}
 			if !ok {
 				return repo, true, nil
@@ -161,23 +182,23 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			return repo, false, nil
 		}
 	case manifest.CodeCommitProviderName:
-		outputFormat, ok := mfSource.Properties["output_artifact_format"]
+		outputFormat, ok := convertProperty(mfSource.Properties, "output_artifact_format")
 		if !ok {
 			outputFormat = ""
 		}
 		return &CodeCommitSource{
 			ProviderName:         manifest.CodeCommitProviderName,
-			Branch:               (mfSource.Properties["branch"]).(string),
-			RepositoryURL:        (mfSource.Properties["repository"]).(string),
-			OutputArtifactFormat: (outputFormat).(string),
+			Branch:               branch,
+			RepositoryURL:        repository,
+			OutputArtifactFormat: outputFormat,
 		}, false, nil
 	case manifest.BitbucketProviderName:
 		// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
 		connection, ok := mfSource.Properties["connection_arn"]
 		repo := &BitbucketSource{
 			ProviderName:  manifest.BitbucketProviderName,
-			Branch:        (mfSource.Properties["branch"]).(string),
-			RepositoryURL: (mfSource.Properties["repository"]).(string),
+			Branch:        branch,
+			RepositoryURL: repository,
 		}
 		if !ok {
 			return repo, true, nil
