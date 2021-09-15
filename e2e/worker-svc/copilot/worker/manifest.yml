@@ -1,0 +1,22 @@
+name: worker
+type: Worker Service
+
+cpu: 1024
+memory: 2048
+
+image:
+  build: ./worker/Dockerfile
+
+subscribe:
+  queue:
+    timeout: 3s
+    dead_letter:
+      tries: 3
+  topics:
+    - name: events
+      service: publisher
+    - name: events-topic-specific
+      service: publisher
+      queue:
+        retention: 24h
+        timeout: 30s

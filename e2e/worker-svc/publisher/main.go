@@ -25,7 +25,7 @@ func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 }
 
 func SimplePost(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-
+	log.Println("Post succeeded")
 }
 
 func healthCheckHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {

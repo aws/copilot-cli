@@ -1,0 +1,22 @@
+type: Backend Service
+name: publisher
+
+image:
+  build: ./publisher/Dockerfile
+  port: 80
+  healthcheck:
+    command: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+    interval: 10s
+    retries: 2
+    timeout: 5s
+    start_period: 0s
+
+cpu: 512
+memory: 1024
+
+count: 1
+
+publish:
+  topics:
+    - name: events
+    - name: events-topic-specific
