@@ -373,6 +373,7 @@ func (e ExecuteCommandConfig) IsEmpty() bool {
 
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
+	Retention      *int              `yaml:"retention"`
 	Image          *string           `yaml:"image"`
 	Destination    map[string]string `yaml:"destination,flow"`
 	EnableMetadata *bool             `yaml:"enableMetadata"`
