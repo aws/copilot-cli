@@ -49,10 +49,11 @@ type resumeSvcOpts struct {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *resumeSvcOpts) Validate() error {
-	if o.appName != "" {
-		if err := o.validateAppName(); err != nil {
-			return err
-		}
+	if o.appName == "" {
+		return nil
+	}
+	if err := o.validateAppName(); err != nil {
+		return err
 	}
 	if o.envName != "" {
 		if err := o.validateEnvName(); err != nil {
@@ -224,13 +225,7 @@ func buildSvcResumeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

@@ -73,3 +73,5 @@ Service のアーキテクチャタイプ。 [Load Balanced Web Service](../conc
 {% include 'image-healthcheck.ja.md' %}
 
 {% include 'common-svc-fields.ja.md' %}
+
+{% include 'publish.ja.md' %}

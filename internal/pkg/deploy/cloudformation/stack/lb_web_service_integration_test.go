@@ -55,10 +55,9 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", svcManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
-	mft, err := manifest.UnmarshalWorkload(manifestBytes)
-	require.NoError(t, err)
-
 	for name, tc := range testCases {
+		mft, err := manifest.UnmarshalWorkload(manifestBytes)
+		require.NoError(t, err)
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
 		v, ok := envMft.(*manifest.LoadBalancedWebService)

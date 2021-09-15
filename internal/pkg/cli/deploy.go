@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
@@ -52,6 +53,10 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
+	deployStore, err := deploy.NewStore(store)
+	if err != nil {
+		return nil, fmt.Errorf("new deploy store: %w", err)
+	}
 	prompter := prompt.New()
 	return &deployOpts{
 		deployWkldVars: vars,
@@ -90,6 +95,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					newAppVersionGetter: func(appName string) (versionGetter, error) {
 						return describe.NewAppDescriber(appName)
 					},
+					snsTopicGetter: deployStore,
 				}
 				opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 				o.deployWkld = opts
@@ -107,6 +113,9 @@ func (o *deployOpts) Run() error {
 	}
 	if err := o.deployWkld.Execute(); err != nil {
 		return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
+	}
+	if err := o.deployWkld.RecommendActions(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -178,6 +187,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

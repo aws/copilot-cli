@@ -110,7 +110,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		layerARN = awsSDKLayerForRegion[s.rc.Region]
 	}
 
-	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app.Name, s.env, s.name)
+	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app.Name, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}

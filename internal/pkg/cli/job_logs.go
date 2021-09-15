@@ -78,9 +78,18 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 // Validate returns an error if the values provided by flags are invalid.
 func (o *jobLogsOpts) Validate() error {
 	if o.appName != "" {
-		_, err := o.configStore.GetApplication(o.appName)
-		if err != nil {
+		if _, err := o.configStore.GetApplication(o.appName); err != nil {
 			return err
+		}
+		if o.envName != "" {
+			if _, err := o.configStore.GetEnvironment(o.appName, o.envName); err != nil {
+				return err
+			}
+		}
+		if o.name != "" {
+			if _, err := o.configStore.GetJob(o.appName, o.name); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -173,13 +182,7 @@ Displays logs from specific task IDs.
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)

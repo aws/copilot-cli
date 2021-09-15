@@ -181,6 +181,160 @@ func TestECS_Service(t *testing.T) {
 				require.EqualError(t, tc.wantErr, gotErr.Error())
 			} else {
 				require.Equal(t, tc.wantSvc, gotSvc)
+				require.NoError(t, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestECS_UpdateService(t *testing.T) {
+	const (
+		clusterName = "mockCluster"
+		serviceName = "mockService"
+	)
+	testCases := map[string]struct {
+		forceUpdate   bool
+		maxTryNum     int
+		mockECSClient func(m *mocks.Mockapi)
+
+		wantErr error
+		wantSvc *Service
+	}{
+		"errors if failed to update service": {
+
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().UpdateService(&ecs.UpdateServiceInput{
+					Cluster: aws.String(clusterName),
+					Service: aws.String(serviceName),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("update service mockService from cluster mockCluster: some error"),
+		},
+		"errors if max retries exceeded": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().UpdateService(&ecs.UpdateServiceInput{
+					Cluster: aws.String(clusterName),
+					Service: aws.String(serviceName),
+				}).Return(&ecs.UpdateServiceOutput{
+					Service: &ecs.Service{
+						Deployments:  []*ecs.Deployment{{}, {}},
+						DesiredCount: aws.Int64(1),
+						RunningCount: aws.Int64(2),
+						ClusterArn:   aws.String(clusterName),
+						ServiceName:  aws.String(serviceName),
+					},
+				}, nil)
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String(clusterName),
+					Services: aws.StringSlice([]string{serviceName}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							Deployments:  []*ecs.Deployment{{}},
+							DesiredCount: aws.Int64(1),
+							RunningCount: aws.Int64(2),
+							ClusterArn:   aws.String(clusterName),
+							ServiceName:  aws.String(serviceName),
+						},
+					},
+				}, nil).Times(2)
+			},
+			wantErr: fmt.Errorf("wait until service mockService becomes stable: max retries 2 exceeded"),
+		},
+		"errors if failed to describe service": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().UpdateService(&ecs.UpdateServiceInput{
+					Cluster: aws.String(clusterName),
+					Service: aws.String(serviceName),
+				}).Return(&ecs.UpdateServiceOutput{
+					Service: &ecs.Service{
+						Deployments:  []*ecs.Deployment{{}, {}},
+						DesiredCount: aws.Int64(1),
+						RunningCount: aws.Int64(2),
+						ClusterArn:   aws.String(clusterName),
+						ServiceName:  aws.String(serviceName),
+					},
+				}, nil)
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String(clusterName),
+					Services: aws.StringSlice([]string{serviceName}),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("wait until service mockService becomes stable: describe service mockService: some error"),
+		},
+		"success": {
+			forceUpdate: true,
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().UpdateService(&ecs.UpdateServiceInput{
+					Cluster:            aws.String(clusterName),
+					Service:            aws.String(serviceName),
+					ForceNewDeployment: aws.Bool(true),
+				}).Return(&ecs.UpdateServiceOutput{
+					Service: &ecs.Service{
+						Deployments:  []*ecs.Deployment{{}, {}},
+						DesiredCount: aws.Int64(1),
+						RunningCount: aws.Int64(2),
+						ClusterArn:   aws.String(clusterName),
+						ServiceName:  aws.String(serviceName),
+					},
+				}, nil)
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String(clusterName),
+					Services: aws.StringSlice([]string{serviceName}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							Deployments:  []*ecs.Deployment{{}},
+							DesiredCount: aws.Int64(1),
+							RunningCount: aws.Int64(2),
+							ClusterArn:   aws.String(clusterName),
+							ServiceName:  aws.String(serviceName),
+						},
+					},
+				}, nil)
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String(clusterName),
+					Services: aws.StringSlice([]string{serviceName}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							Deployments:  []*ecs.Deployment{{}},
+							DesiredCount: aws.Int64(1),
+							RunningCount: aws.Int64(1),
+							ClusterArn:   aws.String(clusterName),
+							ServiceName:  aws.String(serviceName),
+						},
+					},
+				}, nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			service := ECS{
+				client:                mockECSClient,
+				maxServiceStableTries: 2,
+				pollIntervalDuration:  0,
+			}
+			var opts []UpdateServiceOpts
+			if tc.forceUpdate {
+				opts = append(opts, WithForceUpdate())
+			}
+
+			gotErr := service.UpdateService(clusterName, serviceName, opts...)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, gotErr.Error())
+			} else {
+				require.NoError(t, gotErr)
 			}
 		})
 

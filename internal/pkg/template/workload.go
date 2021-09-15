@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -216,6 +218,12 @@ type AutoscalingOpts struct {
 	Memory       *float64
 	Requests     *float64
 	ResponseTime *float64
+	QueueDelay   *AutoscalingQueueDelayOpts
+}
+
+// AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
+type AutoscalingQueueDelayOpts struct {
+	AcceptableBacklogPerTask int
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
@@ -232,10 +240,9 @@ type PublishOpts struct {
 	Topics []*Topic
 }
 
-// Topics holds information needed to render a SNSTopic in a container definition.
+// Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name           *string
-	AllowedWorkers []string
+	Name *string
 
 	Region    string
 	Partition string
@@ -251,6 +258,16 @@ type SubscribeOpts struct {
 	Queue  *SQSQueue
 }
 
+// HasTopicQueues returns true if any individual subscription has a dedicated queue.
+func (s *SubscribeOpts) HasTopicQueues() bool {
+	for _, t := range s.Topics {
+		if t.Queue != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
 	Name    *string
@@ -264,17 +281,11 @@ type SQSQueue struct {
 	Delay      *int64
 	Timeout    *int64
 	DeadLetter *DeadLetterQueue
-	FIFO       *FIFOQueue
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
 type DeadLetterQueue struct {
 	Tries *uint16
-}
-
-// FIFOQueue holds information needed to specify a SQS Queue as FIFO in a container definition.
-type FIFOQueue struct {
-	HighThroughput bool
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.
@@ -348,15 +359,18 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 
 	// Additional options for service templates.
-	WorkloadType         string
-	HealthCheck          *ecs.HealthCheck
-	HTTPHealthCheck      HTTPHealthCheckOpts
-	DeregistrationDelay  *int64
-	AllowedSourceIps     []string
-	RulePriorityLambda   string
-	DesiredCountLambda   string
-	EnvControllerLambda  string
-	CredentialsParameter string
+	WorkloadType        string
+	HealthCheck         *ecs.HealthCheck
+	HTTPHealthCheck     HTTPHealthCheckOpts
+	DeregistrationDelay *int64
+	AllowedSourceIps    []string
+
+	// Lambda functions.
+	RulePriorityLambda             string
+	DesiredCountLambda             string
+	EnvControllerLambda            string
+	CredentialsParameter           string
+	BacklogPerTaskCalculatorLambda string
 
 	// Additional options for job templates.
 	ScheduleExpression string
@@ -469,6 +483,8 @@ func withSvcParsingFuncs() ParseOption {
 			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
 			"logicalIDSafe":       StripNonAlphaNumFunc,
+			"wordSeries":          english.WordSeries,
+			"pluralWord":          english.PluralWord,
 		})
 	}
 }

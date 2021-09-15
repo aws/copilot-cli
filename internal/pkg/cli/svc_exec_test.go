@@ -31,18 +31,22 @@ type execSvcMocks struct {
 
 func TestSvcExec_Validate(t *testing.T) {
 	const (
-		inputApp = "my-app"
-		inputEnv = "my-env"
-		inputSvc = "my-svc"
+		mockApp = "my-app"
+		mockEnv = "my-env"
+		mockSvc = "my-svc"
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
+		inputApp         string
+		inputEnv         string
+		inputSvc         string
 		skipConfirmation *bool
 		setupMocks       func(mocks execSvcMocks)
 
 		wantedError error
 	}{
 		"should bubble error if cannot get application configuration": {
+			inputApp: mockApp,
 			setupMocks: func(m execSvcMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, mockErr)
 			},
@@ -50,6 +54,8 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("some error"),
 		},
 		"should bubble error if cannot get environment configuration": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -62,6 +68,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("some error"),
 		},
 		"should bubble error if cannot get service configuration": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -77,6 +86,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("some error"),
 		},
 		"skip without installing/updating if yes flag is set to be false": {
+			inputApp:         mockApp,
+			inputEnv:         mockEnv,
+			inputSvc:         mockSvc,
 			skipConfirmation: aws.Bool(false),
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
@@ -91,6 +103,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			},
 		},
 		"should bubble error if cannot validate ssm plugin": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -107,6 +122,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("validate ssm plugin: some error"),
 		},
 		"should bubble error if cannot prompt to confirm install": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -125,6 +143,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("prompt to confirm installing the plugin: some error"),
 		},
 		"should bubble error if cannot confirm install": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -143,6 +164,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: errSSMPluginCommandInstallCancelled,
 		},
 		"should bubble error if cannot install binary": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -162,6 +186,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("install ssm plugin: some error"),
 		},
 		"should bubble error if cannot prompt to confirm update": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -183,6 +210,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("prompt to confirm updating the plugin: some error"),
 		},
 		"should proceed if cannot confirm update": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -204,6 +234,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			},
 		},
 		"should bubble error if cannot update the binary": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -227,7 +260,19 @@ func TestSvcExec_Validate(t *testing.T) {
 
 			wantedError: fmt.Errorf("update ssm plugin: some error"),
 		},
+		"skip validation if app flag is not set": {
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.ssmPluginManager.EXPECT().ValidateBinary().Return(nil),
+				)
+			},
+		},
 		"valid case": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -246,6 +291,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: nil,
 		},
 		"valid case with ssm plugin installing": {
+			inputApp: mockApp,
+			inputEnv: mockEnv,
+			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -266,6 +314,9 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: nil,
 		},
 		"valid case with ssm plugin updating and skip confirming to install": {
+			inputApp:         mockApp,
+			inputEnv:         mockEnv,
+			inputSvc:         mockSvc,
 			skipConfirmation: aws.Bool(true),
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
@@ -308,9 +359,9 @@ func TestSvcExec_Validate(t *testing.T) {
 
 			execSvcs := &svcExecOpts{
 				execVars: execVars{
-					name:             inputSvc,
-					appName:          inputApp,
-					envName:          inputEnv,
+					name:             tc.inputSvc,
+					appName:          tc.inputApp,
+					envName:          tc.inputEnv,
 					skipConfirmation: tc.skipConfirmation,
 				},
 				store:            mockStoreReader,

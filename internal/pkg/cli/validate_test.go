@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -670,6 +671,169 @@ func TestValidateSecretName(t *testing.T) {
 				require.EqualError(t, got, tc.want.Error())
 			} else {
 				require.NoError(t, got)
+			}
+		})
+	}
+}
+
+func Test_validatePubSubTopicName(t *testing.T) {
+	testCases := map[string]struct {
+		inName string
+
+		wantErr error
+	}{
+		"valid topic name": {
+			inName: "a-Perfectly_V4l1dString",
+		},
+		"error when no topic name": {
+			inName:  "",
+			wantErr: errMissingPublishTopicField,
+		},
+		"error when invalid topic name": {
+			inName:  "OHNO~/`...,",
+			wantErr: errInvalidPubSubTopicName,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validatePubSubName(tc.inName)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateSubscriptionKey(t *testing.T) {
+	testCases := map[string]struct {
+		inSub interface{}
+
+		wantErr error
+	}{
+		"valid subscription": {
+			inSub:   "svc:topic",
+			wantErr: nil,
+		},
+		"error when non string": {
+			inSub:   true,
+			wantErr: errValueNotAString,
+		},
+		"error when bad format": {
+			inSub:   "svctopic",
+			wantErr: errSubscribeBadFormat,
+		},
+		"error when bad publisher name": {
+			inSub:   "svc:@@@@@@@h",
+			wantErr: fmt.Errorf("invalid topic subscription topic name `@@@@@@@h`: %w", errInvalidPubSubTopicName),
+		},
+		"error when bad svc name": {
+			inSub:   "n#######:topic",
+			wantErr: fmt.Errorf("invalid topic subscription service name `n#######`: %w", errValueBadFormat),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateSubscriptionKey(tc.inSub)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateSubscribe(t *testing.T) {
+	testCases := map[string]struct {
+		inNoSubscriptions bool
+		inSubscribeTags   []string
+
+		wantErr error
+	}{
+		"valid subscription": {
+			inNoSubscriptions: false,
+			inSubscribeTags:   []string{"svc1:topic1", "svc2:topic2"},
+			wantErr:           nil,
+		},
+		"no error when no subscriptions": {
+			inNoSubscriptions: true,
+			inSubscribeTags:   nil,
+			wantErr:           nil,
+		},
+		"error when no-subscriptions and subscribe": {
+			inNoSubscriptions: true,
+			inSubscribeTags:   []string{"svc1:topic1", "svc2:topic2"},
+			wantErr:           errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
+		},
+		"error when bad subscription tag": {
+			inNoSubscriptions: false,
+			inSubscribeTags:   []string{"svc:topic", "svc:@@@@@@@h"},
+			wantErr:           fmt.Errorf("invalid topic subscription topic name `@@@@@@@h`: %w", errInvalidPubSubTopicName),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateSubscribe(tc.inNoSubscriptions, tc.inSubscribeTags)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateTopicsExist(t *testing.T) {
+	mockApp := "app"
+	mockEnv := "env"
+	mockAllowedTopics := []string{
+		"arn:aws:sqs:us-west-2:123456789012:app-env-database-events",
+		"arn:aws:sqs:us-west-2:123456789012:app-env-database-orders",
+		"arn:aws:sqs:us-west-2:123456789012:app-env-api-events",
+	}
+	duration10Hours := 10 * time.Hour
+	testGoodTopics := []manifest.TopicSubscription{
+		{
+			Name:    "events",
+			Service: "database",
+		},
+		{
+			Name:    "orders",
+			Service: "database",
+			Queue: &manifest.SQSQueue{
+				Retention: &duration10Hours,
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inTopics    []manifest.TopicSubscription
+		inTopicARNs []string
+
+		wantErr string
+	}{
+		"empty subscriptions": {
+			inTopics:    nil,
+			inTopicARNs: mockAllowedTopics,
+		},
+		"topics are valid": {
+			inTopics:    testGoodTopics,
+			inTopicARNs: mockAllowedTopics,
+		},
+		"topic is invalid": {
+			inTopics:    testGoodTopics,
+			inTopicARNs: []string{},
+			wantErr:     "SNS topic app-env-database-events does not exist in environment env",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateTopicsExist(tc.inTopics, tc.inTopicARNs, mockApp, mockEnv)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

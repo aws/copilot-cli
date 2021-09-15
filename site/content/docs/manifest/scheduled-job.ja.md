@@ -259,6 +259,8 @@ logging セクションには、コンテナの [FireLens](https://docs.aws.amaz
 <span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
 任意項目。カスタムの Fluent Bit イメージ内の設定ファイルのフルパス。
 
+{% include 'publish.ja.md' %}
+
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
