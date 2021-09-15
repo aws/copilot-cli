@@ -6,6 +6,8 @@ package app_with_domain_test
 import (
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,26 +49,58 @@ var _ = Describe("App With Domain", func() {
 	})
 
 	Context("when creating new environments", func() {
-		var envInitErr error
+		fatalErrors := make(chan error)
+		wgDone := make(chan bool)
+		It("env init should succeed for creating test and prod environments", func() {
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.EnvInit(&client.EnvInitRequest{
+						AppName: appName,
+						EnvName: "test",
+						Profile: "default",
+						Prod:    false,
+					})
+					if err == nil {
+						break
+					}
+					if !isOperationInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.EnvInit(&client.EnvInitRequest{
+						AppName: appName,
+						EnvName: "prod",
+						Profile: "own-iad",
+						Prod:    false,
+					})
+					if err == nil {
+						break
+					}
+					if !isOperationInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				wg.Wait()
+				close(wgDone)
+				close(fatalErrors)
+			}()
 
-		It("env init should succeed for creating the test environment", func() {
-			_, envInitErr = cli.EnvInit(&client.EnvInitRequest{
-				AppName: appName,
-				EnvName: "test",
-				Profile: "default",
-				Prod:    false,
-			})
-			Expect(envInitErr).NotTo(HaveOccurred())
-		})
-
-		It("env init should succeed for creating the prod environment", func() {
-			_, envInitErr = cli.EnvInit(&client.EnvInitRequest{
-				AppName: appName,
-				EnvName: "prod",
-				Profile: prodEnvironmentProfile,
-				Prod:    false,
-			})
-			Expect(envInitErr).NotTo(HaveOccurred())
+			select {
+			case <-wgDone:
+			case err := <-fatalErrors:
+				Expect(err).NotTo(HaveOccurred())
+			}
 		})
 	})
 
@@ -95,33 +129,76 @@ var _ = Describe("App With Domain", func() {
 	})
 
 	Context("when deploying a Load Balanced Web Service", func() {
-		var deployErr error
+		It("deployments should succeed", func() {
+			fatalErrors := make(chan error)
+			wgDone := make(chan bool)
+			var wg sync.WaitGroup
+			wg.Add(3)
+			// deploy hello to test.
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.SvcDeploy(&client.SvcDeployInput{
+						Name:     "hello",
+						EnvName:  "test",
+						ImageTag: "hello",
+					})
+					if err == nil {
+						break
+					}
+					if !isOperationInProgress(content) && !isImagePushingInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			// deploy frontend to test.
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.SvcDeploy(&client.SvcDeployInput{
+						Name:     "frontend",
+						EnvName:  "test",
+						ImageTag: "frontend",
+					})
+					if err == nil {
+						break
+					}
+					if !isOperationInProgress(content) && !isImagePushingInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			// deploy hello to prod.
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.SvcDeploy(&client.SvcDeployInput{
+						Name:     "hello",
+						EnvName:  "prod",
+						ImageTag: "hello",
+					})
+					if err == nil {
+						break
+					}
+					if !isOperationInProgress(content) && !isImagePushingInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				wg.Wait()
+				close(wgDone)
+				close(fatalErrors)
+			}()
 
-		It("deploy hello to test should succeed", func() {
-			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "hello",
-				EnvName:  "test",
-				ImageTag: "hello",
-			})
-			Expect(deployErr).NotTo(HaveOccurred())
-		})
-
-		It("deploy frontend to test should succeed", func() {
-			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "frontend",
-				EnvName:  "test",
-				ImageTag: "frontend",
-			})
-			Expect(deployErr).NotTo(HaveOccurred())
-		})
-
-		It("deploy hello to prod should succeed", func() {
-			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "hello",
-				EnvName:  "prod",
-				ImageTag: "hello",
-			})
-			Expect(deployErr).NotTo(HaveOccurred())
+			select {
+			case <-wgDone:
+			case err := <-fatalErrors:
+				Expect(err).NotTo(HaveOccurred())
+			}
 		})
 
 		It("svc show should contain the expected domain and the request should succeed", func() {
