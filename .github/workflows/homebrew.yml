@@ -1,0 +1,127 @@
+name: homebrew
+on:
+  release:
+    types: [released]
+
+jobs:
+  download-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: macOS/amd64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-darwin-amd64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-darwin-amd64
+          cp copilot-darwin-amd64 copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_macOS_amd64.tar.gz copilot
+      - name: macOS/arm64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-darwin-arm64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-darwin-arm64
+          cp copilot-darwin-arm64 copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_macOS_arm64.tar.gz copilot
+      - name: linux/amd64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-linux https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-linux
+          cp copilot-linux copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_linux_amd64.tar.gz copilot
+      - name: linux/arm64 binary
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -Lo copilot-linux-arm64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-linux-arm64
+          cp copilot-linux-arm64 copilot
+          chmod +x copilot
+          tar czf copilot_${GITHUB_REF##*/}_linux_arm64.tar.gz copilot
+      - name: Save archive files
+        uses: actions/upload-artifact@v2
+        with:
+          name: save tar files
+          path: '*.tar.gz'
+          retention-days: 7
+
+  update-release:
+    runs-on: ubuntu-latest
+    needs: download-and-archive
+    steps:
+      - name: Download archive files
+        uses: actions/download-artifact@v2
+        with:
+          name: save tar files
+      - name: Update release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: '*.tar.gz'
+
+  create-pr:
+    runs-on: ubuntu-latest
+    needs: update-release
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download archive files
+        id: download
+        uses: actions/download-artifact@v2
+        with:
+          name: save tar files
+      - name: Checkout bottle repo
+        uses: actions/checkout@v2
+        with:
+          repository: 'aws/homebrew-tap'
+          path: 'homebrew-tap'
+      - name: Update version
+        run: |
+          tmp=$(mktemp)
+          jq --arg version "${GITHUB_REF##*/}" '.version = $version' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
+      - name: Update root_url
+        run: |
+          tmp=$(mktemp)
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          jq --arg version "${version}" --arg semvar "${semvar}" '.bottle.root_url = "https://github.com/aws/copilot-cli/releases/download/" + $version + "/copilot_" + $semvar + "_"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
+      - name: Update sierra
+        run: |
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_macOS_amd64.tar.gz | awk '{print $NF}')
+          tmp=$(mktemp)
+          jq --arg sha "$sha" '.bottle.sha256.sierra = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
+      - name: Update arm64_big_sur
+        run: |
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_macOS_arm64.tar.gz | awk '{print $NF}')
+          tmp=$(mktemp)
+          jq --arg sha "$sha" '.bottle.sha256.arm64_big_sur = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
+      - name: Update linux
+        run: |
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_linux_amd64.tar.gz | awk '{print $NF}')
+          tmp=$(mktemp)
+          jq --arg sha "$sha" '.bottle.sha256.linux = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
+      - name: Update linux_arm
+        run: |
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_linux_arm64.tar.gz | awk '{print $NF}')
+          tmp=$(mktemp)
+          jq --arg sha "$sha" '.bottle.sha256.linux_arm = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
+      - name: Create commits
+        run: |
+          cd homebrew-tap
+          git config user.name 'ecs-cicd-bot'
+          git config user.email 'ecs-cicd-bot@users.noreply.github.com'
+          git add bottle-configs/copilot-cli.json
+          git commit -m "chore: upgrade copilot-cli to ${GITHUB_REF##*/}"
+      - name: Set pull-request variables
+        id: vars
+        run: |
+          echo ::set-output name=version::"${GITHUB_REF##*/}"
+          echo ::set-output name=pr_title::"chore: upgrade copilot-cli to ${GITHUB_REF##*/}"
+          echo ::set-output name=pr_body::"Created by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+      - name: Create pull-request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          path: homebrew-tap
+          delete-branch: true
+          push-to-fork: ecs-cicd-bot/homebrew-tap
+          title: ${{ steps.vars.outputs.pr_title }}
+          body: ${{ steps.vars.outputs.pr_body }}
+          branch: "upgrade-copilot-${{ steps.vars.outputs.version }}"
+          token: ${{ secrets.ECS_CICD_BOT }}
