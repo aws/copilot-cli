@@ -157,6 +157,7 @@ func TestProvider_FromProfile(t *testing.T) {
 		// Since "walk-like-an-egyptian" is (very likely) a non-existent profile, whether the region information
 		// is missing depends on whether the `AWS_REGION` environment variable is set.
 		err := os.Unsetenv("AWS_REGION")
+		require.NoError(t, err)
 		err = os.Unsetenv("AWS_SESSION_TOKEN")
 		require.NoError(t, err)
 
