@@ -104,14 +104,24 @@ Resources:
               - ecr:CompleteLayerUpload
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.AppName}}}}
+          {{- if ne .Source.ProviderName "GitHubV1" }} {{- if eq .Source.OutputArtifactFormat "CODEBUILD_CLONE_REF" }}
+          # Add the policy needed to use CODEBUILD_CLONE_REF.
           {{- if eq .Source.ProviderName "CodeCommit" }}
-          {{- if ne .Source.OutputArtifactFormat "" }}
-          - Effect: Allow # The policy needed to use CODEBUILD_CLONE_REF for CodeCommit OutputArtifactFormat.
-            Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:{{.Source.Repository}}'
+          - Effect: Allow
             Action:
               - codecommit:GitPull
-          {{- end }}
-          {{- end }}
+            Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:{{.Source.Repository}}'
+          {{- else if isCodeStarConnection .Source }}
+          - Effect: Allow
+            Action:
+              - codestar-connections:UseConnection
+            {{- if eq .Source.ConnectionARN ""}}
+            Resource: !Ref SourceConnection
+            {{- else}}
+            Resource: {{$.Source.Connection}}
+            {{- end }} {{/* endif eq .Source.ConnectionARN "" */}}
+          {{- end }} {{/* if eq .Source.ProviderName "CodeCommit" */}}
+          {{- end }} {{ /* endif ne .Source.OutputArtifactFormat ""}}{{- end }} {{ /* endif ne .Source.ProviderName "GitHubV1"}}
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -332,6 +342,9 @@ Resources:
                 {{- end}}
                 FullRepositoryId: {{$.Source.Repository}}
                 BranchName: {{$.Source.Branch}}
+                {{- if ne .Source.OutputArtifactFormat "" }}
+                OutputArtifactFormat: {{$.Source.OutputArtifactFormat}}
+                {{- end}}
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
