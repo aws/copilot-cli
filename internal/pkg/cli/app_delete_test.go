@@ -137,7 +137,7 @@ type deleteAppMocks struct {
 	envDeleter      *mocks.MockexecuteAsker
 	taskDeleter     *mocks.Mockexecutor
 	bucketEmptier   *mocks.MockbucketEmptier
-	pipelineDeleter *mocks.MockdeletePipelineRunner
+	pipelineDeleter *mocks.Mockcmd
 }
 
 func TestDeleteAppOpts_Execute(t *testing.T) {
@@ -210,7 +210,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
 					// delete pipeline
-					mocks.pipelineDeleter.EXPECT().Run().Return(nil),
+					mocks.pipelineDeleter.EXPECT().Validate().Return(nil),
+					mocks.pipelineDeleter.EXPECT().Ask().Return(nil),
+					mocks.pipelineDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteAppResources
 					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
@@ -260,7 +262,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
 					// delete pipeline
-					mocks.pipelineDeleter.EXPECT().Run().Return(workspace.ErrNoPipelineInWorkspace),
+					mocks.pipelineDeleter.EXPECT().Validate().Return(nil),
+					mocks.pipelineDeleter.EXPECT().Ask().Return(nil),
+					mocks.pipelineDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteAppResources
 					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
@@ -320,9 +324,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				return mockEnvDeleteExecutor, nil
 			}
 
-			mockRunner := mocks.NewMockdeletePipelineRunner(ctrl)
-			mockRunnerProvider := func() (deletePipelineRunner, error) {
-				return mockRunner, nil
+			mockPipelineDeleteCmd := mocks.NewMockcmd(ctrl)
+			mockRunnerProvider := func() (cmd, error) {
+				return mockPipelineDeleteCmd, nil
 			}
 
 			mocks := deleteAppMocks{
@@ -336,7 +340,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				envDeleter:      mockEnvDeleteExecutor,
 				taskDeleter:     mockTaskDeleteExecutor,
 				bucketEmptier:   mockBucketEmptier,
-				pipelineDeleter: mockRunner,
+				pipelineDeleter: mockPipelineDeleteCmd,
 			}
 			test.setupMocks(mocks)
 

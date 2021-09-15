@@ -32,6 +32,18 @@ count:
 # Enable running commands in your container.
 exec: true
 
+taskdef_overrides:
+  - path: "ContainerDefinitions[0].Ulimits[-].Name"
+    value: "cpu"
+  - path: "ContainerDefinitions[0].Ulimits[0].SoftLimit"
+    value: 1024
+  - path: "ContainerDefinitions[0].Ulimits[0].HardLimit"
+    value: 2048
+  - path: "ContainerDefinitions[0].PortMappings[-].ContainerPort"
+    value: 2056
+  - path: "ContainerDefinitions[0].PortMappings[1].Protocol"
+    value: "udp"
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

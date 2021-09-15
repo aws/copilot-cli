@@ -54,7 +54,8 @@ compile-linux:
 
 .PHONY: compile-darwin
 compile-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-darwin-amd64 ./cmd/copilot
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-darwin-arm64 ./cmd/copilot
 
 .PHONY: test
 test: run-unit-test custom-resource-tests
@@ -147,7 +148,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go -source=./internal/pkg/describe/describe.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/stack/mocks/mock_stack.go -source=./internal/pkg/describe/stack/stack.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status.go -source=./internal/pkg/describe/status.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status_describe.go -source=./internal/pkg/describe/status_describe.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_show.go -source=./internal/pkg/describe/pipeline_show.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_status.go -source=./internal/pkg/describe/pipeline_status.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ecr/mocks/mock_ecr.go -source=./internal/pkg/aws/ecr/ecr.go
@@ -188,4 +188,5 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/list/mocks/mock_list.go -source=./internal/pkg/list/list.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/apprunner/apprunner.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go

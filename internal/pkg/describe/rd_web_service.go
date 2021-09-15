@@ -26,15 +26,8 @@ type RDWebServiceDescriber struct {
 	initServiceDescriber func(string) error
 }
 
-// NewRDWebServiceConfig contains fields that initiates RDWebServiceDescriber struct.
-type NewRDWebServiceConfig struct {
-	NewServiceConfig
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
-}
-
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
-func NewRDWebServiceDescriber(opt NewRDWebServiceConfig) (*RDWebServiceDescriber, error) {
+func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, error) {
 	describer := &RDWebServiceDescriber{
 		app:              opt.App,
 		svc:              opt.Svc,
@@ -123,22 +116,6 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 		environments: environments,
 	}, nil
-}
-
-// URI returns the WebServiceURI to identify this service uniquely given an environment name.
-func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
-
-	err := d.initServiceDescriber(envName)
-	if err != nil {
-		return "", err
-	}
-
-	serviceURL, err := d.envSvcDescribers[envName].ServiceURL()
-	if err != nil {
-		return "", fmt.Errorf("get outputs for service %s: %w", d.svc, err)
-	}
-
-	return serviceURL, nil
 }
 
 // rdWebSvcDesc contains serialized parameters for a web service.

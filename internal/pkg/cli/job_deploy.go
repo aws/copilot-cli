@@ -367,8 +367,8 @@ func (o *deployJobOpts) manifest() (interface{}, error) {
 	return envMft, nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deployJobOpts) RecommendedActions() []string {
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deployJobOpts) RecommendActions() error {
 	return nil
 }
 
@@ -435,16 +435,7 @@ func buildJobDeployCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

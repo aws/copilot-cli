@@ -219,10 +219,11 @@ EnvironmentManagerRole:
           Effect: Allow
           Action: [
             "apprunner:DescribeService",
+            "apprunner:ListOperations",
             "apprunner:ListServices",
             "apprunner:PauseService",
             "apprunner:ResumeService",
-            "apprunner:ListOperations"
+            "apprunner:StartDeployment"
           ]
           Resource: "*"
         - Sid: Tags

@@ -1,0 +1,191 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a request driven web service on AWS App Runner.
+Parameters:
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  WorkloadName:
+    Type: String
+  ContainerImage:
+    Type: String
+  ContainerPort:
+    Type: Number
+  ImageRepositoryType:
+    Type: String
+  InstanceCPU:
+    Type: String
+  InstanceMemory:
+    Type: String
+  HealthCheckPath:
+    Type: String
+    Default: ''
+  HealthCheckInterval:
+    Type: String
+    Default: ''
+  HealthCheckTimeout:
+    Type: String
+    Default: ''
+  HealthCheckHealthyThreshold:
+    Type: String
+    Default: ''
+  HealthCheckUnhealthyThreshold:
+    Type: String
+    Default: ''
+  AddonsTemplateURL:
+    Description: 'URL of the addons nested stack template within the S3 bucket.'
+    Type: String
+    Default: ''
+
+Conditions:
+  # App Runner will not accept an AccessRole for ImageRepositoryTypes other than ECR.
+  # In this scenario the request will fail.
+  NeedsAccessRole:
+    !Equals [!Ref ImageRepositoryType, 'ECR']
+  HasHealthCheckPath:
+    !Not [!Equals [!Ref HealthCheckPath, '']]
+  HasHealthCheckInterval:
+    !Not [!Equals [!Ref HealthCheckInterval, '']]
+  HasHealthCheckTimeout:
+    !Not [!Equals [!Ref HealthCheckTimeout, '']]
+  HasHealthCheckHealthyThreshold:
+    !Not [!Equals [!Ref HealthCheckHealthyThreshold, '']]
+  HasHealthCheckUnhealthyThreshold:
+    !Not [!Equals [!Ref HealthCheckUnhealthyThreshold, '']]
+  HasAddons: # If a bucket URL is specified, that means the template exists.
+    !Not [!Equals [!Ref AddonsTemplateURL, '']]
+
+Resources:
+  AccessRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role for App Runner to use on your behalf to pull your image from ECR'
+    Type: AWS::IAM::Role
+    Condition: NeedsAccessRole
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2008-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+
+  InstanceRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role to control permissions for the containers in your service'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: tasks.apprunner.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'DenyIAMExceptTaggedRoles'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Deny'
+                Action: 'iam:*'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 'sts:AssumeRole'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource:
+                  - !Ref customersSNSTopic
+
+  Service:
+    Metadata:
+      'aws:copilot:description': 'An App Runner service to run and manage your containers'
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+      SourceConfiguration:
+        AuthenticationConfiguration: !If
+          - NeedsAccessRole
+          - AccessRoleArn: !GetAtt AccessRole.Arn
+          - !Ref AWS::NoValue
+        AutoDeploymentsEnabled: false
+        ImageRepository:
+          ImageIdentifier: !Ref ContainerImage
+          ImageRepositoryType: !Ref ImageRepositoryType
+          ImageConfiguration:
+            Port: !Ref ContainerPort
+            RuntimeEnvironmentVariables:
+              - Name: COPILOT_APPLICATION_NAME
+                Value: !Ref AppName
+              - Name: COPILOT_ENVIRONMENT_NAME
+                Value: !Ref EnvName
+              - Name: COPILOT_SERVICE_NAME
+                Value: !Ref WorkloadName
+              - Name: COPILOT_SNS_TOPIC_ARNS
+                Value: '{"customers":"arn:aws:sns:us-west-2:123456789123:my-app-test-frontend-customers"}'
+      InstanceConfiguration:
+        Cpu: !Ref InstanceCPU
+        Memory: !Ref InstanceMemory
+        InstanceRoleArn: !GetAtt InstanceRole.Arn
+      Tags:
+        - Key: copilot-application
+          Value: !Ref AppName
+        - Key: copilot-environment
+          Value: !Ref EnvName
+        - Key: copilot-service
+          Value: !Ref WorkloadName
+
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvName
+        Name: !Ref WorkloadName
+      TemplateURL:
+        !Ref AddonsTemplateURL
+
+
+  customersSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast customers events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-customers'
+      KmsMasterKeyId: 'alias/aws/sns'
+  customersSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: customersSNSTopic
+    Properties:
+      Topics:
+        - !Ref customersSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref customersSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"

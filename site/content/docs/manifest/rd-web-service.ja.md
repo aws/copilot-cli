@@ -146,6 +146,8 @@ Service のインスタンスに割り当てる CPU ユニット数。指定可�
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Copilot は Service 名などを常に環境変数としてインスタンスに対して渡します。本フィールドではそれら以外に追加で渡したい環境変数をキーバーリューのペアで指定します。
 
+{% include 'publish.ja.md' %}
+
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  

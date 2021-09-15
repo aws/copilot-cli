@@ -43,7 +43,7 @@ func TestWorkerService_Template(t *testing.T) {
 		ServiceDiscoveryEndpoint: "test.my-app.local",
 		AccountID:                "123456789123",
 		Region:                   "us-west-2",
-	}, []string{"arn:aws:sns:us-west-2:123456789123:my-app-test-dogsvc-givesdogs", "arn:aws:sns:us-west-2:123456789123:my-app-test-dogsvc-giveshuskies"})
+	})
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
@@ -61,8 +61,6 @@ func TestWorkerService_Template(t *testing.T) {
 		// Cut random GUID from template.
 		actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
 		actualString := string(actualBytes)
-		// Fix random order of json
-		actualString = strings.ReplaceAll(actualString, "'{\"dogsvcGiveshuskiesEventsQueue\":\"${dogsvcgiveshuskiesURL}\",\"eventsQueue\":\"${mainURL}\"}'", "'{\"eventsQueue\":\"${mainURL}\",\"dogsvcGiveshuskiesEventsQueue\":\"${dogsvcgiveshuskiesURL}\"}'")
 		// Cut out zip file for more readable output
 		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 		actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")

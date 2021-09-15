@@ -266,4 +266,34 @@ var _ = Describe("App Runner", func() {
 		})
 	})
 
+	Context("force deploy the service", func() {
+		var (
+			svcDeployError error
+			svcStatus      *client.SvcStatusOutput
+			svcStatusError error
+		)
+
+		BeforeAll(func() {
+			_, svcDeployError = cli.SvcDeploy(&client.SvcDeployInput{
+				EnvName: envName,
+				Name:    svcName,
+				Force:   true,
+			})
+			svcStatus, svcStatusError = cli.SvcStatus(&client.SvcStatusRequest{
+				Name:    svcName,
+				AppName: appName,
+				EnvName: envName,
+			})
+		})
+
+		It("should not an return error", func() {
+			Expect(svcDeployError).NotTo(HaveOccurred())
+			Expect(svcStatusError).NotTo(HaveOccurred())
+		})
+
+		It("should successfully force deploy service", func() {
+			Expect(svcStatus.Status).To(Equal("RUNNING"))
+		})
+	})
+
 })

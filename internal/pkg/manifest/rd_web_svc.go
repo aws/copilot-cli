@@ -31,7 +31,7 @@ type RequestDrivenWebServiceConfig struct {
 	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
-	Publish                           *PublishConfig          `yaml:"publish"`
+	PublishConfig                     PublishConfig           `yaml:"publish"`
 }
 
 type RequestDrivenWebServiceHttpConfig struct {
@@ -39,18 +39,18 @@ type RequestDrivenWebServiceHttpConfig struct {
 	Alias                    *string                 `yaml:"alias"`
 }
 
+// AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
+type AppRunnerInstanceConfig struct {
+	CPU      *int                 `yaml:"cpu"`
+	Memory   *int                 `yaml:"memory"`
+	Platform PlatformArgsOrString `yaml:"platform,omitempty"`
+}
+
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
 	Port     uint16
-	Platform *PlatformArgsOrString
-}
-
-// AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
-type AppRunnerInstanceConfig struct {
-	CPU      *int                  `yaml:"cpu"`
-	Memory   *int                  `yaml:"memory"`
-	Platform *PlatformArgsOrString `yaml:"platform,omitempty"`
+	Platform PlatformArgsOrString
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -65,22 +65,6 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	return svc
 }
 
-// newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.
-func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
-	return &RequestDrivenWebService{
-		Workload: Workload{
-			Type: aws.String(RequestDrivenWebServiceType),
-		},
-		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-			ImageConfig: ImageWithPort{},
-			InstanceConfig: AppRunnerInstanceConfig{
-				CPU:    aws.Int(1024),
-				Memory: aws.Int(2048),
-			},
-		},
-	}
-}
-
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
@@ -91,6 +75,17 @@ func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// Port returns the exposed the exposed port in the manifest.
+// A RequestDrivenWebService always has a port exposed therefore the boolean is always true.
+func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {
+	return aws.Uint16Value(s.ImageConfig.Port), true
+}
+
+// Publish returns the list of topics where notifications can be published.
+func (s *RequestDrivenWebService) Publish() []Topic {
+	return s.RequestDrivenWebServiceConfig.PublishConfig.Topics
+}
+
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
@@ -98,7 +93,7 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 
 // TaskPlatform returns the platform for the service.
 func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if s.InstanceConfig.Platform == nil {
+	if s.InstanceConfig.Platform.PlatformString == nil {
 		return nil, nil
 	}
 	return aws.String(platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
@@ -117,13 +112,15 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 		return &s, nil
 	}
 	// Apply overrides to the original service configuration.
-	err := mergo.Merge(&s, RequestDrivenWebService{
-		RequestDrivenWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
-
-	if err != nil {
-		return nil, err
+	for _, t := range defaultTransformers {
+		err := mergo.Merge(&s, RequestDrivenWebService{
+			RequestDrivenWebServiceConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	s.Environments = nil
 	return &s, nil
 }
@@ -131,7 +128,7 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 // WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
 // Here, this method is simply satisfying the WorkloadManifest interface.
 func (s *RequestDrivenWebService) windowsCompatibility() error {
-	if s.InstanceConfig.Platform == nil {
+	if s.InstanceConfig.Platform.IsEmpty() {
 		return nil
 	}
 	// Error out if user added Windows as platform in manifest.
@@ -142,4 +139,20 @@ func (s *RequestDrivenWebService) windowsCompatibility() error {
 		return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)
 	}
 	return nil
+}
+
+// newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.
+func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
+	return &RequestDrivenWebService{
+		Workload: Workload{
+			Type: aws.String(RequestDrivenWebServiceType),
+		},
+		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+			ImageConfig: ImageWithPort{},
+			InstanceConfig: AppRunnerInstanceConfig{
+				CPU:    aws.Int(1024),
+				Memory: aws.Int(2048),
+			},
+		},
+	}
 }

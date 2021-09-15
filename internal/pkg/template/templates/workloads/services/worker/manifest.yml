@@ -15,7 +15,7 @@ image:
 {{- if .ImageConfig.Image.Location}}
   location: {{.ImageConfig.Image.Location}}
 {{- end}}
-{{- if .ImageConfig.HealthCheck}}
+{{- if not .ImageConfig.HealthCheck.IsEmpty}}
   healthcheck:
     # Container health checks
     command: {{fmtSlice (quoteSlice .ImageConfig.HealthCheck.Command)}}
@@ -34,8 +34,8 @@ count: {{.Count.Value}}       # Number of tasks that should be running in your s
 {{- if not .TaskConfig.IsWindows }}
 exec: true     # Enable running commands in your container.
 {{- end}}
-{{- if .Subscribe}}{{- if .Subscribe.Topics}}
-# The events will be available in an SQS queue via the env var $COPILOT_SQS_QUEUE_ARN
+{{if .Subscribe}}{{- if .Subscribe.Topics}}
+# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 subscribe:
   topics:
 {{- range $topic := .Subscribe.Topics}}
@@ -44,7 +44,7 @@ subscribe:
 {{- end}}
 {{- else}}
 # You can register to topics from other services.
-# The events will be available in an SQS queue via the env var $COPILOT_SQS_QUEUE_ARN
+# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 # subscribe:
 #   topics: 
 #     - name: topic-from-another-service

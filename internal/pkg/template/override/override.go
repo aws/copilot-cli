@@ -5,6 +5,7 @@
 package override
 
 import (
+	"bytes"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
@@ -13,7 +14,7 @@ import (
 // CloudFormationTemplate overrides the given CloudFormation template by applying
 // the override rules.
 func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, error) {
-	content, err := unmarshalCFNYaml(origTemp)
+	content, err := unmarshalYAML(origTemp)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +25,7 @@ func CloudFormationTemplate(overrideRules []Rule, origTemp []byte) ([]byte, erro
 	if err := applyRules(ruleNodes, content); err != nil {
 		return nil, err
 	}
-	output, err := marshalCFNYaml(content)
+	output, err := marshalYAML(content)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +47,22 @@ func parseRules(rules []Rule) ([]nodeUpserter, error) {
 	return ruleNodes, nil
 }
 
-func unmarshalCFNYaml(temp []byte) (*yaml.Node, error) {
-	return nil, nil
+func unmarshalYAML(temp []byte) (*yaml.Node, error) {
+	var node yaml.Node
+	if err := yaml.Unmarshal(temp, &node); err != nil {
+		return nil, fmt.Errorf("unmarshal YAML template: %w", err)
+	}
+	return &node, nil
 }
 
-func marshalCFNYaml(content *yaml.Node) ([]byte, error) {
-	return nil, nil
+func marshalYAML(content *yaml.Node) ([]byte, error) {
+	var out bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&out)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(content); err != nil {
+		return nil, fmt.Errorf("marshal YAML template: %w", err)
+	}
+	return out.Bytes(), nil
 }
 
 func applyRules(rules []nodeUpserter, content *yaml.Node) error {

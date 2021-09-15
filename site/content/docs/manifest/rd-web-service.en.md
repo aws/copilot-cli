@@ -145,6 +145,8 @@ Operating system and architecture (formatted as `[os]/[arch]`) to pass with `doc
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
 
+{% include 'publish.en.md' %}
+
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  

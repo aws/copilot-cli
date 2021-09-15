@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/robfig/cron/v3"
 )
 
@@ -106,7 +107,8 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: mft,
 
@@ -133,7 +135,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
 	}
-	publishers, err := convertPublish(j.manifest.Publish, j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
+	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for job %s: %w`, j.name, err)
 	}
@@ -191,7 +193,11 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
 	}
-	return content.String(), nil
+	overridenTpl, err := j.taskDefOverrideFunc(convertTaskDefOverrideRules(j.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

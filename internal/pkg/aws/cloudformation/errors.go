@@ -19,6 +19,16 @@ func (e *ErrChangeSetEmpty) Error() string {
 	return fmt.Sprintf("change set with name %s for stack %s has no changes", e.cs.name, e.cs.stackName)
 }
 
+// NewMockErrChangeSetEmpty creates a mock ErrChangeSetEmpty.
+func NewMockErrChangeSetEmpty() *ErrChangeSetEmpty {
+	return &ErrChangeSetEmpty{
+		cs: &changeSet{
+			name:      "mockChangeSet",
+			stackName: "mockStack",
+		},
+	}
+}
+
 // ErrStackAlreadyExists occurs when a CloudFormation stack already exists with a given name.
 type ErrStackAlreadyExists struct {
 	Name  string

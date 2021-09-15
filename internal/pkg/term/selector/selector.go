@@ -7,6 +7,7 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -70,6 +71,7 @@ const (
 	taskFinalMsg        = "Task:"
 	workloadFinalMsg    = "Name:"
 	dockerfileFinalMsg  = "Dockerfile:"
+	topicFinalmessage   = "Topic subscriptions:"
 )
 
 var scheduleTypes = []string{
@@ -133,6 +135,7 @@ type DeployStoreClient interface {
 	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 	IsJobDeployed(appName, envName, jobName string) (bool, error)
+	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
 // TaskStackDescriber wraps cloudformation client methods to describe task stacks
@@ -1018,4 +1021,82 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 		}
 	}
 	return outServices, nil
+}
+
+// Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
+// across all environments* and returns the topic structs.
+func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
+	envs, err := s.config.ListEnvironments(app)
+	if err != nil {
+		return nil, fmt.Errorf("list environments: %w", err)
+	}
+	if len(envs) == 0 {
+		log.Infoln("No environments are currently deployed. Skipping subscription selection.")
+		return nil, nil
+	}
+
+	envTopics := make(map[string][]deploy.Topic, len(envs))
+	for _, env := range envs {
+		topics, err := s.deployStoreSvc.ListSNSTopics(app, env.Name)
+		if err != nil {
+			return nil, fmt.Errorf("list SNS topics: %w", err)
+		}
+		envTopics[env.Name] = topics
+	}
+
+	// Get only topics deployed in all environments.
+	// Computes the intersection of the `envTopics` lists.
+	overallTopics := make(map[string]deploy.Topic)
+	// Initialize the list of topics.
+	for _, topic := range envTopics[envs[0].Name] {
+		overallTopics[topic.String()] = topic
+	}
+	// Then do the pairwise intersection of all other envs.
+	for _, env := range envs[1:] {
+		topics := envTopics[env.Name]
+		overallTopics = intersect(overallTopics, topics)
+	}
+
+	if len(overallTopics) == 0 {
+		log.Infoln("No SNS topics are currently deployed in all environments. You can customize subscriptions in your manifest.")
+		return nil, nil
+	}
+	// Create the list of options.
+	var topicDescriptions []string
+	for t := range overallTopics {
+		topicDescriptions = append(topicDescriptions, t)
+	}
+	// Sort descriptions by ARN, which implies sorting by workload name and then by topic name due to
+	// behavior of `intersect`. That is, the `overallTopics` map is guaranteed to contain topics
+	// referencing the same environment.
+	sort.Slice(topicDescriptions, func(i, j int) bool {
+		return overallTopics[topicDescriptions[i]].ARN() < overallTopics[topicDescriptions[j]].ARN()
+	})
+
+	selectedTopics, err := s.prompt.MultiSelect(
+		promptMsg,
+		help,
+		topicDescriptions,
+		prompt.WithFinalMessage(topicFinalmessage),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select SNS topics: %w", err)
+	}
+
+	// Get the topics from the topic descriptions again.
+	var topics []deploy.Topic
+	for _, t := range selectedTopics {
+		topics = append(topics, overallTopics[t])
+	}
+	return topics, nil
+}
+
+func intersect(firstMap map[string]deploy.Topic, secondArr []deploy.Topic) map[string]deploy.Topic {
+	out := make(map[string]deploy.Topic)
+	for _, topic := range secondArr {
+		if _, ok := firstMap[topic.String()]; ok {
+			out[topic.String()] = topic
+		}
+	}
+	return out
 }

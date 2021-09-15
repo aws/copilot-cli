@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 type workerSvcReadParser interface {
@@ -28,7 +29,7 @@ type WorkerService struct {
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
-func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig, allowedTopics []string) (*WorkerService, error) {
+func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig) (*WorkerService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -45,10 +46,10 @@ func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeCo
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest:      mft,
-		allowedTopics: allowedTopics,
+		manifest: mft,
 
 		parser: parser,
 	}, nil
@@ -140,7 +141,11 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)
 	}
-	return content.String(), nil
+	overridenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

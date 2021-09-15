@@ -154,6 +154,21 @@ func (mr *MockapiMockRecorder) StopTask(input interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTask", reflect.TypeOf((*Mockapi)(nil).StopTask), input)
 }
 
+// UpdateService mocks base method.
+func (m *Mockapi) UpdateService(input *ecs.UpdateServiceInput) (*ecs.UpdateServiceOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateService", input)
+	ret0, _ := ret[0].(*ecs.UpdateServiceOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateService indicates an expected call of UpdateService.
+func (mr *MockapiMockRecorder) UpdateService(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateService", reflect.TypeOf((*Mockapi)(nil).UpdateService), input)
+}
+
 // WaitUntilTasksRunning mocks base method.
 func (m *Mockapi) WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error {
 	m.ctrl.T.Helper()
