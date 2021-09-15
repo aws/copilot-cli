@@ -355,15 +355,7 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			p := TaskConfig{
-				Platform: &PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
-				},
-			}
+			p := TaskConfig{}
 			err := yaml.Unmarshal(tc.inContent, &p)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
@@ -791,22 +783,8 @@ func TestUnmarshalPublish(t *testing.T) {
 		wantedErr     error
 	}{
 		"Valid publish yaml": {
-			inContent: `topics:
-  - name: tests
-    allowed_workers:
-      - hello
-`,
-			wantedPublish: PublishConfig{
-				Topics: []Topic{
-					{
-						Name:           aws.String("tests"),
-						AllowedWorkers: []string{"hello"},
-					},
-				},
-			},
-		},
-		"Empty workers don't appear in topic": {
-			inContent: `topics:
+			inContent: `
+topics:
   - name: tests
 `,
 			wantedPublish: PublishConfig{
@@ -818,13 +796,10 @@ func TestUnmarshalPublish(t *testing.T) {
 			},
 		},
 		"Error when unmarshalable": {
-			inContent: `topics:
-   - name: tests
-    allowed_workers:
-      - hello
-  - name: orders
+			inContent: `
+topics: abc
 `,
-			wantedErr: errors.New("yaml: line 1: did not find expected '-' indicator"),
+			wantedErr: errors.New("yaml: unmarshal errors:\n  line 2: cannot unmarshal !!str `abc` into []manifest.Topic"),
 		},
 	}
 

@@ -426,16 +426,6 @@ func validatePubSubName(name string) error {
 	return nil
 }
 
-func validateWorkerNames(names []string) error {
-	for _, name := range names {
-		err := validateSvcName(name)
-		if err != nil {
-			return fmt.Errorf("worker name `%s` is invalid: %w", name, err)
-		}
-	}
-	return nil
-}
-
 func validateSvcName(name string) error {
 	if name == "" {
 		return errInvalidSvcName

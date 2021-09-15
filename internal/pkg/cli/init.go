@@ -7,6 +7,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
@@ -231,7 +233,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					prompt:       prompt,
 					dockerEngine: dockerengine.New(cmd),
 					initParser: func(s string) dockerfileParser {
-						return exec.NewDockerfile(fs, s)
+						return dockerfile.NewDockerfile(fs, s)
 					},
 				}
 				o.initWlCmd = &opts
@@ -256,7 +258,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					if opts.df != nil {
 						return opts.df
 					}
-					opts.df = exec.NewDockerfile(opts.fs, opts.dockerfilePath)
+					opts.df = dockerfile.NewDockerfile(opts.fs, opts.dockerfilePath)
 					return opts.df
 				}
 				o.initWlCmd = &opts

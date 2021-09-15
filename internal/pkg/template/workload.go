@@ -230,8 +230,7 @@ type PublishOpts struct {
 
 // Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name           *string
-	AllowedWorkers []string
+	Name *string
 
 	Region    string
 	Partition string

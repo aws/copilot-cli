@@ -125,7 +125,7 @@ Outputs:
 				testWorkerSvcManifestWithBadAutoScaling := manifest.NewWorkerService(baseProps)
 				badRange := manifest.IntRangeBand("badRange")
 				testWorkerSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
-					Range: &manifest.Range{
+					Range: manifest.Range{
 						Value: &badRange,
 					},
 				}

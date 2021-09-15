@@ -7,6 +7,8 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
@@ -406,7 +408,7 @@ type domainHostedZoneGetter interface {
 
 type dockerfileParser interface {
 	GetExposedPorts() ([]uint16, error)
-	GetHealthCheck() (*exec.HealthCheck, error)
+	GetHealthCheck() (*dockerfile.HealthCheck, error)
 }
 
 type statusDescriber interface {
@@ -512,8 +514,7 @@ type topicSelector interface {
 
 type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
-	PublicSubnets(prompt, help, vpcID string) ([]string, error)
-	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
+	Subnets(input selector.SubnetsInput) ([]string, error)
 }
 
 type credsSelector interface {
