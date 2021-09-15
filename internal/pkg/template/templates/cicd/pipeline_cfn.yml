@@ -121,7 +121,7 @@ Resources:
             Resource: {{$.Source.Connection}}
             {{- end }} {{/* endif eq .Source.ConnectionARN "" */}}
           {{- end }} {{/* if eq .Source.ProviderName "CodeCommit" */}}
-          {{- end }} {{ /* endif ne .Source.OutputArtifactFormat ""}}{{- end }} {{ /* endif ne .Source.ProviderName "GitHubV1"}}
+          {{- end }} {{/* endif ne .Source.OutputArtifactFormat "" */}}{{- end }} {{/* endif ne .Source.ProviderName "GitHubV1" */}}
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
