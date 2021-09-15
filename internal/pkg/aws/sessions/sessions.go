@@ -59,6 +59,10 @@ func (p *Provider) Default() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	if aws.StringValue(sess.Config.Region) == "" {
+		return nil, &errMissingRegion{}
+	}
+
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	p.defaultSess = sess
 	return sess, nil
@@ -87,16 +91,23 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	if aws.StringValue(sess.Config.Region) == "" {
+		return nil, &errMissingRegion{}
+	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, nil
 }
 
 // FromRole returns a session configured against the input role and region.
 func (p *Provider) FromRole(roleARN string, region string) (*session.Session, error) {
-	defaultSession, err := p.Default()
+	defaultSession, err := session.NewSessionWithOptions(session.Options{
+		Config:            *newConfig(),
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating default session: %w", err)
 	}
+	defaultSession.Handlers.Build.PushBackNamed(userAgentHandler())
 
 	creds := stscreds.NewCredentials(defaultSession, roleARN)
 	sess, err := session.NewSession(

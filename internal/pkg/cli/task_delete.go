@@ -49,11 +49,11 @@ type deleteTaskOpts struct {
 	deleteTaskVars
 
 	// Dependencies to interact with other modules
-	store   store
-	prompt  prompter
-	spinner progress
-	sess    sessionProvider
-	sel     wsSelector
+	store    store
+	prompt   prompter
+	spinner  progress
+	provider sessionProvider
+	sel      wsSelector
 
 	// Generators for env-specific clients
 	newTaskSel      func(session *session.Session) cfTaskSelector
@@ -72,8 +72,6 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
-	provider := sessions.NewProvider()
-
 	prompter := prompt.New()
 
 	ws, err := workspace.New()
@@ -84,11 +82,11 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
 
-		store:   store,
-		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:  prompter,
-		sess:    provider,
-		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
+		store:    store,
+		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
+		prompt:   prompter,
+		provider: sessions.NewProvider(),
+		sel:      selector.NewWorkspaceSelect(prompter, store, ws),
 		newTaskSel: func(session *session.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
@@ -278,7 +276,7 @@ func (o *deleteTaskOpts) getSession() (*session.Session, error) {
 		return o.session, nil
 	}
 	if o.defaultCluster {
-		sess, err := o.sess.Default()
+		sess, err := o.provider.Default()
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +288,7 @@ func (o *deleteTaskOpts) getSession() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess, err := o.sess.FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := o.provider.FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +332,6 @@ func (o *deleteTaskOpts) Execute() error {
 	if err := o.deleteStack(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -376,7 +373,7 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 		if err != nil {
 			return err
 		}
-		defaultSess, err = o.sess.DefaultWithRegion(aws.StringValue(regionalSession.Config.Region))
+		defaultSess, err = o.provider.DefaultWithRegion(aws.StringValue(regionalSession.Config.Region))
 		if err != nil {
 			return fmt.Errorf("get default session for ECR deletion: %s", err)
 		}
