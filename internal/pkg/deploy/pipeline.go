@@ -16,7 +16,9 @@ import (
 )
 
 const (
-	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
+	fmtInvalidRepo           = "unable to locate the repository URL from the properties: %+v"
+	fmtErrMissingProperty    = "missing `%s` in properties"
+	fmtErrPropertyNotAString = "property `%s` is not a string"
 
 	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 
@@ -127,30 +129,46 @@ type BitbucketSource struct {
 	ConnectionARN string
 }
 
-func convertProperty(properties map[string]interface{}, key string) (string, bool) {
+func convertRequiredProperty(properties map[string]interface{}, key string) (string, error) {
 	v, ok := properties[key]
 	if !ok {
-		return "", false
+		return "", fmt.Errorf(fmtErrMissingProperty, key)
 	}
-	return v.(string), true
+	vStr, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf(fmtErrPropertyNotAString, key)
+	}
+	return vStr, nil
+}
+
+func convertOptionalProperty(properties map[string]interface{}, key string, defaultValue string) (string, error) {
+	v, ok := properties[key]
+	if !ok {
+		return defaultValue, nil
+	}
+	vStr, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf(fmtErrPropertyNotAString, key)
+	}
+	return vStr, nil
 }
 
 // PipelineSourceFromManifest processes manifest info about the source based on provider type.
 // The return boolean is true for CodeStar Connections sources that require a polling prompt.
 func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, shouldPrompt bool, err error) {
-	branch, ok := convertProperty(mfSource.Properties, "branch")
-	if !ok {
-		branch = DefaultPipelineBranch
+	branch, err := convertOptionalProperty(mfSource.Properties, "branch", DefaultPipelineBranch)
+	if err != nil {
+		return nil, false, err
 	}
-	repository, ok := convertProperty(mfSource.Properties, "repository")
-	if !ok {
-		return nil, false, errors.New("missing `repository` in properties")
+	repository, err := convertRequiredProperty(mfSource.Properties, "repository")
+	if err != nil {
+		return nil, false, err
 	}
 	switch mfSource.ProviderName {
 	case manifest.GithubV1ProviderName:
-		token, ok := convertProperty(mfSource.Properties, "access_token_secret")
-		if !ok {
-			return nil, false, errors.New("missing `access_token_secret` in properties")
+		token, err := convertRequiredProperty(mfSource.Properties, "access_token_secret")
+		if err != nil {
+			return nil, false, err
 		}
 		return &GitHubV1Source{
 			ProviderName:                manifest.GithubV1ProviderName,
@@ -184,9 +202,9 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			return repo, false, nil
 		}
 	case manifest.CodeCommitProviderName:
-		outputFormat, ok := convertProperty(mfSource.Properties, "output_artifact_format")
-		if !ok {
-			outputFormat = ""
+		outputFormat, err := convertOptionalProperty(mfSource.Properties, "output_artifact_format", "")
+		if err != nil {
+			return nil, false, err
 		}
 		return &CodeCommitSource{
 			ProviderName:         manifest.CodeCommitProviderName,

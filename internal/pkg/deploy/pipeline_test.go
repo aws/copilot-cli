@@ -49,6 +49,17 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 			expectedShouldPrompt: false,
 			expectedErr:          errors.New("missing `access_token_secret` in properties"),
 		},
+		"error out if a string property is not a string": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.GithubV1ProviderName,
+				Properties: map[string]interface{}{
+					"branch":     "test",
+					"repository": []int{1, 2, 3},
+				},
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          errors.New("property `repository` is not a string"),
+		},
 		"transforms GitHub (v2) source without existing connection": {
 			mfSource: &manifest.Source{
 				ProviderName: manifest.GithubProviderName,
