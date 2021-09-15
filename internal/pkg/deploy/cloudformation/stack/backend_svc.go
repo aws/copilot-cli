@@ -56,6 +56,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 				parser: parser,
 				addons: addons,
 			},
+			logRetention:        mft.Logging.Retention,
 			tc:                  mft.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},

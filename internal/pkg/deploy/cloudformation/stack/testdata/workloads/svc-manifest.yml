@@ -34,7 +34,6 @@ storage:
 publish:
   topics:
     - name: givesdogs
-
 # Optional fields for more advanced use-cases.
 #
 variables:                    # Pass environment variables as key value pairs.
@@ -58,5 +57,7 @@ environments:
         min: 3
         max: 12
         spot_from: 6
+    logging:
+      retention: 1
       
 

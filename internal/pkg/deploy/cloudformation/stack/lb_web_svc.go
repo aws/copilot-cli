@@ -64,6 +64,7 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 				parser: parser,
 				addons: addons,
 			},
+			logRetention:        mft.Logging.Retention,
 			tc:                  mft.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
