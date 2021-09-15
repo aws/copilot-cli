@@ -50,10 +50,6 @@ var (
 	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
 	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
 	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
-
-	errInvalidRangeOpts     = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
-	errInvalidAdvancedCount = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
-	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -422,19 +418,19 @@ type SidecarConfig struct {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU            *int                  `yaml:"cpu"`
-	Memory         *int                  `yaml:"memory"`
-	Platform       *PlatformArgsOrString `yaml:"platform,omitempty"`
-	Count          Count                 `yaml:"count"`
-	ExecuteCommand ExecuteCommand        `yaml:"exec"`
-	Variables      map[string]string     `yaml:"variables"`
-	Secrets        map[string]string     `yaml:"secrets"`
-	Storage        Storage               `yaml:"storage"`
+	CPU            *int                 `yaml:"cpu"`
+	Memory         *int                 `yaml:"memory"`
+	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
+	Count          Count                `yaml:"count"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec"`
+	Variables      map[string]string    `yaml:"variables"`
+	Secrets        map[string]string    `yaml:"secrets"`
+	Storage        Storage              `yaml:"storage"`
 }
 
 // TaskPlatform returns the platform for the service.
 func (t *TaskConfig) TaskPlatform() (*string, error) {
-	if t.Platform == nil {
+	if t.Platform.PlatformString == nil {
 		return nil, nil
 	}
 	return t.Platform.PlatformString, nil
@@ -447,8 +443,7 @@ type PublishConfig struct {
 
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
-	Name           *string  `yaml:"name"`
-	AllowedWorkers []string `yaml:"allowed_workers"`
+	Name *string `yaml:"name"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.

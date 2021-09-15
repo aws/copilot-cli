@@ -204,12 +204,12 @@ func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityPr
 		return nil, nil
 	}
 
-	if a.Spot != nil && a.Range != nil {
+	if a.Spot != nil && !a.Range.IsEmpty() {
 		return nil, errInvalidSpotConfig
 	}
 
 	// return if autoscaling range specified without spot scaling
-	if a.Range != nil && a.Range.Value != nil {
+	if !a.Range.IsEmpty() && a.Range.Value != nil {
 		return nil, nil
 	}
 
@@ -222,7 +222,7 @@ func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityPr
 	})
 
 	// Return if only spot is specifed as count
-	if a.Range == nil {
+	if a.Range.IsEmpty() {
 		return cps, nil
 	}
 
@@ -652,19 +652,15 @@ func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc 
 	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
 		return nil, err
 	}
-	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
-		return nil, err
-	}
 
 	return &template.Topic{
-		Name:           t.Name,
-		AllowedWorkers: t.AllowedWorkers,
-		AccountID:      accountID,
-		Partition:      partition,
-		Region:         region,
-		App:            app,
-		Env:            env,
-		Svc:            svc,
+		Name:      t.Name,
+		AccountID: accountID,
+		Partition: partition,
+		Region:    region,
+		App:       app,
+		Env:       env,
+		Svc:       svc,
 	}, nil
 }
 

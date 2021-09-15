@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package exec provides an interface to execute certain commands.
-package exec
+// Package dockerfile provides functionality to parse a Dockerfile.
+package dockerfile
 
 import (
 	"flag"

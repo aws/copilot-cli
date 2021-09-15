@@ -30,7 +30,6 @@ memory: 2048
 publish:
   topics:
     - name: customers
-      allowed_workers: [worker]
 
 # Optional fields for more advanced use-cases.
 #

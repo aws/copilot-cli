@@ -380,7 +380,7 @@ func TestScheduledJob_Publish(t *testing.T) {
 		"returns the list of topics if manifest publishes notifications": {
 			mft: &ScheduledJob{
 				ScheduledJobConfig: ScheduledJobConfig{
-					Publish: PublishConfig{
+					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{
 								Name: stringP("hello"),
