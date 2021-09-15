@@ -19,7 +19,9 @@ const (
 	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
 
 	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
-	defaultPipelineBranch     = "main"
+
+	// DefaultPipelineBranch is the default repository branch to use for pipeline.
+	DefaultPipelineBranch = "main"
 )
 
 var (
@@ -138,7 +140,7 @@ func convertProperty(properties map[string]interface{}, key string) (string, boo
 func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, shouldPrompt bool, err error) {
 	branch, ok := convertProperty(mfSource.Properties, "branch")
 	if !ok {
-		branch = defaultPipelineBranch
+		branch = DefaultPipelineBranch
 	}
 	repository, ok := convertProperty(mfSource.Properties, "repository")
 	if !ok {
