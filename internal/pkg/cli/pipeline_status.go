@@ -52,7 +52,6 @@ type pipelineStatusOpts struct {
 func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new config store client: %w", err)
 	}
 

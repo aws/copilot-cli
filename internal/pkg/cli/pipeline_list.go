@@ -40,7 +40,6 @@ type listPipelineOpts struct {
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, err
 	}
 

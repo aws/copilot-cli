@@ -57,7 +57,6 @@ type taskExecOpts struct {
 func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
 	ssmStore, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	prompter := prompt.New()

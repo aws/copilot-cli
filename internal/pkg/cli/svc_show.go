@@ -43,7 +43,6 @@ type showSvcOpts struct {
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 	ssmStore, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	deployStore, err := deploy.NewStore(ssmStore)

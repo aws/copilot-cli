@@ -37,7 +37,6 @@ type jobLogsOpts struct {
 func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 	configStore, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to environment config store: %w", err)
 	}
 	deployStore, err := deploy.NewStore(configStore)

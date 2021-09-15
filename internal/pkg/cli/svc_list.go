@@ -32,7 +32,6 @@ type listSvcOpts struct {
 func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, err
 	}
 	ws, err := workspace.New()

@@ -108,7 +108,6 @@ type deploySvcOpts struct {
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 	deployStore, err := deploy.NewStore(store)

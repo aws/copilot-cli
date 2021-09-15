@@ -56,7 +56,6 @@ type initAppOpts struct {
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	sess, err := sessions.NewProvider().Default()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	store, err := config.NewStore()

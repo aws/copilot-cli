@@ -148,7 +148,6 @@ type runTaskOpts struct {
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 

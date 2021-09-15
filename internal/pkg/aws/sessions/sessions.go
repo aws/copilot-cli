@@ -6,7 +6,6 @@ package sessions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -29,9 +28,6 @@ const (
 	credsTimeout                    = 10 * time.Second
 	clientTimeout                   = 30 * time.Second
 )
-
-// ErrMissingRegion is returned when the region information is missing from AWS configuration.
-var ErrMissingRegion = errors.New("missing region configuration")
 
 // Provider provides methods to create sessions.
 // Once a session is created, it's cached locally so that the same session is not re-created.
@@ -64,7 +60,7 @@ func (p *Provider) Default() (*session.Session, error) {
 		return nil, err
 	}
 	if aws.StringValue(sess.Config.Region) == "" {
-		return sess, ErrMissingRegion
+		return nil, &ErrMissingRegion{}
 	}
 
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
@@ -96,7 +92,7 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 		return nil, err
 	}
 	if aws.StringValue(sess.Config.Region) == "" {
-		return nil, ErrMissingRegion
+		return nil, &ErrMissingRegion{}
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, nil
@@ -104,10 +100,14 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 
 // FromRole returns a session configured against the input role and region.
 func (p *Provider) FromRole(roleARN string, region string) (*session.Session, error) {
-	defaultSession, err := p.Default()
-	if err != nil && !errors.As(err, &ErrMissingRegion) {
+	defaultSession, err := session.NewSessionWithOptions(session.Options{
+		Config:            *newConfig(),
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
 		return nil, fmt.Errorf("error creating default session: %w", err)
 	}
+	defaultSession.Handlers.Build.PushBackNamed(userAgentHandler())
 
 	creds := stscreds.NewCredentials(defaultSession, roleARN)
 	sess, err := session.NewSession(

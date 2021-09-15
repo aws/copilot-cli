@@ -53,7 +53,6 @@ type appUpgradeOpts struct {
 func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to config store: %v", err)
 	}
 	sess, err := sessions.NewProvider().Default()

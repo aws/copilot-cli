@@ -85,7 +85,6 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	}
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	deployStore, err := deploy.NewStore(store)

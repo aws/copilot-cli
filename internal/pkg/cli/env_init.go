@@ -155,7 +155,6 @@ type initEnvOpts struct {
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, err
 	}
 	sessProvider := sessions.NewProvider()

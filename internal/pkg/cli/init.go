@@ -95,7 +95,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	ssm, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, err
 	}
 	sessProvider := sessions.NewProvider()

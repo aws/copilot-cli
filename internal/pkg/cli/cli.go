@@ -10,8 +10,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -131,19 +129,4 @@ func logRecommendedActions(actions []string) {
 	for _, followup := range actions {
 		log.Infof("%s %s\n", prefix, followup)
 	}
-}
-
-func logFriendlyTextIfRegionIsMissing(err error) {
-	if !isMissingRegionErrorInChain(err) {
-		return
-	}
-	log.Infof(`It looks like your AWS region configuration is missing.
-- We recommend including your region configuration in the "~/.aws/config" file.
-- Alternatively, you can run %s to set the environment variable.
-More information: https://aws.github.io/copilot-cli/docs/credentials/
-`, color.HighlightCode("export AWS_REGION=<application region>"))
-}
-
-func isMissingRegionErrorInChain(err error) bool {
-	return errors.As(err, &sessions.ErrMissingRegion)
 }

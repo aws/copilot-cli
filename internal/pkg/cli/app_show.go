@@ -42,7 +42,6 @@ type showAppOpts struct {
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 	defaultSession, err := sessions.NewProvider().Default()

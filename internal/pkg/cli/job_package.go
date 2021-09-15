@@ -59,7 +59,6 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	}
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	p := sessions.NewProvider()

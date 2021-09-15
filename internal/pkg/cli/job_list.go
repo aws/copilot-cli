@@ -30,7 +30,6 @@ type listJobOpts struct {
 func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, err
 	}
 	ws, err := workspace.New()

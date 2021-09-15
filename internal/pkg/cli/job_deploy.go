@@ -66,7 +66,6 @@ type deployJobOpts struct {
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		logFriendlyTextIfRegionIsMissing(err)
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
