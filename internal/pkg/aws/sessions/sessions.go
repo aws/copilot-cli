@@ -60,7 +60,7 @@ func (p *Provider) Default() (*session.Session, error) {
 		return nil, err
 	}
 	if aws.StringValue(sess.Config.Region) == "" {
-		return nil, &ErrMissingRegion{}
+		return nil, &errMissingRegion{}
 	}
 
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
@@ -92,7 +92,7 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 		return nil, err
 	}
 	if aws.StringValue(sess.Config.Region) == "" {
-		return nil, &ErrMissingRegion{}
+		return nil, &errMissingRegion{}
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, nil
