@@ -56,15 +56,15 @@ var (
 	// Acceptable strings for Windows operating systems.
 	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
 
-	// All placement options.
-	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
-
-	validShortPlatforms = []string{
+	// ValidShortPlatforms are all of the os/arch combinations that the PlatformString field may accept.
+	ValidShortPlatforms = []string{
 		platformString(OSLinux, ArchAMD64),
 		platformString(OSLinux, ArchX86),
 		platformString(OSWindows, ArchAMD64),
 		platformString(OSWindows, ArchX86),
 	}
+
+	// validAdvancedPlatforms are all of the OsFamily/Arch combinations that the PlatformArgs field may accept.
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
@@ -73,6 +73,9 @@ var (
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
 	}
+
+	// All placement options.
+	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	defaultPlatform = platformString(OSLinux, ArchAMD64)
 
@@ -754,12 +757,12 @@ func validateShortPlatform(platform *string) error {
 	if platform == nil {
 		return nil
 	}
-	for _, validPlatform := range validShortPlatforms {
+	for _, validPlatform := range ValidShortPlatforms {
 		if aws.StringValue(platform) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validShortPlatforms, "and"))
+	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
 }
 
 func validateAdvancedPlatform(platform PlatformArgs) error {

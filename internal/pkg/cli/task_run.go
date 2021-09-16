@@ -62,11 +62,6 @@ const (
 )
 
 var (
-	validOS   = []string{manifest.OSLinux, manifest.OSWindows, manifest.OSWindowsServer2019Full, manifest.OSWindowsServer2019Core}
-	validArch = []string{manifest.ArchAMD64, manifest.ArchX86}
-)
-
-var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCPUNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
@@ -311,10 +306,7 @@ func (o *runTaskOpts) Validate() error {
 	if noOS, noArch := o.os == "", o.arch == ""; noOS != noArch {
 		return fmt.Errorf("must specify either both `--%s` and `--%s` or neither", osFlag, archFlag)
 	}
-	if err := o.validateOS(); err != nil {
-		return err
-	}
-	if err := o.validateArch(); err != nil {
+	if err := o.validatePlatform(); err != nil {
 		return err
 	}
 
@@ -361,30 +353,16 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
-func (o *runTaskOpts) validateOS() error {
-	if o.os == "" {
+func (o *runTaskOpts) validatePlatform() error {
+	if o.os == "" || o.arch == "" {
 		return nil
 	}
-	o.os = strings.ToLower(o.os)
-	for _, os := range validOS {
-		if o.os == os {
+	for _, validPlatform := range manifest.ValidShortPlatforms {
+		if dockerengine.PlatformString(o.os, o.arch) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("OS %s is invalid; %s: %s", o.os, english.PluralWord(len(validOS), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOS, "and"))
-}
-
-func (o *runTaskOpts) validateArch() error {
-	if o.arch == "" {
-		return nil
-	}
-	o.arch = strings.ToLower(o.arch)
-	for _, arch := range validArch {
-		if o.arch == arch {
-			return nil
-		}
-	}
-	return fmt.Errorf("arch %s is invalid; %s: %s", o.arch, english.PluralWord(len(validArch), "the valid architecture is", "valid architectures are"), english.WordSeries(validArch, "and"))
+	return fmt.Errorf("platform %s is invalid; %s: %s", dockerengine.PlatformString(o.os, o.arch), english.PluralWord(len(manifest.ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(manifest.ValidShortPlatforms, "and"))
 }
 
 func (o *runTaskOpts) validateFlagsWithCluster() error {
