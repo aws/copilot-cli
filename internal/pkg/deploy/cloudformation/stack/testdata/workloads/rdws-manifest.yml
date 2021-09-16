@@ -42,5 +42,6 @@ publish:
 # You can override any of the values defined above by environment.
 environments:
   test:
+    start_command: "echo es by pink floyd"
     variables:
       LOG_LEVEL: debug        # Log level for the "test" environment.

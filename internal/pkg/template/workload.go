@@ -348,6 +348,7 @@ type WorkloadOpts struct {
 // ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
 type ParseRequestDrivenWebServiceInput struct {
 	Variables           map[string]string
+	StartCommand        string
 	Tags                map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	EnableHealthCheck   bool

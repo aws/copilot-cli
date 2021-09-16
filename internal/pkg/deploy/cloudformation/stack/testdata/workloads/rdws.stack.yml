@@ -140,6 +140,7 @@ Resources:
                 Value: '{"customers":"arn:aws:sns:us-west-2:123456789123:my-app-test-frontend-customers"}'
               - Name: LOG_LEVEL
                 Value: debug
+            StartCommand: echo es by pink floyd
       InstanceConfiguration:
         Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory
