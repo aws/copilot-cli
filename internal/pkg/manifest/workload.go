@@ -49,6 +49,13 @@ var (
 	// WorkloadTypes holds all workload manifest types.
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
 
+	// Minimum CPU and mem values required for Windows-based tasks.
+	WindowsTaskCPU    = 1024
+	WindowsTaskMemory = 2048
+
+	// Acceptable strings for Windows operating systems.
+	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
+
 	// All placement options.
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
@@ -68,13 +75,6 @@ var (
 	}
 
 	defaultPlatform = platformString(OSLinux, ArchAMD64)
-
-	// Minimum CPU and mem values required for Windows-based tasks.
-	WindowsTaskCPU    = 1024
-	WindowsTaskMemory = 2048
-
-	// Acceptable strings for Windows operating systems.
-	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
