@@ -523,6 +523,9 @@ func (s *SidecarConfig) Validate() error {
 			return fmt.Errorf(`validate "mount_points[%d]: %w`, ind, err)
 		}
 	}
+	if err := s.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
+	}
 	return s.ImageOverride.Validate()
 }
 

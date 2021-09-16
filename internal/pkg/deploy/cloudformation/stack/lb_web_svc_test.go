@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
@@ -92,8 +91,8 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
-	var overridenContainerHealthCheck = ecs.HealthCheck{
-		Command:     []*string{aws.String("CMD-SHELL"), aws.String("curl -f http://localhost/ || exit 1")},
+	var overridenContainerHealthCheck = template.ContainerHealthCheck{
+		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 		Interval:    aws.Int64(10),
 		StartPeriod: aws.Int64(0),
 		Timeout:     aws.Int64(5),

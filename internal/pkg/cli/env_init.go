@@ -694,7 +694,7 @@ func buildEnvInitCmd() *cobra.Command {
 
   Creates an environment with imported VPC resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
-  /code --import-public-subnets subnet-013e8b691862966cf,subnet -014661ebb7ab8681a \
+  /code --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
   /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
 
   Creates an environment with overridden CIDRs.

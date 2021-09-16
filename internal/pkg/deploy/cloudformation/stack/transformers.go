@@ -118,10 +118,26 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 			DockerLabels: config.DockerLabels,
 			DependsOn:    config.DependsOn,
 			EntryPoint:   entrypoint,
+			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
 		})
 	}
 	return sidecars, nil
+}
+
+func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.ContainerHealthCheck {
+	if hc.IsEmpty() {
+		return nil
+	}
+	// Make sure that unset fields in the healthcheck gets a default value.
+	hc.ApplyIfNotSet(manifest.NewDefaultContainerHealthCheck())
+	return &template.ContainerHealthCheck{
+		Command:     hc.Command,
+		Interval:    aws.Int64(int64(hc.Interval.Seconds())),
+		Retries:     aws.Int64(int64(aws.IntValue(hc.Retries))),
+		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
+		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
+	}
 }
 
 // convertDependsOnStatus converts image and sidecar depends on fields to have upper case statuses

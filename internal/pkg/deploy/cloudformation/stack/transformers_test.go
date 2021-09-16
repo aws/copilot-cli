@@ -29,6 +29,7 @@ func Test_convertSidecar(t *testing.T) {
 		inDependsOn       map[string]string
 		inImg             manifest.Image
 		inImageOverride   manifest.ImageOverride
+		inHealthCheck     manifest.ContainerHealthCheck
 		circDepContainers []string
 
 		wanted    *template.SidecarOpts
@@ -241,6 +242,27 @@ func Test_convertSidecar(t *testing.T) {
 				Command:    []string{"arg1", "arg2"},
 			},
 		},
+		"with health check": {
+			inHealthCheck: manifest.ContainerHealthCheck{
+				Command: []string{"foo", "bar"},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				HealthCheck: &template.ContainerHealthCheck{
+					Command:     []string{"foo", "bar"},
+					Interval:    aws.Int64(10),
+					Retries:     aws.Int64(2),
+					StartPeriod: aws.Int64(0),
+					Timeout:     aws.Int64(5),
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -255,6 +277,7 @@ func Test_convertSidecar(t *testing.T) {
 					DockerLabels:  tc.inLabels,
 					DependsOn:     tc.inDependsOn,
 					ImageOverride: tc.inImageOverride,
+					HealthCheck:   tc.inHealthCheck,
 				},
 			}
 			got, err := convertSidecar(convertSidecarOpts{
