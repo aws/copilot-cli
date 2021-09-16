@@ -78,7 +78,7 @@ var _ = Describe("App With Domain", func() {
 					content, err := cli.EnvInit(&client.EnvInitRequest{
 						AppName: appName,
 						EnvName: "prod",
-						Profile: "own-iad",
+						Profile: prodEnvironmentProfile,
 						Prod:    false,
 					})
 					if err == nil {
