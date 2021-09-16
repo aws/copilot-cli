@@ -55,6 +55,10 @@ const (
 	RDWkldHealthCheckUnhealthyThresholdParamKey = "HealthCheckUnhealthyThreshold"
 )
 
+const (
+	ecsWkldLogRetentionDefault = 30
+)
+
 // Matches alphanumeric characters and -._
 var pathRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
 
@@ -257,7 +261,8 @@ func envVarOutputNames(outputs []addon.Output) []string {
 
 type ecsWkld struct {
 	*wkld
-	tc manifest.TaskConfig
+	tc           manifest.TaskConfig
+	logRetention *int
 
 	// Overriden in unit tests.
 	taskDefOverrideFunc func(overrideRules []override.Rule, origTemp []byte) ([]byte, error)
@@ -272,6 +277,10 @@ func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	desiredCount, err := w.tc.Count.Desired()
 	if err != nil {
 		return nil, err
+	}
+	logRetention := ecsWkldLogRetentionDefault
+	if w.logRetention != nil {
+		logRetention = aws.IntValue(w.logRetention)
 	}
 	return append(wkldParameters, []*cloudformation.Parameter{
 		{
@@ -288,7 +297,7 @@ func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
-			ParameterValue: aws.String("30"),
+			ParameterValue: aws.String(strconv.Itoa(logRetention)),
 		},
 	}...), nil
 }

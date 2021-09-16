@@ -8,7 +8,7 @@
     "TaskCPU": "256",
     "TaskMemory": "512",
     "TaskCount": "3",
-    "LogRetention": "30",
+    "LogRetention": "1",
     "ContainerPort": "4000",
     "RulePath": "/",
     "HTTPSEnabled": "true",

@@ -107,6 +107,7 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				parser: parser,
 				addons: addons,
 			},
+			logRetention:        mft.Logging.Retention,
 			tc:                  mft.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
