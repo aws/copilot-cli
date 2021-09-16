@@ -24,9 +24,10 @@ func TestCC_Pipeline_Template(t *testing.T) {
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
 		Source: &deploy.CodeCommitSource{
-			ProviderName:  manifest.CodeCommitProviderName,
-			RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/aws-sample/browse",
-			Branch:        "main",
+			ProviderName:         manifest.CodeCommitProviderName,
+			RepositoryURL:        "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/aws-sample/browse",
+			Branch:               "main",
+			OutputArtifactFormat: "CODEBUILD_CLONE_REF",
 		},
 		Build: deploy.PipelineBuildFromManifest(nil),
 		Stages: []deploy.PipelineStage{
