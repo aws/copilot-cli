@@ -17,10 +17,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func durationPointer(d time.Duration) *time.Duration {
-	return &d
-}
-
 func TestNewRequestDrivenWebService(t *testing.T) {
 	testCases := map[string]struct {
 		input *RequestDrivenWebServiceProps
@@ -216,8 +212,8 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 								Path:               aws.String("/healthcheck"),
 								HealthyThreshold:   aws.Int64(3),
 								UnhealthyThreshold: aws.Int64(5),
-								Interval:           durationPointer(10 * time.Second),
-								Timeout:            durationPointer(5 * time.Second),
+								Interval:           durationp(10 * time.Second),
+								Timeout:            durationp(5 * time.Second),
 							},
 						},
 						Alias: aws.String("convex.domain.com"),

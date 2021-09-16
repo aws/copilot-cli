@@ -99,6 +99,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
+					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
+						workloadType: LoadBalancedWebServiceType,
+					},
 				},
 				ExecuteCommand: ExecuteCommand{
 					Enable: aws.Bool(false),
