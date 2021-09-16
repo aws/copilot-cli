@@ -66,6 +66,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						Memory: aws.Int(512),
 						Count: Count{
 							Value: aws.Int(1),
+							AdvancedCount: AdvancedCount{
+								workloadType: LoadBalancedWebServiceType,
+							},
 						},
 						ExecuteCommand: ExecuteCommand{
 							Enable: aws.Bool(false),

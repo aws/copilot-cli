@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/dustin/go-humanize/english"
 )
@@ -87,4 +88,19 @@ type errMinGreaterThanMax struct {
 
 func (e *errMinGreaterThanMax) Error() string {
 	return fmt.Sprintf("min value %d cannot be greater than max value %d", e.min, e.max)
+}
+
+type errAtLeastOneFieldMustBeSpecified struct {
+	missingFields    []string
+	conditionalField string
+}
+
+func (e *errAtLeastOneFieldMustBeSpecified) Error() string {
+	quotedFields := make([]string, len(e.missingFields))
+	for i, f := range e.missingFields {
+		quotedFields[i] = strconv.Quote(f)
+	}
+	return fmt.Sprintf(`must specify at least one of %s if "%s" is specified`,
+		english.WordSeries(quotedFields, "or"),
+		e.conditionalField)
 }
