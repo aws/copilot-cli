@@ -333,9 +333,17 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
+		"cannot have autoscaling for scheduled jobs": {
+			AdvancedCount: AdvancedCount{
+				Spot:         aws.Int(42),
+				workloadType: ScheduledJobType,
+			},
+			wantedError: errors.New("cannot have autoscaling options for workloads of type 'Scheduled Job'"),
+		},
 		"valid if only spot is specified": {
 			AdvancedCount: AdvancedCount{
-				Spot: aws.Int(42),
+				Spot:         aws.Int(42),
+				workloadType: BackendServiceType,
 			},
 		},
 		"valid when range and and at least one autoscaling fields are specified": {
@@ -348,28 +356,73 @@ func TestAdvancedCount_Validate(t *testing.T) {
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
+				workloadType: WorkerServiceType,
 			},
 		},
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
-				Spot: aws.Int(123),
-				CPU:  aws.Int(70),
+				Spot:         aws.Int(123),
+				CPU:          aws.Int(70),
+				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay"`),
+			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
 		},
 		"error if fail to validate range": {
 			AdvancedCount: AdvancedCount{
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("")),
 				},
+				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "range": `,
 		},
-		"error if range is missing when autoscaling fields are set": {
+		"error if range is missing when autoscaling fields are set for Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
-				Requests: aws.Int(123),
+				Requests:     aws.Int(123),
+				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests, response_time or queue_delay" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests or response_time" are specified`),
+		},
+		"error if range is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(aws.String("1-10")),
+				},
+				workloadType: LoadBalancedWebServiceType,
+			},
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
+		},
+		"error if range is specified but no autoscaling fields are specified for a Backend Service": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(aws.String("1-10")),
+				},
+				workloadType: BackendServiceType,
+			},
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage" or "memory_percentage" if "range" is specified`),
+		},
+		"error if range is specified but no autoscaling fields are specified for a Worker Service": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(aws.String("1-10")),
+				},
+				workloadType: WorkerServiceType,
+			},
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "range" is specified`),
+		},
+		"error if range is missing when autoscaling fields are set for Backend Service": {
+			AdvancedCount: AdvancedCount{
+				CPU:          aws.Int(123),
+				workloadType: BackendServiceType,
+			},
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage or memory_percentage" are specified`),
+		},
+		"error if range is missing when autoscaling fields are set for Worker Service": {
+			AdvancedCount: AdvancedCount{
+				CPU:          aws.Int(123),
+				workloadType: WorkerServiceType,
+			},
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or queue_delay" are specified`),
 		},
 		"wrap error from queue_delay on failure": {
 			AdvancedCount: AdvancedCount{
@@ -384,6 +437,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 					AcceptableLatency: nil,
 					AvgProcessingTime: durationp(1 * time.Second),
 				},
+				workloadType: WorkerServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "queue_delay": `,
 		},
@@ -410,7 +464,6 @@ func TestQueueScaling_Validate(t *testing.T) {
 		in     QueueScaling
 		wanted error
 	}{
-		"should not error if queue scaling is empty": {},
 		"should return an error if only msg_processing_time is specified": {
 			in: QueueScaling{
 				AvgProcessingTime: durationp(1 * time.Second),

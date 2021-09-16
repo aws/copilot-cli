@@ -109,6 +109,9 @@ environments:
 							Memory: aws.Int(1024),
 							Count: Count{
 								Value: aws.Int(1),
+								AdvancedCount: AdvancedCount{
+									workloadType: LoadBalancedWebServiceType,
+								},
 							},
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
@@ -247,6 +250,9 @@ secrets:
 							Memory: aws.Int(1024),
 							Count: Count{
 								Value: aws.Int(1),
+								AdvancedCount: AdvancedCount{
+									workloadType: BackendServiceType,
+								},
 							},
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(false),
@@ -310,6 +316,9 @@ subscribe:
 							Memory: aws.Int(1024),
 							Count: Count{
 								Value: aws.Int(1),
+								AdvancedCount: AdvancedCount{
+									workloadType: WorkerServiceType,
+								},
 							},
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
@@ -430,25 +439,6 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
-		"With all RangeConfig fields specified": {
-			inContent: []byte(`count:
-  range:
-    min: 2
-    max: 8
-    spot_from: 3
-`),
-			wantedStruct: Count{
-				AdvancedCount: AdvancedCount{
-					Range: Range{
-						RangeConfig: RangeConfig{
-							Min:      aws.Int(2),
-							Max:      aws.Int(8),
-							SpotFrom: aws.Int(3),
-						},
-					},
-				},
-			},
-		},
 		"With all RangeConfig fields specified and autoscaling field": {
 			inContent: []byte(`count:
   range:
@@ -470,23 +460,15 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
-		"Error if spot specified as int with range": {
+
+		"Error if mutually exclusive fields are specified": {
 			inContent: []byte(`count:
-  range: 1-10
-  spot: 3
+  spot: 1
+  cpu_percentage: 30
 `),
 			wantedError: &errFieldMutualExclusive{
 				firstField:  "spot",
 				secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
-			},
-		},
-		"Error if autoscaling specified without range": {
-			inContent: []byte(`count:
-  cpu_percentage: 30
-`),
-			wantedError: &errFieldMustBeSpecified{
-				missingField:      "range",
-				conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "queue_delay"},
 			},
 		},
 		"Error if unmarshalable": {
@@ -790,6 +772,10 @@ func TestQueueScaling_AcceptableBacklogPerTask(t *testing.T) {
 		wantedBacklog int
 		wantedErr     error
 	}{
+		"should return an error if queue scaling is empty": {
+			in:        QueueScaling{},
+			wantedErr: errors.New(`"queue_delay" must be specified in order to calculate the acceptable backlog`),
+		},
 		"should return an error if queue scaling is invalid": {
 			in: QueueScaling{
 				AcceptableLatency: durationp(1 * time.Second),

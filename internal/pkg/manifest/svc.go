@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -135,8 +136,11 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if err := c.AdvancedCount.IsValid(); err != nil {
-		return err
+	if c.AdvancedCount.Spot != nil && (c.AdvancedCount.hasAutoscaling()) {
+		return &errFieldMutualExclusive{
+			firstField:  "spot",
+			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
+		}
 	}
 
 	if !c.AdvancedCount.IsEmpty() {
@@ -181,6 +185,8 @@ type AdvancedCount struct {
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
 	QueueScaling QueueScaling   `yaml:"queue_delay"`
+
+	workloadType string
 }
 
 // IsEmpty returns whether AdvancedCount is empty.
@@ -195,28 +201,33 @@ func (a *AdvancedCount) IgnoreRange() bool {
 }
 
 func (a *AdvancedCount) hasAutoscaling() bool {
-	return !a.Range.IsEmpty() || a.CPU != nil || a.Memory != nil ||
-		a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
+	return !a.Range.IsEmpty() || a.hasScalingFieldsSet()
 }
 
-// IsValid checks to make sure Spot fields are compatible with other values in AdvancedCount
-func (a *AdvancedCount) IsValid() error {
-	// Spot translates to desiredCount; cannot specify with autoscaling
-	if a.Spot != nil && a.hasAutoscaling() {
-		return &errFieldMutualExclusive{
-			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
-		}
+func (a *AdvancedCount) validScalingFields() []string {
+	switch a.workloadType {
+	case LoadBalancedWebServiceType:
+		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
+	case BackendServiceType:
+		return []string{"cpu_percentage", "memory_percentage"}
+	case WorkerServiceType:
+		return []string{"cpu_percentage", "memory_percentage", "queue_delay"}
+	default:
+		return nil
 	}
+}
 
-	// Range must be specified if using autoscaling
-	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()) {
-		return &errFieldMustBeSpecified{
-			missingField:      "range",
-			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "queue_delay"},
-		}
+func (a *AdvancedCount) hasScalingFieldsSet() bool {
+	switch a.workloadType {
+	case LoadBalancedWebServiceType:
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
+	case BackendServiceType:
+		return a.CPU != nil || a.Memory != nil
+	case WorkerServiceType:
+		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty()
+	default:
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
 	}
-	return nil
 }
 
 func (a *AdvancedCount) unsetAutoscaling() {
@@ -242,6 +253,9 @@ func (qs *QueueScaling) IsEmpty() bool {
 // AcceptableBacklogPerTask returns the total number of messages that each task can accumulate in the queue
 // while maintaining the AcceptableLatency given the AvgProcessingTime.
 func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
+	if qs.IsEmpty() {
+		return 0, errors.New(`"queue_delay" must be specified in order to calculate the acceptable backlog`)
+	}
 	if err := qs.Validate(); err != nil {
 		return 0, err
 	}

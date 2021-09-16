@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 )
@@ -349,32 +350,45 @@ func (a *AdvancedCount) Validate() error {
 	if a.IsEmpty() {
 		return nil
 	}
+	if len(a.validScalingFields()) == 0 {
+		return fmt.Errorf("cannot have autoscaling options for workloads of type '%s'", a.workloadType)
+	}
+	// Validate spot and remaining autoscaling fields.
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
 			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
+			secondField: fmt.Sprintf("range/%s", strings.Join(a.validScalingFields(), "/")),
 		}
 	}
 	if err := a.Range.Validate(); err != nil {
 		return fmt.Errorf(`validate "range": %w`, err)
 	}
-	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()) {
+
+	// Validate combinations with "range".
+	if a.Range.IsEmpty() && a.hasScalingFieldsSet() {
 		return &errFieldMustBeSpecified{
 			missingField:      "range",
-			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "queue_delay"},
+			conditionalFields: a.validScalingFields(),
 		}
 	}
-	if err := a.QueueScaling.Validate(); err != nil {
-		return fmt.Errorf(`validate "queue_delay": %w`, err)
+	if !a.Range.IsEmpty() && !a.hasScalingFieldsSet() {
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields:    a.validScalingFields(),
+			conditionalField: "range",
+		}
+	}
+
+	// Validate individual custom autoscaling options.
+	if !a.QueueScaling.IsEmpty() {
+		if err := a.QueueScaling.Validate(); err != nil {
+			return fmt.Errorf(`validate "queue_delay": %w`, err)
+		}
 	}
 	return nil
 }
 
 // Validate returns nil if QueueScaling is configured correctly.
 func (qs *QueueScaling) Validate() error {
-	if qs.IsEmpty() {
-		return nil
-	}
 	if qs.AcceptableLatency == nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "acceptable_latency",
