@@ -318,21 +318,6 @@ func (o *runTaskOpts) Validate() error {
 		return err
 	}
 
-	// Set default values for CPU and memory based on the operating system.
-	// The flag default value is 0. If a user sets `--cpu 0` or `--memory 0`, then the 0 value will be replaced by 256/1024 for cpu and 512/2048 for mem, depending on OS, instead of erroring out.
-	if o.cpu == 0 {
-		o.cpu = 256
-		if isWindowsOS(o.os) {
-			o.cpu = manifest.WindowsTaskCPU
-		}
-	}
-	if o.memory == 0 {
-		o.memory = 512
-		if isWindowsOS(o.os) {
-			o.memory = manifest.WindowsTaskMemory
-		}
-	}
-
 	if o.cpu < 0 {
 		return errCPUNotPositive
 	}
@@ -942,8 +927,8 @@ Run a task with a command.
 	}
 
 	cmd.Flags().IntVar(&vars.count, countFlag, 1, countFlagDescription)
-	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 0, cpuFlagDescription)
-	cmd.Flags().IntVar(&vars.memory, memoryFlag, 0, memoryFlagDescription)
+	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
+	cmd.Flags().IntVar(&vars.memory, memoryFlag, 512, memoryFlagDescription)
 
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
