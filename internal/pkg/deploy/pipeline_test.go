@@ -274,32 +274,39 @@ func TestParseOwnerAndRepo(t *testing.T) {
 
 func TestParseRepo(t *testing.T) {
 	testCases := map[string]struct {
-		src            *CodeCommitSource
-		expectedErrMsg *string
-		expectedOwner  string
-		expectedRepo   string
+		src           *CodeCommitSource
+		expectedErr   error
+		expectedOwner string
+		expectedRepo  string
 	}{
 		"missing repository property": {
 			src: &CodeCommitSource{
 				RepositoryURL: "",
 			},
-			expectedErrMsg: aws.String("unable to locate the repository"),
+			expectedErr: errors.New("unable to locate the repository"),
+		},
+		"unable to parse repository name from URL": {
+			src: &CodeCommitSource{
+				RepositoryURL: "https://hahahaha.wrong.URL/repositories/wings/browse",
+			},
+			expectedErr:   errors.New("unable to parse the repository from the URL https://hahahaha.wrong.URL/repositories/wings/browse"),
+			expectedOwner: "",
+			expectedRepo:  "wings",
 		},
 		"valid full CC repository name": {
 			src: &CodeCommitSource{
 				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/wings/browse",
 			},
-			expectedErrMsg: nil,
-			expectedOwner:  "",
-			expectedRepo:   "wings",
+			expectedOwner: "",
+			expectedRepo:  "wings",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			repo, err := tc.src.parseRepo()
-			if tc.expectedErrMsg != nil {
-				require.Contains(t, err.Error(), *tc.expectedErrMsg)
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err, "expected error")
 				require.Equal(t, tc.expectedRepo, repo, "mismatched repo")

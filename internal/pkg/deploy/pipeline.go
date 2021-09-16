@@ -19,7 +19,7 @@ import (
 const DefaultPipelineBranch = "main"
 
 const (
-	fmtInvalidRepo           = "unable to locate the repository URL from the properties: %+v"
+	fmtInvalidRepo           = "unable to parse the repository from the URL %+v"
 	fmtErrMissingProperty    = "missing `%s` in properties"
 	fmtErrPropertyNotAString = "property `%s` is not a string"
 
