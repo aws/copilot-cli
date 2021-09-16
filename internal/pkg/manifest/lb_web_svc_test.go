@@ -1248,7 +1248,7 @@ func Test_Temp(t *testing.T) {
 			},
 			Port: aws.Uint16(5000),
 		},
-		HealthCheck: *newDefaultContainerHealthCheck(),
+		HealthCheck: *NewDefaultContainerHealthCheck(),
 	}
 	t.Run("temporary", func(t *testing.T) {
 		// WHEN
@@ -1292,7 +1292,7 @@ func Test_Temp(t *testing.T) {
 							},
 							Port: aws.Uint16(5000),
 						},
-						HealthCheck: *newDefaultContainerHealthCheck(),
+						HealthCheck: *NewDefaultContainerHealthCheck(),
 					},
 				},
 			},

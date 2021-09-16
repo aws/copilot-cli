@@ -18,7 +18,6 @@ import (
 	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -405,15 +404,16 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port          *string             `yaml:"port"`
-	Image         *string             `yaml:"image"`
-	Essential     *bool               `yaml:"essential"`
-	CredsParam    *string             `yaml:"credentialsParameter"`
-	Variables     map[string]string   `yaml:"variables"`
-	Secrets       map[string]string   `yaml:"secrets"`
-	MountPoints   []SidecarMountPoint `yaml:"mount_points"`
-	DockerLabels  map[string]string   `yaml:"labels"`
-	DependsOn     map[string]string   `yaml:"depends_on"`
+	Port          *string              `yaml:"port"`
+	Image         *string              `yaml:"image"`
+	Essential     *bool                `yaml:"essential"`
+	CredsParam    *string              `yaml:"credentialsParameter"`
+	Variables     map[string]string    `yaml:"variables"`
+	Secrets       map[string]string    `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
+	DockerLabels  map[string]string    `yaml:"labels"`
+	DependsOn     map[string]string    `yaml:"depends_on"`
+	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
 }
 
@@ -558,9 +558,9 @@ type ContainerHealthCheck struct {
 	StartPeriod *time.Duration `yaml:"start_period"`
 }
 
-// newDefaultContainerHealthCheck returns container health check configuration
+// NewDefaultContainerHealthCheck returns container health check configuration
 // that's identical to a load balanced web service's defaults.
-func newDefaultContainerHealthCheck() *ContainerHealthCheck {
+func NewDefaultContainerHealthCheck() *ContainerHealthCheck {
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 		Interval:    durationp(10 * time.Second),
@@ -575,8 +575,8 @@ func (hc ContainerHealthCheck) IsEmpty() bool {
 	return hc.Command == nil && hc.Interval == nil && hc.Retries == nil && hc.Timeout == nil && hc.StartPeriod == nil
 }
 
-// applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
-func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
+// ApplyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
+func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	if hc.Command == nil && other.Command != nil {
 		hc.Command = other.Command
 	}
@@ -592,33 +592,6 @@ func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
 	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
 	}
-}
-
-func (hc *ContainerHealthCheck) healthCheckOpts() *ecs.HealthCheck {
-	// Make sure that unset fields in the healthcheck gets a default value.
-	hc.applyIfNotSet(newDefaultContainerHealthCheck())
-	return &ecs.HealthCheck{
-		Command:     aws.StringSlice(hc.Command),
-		Interval:    aws.Int64(int64(hc.Interval.Seconds())),
-		Retries:     aws.Int64(int64(*hc.Retries)),
-		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
-		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
-	}
-}
-
-// HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
-func (i ImageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck.IsEmpty() {
-		return nil
-	}
-	return i.HealthCheck.healthCheckOpts()
-}
-
-func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck.IsEmpty() {
-		return nil
-	}
-	return i.HealthCheck.healthCheckOpts()
 }
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which

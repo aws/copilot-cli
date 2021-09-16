@@ -124,7 +124,7 @@ func (s *WorkerService) Template() (string, error) {
 		DesiredCountOnSpot:       desiredCountOnSpot,
 		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:             manifest.WorkerServiceType,
-		HealthCheck:              s.manifest.WorkerServiceConfig.ImageConfig.HealthCheckOpts(),
+		HealthCheck:              convertContainerHealthCheck(s.manifest.WorkerServiceConfig.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.DockerLabels,
 		DesiredCountLambda:       desiredCountLambda.String(),
