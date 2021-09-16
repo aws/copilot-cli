@@ -536,7 +536,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
@@ -562,7 +562,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: nil,
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
@@ -587,7 +587,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
@@ -611,7 +611,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: nil,
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
@@ -695,7 +695,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 							},
 						},
 					},
@@ -732,7 +732,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
+								Range: Range{Value: &mockRange},
 							},
 						},
 					},
@@ -742,7 +742,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						TaskConfig: TaskConfig{
 							Count: Count{
 								AdvancedCount: AdvancedCount{
-									Range: &Range{
+									Range: Range{
 										RangeConfig: RangeConfig{
 											Min: aws.Int(2),
 											Max: aws.Int(8),
@@ -761,7 +761,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{
+								Range: Range{
 									RangeConfig: RangeConfig{
 										Min: aws.Int(2),
 										Max: aws.Int(8),
@@ -1204,7 +1204,7 @@ func TestLoadBalancedWebService_Publish(t *testing.T) {
 		"returns the list of topics if manifest publishes notifications": {
 			mft: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Publish: PublishConfig{
+					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{
 								Name: stringP("hello"),
@@ -1248,7 +1248,7 @@ func Test_Temp(t *testing.T) {
 			},
 			Port: aws.Uint16(5000),
 		},
-		HealthCheck: *newDefaultContainerHealthCheck(),
+		HealthCheck: *NewDefaultContainerHealthCheck(),
 	}
 	t.Run("temporary", func(t *testing.T) {
 		// WHEN
@@ -1292,7 +1292,7 @@ func Test_Temp(t *testing.T) {
 							},
 							Port: aws.Uint16(5000),
 						},
-						HealthCheck: *newDefaultContainerHealthCheck(),
+						HealthCheck: *NewDefaultContainerHealthCheck(),
 					},
 				},
 			},

@@ -525,43 +525,6 @@ func Test_validatePubSubTopicName(t *testing.T) {
 	}
 }
 
-func TestValidateWorkerName(t *testing.T) {
-	testCases := map[string]struct {
-		inName []string
-
-		wantErr error
-	}{
-		"good case": {
-			inName:  []string{"good-name"},
-			wantErr: nil,
-		},
-		"empty name": {
-			inName:  []string{""},
-			wantErr: fmt.Errorf("worker name `` is invalid: %s", errInvalidSvcName),
-		},
-		"contains spaces": {
-			inName:  []string{"a re@!!y b#d n&me"},
-			wantErr: fmt.Errorf("worker name `a re@!!y b#d n&me` is invalid: %s", errSvcNameBadFormat),
-		},
-		"too long": {
-			inName:  []string{"this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long"},
-			wantErr: fmt.Errorf("worker name `this-is-the-name-that-goes-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-and-on-until-it-is-too-long` is invalid: %s", errSvcNameTooLong),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := validateWorkerNames(tc.inName)
-
-			if tc.wantErr == nil {
-				require.NoError(t, err)
-			} else {
-				require.EqualError(t, err, tc.wantErr.Error())
-			}
-		})
-	}
-}
-
 func TestValidateTopicSubscription(t *testing.T) {
 	testCases := map[string]struct {
 		inTS manifest.TopicSubscription

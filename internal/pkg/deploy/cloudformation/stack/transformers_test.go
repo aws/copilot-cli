@@ -29,6 +29,7 @@ func Test_convertSidecar(t *testing.T) {
 		inDependsOn       map[string]string
 		inImg             manifest.Image
 		inImageOverride   manifest.ImageOverride
+		inHealthCheck     manifest.ContainerHealthCheck
 		circDepContainers []string
 
 		wanted    *template.SidecarOpts
@@ -241,6 +242,27 @@ func Test_convertSidecar(t *testing.T) {
 				Command:    []string{"arg1", "arg2"},
 			},
 		},
+		"with health check": {
+			inHealthCheck: manifest.ContainerHealthCheck{
+				Command: []string{"foo", "bar"},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				HealthCheck: &template.ContainerHealthCheck{
+					Command:     []string{"foo", "bar"},
+					Interval:    aws.Int64(10),
+					Retries:     aws.Int64(2),
+					StartPeriod: aws.Int64(0),
+					Timeout:     aws.Int64(5),
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -255,6 +277,7 @@ func Test_convertSidecar(t *testing.T) {
 					DockerLabels:  tc.inLabels,
 					DependsOn:     tc.inDependsOn,
 					ImageOverride: tc.inImageOverride,
+					HealthCheck:   tc.inHealthCheck,
 				},
 			}
 			got, err := convertSidecar(convertSidecarOpts{
@@ -309,7 +332,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 		},
 		"success with fargate autoscaling": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 				CPU: aws.Int(70),
@@ -324,7 +347,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 		},
 		"success with spot autoscaling": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(2),
 						Max:      aws.Int(20),
@@ -390,7 +413,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"with scaling only on spot": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
 						Max:      aws.Int(10),
@@ -408,7 +431,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"with scaling into spot": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
 						Max:      aws.Int(10),
@@ -431,7 +454,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"returns nil if no spot config specified": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 			},
@@ -439,7 +462,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"errors if spot specified with range": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 				Spot: aws.Int(3),
@@ -475,7 +498,7 @@ func Test_convertAutoscaling(t *testing.T) {
 	}{
 		"invalid range": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &badRange,
 				},
 			},
@@ -484,7 +507,7 @@ func Test_convertAutoscaling(t *testing.T) {
 		},
 		"success": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					Value: &mockRange,
 				},
 				CPU:          aws.Int(70),
@@ -504,7 +527,7 @@ func Test_convertAutoscaling(t *testing.T) {
 		},
 		"success with range subfields": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.Range{
+				Range: manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(5),
 						Max:      aws.Int(10),
@@ -1523,10 +1546,13 @@ func Test_convertPublish(t *testing.T) {
 			inTopics:    []manifest.Topic{{}},
 			wantedError: errMissingPublishTopicField,
 		},
-		"publish with no workers": {
+		"valid publish": {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
+				},
+				{
+					Name: aws.String("topic2"),
 				},
 			},
 			wanted: &template.PublishOpts{
@@ -1540,45 +1566,23 @@ func Test_convertPublish(t *testing.T) {
 						Env:       env,
 						Svc:       svc,
 					},
-				},
-			},
-		},
-		"publish with workers": {
-			inTopics: []manifest.Topic{
-				{
-					Name:           aws.String("topic1"),
-					AllowedWorkers: []string{"worker1"},
-				},
-			},
-			wanted: &template.PublishOpts{
-				Topics: []*template.Topic{
 					{
-						Name:           aws.String("topic1"),
-						AllowedWorkers: []string{"worker1"},
-						AccountID:      accountId,
-						Partition:      partition,
-						Region:         region,
-						App:            app,
-						Env:            env,
-						Svc:            svc,
+
+						Name:      aws.String("topic2"),
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
 					},
 				},
 			},
 		},
-		"invalid worker name": {
-			inTopics: []manifest.Topic{
-				{
-					Name:           aws.String("topic1"),
-					AllowedWorkers: []string{"worker1~~@#$"},
-				},
-			},
-			wantedError: fmt.Errorf("worker name `worker1~~@#$` is invalid: %s", errSvcNameBadFormat),
-		},
 		"invalid topic name": {
 			inTopics: []manifest.Topic{
 				{
-					Name:           aws.String("topic1~~@#$"),
-					AllowedWorkers: []string{"worker1"},
+					Name: aws.String("topic1~~@#$"),
 				},
 			},
 			wantedError: errInvalidPubSubTopicName,

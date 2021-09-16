@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -125,7 +124,7 @@ Outputs:
 				testWorkerSvcManifestWithBadAutoScaling := manifest.NewWorkerService(baseProps)
 				badRange := manifest.IntRangeBand("badRange")
 				testWorkerSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
-					Range: &manifest.Range{
+					Range: manifest.Range{
 						Value: &badRange,
 					},
 				}
@@ -201,8 +200,8 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseWorkerService(template.WorkloadOpts{
 					WorkloadType: manifest.WorkerServiceType,
-					HealthCheck: &ecs.HealthCheck{
-						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
+					HealthCheck: &template.ContainerHealthCheck{
+						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    aws.Int64(5),
 						Retries:     aws.Int64(3),
 						StartPeriod: aws.Int64(0),

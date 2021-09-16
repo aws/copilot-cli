@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -104,6 +103,7 @@ type SidecarOpts struct {
 	DependsOn    map[string]string
 	EntryPoint   []string
 	Command      []string
+	HealthCheck  *ContainerHealthCheck
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -190,6 +190,15 @@ type AdvancedCount struct {
 	Cps         []*CapacityProviderStrategy
 }
 
+// ContainerHealthCheck holds configuration for container health check.
+type ContainerHealthCheck struct {
+	Command     []string
+	Interval    *int64
+	Retries     *int64
+	StartPeriod *int64
+	Timeout     *int64
+}
+
 // CapacityProviderStrategy holds the configuration needed for a
 // CapacityProviderStrategyItem on a Service
 type CapacityProviderStrategy struct {
@@ -230,8 +239,7 @@ type PublishOpts struct {
 
 // Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name           *string
-	AllowedWorkers []string
+	Name *string
 
 	Region    string
 	Partition string
@@ -317,7 +325,7 @@ type WorkloadOpts struct {
 
 	// Additional options for service templates.
 	WorkloadType        string
-	HealthCheck         *ecs.HealthCheck
+	HealthCheck         *ContainerHealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	DeregistrationDelay *int64
 	AllowedSourceIps    []string
@@ -432,7 +440,7 @@ func withSvcParsingFuncs() ParseOption {
 			"toSnakeCase":         ToSnakeCaseFunc,
 			"hasSecrets":          hasSecrets,
 			"fmtSlice":            FmtSliceFunc,
-			"quoteSlice":          QuotePSliceFunc,
+			"quoteSlice":          QuoteSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
 			"jsonSNSTopics":       generateSNSJSON,

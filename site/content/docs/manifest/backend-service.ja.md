@@ -71,3 +71,5 @@ Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md
 {% include 'image-healthcheck.ja.md' %}
 
 {% include 'common-svc-fields.ja.md' %}
+
+{% include 'publish.ja.md' %}

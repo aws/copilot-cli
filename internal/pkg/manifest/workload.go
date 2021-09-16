@@ -18,7 +18,6 @@ import (
 	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,10 +49,6 @@ var (
 	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
 	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
 	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
-
-	errInvalidRangeOpts     = errors.New(`must specify one, not both, of "range" and "min"/"max"`)
-	errInvalidAdvancedCount = errors.New(`must specify one, not both, of "spot" and autoscaling fields`)
-	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -377,6 +372,7 @@ func (e ExecuteCommandConfig) IsEmpty() bool {
 
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
+	Retention      *int              `yaml:"retention"`
 	Image          *string           `yaml:"image"`
 	Destination    map[string]string `yaml:"destination,flow"`
 	EnableMetadata *bool             `yaml:"enableMetadata"`
@@ -408,33 +404,34 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port          *string             `yaml:"port"`
-	Image         *string             `yaml:"image"`
-	Essential     *bool               `yaml:"essential"`
-	CredsParam    *string             `yaml:"credentialsParameter"`
-	Variables     map[string]string   `yaml:"variables"`
-	Secrets       map[string]string   `yaml:"secrets"`
-	MountPoints   []SidecarMountPoint `yaml:"mount_points"`
-	DockerLabels  map[string]string   `yaml:"labels"`
-	DependsOn     map[string]string   `yaml:"depends_on"`
+	Port          *string              `yaml:"port"`
+	Image         *string              `yaml:"image"`
+	Essential     *bool                `yaml:"essential"`
+	CredsParam    *string              `yaml:"credentialsParameter"`
+	Variables     map[string]string    `yaml:"variables"`
+	Secrets       map[string]string    `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
+	DockerLabels  map[string]string    `yaml:"labels"`
+	DependsOn     map[string]string    `yaml:"depends_on"`
+	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU            *int                  `yaml:"cpu"`
-	Memory         *int                  `yaml:"memory"`
-	Platform       *PlatformArgsOrString `yaml:"platform,omitempty"`
-	Count          Count                 `yaml:"count"`
-	ExecuteCommand ExecuteCommand        `yaml:"exec"`
-	Variables      map[string]string     `yaml:"variables"`
-	Secrets        map[string]string     `yaml:"secrets"`
-	Storage        Storage               `yaml:"storage"`
+	CPU            *int                 `yaml:"cpu"`
+	Memory         *int                 `yaml:"memory"`
+	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
+	Count          Count                `yaml:"count"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec"`
+	Variables      map[string]string    `yaml:"variables"`
+	Secrets        map[string]string    `yaml:"secrets"`
+	Storage        Storage              `yaml:"storage"`
 }
 
 // TaskPlatform returns the platform for the service.
 func (t *TaskConfig) TaskPlatform() (*string, error) {
-	if t.Platform == nil {
+	if t.Platform.PlatformString == nil {
 		return nil, nil
 	}
 	return t.Platform.PlatformString, nil
@@ -447,8 +444,7 @@ type PublishConfig struct {
 
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
-	Name           *string  `yaml:"name"`
-	AllowedWorkers []string `yaml:"allowed_workers"`
+	Name *string `yaml:"name"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
@@ -562,9 +558,9 @@ type ContainerHealthCheck struct {
 	StartPeriod *time.Duration `yaml:"start_period"`
 }
 
-// newDefaultContainerHealthCheck returns container health check configuration
+// NewDefaultContainerHealthCheck returns container health check configuration
 // that's identical to a load balanced web service's defaults.
-func newDefaultContainerHealthCheck() *ContainerHealthCheck {
+func NewDefaultContainerHealthCheck() *ContainerHealthCheck {
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 		Interval:    durationp(10 * time.Second),
@@ -579,8 +575,8 @@ func (hc ContainerHealthCheck) IsEmpty() bool {
 	return hc.Command == nil && hc.Interval == nil && hc.Retries == nil && hc.Timeout == nil && hc.StartPeriod == nil
 }
 
-// applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
-func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
+// ApplyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
+func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	if hc.Command == nil && other.Command != nil {
 		hc.Command = other.Command
 	}
@@ -596,33 +592,6 @@ func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
 	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
 	}
-}
-
-func (hc *ContainerHealthCheck) healthCheckOpts() *ecs.HealthCheck {
-	// Make sure that unset fields in the healthcheck gets a default value.
-	hc.applyIfNotSet(newDefaultContainerHealthCheck())
-	return &ecs.HealthCheck{
-		Command:     aws.StringSlice(hc.Command),
-		Interval:    aws.Int64(int64(hc.Interval.Seconds())),
-		Retries:     aws.Int64(int64(*hc.Retries)),
-		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
-		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
-	}
-}
-
-// HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
-func (i ImageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck.IsEmpty() {
-		return nil
-	}
-	return i.HealthCheck.healthCheckOpts()
-}
-
-func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck.IsEmpty() {
-		return nil
-	}
-	return i.HealthCheck.healthCheckOpts()
 }
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
