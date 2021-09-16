@@ -37,7 +37,7 @@ Conditions:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
   HasEntryPoint:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
-  HasPlatform:
+  HasCustomPlatform:
     !Not [!Equals [!Ref OS, ""]]
 Resources:
   TaskDefinition:
@@ -68,9 +68,11 @@ Resources:
             ValueFrom: {{$valueFrom}}{{end}}
           {{- end}}
       Family: !Join ['-', ["copilot", !Ref TaskName]]
-      RuntimePlatform:
-        OperatingSystemFamily: !If [HasPlatform, !Ref OS, "LINUX"]
-        CpuArchitecture: !If [HasPlatform, !Ref Arch, "X86_64"]
+      RuntimePlatform: !If
+          - HasCustomPlatform,
+          - OperatingSystemFamily: !Ref OS
+            CpuArchitecture: !Ref Arch
+          - !Ref "AWS::NoValue"
       RequiresCompatibilities:
         - "FARGATE"
       NetworkMode: awsvpc
