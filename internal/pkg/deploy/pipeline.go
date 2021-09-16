@@ -15,15 +15,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 )
 
+// DefaultPipelineBranch is the default repository branch to use for pipeline.
+const DefaultPipelineBranch = "main"
+
 const (
 	fmtInvalidRepo           = "unable to locate the repository URL from the properties: %+v"
 	fmtErrMissingProperty    = "missing `%s` in properties"
 	fmtErrPropertyNotAString = "property `%s` is not a string"
 
 	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
-
-	// DefaultPipelineBranch is the default repository branch to use for pipeline.
-	DefaultPipelineBranch = "main"
 )
 
 var (
