@@ -93,6 +93,10 @@ Resources:
               - ecr:CompleteLayerUpload
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': phonetool}}
+          - Effect: Allow
+            Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:aws-sample'
+            Action:
+              - codecommit:GitPull
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -150,6 +154,7 @@ Resources:
               - codecommit:UploadArchive
               - codecommit:GetUploadArchiveStatus
               - codecommit:CancelUploadArchive
+              - codecommit:GetRepository
               - iam:ListRoles
               - cloudformation:Describe*
               - cloudFormation:List*
@@ -244,6 +249,7 @@ Resources:
               Configuration:
                 RepositoryName: aws-sample
                 BranchName: main
+                OutputArtifactFormat: CODEBUILD_CLONE_REF
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1

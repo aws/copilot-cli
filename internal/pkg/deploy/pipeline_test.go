@@ -4,6 +4,7 @@
 package deploy
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -17,7 +18,7 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 		mfSource             *manifest.Source
 		expectedDeploySource interface{}
 		expectedShouldPrompt bool
-		expectedErr          *string
+		expectedErr          error
 	}{
 		"transforms GitHubV1 source": {
 			mfSource: &manifest.Source{
@@ -36,6 +37,28 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 			},
 			expectedShouldPrompt: false,
 			expectedErr:          nil,
+		},
+		"error out if using GitHubV1 while not having access token secret": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.GithubV1ProviderName,
+				Properties: map[string]interface{}{
+					"branch":     "test",
+					"repository": "some/repository/URL",
+				},
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          errors.New("missing `access_token_secret` in properties"),
+		},
+		"error out if a string property is not a string": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.GithubV1ProviderName,
+				Properties: map[string]interface{}{
+					"branch":     "test",
+					"repository": []int{1, 2, 3},
+				},
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          errors.New("property `repository` is not a string"),
 		},
 		"transforms GitHub (v2) source without existing connection": {
 			mfSource: &manifest.Source{
@@ -109,17 +132,42 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 			mfSource: &manifest.Source{
 				ProviderName: manifest.CodeCommitProviderName,
 				Properties: map[string]interface{}{
-					"branch":     "test",
+					"branch":                 "test",
+					"repository":             "some/repository/URL",
+					"output_artifact_format": "testFormat",
+				},
+			},
+			expectedDeploySource: &CodeCommitSource{
+				ProviderName:         manifest.CodeCommitProviderName,
+				Branch:               "test",
+				RepositoryURL:        "some/repository/URL",
+				OutputArtifactFormat: "testFormat",
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          nil,
+		},
+		"use default branch `main` if branch is not configured": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.CodeCommitProviderName,
+				Properties: map[string]interface{}{
 					"repository": "some/repository/URL",
 				},
 			},
 			expectedDeploySource: &CodeCommitSource{
 				ProviderName:  manifest.CodeCommitProviderName,
-				Branch:        "test",
+				Branch:        "main",
 				RepositoryURL: "some/repository/URL",
 			},
 			expectedShouldPrompt: false,
 			expectedErr:          nil,
+		},
+		"error out if repository is not configured": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.CodeCommitProviderName,
+				Properties:   map[string]interface{}{},
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          errors.New("missing `repository` in properties"),
 		},
 		"errors if user changed provider name in manifest to unsupported source": {
 			mfSource: &manifest.Source{
@@ -131,14 +179,14 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 			},
 			expectedDeploySource: nil,
 			expectedShouldPrompt: false,
-			expectedErr:          aws.String("invalid repo source provider: BitCommitHubBucket"),
+			expectedErr:          errors.New("invalid repo source provider: BitCommitHubBucket"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			source, shouldPrompt, err := PipelineSourceFromManifest(tc.mfSource)
 			if tc.expectedErr != nil {
-				require.Contains(t, err.Error(), *tc.expectedErr)
+				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedDeploySource, source, "mismatched source")
@@ -226,32 +274,39 @@ func TestParseOwnerAndRepo(t *testing.T) {
 
 func TestParseRepo(t *testing.T) {
 	testCases := map[string]struct {
-		src            *CodeCommitSource
-		expectedErrMsg *string
-		expectedOwner  string
-		expectedRepo   string
+		src           *CodeCommitSource
+		expectedErr   error
+		expectedOwner string
+		expectedRepo  string
 	}{
 		"missing repository property": {
 			src: &CodeCommitSource{
 				RepositoryURL: "",
 			},
-			expectedErrMsg: aws.String("unable to locate the repository"),
+			expectedErr: errors.New("unable to locate the repository"),
+		},
+		"unable to parse repository name from URL": {
+			src: &CodeCommitSource{
+				RepositoryURL: "https://hahahaha.wrong.URL/repositories/wings/browse",
+			},
+			expectedErr:   errors.New("unable to parse the repository from the URL https://hahahaha.wrong.URL/repositories/wings/browse"),
+			expectedOwner: "",
+			expectedRepo:  "wings",
 		},
 		"valid full CC repository name": {
 			src: &CodeCommitSource{
 				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/wings/browse",
 			},
-			expectedErrMsg: nil,
-			expectedOwner:  "",
-			expectedRepo:   "wings",
+			expectedOwner: "",
+			expectedRepo:  "wings",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			repo, err := tc.src.parseRepo()
-			if tc.expectedErrMsg != nil {
-				require.Contains(t, err.Error(), *tc.expectedErrMsg)
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err, "expected error")
 				require.Equal(t, tc.expectedRepo, repo, "mismatched repo")
