@@ -40,7 +40,7 @@ publish:
 #   project: project-name
 
 # You can override any of the values defined above by environment.
-# environments:
-#   test:
-#     variables:
-#       LOG_LEVEL: debug        # Log level for the "test" environment.
+environments:
+  test:
+    variables:
+      LOG_LEVEL: debug        # Log level for the "test" environment.
