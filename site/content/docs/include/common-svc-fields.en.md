@@ -222,7 +222,10 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-The logging section contains log configuration parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
+The logging section contains log configuration. You can also configure parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver in this section (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
+
+<span class="parent-field">logging.</span><a id="retention" href="#logging-retention" class="field">`retention`</a> <span class="type">Integer</span>  
+Optional. The number of days to retain the log events. See [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays) for all accepted values. If omitted, the default is 30.
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
 Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
