@@ -62,8 +62,8 @@ type HealthCheck struct {
 
 // Dockerfile represents a parsed Dockerfile.
 type Dockerfile struct {
-	ExposedPorts []portConfig
-	HealthCheck  *HealthCheck
+	exposedPorts []portConfig
+	healthCheck  *HealthCheck
 	parsed       bool
 	path         string
 
@@ -73,8 +73,8 @@ type Dockerfile struct {
 // NewDockerfile returns an empty Dockerfile.
 func NewDockerfile(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
-		ExposedPorts: []portConfig{},
-		HealthCheck:  nil,
+		exposedPorts: []portConfig{},
+		healthCheck:  nil,
 		fs:           fs,
 		path:         path,
 		parsed:       false,
@@ -90,14 +90,14 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	}
 	var ports []uint16
 
-	if len(df.ExposedPorts) == 0 {
+	if len(df.exposedPorts) == 0 {
 		return nil, ErrNoExpose{
 			Dockerfile: df.path,
 		}
 	}
 
 	var err error
-	for _, port := range df.ExposedPorts {
+	for _, port := range df.exposedPorts {
 		// ensure we register that there is an error (will only be ErrNoExpose) if
 		// any ports were unparseable or invalid
 		if port.err != nil {
@@ -116,7 +116,7 @@ func (df *Dockerfile) GetHealthCheck() (*HealthCheck, error) {
 			return nil, err
 		}
 	}
-	return df.HealthCheck, nil
+	return df.healthCheck, nil
 }
 
 // parse takes a Dockerfile and fills in struct members based on methods like parseExpose and parseHealthcheck.
@@ -142,8 +142,8 @@ func (df *Dockerfile) parse() error {
 		return err
 	}
 
-	df.ExposedPorts = parsedDockerfile.ExposedPorts
-	df.HealthCheck = parsedDockerfile.HealthCheck
+	df.exposedPorts = parsedDockerfile.exposedPorts
+	df.healthCheck = parsedDockerfile.healthCheck
 	df.parsed = true
 	return nil
 }
@@ -151,7 +151,7 @@ func (df *Dockerfile) parse() error {
 // parse parses the contents of a Dockerfile into a Dockerfile struct.
 func parse(content string) (*Dockerfile, error) {
 	var df Dockerfile
-	df.ExposedPorts = []portConfig{}
+	df.exposedPorts = []portConfig{}
 
 	ast, err := parser.Parse(strings.NewReader(content))
 	if err != nil {
@@ -172,13 +172,13 @@ func parse(content string) (*Dockerfile, error) {
 		switch d := child.Value; d {
 		case "expose":
 			currentPorts := parseExpose(inst)
-			df.ExposedPorts = append(df.ExposedPorts, currentPorts...)
+			df.exposedPorts = append(df.exposedPorts, currentPorts...)
 		case "healthcheck":
 			healthcheckOptions, err := parseHealthCheck(inst)
 			if err != nil {
 				return nil, err
 			}
-			df.HealthCheck = healthcheckOptions
+			df.healthCheck = healthcheckOptions
 		}
 	}
 	return &df, nil
