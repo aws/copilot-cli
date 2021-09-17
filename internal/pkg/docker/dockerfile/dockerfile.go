@@ -108,6 +108,17 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	return ports, err
 }
 
+// GetHealthCheck parses the HEALTHCHECK instruction from the Dockerfile and returns it.
+// If the HEALTHCHECK is NONE or there is no instruction, returns nil.
+func (df *Dockerfile) GetHealthCheck() (*HealthCheck, error) {
+	if !df.parsed {
+		if err := df.parse(); err != nil {
+			return nil, err
+		}
+	}
+	return df.HealthCheck, nil
+}
+
 // parse takes a Dockerfile and fills in struct members based on methods like parseExpose and parseHealthcheck.
 func (df *Dockerfile) parse() error {
 	if df.parsed {
@@ -257,15 +268,4 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 		Retries:     retries,
 		Cmd:         []string{cmdShell, command},
 	}, nil
-}
-
-// GetHealthCheck parses the HEALTHCHECK instruction from the Dockerfile and returns it.
-// If the HEALTHCHECK is NONE or there is no instruction, returns nil.
-func (df *Dockerfile) GetHealthCheck() (*HealthCheck, error) {
-	if !df.parsed {
-		if err := df.parse(); err != nil {
-			return nil, err
-		}
-	}
-	return df.HealthCheck, nil
 }
