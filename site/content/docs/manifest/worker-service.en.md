@@ -170,11 +170,11 @@ Scale up or down based on the average CPU your service should maintain.
 Scale up or down based on the average memory your service should maintain.
 
 <span class="parent-field">count.</span><a id="count-queue-delay" href="#count-queue-delay" class="field">`queue_delay`</a> <span class="type">Integer</span>   
-Scale up or down based to maintain an acceptable backlog per task.  
-The acceptable backlog per task is calculated by dividing `acceptable_latency/msg_processing_time`. For example, if you can tolerate consuming a message within 10 minutes 
+Scale up or down to maintain an acceptable queue latency by tracking against the acceptable backlog per task.  
+The acceptable backlog per task is calculated by dividing `acceptable_latency` by `msg_processing_time`. For example, if you can tolerate consuming a message within 10 minutes 
 of its arrival and it takes your task on average 250 milliseconds to process a message, then `acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400`. Therefore, each task can hold up to 
 2,400 messages.   
-A target tracking policy is setup on your behalf to ensure your service scales up and down to maintain <= 2400 messages per task. To learn more see [docs](https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html).
+A target tracking policy is set up on your behalf to ensure your service scales up and down to maintain <= 2400 messages per task. To learn more see [docs](https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html).
 
 <span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-acceptable-latency" href="#count-queue-delay-acceptable-latency" class="field">`acceptable_latency`</a> <span class="type">Duration</span>   
 The acceptable amount of time that a message can sit in the queue. For example, `"45s"`, `"5m"`, `10h`.
