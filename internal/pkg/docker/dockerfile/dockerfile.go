@@ -271,8 +271,10 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 	// Or, it can also be an exec array: HEALTHCHECK CMD ["/bin/check-running"]
 	cmdIndex := strings.Index(content, cmdInstructionPrefix)
 	cmdArgs := strings.TrimSpace(content[cmdIndex+len(cmdInstructionPrefix):])
+	cmdExecutor := "CMD"
 	var args []string
 	if err := json.Unmarshal([]byte(cmdArgs), &args); err != nil {
+		cmdExecutor = cmdShell // In string form, use CMD-SHELL.
 		args = []string{cmdArgs}
 	}
 
@@ -281,6 +283,6 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 		Timeout:     timeout,
 		StartPeriod: startPeriod,
 		Retries:     retries,
-		Cmd:         append([]string{cmdShell}, args...),
+		Cmd:         append([]string{cmdExecutor}, args...),
 	}, nil
 }

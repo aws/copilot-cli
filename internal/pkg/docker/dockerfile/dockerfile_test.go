@@ -120,8 +120,7 @@ EXPOSE 8080/tcp 5000`),
 			require.NoError(t, err)
 			ast, err := parser.Parse(bytes.NewReader(dat))
 			require.NoError(t, err)
-			stages, _, err := instructions.Parse(ast.AST)
-			require.NoError(t, err)
+			stages, _, _ := instructions.Parse(ast.AST)
 
 			ports, err := New(fs, "./Dockerfile").GetExposedPorts()
 			if tc.wantedErr != nil {
@@ -216,7 +215,7 @@ HEALTHCHECK   CMD     ["a",    "b"]
 				Interval: 10 * time.Second,
 				Timeout:  5 * time.Second,
 				Retries:  2,
-				Cmd:      []string{cmdShell, "a", "b"},
+				Cmd:      []string{"CMD", "a", "b"},
 			},
 		},
 		"healthcheck contains an invalid flag": {
@@ -241,15 +240,33 @@ HEALTHCHECK   CMD     ["a",    "b"]
 				t.FailNow()
 			}
 
+			// Ensure the dockerfile is parse-able by Docker.
+			dat, err := fs.ReadFile("./Dockerfile")
+			require.NoError(t, err)
+			ast, err := parser.Parse(bytes.NewReader(dat))
+			require.NoError(t, err)
+			stages, _, _ := instructions.Parse(ast.AST)
+
 			hc, err := New(fs, "./Dockerfile").GetHealthCheck()
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedConfig, hc, "healthcheck configs do not match")
+
+				for _, cmd := range stages[0].Commands {
+					switch v := cmd.(type) {
+					case *instructions.HealthCheckCommand:
+						if tc.wantedConfig == nil {
+							require.Equal(t, []string{"NONE"}, v.Health.Test, "expected NONE from Docker healthcheck")
+						} else {
+							require.Equal(t, tc.wantedConfig.Cmd, v.Health.Test, "Docker CMD instructions do not match")
+						}
+					}
+				}
 			}
 
-			require.Equal(t, tc.wantedConfig, hc)
 		})
 	}
 }
