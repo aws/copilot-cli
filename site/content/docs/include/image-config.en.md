@@ -35,7 +35,7 @@ Instead of building a container from a Dockerfile, you can specify an existing i
 The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
 <span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">String</span>
-An optional credentials arn for private repository. The `credentials` field follows the same definition as the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the Amazon ECS task definition.  
+An optional credentials ARN for a private repository. The `credentials` field follows the same definition as the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the Amazon ECS task definition.
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
