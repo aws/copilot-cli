@@ -145,12 +145,12 @@ func TestCreds(t *testing.T) {
 func TestProvider_FromProfile(t *testing.T) {
 	t.Run("error if region is missing", func(t *testing.T) {
 		ogRegion := os.Getenv("AWS_REGION")
-		ogSessionToken := os.Getenv("AWS_SESSION_TOKEN")
+		ogDefaultRegion := os.Getenv("AWS_DEFAULT_REGION")
 		defer func() {
 			err := restoreEnvVar("AWS_REGION", ogRegion)
 			require.NoError(t, err)
 
-			err = restoreEnvVar("AWS_SESSION_TOKEN", ogSessionToken)
+			err = restoreEnvVar("AWS_DEFAULT_REGION", ogDefaultRegion)
 			require.NoError(t, err)
 		}()
 
@@ -158,7 +158,7 @@ func TestProvider_FromProfile(t *testing.T) {
 		// is missing depends on whether the `AWS_REGION` environment variable is set.
 		err := os.Unsetenv("AWS_REGION")
 		require.NoError(t, err)
-		err = os.Unsetenv("AWS_SESSION_TOKEN")
+		err = os.Unsetenv("AWS_DEFAULT_REGION")
 		require.NoError(t, err)
 
 		// When
