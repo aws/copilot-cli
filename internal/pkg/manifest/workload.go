@@ -38,26 +38,28 @@ const (
 
 	ArchAMD64 = dockerengine.ArchAMD64
 	ArchX86   = dockerengine.ArchX86
-)
 
-const (
-	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
-	defaultDockerfileName = "Dockerfile"
+	// Minimum CPU and mem values required for Windows-based tasks.
+	MinWindowsTaskCPU    = 1024
+	MinWindowsTaskMemory = 2048
 )
 
 var (
 	// WorkloadTypes holds all workload manifest types.
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
 
-	// All placement options.
-	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
+	// Acceptable strings for Windows operating systems.
+	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
 
-	validShortPlatforms = []string{
+	// ValidShortPlatforms are all of the os/arch combinations that the PlatformString field may accept.
+	ValidShortPlatforms = []string{
 		platformString(OSLinux, ArchAMD64),
 		platformString(OSLinux, ArchX86),
 		platformString(OSWindows, ArchAMD64),
 		platformString(OSWindows, ArchX86),
 	}
+
+	// validAdvancedPlatforms are all of the OsFamily/Arch combinations that the PlatformArgs field may accept.
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
@@ -67,12 +69,10 @@ var (
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
 	}
 
+	// All placement options.
+	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
+
 	defaultPlatform = platformString(OSLinux, ArchAMD64)
-
-	windowsTaskCPU    = 1024
-	windowsTaskMemory = 2048
-
-	windowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
@@ -84,6 +84,11 @@ var (
 	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
 
 	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
+)
+
+const (
+	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
+	defaultDockerfileName = "Dockerfile"
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -752,12 +757,12 @@ func validateShortPlatform(platform *string) error {
 	if platform == nil {
 		return nil
 	}
-	for _, validPlatform := range validShortPlatforms {
+	for _, validPlatform := range ValidShortPlatforms {
 		if aws.StringValue(platform) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validShortPlatforms, "and"))
+	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
 }
 
 func validateAdvancedPlatform(platform PlatformArgs) error {
@@ -778,7 +783,7 @@ func validateAdvancedPlatform(platform PlatformArgs) error {
 }
 
 func isWindowsPlatform(platform PlatformArgsOrString) bool {
-	for _, win := range windowsOSFamilies {
+	for _, win := range WindowsOSFamilies {
 		if platform.OS() == win {
 			return true
 		}

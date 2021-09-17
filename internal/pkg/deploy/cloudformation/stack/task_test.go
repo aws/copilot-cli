@@ -111,6 +111,14 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 			ParameterKey:   aws.String(taskEntryPointParamKey),
 			ParameterValue: aws.String("exec,some command"),
 		},
+		{
+			ParameterKey:   aws.String(taskOSParamKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(taskArchParamKey),
+			ParameterValue: aws.String(""),
+		},
 	}
 
 	taskInput := deploy.CreateTaskResourcesInput{
