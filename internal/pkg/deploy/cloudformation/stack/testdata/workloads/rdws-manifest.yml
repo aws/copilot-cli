@@ -26,6 +26,7 @@ image:
 cpu: 1024
 # Amount of memory in MiB used by the task.
 memory: 2048
+command: "shine on you"
 
 publish:
   topics:
@@ -42,6 +43,6 @@ publish:
 # You can override any of the values defined above by environment.
 environments:
   test:
-    start_command: "echo es by pink floyd"
+    command: crazy diamond
     variables:
       LOG_LEVEL: debug        # Log level for the "test" environment.
