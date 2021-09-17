@@ -117,6 +117,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
+		StartCommand:      s.manifest.StartCommand,
 		Tags:              s.manifest.Tags,
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
