@@ -59,5 +59,13 @@ environments:
         spot_from: 6
     logging:
       retention: 1
-      
+    sidecars:
+      nginx:
+        port: 80
+        image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
+        variables:
+          NGINX_PORT: 80
+        healthcheck:
+          command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+          interval: 10s
 

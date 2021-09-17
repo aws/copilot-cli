@@ -14,6 +14,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
+// Template rendering configuration.
+const (
+	backlogCalculatorLambdaPath = "custom-resources/backlog-per-task-calculator.js"
+)
+
 type workerSvcReadParser interface {
 	template.ReadParser
 	ParseWorkerService(template.WorkloadOpts) (*template.Content, error)
@@ -60,11 +65,15 @@ func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeCo
 func (s *WorkerService) Template() (string, error) {
 	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
 	if err != nil {
-		return "", fmt.Errorf("read desired count lambda: %w", err)
+		return "", fmt.Errorf("read desired count lambda function source code: %w", err)
 	}
 	envControllerLambda, err := s.parser.Read(envControllerPath)
 	if err != nil {
-		return "", fmt.Errorf("read env controller lambda: %w", err)
+		return "", fmt.Errorf("read env controller lambda function source code: %w", err)
+	}
+	backlogPerTaskLambda, err := s.parser.Read(backlogCalculatorLambdaPath)
+	if err != nil {
+		return "", fmt.Errorf("read backlog-per-task-calculator lambda function source code: %w", err)
 	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
@@ -115,28 +124,29 @@ func (s *WorkerService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
-		Variables:                s.manifest.WorkerServiceConfig.Variables,
-		Secrets:                  s.manifest.WorkerServiceConfig.Secrets,
-		NestedStack:              outputs,
-		Sidecars:                 sidecars,
-		Autoscaling:              autoscaling,
-		CapacityProviders:        capacityProviders,
-		DesiredCountOnSpot:       desiredCountOnSpot,
-		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:             manifest.WorkerServiceType,
-		HealthCheck:              s.manifest.WorkerServiceConfig.ImageConfig.HealthCheckOpts(),
-		LogConfig:                convertLogging(s.manifest.Logging),
-		DockerLabels:             s.manifest.ImageConfig.DockerLabels,
-		DesiredCountLambda:       desiredCountLambda.String(),
-		EnvControllerLambda:      envControllerLambda.String(),
-		Storage:                  storage,
-		Network:                  convertNetworkConfig(s.manifest.Network),
-		EntryPoint:               entrypoint,
-		Command:                  command,
-		DependsOn:                dependencies,
-		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
-		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
-		Subscribe:                subscribe,
+		Variables:                      s.manifest.WorkerServiceConfig.Variables,
+		Secrets:                        s.manifest.WorkerServiceConfig.Secrets,
+		NestedStack:                    outputs,
+		Sidecars:                       sidecars,
+		Autoscaling:                    autoscaling,
+		CapacityProviders:              capacityProviders,
+		DesiredCountOnSpot:             desiredCountOnSpot,
+		ExecuteCommand:                 convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:                   manifest.WorkerServiceType,
+		HealthCheck:                    convertContainerHealthCheck(s.manifest.WorkerServiceConfig.ImageConfig.HealthCheck),
+		LogConfig:                      convertLogging(s.manifest.Logging),
+		DockerLabels:                   s.manifest.ImageConfig.DockerLabels,
+		DesiredCountLambda:             desiredCountLambda.String(),
+		EnvControllerLambda:            envControllerLambda.String(),
+		BacklogPerTaskCalculatorLambda: backlogPerTaskLambda.String(),
+		Storage:                        storage,
+		Network:                        convertNetworkConfig(s.manifest.Network),
+		EntryPoint:                     entrypoint,
+		Command:                        command,
+		DependsOn:                      dependencies,
+		CredentialsParameter:           aws.StringValue(s.manifest.ImageConfig.Credentials),
+		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
+		Subscribe:                      subscribe,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)

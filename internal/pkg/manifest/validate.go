@@ -4,9 +4,11 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 )
@@ -348,20 +350,66 @@ func (a *AdvancedCount) Validate() error {
 	if a.IsEmpty() {
 		return nil
 	}
+	if len(a.validScalingFields()) == 0 {
+		return fmt.Errorf("cannot have autoscaling options for workloads of type '%s'", a.workloadType)
+	}
+	// Validate spot and remaining autoscaling fields.
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
 			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			secondField: fmt.Sprintf("range/%s", strings.Join(a.validScalingFields(), "/")),
 		}
 	}
 	if err := a.Range.Validate(); err != nil {
 		return fmt.Errorf(`validate "range": %w`, err)
 	}
-	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
+
+	// Validate combinations with "range".
+	if a.Range.IsEmpty() && a.hasScalingFieldsSet() {
 		return &errFieldMustBeSpecified{
 			missingField:      "range",
-			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+			conditionalFields: a.validScalingFields(),
 		}
+	}
+	if !a.Range.IsEmpty() && !a.hasScalingFieldsSet() {
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields:    a.validScalingFields(),
+			conditionalField: "range",
+		}
+	}
+
+	// Validate individual custom autoscaling options.
+	if !a.QueueScaling.IsEmpty() {
+		if err := a.QueueScaling.Validate(); err != nil {
+			return fmt.Errorf(`validate "queue_delay": %w`, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if QueueScaling is configured correctly.
+func (qs *QueueScaling) Validate() error {
+	if qs.AcceptableLatency == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "acceptable_latency",
+			conditionalFields: []string{"msg_processing_time"},
+		}
+	}
+	if qs.AvgProcessingTime == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "msg_processing_time",
+			conditionalFields: []string{"acceptable_latency"},
+		}
+	}
+	latency, process := *qs.AcceptableLatency, *qs.AvgProcessingTime
+	if latency == 0 {
+		return errors.New(`"acceptable_latency" cannot be 0`)
+	}
+	if process == 0 {
+		return errors.New(`"msg_processing_time" cannot be 0`)
+	}
+	if process > latency {
+		return errors.New(`"msg_processing_time" cannot be longer than "acceptable_latency"`)
 	}
 	return nil
 }
@@ -522,6 +570,9 @@ func (s *SidecarConfig) Validate() error {
 		if err := mp.Validate(); err != nil {
 			return fmt.Errorf(`validate "mount_points[%d]: %w`, ind, err)
 		}
+	}
+	if err := s.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	return s.ImageOverride.Validate()
 }

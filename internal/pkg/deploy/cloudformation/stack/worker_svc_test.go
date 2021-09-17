@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -41,7 +40,7 @@ func TestWorkerService_Template(t *testing.T) {
 				svc.parser = m
 			},
 			wantedTemplate: "",
-			wantedErr:      fmt.Errorf("read desired count lambda: some error"),
+			wantedErr:      fmt.Errorf("read desired count lambda function source code: some error"),
 		},
 		"unavailable env controller lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
@@ -51,13 +50,25 @@ func TestWorkerService_Template(t *testing.T) {
 				svc.parser = m
 			},
 			wantedTemplate: "",
-			wantedErr:      fmt.Errorf("read env controller lambda: some error"),
+			wantedErr:      fmt.Errorf("read env controller lambda function source code: some error"),
+		},
+		"unavailable backlog-per-task-caculator lambda template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
+				m := mocks.NewMockworkerSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(nil, errors.New("some error"))
+				svc.parser = m
+			},
+			wantedTemplate: "",
+			wantedErr:      fmt.Errorf("read backlog-per-task-calculator lambda function source code: some error"),
 		},
 		"unexpected addons parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
@@ -77,6 +88,7 @@ func TestWorkerService_Template(t *testing.T) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `
@@ -107,6 +119,7 @@ Outputs:
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `
@@ -135,6 +148,7 @@ Outputs:
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `
@@ -156,6 +170,7 @@ Outputs:
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseWorkerService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -199,18 +214,20 @@ Outputs:
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseWorkerService(template.WorkloadOpts{
 					WorkloadType: manifest.WorkerServiceType,
-					HealthCheck: &ecs.HealthCheck{
-						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
+					HealthCheck: &template.ContainerHealthCheck{
+						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    aws.Int64(5),
 						Retries:     aws.Int64(3),
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
-					DesiredCountLambda:  "something",
-					EnvControllerLambda: "something",
-					ExecuteCommand:      &template.ExecuteCommandOpts{},
+					DesiredCountLambda:             "something",
+					EnvControllerLambda:            "something",
+					BacklogPerTaskCalculatorLambda: "something",
+					ExecuteCommand:                 &template.ExecuteCommandOpts{},
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},

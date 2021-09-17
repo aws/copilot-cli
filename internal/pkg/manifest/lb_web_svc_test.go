@@ -66,6 +66,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						Memory: aws.Int(512),
 						Count: Count{
 							Value: aws.Int(1),
+							AdvancedCount: AdvancedCount{
+								workloadType: LoadBalancedWebServiceType,
+							},
 						},
 						ExecuteCommand: ExecuteCommand{
 							Enable: aws.Bool(false),
@@ -1248,7 +1251,7 @@ func Test_Temp(t *testing.T) {
 			},
 			Port: aws.Uint16(5000),
 		},
-		HealthCheck: *newDefaultContainerHealthCheck(),
+		HealthCheck: *NewDefaultContainerHealthCheck(),
 	}
 	t.Run("temporary", func(t *testing.T) {
 		// WHEN
@@ -1292,7 +1295,7 @@ func Test_Temp(t *testing.T) {
 							},
 							Port: aws.Uint16(5000),
 						},
-						HealthCheck: *newDefaultContainerHealthCheck(),
+						HealthCheck: *NewDefaultContainerHealthCheck(),
 					},
 				},
 			},

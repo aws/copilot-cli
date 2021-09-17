@@ -29,6 +29,7 @@ func Test_convertSidecar(t *testing.T) {
 		inDependsOn       map[string]string
 		inImg             manifest.Image
 		inImageOverride   manifest.ImageOverride
+		inHealthCheck     manifest.ContainerHealthCheck
 		circDepContainers []string
 
 		wanted    *template.SidecarOpts
@@ -241,6 +242,27 @@ func Test_convertSidecar(t *testing.T) {
 				Command:    []string{"arg1", "arg2"},
 			},
 		},
+		"with health check": {
+			inHealthCheck: manifest.ContainerHealthCheck{
+				Command: []string{"foo", "bar"},
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				HealthCheck: &template.ContainerHealthCheck{
+					Command:     []string{"foo", "bar"},
+					Interval:    aws.Int64(10),
+					Retries:     aws.Int64(2),
+					StartPeriod: aws.Int64(0),
+					Timeout:     aws.Int64(5),
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -255,6 +277,7 @@ func Test_convertSidecar(t *testing.T) {
 					DockerLabels:  tc.inLabels,
 					DependsOn:     tc.inDependsOn,
 					ImageOverride: tc.inImageOverride,
+					HealthCheck:   tc.inHealthCheck,
 				},
 			}
 			got, err := convertSidecar(convertSidecarOpts{
@@ -467,6 +490,9 @@ func Test_convertAutoscaling(t *testing.T) {
 	badRange := manifest.IntRangeBand("badRange")
 	mockRequests := 1000
 	mockResponseTime := 512 * time.Millisecond
+
+	testAcceptableLatency := 10 * time.Minute
+	testAvgProcessingTime := 250 * time.Millisecond
 	testCases := map[string]struct {
 		input *manifest.AdvancedCount
 
@@ -524,6 +550,28 @@ func Test_convertAutoscaling(t *testing.T) {
 				Memory:       aws.Float64(80),
 				Requests:     aws.Float64(1000),
 				ResponseTime: aws.Float64(0.512),
+			},
+		},
+		"success with queue autoscaling": {
+			input: &manifest.AdvancedCount{
+				Range: manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(5),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(5),
+					},
+				},
+				QueueScaling: manifest.QueueScaling{
+					AcceptableLatency: &testAcceptableLatency,
+					AvgProcessingTime: &testAvgProcessingTime,
+				},
+			},
+			wanted: &template.AutoscalingOpts{
+				MaxCapacity: aws.Int(10),
+				MinCapacity: aws.Int(5),
+				QueueDelay: &template.AutoscalingQueueDelayOpts{
+					AcceptableBacklogPerTask: 2400,
+				},
 			},
 		},
 		"returns nil if spot specified": {

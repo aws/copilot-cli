@@ -1260,7 +1260,7 @@ func TestWorkerSvc_Subscriptions(t *testing.T) {
 					},
 				},
 				Queue: &SQSQueue{
-					Retention: durationPointer(4 * 24 * time.Hour),
+					Retention: durationp(4 * 24 * time.Hour),
 				},
 			},
 			expected: []TopicSubscription{
