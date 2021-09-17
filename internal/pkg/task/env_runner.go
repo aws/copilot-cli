@@ -6,6 +6,8 @@ package task
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -35,6 +37,10 @@ type EnvRunner struct {
 	// App and Env in which the tasks will be launched.
 	App string
 	Env string
+
+	// Platform configuration
+	OS   string
+	Arch string
 
 	// Interfaces to interact with dependencies. Must not be nil.
 	VPCGetter            VPCGetter
@@ -74,13 +80,21 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
 
+	platformVersion := "LATEST"
+	for _, windowsOS := range manifest.WindowsOSFamilies {
+		if r.OS == windowsOS {
+			platformVersion = "1.0.0"
+		}
+	}
+
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
-		Cluster:        cluster,
-		Count:          r.Count,
-		Subnets:        subnets,
-		SecurityGroups: securityGroups,
-		TaskFamilyName: taskFamilyName(r.GroupName),
-		StartedBy:      startedBy,
+		Cluster:         cluster,
+		Count:           r.Count,
+		Subnets:         subnets,
+		SecurityGroups:  securityGroups,
+		TaskFamilyName:  taskFamilyName(r.GroupName),
+		StartedBy:       startedBy,
+		PlatformVersion: platformVersion,
 	})
 	if err != nil {
 		return nil, &errRunTask{

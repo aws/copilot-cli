@@ -6,6 +6,8 @@ package task
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
@@ -35,6 +37,10 @@ type ConfigRunner struct {
 
 	// Must not be nil if using default subnets.
 	VPCGetter VPCGetter
+
+	// Platform configuration
+	OS   string
+	Arch string
 }
 
 // Run runs tasks given subnets, security groups and the cluster, and returns the tasks.
@@ -65,14 +71,21 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 		}
 		r.Subnets = subnets
 	}
+	platformVersion := "LATEST"
+	for _, windowsOS := range manifest.WindowsOSFamilies {
+		if r.OS == windowsOS {
+			platformVersion = "1.0.0"
+		}
+	}
 
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
-		Cluster:        r.Cluster,
-		Count:          r.Count,
-		Subnets:        r.Subnets,
-		SecurityGroups: r.SecurityGroups,
-		TaskFamilyName: taskFamilyName(r.GroupName),
-		StartedBy:      startedBy,
+		Cluster:         r.Cluster,
+		Count:           r.Count,
+		Subnets:         r.Subnets,
+		SecurityGroups:  r.SecurityGroups,
+		TaskFamilyName:  taskFamilyName(r.GroupName),
+		StartedBy:       startedBy,
+		PlatformVersion: platformVersion,
 	})
 	if err != nil {
 		return nil, &errRunTask{

@@ -89,8 +89,8 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.WorkerServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {
-		svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(windowsTaskCPU)
-		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(windowsTaskMemory)
+		svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform

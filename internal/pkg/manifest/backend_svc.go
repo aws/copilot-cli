@@ -57,8 +57,8 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.BackendServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {
-		svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(windowsTaskCPU)
-		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(windowsTaskMemory)
+		svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.parser = template.New()
 	return svc

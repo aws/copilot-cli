@@ -188,7 +188,7 @@ Resources:
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
-      PlatformVersion: 1.4.0
+      PlatformVersion: LATEST
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE

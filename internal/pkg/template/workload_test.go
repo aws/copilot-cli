@@ -242,15 +242,15 @@ func TestRuntimePlatformOpts_Version(t *testing.T) {
 		in       RuntimePlatformOpts
 		wantedPV string
 	}{
-		"should return 1.4.0 for on empty platform": {
-			wantedPV: "1.4.0",
+		"should return LATEST for on empty platform": {
+			wantedPV: "LATEST",
 		},
-		"should return 1.4.0 for linux containers": {
+		"should return LATEST for linux containers": {
 			in: RuntimePlatformOpts{
 				OS:   "LINUX",
 				Arch: "X86_64",
 			},
-			wantedPV: "1.4.0",
+			wantedPV: "LATEST",
 		},
 		"should return 1.0.0 for windows containers": {
 			in: RuntimePlatformOpts{
