@@ -39,6 +39,7 @@
     "ts-jest": "^26.4.4",
     "ws": ">=7.4.6",
     "yargs-parser": ">=20.2.4",
-    "glob-parent": ">=5.1.2"
+    "glob-parent": ">=5.1.2",
+    "set-value": ">=4.0.1"
   }
 }

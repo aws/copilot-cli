@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -233,7 +234,7 @@ var _ = Describe("sidecars flow", func() {
 			uri := route.URL + "/health-check"
 
 			// Service should be ready.
-			var resp *http.Response
+			resp := &http.Response{}
 			var fetchErr error
 			Eventually(func() (int, error) {
 				resp, fetchErr = http.Get(uri)
@@ -248,29 +249,38 @@ var _ = Describe("sidecars flow", func() {
 		})
 
 		It("svc logs should display logs", func() {
+			var firelensCreated bool
 			var svcLogs []client.SvcLogsOutput
 			var svcLogsErr error
-			Eventually(func() ([]client.SvcLogsOutput, error) {
+			for i := 0; i < 10; i++ {
 				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
 					AppName: appName,
 					Name:    svcName,
 					EnvName: "test",
 					Since:   "1h",
 				})
-				return svcLogs, svcLogsErr
-			}, "60s", "10s").ShouldNot(BeEmpty())
-
-			var firelensCreated bool
-			for _, logLine := range svcLogs {
-				Expect(logLine.Message).NotTo(Equal(""))
-				Expect(logLine.LogStreamName).NotTo(Equal(""))
-				Expect(logLine.Timestamp).NotTo(Equal(0))
-				Expect(logLine.IngestionTime).NotTo(Equal(0))
-				if strings.Contains(logLine.LogStreamName, fmt.Sprintf("copilot/%s-firelens-", svcName)) {
-					firelensCreated = true
+				if svcLogsErr != nil {
+					exponentialBackoffWithJitter(i)
+					continue
 				}
+				for _, logLine := range svcLogs {
+					if strings.Contains(logLine.LogStreamName, fmt.Sprintf("copilot/%s-firelens-", svcName)) {
+						firelensCreated = true
+					}
+				}
+				if firelensCreated {
+					break
+				}
+				exponentialBackoffWithJitter(i)
 			}
+			Expect(svcLogsErr).NotTo(HaveOccurred())
 			Expect(firelensCreated).To(Equal(true))
+			// Randomly check if a log line is valid.
+			logLine := rand.Intn(len(svcLogs))
+			Expect(svcLogs[logLine].Message).NotTo(Equal(""))
+			Expect(svcLogs[logLine].LogStreamName).NotTo(Equal(""))
+			Expect(svcLogs[logLine].Timestamp).NotTo(Equal(0))
+			Expect(svcLogs[logLine].IngestionTime).NotTo(Equal(0))
 		})
 	})
 })

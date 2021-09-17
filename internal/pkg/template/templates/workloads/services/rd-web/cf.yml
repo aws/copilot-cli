@@ -103,6 +103,9 @@ Resources:
                   Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
               {{- end}}
               {{- end}}
+            {{- if .StartCommand }}
+            StartCommand: {{.StartCommand}}
+            {{- end }}
       InstanceConfiguration:
         Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory
