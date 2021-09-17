@@ -65,7 +65,7 @@ The name of an existing CodeStar Connections connection. If omitted, Copilot wil
 Optional. The output artifact format. Values can be either `CODEBUILD_CLONE_REF` or `CODE_ZIP`. If omitted, the default is `CODE_ZIP`.
 
 !!! info
-    This property is not available for pipelines with GitHub V1 connection which uses the `access_token_secret`. 
+    This property is not available for pipelines with [GitHub version 1](https://docs.aws.amazon.com/codepipeline/latest/userguide/appendix-github-oauth.html) source actions, which use `access_token_secret`. 
 
 <div class="separator"></div>
 
