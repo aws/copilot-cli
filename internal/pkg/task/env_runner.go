@@ -80,7 +80,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
 
-	platformVersion := "1.4.0"
+	platformVersion := "LATEST"
 	for _, windowsOS := range manifest.WindowsOSFamilies {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"

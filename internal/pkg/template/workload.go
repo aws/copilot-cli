@@ -326,7 +326,7 @@ func (p RuntimePlatformOpts) Version() string {
 			return "1.0.0"
 		}
 	}
-	return "1.4.0"
+	return "LATEST"
 }
 
 func (p RuntimePlatformOpts) isEmpty() bool {

@@ -121,7 +121,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					SecurityGroups:  []string{"sg-1", "sg-2"},
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
-					PlatformVersion: "1.4.0",
+					PlatformVersion: "LATEST",
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -165,7 +165,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					SecurityGroups:  []string{"sg-1", "sg-2"},
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
-					PlatformVersion: "1.4.0",
+					PlatformVersion: "LATEST",
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -197,7 +197,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					SecurityGroups:  []string{"sg-1", "sg-2"},
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
-					PlatformVersion: "1.4.0",
+					PlatformVersion: "LATEST",
 				}).Return([]*ecs.Task{
 					&taskWithENI,
 					&taskWithNoENI,
@@ -239,7 +239,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					SecurityGroups:  []string{"sg-1", "sg-2"},
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
-					PlatformVersion: "1.4.0",
+					PlatformVersion: "LATEST",
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 

@@ -873,7 +873,7 @@ func TestECS_RunTask(t *testing.T) {
 		securityGroups:  []string{"sg-1", "sg-2"},
 		taskFamilyName:  "my-task",
 		startedBy:       "task",
-		platformVersion: "1.4.0",
+		platformVersion: "LATEST",
 	}
 	ecsTasks := []*ecs.Task{
 		{
@@ -916,7 +916,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).Return(&ecs.RunTaskOutput{
 					Tasks: ecsTasks,
@@ -956,7 +956,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{}, errors.New("error"))
@@ -981,7 +981,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
@@ -1009,7 +1009,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{

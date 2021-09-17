@@ -156,7 +156,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					SecurityGroups:  []string{"sg-1", "sg-2"},
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
-					PlatformVersion: "1.4.0",
+					PlatformVersion: "LATEST",
 				}).Return(nil, errors.New("error running task"))
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -181,7 +181,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					SecurityGroups:  []string{"sg-1", "sg-2"},
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
-					PlatformVersion: "1.4.0",
+					PlatformVersion: "LATEST",
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -237,7 +237,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					SecurityGroups:  []string{"sg-1", "sg-2"},
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
-					PlatformVersion: "1.4.0",
+					PlatformVersion: "LATEST",
 				}).Return([]*ecs.Task{
 					&taskWithENI,
 					&taskWithNoENI,
