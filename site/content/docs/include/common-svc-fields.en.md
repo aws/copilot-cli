@@ -227,19 +227,19 @@ The logging section contains log configuration. You can also configure parameter
 <span class="parent-field">logging.</span><a id="retention" href="#logging-retention" class="field">`retention`</a> <span class="type">Integer</span>  
 Optional. The number of days to retain the log events. See [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays) for all accepted values. If omitted, the default is 30.
 
-<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
+<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">String</span>  
 Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 Optional. The configuration options to send to the FireLens log driver.
 
-<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
+<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Boolean</span>  
 Optional. Whether to include ECS metadata in logs. Defaults to `true`.
 
 <span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
 Optional. The secrets to pass to the log configuration.
 
-<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
+<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">String</span>  
 Optional. The full config file path in your custom Fluent Bit image.
 
 <div class="separator"></div>
