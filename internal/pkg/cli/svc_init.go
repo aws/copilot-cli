@@ -276,7 +276,7 @@ func (o *initSvcOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: o.platform,
+				PlatformString: manifest.PlatformStringP(o.platform),
 			},
 			Topics: o.topics,
 		},

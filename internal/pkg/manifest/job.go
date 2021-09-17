@@ -157,7 +157,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
 		},

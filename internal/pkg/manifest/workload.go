@@ -24,18 +24,18 @@ import (
 const (
 	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 	defaultDockerfileName = "Dockerfile"
-
-	// AWS VPC subnet placement options.
-	PublicSubnetPlacement  = "public"
-	PrivateSubnetPlacement = "private"
 )
 
 var (
+	// AWS VPC subnet placement options.
+	PublicSubnetPlacement  = Placement("public")
+	PrivateSubnetPlacement = Placement("private")
+
 	// WorkloadTypes holds all workload manifest types.
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
 
 	// All placement options.
-	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
+	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 
 	validPlatforms        = []string{dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch)}
 	validOperatingSystems = []string{dockerengine.LinuxOS}
@@ -434,7 +434,8 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform.PlatformString == nil {
 		return nil, nil
 	}
-	return t.Platform.PlatformString, nil
+	val := string(*t.Platform.PlatformString)
+	return &val, nil
 }
 
 // PublishConfig represents the configurable options for setting up publishers.
@@ -461,8 +462,9 @@ func (c *NetworkConfig) IsEmpty() bool {
 // If the user specified a placement that's not valid then throw an error.
 func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type networkWithDefaults NetworkConfig
+	publicPlacement := Placement(PublicSubnetPlacement)
 	defaultVPCConf := vpcConfig{
-		Placement: stringP(PublicSubnetPlacement),
+		Placement: &publicPlacement,
 	}
 	conf := networkWithDefaults{
 		VPC: defaultVPCConf,
@@ -474,15 +476,18 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		conf.VPC = defaultVPCConf
 	}
 	if !conf.VPC.isValidPlacement() {
-		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
+		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", string(*conf.VPC.Placement), subnetPlacements)
 	}
 	*c = NetworkConfig(conf)
 	return nil
 }
 
+// Placement represents where to place tasks (public or private subnets).
+type Placement string
+
 // vpcConfig represents the security groups and subnets attached to a task.
 type vpcConfig struct {
-	Placement      *string  `yaml:"placement"`
+	*Placement     `yaml:"placement"`
 	SecurityGroups []string `yaml:"security_groups"`
 }
 
@@ -495,7 +500,7 @@ func (c *vpcConfig) isValidPlacement() bool {
 		return false
 	}
 	for _, allowed := range subnetPlacements {
-		if *c.Placement == allowed {
+		if string(*c.Placement) == allowed {
 			return true
 		}
 	}
@@ -594,11 +599,24 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	}
 }
 
+// PlatformString represents the platform string consisting of OS family and architecture type.
+// For example: "windows/x86"
+type PlatformString string
+
+// PlatformStringP converts a string pointer to a PlatformString pointer.
+func PlatformStringP(s *string) *PlatformString {
+	if s == nil {
+		return nil
+	}
+	val := PlatformString(*s)
+	return &val
+}
+
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type PlatformArgs.
 type PlatformArgsOrString struct {
-	PlatformString *string
-	PlatformArgs   PlatformArgs
+	*PlatformString
+	PlatformArgs PlatformArgs
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the PlatformArgsOrString
@@ -651,16 +669,16 @@ func (p *PlatformArgs) bothSpecified() bool {
 	return (p.OSFamily != nil) && (p.Arch != nil)
 }
 
-func validatePlatform(platform *string) error {
+func validatePlatform(platform *PlatformString) error {
 	if platform == nil {
 		return nil
 	}
 	for _, validPlatform := range validPlatforms {
-		if aws.StringValue(platform) == validPlatform {
+		if string(*platform) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
+	return fmt.Errorf("platform %s is invalid; %s: %s", string(*platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 }
 
 func validateOS(os *string) error {

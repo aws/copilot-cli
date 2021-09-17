@@ -525,28 +525,28 @@ func TestApplyEnv_StringSlice(t *testing.T) {
 	}{
 		"string slice overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
-				svc.Environments["test"].RoutingRule.AllowedSourceIps = []string{"walk", "on", "the", "wild", "side"}
+				svc.ImageConfig.HealthCheck.Command = []string{"walk", "like", "an", "egyptian"}
+				svc.Environments["test"].ImageConfig.HealthCheck.Command = []string{"walk", "on", "the", "wild", "side"}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.AllowedSourceIps = []string{"walk", "on", "the", "wild", "side"}
+				svc.ImageConfig.HealthCheck.Command = []string{"walk", "on", "the", "wild", "side"}
 			},
 		},
 		"string slice overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
-				svc.Environments["test"].RoutingRule.AllowedSourceIps = []string{}
+				svc.ImageConfig.HealthCheck.Command = []string{"walk", "like", "an", "egyptian"}
+				svc.Environments["test"].ImageConfig.HealthCheck.Command = []string{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.AllowedSourceIps = []string{}
+				svc.ImageConfig.HealthCheck.Command = []string{}
 			},
 		},
 		"string slice not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
+				svc.ImageConfig.HealthCheck.Command = []string{"walk", "like", "an", "egyptian"}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.AllowedSourceIps = []string{"walk", "like", "an", "egyptian"}
+				svc.ImageConfig.HealthCheck.Command = []string{"walk", "like", "an", "egyptian"}
 			},
 		},
 	}

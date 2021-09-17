@@ -287,6 +287,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 }
 
 func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
+	mockPlatformStr := PlatformString("linux/amd64")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -331,7 +332,7 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 			inContent: []byte(`platform: linux/amd64`),
 
 			wantedStruct: PlatformArgsOrString{
-				PlatformString: aws.String("linux/amd64"),
+				PlatformString: &mockPlatformStr,
 			},
 		},
 		"both os/arch specified with valid values": {
@@ -668,7 +669,7 @@ network:
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
 		},
@@ -691,7 +692,7 @@ network:
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
-					Placement:      stringP(PublicSubnetPlacement),
+					Placement:      &PublicSubnetPlacement,
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},
 			},

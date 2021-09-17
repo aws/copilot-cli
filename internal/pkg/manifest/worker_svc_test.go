@@ -55,7 +55,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},
@@ -96,7 +96,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},
@@ -188,6 +188,7 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 }
 
 func TestWorkerSvc_ApplyEnv(t *testing.T) {
+	mockPerc := Percentage(70)
 	mockWorkerServiceWithNoEnvironments := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
@@ -293,7 +294,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					Count: Count{
 						AdvancedCount: AdvancedCount{
-							CPU: aws.Int(70),
+							CPU: &mockPerc,
 						},
 					},
 					CPU: aws.Int(512),
@@ -714,7 +715,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(256),
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								CPU: aws.Int(70),
+								CPU: &mockPerc,
 							},
 						},
 						Variables: map[string]string{
@@ -1084,6 +1085,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 
 func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
+	mockPerc := Percentage(80)
 	testCases := map[string]struct {
 		svcCount Count
 		envCount Count
@@ -1094,7 +1096,7 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
 					Range: Range{Value: &mockRange},
-					CPU:   aws.Int(80),
+					CPU:   &mockPerc,
 				},
 			},
 			envCount: Count{},
@@ -1104,7 +1106,7 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								CPU:   &mockPerc,
 							},
 						},
 					},

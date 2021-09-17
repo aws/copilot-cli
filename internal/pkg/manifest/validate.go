@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -284,6 +285,12 @@ func (r *RoutingRule) Validate() error {
 			secondField: "targetContainer",
 		}
 	}
+	for ind, ip := range r.AllowedSourceIps {
+		if err = ip.Validate(); err != nil {
+			return fmt.Errorf(`validate "allowed_source_ips[%v]": %w`, ind, err)
+		}
+	}
+
 	return nil
 }
 
@@ -308,6 +315,17 @@ func (*Alias) Validate() error {
 	return nil
 }
 
+// Validate returns nil if IPNet is configured correctly.
+func (ip *IPNet) Validate() error {
+	if ip == nil {
+		return nil
+	}
+	if _, _, err := net.ParseCIDR(string(*ip)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Validate returns nil if TaskConfig is configured correctly.
 func (t *TaskConfig) Validate() error {
 	var err error
@@ -328,7 +346,23 @@ func (t *TaskConfig) Validate() error {
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
 func (p *PlatformArgsOrString) Validate() error {
+	if err := p.PlatformString.Validate(); err != nil {
+		return err
+	}
 	return p.PlatformArgs.Validate()
+}
+
+// Validate returns nil if PlatformString is configured correctly.
+func (p *PlatformString) Validate() error {
+	if p == nil {
+		return nil
+	}
+	val := string(*p)
+	reg := regexp.MustCompile(`^.+\/.+$`)
+	if !reg.MatchString(val) {
+		return fmt.Errorf(`cannot use %s for platform. Must match the regex "^.+\/.+$"`, val)
+	}
+	return nil
 }
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
@@ -383,6 +417,24 @@ func (a *AdvancedCount) Validate() error {
 		if err := a.QueueScaling.Validate(); err != nil {
 			return fmt.Errorf(`validate "queue_delay": %w`, err)
 		}
+	}
+
+	if err := a.CPU.Validate(); err != nil {
+		return fmt.Errorf(`validate "cpu_percentage": %w`, err)
+	}
+	if err := a.Memory.Validate(); err != nil {
+		return fmt.Errorf(`validate "memory_percentage": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if Percentage is configured correctly.
+func (p *Percentage) Validate() error {
+	if p == nil {
+		return nil
+	}
+	if val := int(*p); val < 0 || val > 100 {
+		return fmt.Errorf("cannot specify %v as Percentage. Must be an integer from 0 to 100", val)
 	}
 	return nil
 }
@@ -593,7 +645,23 @@ func (v *vpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
+	}
 	return nil
+}
+
+// Validate returns nil if Placement is configured correctly.
+func (p *Placement) Validate() error {
+	if p == nil {
+		return fmt.Errorf(`"placement" cannot be empty`)
+	}
+	for _, allowed := range subnetPlacements {
+		if string(*p) == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf(`"placement" %s is invalid. Must be one of %#v"`, string(*p), subnetPlacements)
 }
 
 // Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
