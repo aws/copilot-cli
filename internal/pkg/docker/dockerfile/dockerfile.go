@@ -5,6 +5,8 @@
 package dockerfile
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"regexp"
@@ -39,9 +41,9 @@ const (
 	hcRetriesFlag  = "retries"
 	retriesDefault = 2
 
-	hcInstrStartIndex = len("HEALTHCHECK ")
-	cmdLength         = "CMD "
-	cmdShell          = "CMD-SHELL"
+	hcInstrStartIndex    = len("HEALTHCHECK ")
+	cmdInstructionPrefix = "CMD "
+	cmdShell             = "CMD-SHELL"
 )
 
 // Port represents an exposed port in a Dockerfile.
@@ -244,8 +246,11 @@ func parseExpose(line string) []Port {
 
 // parseHealthCheck takes a HEALTHCHECK directives and turns into a healthCheck struct.
 func parseHealthCheck(content string) (*HealthCheck, error) {
-	if content[hcInstrStartIndex:] == "NONE" {
+	if strings.TrimSpace(content[hcInstrStartIndex:]) == "NONE" {
 		return nil, nil
+	}
+	if strings.Index(content, "CMD") == -1 {
+		return nil, errors.New(`HEALTHCHECK instruction must container either CMD or NONE`)
 	}
 
 	var retries int
@@ -261,15 +266,21 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 		return nil, err
 	}
 
-	// if HEALTHCHECK instruction is not "NONE", there must be a "CMD" instruction otherwise will error out
-	cmdIndex := strings.Index(content, "CMD")
-	command := content[cmdIndex+len(cmdLength):]
+	// if HEALTHCHECK instruction is not "NONE", there must be a "CMD" instruction otherwise will error out.
+	// The CMD instruction can either be in a shell command format: `HEALTHCHECK CMD /bin/check-running`
+	// Or, it can also be an exec array: HEALTHCHECK CMD ["/bin/check-running"]
+	cmdIndex := strings.Index(content, cmdInstructionPrefix)
+	cmdArgs := strings.TrimSpace(content[cmdIndex+len(cmdInstructionPrefix):])
+	var args []string
+	if err := json.Unmarshal([]byte(cmdArgs), &args); err != nil {
+		args = []string{cmdArgs}
+	}
 
 	return &HealthCheck{
 		Interval:    interval,
 		Timeout:     timeout,
 		StartPeriod: startPeriod,
 		Retries:     retries,
-		Cmd:         []string{cmdShell, command},
+		Cmd:         append([]string{cmdShell}, args...),
 	}, nil
 }

@@ -4,9 +4,13 @@
 package dockerfile
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -111,12 +115,30 @@ EXPOSE 8080/tcp 5000`),
 				t.FailNow()
 			}
 
+			// Ensure the dockerfile is parse-able by Docker.
+			dat, err := fs.ReadFile("./Dockerfile")
+			require.NoError(t, err)
+			ast, err := parser.Parse(bytes.NewReader(dat))
+			require.NoError(t, err)
+			stages, _, err := instructions.Parse(ast.AST)
+			require.NoError(t, err)
+
 			ports, err := New(fs, "./Dockerfile").GetExposedPorts()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
 				require.ElementsMatch(t, tc.wantedPorts, ports, "expected ports do not match")
+
+				// Compare our parsing against Docker's.
+				var portsFromDocker []string
+				for _, cmd := range stages[0].Commands {
+					switch v := cmd.(type) {
+					case *instructions.ExposeCommand:
+						portsFromDocker = append(portsFromDocker, v.Ports...)
+					}
+				}
+				require.ElementsMatch(t, portsFromDocker, stringifyPorts(ports), "ports from Docker do not match")
 			}
 		})
 	}
@@ -130,8 +152,11 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 		wantedErr      error
 	}{
 		"correctly parses healthcheck with default values": {
-			dockerfile: []byte(`HEALTHCHECK CMD curl -f http://localhost/ || exit 1`),
-			wantedErr:  nil,
+			dockerfile: []byte(`
+FROM nginx
+HEALTHCHECK CMD curl -f http://localhost/ || exit 1
+`),
+			wantedErr: nil,
 			wantedConfig: &HealthCheck{
 				Interval:    10 * time.Second,
 				Timeout:     5 * time.Second,
@@ -141,8 +166,10 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 			},
 		},
 		"correctly parses healthcheck with user's values": {
-			dockerfile: []byte(`HEALTHCHECK --interval=5m --timeout=3s --start-period=2s --retries=3 \
-			CMD curl -f http://localhost/ || exit 1`),
+			dockerfile: []byte(`
+FROM nginx
+HEALTHCHECK --interval=5m --timeout=3s --start-period=2s --retries=3 \
+	CMD curl -f http://localhost/ || exit 1`),
 			wantedErr: nil,
 			wantedConfig: &HealthCheck{
 				Interval:    300 * time.Second,
@@ -153,9 +180,44 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 			},
 		},
 		"correctly parses healthcheck with NONE": {
-			dockerfile:   []byte(`HEALTHCHECK NONE`),
+			dockerfile: []byte(`
+FROM nginx
+HEALTHCHECK NONE
+`),
 			wantedErr:    nil,
 			wantedConfig: nil,
+		},
+		"correctly parses no healthchecks": {
+			dockerfile:   []byte(`FROM nginx`),
+			wantedErr:    nil,
+			wantedConfig: nil,
+		},
+		"correctly parses HEALTHCHECK instruction with awkward spacing": {
+			dockerfile: []byte(`
+FROM nginx
+HEALTHCHECK   CMD   a b
+`),
+			wantedErr: nil,
+			wantedConfig: &HealthCheck{
+				Interval: 10 * time.Second,
+				Timeout:  5 * time.Second,
+				Retries:  2,
+				Cmd:      []string{cmdShell, "a b"},
+			},
+		},
+		"correctly parses HEALTHCHECK instruction with exec array format": {
+			dockerfile: []byte(`
+FROM nginx
+EXPOSE 80
+HEALTHCHECK   CMD     ["a",    "b"]
+`),
+			wantedErr: nil,
+			wantedConfig: &HealthCheck{
+				Interval: 10 * time.Second,
+				Timeout:  5 * time.Second,
+				Retries:  2,
+				Cmd:      []string{cmdShell, "a", "b"},
+			},
 		},
 		"healthcheck contains an invalid flag": {
 			dockerfile: []byte(`HEALTHCHECK --interval=5m --randomFlag=4s CMD curl -f http://localhost/ || exit 1`),
@@ -179,8 +241,7 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 				t.FailNow()
 			}
 
-			df := New(fs, "./Dockerfile")
-			hc, err := df.GetHealthCheck()
+			hc, err := New(fs, "./Dockerfile").GetHealthCheck()
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -191,4 +252,15 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 			require.Equal(t, tc.wantedConfig, hc)
 		})
 	}
+}
+
+func stringifyPorts(ports []Port) []string {
+	var arr []string
+	for _, p := range ports {
+		if p.err != nil {
+			continue
+		}
+		arr = append(arr, p.String())
+	}
+	return arr
 }
