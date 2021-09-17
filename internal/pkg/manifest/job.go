@@ -81,8 +81,8 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job.ImageConfig.HealthCheck = props.HealthCheck
 	job.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {
-		job.TaskConfig.CPU = aws.Int(WindowsTaskCPU)
-		job.TaskConfig.Memory = aws.Int(WindowsTaskMemory)
+		job.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		job.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	job.On.Schedule = stringP(props.Schedule)
 	if props.Retries != 0 {

@@ -38,20 +38,15 @@ const (
 
 	ArchAMD64 = dockerengine.ArchAMD64
 	ArchX86   = dockerengine.ArchX86
-)
 
-const (
-	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
-	defaultDockerfileName = "Dockerfile"
+	// Minimum CPU and mem values required for Windows-based tasks.
+	MinWindowsTaskCPU    = 1024
+	MinWindowsTaskMemory = 2048
 )
 
 var (
 	// WorkloadTypes holds all workload manifest types.
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
-
-	// Minimum CPU and mem values required for Windows-based tasks.
-	WindowsTaskCPU    = 1024
-	WindowsTaskMemory = 2048
 
 	// Acceptable strings for Windows operating systems.
 	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
@@ -89,6 +84,11 @@ var (
 	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
 
 	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
+)
+
+const (
+	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
+	defaultDockerfileName = "Dockerfile"
 )
 
 // WorkloadManifest represents a workload manifest.

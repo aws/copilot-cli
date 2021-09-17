@@ -77,8 +77,8 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.LoadBalancedWebServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {
-		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(WindowsTaskCPU)
-		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(WindowsTaskMemory)
+		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
