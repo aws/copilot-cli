@@ -447,8 +447,8 @@ func (o *runTaskOpts) validateFlagsWithWindows() error {
 	if o.cpu < manifest.MinWindowsTaskCPU {
 		return fmt.Errorf("CPU %d must be at least %d for a Windows-based task", o.cpu, manifest.MinWindowsTaskCPU)
 	}
-	if o.memory < manifest.MinWindowsTaskCPU {
-		return fmt.Errorf("memory %d must be at least %d for a Windows-based task", o.memory, manifest.MinWindowsTaskCPU)
+	if o.memory < manifest.MinWindowsTaskMemory {
+		return fmt.Errorf("memory %d must be at least %d for a Windows-based task", o.memory, manifest.MinWindowsTaskMemory)
 	}
 	return nil
 }
