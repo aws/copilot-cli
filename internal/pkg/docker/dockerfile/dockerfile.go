@@ -44,14 +44,20 @@ const (
 	cmdShell          = "CMD-SHELL"
 )
 
-type portConfig struct {
+// Port represents an exposed port in a Dockerfile.
+type Port struct {
 	Port      uint16
 	Protocol  string
 	RawString string
 	err       error
 }
 
-// HealthCheck represents health check options for a Dockerfile.
+// String implements the fmt.Stringer interface.
+func (p *Port) String() string {
+	return p.RawString
+}
+
+// HealthCheck represents container health check options in a Dockerfile.
 type HealthCheck struct {
 	Interval    time.Duration
 	Timeout     time.Duration
@@ -62,7 +68,7 @@ type HealthCheck struct {
 
 // Dockerfile represents a parsed Dockerfile.
 type Dockerfile struct {
-	exposedPorts []portConfig
+	exposedPorts []Port
 	healthCheck  *HealthCheck
 	parsed       bool
 	path         string
@@ -70,10 +76,10 @@ type Dockerfile struct {
 	fs afero.Fs
 }
 
-// NewDockerfile returns an empty Dockerfile.
-func NewDockerfile(fs afero.Fs, path string) *Dockerfile {
+// New returns an empty Dockerfile.
+func New(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
-		exposedPorts: []portConfig{},
+		exposedPorts: []Port{},
 		healthCheck:  nil,
 		fs:           fs,
 		path:         path,
@@ -82,30 +88,28 @@ func NewDockerfile(fs afero.Fs, path string) *Dockerfile {
 }
 
 // GetExposedPorts returns a uint16 slice of exposed ports found in the Dockerfile.
-func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
+func (df *Dockerfile) GetExposedPorts() ([]Port, error) {
 	if !df.parsed {
 		if err := df.parse(); err != nil {
 			return nil, err
 		}
 	}
-	var ports []uint16
-
 	if len(df.exposedPorts) == 0 {
 		return nil, ErrNoExpose{
 			Dockerfile: df.path,
 		}
 	}
 
-	var err error
+	var portsWithoutErrs []Port
 	for _, port := range df.exposedPorts {
 		// ensure we register that there is an error (will only be ErrNoExpose) if
 		// any ports were unparseable or invalid
 		if port.err != nil {
 			return nil, port.err
 		}
-		ports = append(ports, port.Port)
+		portsWithoutErrs = append(portsWithoutErrs, port)
 	}
-	return ports, err
+	return portsWithoutErrs, nil
 }
 
 // GetHealthCheck parses the HEALTHCHECK instruction from the Dockerfile and returns it.
@@ -151,7 +155,7 @@ func (df *Dockerfile) parse() error {
 // parse parses the contents of a Dockerfile into a Dockerfile struct.
 func parse(content string) (*Dockerfile, error) {
 	var df Dockerfile
-	df.exposedPorts = []portConfig{}
+	df.exposedPorts = []Port{}
 
 	ast, err := parser.Parse(strings.NewReader(content))
 	if err != nil {
@@ -184,7 +188,7 @@ func parse(content string) (*Dockerfile, error) {
 	return &df, nil
 }
 
-func parseExpose(line string) []portConfig {
+func parseExpose(line string) []Port {
 	// group 0: whole match
 	// group 1: port
 	// group 2: /protocol
@@ -199,7 +203,7 @@ func parseExpose(line string) []portConfig {
 	// TODO implement arg parser regex
 	// https://github.com/aws/copilot-cli/issues/827
 	if len(matches) == 0 {
-		return []portConfig{
+		return []Port{
 			{
 				RawString: line,
 				err: ErrInvalidPort{
@@ -208,14 +212,14 @@ func parseExpose(line string) []portConfig {
 			},
 		}
 	}
-	var ports []portConfig
+	var ports []Port
 	for _, match := range matches {
 		var err error
 		// convert the matched port to int and validate
 		// We don't use the validate func in the cli package to avoid a circular dependency
 		extractedPort, err := strconv.Atoi(match[exposeRegexpPort])
 		if err != nil {
-			ports = append(ports, portConfig{
+			ports = append(ports, Port{
 				err: ErrInvalidPort{
 					Match: match[0],
 				},
@@ -228,7 +232,7 @@ func parseExpose(line string) []portConfig {
 		} else {
 			err = ErrInvalidPort{Match: match[0]}
 		}
-		ports = append(ports, portConfig{
+		ports = append(ports, Port{
 			RawString: match[exposeRegexpWholeMatch],
 			Protocol:  match[exposeRegexpProtocol],
 			Port:      extractedPortUint,

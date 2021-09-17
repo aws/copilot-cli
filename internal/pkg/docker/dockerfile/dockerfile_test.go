@@ -12,93 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseExposeDockerfile(t *testing.T) {
-	testCases := map[string]struct {
-		dockerfile   string
-		err          error
-		wantedConfig Dockerfile
-	}{
-		"correctly parses directly exposed port": {
-			dockerfile: `EXPOSE 5000`,
-			err:        nil,
-			wantedConfig: Dockerfile{
-				ExposedPorts: []portConfig{
-					{
-						Port:      5000,
-						Protocol:  "",
-						RawString: "5000",
-					},
-				},
-				HealthCheck: nil,
-			},
-		},
-		"correctly parses exposed port and protocol": {
-			dockerfile: `EXPOSE 5000/tcp`,
-			err:        nil,
-			wantedConfig: Dockerfile{
-				ExposedPorts: []portConfig{
-					{
-						Port:      5000,
-						Protocol:  "tcp",
-						RawString: "5000/tcp",
-					},
-				},
-				HealthCheck: nil,
-			},
-		},
-		"multiple ports with one expose line": {
-			dockerfile: `EXPOSE 5000/tcp 8080/tcp 6000`,
-			err:        nil,
-			wantedConfig: Dockerfile{
-				ExposedPorts: []portConfig{
-					{
-						Port:      5000,
-						Protocol:  "tcp",
-						RawString: "5000/tcp",
-					},
-					{
-						Port:      8080,
-						Protocol:  "tcp",
-						RawString: "8080/tcp",
-					},
-					{
-						Port:      6000,
-						Protocol:  "",
-						RawString: "6000",
-					},
-				},
-				HealthCheck: nil,
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got, _ := parse(tc.dockerfile)
-			require.Equal(t, tc.wantedConfig, *got)
-		})
-	}
-}
-
-func getUintPorts(inPorts []portConfig) []uint16 {
-	if len(inPorts) == 0 {
-		return []uint16(nil)
-	}
-	var ports []uint16
-	for _, p := range inPorts {
-		if p.Port != 0 {
-			ports = append(ports, p.Port)
-		}
-	}
-	return ports
-}
-
 func TestDockerfile_GetExposedPort(t *testing.T) {
 	wantedPath := "./Dockerfile"
 	testCases := map[string]struct {
 		dockerfilePath string
 		dockerfile     []byte
-		wantedPorts    []portConfig
+		wantedPorts    []Port
 		wantedErr      error
 	}{
 		"no exposed ports": {
@@ -106,13 +25,16 @@ func TestDockerfile_GetExposedPort(t *testing.T) {
 			dockerfile: []byte(`
 	FROM nginx
 	ARG arg=80`),
-			wantedPorts: []portConfig{},
+			wantedPorts: []Port{},
 			wantedErr:   ErrNoExpose{Dockerfile: wantedPath},
 		},
 		"one exposed port": {
 			dockerfilePath: wantedPath,
-			dockerfile:     []byte("EXPOSE 8080"),
-			wantedPorts: []portConfig{
+			dockerfile: []byte(`
+FROM nginx
+EXPOSE 8080
+`),
+			wantedPorts: []Port{
 				{
 					Port:      8080,
 					RawString: "8080",
@@ -122,9 +44,10 @@ func TestDockerfile_GetExposedPort(t *testing.T) {
 		"two exposed ports": {
 			dockerfilePath: wantedPath,
 			dockerfile: []byte(`
+FROM nginx
 EXPOSE 8080
 EXPOSE 80`),
-			wantedPorts: []portConfig{
+			wantedPorts: []Port{
 				{
 					Port:      8080,
 					RawString: "8080",
@@ -137,8 +60,10 @@ EXPOSE 80`),
 		},
 		"two exposed ports one line": {
 			dockerfilePath: wantedPath,
-			dockerfile:     []byte("EXPOSE 80/tcp 3000"),
-			wantedPorts: []portConfig{
+			dockerfile: []byte(`
+FROM nginx
+EXPOSE 80/tcp 3000`),
+			wantedPorts: []Port{
 				{
 					Port:      80,
 					Protocol:  "tcp",
@@ -152,8 +77,11 @@ EXPOSE 80`),
 		},
 		"bad expose token single port": {
 			dockerfilePath: wantedPath,
-			dockerfile:     []byte(`EXPOSE $arg`),
-			wantedPorts: []portConfig{
+			dockerfile: []byte(`
+FROM nginx
+EXPOSE $arg
+`),
+			wantedPorts: []Port{
 				{
 					RawString: "EXPOSE $arg",
 					err: ErrInvalidPort{
@@ -166,6 +94,7 @@ EXPOSE 80`),
 		"bad expose token multiple ports": {
 			dockerfilePath: wantedPath,
 			dockerfile: []byte(`
+FROM nginx
 EXPOSE 80
 EXPOSE $arg
 EXPOSE 8080/tcp 5000`),
@@ -176,24 +105,19 @@ EXPOSE 8080/tcp 5000`),
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			wantedUintPorts := getUintPorts(tc.wantedPorts)
 			fs := afero.Afero{Fs: afero.NewMemMapFs()}
 			err := fs.WriteFile("./Dockerfile", tc.dockerfile, 0644)
 			if err != nil {
 				t.FailNow()
 			}
 
-			df := NewDockerfile(fs, "./Dockerfile")
-
-			ports, err := df.GetExposedPorts()
+			ports, err := New(fs, "./Dockerfile").GetExposedPorts()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
+				require.ElementsMatch(t, tc.wantedPorts, ports, "expected ports do not match")
 			}
-
-			require.Equal(t, wantedUintPorts, ports)
-
 		})
 	}
 }
@@ -255,7 +179,7 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 				t.FailNow()
 			}
 
-			df := NewDockerfile(fs, "./Dockerfile")
+			df := New(fs, "./Dockerfile")
 			hc, err := df.GetHealthCheck()
 
 			if tc.wantedErr != nil {
