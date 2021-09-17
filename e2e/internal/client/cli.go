@@ -920,7 +920,7 @@ func (cli *CLI) exec(command *exec.Cmd) (string, error) {
 
 	contents := sess.Wait(100000000).Out.Contents()
 	if exitCode := sess.ExitCode(); exitCode != 0 {
-		return string(contents), fmt.Errorf("received non 0 exit code")
+		return string(sess.Err.Contents()), fmt.Errorf("received non 0 exit code")
 	}
 
 	return string(contents), nil

@@ -296,6 +296,15 @@ func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, e
 		responseTime := float64(*a.ResponseTime) / float64(time.Second)
 		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
 	}
+	if !a.QueueScaling.IsEmpty() {
+		acceptableBacklog, err := a.QueueScaling.AcceptableBacklogPerTask()
+		if err != nil {
+			return nil, err
+		}
+		autoscalingOpts.QueueDelay = &template.AutoscalingQueueDelayOpts{
+			AcceptableBacklogPerTask: acceptableBacklog,
+		}
+	}
 	return &autoscalingOpts, nil
 }
 
