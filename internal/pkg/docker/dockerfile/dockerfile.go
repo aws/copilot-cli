@@ -249,8 +249,8 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 	if strings.TrimSpace(content[hcInstrStartIndex:]) == "NONE" {
 		return nil, nil
 	}
-	if strings.Index(content, "CMD") == -1 {
-		return nil, errors.New(`HEALTHCHECK instruction must container either CMD or NONE`)
+	if !strings.Contains(content, "CMD") {
+		return nil, errors.New("HEALTHCHECK instruction must contain either CMD or NONE")
 	}
 
 	var retries int
