@@ -366,7 +366,7 @@ func TestIPNet_Validate(t *testing.T) {
 	}{
 		"should return an error if IPNet is not valid": {
 			in:     IPNet("badIPNet"),
-			wanted: errors.New("invalid CIDR address: badIPNet"),
+			wanted: errors.New("parse IPNet badIPNet: invalid CIDR address: badIPNet"),
 		},
 	}
 	for name, tc := range testCases {
@@ -447,7 +447,7 @@ func TestPlatformString_Validate(t *testing.T) {
 	}{
 		"should return an error if platform string is not valid": {
 			in:     PlatformString("NS"),
-			wanted: errors.New(`cannot use NS for platform. Must match the regex "^.+\/.+$"`),
+			wanted: errors.New("platform NS must be in format of <OS>/<Arch>"),
 		},
 	}
 	for name, tc := range testCases {
@@ -628,7 +628,7 @@ func TestPercentage_Validate(t *testing.T) {
 	}{
 		"should return an error if percentage is not valid": {
 			in:     Percentage(120),
-			wanted: errors.New("cannot specify 120 as Percentage. Must be an integer from 0 to 100"),
+			wanted: errors.New("percentage value 120 must be an integer from 0 to 100"),
 		},
 	}
 	for name, tc := range testCases {
@@ -934,7 +934,7 @@ func TestPlacement_Validate(t *testing.T) {
 		},
 		"should return an error if placement is invalid": {
 			in:     &mockInvalidPlacement,
-			wanted: errors.New(`"placement" external is invalid. Must be one of []string{"public", "private"}"`),
+			wanted: errors.New(`"placement" external must be one of []string{"public", "private"}"`),
 		},
 	}
 	for name, tc := range testCases {

@@ -287,7 +287,7 @@ func (r *RoutingRule) Validate() error {
 	}
 	for ind, ip := range r.AllowedSourceIps {
 		if err = ip.Validate(); err != nil {
-			return fmt.Errorf(`validate "allowed_source_ips[%v]": %w`, ind, err)
+			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
 		}
 	}
 
@@ -321,7 +321,7 @@ func (ip *IPNet) Validate() error {
 		return nil
 	}
 	if _, _, err := net.ParseCIDR(string(*ip)); err != nil {
-		return err
+		return fmt.Errorf("parse IPNet %s: %w", string(*ip), err)
 	}
 	return nil
 }
@@ -360,7 +360,7 @@ func (p *PlatformString) Validate() error {
 	val := string(*p)
 	reg := regexp.MustCompile(`^.+\/.+$`)
 	if !reg.MatchString(val) {
-		return fmt.Errorf(`cannot use %s for platform. Must match the regex "^.+\/.+$"`, val)
+		return fmt.Errorf(`platform %s must be in format of <OS>/<Arch>`, val)
 	}
 	return nil
 }
@@ -432,7 +432,7 @@ func (p *Percentage) Validate() error {
 		return nil
 	}
 	if val := int(*p); val < 0 || val > 100 {
-		return fmt.Errorf("cannot specify %v as Percentage. Must be an integer from 0 to 100", val)
+		return fmt.Errorf("percentage value %v must be an integer from 0 to 100", val)
 	}
 	return nil
 }
@@ -662,7 +662,7 @@ func (p *Placement) Validate() error {
 			return nil
 		}
 	}
-	return fmt.Errorf(`"placement" %s is invalid. Must be one of %#v"`, string(*p), subnetPlacements)
+	return fmt.Errorf(`"placement" %s must be one of %#v"`, string(*p), subnetPlacements)
 }
 
 // Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
