@@ -3,9 +3,9 @@ module github.com/aws/copilot-cli
 go 1.16
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.1
+	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.40.32
+	github.com/aws/aws-sdk-go v1.40.45
 	github.com/briandowns/spinner v1.15.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.12.0
@@ -27,7 +27,7 @@ require (
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/mod v0.5.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	gopkg.in/ini.v1 v1.62.0
+	gopkg.in/ini.v1 v1.63.2
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
