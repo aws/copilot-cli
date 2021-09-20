@@ -85,7 +85,6 @@ func New(fs afero.Fs, path string) *Dockerfile {
 		healthCheck:  nil,
 		fs:           fs,
 		path:         path,
-		parsed:       false,
 	}
 }
 

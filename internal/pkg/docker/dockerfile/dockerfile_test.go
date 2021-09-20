@@ -85,15 +85,8 @@ EXPOSE 80/tcp 3000`),
 FROM nginx
 EXPOSE $arg
 `),
-			wantedPorts: []Port{
-				{
-					RawString: "EXPOSE $arg",
-					err: ErrInvalidPort{
-						Match: "EXPOSE $arg",
-					},
-				},
-			},
-			wantedErr: ErrInvalidPort{Match: "EXPOSE $arg"},
+			wantedPorts: nil,
+			wantedErr:   ErrInvalidPort{Match: "EXPOSE $arg"},
 		},
 		"bad expose token multiple ports": {
 			dockerfilePath: wantedPath,
@@ -125,6 +118,7 @@ EXPOSE 8080/tcp 5000`),
 			ports, err := New(fs, "./Dockerfile").GetExposedPorts()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
+				require.Nil(t, ports)
 			} else {
 				require.NoError(t, err)
 				require.ElementsMatch(t, tc.wantedPorts, ports, "expected ports do not match")
