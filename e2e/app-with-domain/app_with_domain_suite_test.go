@@ -51,10 +51,14 @@ func BeforeAll(fn func()) {
 	})
 }
 
-func isOperationInProgress(s string) bool {
+// isStackSetOperationInProgress returns if the current stack set is in operation.
+func isStackSetOperationInProgress(s string) bool {
 	return strings.Contains(s, cloudformation.ErrCodeOperationInProgressException)
 }
 
-func isImagePushingInProgress(s string) bool {
-	return strings.Contains(s, "denied: Your authorization token has expired. Reauthenticate and try again.")
+// isImagePushingToECRInProgress returns if we are pushing images to ECR. Pushing images concurrently would fail because
+// of credential verification issue.
+func isImagePushingToECRInProgress(s string) bool {
+	return strings.Contains(s, "denied: Your authorization token has expired. Reauthenticate and try again.") ||
+		strings.Contains(s, "no basic auth credentials")
 }

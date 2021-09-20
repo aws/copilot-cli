@@ -20,6 +20,7 @@ import (
 
 func TestRDWS_Template(t *testing.T) {
 	const (
+		envName               = "test"
 		manifestFileName      = "rdws-manifest.yml"
 		stackTemplateFileName = "rdws.stack.yml"
 	)

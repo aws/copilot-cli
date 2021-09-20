@@ -185,16 +185,16 @@ type ImageOverride struct {
 	Command    CommandOverride    `yaml:"command"`
 }
 
-// EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
+// EntryPointOverride is a custom type which supports unmarshalling "entrypoint" yaml which
 // can either be of type string or type slice of string.
 type EntryPointOverride stringSliceOrString
 
-// CommandOverride is a custom type which supports unmarshaling "command" yaml which
+// CommandOverride is a custom type which supports unmarshalling "command" yaml which
 // can either be of type string or type slice of string.
 type CommandOverride stringSliceOrString
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the EntryPointOverride
-// struct, allowing it to perform more complex unmarshaling behavior.
+// UnmarshalYAML overrides the default YAML unmarshalling logic for the EntryPointOverride
+// struct, allowing it to perform more complex unmarshalling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
 func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {

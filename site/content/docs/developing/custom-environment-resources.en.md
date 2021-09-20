@@ -21,4 +21,4 @@ When you select the default configuration, Copilot follows [AWS best practices](
 ## Considerations
 * If you are importing an existing VPC, we recommend following [Security best practices for your VPC](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html) and the [Security & Filtering section from the Amazon VPC FAQs](https://aws.amazon.com/vpc/faqs/#Security_and_Filtering).
 * If you are using a private hosted zone, [you must](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zone-private-considerations.html#hosted-zone-private-considerations-vpc-settings) set `enableDnsHostname` and `enableDnsSupport` to true.
-* To deploy internet-facing workloads in [private subnets](../include/common-svc-fields.en.md#network-vpc-placement), your VPC will need a [NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html). 
+* To deploy internet-facing workloads in [private subnets](../manifest/lb-web-service.en.md#network-vpc-placement), your VPC will need a [NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html). 
