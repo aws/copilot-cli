@@ -413,10 +413,8 @@ func (a *AdvancedCount) Validate() error {
 	}
 
 	// Validate individual custom autoscaling options.
-	if !a.QueueScaling.IsEmpty() {
-		if err := a.QueueScaling.Validate(); err != nil {
-			return fmt.Errorf(`validate "queue_delay": %w`, err)
-		}
+	if err := a.QueueScaling.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue_delay": %w`, err)
 	}
 
 	if err := a.CPU.Validate(); err != nil {
@@ -441,6 +439,9 @@ func (p *Percentage) Validate() error {
 
 // Validate returns nil if QueueScaling is configured correctly.
 func (qs *QueueScaling) Validate() error {
+	if qs.IsEmpty() {
+		return nil
+	}
 	if qs.AcceptableLatency == nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "acceptable_latency",
