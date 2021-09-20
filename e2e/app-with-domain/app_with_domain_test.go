@@ -66,7 +66,7 @@ var _ = Describe("App With Domain", func() {
 					if err == nil {
 						break
 					}
-					if !isOperationInProgress(content) {
+					if !isStackSetOperationInProgress(content) {
 						fatalErrors <- err
 					}
 					time.Sleep(waitingInterval)
@@ -84,7 +84,7 @@ var _ = Describe("App With Domain", func() {
 					if err == nil {
 						break
 					}
-					if !isOperationInProgress(content) {
+					if !isStackSetOperationInProgress(content) {
 						fatalErrors <- err
 					}
 					time.Sleep(waitingInterval)
@@ -146,7 +146,7 @@ var _ = Describe("App With Domain", func() {
 					if err == nil {
 						break
 					}
-					if !isOperationInProgress(content) && !isImagePushingInProgress(content) {
+					if !isStackSetOperationInProgress(content) && !isImagePushingToECRInProgress(content) {
 						fatalErrors <- err
 					}
 					time.Sleep(waitingInterval)
@@ -164,7 +164,7 @@ var _ = Describe("App With Domain", func() {
 					if err == nil {
 						break
 					}
-					if !isOperationInProgress(content) && !isImagePushingInProgress(content) {
+					if !isStackSetOperationInProgress(content) && !isImagePushingToECRInProgress(content) {
 						fatalErrors <- err
 					}
 					time.Sleep(waitingInterval)
@@ -182,7 +182,7 @@ var _ = Describe("App With Domain", func() {
 					if err == nil {
 						break
 					}
-					if !isOperationInProgress(content) && !isImagePushingInProgress(content) {
+					if !isStackSetOperationInProgress(content) && !isImagePushingToECRInProgress(content) {
 						fatalErrors <- err
 					}
 					time.Sleep(waitingInterval)
