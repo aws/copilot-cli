@@ -142,6 +142,11 @@ Operating system and architecture (formatted as `[os]/[arch]`) to pass with `doc
 
 <div class="separator"></div>
 
+<a id="command" href="#command" class="field">`command`</a> <span class="type">String</span>  
+Optional. Override the default command in the image.
+
+<div class="separator"></div>
+
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
 
