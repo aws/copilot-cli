@@ -46,9 +46,6 @@ An optional key/value map of [Docker labels](https://docs.docker.com/config/labe
 <span class="parent-field">image.</span><a id="image-depends-on" href="#image-depends-on" class="field">`depends_on`</a> <span class="type">Map</span>  
 An optional key/value map of [Container Dependencies](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDependency.html) to add to the container. The key of the map is a container name and the value is the condition to depend on. Valid conditions are: `start`, `healthy`, `complete`, and `success`. You cannot specify a `complete` or `success` dependency on an essential container.
 
-!!! note
-    Container health checks for sidecars are not currently supported in Copilot. This means that `healthy` is not a valid sidecar dependency condition.
-
 For example:
 ```yaml
 image:

@@ -296,6 +296,15 @@ func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, e
 		responseTime := float64(*a.ResponseTime) / float64(time.Second)
 		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
 	}
+	if !a.QueueScaling.IsEmpty() {
+		acceptableBacklog, err := a.QueueScaling.AcceptableBacklogPerTask()
+		if err != nil {
+			return nil, err
+		}
+		autoscalingOpts.QueueDelay = &template.AutoscalingQueueDelayOpts{
+			AcceptableBacklogPerTask: acceptableBacklog,
+		}
+	}
 	return &autoscalingOpts, nil
 }
 
@@ -620,7 +629,7 @@ func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts 
 func convertAlias(alias manifest.Alias) ([]string, error) {
 	out, err := alias.ToStringSlice()
 	if err != nil {
-		return nil, fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
+		return nil, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
 	}
 	return out, nil
 }
@@ -628,7 +637,7 @@ func convertAlias(alias manifest.Alias) ([]string, error) {
 func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error) {
 	out, err := entrypoint.ToStringSlice()
 	if err != nil {
-		return nil, fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
+		return nil, fmt.Errorf(`convert "entrypoint" to string slice: %w`, err)
 	}
 	return out, nil
 }
@@ -636,7 +645,7 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
 	out, err := command.ToStringSlice()
 	if err != nil {
-		return nil, fmt.Errorf(`convert 'command' to string slice: %w`, err)
+		return nil, fmt.Errorf(`convert "command" to string slice: %w`, err)
 	}
 	return out, nil
 }

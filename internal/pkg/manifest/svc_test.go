@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -108,6 +109,9 @@ environments:
 							Memory: aws.Int(1024),
 							Count: Count{
 								Value: aws.Int(1),
+								AdvancedCount: AdvancedCount{
+									workloadType: LoadBalancedWebServiceType,
+								},
 							},
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
@@ -246,6 +250,9 @@ secrets:
 							Memory: aws.Int(1024),
 							Count: Count{
 								Value: aws.Int(1),
+								AdvancedCount: AdvancedCount{
+									workloadType: BackendServiceType,
+								},
 							},
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(false),
@@ -309,6 +316,9 @@ subscribe:
 							Memory: aws.Int(1024),
 							Count: Count{
 								Value: aws.Int(1),
+								AdvancedCount: AdvancedCount{
+									workloadType: WorkerServiceType,
+								},
 							},
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
@@ -429,25 +439,6 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
-		"With all RangeConfig fields specified": {
-			inContent: []byte(`count:
-  range:
-    min: 2
-    max: 8
-    spot_from: 3
-`),
-			wantedStruct: Count{
-				AdvancedCount: AdvancedCount{
-					Range: Range{
-						RangeConfig: RangeConfig{
-							Min:      aws.Int(2),
-							Max:      aws.Int(8),
-							SpotFrom: aws.Int(3),
-						},
-					},
-				},
-			},
-		},
 		"With all RangeConfig fields specified and autoscaling field": {
 			inContent: []byte(`count:
   range:
@@ -469,23 +460,15 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
-		"Error if spot specified as int with range": {
+
+		"Error if mutually exclusive fields are specified": {
 			inContent: []byte(`count:
-  range: 1-10
-  spot: 3
+  spot: 1
+  cpu_percentage: 30
 `),
 			wantedError: &errFieldMutualExclusive{
 				firstField:  "spot",
-				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
-			},
-		},
-		"Error if autoscaling specified without range": {
-			inContent: []byte(`count:
-  cpu_percentage: 30
-`),
-			wantedError: &errFieldMustBeSpecified{
-				missingField:      "range",
-				conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+				secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
 			},
 		},
 		"Error if unmarshalable": {
@@ -725,156 +708,6 @@ func TestCount_Desired(t *testing.T) {
 	}
 }
 
-func TestAdvancedCount_IsValid(t *testing.T) {
-	mockRange := IntRangeBand("1-10")
-	testCases := map[string]struct {
-		input *AdvancedCount
-
-		expectedErr error
-	}{
-		"with spot count": {
-			input: &AdvancedCount{
-				Spot: aws.Int(42),
-			},
-
-			expectedErr: nil,
-		},
-		"with range value": {
-			input: &AdvancedCount{
-				Range: Range{
-					Value: &mockRange,
-				},
-			},
-
-			expectedErr: nil,
-		},
-		"with range config": {
-			input: &AdvancedCount{
-				Range: Range{
-					RangeConfig: RangeConfig{
-						Min:      aws.Int(1),
-						Max:      aws.Int(10),
-						SpotFrom: aws.Int(2),
-					},
-				},
-			},
-
-			expectedErr: nil,
-		},
-		"with range and autoscaling config": {
-			input: &AdvancedCount{
-				Range: Range{
-					Value: &mockRange,
-				},
-				CPU:      aws.Int(512),
-				Memory:   aws.Int(1024),
-				Requests: aws.Int(1000),
-			},
-
-			expectedErr: nil,
-		},
-		"with range config and autoscaling config": {
-			input: &AdvancedCount{
-				Range: Range{
-					RangeConfig: RangeConfig{
-						Min: aws.Int(1),
-						Max: aws.Int(10),
-					},
-				},
-				CPU:      aws.Int(512),
-				Memory:   aws.Int(1024),
-				Requests: aws.Int(1000),
-			},
-
-			expectedErr: nil,
-		},
-		"with range config with spot and autoscaling config": {
-			input: &AdvancedCount{
-				Range: Range{
-					RangeConfig: RangeConfig{
-						Min:      aws.Int(1),
-						Max:      aws.Int(10),
-						SpotFrom: aws.Int(3),
-					},
-				},
-				CPU:      aws.Int(512),
-				Memory:   aws.Int(1024),
-				Requests: aws.Int(1000),
-			},
-
-			expectedErr: nil,
-		},
-		"invalid with spot count and autoscaling config": {
-			input: &AdvancedCount{
-				Spot:     aws.Int(42),
-				CPU:      aws.Int(512),
-				Memory:   aws.Int(1024),
-				Requests: aws.Int(1000),
-			},
-
-			expectedErr: &errFieldMutualExclusive{
-				firstField:  "spot",
-				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
-			},
-		},
-		"invalid with spot count and range": {
-			input: &AdvancedCount{
-				Spot: aws.Int(42),
-				Range: Range{
-					Value: &mockRange,
-				},
-			},
-
-			expectedErr: &errFieldMutualExclusive{
-				firstField:  "spot",
-				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
-			},
-		},
-		"invalid with spot count and range config": {
-			input: &AdvancedCount{
-				Spot: aws.Int(42),
-				Range: Range{
-					RangeConfig: RangeConfig{
-						Min:      aws.Int(1),
-						Max:      aws.Int(10),
-						SpotFrom: aws.Int(3),
-					},
-				},
-			},
-
-			expectedErr: &errFieldMutualExclusive{
-				firstField:  "spot",
-				secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
-			},
-		},
-		"invalid with autoscaling fields and no range": {
-			input: &AdvancedCount{
-				CPU:      aws.Int(512),
-				Memory:   aws.Int(1024),
-				Requests: aws.Int(1000),
-			},
-
-			expectedErr: &errFieldMustBeSpecified{
-				missingField:      "range",
-				conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			err := tc.input.IsValid()
-
-			// THEN
-			if tc.expectedErr != nil {
-				require.EqualError(t, err, tc.expectedErr.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		hc     HealthCheckArgsOrString
@@ -902,6 +735,71 @@ func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.hc.IsEmpty())
+		})
+	}
+}
+
+func TestQueueScaling_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     QueueScaling
+		wanted bool
+	}{
+		"should return false if msg_processing_time is not nil": {
+			in: QueueScaling{
+				AvgProcessingTime: durationp(5 * time.Second),
+			},
+		},
+		"should return false if acceptable_latency is not nil": {
+			in: QueueScaling{
+				AcceptableLatency: durationp(1 * time.Minute),
+			},
+		},
+		"should return true if there are no fields set": {
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.IsEmpty())
+		})
+	}
+}
+
+func TestQueueScaling_AcceptableBacklogPerTask(t *testing.T) {
+	testCases := map[string]struct {
+		in            QueueScaling
+		wantedBacklog int
+		wantedErr     error
+	}{
+		"should return an error if queue scaling is empty": {
+			in:        QueueScaling{},
+			wantedErr: errors.New(`"queue_delay" must be specified in order to calculate the acceptable backlog`),
+		},
+		"should return an error if queue scaling is invalid": {
+			in: QueueScaling{
+				AcceptableLatency: durationp(1 * time.Second),
+				AvgProcessingTime: durationp(0 * time.Second),
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should round up to an integer if backlog number has a decimal": {
+			in: QueueScaling{
+				AcceptableLatency: durationp(10 * time.Second),
+				AvgProcessingTime: durationp(300 * time.Millisecond),
+			},
+			wantedBacklog: 34,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual, err := tc.in.AcceptableBacklogPerTask()
+			if tc.wantedErr != nil {
+				require.NotNil(t, err)
+			} else {
+				require.Equal(t, tc.wantedBacklog, actual)
+			}
 		})
 	}
 }
