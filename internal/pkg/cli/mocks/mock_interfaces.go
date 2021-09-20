@@ -9,8 +9,6 @@ import (
 	io "io"
 	reflect "reflect"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -23,6 +21,7 @@ import (
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
 	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
@@ -4311,10 +4310,10 @@ func (m *MockdockerfileParser) EXPECT() *MockdockerfileParserMockRecorder {
 }
 
 // GetExposedPorts mocks base method.
-func (m *MockdockerfileParser) GetExposedPorts() ([]uint16, error) {
+func (m *MockdockerfileParser) GetExposedPorts() ([]dockerfile.Port, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetExposedPorts")
-	ret0, _ := ret[0].([]uint16)
+	ret0, _ := ret[0].([]dockerfile.Port)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -4835,43 +4834,6 @@ func (m *Mockexecutor) Execute() error {
 func (mr *MockexecutorMockRecorder) Execute() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*Mockexecutor)(nil).Execute))
-}
-
-// MockdeletePipelineRunner is a mock of deletePipelineRunner interface.
-type MockdeletePipelineRunner struct {
-	ctrl     *gomock.Controller
-	recorder *MockdeletePipelineRunnerMockRecorder
-}
-
-// MockdeletePipelineRunnerMockRecorder is the mock recorder for MockdeletePipelineRunner.
-type MockdeletePipelineRunnerMockRecorder struct {
-	mock *MockdeletePipelineRunner
-}
-
-// NewMockdeletePipelineRunner creates a new mock instance.
-func NewMockdeletePipelineRunner(ctrl *gomock.Controller) *MockdeletePipelineRunner {
-	mock := &MockdeletePipelineRunner{ctrl: ctrl}
-	mock.recorder = &MockdeletePipelineRunnerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdeletePipelineRunner) EXPECT() *MockdeletePipelineRunnerMockRecorder {
-	return m.recorder
-}
-
-// Run mocks base method.
-func (m *MockdeletePipelineRunner) Run() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Run indicates an expected call of Run.
-func (mr *MockdeletePipelineRunnerMockRecorder) Run() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockdeletePipelineRunner)(nil).Run))
 }
 
 // MockexecuteAsker is a mock of executeAsker interface.

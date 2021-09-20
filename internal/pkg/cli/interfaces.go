@@ -407,7 +407,7 @@ type domainHostedZoneGetter interface {
 }
 
 type dockerfileParser interface {
-	GetExposedPorts() ([]uint16, error)
+	GetExposedPorts() ([]dockerfile.Port, error)
 	GetHealthCheck() (*dockerfile.HealthCheck, error)
 }
 
