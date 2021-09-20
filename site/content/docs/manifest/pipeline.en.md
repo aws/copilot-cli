@@ -61,6 +61,12 @@ The URL of your repository.
 <span class="parent-field">source.properties.</span><a id="source-properties-connection-name" href="#source-properties-connection-name" class="field">`connection_name`</a> <span class="type">String</span>  
 The name of an existing CodeStar Connections connection. If omitted, Copilot will generate a connection for you.
 
+<span class="parent-field">source.properties.</span><a id="source-properties-output-artifact-format" href="#source-properties-output-artifact-format" class="field">`output_artifact_format`</a> <span class="type">String</span>  
+Optional. The output artifact format. Values can be either `CODEBUILD_CLONE_REF` or `CODE_ZIP`. If omitted, the default is `CODE_ZIP`.
+
+!!! info
+    This property is not available for pipelines with [GitHub version 1](https://docs.aws.amazon.com/codepipeline/latest/userguide/appendix-github-oauth.html) source actions, which use `access_token_secret`. 
+
 <div class="separator"></div>
 
 <a id="build" href="#build" class="field">`build`</a> <span class="type">Map</span>  
