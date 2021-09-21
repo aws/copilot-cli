@@ -384,20 +384,11 @@ func TestIPNet_Validate(t *testing.T) {
 
 func TestTaskConfig_Validate(t *testing.T) {
 	mockPerc := Percentage(70)
-	mockBadPlatformStr := PlatformString("mockBadPlatform")
 	testCases := map[string]struct {
 		TaskConfig TaskConfig
 
 		wantedErrorPrefix string
 	}{
-		"error if fail to validate platform": {
-			TaskConfig: TaskConfig{
-				Platform: PlatformArgsOrString{
-					PlatformString: &mockBadPlatformStr,
-				},
-			},
-			wantedErrorPrefix: `validate "platform": `,
-		},
 		"error if fail to validate count": {
 			TaskConfig: TaskConfig{
 				Count: Count{
@@ -444,12 +435,7 @@ func TestPlatformString_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     PlatformString
 		wanted error
-	}{
-		"should return an error if platform string is not valid": {
-			in:     PlatformString("NS"),
-			wanted: errors.New("platform NS must be in format of <OS>/<Arch>"),
-		},
-	}
+	}{}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := tc.in.Validate()
@@ -934,7 +920,7 @@ func TestPlacement_Validate(t *testing.T) {
 		},
 		"should return an error if placement is invalid": {
 			in:     &mockInvalidPlacement,
-			wanted: errors.New(`"placement" external must be one of []string{"public", "private"}"`),
+			wanted: errors.New(`"placement" external must be one of public, private`),
 		},
 	}
 	for name, tc := range testCases {

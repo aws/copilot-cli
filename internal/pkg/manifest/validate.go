@@ -357,11 +357,7 @@ func (p *PlatformString) Validate() error {
 	if p == nil {
 		return nil
 	}
-	val := string(*p)
-	reg := regexp.MustCompile(`^.+\/.+$`)
-	if !reg.MatchString(val) {
-		return fmt.Errorf(`platform %s must be in format of <OS>/<Arch>`, val)
-	}
+	// TODO: Consolidate with "UnmarshalYAML".
 	return nil
 }
 
@@ -662,7 +658,7 @@ func (p *Placement) Validate() error {
 			return nil
 		}
 	}
-	return fmt.Errorf(`"placement" %s must be one of %#v"`, string(*p), subnetPlacements)
+	return fmt.Errorf(`"placement" %s must be one of %s`, string(*p), strings.Join(subnetPlacements, ", "))
 }
 
 // Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.

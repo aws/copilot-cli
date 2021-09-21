@@ -603,15 +603,6 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 // For example: "windows/x86"
 type PlatformString string
 
-// PlatformStringP converts a string pointer to a PlatformString pointer.
-func PlatformStringP(s *string) *PlatformString {
-	if s == nil {
-		return nil
-	}
-	val := PlatformString(*s)
-	return &val
-}
-
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type PlatformArgs.
 type PlatformArgsOrString struct {

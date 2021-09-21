@@ -261,11 +261,14 @@ func (o *initSvcOpts) Execute() error {
 		return fmt.Errorf("get/redirect docker engine platform: %w", err)
 	}
 	o.platform = platform
+	var platformStrPtr *manifest.PlatformString
 	if o.platform != nil {
 		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
 		if o.wkldType != manifest.RequestDrivenWebServiceType {
 			log.Warning("See 'platform' field in your manifest.\n")
 		}
+		val := manifest.PlatformString(*o.platform)
+		platformStrPtr = &val
 	}
 
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
@@ -276,7 +279,7 @@ func (o *initSvcOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: manifest.PlatformStringP(o.platform),
+				PlatformString: platformStrPtr,
 			},
 			Topics: o.topics,
 		},
