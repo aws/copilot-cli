@@ -15,6 +15,7 @@ import (
 )
 
 func TestUnmarshalSvc(t *testing.T) {
+	mockPerc := Percentage(70)
 	testCases := map[string]struct {
 		inContent string
 
@@ -43,6 +44,9 @@ http:
   alias:
     - foobar.com
     - v1.foobar.com
+  allowed_source_ips:
+    - 10.1.0.0/24
+    - 10.1.1.0/24
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -103,6 +107,7 @@ environments:
 							HealthCheck: HealthCheckArgsOrString{
 								HealthCheckPath: aws.String("/"),
 							},
+							AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 						},
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(512),
@@ -144,7 +149,7 @@ environments:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: stringP("public"),
+								Placement: &PublicSubnetPlacement,
 							},
 						},
 						TaskDefOverrides: []OverrideRule{
@@ -200,7 +205,7 @@ environments:
 										Range: Range{
 											Value: &mockRange,
 										},
-										CPU: aws.Int(70),
+										CPU: &mockPerc,
 									},
 								},
 							},
@@ -263,7 +268,7 @@ secrets:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: stringP("public"),
+								Placement: &PublicSubnetPlacement,
 							},
 						},
 					},
@@ -326,7 +331,7 @@ subscribe:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: stringP("public"),
+								Placement: &PublicSubnetPlacement,
 							},
 						},
 						Subscribe: SubscribeConfig{
@@ -379,8 +384,12 @@ type: 'OH NO'
 }
 
 func TestCount_UnmarshalYAML(t *testing.T) {
-	mockResponseTime := 500 * time.Millisecond
-	mockRange := IntRangeBand("1-10")
+	var (
+		mockResponseTime = 500 * time.Millisecond
+		mockRange        = IntRangeBand("1-10")
+		mockCPU          = Percentage(70)
+		mockMem          = Percentage(80)
+	)
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -405,8 +414,8 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
 					Range:        Range{Value: &mockRange},
-					CPU:          aws.Int(70),
-					Memory:       aws.Int(80),
+					CPU:          &mockCPU,
+					Memory:       &mockMem,
 					Requests:     aws.Int(1000),
 					ResponseTime: &mockResponseTime,
 				},
@@ -445,7 +454,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
     min: 2
     max: 8
     spot_from: 3
-  cpu_percentage: 50
+  cpu_percentage: 70
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
@@ -456,7 +465,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 							SpotFrom: aws.Int(3),
 						},
 					},
-					CPU: aws.Int(50),
+					CPU: &mockCPU,
 				},
 			},
 		},

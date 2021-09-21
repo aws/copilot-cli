@@ -245,7 +245,8 @@ Outputs:
 
 			if tc.setUpManifest != nil {
 				tc.setUpManifest(conf)
-				conf.manifest.Network.VPC.Placement = aws.String(manifest.PrivateSubnetPlacement)
+				privatePlacement := manifest.Placement(manifest.PrivateSubnetPlacement)
+				conf.manifest.Network.VPC.Placement = &privatePlacement
 				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
 

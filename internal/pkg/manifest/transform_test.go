@@ -333,6 +333,7 @@ func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 }
 
 func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
+	mockPlatformStr := PlatformString("mockString")
 	testCases := map[string]struct {
 		original func(p *PlatformArgsOrString)
 		override func(p *PlatformArgsOrString)
@@ -340,7 +341,7 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 	}{
 		"string set to empty if args is not nil": {
 			original: func(p *PlatformArgsOrString) {
-				p.PlatformString = aws.String("mockString")
+				p.PlatformString = &mockPlatformStr
 			},
 			override: func(p *PlatformArgsOrString) {
 				p.PlatformArgs = PlatformArgs{
@@ -363,10 +364,10 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 				}
 			},
 			override: func(p *PlatformArgsOrString) {
-				p.PlatformString = aws.String("mockString")
+				p.PlatformString = &mockPlatformStr
 			},
 			wanted: func(p *PlatformArgsOrString) {
-				p.PlatformString = aws.String("mockString")
+				p.PlatformString = &mockPlatformStr
 			},
 		},
 	}
@@ -513,6 +514,7 @@ func TestCountTransformer_Transformer(t *testing.T) {
 }
 
 func TestAdvancedCountTransformer_Transformer(t *testing.T) {
+	mockPerc := Percentage(80)
 	testCases := map[string]struct {
 		original func(a *AdvancedCount)
 		override func(a *AdvancedCount)
@@ -526,14 +528,14 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = aws.Int(1024)
+				a.CPU = &mockPerc
 				a.Requests = aws.Int(42)
 			},
 			wanted: func(a *AdvancedCount) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = aws.Int(1024)
+				a.CPU = &mockPerc
 				a.Requests = aws.Int(42)
 			},
 		},
@@ -542,7 +544,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = aws.Int(1024)
+				a.CPU = &mockPerc
 				a.Requests = aws.Int(42)
 			},
 			override: func(a *AdvancedCount) {

@@ -125,7 +125,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP(PublicSubnetPlacement),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},
@@ -171,7 +171,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP(PublicSubnetPlacement),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},

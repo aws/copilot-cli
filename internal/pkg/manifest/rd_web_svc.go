@@ -95,7 +95,8 @@ func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
 	if s.InstanceConfig.Platform.PlatformString == nil {
 		return nil, nil
 	}
-	return s.InstanceConfig.Platform.PlatformString, nil
+	str := string(*s.InstanceConfig.Platform.PlatformString)
+	return &str, nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

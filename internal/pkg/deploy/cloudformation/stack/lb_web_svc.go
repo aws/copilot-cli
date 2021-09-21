@@ -163,7 +163,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
 	}
 
-	allowedSourceIPs := s.manifest.AllowedSourceIps
+	var allowedSourceIPs []string
+	for _, ipNet := range s.manifest.AllowedSourceIps {
+		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                s.manifest.Variables,
 		Secrets:                  s.manifest.Secrets,

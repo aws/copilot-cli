@@ -175,13 +175,16 @@ func (c *Count) Desired() (*int, error) {
 	return aws.Int(min), nil
 }
 
+// Percentage represents a valid percentage integer ranging from 0 to 100.
+type Percentage int
+
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
 	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
 	Range        Range          `yaml:"range"`
-	CPU          *int           `yaml:"cpu_percentage"`
-	Memory       *int           `yaml:"memory_percentage"`
+	CPU          *Percentage    `yaml:"cpu_percentage"`
+	Memory       *Percentage    `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
 	QueueScaling QueueScaling   `yaml:"queue_delay"`

@@ -619,7 +619,10 @@ func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts 
 		SubnetsType:    template.PublicSubnetsPlacement,
 		SecurityGroups: network.VPC.SecurityGroups,
 	}
-	if aws.StringValue(network.VPC.Placement) != manifest.PublicSubnetPlacement {
+	if network.VPC.Placement == nil {
+		return opts
+	}
+	if *network.VPC.Placement != manifest.PublicSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}

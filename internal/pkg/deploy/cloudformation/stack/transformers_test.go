@@ -303,6 +303,7 @@ func Test_convertSidecar(t *testing.T) {
 
 func Test_convertAdvancedCount(t *testing.T) {
 	mockRange := manifest.IntRangeBand("1-10")
+	mockPerc := manifest.Percentage(70)
 	testCases := map[string]struct {
 		input       *manifest.AdvancedCount
 		expected    *template.AdvancedCount
@@ -335,7 +336,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 				Range: manifest.Range{
 					Value: &mockRange,
 				},
-				CPU: aws.Int(70),
+				CPU: &mockPerc,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -354,7 +355,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 						SpotFrom: aws.Int(5),
 					},
 				},
-				CPU: aws.Int(70),
+				CPU: &mockPerc,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -486,10 +487,14 @@ func Test_convertCapacityProviders(t *testing.T) {
 }
 
 func Test_convertAutoscaling(t *testing.T) {
-	mockRange := manifest.IntRangeBand("1-100")
-	badRange := manifest.IntRangeBand("badRange")
-	mockRequests := 1000
-	mockResponseTime := 512 * time.Millisecond
+	var (
+		mockRange        = manifest.IntRangeBand("1-100")
+		badRange         = manifest.IntRangeBand("badRange")
+		mockRequests     = 1000
+		mockResponseTime = 512 * time.Millisecond
+		mockCPU          = manifest.Percentage(70)
+		mockMem          = manifest.Percentage(80)
+	)
 
 	testAcceptableLatency := 10 * time.Minute
 	testAvgProcessingTime := 250 * time.Millisecond
@@ -513,8 +518,8 @@ func Test_convertAutoscaling(t *testing.T) {
 				Range: manifest.Range{
 					Value: &mockRange,
 				},
-				CPU:          aws.Int(70),
-				Memory:       aws.Int(80),
+				CPU:          &mockCPU,
+				Memory:       &mockMem,
 				Requests:     aws.Int(mockRequests),
 				ResponseTime: &mockResponseTime,
 			},
@@ -537,8 +542,8 @@ func Test_convertAutoscaling(t *testing.T) {
 						SpotFrom: aws.Int(5),
 					},
 				},
-				CPU:          aws.Int(70),
-				Memory:       aws.Int(80),
+				CPU:          &mockCPU,
+				Memory:       &mockMem,
 				Requests:     aws.Int(mockRequests),
 				ResponseTime: &mockResponseTime,
 			},

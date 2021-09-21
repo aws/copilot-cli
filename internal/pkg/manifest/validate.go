@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -284,6 +285,12 @@ func (r *RoutingRule) Validate() error {
 			secondField: "targetContainer",
 		}
 	}
+	for ind, ip := range r.AllowedSourceIps {
+		if err = ip.Validate(); err != nil {
+			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
+		}
+	}
+
 	return nil
 }
 
@@ -308,6 +315,17 @@ func (*Alias) Validate() error {
 	return nil
 }
 
+// Validate returns nil if IPNet is configured correctly.
+func (ip *IPNet) Validate() error {
+	if ip == nil {
+		return nil
+	}
+	if _, _, err := net.ParseCIDR(string(*ip)); err != nil {
+		return fmt.Errorf("parse IPNet %s: %w", string(*ip), err)
+	}
+	return nil
+}
+
 // Validate returns nil if TaskConfig is configured correctly.
 func (t *TaskConfig) Validate() error {
 	var err error
@@ -328,7 +346,19 @@ func (t *TaskConfig) Validate() error {
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
 func (p *PlatformArgsOrString) Validate() error {
+	if err := p.PlatformString.Validate(); err != nil {
+		return err
+	}
 	return p.PlatformArgs.Validate()
+}
+
+// Validate returns nil if PlatformString is configured correctly.
+func (p *PlatformString) Validate() error {
+	if p == nil {
+		return nil
+	}
+	// TODO: Consolidate with "UnmarshalYAML".
+	return nil
 }
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
@@ -379,16 +409,35 @@ func (a *AdvancedCount) Validate() error {
 	}
 
 	// Validate individual custom autoscaling options.
-	if !a.QueueScaling.IsEmpty() {
-		if err := a.QueueScaling.Validate(); err != nil {
-			return fmt.Errorf(`validate "queue_delay": %w`, err)
-		}
+	if err := a.QueueScaling.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue_delay": %w`, err)
+	}
+
+	if err := a.CPU.Validate(); err != nil {
+		return fmt.Errorf(`validate "cpu_percentage": %w`, err)
+	}
+	if err := a.Memory.Validate(); err != nil {
+		return fmt.Errorf(`validate "memory_percentage": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if Percentage is configured correctly.
+func (p *Percentage) Validate() error {
+	if p == nil {
+		return nil
+	}
+	if val := int(*p); val < 0 || val > 100 {
+		return fmt.Errorf("percentage value %v must be an integer from 0 to 100", val)
 	}
 	return nil
 }
 
 // Validate returns nil if QueueScaling is configured correctly.
 func (qs *QueueScaling) Validate() error {
+	if qs.IsEmpty() {
+		return nil
+	}
 	if qs.AcceptableLatency == nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "acceptable_latency",
@@ -593,7 +642,23 @@ func (v *vpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
+	}
 	return nil
+}
+
+// Validate returns nil if Placement is configured correctly.
+func (p *Placement) Validate() error {
+	if p == nil {
+		return fmt.Errorf(`"placement" cannot be empty`)
+	}
+	for _, allowed := range subnetPlacements {
+		if string(*p) == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf(`"placement" %s must be one of %s`, string(*p), strings.Join(subnetPlacements, ", "))
 }
 
 // Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.

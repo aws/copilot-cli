@@ -109,7 +109,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
 		},
@@ -182,10 +182,13 @@ type RoutingRule struct {
 	Alias               Alias                   `yaml:"alias"`
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string  `yaml:"target_container"`
-	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
+	TargetContainer          *string `yaml:"target_container"`
+	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
 }
+
+// IPNet represents an IP network string. For example: 10.1.0.0/16
+type IPNet string
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
 // can either be of type string or type slice of string.

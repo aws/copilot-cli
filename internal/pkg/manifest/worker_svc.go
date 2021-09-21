@@ -171,7 +171,7 @@ func newDefaultWorkerService() *WorkerService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: aws.String(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
 		},
