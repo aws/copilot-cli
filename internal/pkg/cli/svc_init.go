@@ -169,7 +169,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		if opts.df != nil {
 			return opts.df
 		}
-		opts.df = dockerfile.NewDockerfile(opts.fs, opts.dockerfilePath)
+		opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 		return opts.df
 	}
 	return opts, nil
@@ -405,7 +405,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		return nil
 	}
 
-	var ports []uint16
+	var ports []dockerfile.Port
 	if o.dockerfilePath != "" && o.image == "" {
 		// Check for exposed ports.
 		ports, err = o.dockerfile(o.dockerfilePath).GetExposedPorts()
@@ -421,10 +421,10 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		case 0:
 			// There were no ports detected, keep the default port prompt.
 		case 1:
-			o.port = ports[0]
+			o.port = ports[0].Port
 			return nil
 		default:
-			defaultPort = strconv.Itoa(int(ports[0]))
+			defaultPort = strconv.Itoa(int(ports[0].Port))
 		}
 	}
 	// Skip asking if it is a backend or worker service.

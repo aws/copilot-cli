@@ -112,7 +112,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		sel:          sel,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		initParser: func(path string) dockerfileParser {
-			return dockerfile.NewDockerfile(fs, path)
+			return dockerfile.New(fs, path)
 		},
 	}, nil
 }
