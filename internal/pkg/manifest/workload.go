@@ -90,6 +90,25 @@ type ImageWithHealthcheck struct {
 	HealthCheck ContainerHealthCheck `yaml:"healthcheck"`
 }
 
+// UnmarshalYAML implements the yaml(v2) interface.
+func (i *ImageWithHealthcheck) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type imageWithHC ImageWithHealthcheck
+	var im imageWithHC
+	if err := unmarshal(&im); err != nil {
+		return err
+	}
+	img := ImageWithHealthcheck(im)
+	*i = img
+	if !i.Build.isEmpty() && i.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
+}
+
 // ImageWithPortAndHealthcheck represents a container image with an exposed port and health check.
 type ImageWithPortAndHealthcheck struct {
 	ImageWithPort `yaml:",inline"`
@@ -100,6 +119,25 @@ type ImageWithPortAndHealthcheck struct {
 type ImageWithPort struct {
 	Image `yaml:",inline"`
 	Port  *uint16 `yaml:"port"`
+}
+
+// UnmarshalYAML implements the yaml(v2) interface.
+func (i *ImageWithPort) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type imageWithPort ImageWithPort
+	var im imageWithPort
+	if err := unmarshal(&im); err != nil {
+		return err
+	}
+	img := ImageWithPort(im)
+	*i = img
+	if !i.Build.isEmpty() && i.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
 }
 
 // GetLocation returns the location of the image.

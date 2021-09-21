@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -60,6 +61,73 @@ func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.StringSlice, e.EntryPoint.StringSlice)
 				require.Equal(t, tc.wantedStruct.String, e.EntryPoint.String)
+			}
+		})
+	}
+}
+
+func TestImageWithHealthcheck_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedError error
+	}{
+		"error if both build and location are set": {
+			inContent: []byte(`build: mockBuild
+location: mockLocation`),
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"success": {
+			inContent: []byte(`location: mockLocation
+healthcheck:
+  command:
+    - foo
+    - bar`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			i := ImageWithHealthcheck{}
+			err := yaml.Unmarshal(tc.inContent, &i)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "mockLocation", aws.StringValue(i.Location))
+				require.Equal(t, []string{"foo", "bar"}, i.HealthCheck.Command)
+			}
+		})
+	}
+}
+
+func TestImageWithPort_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedError error
+	}{
+		"error if both build and location are set": {
+			inContent: []byte(`build: mockBuild
+location: mockLocation`),
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"success": {
+			inContent: []byte(`location: mockLocation
+port: 80`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			i := ImageWithPort{}
+			err := yaml.Unmarshal(tc.inContent, &i)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "mockLocation", aws.StringValue(i.Location))
+				require.Equal(t, 80, int(aws.Uint16Value(i.Port)))
 			}
 		})
 	}

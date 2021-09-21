@@ -94,7 +94,7 @@ func (e *EFSConfigOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error
 	}
 
 	if !e.Advanced.IsEmpty() {
-		// Unmarshaled successfully to e.Config, unset e.ID, and return.
+		// TODO: remove when manifest validate is applied.
 		if err := e.Advanced.isValid(); err != nil {
 			return err
 		}
