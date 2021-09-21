@@ -252,7 +252,7 @@ func (o *initSvcOpts) Execute() error {
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.dockerfile(o.dockerfilePath))
 		if err != nil {
-			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
+			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
 
