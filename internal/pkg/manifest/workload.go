@@ -87,9 +87,9 @@ type Image struct {
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (i *Image) UnmarshalYAML(node *yaml.Node) error {
+func (i *Image) UnmarshalYAML(value *yaml.Node) error {
 	type image Image
-	if err := node.Decode((*image)(i)); err != nil {
+	if err := value.Decode((*image)(i)); err != nil {
 		return err
 	}
 	if !i.Build.isEmpty() && i.Location != nil {

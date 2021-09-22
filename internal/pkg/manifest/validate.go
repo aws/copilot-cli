@@ -357,15 +357,25 @@ func (p *PlatformString) Validate() error {
 	if p == nil {
 		return nil
 	}
-	// TODO: Consolidate with "UnmarshalYAML".
+	if err := validatePlatform(p); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
-// TODO: add validation once "feat/pencere" is merged.
 func (p *PlatformArgs) Validate() error {
 	if p.isEmpty() {
 		return nil
+	}
+	if !p.bothSpecified() {
+		return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
+	}
+	if err := validateOS(p.OSFamily); err != nil {
+		return err
+	}
+	if err := validateArch(p.Arch); err != nil {
+		return err
 	}
 	return nil
 }

@@ -396,6 +396,14 @@ func TestTaskConfig_Validate(t *testing.T) {
 
 		wantedErrorPrefix string
 	}{
+		"error if fail to validate platform": {
+			TaskConfig: TaskConfig{
+				Platform: PlatformArgsOrString{
+					PlatformString: (*PlatformString)(aws.String("foobar")),
+				},
+			},
+			wantedErrorPrefix: `validate "platform": `,
+		},
 		"error if fail to validate count": {
 			TaskConfig: TaskConfig{
 				Count: Count{
@@ -437,12 +445,16 @@ func TestTaskConfig_Validate(t *testing.T) {
 		})
 	}
 }
-
 func TestPlatformString_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     PlatformString
 		wanted error
-	}{}
+	}{
+		"error if platform string is invalid": {
+			in:     PlatformString("foobar"),
+			wanted: fmt.Errorf("platform foobar is invalid; the valid platform is: linux/amd64"),
+		},
+	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := tc.in.Validate()
@@ -455,7 +467,44 @@ func TestPlatformString_Validate(t *testing.T) {
 		})
 	}
 }
+func TestPlatformArgs_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     PlatformArgs
+		wanted error
+	}{
+		"error if only osfamily is specified": {
+			in: PlatformArgs{
+				OSFamily: aws.String("linux"),
+			},
+			wanted: fmt.Errorf(`fields "osfamily" and "architecture" must either both be specified or both be empty`),
+		},
+		"error if osfamily is invalid": {
+			in: PlatformArgs{
+				OSFamily: aws.String("foo"),
+				Arch:     aws.String("amd64"),
+			},
+			wanted: fmt.Errorf("OS foo is invalid; the valid operating system is: linux"),
+		},
+		"error if arch is invalid": {
+			in: PlatformArgs{
+				OSFamily: aws.String("linux"),
+				Arch:     aws.String("bar"),
+			},
+			wanted: fmt.Errorf("architecture bar is invalid; the valid architecture is: amd64"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
 
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 func TestAdvancedCount_Validate(t *testing.T) {
 	var (
 		mockPerc    = Percentage(70)
