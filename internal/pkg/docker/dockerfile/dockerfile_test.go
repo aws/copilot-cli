@@ -5,6 +5,7 @@ package dockerfile
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -86,7 +87,7 @@ FROM nginx
 EXPOSE $arg
 `),
 			wantedPorts: nil,
-			wantedErr:   ErrInvalidPort{Match: "EXPOSE $arg"},
+			wantedErr:   ErrInvalidPort{Match: "$arg"},
 		},
 		"bad expose token multiple ports": {
 			dockerfilePath: wantedPath,
@@ -96,7 +97,7 @@ EXPOSE 80
 EXPOSE $arg
 EXPOSE 8080/tcp 5000`),
 			wantedPorts: nil,
-			wantedErr:   ErrInvalidPort{Match: "EXPOSE $arg"},
+			wantedErr:   ErrInvalidPort{Match: "$arg"},
 		},
 	}
 
@@ -214,15 +215,11 @@ HEALTHCHECK   CMD     ["a",    "b"]
 		},
 		"healthcheck contains an invalid flag": {
 			dockerfile: []byte(`HEALTHCHECK --interval=5m --randomFlag=4s CMD curl -f http://localhost/ || exit 1`),
-			wantedErr:  fmt.Errorf("parse instructions: Unknown flag: randomFlag"),
+			wantedErr:  fmt.Errorf("parse HEALTHCHECK: flag provided but not defined: -randomFlag"),
 		},
 		"healthcheck does not contain CMD": {
 			dockerfile: []byte(`HEALTHCHECK --interval=5m curl -f http://localhost/ || exit 1`),
-			wantedErr:  fmt.Errorf("parse instructions: Unknown type \"CURL\" in HEALTHCHECK (try CMD)"),
-		},
-		"healthcheck does not contain command": {
-			dockerfile: []byte(`HEALTHCHECK --interval=5m CMD`),
-			wantedErr:  fmt.Errorf("parse instructions: Missing command after HEALTHCHECK CMD"),
+			wantedErr:  errors.New("parse HEALTHCHECK: instruction must contain either CMD or NONE"),
 		},
 	}
 

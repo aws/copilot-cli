@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/spf13/afero"
 )
 
@@ -41,7 +39,6 @@ const (
 	hcRetriesFlag  = "retries"
 	retriesDefault = 2
 
-	hcInstrStartIndex    = len("HEALTHCHECK ")
 	cmdInstructionPrefix = "CMD "
 	cmdShell             = "CMD-SHELL"
 )
@@ -142,7 +139,7 @@ func (df *Dockerfile) parse() error {
 		return fmt.Errorf("read Dockerfile %s error: %w", f, err)
 	}
 
-	parsedDockerfile, err := parse(string(f))
+	parsedDockerfile, err := parse(file.Name(), string(f))
 	if err != nil {
 		return err
 	}
@@ -154,39 +151,29 @@ func (df *Dockerfile) parse() error {
 }
 
 // parse parses the contents of a Dockerfile into a Dockerfile struct.
-func parse(content string) (*Dockerfile, error) {
+func parse(name, content string) (*Dockerfile, error) {
 	var df Dockerfile
 	df.exposedPorts = []Port{}
 
-	ast, err := parser.Parse(strings.NewReader(content))
-	if err != nil {
-		return nil, fmt.Errorf("parse reader: %w", err)
-	}
-
-	for _, child := range ast.AST.Children {
-		// ParseInstruction converts an AST to a typed instruction.
-		// Does prevalidation checks before parsing
-		// Example of an instruction is HEALTHCHECK CMD curl -f http://localhost/ || exit 1.
-		instruction, err := instructions.ParseInstruction(child)
-		if err != nil {
-			return nil, fmt.Errorf("parse instructions: %w", err)
-		}
-		inst := fmt.Sprint(instruction)
-
-		// Getting the value at a children will return the Dockerfile directive
-		switch d := child.Value; d {
-		case "expose":
-			currentPorts := parseExpose(inst)
+	lexer := lex(name, strings.NewReader(content))
+	for {
+		instr := lexer.next()
+		switch instr.name {
+		case instrErr:
+			return nil, errors.New(instr.args)
+		case instrEOF:
+			return &df, nil
+		case instrExpose:
+			currentPorts := parseExpose(instr.args)
 			df.exposedPorts = append(df.exposedPorts, currentPorts...)
-		case "healthcheck":
-			healthcheckOptions, err := parseHealthCheck(inst)
+		case instrHealthCheck:
+			hc, err := parseHealthCheck(instr.args)
 			if err != nil {
 				return nil, err
 			}
-			df.healthCheck = healthcheckOptions
+			df.healthCheck = hc
 		}
 	}
-	return &df, nil
 }
 
 func parseExpose(line string) []Port {
@@ -245,11 +232,11 @@ func parseExpose(line string) []Port {
 
 // parseHealthCheck takes a HEALTHCHECK directives and turns into a healthCheck struct.
 func parseHealthCheck(content string) (*HealthCheck, error) {
-	if strings.TrimSpace(content[hcInstrStartIndex:]) == "NONE" {
+	if strings.ToUpper(strings.TrimSpace(content)) == "NONE" {
 		return nil, nil
 	}
 	if !strings.Contains(content, "CMD") {
-		return nil, errors.New("HEALTHCHECK instruction must contain either CMD or NONE")
+		return nil, errors.New("parse HEALTHCHECK: instruction must contain either CMD or NONE")
 	}
 
 	var retries int
@@ -261,8 +248,8 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 	fs.DurationVar(&startPeriod, startPeriodFlag, startPeriodDefault, "")
 	fs.IntVar(&retries, hcRetriesFlag, retriesDefault, "")
 
-	if err := fs.Parse(strings.Split(content[hcInstrStartIndex:], " ")); err != nil {
-		return nil, err
+	if err := fs.Parse(strings.Split(content, " ")); err != nil {
+		return nil, fmt.Errorf("parse HEALTHCHECK: %w", err)
 	}
 
 	// if HEALTHCHECK instruction is not "NONE", there must be a "CMD" instruction otherwise will error out.
