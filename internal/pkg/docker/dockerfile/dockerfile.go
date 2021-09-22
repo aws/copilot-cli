@@ -155,12 +155,12 @@ func parse(name, content string) (*Dockerfile, error) {
 	var df Dockerfile
 	df.exposedPorts = []Port{}
 
-	lexer := lex(name, strings.NewReader(content))
+	lexer := lex(strings.NewReader(content))
 	for {
 		instr := lexer.next()
 		switch instr.name {
 		case instrErr:
-			return nil, errors.New(instr.args)
+			return nil, fmt.Errorf("scan Dockerfile %s: %s", name, instr.args)
 		case instrEOF:
 			return &df, nil
 		case instrExpose:
@@ -242,13 +242,20 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 	var retries int
 	var interval, timeout, startPeriod time.Duration
 	fs := flag.NewFlagSet("flags", flag.ContinueOnError)
-
 	fs.DurationVar(&interval, intervalFlag, intervalDefault, "")
 	fs.DurationVar(&timeout, timeoutFlag, timeoutDefault, "")
 	fs.DurationVar(&startPeriod, startPeriodFlag, startPeriodDefault, "")
 	fs.IntVar(&retries, hcRetriesFlag, retriesDefault, "")
 
-	if err := fs.Parse(strings.Split(content, " ")); err != nil {
+	var instrArgs []string
+	for _, arg := range strings.Split(content, " ") {
+		if arg == "" {
+			continue
+		}
+		instrArgs = append(instrArgs, strings.TrimSpace(arg))
+	}
+
+	if err := fs.Parse(instrArgs); err != nil {
 		return nil, fmt.Errorf("parse HEALTHCHECK: %w", err)
 	}
 

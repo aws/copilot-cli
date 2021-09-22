@@ -159,6 +159,21 @@ HEALTHCHECK CMD curl -f http://localhost/ || exit 1
 				Cmd:         []string{cmdShell, "curl -f http://localhost/ || exit 1"},
 			},
 		},
+		"correctly parses multiline healthcheck": {
+			dockerfile: []byte(`
+FROM nginx
+HEALTHCHECK --interval=5m\
+  --timeout=3s     --start-period=2s --retries=3 \
+	     CMD              curl -f http://localhost/ || exit 1    `),
+			wantedErr: nil,
+			wantedConfig: &HealthCheck{
+				Interval:    300 * time.Second,
+				Timeout:     3 * time.Second,
+				StartPeriod: 2 * time.Second,
+				Retries:     3,
+				Cmd:         []string{cmdShell, "curl -f http://localhost/ || exit 1"},
+			},
+		},
 		"correctly parses healthcheck with user's values": {
 			dockerfile: []byte(`
 FROM nginx

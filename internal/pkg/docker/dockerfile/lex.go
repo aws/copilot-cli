@@ -22,16 +22,16 @@ const (
 )
 
 const (
-	exposeInstrMarker     = "expose "      // start of an EXPOSE instruction.
-	heathCheckInstrMarker = "healthcheck " // start of a HEALTHCHECK instruction.
+	markerExposeInstr      = "expose "      // start of an EXPOSE instruction.
+	markerHealthCheckInstr = "healthcheck " // start of a HEALTHCHECK instruction.
 )
 
 var (
 	lineContinuationMarkers = []string{"`", "\\"} // denotes that the instruction continues to the next line.
 
 	instrMarkers = map[instructionName]string{ // lookup table for how an instruction starts.
-		instrExpose:      exposeInstrMarker,
-		instrHealthCheck: heathCheckInstrMarker,
+		instrExpose:      markerExposeInstr,
+		instrHealthCheck: markerHealthCheckInstr,
 	}
 )
 
@@ -49,7 +49,6 @@ type instruction struct {
 
 // lexer holds the state of the scanner.
 type lexer struct {
-	name    string         // name of the Dockerfile; used only for error reports.
 	scanner *bufio.Scanner // line-by-line scanner of the contents of the Dockerfile.
 
 	curLineCount int              // line number scanned so far.
@@ -62,9 +61,8 @@ type lexer struct {
 // lex returns a running lexer that scans the Dockerfile.
 // The lexing logic is heavily inspired by:
 //   https://cs.opensource.google/go/go/+/refs/tags/go1.17.1:src/text/template/parse/lex.go
-func lex(name string, reader io.Reader) *lexer {
+func lex(reader io.Reader) *lexer {
 	l := &lexer{
-		name:         name,
 		scanner:      bufio.NewScanner(reader),
 		curArgs:      new(strings.Builder),
 		instructions: make(chan instruction),
@@ -84,7 +82,7 @@ func (lex *lexer) next() instruction {
 func (lex *lexer) readLine() (isEOF bool, err error) {
 	if ok := lex.scanner.Scan(); !ok {
 		if err := lex.scanner.Err(); err != nil {
-			return false, fmt.Errorf("scan Dockerfile %s: %w", lex.name, err)
+			return false, err
 		}
 		return true, nil
 	}
@@ -172,9 +170,9 @@ func lexContent(l *lexer) stateFn {
 	}
 	line := strings.ToLower(strings.TrimLeftFunc(l.curLine, unicode.IsSpace))
 	switch {
-	case strings.HasPrefix(line, exposeInstrMarker):
+	case strings.HasPrefix(line, markerExposeInstr):
 		return lexExpose
-	case strings.HasPrefix(line, heathCheckInstrMarker):
+	case strings.HasPrefix(line, markerHealthCheckInstr):
 		return lexHealthCheck
 	default:
 		return lexContent // Ignore all the other instructions, consume the line without emitting any instructions.
@@ -220,6 +218,9 @@ func hasLineContinuationMarker(line string) bool {
 // trimInstruction trims the instrMarker prefix from line and returns it.
 func trimInstruction(line, instrMarker string) string {
 	normalized := strings.ToLower(line)
+	if !strings.Contains(normalized, instrMarker) {
+		return line
+	}
 	idx := strings.Index(normalized, instrMarker) + len(instrMarker)
 	return line[idx:]
 }
@@ -229,7 +230,7 @@ func trimInstruction(line, instrMarker string) string {
 func trimContinuationLineMarker(line string) string {
 	for _, marker := range lineContinuationMarkers {
 		if strings.HasSuffix(line, marker) {
-			return line[:len(line)-1-len(marker)]
+			return strings.TrimSuffix(line, marker)
 		}
 	}
 	return line
