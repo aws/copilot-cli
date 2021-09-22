@@ -84,7 +84,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	// Apply overrides.
 	svc.Name = stringP(props.Name)
 	svc.WorkerServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
-	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	svc.WorkerServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
@@ -112,7 +112,7 @@ func (s *WorkerService) BuildRequired() (bool, error) {
 
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
 func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.BuildConfig(wsRoot)
+	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service

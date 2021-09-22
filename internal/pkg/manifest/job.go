@@ -74,8 +74,8 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
 	job.Name = stringP(props.Name)
-	job.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
-	job.ImageConfig.Location = stringP(props.Image)
+	job.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	job.ImageConfig.Image.Location = stringP(props.Image)
 	job.ImageConfig.HealthCheck = props.HealthCheck
 	job.On.Schedule = stringP(props.Schedule)
 	if props.Retries != 0 {
@@ -124,7 +124,7 @@ func (j *ScheduledJob) Publish() []Topic {
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
 func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return j.ImageConfig.BuildConfig(wsRoot)
+	return j.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.

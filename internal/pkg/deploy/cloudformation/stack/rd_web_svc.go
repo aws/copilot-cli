@@ -78,7 +78,7 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env strin
 				env:    env,
 				app:    app.Name,
 				rc:     rc,
-				image:  mft.ImageConfig,
+				image:  mft.ImageConfig.Image,
 				addons: addons,
 				parser: parser,
 			},

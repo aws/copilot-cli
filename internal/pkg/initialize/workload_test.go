@@ -85,7 +85,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Do(func(m *manifest.ScheduledJob, _ string) {
 					require.Equal(t, *m.Workload.Type, manifest.ScheduledJobType)
-					require.Equal(t, *m.ImageConfig.Location, "mockImage")
+					require.Equal(t, *m.ImageConfig.Image.Location, "mockImage")
 				}).Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -363,7 +363,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Workload.Name))
 				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.ImageConfig.Port))
-				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.ImageConfig.Build.BuildArgs.Dockerfile))
+				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.ImageConfig.Image.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -418,10 +418,10 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 			require.Equal(t, tc.inSvcName, *manifest.Name)
 			require.Equal(t, tc.inSvcPort, *manifest.ImageConfig.Port)
 			if tc.inImage != "" {
-				require.Equal(t, tc.inImage, *manifest.ImageConfig.Location)
+				require.Equal(t, tc.inImage, *manifest.ImageConfig.Image.Location)
 			}
 			if tc.inDockerfilePath != "" {
-				require.Equal(t, tc.inDockerfilePath, *manifest.ImageConfig.Build.BuildArgs.Dockerfile)
+				require.Equal(t, tc.inDockerfilePath, *manifest.ImageConfig.Image.Build.BuildArgs.Dockerfile)
 			}
 		})
 	}
@@ -588,7 +588,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
-						require.Equal(t, *m.ImageConfig.Location, "mockImage")
+						require.Equal(t, *m.ImageConfig.Image.Location, "mockImage")
 						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
 			},

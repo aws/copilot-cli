@@ -475,28 +475,28 @@ func TestApplyEnv_String(t *testing.T) {
 	}{
 		"string overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("cairo")
-				svc.Environments["test"].ImageConfig.Location = aws.String("nerac")
+				svc.ImageConfig.Image.Location = aws.String("cairo")
+				svc.Environments["test"].ImageConfig.Image.Location = aws.String("nerac")
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("nerac")
+				svc.ImageConfig.Image.Location = aws.String("nerac")
 			},
 		},
 		"string overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("cairo")
-				svc.Environments["test"].ImageConfig.Location = aws.String("")
+				svc.ImageConfig.Image.Location = aws.String("cairo")
+				svc.Environments["test"].ImageConfig.Image.Location = aws.String("")
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("")
+				svc.ImageConfig.Image.Location = aws.String("")
 			},
 		},
 		"string not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("cairo")
+				svc.ImageConfig.Image.Location = aws.String("cairo")
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Location = aws.String("cairo")
+				svc.ImageConfig.Image.Location = aws.String("cairo")
 			},
 		},
 	}

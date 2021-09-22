@@ -667,7 +667,12 @@ func (r *RequestDrivenWebServiceHttpConfig) Validate() error {
 }
 
 // Validate returns nil if JobTriggerConfig is configured correctly.
-func (*JobTriggerConfig) Validate() error {
+func (c *JobTriggerConfig) Validate() error {
+	if c.Schedule == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "schedule",
+		}
+	}
 	return nil
 }
 
