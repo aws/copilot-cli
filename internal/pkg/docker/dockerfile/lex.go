@@ -60,6 +60,8 @@ type lexer struct {
 }
 
 // lex returns a running lexer that scans the Dockerfile.
+// The lexing logic is heavily inspired by:
+//   https://cs.opensource.google/go/go/+/refs/tags/go1.17.1:src/text/template/parse/lex.go
 func lex(name string, reader io.Reader) *lexer {
 	l := &lexer{
 		name:         name,
@@ -112,7 +114,7 @@ func (lex *lexer) emitErr(err error) {
 }
 
 // consumeInstr keeps calling readLine and storing the arguments in the lexer until there is no more
-// continuation marker and the emits the instruction.
+// continuation marker and then emits the instruction.
 func (lex *lexer) consumeInstr(name instructionName) stateFn {
 	isEOF, err := lex.readLine()
 	if err != nil {
