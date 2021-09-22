@@ -84,9 +84,27 @@ type Image struct {
 	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
 }
 
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (i *Image) UnmarshalYAML(node *yaml.Node) error {
+	type image Image
+	if err := node.Decode((*image)(i)); err != nil {
+		return err
+	}
+	if !i.Build.isEmpty() && i.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
+}
+
 // ImageWithHealthcheck represents a container image with health check.
 type ImageWithHealthcheck struct {
-	Image       `yaml:",inline"`
+	Image       Image                `yaml:",inline"`
 	HealthCheck ContainerHealthCheck `yaml:"healthcheck"`
 }
 
@@ -98,7 +116,7 @@ type ImageWithPortAndHealthcheck struct {
 
 // ImageWithPort represents a container image with an exposed port.
 type ImageWithPort struct {
-	Image `yaml:",inline"`
+	Image Image   `yaml:",inline"`
 	Port  *uint16 `yaml:"port"`
 }
 
@@ -195,9 +213,9 @@ type CommandOverride stringSliceOrString
 
 // UnmarshalYAML overrides the default YAML unmarshalling logic for the EntryPointOverride
 // struct, allowing it to perform more complex unmarshalling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
 		return errUnmarshalEntryPoint
 	}
 	return nil
@@ -214,9 +232,9 @@ func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the CommandOverride
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), unmarshal); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (c *CommandOverride) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), value); err != nil {
 		return errUnmarshalCommand
 	}
 	return nil
@@ -236,8 +254,8 @@ type stringSliceOrString struct {
 	StringSlice []string
 }
 
-func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(interface{}) error) error {
-	if err := unmarshal(&s.StringSlice); err != nil {
+func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, value *yaml.Node) error {
+	if err := value.Decode(&s.StringSlice); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -252,7 +270,7 @@ func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(i
 		return nil
 	}
 
-	return unmarshal(&s.String)
+	return value.Decode(&s.String)
 }
 
 func toStringSlice(s *stringSliceOrString) ([]string, error) {
@@ -288,9 +306,9 @@ func (b *BuildArgsOrString) isEmpty() bool {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&b.BuildArgs); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (b *BuildArgsOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&b.BuildArgs); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -305,7 +323,7 @@ func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return nil
 	}
 
-	if err := unmarshal(&b.BuildString); err != nil {
+	if err := value.Decode(&b.BuildString); err != nil {
 		return errUnmarshalBuildOpts
 	}
 	return nil
@@ -338,9 +356,9 @@ type ExecuteCommand struct {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ExecuteCommand
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (e *ExecuteCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&e.Config); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (e *ExecuteCommand) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&e.Config); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -353,7 +371,7 @@ func (e *ExecuteCommand) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return nil
 	}
 
-	if err := unmarshal(&e.Enable); err != nil {
+	if err := value.Decode(&e.Enable); err != nil {
 		return errUnmarshalExec
 	}
 	return nil
@@ -460,7 +478,7 @@ func (c *NetworkConfig) IsEmpty() bool {
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
 // If the user specified a placement that's not valid then throw an error.
-func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (c *NetworkConfig) UnmarshalYAML(value *yaml.Node) error {
 	type networkWithDefaults NetworkConfig
 	publicPlacement := Placement(PublicSubnetPlacement)
 	defaultVPCConf := vpcConfig{
@@ -469,7 +487,7 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	conf := networkWithDefaults{
 		VPC: defaultVPCConf,
 	}
-	if err := unmarshal(&conf); err != nil {
+	if err := value.Decode(&conf); err != nil {
 		return err
 	}
 	if conf.VPC.isEmpty() { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
@@ -612,9 +630,9 @@ type PlatformArgsOrString struct {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the PlatformArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&p.PlatformArgs); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&p.PlatformArgs); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -637,7 +655,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 		p.PlatformString = nil
 		return nil
 	}
-	if err := unmarshal(&p.PlatformString); err != nil {
+	if err := value.Decode(&p.PlatformString); err != nil {
 		return errUnmarshalPlatformOpts
 	}
 	if err := validatePlatform(p.PlatformString); err != nil {

@@ -241,6 +241,13 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 			},
 			wantedErrorPrefix: `validate "network": `,
 		},
+		"error if fail to validate on": {
+			config: ScheduledJobConfig{
+				ImageConfig: testImageConfig,
+				On:          JobTriggerConfig{},
+			},
+			wantedErrorPrefix: `validate "on": `,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -921,6 +928,29 @@ func TestPlacement_Validate(t *testing.T) {
 		"should return an error if placement is invalid": {
 			in:     &mockInvalidPlacement,
 			wanted: errors.New(`"placement" external must be one of public, private`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestJobTriggerConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     *JobTriggerConfig
+		wanted error
+	}{
+		"should return an error if schedule is empty": {
+			in:     &JobTriggerConfig{},
+			wanted: errors.New(`"schedule" must be specified`),
 		},
 	}
 	for name, tc := range testCases {

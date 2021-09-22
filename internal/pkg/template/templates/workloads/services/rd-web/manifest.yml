@@ -8,14 +8,14 @@ name: {{.Name}}
 type: {{.Type}}
 
 image:
-{{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
+{{- if .ImageConfig.Image.Build.BuildArgs.Dockerfile}}
   # Docker build arguments.
   # For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/rd-web-service/#image-build
-  build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
+  build: {{.ImageConfig.Image.Build.BuildArgs.Dockerfile}}
 {{- end}}
-{{- if .ImageConfig.Location}}
+{{- if .ImageConfig.Image.Location}}
   # The name of the Docker image.
-  location: {{.ImageConfig.Location}}
+  location: {{.ImageConfig.Image.Location}}
 {{- end}}
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}

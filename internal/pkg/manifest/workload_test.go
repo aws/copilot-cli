@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -12,6 +13,36 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
+
+func TestImage_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedError error
+	}{
+		"error if both build and location are set": {
+			inContent: []byte(`build: mockBuild
+location: mockLocation`),
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"success": {
+			inContent: []byte(`location: mockLocation`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			i := Image{}
+			err := yaml.Unmarshal(tc.inContent, &i)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "mockLocation", aws.StringValue(i.Location))
+			}
+		})
+	}
+}
 
 func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {

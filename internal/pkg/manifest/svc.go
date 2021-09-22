@@ -56,9 +56,9 @@ func (r *Range) Parse() (min int, max int, err error) {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the RangeOpts
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (r *Range) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&r.RangeConfig); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (r *Range) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.RangeConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -73,7 +73,7 @@ func (r *Range) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	if err := unmarshal(&r.Value); err != nil {
+	if err := value.Decode(&r.Value); err != nil {
 		return errUnmarshalRangeOpts
 	}
 	return nil
@@ -125,9 +125,9 @@ type Count struct {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Count
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&c.AdvancedCount); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (c *Count) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&c.AdvancedCount); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -148,7 +148,7 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	if err := unmarshal(&c.Value); err != nil {
+	if err := value.Decode(&c.Value); err != nil {
 		return errUnmarshalCountOpts
 	}
 	return nil
@@ -308,9 +308,9 @@ type HealthCheckArgsOrString struct {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&hc.HealthCheckArgs); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (hc *HealthCheckArgsOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&hc.HealthCheckArgs); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -325,7 +325,7 @@ func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) err
 		return nil
 	}
 
-	if err := unmarshal(&hc.HealthCheckPath); err != nil {
+	if err := value.Decode(&hc.HealthCheckPath); err != nil {
 		return errUnmarshalHealthCheckArgs
 	}
 	return nil
