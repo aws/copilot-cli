@@ -1479,19 +1479,6 @@ func Test_convertImageDependsOn(t *testing.T) {
 			wantedError:       circularDependencyErr,
 			circDepContainers: []string{"frontend", "sidecar", "sidecar2"},
 		},
-		"invalid container dependency due to status": {
-			inImage: &manifest.Image{
-				DependsOn: map[string]string{
-					"sidecar": "end",
-				},
-			},
-			inSidecars: map[string]*manifest.SidecarConfig{
-				"sidecar": {
-					Essential: aws.Bool(false),
-				},
-			},
-			wantedError: errInvalidSidecarDependsOnStatus,
-		},
 		"invalid implied essential container depdendency": {
 			inImage: &manifest.Image{
 				DependsOn: map[string]string{

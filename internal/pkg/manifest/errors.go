@@ -4,10 +4,15 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/dustin/go-humanize/english"
+)
+
+var (
+	errInvalidContainer = errors.New("container dependency does not exist")
 )
 
 // ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.

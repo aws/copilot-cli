@@ -25,7 +25,8 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		lbConfig LoadBalancedWebServiceConfig
 
-		wantedErrorPrefix string
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate image": {
 			lbConfig: LoadBalancedWebServiceConfig{
@@ -38,7 +39,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "image": `,
+			wantedErrorMsgPrefix: `validate "image": `,
 		},
 		"error if fail to validate http": {
 			lbConfig: LoadBalancedWebServiceConfig{
@@ -48,32 +49,63 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					TargetContainerCamelCase: aws.String("mockTargetContainer"),
 				},
 			},
-			wantedErrorPrefix: `validate "http": `,
+			wantedErrorMsgPrefix: `validate "http": `,
+		},
+		"error if fail to validate sidecars": {
+			lbConfig: LoadBalancedWebServiceConfig{
+				ImageConfig: testImageConfig,
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: DependsOn{
+							"foo": "bar",
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
-				RoutingRule: RoutingRule{
-					TargetContainer: aws.String("mockTargetContainer"),
-				},
 				Network: NetworkConfig{
 					vpcConfig{
 						SecurityGroups: []string{},
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "network": `,
+			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate dependencies": {
+			lbConfig: LoadBalancedWebServiceConfig{
+				ImageConfig: testImageConfig,
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: map[string]string{"bar": "healthy"},
+						Essential: aws.Bool(false),
+					},
+					"bar": {
+						DependsOn: map[string]string{"foo": "healthy"},
+						Essential: aws.Bool(false),
+					},
+				},
+			},
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.lbConfig.Validate()
+			gotErr := tc.lbConfig.Validate("mockWorkload")
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }
@@ -90,7 +122,8 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config BackendServiceConfig
 
-		wantedErrorPrefix string
+		wantedErrorMsgPrefix string
+		wantedError          error
 	}{
 		"error if fail to validate image": {
 			config: BackendServiceConfig{
@@ -103,7 +136,20 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "image": `,
+			wantedErrorMsgPrefix: `validate "image": `,
+		},
+		"error if fail to validate sidecars": {
+			config: BackendServiceConfig{
+				ImageConfig: testImageConfig,
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: DependsOn{
+							"foo": "bar",
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
 			config: BackendServiceConfig{
@@ -114,18 +160,37 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "network": `,
+			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate dependencies": {
+			config: BackendServiceConfig{
+				ImageConfig: testImageConfig,
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: map[string]string{"bar": "start"},
+					},
+					"bar": {
+						DependsOn: map[string]string{"foo": "start"},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.Validate("mockWorkload")
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }
@@ -150,7 +215,7 @@ func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.Validate("mockWorkload")
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -170,7 +235,8 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config WorkerServiceConfig
 
-		wantedErrorPrefix string
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate image": {
 			config: WorkerServiceConfig{
@@ -181,7 +247,20 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "image": `,
+			wantedErrorMsgPrefix: `validate "image": `,
+		},
+		"error if fail to validate sidecars": {
+			config: WorkerServiceConfig{
+				ImageConfig: testImageConfig,
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: DependsOn{
+							"foo": "bar",
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
 			config: WorkerServiceConfig{
@@ -192,18 +271,37 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "network": `,
+			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate dependencies": {
+			config: WorkerServiceConfig{
+				ImageConfig: testImageConfig,
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: map[string]string{"bar": "start"},
+					},
+					"bar": {
+						DependsOn: map[string]string{"foo": "start"},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.Validate("mockWorkload")
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }
@@ -217,7 +315,8 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config ScheduledJobConfig
 
-		wantedErrorPrefix string
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate image": {
 			config: ScheduledJobConfig{
@@ -228,7 +327,20 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "image": `,
+			wantedErrorMsgPrefix: `validate "image": `,
+		},
+		"error if fail to validate sidecars": {
+			config: ScheduledJobConfig{
+				ImageConfig: testImageConfig,
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: DependsOn{
+							"foo": "bar",
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
 			config: ScheduledJobConfig{
@@ -239,25 +351,47 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "network": `,
+			wantedErrorMsgPrefix: `validate "network": `,
 		},
 		"error if fail to validate on": {
 			config: ScheduledJobConfig{
 				ImageConfig: testImageConfig,
 				On:          JobTriggerConfig{},
 			},
-			wantedErrorPrefix: `validate "on": `,
+			wantedErrorMsgPrefix: `validate "on": `,
+		},
+		"error if fail to validate dependencies": {
+			config: ScheduledJobConfig{
+				ImageConfig: testImageConfig,
+				On: JobTriggerConfig{
+					Schedule: aws.String("mockSchedule"),
+				},
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: map[string]string{"bar": "start"},
+					},
+					"bar": {
+						DependsOn: map[string]string{"foo": "start"},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.Validate("mockWorkload")
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }
@@ -294,7 +428,8 @@ func TestImage_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		Image Image
 
-		wantedError error
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"error if build and location both specified": {
 			Image: Image{
@@ -309,6 +444,15 @@ func TestImage_Validate(t *testing.T) {
 			Image:       Image{},
 			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
 		},
+		"error if fail to validate depends_on": {
+			Image: Image{
+				Location: aws.String("mockLocation"),
+				DependsOn: DependsOn{
+					"foo": "complete",
+				},
+			},
+			wantedErrorMsgPrefix: `validate "depends_on":`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -316,13 +460,51 @@ func TestImage_Validate(t *testing.T) {
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+func TestImage_validateDependsOn(t *testing.T) {
+	testCases := map[string]struct {
+		in     Image
+		wanted error
+	}{
+		"should return an error if dependency status is invalid": {
+			in: Image{
+				DependsOn: DependsOn{
+					"foo": "bar",
+				},
+			},
+			wanted: errors.New("container dependency status must be one of < START | COMPLETE | SUCCESS | HEALTHY >"),
+		},
+		"should return an error if it is not a valid essential status": {
+			in: Image{
+				DependsOn: DependsOn{
+					"foo": "complete",
+				},
+			},
+			wanted: errors.New("essential container dependencies can only have status < START | HEALTHY >"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.validateDependsOn()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
 			} else {
-				require.NoError(t, gotErr)
+				require.NoError(t, err)
 			}
 		})
 	}
 }
-
 func TestRoutingRule_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		RoutingRule RoutingRule
@@ -906,6 +1088,69 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestSidecarConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config SidecarConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate depends_on": {
+			config: SidecarConfig{
+				DependsOn: DependsOn{
+					"foo": "bar",
+				},
+			},
+			wantedErrorPrefix: `validate "depends_on": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestSidecarConfig_validateDependsOn(t *testing.T) {
+	testCases := map[string]struct {
+		in     SidecarConfig
+		wanted error
+	}{
+		"should return an error if dependency status is invalid": {
+			in: SidecarConfig{
+				DependsOn: DependsOn{
+					"foo": "bar",
+				},
+			},
+			wanted: errors.New("container dependency status must be one of < START | COMPLETE | SUCCESS | HEALTHY >"),
+		},
+		"should return an error if it is not a valid essential status": {
+			in: SidecarConfig{
+				DependsOn: DependsOn{
+					"foo": "complete",
+				},
+			},
+			wanted: errors.New("essential sidecar container dependencies can only have status < START >"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.validateDependsOn()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

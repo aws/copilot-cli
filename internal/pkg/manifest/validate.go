@@ -12,14 +12,26 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/term/graph"
+)
+
+// Container dependency status constants.
+const (
+	dependsOnStart    = "START"
+	dependsOnComplete = "COMPLETE"
+	dependsOnSuccess  = "SUCCESS"
+	dependsOnHealthy  = "HEALTHY"
 )
 
 var (
 	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
+
+	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 )
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
-func (l *LoadBalancedWebServiceConfig) Validate() error {
+func (l *LoadBalancedWebServiceConfig) Validate(name string) error {
 	var err error
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -38,7 +50,7 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for k, v := range l.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = l.Network.Validate(); err != nil {
@@ -49,14 +61,21 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range l.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+		sidecarConfig:     l.Sidecars,
+		imageConfig:       &l.ImageConfig.Image,
+		mainContainerName: name,
+	}); err != nil {
+		return err
 	}
 	return nil
 }
 
 // Validate returns nil if BackendServiceConfig is configured correctly.
-func (b *BackendServiceConfig) Validate() error {
+func (b *BackendServiceConfig) Validate(name string) error {
 	var err error
 	if err = b.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -72,7 +91,7 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for k, v := range b.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = b.Network.Validate(); err != nil {
@@ -83,14 +102,21 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range b.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+		sidecarConfig:     b.Sidecars,
+		imageConfig:       &b.ImageConfig.Image,
+		mainContainerName: name,
+	}); err != nil {
+		return err
 	}
 	return nil
 }
 
 // Validate returns nil if RequestDrivenWebService is configured correctly.
-func (r *RequestDrivenWebServiceConfig) Validate() error {
+func (r *RequestDrivenWebServiceConfig) Validate(name string) error {
 	var err error
 	if err = r.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -105,7 +131,7 @@ func (r *RequestDrivenWebServiceConfig) Validate() error {
 }
 
 // Validate returns nil if WorkerServiceConfig is configured correctly.
-func (w *WorkerServiceConfig) Validate() error {
+func (w *WorkerServiceConfig) Validate(name string) error {
 	var err error
 	if err = w.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -121,7 +147,7 @@ func (w *WorkerServiceConfig) Validate() error {
 	}
 	for k, v := range w.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = w.Network.Validate(); err != nil {
@@ -132,14 +158,21 @@ func (w *WorkerServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range w.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+		sidecarConfig:     w.Sidecars,
+		imageConfig:       &w.ImageConfig.Image,
+		mainContainerName: name,
+	}); err != nil {
+		return err
 	}
 	return nil
 }
 
 // Validate returns nil if ScheduledJobConfig is configured correctly.
-func (s *ScheduledJobConfig) Validate() error {
+func (s *ScheduledJobConfig) Validate(name string) error {
 	var err error
 	if err = s.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -155,7 +188,7 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for k, v := range s.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = s.Network.Validate(); err != nil {
@@ -172,8 +205,15 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range s.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+		sidecarConfig:     s.Sidecars,
+		imageConfig:       &s.ImageConfig.Image,
+		mainContainerName: name,
+	}); err != nil {
+		return err
 	}
 	return nil
 }
@@ -222,6 +262,45 @@ func (i *Image) Validate() error {
 			firstField:  "build",
 			secondField: "location",
 			mustExist:   true,
+		}
+	}
+	if err = i.validateDependsOn(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
+	return nil
+}
+
+func (i *Image) validateDependsOn() error {
+	if i.DependsOn == nil {
+		return nil
+	}
+	if err := i.DependsOn.Validate(); err != nil {
+		return err
+	}
+	for name, status := range i.DependsOn {
+		if ok, err := isEssentialStatus(strings.ToUpper(status), name); !ok {
+			return err
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if DependsOn is configured correctly.
+func (d *DependsOn) Validate() error {
+	if d == nil {
+		return nil
+	}
+	for _, v := range *d {
+		status := strings.ToUpper(v)
+		var validStatus bool
+		for _, allowed := range dependsOnValidStatuses {
+			if status == allowed {
+				validStatus = true
+				break
+			}
+		}
+		if !validStatus {
+			return fmt.Errorf("container dependency status must be one of < %s | %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy)
 		}
 	}
 	return nil
@@ -633,7 +712,29 @@ func (s *SidecarConfig) Validate() error {
 	if err := s.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
+	if err := s.validateDependsOn(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
 	return s.ImageOverride.Validate()
+}
+
+func (s *SidecarConfig) validateDependsOn() error {
+	if s.DependsOn == nil {
+		return nil
+	}
+	if err := s.DependsOn.Validate(); err != nil {
+		return err
+	}
+	for name, status := range s.DependsOn {
+		if ok, err := isSidecarEssentialStatus(strings.ToUpper(status), name); s.isEssential() && !ok {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SidecarConfig) isEssential() bool {
+	return s.Essential == nil || aws.BoolValue(s.Essential)
 }
 
 // Validate returns nil if NetworkConfig is configured correctly.
@@ -743,4 +844,61 @@ func (d *DeadLetterQueue) Validate() error {
 // Validate returns nil if OverrideRule is configured correctly.
 func (*OverrideRule) Validate() error {
 	return nil
+}
+
+type validateNoCircularDependenciesOpts struct {
+	mainContainerName string
+	sidecarConfig     map[string]*SidecarConfig
+	imageConfig       *Image
+}
+
+func validateNoCircularDependencies(opts validateNoCircularDependenciesOpts) error {
+	dependencies, err := buildDependencyGraph(opts)
+	if err != nil {
+		return err
+	}
+	if dependencies.IsAcyclic() {
+		return nil
+	}
+	if len(dependencies.Cycle) == 1 {
+		return fmt.Errorf("container %s cannot depend on itself", dependencies.Cycle[0])
+	}
+	return fmt.Errorf("circular container dependency chain includes the following containers: %s", dependencies.Cycle)
+}
+
+func buildDependencyGraph(opts validateNoCircularDependenciesOpts) (*graph.Graph, error) {
+	dependencyGraph := graph.NewGraph()
+	// Add any sidecar dependencies.
+	for name, sidecar := range opts.sidecarConfig {
+		for dep := range sidecar.DependsOn {
+			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+				return nil, errInvalidContainer
+			}
+			dependencyGraph.Add(name, dep)
+		}
+	}
+	// Add any image dependencies.
+	for dep := range opts.imageConfig.DependsOn {
+		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+			return nil, errInvalidContainer
+		}
+		dependencyGraph.Add(opts.mainContainerName, dep)
+	}
+	return dependencyGraph, nil
+}
+
+func isSidecarEssentialStatus(status string, container string) (bool, error) {
+	if status == dependsOnStart {
+		return true, nil
+	}
+	return false, fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
+}
+
+func isEssentialStatus(status string, container string) (bool, error) {
+	for _, allowed := range essentialContainerValidStatuses {
+		if status == allowed {
+			return true, nil
+		}
+	}
+	return false, fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 }
