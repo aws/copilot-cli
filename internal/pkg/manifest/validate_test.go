@@ -89,7 +89,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
 		},
 	}
 	for name, tc := range testCases {
@@ -174,7 +174,7 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
 		},
 	}
 	for name, tc := range testCases {
@@ -285,7 +285,7 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
 		},
 	}
 	for name, tc := range testCases {
@@ -375,7 +375,7 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [foo bar]"),
+			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
 		},
 	}
 	for name, tc := range testCases {

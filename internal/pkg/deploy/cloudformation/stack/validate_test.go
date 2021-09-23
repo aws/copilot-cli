@@ -201,6 +201,20 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		"error when sidecar container dependency status is invalid": {
+			inSidecar: &manifest.SidecarConfig{
+				DependsOn: map[string]string{
+					"sidecar2": "END",
+				},
+			},
+			allSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {},
+				"sidecar2": {
+					Essential: aws.Bool(false),
+				},
+			},
+			wantErr: errInvalidDependsOnStatus,
+		},
 		"error when container dependency status is invalid": {
 			inSidecar: &manifest.SidecarConfig{
 				DependsOn: map[string]string{
@@ -428,6 +442,17 @@ func TestValidateImageDependsOn(t *testing.T) {
 				},
 			},
 			wantErr: fmt.Errorf("container frontend cannot depend on itself"),
+		},
+		"error when image container dependency status is invalid": {
+			inImage: &manifest.Image{
+				DependsOn: map[string]string{
+					"sidecar": "END",
+				},
+			},
+			inSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {},
+			},
+			wantErr: errInvalidDependsOnStatus,
 		},
 		"error when set essential sidecar container has a status besides start": {
 			inImage: &manifest.Image{
