@@ -81,10 +81,10 @@ func (e *EFSConfigOrBool) IsEmpty() bool {
 	return e.Advanced.IsEmpty() && e.Enabled == nil
 }
 
-// UnmarshalYAML implements the yaml(v2) interface. It allows EFS to be specified as a
+// UnmarshalYAML implements the yaml(v3) interface. It allows EFS to be specified as a
 // string or a struct alternately.
-func (e *EFSConfigOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&e.Advanced); err != nil {
+func (e *EFSConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&e.Advanced); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -102,7 +102,7 @@ func (e *EFSConfigOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error
 		return nil
 	}
 
-	if err := unmarshal(&e.Enabled); err != nil {
+	if err := value.Decode(&e.Enabled); err != nil {
 		return errUnmarshalEFSOpts
 	}
 	return nil
