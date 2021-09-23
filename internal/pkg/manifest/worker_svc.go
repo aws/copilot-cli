@@ -10,15 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
-	"gopkg.in/yaml.v3"
 )
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
-)
-
-var (
-	errUnmarshalFIFO = errors.New("cannot unmarshal field `fifo` under `subscribe`")
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -33,26 +28,20 @@ type WorkerService struct {
 
 // WorkerServiceConfig holds the configuration that can be overridden per environments.
 type WorkerServiceConfig struct {
-	ImageConfig   ImageWithHealthcheck `yaml:"image,flow"`
-	ImageOverride `yaml:",inline"`
-	TaskConfig    `yaml:",inline"`
-	*Logging      `yaml:"logging,flow"`
-	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Subscribe     *SubscribeConfig          `yaml:"subscribe"`
-	Network       *NetworkConfig            `yaml:"network"`
-}
-
-// WorkerServiceProps represents the configuration needed to create a worker service.
-type WorkerServiceProps struct {
-	WorkloadProps
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	Topics      *[]TopicSubscription  // Optional topics for subscriptions
+	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
+	ImageOverride    `yaml:",inline"`
+	TaskConfig       `yaml:",inline"`
+	Logging          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Subscribe        SubscribeConfig           `yaml:"subscribe"`
+	Network          NetworkConfig             `yaml:"network"`
+	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
-	Topics *[]TopicSubscription `yaml:"topics"`
-	Queue  *SQSQueue            `yaml:"queue"`
+	Topics []TopicSubscription `yaml:"topics"`
+	Queue  *SQSQueue           `yaml:"queue"`
 }
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
@@ -64,11 +53,10 @@ type TopicSubscription struct {
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Retention  *time.Duration   `yaml:"retention"`
-	Delay      *time.Duration   `yaml:"delay"`
-	Timeout    *time.Duration   `yaml:"timeout"`
-	DeadLetter *DeadLetterQueue `yaml:"dead_letter"`
-	FIFO       *FIFOOrBool      `yaml:"fifo"`
+	Retention  *time.Duration  `yaml:"retention"`
+	Delay      *time.Duration  `yaml:"delay"`
+	Timeout    *time.Duration  `yaml:"timeout"`
+	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
@@ -76,43 +64,18 @@ type DeadLetterQueue struct {
 	Tries *uint16 `yaml:"tries"`
 }
 
-// FIFOOrBool contains custom unmarshaling logic for the `fifo` field in the manifest.
-type FIFOOrBool struct {
-	FIFO    FIFOQueue
-	Enabled *bool
-}
-
-// FIFOQueue represents the configurable options for setting up a FIFO queue.
-type FIFOQueue struct {
-	HighThroughput *bool `yaml:"high_throughput"`
-}
-
 // IsEmpty returns empty if the struct has all zero members.
-func (q *FIFOQueue) IsEmpty() bool {
-	return q.HighThroughput == nil
+func (q *DeadLetterQueue) IsEmpty() bool {
+	return q.Tries == nil
 }
 
-// UnmarshalYAML implements the yaml(v2) interface. It allows FIFOQueue to be specified as a
-// string or a struct alternately.
-func (q *FIFOOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&q.FIFO); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
+// WorkerServiceProps represents the configuration needed to create a worker service.
+type WorkerServiceProps struct {
+	WorkloadProps
 
-	if !q.FIFO.IsEmpty() {
-		q.Enabled = nil
-		return nil
-	}
-
-	if err := unmarshal(&q.Enabled); err != nil {
-		return errUnmarshalFIFO
-	}
-	return nil
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
+	Topics      []TopicSubscription  // Optional topics for subscriptions
 }
 
 // NewWorkerService applies the props to a default Worker service configuration with
@@ -124,37 +87,15 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	svc.WorkerServiceConfig.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
+	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
-}
-
-// newDefaultWorkerService returns a Worker service with minimal task sizes and a single replica.
-func newDefaultWorkerService() *WorkerService {
-	return &WorkerService{
-		Workload: Workload{
-			Type: aws.String(WorkerServiceType),
-		},
-		WorkerServiceConfig: WorkerServiceConfig{
-			ImageConfig: ImageWithHealthcheck{},
-			Subscribe:   &SubscribeConfig{},
-			TaskConfig: TaskConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
-				Count: Count{
-					Value: aws.Int(1),
-				},
-				ExecuteCommand: ExecuteCommand{
-					Enable: aws.Bool(false),
-				},
-			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
-					Placement: aws.String(PublicSubnetPlacement),
-				},
-			},
-		},
-	}
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
@@ -180,6 +121,12 @@ func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.BuildConfig(wsRoot)
 }
 
+// Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
+// receives messages from.
+func (s *WorkerService) Subscriptions() []TopicSubscription {
+	return s.Subscribe.Topics
+}
+
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
 func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
@@ -192,19 +139,62 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 		return &s, nil
 	}
 
-	envCount := overrideConfig.TaskConfig.Count
-	if !envCount.IsEmpty() {
-		s.TaskConfig.Count = envCount
-	}
-
 	// Apply overrides to the original service s.
-	err := mergo.Merge(&s, WorkerService{
-		WorkerServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+	for _, t := range defaultTransformers {
+		err := mergo.Merge(&s, WorkerService{
+			WorkerServiceConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// windowsCompatibility disallows unsupported when deploying Windows containers on Fargate.
+func (s *WorkerService) windowsCompatibility() error {
+	if !s.IsWindows() {
+		return nil
+	}
+	// Exec is not supported.
+	if aws.BoolValue(s.ExecuteCommand.Enable) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported.
+	for _, volume := range s.Storage.Volumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
+		}
+	}
+	return nil
+}
+
+// newDefaultWorkerService returns a Worker service with minimal task sizes and a single replica.
+func newDefaultWorkerService() *WorkerService {
+	return &WorkerService{
+		Workload: Workload{
+			Type: aws.String(WorkerServiceType),
+		},
+		WorkerServiceConfig: WorkerServiceConfig{
+			ImageConfig: ImageWithHealthcheck{},
+			Subscribe:   SubscribeConfig{},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count: Count{
+					Value: aws.Int(1),
+				},
+				ExecuteCommand: ExecuteCommand{
+					Enable: aws.Bool(false),
+				},
+			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: aws.String(PublicSubnetPlacement),
+				},
+			},
+		},
+	}
 }

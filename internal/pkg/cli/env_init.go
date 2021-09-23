@@ -300,8 +300,8 @@ func (o *initEnvOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initEnvOpts) RecommendedActions() []string {
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initEnvOpts) RecommendActions() error {
 	return nil
 }
 
@@ -329,12 +329,11 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
 	if o.importVPC.isSet() {
-		// We allow 0 or 2+ public subnets.
+		// Allow passing in VPC without subnets, but error out early for too few subnets-- we won't prompt the user to select more of one type if they pass in any.
 		if len(o.importVPC.PublicSubnetIDs) == 1 {
-			return fmt.Errorf("at least two public subnets must be imported to enable Load Balancing")
+			return errors.New("at least two public subnets must be imported to enable Load Balancing")
 		}
-		// We require 2+ private subnets.
-		if len(o.importVPC.PrivateSubnetIDs) < 2 {
+		if len(o.importVPC.PrivateSubnetIDs) == 1 {
 			return fmt.Errorf("at least two private subnets must be imported")
 		}
 	}
@@ -359,7 +358,7 @@ func (o *initEnvOpts) askEnvName() error {
 		return nil
 	}
 
-	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
+	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, prompt.WithFinalMessage("Environment name:"))
 	if err != nil {
 		return fmt.Errorf("get environment name: %w", err)
 	}
@@ -398,7 +397,7 @@ func (o *initEnvOpts) askEnvRegion() error {
 		region = o.region
 	}
 	if region == "" {
-		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption))
+		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption), prompt.WithFinalMessage("Region:"))
 		if err != nil {
 			return fmt.Errorf("get environment region: %w", err)
 		}
@@ -420,7 +419,8 @@ func (o *initEnvOpts) askCustomizedResources() error {
 	}
 	adjustOrImport, err := o.prompt.SelectOne(
 		envInitDefaultEnvConfirmPrompt, "",
-		envInitCustomizedEnvTypes)
+		envInitCustomizedEnvTypes,
+		prompt.WithFinalMessage("Default environment configuration?"))
 	if err != nil {
 		return fmt.Errorf("select adjusting or importing resources: %w", err)
 	}
@@ -467,10 +467,15 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		return fmt.Errorf("VPC %s has no DNS support enabled", o.importVPC.ID)
 	}
 	if o.importVPC.PublicSubnetIDs == nil {
-		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.importVPC.ID)
+		publicSubnets, err := o.selVPC.Subnets(selector.SubnetsInput{
+			Msg:      envInitPublicSubnetsSelectPrompt,
+			Help:     "",
+			VPCID:    o.importVPC.ID,
+			IsPublic: true,
+		})
 		if err != nil {
-			if err == selector.ErrSubnetsNotFound {
-				log.Warningf(`No existing public subnets were found in VPC %s.
+			if errors.Is(err, selector.ErrSubnetsNotFound) {
+				log.Warningf(`No existing subnets were found in VPC %s.
 If you proceed without at least two public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
 `, o.importVPC.ID)
 			} else {
@@ -483,16 +488,21 @@ If you proceed without at least two public subnets, you will not be able to depl
 		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
 	if o.importVPC.PrivateSubnetIDs == nil {
-		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.importVPC.ID)
+		privateSubnets, err := o.selVPC.Subnets(selector.SubnetsInput{
+			Msg:      envInitPrivateSubnetsSelectPrompt,
+			Help:     "",
+			VPCID:    o.importVPC.ID,
+			IsPublic: false,
+		})
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
+				log.Errorf(`No existing subnets were found in VPC %s. You can either:
 - Create new private subnets and then import them.
 - Use the default Copilot environment configuration.`, o.importVPC.ID)
 			}
 			return fmt.Errorf("select private subnets: %w", err)
 		}
-		if len(privateSubnets) == 1 {
+		if len(privateSubnets) < 2 {
 			return errors.New("select private subnets: at least two private subnets must be selected")
 		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
@@ -503,7 +513,7 @@ If you proceed without at least two public subnets, you will not be able to depl
 func (o *initEnvOpts) askAdjustResources() error {
 	if o.adjustVPC.CIDR.String() == emptyIPNet.String() {
 		vpcCIDRString, err := o.prompt.Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, validateCIDR,
-			prompt.WithDefaultInput(stack.DefaultVPCCIDR))
+			prompt.WithDefaultInput(stack.DefaultVPCCIDR), prompt.WithFinalMessage("VPC CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get VPC CIDR: %w", err)
 		}
@@ -515,7 +525,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 	}
 	if o.adjustVPC.PublicSubnetCIDRs == nil {
 		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, validateCIDRSlice,
-			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs))
+			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs), prompt.WithFinalMessage("Public subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get public subnet CIDRs: %w", err)
 		}
@@ -523,7 +533,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 	}
 	if o.adjustVPC.PrivateSubnetCIDRs == nil {
 		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, validateCIDRSlice,
-			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs))
+			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs), prompt.WithFinalMessage("Private subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
 		}
@@ -696,13 +706,7 @@ func buildEnvInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

@@ -5,6 +5,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -26,6 +27,11 @@ type pipelineStatusMocks struct {
 }
 
 func TestPipelineStatus_Validate(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		testAppName      string
 		testPipelineName string
@@ -109,6 +115,11 @@ func TestPipelineStatus_Validate(t *testing.T) {
 }
 
 func TestPipelineStatus_Ask(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	testTags := map[string]string{
 		"copilot-application": mockAppName,
 	}
@@ -175,7 +186,7 @@ stages:
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
-					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineStatusPipelineNameHelpPrompt, mockPipelines).Return(mockPipelineName, nil),
+					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineStatusPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return(mockPipelineName, nil),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -221,7 +232,7 @@ stages:
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
-					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineStatusPipelineNameHelpPrompt, mockPipelines).Return("", mockError),
+					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineStatusPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return("", mockError),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -289,6 +300,10 @@ stages:
 }
 
 func TestPipelineStatus_Execute(t *testing.T) {
+	const (
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	mockPipelineStatus := mockDescribeData{
 		data: "mockData",
 		err:  mockError,

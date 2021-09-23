@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Template rendering configuration common across workloads.
@@ -257,6 +258,9 @@ func envVarOutputNames(outputs []addon.Output) []string {
 type ecsWkld struct {
 	*wkld
 	tc manifest.TaskConfig
+
+	// Overriden in unit tests.
+	taskDefOverrideFunc func(overrideRules []override.Rule, origTemp []byte) ([]byte, error)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
@@ -312,7 +316,19 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
 	if err != nil {
-		return nil, fmt.Errorf("determining image repository type: %w", err)
+		return nil, fmt.Errorf("determine image repository type: %w", err)
+	}
+
+	if w.imageConfig.Port == nil {
+		return nil, fmt.Errorf("field `image.port` is required for Request Driven Web Services")
+	}
+
+	if w.instanceConfig.CPU == nil {
+		return nil, fmt.Errorf("field `cpu` is required for Request Driven Web Services")
+	}
+
+	if w.instanceConfig.Memory == nil {
+		return nil, fmt.Errorf("field `memory` is required for Request Driven Web Services")
 	}
 
 	appRunnerParameters := []*cloudformation.Parameter{
@@ -322,15 +338,15 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.imageConfig.Port))),
+			ParameterValue: aws.String(strconv.Itoa(int(aws.Uint16Value(w.imageConfig.Port)))),
 		},
 		{
 			ParameterKey:   aws.String(RDWkldInstanceCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.CPU)),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.CPU))),
 		},
 		{
 			ParameterKey:   aws.String(RDWkldInstanceMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.Memory)),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.Memory))),
 		},
 	}
 

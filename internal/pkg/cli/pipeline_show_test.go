@@ -18,12 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	mockError        = errors.New("mock error")
-	mockAppName      = "dinder"
-	mockPipelineName = "pipeline-dinder-badgoose-repo"
-)
-
 type showPipelineMocks struct {
 	store       *mocks.Mockstore
 	ws          *mocks.MockwsPipelineReader
@@ -33,6 +27,11 @@ type showPipelineMocks struct {
 }
 
 func TestPipelineShow_Validate(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		inAppName      string
 		inPipelineName string
@@ -117,6 +116,11 @@ func TestPipelineShow_Validate(t *testing.T) {
 }
 
 func TestPipelineShow_Ask(t *testing.T) {
+	const (
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
 	pipelineData := `
 name: pipeline-dinder-badgoose-repo
@@ -177,7 +181,7 @@ stages:
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
-					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines).Return(mockPipelineName, nil),
+					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return(mockPipelineName, nil),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -239,7 +243,7 @@ stages:
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
-					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines).Return("", mockError),
+					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return("", mockError),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -297,6 +301,10 @@ stages:
 	}
 }
 func TestPipelineShow_Execute(t *testing.T) {
+	const (
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
+	)
+	mockError := errors.New("mock error")
 	mockPipeline := mockDescribeData{
 		data: "mockData",
 		err:  mockError,

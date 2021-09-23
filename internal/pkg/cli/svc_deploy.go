@@ -11,6 +11,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/apprunner"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -41,12 +45,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	fmtForceUpdateSvcStart    = "Forcing an update for service %s from environment %s"
+	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
+	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
+)
+
 type deployWkldVars struct {
-	appName      string
-	name         string
-	envName      string
-	imageTag     string
-	resourceTags map[string]string
+	appName        string
+	name           string
+	envName        string
+	imageTag       string
+	resourceTags   map[string]string
+	forceNewUpdate bool
 }
 
 type uploadCustomResourcesOpts struct {
@@ -65,11 +76,13 @@ type deploySvcOpts struct {
 	cmd                 runner
 	addons              templater
 	appCFN              appResourcesGetter
-	svcCFN              cloudformation.CloudFormation
+	svcCFN              serviceDeployer
+	newSvcUpdater       func(func(*session.Session) serviceUpdater)
 	sessProvider        sessionProvider
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
 	endpointGetter      endpointGetter
+	snsTopicGetter      deployedEnvironmentLister
 	identity            identityService
 
 	spinner progress
@@ -80,10 +93,14 @@ type deploySvcOpts struct {
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
 	targetSvc         *config.Workload
+	appliedManifest   interface{}
 	imageDigest       string
 	buildRequired     bool
 	appEnvResources   *stack.AppRegionalResources
 	rdSvcAlias        string
+	svcUpdater        serviceUpdater
+
+	subscriptions []manifest.TopicSubscription
 
 	uploadOpts *uploadCustomResourcesOpts
 }
@@ -92,6 +109,10 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
+	}
+	deployStore, err := deploy.NewStore(store)
+	if err != nil {
+		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
 	ws, err := workspace.New()
 	if err != nil {
@@ -114,8 +135,9 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 			}
 			return d, nil
 		},
-		cmd:          exec.NewCmd(),
-		sessProvider: sessions.NewProvider(),
+		cmd:            exec.NewCmd(),
+		sessProvider:   sessions.NewProvider(),
+		snsTopicGetter: deployStore,
 	}
 	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
@@ -190,11 +212,21 @@ func (o *deploySvcOpts) Execute() error {
 	if err := o.deploySvc(addonsURL); err != nil {
 		return err
 	}
-	return o.showSvcURI()
+	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
+	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deploySvcOpts) RecommendedActions() []string {
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deploySvcOpts) RecommendActions() error {
+	var recommendations []string
+	uriRecs, err := o.uriRecommendedActions()
+	if err != nil {
+		return err
+	}
+	recommendations = append(recommendations, uriRecs...)
+	recommendations = append(recommendations, o.publishRecommendedActions()...)
+	recommendations = append(recommendations, o.subscribeRecommendedActions()...)
+	logRecommendedActions(recommendations)
 	return nil
 }
 
@@ -273,6 +305,10 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
+	o.newSvcUpdater = func(f func(*session.Session) serviceUpdater) {
+		o.svcUpdater = f(envSession)
+	}
+
 	// CF client against env account profile AND target environment region.
 	o.svcCFN = cloudformation.New(envSession)
 
@@ -330,7 +366,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 		return err
 	}
 
-	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
+	digest, err := o.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
 	if err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
@@ -339,7 +375,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	return nil
 }
 
-func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, error) {
+func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
@@ -347,7 +383,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, erro
 	return buildArgs(o.name, o.imageTag, copilotDir, svc)
 }
 
-func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*exec.BuildArguments, error) {
+func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 		TaskPlatform() (*string, error)
@@ -365,7 +401,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	if err != nil {
 		return nil, fmt.Errorf("get platform for service: %w", err)
 	}
-	return &exec.BuildArguments{
+	return &dockerengine.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
@@ -403,6 +439,10 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
+	if o.appliedManifest != nil {
+		return o.appliedManifest, nil
+	}
+
 	raw, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest file: %w", o.name, err)
@@ -415,6 +455,8 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
+
+	o.appliedManifest = envMft // cache the results.
 	return envMft, nil
 }
 
@@ -484,6 +526,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	if err != nil {
 		return nil, err
 	}
+	o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+		return ecs.New(s)
+	})
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -500,6 +545,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
+		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+			return apprunner.New(s)
+		})
 		var caller identity.Caller
 		caller, err = o.identity.Get()
 		if err != nil {
@@ -537,6 +585,32 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+	case *manifest.WorkerService:
+		var topics []deploy.Topic
+		topics, err = o.snsTopicGetter.ListSNSTopics(o.appName, o.envName)
+		if err != nil {
+			return nil, fmt.Errorf("get SNS topics for app %s and environment %s: %w", o.appName, o.envName, err)
+		}
+		var topicARNs []string
+		for _, topic := range topics {
+			topicARNs = append(topicARNs, topic.ARN())
+		}
+		type subscriptions interface {
+			Subscriptions() []manifest.TopicSubscription
+		}
+
+		subscriptionGetter, ok := mft.(subscriptions)
+		if !ok {
+			return nil, errors.New("manifest does not have required method Subscriptions")
+		}
+		// Cache the subscriptions for later.
+		o.subscriptions = subscriptionGetter.Subscriptions()
+
+		if err = validateTopicsExist(o.subscriptions, topicARNs, o.appName, o.envName); err != nil {
+			return nil, err
+		}
+		conf, err = stack.NewWorkerService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -553,13 +627,38 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	}
 
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
+		if errors.As(err, &errEmptyCS) {
+			if o.forceNewUpdate {
+				return o.forceDeploy()
+			}
+			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
+		}
 		return fmt.Errorf("deploy service: %w", err)
 	}
 	return nil
 }
 
-func validateLBSvcAliasAndAppVersion(svcName string, aliases *manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
-	if aliases == nil {
+func (o *deploySvcOpts) forceDeploy() error {
+	// Force update the service if --force is set and change set is empty.
+	o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
+	if err := o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
+		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
+			color.HighlightUserInput(o.envName), err)
+		var terr timeoutError
+		if errors.As(err, &terr) {
+			errLog = fmt.Sprintf("%s  Run %s to check for the fail reason.\n", errLog,
+				color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", o.name, o.envName)))
+		}
+		o.spinner.Stop(log.Serror(errLog))
+		return fmt.Errorf("force an update for service %s: %w", o.name, err)
+	}
+	o.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
+	return nil
+}
+
+func validateLBSvcAliasAndAppVersion(svcName string, aliases manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
+	if aliases.IsEmpty() {
 		return nil
 	}
 	aliasList, err := aliases.ToStringSlice()
@@ -712,67 +811,108 @@ func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {
 	return nil
 }
 
-func (o *deploySvcOpts) showSvcURI() error {
-	type identifier interface {
-		URI(string) (string, error)
+func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
+	type reachable interface {
+		Port() (uint16, bool)
+	}
+	mft, ok := o.appliedManifest.(reachable)
+	if !ok {
+		return nil, nil
+	}
+	if _, ok := mft.Port(); !ok { // No exposed port.
+		return nil, nil
 	}
 
-	var ecsSvcDescriber identifier
-	var err error
-	switch o.targetSvc.Type {
-	case manifest.LoadBalancedWebServiceType:
-		ecsSvcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
-			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.appName,
-				Svc:         o.name,
-				ConfigStore: o.store,
-			},
-		})
-	case manifest.RequestDrivenWebServiceType:
-		ecsSvcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
-			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.appName,
-				Svc:         o.name,
-				ConfigStore: o.store,
-			},
-		})
-	case manifest.BackendServiceType:
-		ecsSvcDescriber, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
-			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.appName,
-				Svc:         o.name,
-				ConfigStore: o.store,
-			},
-		})
-	default:
-		err = errors.New("unexpected service type")
-	}
+	describer, err := describe.NewReachableService(o.appName, o.name, o.store)
 	if err != nil {
-		return fmt.Errorf("create describer for service type %s: %w", o.targetSvc.Type, err)
+		return nil, err
+	}
+	uri, err := describer.URI(o.targetEnvironment.Name)
+	if err != nil {
+		return nil, fmt.Errorf("get uri for environment %s: %w", o.targetEnvironment.Name, err)
 	}
 
-	uri, err := ecsSvcDescriber.URI(o.targetEnvironment.Name)
-	if err != nil {
-		return fmt.Errorf("get uri for environment %s: %w", o.targetEnvironment.Name, err)
+	network := "over the internet."
+	if o.targetSvc.Type == manifest.BackendServiceType {
+		network = "with service discovery."
 	}
-	switch o.targetSvc.Type {
-	case manifest.BackendServiceType:
-		msg := fmt.Sprintf("Deployed %s.\n", color.HighlightUserInput(o.name))
-		if uri != describe.BlankServiceDiscoveryURI {
-			msg = fmt.Sprintf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
-		}
-		log.Success(msg)
-	case manifest.RequestDrivenWebServiceType:
-		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
-		if o.rdSvcAlias != "" {
-			log.Infof(`The validation process for https://%s can take more than 15 minutes.
-Please visit %s to check the validation status.
-`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))
-		}
-	default:
-		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
+	recs := []string{
+		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri), network),
 	}
-	return nil
+	if o.rdSvcAlias != "" {
+		recs = append(recs, fmt.Sprintf(`The validation process for https://%s can take more than 15 minutes.
+    Please visit %s to check the validation status.`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home")))
+	}
+	return recs, nil
+}
+
+func (o *deploySvcOpts) subscribeRecommendedActions() []string {
+	type subscriber interface {
+		Subscriptions() []manifest.TopicSubscription
+	}
+	if _, ok := o.appliedManifest.(subscriber); !ok {
+		return nil
+	}
+	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
+	actionRetrieveEnvVar := fmt.Sprintf(
+		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URI".
+    In JavaScript you can write %s.`,
+		o.name,
+		color.HighlightCode(retrieveEnvVarCode),
+	)
+	recs := []string{actionRetrieveEnvVar}
+	topicQueueNames := o.buildWorkerQueueNames()
+	if topicQueueNames == "" {
+		return recs
+	}
+	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = JSON.parse(process.env.COPILOT_TOPIC_QUEUE_URIS)", topicQueueNames)
+	actionRetrieveTopicQueues := fmt.Sprintf(
+		`You can retrieve topic-specific queues by writing
+    %s.`,
+		color.HighlightCode(retrieveTopicQueueEnvVarCode),
+	)
+	recs = append(recs, actionRetrieveTopicQueues)
+	return recs
+}
+
+func (o *deploySvcOpts) publishRecommendedActions() []string {
+	type publisher interface {
+		Publish() []manifest.Topic
+	}
+	mft, ok := o.appliedManifest.(publisher)
+	if !ok {
+		return nil
+	}
+	if topics := mft.Publish(); len(topics) == 0 {
+		return nil
+	}
+
+	return []string{
+		fmt.Sprintf(`Update %s's code to leverage the injected environment variable "COPILOT_SNS_TOPIC_ARNS".
+    In JavaScript you can write %s.`,
+			o.name,
+			color.HighlightCode("const {<topicName>} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)")),
+	}
+}
+
+func (o *deploySvcOpts) buildWorkerQueueNames() string {
+	sb := new(strings.Builder)
+	first := true
+	for _, subscription := range o.subscriptions {
+		if subscription.Queue == nil {
+			continue
+		}
+		topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
+		topicName := template.StripNonAlphaNumFunc(subscription.Name)
+		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
+		if first {
+			sb.WriteString(subName)
+			first = false
+		} else {
+			sb.WriteString(fmt.Sprintf(", %s", subName))
+		}
+	}
+	return sb.String()
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
@@ -792,16 +932,7 @@ func buildSvcDeployCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
@@ -809,6 +940,7 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 
 	return cmd
 }

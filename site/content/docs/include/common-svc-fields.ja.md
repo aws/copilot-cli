@@ -34,6 +34,11 @@ command: ["ps", "au"]
 
 <div class="separator"></div>
 
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+
+<div class="separator"></div>
+
 <a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
 数値を指定する例。
 
@@ -64,7 +69,7 @@ count:
 ```
 
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>  
-最小と最大を範囲指定することで Service が保つべきタスク数を指定できます。
+メトリクスに指定した値に基づいて、Service が保つべきタスク数の最小と最大を範囲指定できます。
 
 ```yaml
 count:
@@ -222,5 +227,36 @@ EFS に関連する認可設定を指定します。
 
 <div class="separator"></div>
 
+<a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
+logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
+
+<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
+任意項目。使用する Fluent Bit のイメージ。デフォルト値は `amazon/aws-for-fluent-bit:latest`。
+
+<span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
+任意項目。FireLens ログドライバーにログを送信するときの設定。
+
+<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
+任意項目。ログに ECS メタデータを含むかどうか。デフォルトは `true`。
+
+<span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
+任意項目。ログの設定に渡す秘密情報です。
+
+<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
+任意項目。カスタムの Fluent Bit イメージ内の設定ファイルのフルパス。
+
+<div class="separator"></div>
+
+<a id="taskdef_overrides" href="#taskdef_overrides" class="field">`taskdef_overrides`</a> <span class="type">Array of Rules</span>  
+`taskdef_overrides` セクションでは、ECS のタスク定義のオーバーライドルールを適用できます (例は[こちら](../developing/taskdef-overrides.ja.md#examples))。
+
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-path" href="#taskdef_overrides-path" class="field">`path`</a> <span class="type">String</span>
+必須設定項目です。オーバーライドするタスク定義のフィールドのパス。
+
+<span class="parent-field">taskdef_overrides.</span><a id="taskdef_overrides-value" href="#taskdef_overrides-value" class="field">`value`</a> <span class="type">Any</span>
+必須設定項目です。オーバーライドするタスク定義のフィールドの値。
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-`environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで prod Environment で実行されるタスク数を２に設定しています。
+`environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで 'prod' Environment で実行されるタスク数を ２ に設定し、'staging' Environment で実行される Fargate Spot capacity によるタスク数を ２ に設定します。

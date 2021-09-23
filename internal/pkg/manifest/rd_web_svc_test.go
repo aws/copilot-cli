@@ -302,6 +302,64 @@ func TestRequestDrivenWebService_MarshalBinary(t *testing.T) {
 	}
 }
 
+func TestRequestDrivenWebService_Port(t *testing.T) {
+	// GIVEN
+	mft := RequestDrivenWebService{
+		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+			ImageConfig: ImageWithPort{
+				Port: uint16P(80),
+			},
+		},
+	}
+
+	// WHEN
+	actual, ok := mft.Port()
+
+	// THEN
+	require.True(t, ok)
+	require.Equal(t, uint16(80), actual)
+}
+
+func TestRequestDrivenWebService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *RequestDrivenWebService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &RequestDrivenWebService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
+		})
+	}
+}
+
 func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 	testCases := map[string]struct {
 		in         *RequestDrivenWebService
@@ -490,6 +548,71 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
+		})
+	}
+}
+
+func TestRequestDrivenWebService_windowsCompatibility(t *testing.T) {
+	testCases := map[string]struct {
+		in *RequestDrivenWebService
+
+		wantedErr error
+	}{
+		"returns error if windows indicated as string": {
+			in: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					InstanceConfig: AppRunnerInstanceConfig{
+						Platform: PlatformArgsOrString{
+							PlatformString: stringP("windows/amd64"),
+							PlatformArgs:   PlatformArgs{},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("Windows is not supported for App Runner services"),
+		},
+		"returns error if windows indicated as map": {
+			in: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					InstanceConfig: AppRunnerInstanceConfig{
+						Platform: PlatformArgsOrString{
+							PlatformString: nil,
+							PlatformArgs: PlatformArgs{
+								OSFamily: stringP("windows_server_2019_core"),
+								Arch:     stringP("arm64"),
+							},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("Windows is not supported for App Runner services"),
+		},
+		"returns error if arch is not valid": {
+			in: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					InstanceConfig: AppRunnerInstanceConfig{
+						Platform: PlatformArgsOrString{
+							PlatformString: nil,
+							PlatformArgs: PlatformArgs{
+								OSFamily: stringP("linux"),
+								Arch:     stringP("arm64"),
+							},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("App Runner services can only build on amd64 and x86_64 architectures"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			err := tc.in.windowsCompatibility()
+
+			// THEN
+			if err != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
 		})
 	}
 }

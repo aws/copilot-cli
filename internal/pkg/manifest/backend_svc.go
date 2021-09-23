@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -12,13 +14,6 @@ import (
 const (
 	backendSvcManifestPath = "workloads/services/backend/manifest.yml"
 )
-
-// BackendServiceProps represents the configuration needed to create a backend service.
-type BackendServiceProps struct {
-	WorkloadProps
-	Port        uint16
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-}
 
 // BackendService holds the configuration to create a backend service manifest.
 type BackendService struct {
@@ -32,13 +27,22 @@ type BackendService struct {
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
 type BackendServiceConfig struct {
-	ImageConfig   ImageWithPortAndHealthcheck `yaml:"image,flow"`
-	ImageOverride `yaml:",inline"`
-	TaskConfig    `yaml:",inline"`
-	*Logging      `yaml:"logging,flow"`
-	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Network       *NetworkConfig            `yaml:"network"`
-	Publish       *PublishConfig            `yaml:"publish"`
+	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
+	ImageOverride    `yaml:",inline"`
+	TaskConfig       `yaml:",inline"`
+	Logging          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig             `yaml:"network"`
+	PublishConfig    PublishConfig             `yaml:"publish"`
+	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
+}
+
+// BackendServiceProps represents the configuration needed to create a backend service.
+type BackendServiceProps struct {
+	WorkloadProps
+	Port        uint16
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 }
 
 // NewBackendService applies the props to a default backend service configuration with
@@ -51,6 +55,11 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	svc.BackendServiceConfig.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	svc.parser = template.New()
 	return svc
 }
@@ -66,6 +75,21 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return content.Bytes(), nil
+}
+
+// Port returns the exposed the exposed port in the manifest.
+// If the backend service is not meant to be reachable, then ok is set to false.
+func (s *BackendService) Port() (port uint16, ok bool) {
+	value := s.BackendServiceConfig.ImageConfig.Port
+	if value == nil {
+		return 0, false
+	}
+	return aws.Uint16Value(value), true
+}
+
+// Publish returns the list of topics where notifications can be published.
+func (s *BackendService) Publish() []Topic {
+	return s.BackendServiceConfig.PublishConfig.Topics
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
@@ -90,21 +114,35 @@ func (s BackendService) ApplyEnv(envName string) (WorkloadManifest, error) {
 		return &s, nil
 	}
 
-	envCount := overrideConfig.TaskConfig.Count
-	if !envCount.IsEmpty() {
-		s.TaskConfig.Count = envCount
-	}
-
 	// Apply overrides to the original service s.
-	err := mergo.Merge(&s, BackendService{
-		BackendServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
-
-	if err != nil {
-		return nil, err
+	for _, t := range defaultTransformers {
+		err := mergo.Merge(&s, BackendService{
+			BackendServiceConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (s *BackendService) windowsCompatibility() error {
+	if !s.IsWindows() {
+		return nil
+	}
+	// Exec is not supported.
+	if aws.BoolValue(s.ExecuteCommand.Enable) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported.
+	for _, volume := range s.Storage.Volumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
+		}
+	}
+	return nil
 }
 
 // newDefaultBackendService returns a backend service with minimal task sizes and a single replica.
@@ -125,8 +163,8 @@ func newDefaultBackendService() *BackendService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},

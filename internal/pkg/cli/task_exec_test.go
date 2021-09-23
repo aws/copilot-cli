@@ -19,10 +19,11 @@ import (
 )
 
 type execTaskMocks struct {
-	storeSvc    *mocks.Mockstore
-	configSel   *mocks.MockappEnvSelector
-	taskSel     *mocks.MockrunningTaskSelector
-	commandExec *mocks.MockecsCommandExecutor
+	storeSvc         *mocks.Mockstore
+	configSel        *mocks.MockappEnvSelector
+	taskSel          *mocks.MockrunningTaskSelector
+	commandExec      *mocks.MockecsCommandExecutor
+	ssmPluginManager *mocks.MockssmPluginManager
 }
 
 func TestTaskExec_Validate(t *testing.T) {
@@ -73,6 +74,21 @@ func TestTaskExec_Validate(t *testing.T) {
 
 			wantedError: fmt.Errorf("some error"),
 		},
+		"skip validation if app flag is not set": {
+			inEnv: mockEnv,
+			setupMocks: func(m execTaskMocks) {
+				m.ssmPluginManager.EXPECT().ValidateBinary().Return(nil)
+			},
+		},
+		"success": {
+			inApp: mockApp,
+			inEnv: mockEnv,
+			setupMocks: func(m execTaskMocks) {
+				m.storeSvc.EXPECT().GetApplication(mockApp).Return(&config.Application{}, nil)
+				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(&config.Environment{}, nil)
+				m.ssmPluginManager.EXPECT().ValidateBinary().Return(nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -81,8 +97,10 @@ func TestTaskExec_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockSSMValidator := mocks.NewMockssmPluginManager(ctrl)
 			mocks := execTaskMocks{
-				storeSvc: mockStoreReader,
+				storeSvc:         mockStoreReader,
+				ssmPluginManager: mockSSMValidator,
 			}
 
 			tc.setupMocks(mocks)
@@ -96,7 +114,8 @@ func TestTaskExec_Validate(t *testing.T) {
 					},
 					useDefault: tc.useDefault,
 				},
-				store: mockStoreReader,
+				store:            mockStoreReader,
+				ssmPluginManager: mockSSMValidator,
 			}
 
 			// WHEN

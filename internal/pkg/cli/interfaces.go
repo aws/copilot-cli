@@ -7,6 +7,10 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -31,8 +35,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
-// actionCommand is the interface that every command that creates a resource implements.
-type actionCommand interface {
+type cmd interface {
 	// Validate returns an error if a flag's value is invalid.
 	Validate() error
 
@@ -41,9 +44,13 @@ type actionCommand interface {
 
 	// Execute runs the command after collecting all required options.
 	Execute() error
+}
 
-	// RecommendedActions returns a list of follow-up suggestions users can run once the command executes successfully.
-	RecommendedActions() []string
+// actionCommand is the interface that every command that creates a resource implements.
+type actionCommand interface {
+	cmd
+	// RecommendActions logs a list of follow-up suggestions users can run once the command executes successfully.
+	RecommendActions() error
 }
 
 // SSM store interfaces.
@@ -134,6 +141,7 @@ type deployedEnvironmentLister interface {
 	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
 	ListDeployedServices(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName, envName string, svcName string) (bool, error)
+	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
 // Secretsmanager interface.
@@ -152,7 +160,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error)
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
 
 type repositoryURIGetter interface {
@@ -400,7 +408,7 @@ type domainHostedZoneGetter interface {
 
 type dockerfileParser interface {
 	GetExposedPorts() ([]uint16, error)
-	GetHealthCheck() (*exec.HealthCheck, error)
+	GetHealthCheck() (*dockerfile.HealthCheck, error)
 }
 
 type statusDescriber interface {
@@ -449,10 +457,6 @@ type pipelineGetter interface {
 
 type executor interface {
 	Execute() error
-}
-
-type deletePipelineRunner interface {
-	Run() error
 }
 
 type executeAsker interface {
@@ -504,10 +508,13 @@ type dockerfileSelector interface {
 	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
 
+type topicSelector interface {
+	Topics(prompt, help, app string) ([]deploy.Topic, error)
+}
+
 type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
-	PublicSubnets(prompt, help, vpcID string) ([]string, error)
-	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
+	Subnets(input selector.SubnetsInput) ([]string, error)
 }
 
 type credsSelector interface {
@@ -536,6 +543,14 @@ type roleDeleter interface {
 
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
+}
+
+type serviceUpdater interface {
+	ForceUpdateService(app, env, svc string) error
+}
+
+type serviceDeployer interface {
+	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, opts ...awscloudformation.StackOption) error
 }
 
 type apprunnerServiceDescriber interface {
@@ -581,7 +596,7 @@ type runningTaskSelector interface {
 
 type dockerEngine interface {
 	CheckDockerEngineRunning() error
-	RedirectPlatform(string) (*string, error)
+	GetPlatform() (string, string, error)
 }
 
 type codestar interface {
@@ -602,4 +617,9 @@ type secretPutter interface {
 
 type servicePauser interface {
 	PauseService(svcARN string) error
+}
+
+type timeoutError interface {
+	error
+	Timeout() bool
 }

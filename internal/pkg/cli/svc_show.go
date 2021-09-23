@@ -64,32 +64,34 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		}
 		switch svc.Type {
 		case manifest.LoadBalancedWebServiceType:
-			d, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
-				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.appName,
-					Svc:         opts.svcName,
-					ConfigStore: ssmStore,
-				},
+			d, err = describe.NewLBWebServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
 		case manifest.RequestDrivenWebServiceType:
-			d, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
-				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.appName,
-					Svc:         opts.svcName,
-					ConfigStore: ssmStore,
-				},
+			d, err = describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
 		case manifest.BackendServiceType:
-			d, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
-				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.appName,
-					Svc:         opts.svcName,
-					ConfigStore: ssmStore,
-				},
+			d, err = describe.NewBackendServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
+				DeployStore:     deployStore,
+				EnableResources: opts.shouldOutputResources,
+			})
+		case manifest.WorkerServiceType:
+			d, err = describe.NewWorkerServiceDescriber(describe.NewServiceConfig{
+				App:             opts.appName,
+				Svc:             opts.svcName,
+				ConfigStore:     ssmStore,
 				DeployStore:     deployStore,
 				EnableResources: opts.shouldOutputResources,
 			})
@@ -108,17 +110,17 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showSvcOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
+	if o.appName == "" {
+		return nil
+	}
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return err
 	}
 	if o.svcName != "" {
 		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -199,13 +201,7 @@ func buildSvcShowCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

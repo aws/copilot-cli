@@ -69,3 +69,5 @@ The architecture type for your service. [Backend Services](../concepts/services.
 {% include 'image-healthcheck.en.md' %}
 
 {% include 'common-svc-fields.en.md' %}
+
+{% include 'publish.en.md' %}

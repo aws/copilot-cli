@@ -28,6 +28,11 @@ const (
 
 const (
 	stackResourceType = "cloudformation:stack"
+	snsResourceType   = "sns"
+
+	// fmtSNSTopicNamePrefix holds the App-Env-Workload- components of a topic name
+	fmtSNSTopicNamePrefix = "%s-%s-%s-"
+	snsServiceName        = "sns"
 )
 
 type resourceGetter interface {
@@ -125,6 +130,49 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	}
 	sort.Strings(wklds)
 	return wklds, nil
+}
+
+// ListSNSTopics returns a list of SNS topics deployed to the current environment and tagged with
+// Copilot identifiers.
+func (s *Store) ListSNSTopics(appName string, envName string) ([]Topic, error) {
+	rgClient, err := s.newRgClientFromIDs(appName, envName)
+	if err != nil {
+		return nil, err
+	}
+	topics, err := rgClient.GetResourcesByTags(snsResourceType, map[string]string{
+		AppTagKey: appName,
+		EnvTagKey: envName,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var out []Topic
+	for _, r := range topics {
+		// If the topic doesn't have a specific workload tag, don't return it.
+		if _, ok := r.Tags[ServiceTagKey]; !ok {
+			continue
+		}
+
+		t, err := NewTopic(r.ARN, appName, envName, r.Tags[ServiceTagKey])
+		if err != nil {
+			// If there's an error parsing the topic ARN, don't include it in the list of topics.
+			// This includes times where the topic name does not match its tags, or the name
+			// is invalid.
+			switch err {
+			case errInvalidARN:
+				// This error indicates that the returned ARN is not parseable.
+				return nil, err
+			default:
+				continue
+			}
+		}
+
+		out = append(out, *t)
+	}
+
+	return out, nil
 }
 
 func contains(name string, names []string) bool {

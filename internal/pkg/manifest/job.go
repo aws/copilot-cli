@@ -5,6 +5,8 @@
 package manifest
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -39,12 +41,13 @@ type ScheduledJobConfig struct {
 	ImageConfig             ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride           `yaml:",inline"`
 	TaskConfig              `yaml:",inline"`
-	*Logging                `yaml:"logging,flow"`
-	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
+	Logging                 `yaml:"logging,flow"`
+	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
-	Network                 *NetworkConfig `yaml:"network"`
-	Publish                 *PublishConfig `yaml:"publish"`
+	Network                 NetworkConfig  `yaml:"network"`
+	PublishConfig           PublishConfig  `yaml:"publish"`
+	TaskDefOverrides        []OverrideRule `yaml:"taskdef_overrides"`
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.
@@ -63,32 +66,9 @@ type ScheduledJobProps struct {
 	*WorkloadProps
 	Schedule    string
 	Timeout     string
-	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 	Retries     int
-}
-
-// newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
-func newDefaultScheduledJob() *ScheduledJob {
-	return &ScheduledJob{
-		Workload: Workload{
-			Type: aws.String(ScheduledJobType),
-		},
-		ScheduledJobConfig: ScheduledJobConfig{
-			ImageConfig: ImageWithHealthcheck{},
-			TaskConfig: TaskConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
-				Count: Count{
-					Value: aws.Int(1),
-				},
-			},
-			Network: &NetworkConfig{
-				VPC: &vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
-				},
-			},
-		},
-	}
 }
 
 // NewScheduledJob creates a new scheduled job object.
@@ -99,6 +79,11 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	job.ImageConfig.Location = stringP(props.Image)
 	job.ImageConfig.HealthCheck = props.HealthCheck
+	job.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		job.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		job.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	job.On.Schedule = stringP(props.Schedule)
 	if props.Retries != 0 {
 		job.Retries = aws.Int(props.Retries)
@@ -124,16 +109,37 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	if !ok {
 		return &j, nil
 	}
-	// Apply overrides to the original job
-	err := mergo.Merge(&j, ScheduledJob{
-		ScheduledJobConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
 
-	if err != nil {
-		return nil, err
+	// Apply overrides to the original job
+	for _, t := range defaultTransformers {
+		err := mergo.Merge(&j, ScheduledJob{
+			ScheduledJobConfig: *overrideConfig,
+		}, mergo.WithOverride, mergo.WithTransformers(t))
+		if err != nil {
+			return nil, err
+		}
 	}
 	j.Environments = nil
 	return &j, nil
+}
+
+// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (j *ScheduledJob) windowsCompatibility() error {
+	if !j.IsWindows() {
+		return nil
+	}
+	// EFS is not supported.
+	for _, volume := range j.Storage.Volumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
+		}
+	}
+	return nil
+}
+
+// Publish returns the list of topics where notifications can be published.
+func (j *ScheduledJob) Publish() []Topic {
+	return j.ScheduledJobConfig.PublishConfig.Topics
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
@@ -149,4 +155,28 @@ func (j *ScheduledJob) BuildRequired() (bool, error) {
 // JobDockerfileBuildRequired returns if the job container image should be built from local Dockerfile.
 func JobDockerfileBuildRequired(job interface{}) (bool, error) {
 	return dockerfileBuildRequired("job", job)
+}
+
+// newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
+func newDefaultScheduledJob() *ScheduledJob {
+	return &ScheduledJob{
+		Workload: Workload{
+			Type: aws.String(ScheduledJobType),
+		},
+		ScheduledJobConfig: ScheduledJobConfig{
+			ImageConfig: ImageWithHealthcheck{},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count: Count{
+					Value: aws.Int(1),
+				},
+			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
+				},
+			},
+		},
+	}
 }

@@ -55,7 +55,7 @@ func TestEc2Select_VPC(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.prompt.EXPECT().SelectOne("Select a VPC", "Help text", []string{"mockVPC1", "mockVPC2"}).
+				m.prompt.EXPECT().SelectOne("Select a VPC", "Help text", []string{"mockVPC1", "mockVPC2"}, gomock.Any()).
 					Return("", mockErr)
 
 			},
@@ -76,7 +76,7 @@ func TestEc2Select_VPC(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.prompt.EXPECT().SelectOne("Select a VPC", "Help text", []string{"mockVPCID1", "mockVPCID2 (mockVPC2Name)"}).
+				m.prompt.EXPECT().SelectOne("Select a VPC", "Help text", []string{"mockVPCID1", "mockVPCID2 (mockVPC2Name)"}, gomock.Any()).
 					Return("mockVPC1", nil)
 
 			},
@@ -151,7 +151,7 @@ func TestEc2Select_Subnets(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", gomock.Any()).
+				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", gomock.Any(), gomock.Any()).
 					Return(nil, mockErr)
 			},
 			wantErr: fmt.Errorf("some error"),
@@ -180,7 +180,7 @@ func TestEc2Select_Subnets(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", []string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}).
+				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", []string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}, gomock.Any()).
 					Return([]string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}, nil)
 			},
 			wantSubnets: []string{"mockSubnetID2", "mockSubnetID3"},
@@ -204,7 +204,13 @@ func TestEc2Select_Subnets(t *testing.T) {
 				prompt: mockprompt,
 				ec2Svc: mockec2Svc,
 			}
-			subnets, err := sel.selectPublicSubnets("Select a subnet", "Help text", mockVPC)
+			mockInput := SubnetsInput{
+				Msg:      "Select a subnet",
+				Help:     "Help text",
+				VPCID:    mockVPC,
+				IsPublic: true,
+			}
+			subnets, err := sel.selectFromVPCSubnets(mockInput)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {

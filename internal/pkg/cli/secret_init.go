@@ -148,19 +148,18 @@ func (o *secretInitOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf("get application %s: %w", o.appName, err)
 		}
+		if o.values != nil {
+			for env := range o.values {
+				if _, err := o.targetEnv(env); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	if o.name != "" {
 		if err := validateSecretName(o.name); err != nil {
 			return err
-		}
-	}
-
-	if o.values != nil {
-		for env := range o.values {
-			if _, err := o.targetEnv(env); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -357,7 +356,7 @@ func (o *secretInitOpts) askForSecretName() error {
 	name, err := o.prompter.Get(secretInitSecretNamePrompt,
 		secretInitSecretNamePromptHelp,
 		validateSecretName,
-		prompt.WithFinalMessage("secret name: "))
+		prompt.WithFinalMessage("Secret name: "))
 	if err != nil {
 		return fmt.Errorf("ask for the secret name: %w", err)
 	}
@@ -387,7 +386,9 @@ func (o *secretInitOpts) askForSecretValues() error {
 	for _, env := range envs {
 		value, err := o.prompter.GetSecret(
 			fmt.Sprintf(fmtSecretInitSecretValuePrompt, color.HighlightUserInput(o.name), env.Name),
-			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name))
+			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name),
+			prompt.WithFinalMessage(fmt.Sprintf("%s secret value:", strings.Title(env.Name))),
+		)
 		if err != nil {
 			return fmt.Errorf("get secret value for %s in environment %s: %w", color.HighlightUserInput(o.name), env.Name, err)
 		}
@@ -400,8 +401,8 @@ func (o *secretInitOpts) askForSecretValues() error {
 	return nil
 }
 
-// RecommendedActions shows recommended actions to do after running `secret init`.
-func (o *secretInitOpts) RecommendedActions() error {
+// RecommendActions shows recommended actions to do after running `secret init`.
+func (o *secretInitOpts) RecommendActions() error {
 	type secretInitOutput struct {
 		SecretsPerEnv map[string]map[string]string
 	}
@@ -513,7 +514,7 @@ Create secrets from input.yml. For the format of the YAML file, please see https
 				return err
 			}
 
-			if err := opts.RecommendedActions(); err != nil {
+			if err := opts.RecommendActions(); err != nil {
 				return err
 			}
 			return nil

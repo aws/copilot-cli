@@ -10,6 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -102,6 +106,9 @@ type runTaskVars struct {
 
 	follow                bool
 	generateCommandTarget string
+
+	os   string
+	arch string
 }
 
 type runTaskOpts struct {
@@ -213,13 +220,15 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			App: o.appName,
 			Env: o.env,
 
+			OS:   o.os,
+			Arch: o.arch,
+
 			VPCGetter:            vpcGetter,
 			ClusterGetter:        ecs.New(o.sess),
 			Starter:              ecsService,
 			EnvironmentDescriber: d,
 		}, nil
 	}
-
 	return &task.ConfigRunner{
 		Count:     o.count,
 		GroupName: o.groupName,
@@ -227,6 +236,8 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		Cluster:        o.cluster,
 		Subnets:        o.subnets,
 		SecurityGroups: o.securityGroups,
+		OS:             o.os,
+		Arch:           o.arch,
 
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
@@ -276,14 +287,6 @@ func (o *runTaskOpts) Validate() error {
 		return errNumNotPositive
 	}
 
-	if o.cpu <= 0 {
-		return errCPUNotPositive
-	}
-
-	if o.memory <= 0 {
-		return errMemNotPositive
-	}
-
 	if o.groupName != "" {
 		if err := basicNameValidation(o.groupName); err != nil {
 			return err
@@ -298,6 +301,21 @@ func (o *runTaskOpts) Validate() error {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
 		}
+	}
+
+	if noOS, noArch := o.os == "", o.arch == ""; noOS != noArch {
+		return fmt.Errorf("must specify either both `--%s` and `--%s` or neither", osFlag, archFlag)
+	}
+	if err := o.validatePlatform(); err != nil {
+		return err
+	}
+
+	if o.cpu < 0 {
+		return errCPUNotPositive
+	}
+
+	if o.memory < 0 {
+		return errMemNotPositive
 	}
 
 	if err := o.validateFlagsWithCluster(); err != nil {
@@ -316,6 +334,10 @@ func (o *runTaskOpts) Validate() error {
 		return err
 	}
 
+	if err := o.validateFlagsWithWindows(); err != nil {
+		return err
+	}
+
 	if o.appName != "" {
 		if err := o.validateAppName(); err != nil {
 			return err
@@ -329,6 +351,18 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	return nil
+}
+
+func (o *runTaskOpts) validatePlatform() error {
+	if o.os == "" || o.arch == "" {
+		return nil
+	}
+	for _, validPlatform := range manifest.ValidShortPlatforms {
+		if dockerengine.PlatformString(o.os, o.arch) == validPlatform {
+			return nil
+		}
+	}
+	return fmt.Errorf("platform %s is invalid; %s: %s", dockerengine.PlatformString(o.os, o.arch), english.PluralWord(len(manifest.ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(manifest.ValidShortPlatforms, "and"))
 }
 
 func (o *runTaskOpts) validateFlagsWithCluster() error {
@@ -404,6 +438,28 @@ func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
 		return fmt.Errorf("cannot specify both `--security-groups` and `--env`")
 	}
 	return nil
+}
+
+func (o *runTaskOpts) validateFlagsWithWindows() error {
+	if !isWindowsOS(o.os) {
+		return nil
+	}
+	if o.cpu < manifest.MinWindowsTaskCPU {
+		return fmt.Errorf("CPU %d must be at least %d for a Windows-based task", o.cpu, manifest.MinWindowsTaskCPU)
+	}
+	if o.memory < manifest.MinWindowsTaskMemory {
+		return fmt.Errorf("memory %d must be at least %d for a Windows-based task", o.memory, manifest.MinWindowsTaskMemory)
+	}
+	return nil
+}
+
+func isWindowsOS(os string) bool {
+	for _, windowsOS := range manifest.WindowsOSFamilies {
+		if os == windowsOS {
+			return true
+		}
+	}
+	return false
 }
 
 // Ask prompts the user for any required or important fields that are not provided.
@@ -686,7 +742,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if _, err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
+	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
 		Context:    filepath.Dir(o.dockerfilePath),
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
@@ -737,6 +793,8 @@ func (o *runTaskOpts) deploy() error {
 		EntryPoint:     entrypoint,
 		EnvVars:        o.envVars,
 		Secrets:        o.secrets,
+		OS:             o.os,
+		Arch:           o.arch,
 		App:            o.appName,
 		Env:            o.env,
 		AdditionalTags: o.resourceTags,
@@ -842,19 +900,7 @@ Run a task with a command.
 			if cmd.Flags().Changed(dockerFileFlag) {
 				opts.isDockerfileSet = true
 			}
-
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 
@@ -877,6 +923,8 @@ Run a task with a command.
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
+	cmd.Flags().StringVar(&vars.os, osFlag, "", osFlagDescription)
+	cmd.Flags().StringVar(&vars.arch, archFlag, "", archFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.secrets, secretsFlag, nil, secretsFlagDescription)

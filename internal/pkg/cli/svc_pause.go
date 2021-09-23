@@ -108,10 +108,11 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *svcPauseOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
+	if o.appName == "" {
+		return nil
+	}
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return err
 	}
 	if o.svcName != "" {
 		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
@@ -139,7 +140,7 @@ func (o *svcPauseOpts) Ask() error {
 		return nil
 	}
 
-	pauseConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtSvcPauseConfirmPrompt, color.HighlightUserInput(o.svcName)), "")
+	pauseConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtSvcPauseConfirmPrompt, color.HighlightUserInput(o.svcName)), "", prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("svc pause confirmation prompt: %w", err)
 	}
@@ -196,11 +197,12 @@ func (o *svcPauseOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *svcPauseOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *svcPauseOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to start processing requests again.", color.HighlightCode(fmt.Sprintf("copilot svc resume -n %s", o.svcName))),
-	}
+	})
+	return nil
 }
 
 // buildSvcPauseCmd builds the command for pausing the running service.
@@ -219,20 +221,7 @@ func buildSvcPauseCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Infoln("Recommended follow-up action:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)

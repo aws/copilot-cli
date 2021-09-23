@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -39,6 +41,13 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
+
+	// RuntimePlatform configuration.
+	OSLinux             = "LINUX"
+	OSWindowsServerFull = "WINDOWS_SERVER_2019_FULL"
+	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
+
+	ArchX86 = "X86_64"
 )
 
 // Constants for ARN options.
@@ -74,6 +83,11 @@ var (
 		"accessrole",
 		"publish",
 		"subscribe",
+	}
+
+	// Operating systems to determine Fargate platform versions.
+	osFamiliesForPV100 = []string{
+		OSWindowsServerFull, OSWindowsServerCore,
 	}
 )
 
@@ -204,6 +218,12 @@ type AutoscalingOpts struct {
 	Memory       *float64
 	Requests     *float64
 	ResponseTime *float64
+	QueueDelay   *AutoscalingQueueDelayOpts
+}
+
+// AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
+type AutoscalingQueueDelayOpts struct {
+	AcceptableBacklogPerTask int
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
@@ -220,10 +240,9 @@ type PublishOpts struct {
 	Topics []*Topic
 }
 
-// Topics holds information needed to render a SNSTopic in a container definition.
+// Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name           *string
-	AllowedWorkers []string
+	Name *string
 
 	Region    string
 	Partition string
@@ -239,6 +258,16 @@ type SubscribeOpts struct {
 	Queue  *SQSQueue
 }
 
+// HasTopicQueues returns true if any individual subscription has a dedicated queue.
+func (s *SubscribeOpts) HasTopicQueues() bool {
+	for _, t := range s.Topics {
+		if t.Queue != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
 	Name    *string
@@ -252,17 +281,11 @@ type SQSQueue struct {
 	Delay      *int64
 	Timeout    *int64
 	DeadLetter *DeadLetterQueue
-	FIFO       *FIFOQueue
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
 type DeadLetterQueue struct {
 	Tries *uint16
-}
-
-// FIFOQueue holds information needed to specify a SQS Queue as FIFO in a container definition.
-type FIFOQueue struct {
-	HighThroughput bool
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.
@@ -277,6 +300,37 @@ func defaultNetworkOpts() *NetworkOpts {
 		AssignPublicIP: EnablePublicIP,
 		SubnetsType:    PublicSubnetsPlacement,
 	}
+}
+
+// RuntimePlatformOpts holds configuration needed for Platform configuration.
+type RuntimePlatformOpts struct {
+	OS   string
+	Arch string
+}
+
+// IsDefault returns true if the platform matches the default docker image platform of "linux/amd64".
+func (p RuntimePlatformOpts) IsDefault() bool {
+	if p.isEmpty() {
+		return true
+	}
+	if p.OS == OSLinux && p.Arch == ArchX86 {
+		return true
+	}
+	return false
+}
+
+// Version returns the Fargate platform version based on the selected os family.
+func (p RuntimePlatformOpts) Version() string {
+	for _, os := range osFamiliesForPV100 {
+		if p.OS == os {
+			return "1.0.0"
+		}
+	}
+	return "LATEST"
+}
+
+func (p RuntimePlatformOpts) isEmpty() bool {
+	return p.OS == "" && p.Arch == ""
 }
 
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
@@ -295,6 +349,7 @@ type WorkloadOpts struct {
 	Storage                  *StorageOpts
 	Network                  *NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
+	Platform                 RuntimePlatformOpts
 	EntryPoint               []string
 	Command                  []string
 	DomainAlias              string
@@ -304,15 +359,18 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 
 	// Additional options for service templates.
-	WorkloadType         string
-	HealthCheck          *ecs.HealthCheck
-	HTTPHealthCheck      HTTPHealthCheckOpts
-	DeregistrationDelay  *int64
-	AllowedSourceIps     []string
-	RulePriorityLambda   string
-	DesiredCountLambda   string
-	EnvControllerLambda  string
-	CredentialsParameter string
+	WorkloadType        string
+	HealthCheck         *ecs.HealthCheck
+	HTTPHealthCheck     HTTPHealthCheckOpts
+	DeregistrationDelay *int64
+	AllowedSourceIps    []string
+
+	// Lambda functions.
+	RulePriorityLambda             string
+	DesiredCountLambda             string
+	EnvControllerLambda            string
+	CredentialsParameter           string
+	BacklogPerTaskCalculatorLambda string
 
 	// Additional options for job templates.
 	ScheduleExpression string
@@ -330,6 +388,7 @@ type ParseRequestDrivenWebServiceInput struct {
 	EnableHealthCheck   bool
 	EnvControllerLambda string
 	Publish             *PublishOpts
+	Platform            RuntimePlatformOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
@@ -424,6 +483,8 @@ func withSvcParsingFuncs() ParseOption {
 			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
 			"logicalIDSafe":       StripNonAlphaNumFunc,
+			"wordSeries":          english.WordSeries,
+			"pluralWord":          english.PluralWord,
 		})
 	}
 }

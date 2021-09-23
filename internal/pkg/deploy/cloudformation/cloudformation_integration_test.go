@@ -522,6 +522,16 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					output.OutputValue,
 					"ServiceDiscoveryNamespaceID value should not be nil")
 			},
+			"InternetGatewayID": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-InternetGatewayID", envStackName),
+					*output.ExportName,
+					"Should export InternetGatewayID as stackname-InternetGatewayID")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"InternetGatewayID value should not be nil")
+			},
 			"EnvironmentSecurityGroup": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-EnvironmentSecurityGroup", envStackName),

@@ -181,7 +181,10 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 
 	// select from list of deployed pipelines
 	pipelineName, err = o.prompt.SelectOne(
-		fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(o.appName)), pipelineStatusPipelineNameHelpPrompt, pipelineNames,
+		fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(o.appName)),
+		pipelineStatusPipelineNameHelpPrompt,
+		pipelineNames,
+		prompt.WithFinalMessage("Pipeline:"),
 	)
 	if err != nil {
 		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
@@ -230,13 +233,7 @@ Shows status of the pipeline "pipeline-myapp-myrepo".
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.pipelineName, nameFlag, nameFlagShort, "", pipelineFlagDescription)

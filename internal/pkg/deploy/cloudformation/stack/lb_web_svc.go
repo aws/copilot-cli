@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Template rendering configuration.
@@ -63,7 +64,8 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:     mft,
 		httpsEnabled: false,
@@ -115,7 +117,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
-	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
@@ -160,10 +162,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
 	}
 
-	var allowedSourceIPs []string
-	if s.manifest.AllowedSourceIps != nil {
-		allowedSourceIPs = *s.manifest.AllowedSourceIps
-	}
+	allowedSourceIPs := s.manifest.AllowedSourceIps
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                s.manifest.Variables,
 		Secrets:                  s.manifest.Secrets,
@@ -192,11 +191,16 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", err
 	}
-	return content.String(), nil
+	overridenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTpl), nil
 }
 
 func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string, err error) {

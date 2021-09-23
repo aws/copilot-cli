@@ -137,7 +137,8 @@ func (o *deleteSvcOpts) Ask() error {
 
 	deleteConfirmed, err := o.prompt.Confirm(
 		deletePrompt,
-		deleteConfirmHelp)
+		deleteConfirmHelp,
+		prompt.WithConfirmFinalMessage())
 
 	if err != nil {
 		return fmt.Errorf("svc delete confirmation prompt: %w", err)
@@ -177,6 +178,7 @@ func (o *deleteSvcOpts) Execute() error {
 		return err
 	}
 
+	log.Infoln()
 	log.Successf("Deleted service %s from application %s.\n", o.name, o.appName)
 
 	return nil
@@ -320,12 +322,13 @@ func (o *deleteSvcOpts) deleteSSMParam() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deleteSvcOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deleteSvcOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
 			color.HighlightCode("copilot pipeline update")),
-	}
+	})
+	return nil
 }
 
 // buildSvcDeleteCmd builds the command to delete application(s).
@@ -351,21 +354,7 @@ func buildSvcDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 

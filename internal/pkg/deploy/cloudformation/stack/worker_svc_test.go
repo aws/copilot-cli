@@ -93,8 +93,8 @@ Outputs:
 		"failed parsing subscribe template": {
 			setUpManifest: func(svc *WorkerService) {
 				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
-				testWorkerSvcManifestWithBadSubscribe.Subscribe = &manifest.SubscribeConfig{
-					Topics: &[]manifest.TopicSubscription{
+				testWorkerSvcManifestWithBadSubscribe.Subscribe = manifest.SubscribeConfig{
+					Topics: []manifest.TopicSubscription{
 						{
 							Name:    "name",
 							Service: "un@cept#ble",
@@ -120,42 +120,12 @@ Outputs:
 			},
 			wantedErr: fmt.Errorf(`invalid topic subscription "name": %w`, errSvcNameBadFormat),
 		},
-		"failed parsing subscribe template due to topic not in valid topics": {
-			setUpManifest: func(svc *WorkerService) {
-				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
-				testWorkerSvcManifestWithBadSubscribe.Subscribe = &manifest.SubscribeConfig{
-					Topics: &[]manifest.TopicSubscription{
-						{
-							Name:    "badname",
-							Service: "frontend",
-						},
-					},
-				}
-				svc.manifest = testWorkerSvcManifestWithBadSubscribe
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
-				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				svc.parser = m
-				svc.addons = mockTemplater{
-					tpl: `
-Resources:
-  AdditionalResourcesPolicy:
-    Type: AWS::IAM::ManagedPolicy
-Outputs:
-  AdditionalResourcesPolicyArn:
-    Value: hello`,
-				}
-			},
-			wantedErr: fmt.Errorf(`invalid topic subscription "badname": %w`, errTopicSubscriptionNotAllowed),
-		},
 		"failed parsing Auto Scaling template": {
 			setUpManifest: func(svc *WorkerService) {
 				testWorkerSvcManifestWithBadAutoScaling := manifest.NewWorkerService(baseProps)
 				badRange := manifest.IntRangeBand("badRange")
 				testWorkerSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
-					Range: &manifest.Range{
+					Range: manifest.Range{
 						Value: &badRange,
 					},
 				}
@@ -207,7 +177,7 @@ Outputs:
 						Name:       testServiceName,
 						Dockerfile: testDockerfile,
 					},
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    &testInterval,
 						Retries:     &testRetries,
@@ -215,11 +185,11 @@ Outputs:
 						StartPeriod: &testStartPeriod,
 					},
 				})
-				svc.manifest.EntryPoint = &manifest.EntryPointOverride{
+				svc.manifest.EntryPoint = manifest.EntryPointOverride{
 					String:      nil,
 					StringSlice: []string{"enter", "from"},
 				}
-				svc.manifest.Command = &manifest.CommandOverride{
+				svc.manifest.Command = manifest.CommandOverride{
 					String:      nil,
 					StringSlice: []string{"here"},
 				}
@@ -288,8 +258,8 @@ Outputs:
 							Region:    "us-west-2",
 						},
 					},
+					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
-				allowedTopics: []string{"arn:aws:sns:us-west-2:123456789012:phonetool-test-frontend-name"},
 			}
 
 			if tc.setUpManifest != nil {
@@ -320,7 +290,7 @@ func TestWorkerService_Parameters(t *testing.T) {
 			Name:       testServiceName,
 			Dockerfile: testDockerfile,
 		},
-		HealthCheck: &manifest.ContainerHealthCheck{
+		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,
 			Retries:     &testRetries,

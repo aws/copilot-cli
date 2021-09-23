@@ -9,8 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -174,6 +177,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 		wantedImage          = "mockImage"
 		wantedCronSchedule   = "0 9-17 * * MON-FRI"
 	)
+	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		inJobType        string
 		inJobName        string
@@ -265,7 +269,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockinitJobSelector) {},
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(exec.ErrDockerCommandNotFound)
+				m.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -282,7 +286,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockinitJobSelector) {},
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerDaemonNotResponsive{})
+				m.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -504,7 +508,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			wantedManifestPath: "manifest/path",
 
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetHealthCheck().Return(&exec.HealthCheck{
+				m.EXPECT().GetHealthCheck().Return(&dockerfile.HealthCheck{
 					Cmd:         []string{"mockCommand"},
 					Interval:    second,
 					Timeout:     second,
@@ -513,7 +517,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return(nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(&initialize.JobProps{
@@ -522,10 +526,10 @@ func TestJobInitOpts_Execute(t *testing.T) {
 						Name:           "mailer",
 						Type:           "Scheduled Job",
 						DockerfilePath: "./Dockerfile",
-						Platform:       nil,
+						Platform:       manifest.PlatformArgsOrString{},
 					},
 					Schedule: "@hourly",
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"mockCommand"},
 						Interval:    &second,
 						Retries:     &zero,
@@ -537,12 +541,18 @@ func TestJobInitOpts_Execute(t *testing.T) {
 		},
 		"fail to init job": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return(nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: errors.New("some error"),
+		},
+		"return error if platform detection fails": {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
+			},
+			wantedErr: errors.New("get docker engine platform: some error"),
 		},
 	}
 	for name, tc := range testCases {

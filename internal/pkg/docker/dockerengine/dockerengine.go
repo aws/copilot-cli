@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package exec provides an interface to execute certain commands.
-package exec
+// Package dockerengine provides functionality to interact with the Docker server.
+package dockerengine
 
 import (
 	"bytes"
@@ -10,35 +10,50 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
+	osexec "os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-
-	"github.com/dustin/go-humanize/english"
-
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
-// DockerCommand represents docker commands that can be run.
-type DockerCommand struct {
-	runner
+// Cmd is the interface implemented by external commands.
+type Cmd interface {
+	Run(name string, args []string, options ...exec.CmdOption) error
+}
+
+// Operating systems and architectures supported by docker.
+const (
+	OSLinux   = "linux"
+	OSWindows = "windows"
+
+	ArchAMD64 = "amd64"
+	ArchX86   = "x86_64"
+)
+
+const (
+	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
+)
+
+// CmdClient represents the docker client to interact with the server via external commands.
+type CmdClient struct {
+	runner Cmd
 	// Override in unit tests.
 	buf      *bytes.Buffer
 	homePath string
 }
 
-// NewDockerCommand returns a DockerCommand.
-func NewDockerCommand() DockerCommand {
-	return DockerCommand{
-		runner:   NewCmd(),
+// New returns CmdClient to make requests against the Docker daemon via external commands.
+func New(cmd Cmd) CmdClient {
+	return CmdClient{
+		runner:   cmd,
 		homePath: userHomeDirectory(),
 	}
 }
 
-// BuildArguments holds the arguments we can pass in as flags from the manifest.
+// BuildArguments holds the arguments that can be passed while building a container.
 type BuildArguments struct {
 	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
 	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
@@ -55,22 +70,8 @@ type dockerConfig struct {
 	CredHelpers map[string]string `json:"credHelpers,omitempty"`
 }
 
-const (
-	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
-)
-
-// Operating systems and architectures.
-const (
-	LinuxOS   = "linux"
-	Amd64Arch = "amd64"
-)
-
-var validPlatforms = []string{
-	dockerBuildPlatform(LinuxOS, Amd64Arch),
-}
-
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
-func (c DockerCommand) Build(in *BuildArguments) error {
+func (c CmdClient) Build(in *BuildArguments) error {
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)
@@ -116,7 +117,7 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 	if in.Platform != "" {
 		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
 	}
-	if err := c.Run("docker", args); err != nil {
+	if err := c.runner.Run("docker", args); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 
@@ -124,10 +125,10 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
-func (c DockerCommand) Login(uri, username, password string) error {
-	err := c.Run("docker",
+func (c CmdClient) Login(uri, username, password string) error {
+	err := c.runner.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
-		Stdin(strings.NewReader(password)))
+		exec.Stdin(strings.NewReader(password)))
 
 	if err != nil {
 		return fmt.Errorf("authenticate to ECR: %w", err)
@@ -137,19 +138,19 @@ func (c DockerCommand) Login(uri, username, password string) error {
 }
 
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
-func (c DockerCommand) Push(uri string, tags ...string) (digest string, err error) {
+func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	images := []string{uri}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
 	}
 
 	for _, img := range images {
-		if err := c.Run("docker", []string{"push", img}); err != nil {
+		if err := c.runner.Run("docker", []string{"push", img}); err != nil {
 			return "", fmt.Errorf("docker push %s: %w", img, err)
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, Stdout(buf)); err != nil {
+	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
@@ -161,12 +162,12 @@ func (c DockerCommand) Push(uri string, tags ...string) (digest string, err erro
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
-func (c DockerCommand) CheckDockerEngineRunning() error {
-	if _, err := exec.LookPath("docker"); err != nil {
+func (c CmdClient) CheckDockerEngineRunning() error {
+	if _, err := osexec.LookPath("docker"); err != nil {
 		return ErrDockerCommandNotFound
 	}
 	buf := &bytes.Buffer{}
-	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, Stdout(buf))
+	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, exec.Stdout(buf))
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
@@ -188,13 +189,13 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	}
 }
 
-// getPlatform will run the `docker version` command to get the OS/Arch.
-func (c DockerCommand) getPlatform() (os, arch string, err error) {
-	if _, err := exec.LookPath("docker"); err != nil {
+// GetPlatform will run the `docker version` command to get the OS/Arch.
+func (c CmdClient) GetPlatform() (os, arch string, err error) {
+	if _, err := osexec.LookPath("docker"); err != nil {
 		return "", "", ErrDockerCommandNotFound
 	}
 	buf := &bytes.Buffer{}
-	err = c.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, Stdout(buf))
+	err = c.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, exec.Stdout(buf))
 	if err != nil {
 		return "", "", fmt.Errorf("run docker version: %w", err)
 	}
@@ -212,10 +213,6 @@ func (c DockerCommand) getPlatform() (os, arch string, err error) {
 	return platform.OS, platform.Arch, nil
 }
 
-func dockerBuildPlatform(os, arch string) string {
-	return fmt.Sprintf("%s/%s", os, arch)
-}
-
 func imageName(uri, tag string) string {
 	if tag == "" {
 		return uri // If no tag is specified build with latest.
@@ -224,7 +221,7 @@ func imageName(uri, tag string) string {
 }
 
 // IsEcrCredentialHelperEnabled return true if ecr-login is enabled either globally or registry level
-func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
+func (c CmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
 	// Make sure the program is able to obtain the home directory
 	splits := strings.Split(uri, "/")
 	if c.homePath == "" || len(splits) == 0 {
@@ -253,32 +250,9 @@ func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 	return false
 }
 
-// ValidatePlatform checks if the entered string is a Docker-buildable platform.
-func ValidatePlatform(platform *string) error {
-	if platform == nil {
-		return nil
-	}
-	if aws.StringValue(platform) != dockerBuildPlatform(LinuxOS, Amd64Arch) {
-		return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
-	}
-	return nil
-}
-
-func (c DockerCommand) RedirectPlatform(image string) (*string, error) {
-	// If the user passes in an image, their docker engine isn't necessarily running, and we can't redirect the platform because we're not building the Docker image.
-	if image != "" {
-		return nil, nil
-	}
-	_, arch, err := c.getPlatform()
-	if err != nil {
-		return nil, fmt.Errorf("get os/arch from docker: %w", err)
-	}
-	// Log a message informing non-default arch users of platform for build.
-	if arch != Amd64Arch {
-		log.Warningf(`Architecture type %s is currently unsupported. Setting platform %s instead.\nSee 'platform' field in your manifest.\n`, arch, dockerBuildPlatform(LinuxOS, Amd64Arch))
-		return aws.String(dockerBuildPlatform(LinuxOS, Amd64Arch)), nil
-	}
-	return nil, nil
+// PlatformString returns a specified of the format <os>/<arch>.
+func PlatformString(os, arch string) string {
+	return fmt.Sprintf("%s/%s", os, arch)
 }
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {

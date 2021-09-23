@@ -104,7 +104,12 @@ func (o *initAppOpts) Validate() error {
 
 // Ask prompts the user for any required arguments that they didn't provide.
 func (o *initAppOpts) Ask() error {
-	if ok, _ := o.isSessionFromEnvVars(); ok { // Ignore the error, we do not want to crash for a warning.
+	ok, err := o.isSessionFromEnvVars()
+	if err != nil {
+		return err
+	}
+
+	if ok {
 		log.Warningln(`Looks like you're creating an application using credentials set by environment variables.
 Copilot will store your application metadata in this account.
 We recommend using credentials from named profiles. To learn more:
@@ -189,13 +194,18 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.name)))
 
-	return o.store.CreateApplication(&config.Application{
+	if err := o.store.CreateApplication(&config.Application{
 		AccountID:          caller.Account,
 		Name:               o.name,
 		Domain:             o.domainName,
 		DomainHostedZoneID: hostedZoneID,
 		Tags:               o.resourceTags,
-	})
+	}); err != nil {
+		return err
+	}
+	log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(o.name))
+	log.Infoln()
+	return nil
 }
 
 func (o *initAppOpts) validateAppName(name string) error {
@@ -227,11 +237,12 @@ func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
 	return hostedZoneID, nil
 }
 
-// RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
-func (o *initAppOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns a list of suggested additional commands users can run after successfully executing this command.
+func (o *initAppOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to add a new service or job to your application.", color.HighlightCode("copilot init")),
-	}
+	})
+	return nil
 }
 
 func (o *initAppOpts) askAppName(formatMsg string) error {
@@ -288,22 +299,7 @@ An application is a collection of containerized services that operate together.`
 			if len(args) == 1 {
 				opts.name = args[0]
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(opts.name))
-			log.Infoln()
-			log.Infoln("Recommended follow-up actions:")
-			for _, followUp := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followUp)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVar(&vars.domainName, domainNameFlag, "", domainNameFlagDescription)

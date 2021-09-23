@@ -103,7 +103,8 @@ func (o *deletePipelineOpts) Ask() error {
 
 	deleteConfirmed, err := o.prompt.Confirm(
 		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.appName),
-		pipelineDeleteConfirmHelp)
+		pipelineDeleteConfirmHelp,
+		prompt.WithConfirmFinalMessage())
 
 	if err != nil {
 		return fmt.Errorf("pipeline delete confirmation prompt: %w", err)
@@ -191,22 +192,8 @@ func (o *deletePipelineOpts) deleteStack() error {
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *deletePipelineOpts) RecommendedActions() []string {
-	return nil
-}
-
-// Run validates user input, asks for any missing flags, and then executes the command.
-func (o *deletePipelineOpts) Run() error {
-	if err := o.Validate(); err != nil {
-		return err
-	}
-	if err := o.Ask(); err != nil {
-		return err
-	}
-	if err := o.Execute(); err != nil {
-		return err
-	}
+// RecommendActions is a no-op for this command.
+func (o *deletePipelineOpts) RecommendActions() error {
 	return nil
 }
 
@@ -225,7 +212,7 @@ func buildPipelineDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return opts.Run()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package manifest provides functionality to create Manifest files.
 package manifest
 
 import (
@@ -25,6 +24,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 					Name:  "cuteness-aggregator",
 					Image: "copilot/cuteness-aggregator",
 				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
+				},
 				Schedule: "@weekly",
 			},
 			wantedTestData: "scheduled-job-no-timeout-or-retries.yml",
@@ -34,6 +37,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
 				},
 				Schedule: "0 */2 * * *",
 				Retries:  3,
@@ -47,6 +54,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
 				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
+				},
 				Schedule: "@every 5h",
 				Retries:  0,
 				Timeout:  "3h",
@@ -58,6 +69,10 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
 				},
 				Schedule: "@every 5h",
 				Retries:  5,
@@ -124,8 +139,8 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},
@@ -170,8 +185,8 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL": "prod",
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},
@@ -365,6 +380,46 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				require.NoError(t, actualErr)
 				require.Equal(t, tc.wantedManifest, actualManifest)
 			}
+		})
+	}
+}
+
+func TestScheduledJob_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *ScheduledJob
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &ScheduledJob{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
 		})
 	}
 }

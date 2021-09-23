@@ -60,7 +60,7 @@ type deleteAppOpts struct {
 	jobDeleteExecutor    func(jobName string) (executor, error)
 	envDeleteExecutor    func(envName string) (executeAsker, error)
 	taskDeleteExecutor   func(envName, taskName string) (executor, error)
-	deletePipelineRunner func() (deletePipelineRunner, error)
+	deletePipelineRunner func() (cmd, error)
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
@@ -136,7 +136,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		deletePipelineRunner: func() (deletePipelineRunner, error) {
+		deletePipelineRunner: func() (cmd, error) {
 			opts, err := newDeletePipelineOpts(deletePipelineVars{
 				appName:            vars.name,
 				skipConfirmation:   true,
@@ -167,7 +167,8 @@ func (o *deleteAppOpts) Ask() error {
 	manualConfirm, err := o.prompt.Confirm(
 		fmt.Sprintf(fmtDeleteAppConfirmPrompt, o.name),
 		deleteAppConfirmHelp,
-		prompt.WithTrueDefault())
+		prompt.WithTrueDefault(),
+		prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("confirm app deletion: %w", err)
 	}
@@ -324,7 +325,7 @@ func (o *deleteAppOpts) deletePipeline() error {
 	if err != nil {
 		return err
 	}
-	return cmd.Run()
+	return run(cmd)
 }
 
 func (o *deleteAppOpts) deleteAppResources() error {
@@ -371,14 +372,7 @@ func buildAppDeleteCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 

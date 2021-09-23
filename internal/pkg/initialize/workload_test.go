@@ -24,6 +24,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		inDockerfilePath string
 		inImage          string
 		inAppName        string
+		inPlatform       manifest.PlatformArgsOrString
 
 		inSchedule string
 		inRetries  int
@@ -236,6 +237,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					DockerfilePath: tc.inDockerfilePath,
 					Image:          tc.inImage,
 					Type:           tc.inJobType,
+					Platform:       tc.inPlatform,
 				},
 				Schedule: tc.inSchedule,
 				Retries:  tc.inRetries,
@@ -428,7 +430,6 @@ func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
 }
 
 func TestWorkloadInitializer_Service(t *testing.T) {
-
 	var (
 		testInterval    = 10 * time.Second
 		testRetries     = 2
@@ -443,7 +444,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		inDockerfilePath string
 		inAppName        string
 		inImage          string
-		inHealthCheck    *manifest.ContainerHealthCheck
+		inHealthCheck    manifest.ContainerHealthCheck
+		inTopics         []manifest.TopicSubscription
 
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
@@ -589,7 +591,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
 						require.Equal(t, *m.ImageConfig.Location, "mockImage")
-						require.Nil(t, m.ImageConfig.HealthCheck)
+						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -631,7 +633,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
-						require.Nil(t, m.ImageConfig.HealthCheck)
+						require.Empty(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -667,7 +669,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcName:        "backend",
 			inDockerfilePath: "backend/Dockerfile",
 			inSvcPort:        80,
-			inHealthCheck: &manifest.ContainerHealthCheck{
+			inHealthCheck: manifest.ContainerHealthCheck{
 				Interval:    &testInterval,
 				Retries:     &testRetries,
 				Timeout:     &testTimeout,
@@ -680,7 +682,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
-						require.Equal(t, *m.ImageConfig.HealthCheck, manifest.ContainerHealthCheck{
+						require.Equal(t, m.ImageConfig.HealthCheck, manifest.ContainerHealthCheck{
 							Interval:    &testInterval,
 							Retries:     &testRetries,
 							Timeout:     &testTimeout,
@@ -712,6 +714,54 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockProg: func(m *mocks.MockProg) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
+			},
+		},
+		"topic subscriptions enabled": {
+			inSvcType:        manifest.WorkerServiceType,
+			inAppName:        "app",
+			inSvcName:        "worker",
+			inDockerfilePath: "worker/Dockerfile",
+			inSvcPort:        80,
+			inTopics: []manifest.TopicSubscription{
+				{
+					Name:    "theTopic",
+					Service: "publisher",
+				},
+			},
+
+			mockWriter: func(m *mocks.MockWorkspace) {
+				m.EXPECT().CopilotDirPath().Return("/worker", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
+					Do(func(m *manifest.WorkerService, _ string) {
+						require.Equal(t, *m.Workload.Type, manifest.WorkerServiceType)
+						require.Empty(t, m.ImageConfig.HealthCheck)
+					}).Return("/worker/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
+							Name: "worker",
+							App:  "app",
+							Type: manifest.WorkerServiceType,
+						}, app)
+					}).
+					Return(nil)
+
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "worker")
+			},
+			mockProg: func(m *mocks.MockProg) {
+				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "worker"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "worker"))
 			},
 		},
 	}
@@ -755,6 +805,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Type:           tc.inSvcType,
 					DockerfilePath: tc.inDockerfilePath,
 					Image:          tc.inImage,
+					Topics:         tc.inTopics,
 				},
 				Port:        tc.inSvcPort,
 				HealthCheck: tc.inHealthCheck,

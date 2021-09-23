@@ -82,6 +82,8 @@ func TestEnvRunner_Run(t *testing.T) {
 	testCases := map[string]struct {
 		count     int
 		groupName string
+		os        string
+		arch      string
 
 		MockVPCGetter            func(m *mocks.MockVPCGetter)
 		MockClusterGetter        func(m *mocks.MockClusterGetter)
@@ -148,12 +150,13 @@ func TestEnvRunner_Run(t *testing.T) {
 			},
 			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
-					Cluster:        "cluster-1",
-					Count:          1,
-					Subnets:        []string{"subnet-0789ab", "subnet-0123cd"},
-					SecurityGroups: []string{"sg-1", "sg-2"},
-					TaskFamilyName: taskFamilyName("my-task"),
-					StartedBy:      startedBy,
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"subnet-0789ab", "subnet-0123cd"},
+					SecurityGroups:  []string{"sg-1", "sg-2"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "LATEST",
 				}).Return(nil, errors.New("error running task"))
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -172,12 +175,42 @@ func TestEnvRunner_Run(t *testing.T) {
 			},
 			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
-					Cluster:        "cluster-1",
-					Count:          1,
-					Subnets:        []string{"subnet-0789ab", "subnet-0123cd"},
-					SecurityGroups: []string{"sg-1", "sg-2"},
-					TaskFamilyName: taskFamilyName("my-task"),
-					StartedBy:      startedBy,
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"subnet-0789ab", "subnet-0123cd"},
+					SecurityGroups:  []string{"sg-1", "sg-2"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "LATEST",
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
+			},
+			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+			},
+		},
+		"run in env with windows os success": {
+			count:     1,
+			groupName: "my-task",
+			os:        "windows",
+			arch:      "amd64",
+
+			MockClusterGetter: mockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"subnet-0789ab", "subnet-0123cd"},
+					SecurityGroups:  []string{"sg-1", "sg-2"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "1.0.0",
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -198,12 +231,13 @@ func TestEnvRunner_Run(t *testing.T) {
 			},
 			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
-					Cluster:        "cluster-1",
-					Count:          1,
-					Subnets:        []string{"subnet-0789ab", "subnet-0123cd"},
-					SecurityGroups: []string{"sg-1", "sg-2"},
-					TaskFamilyName: taskFamilyName("my-task"),
-					StartedBy:      startedBy,
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"subnet-0789ab", "subnet-0123cd"},
+					SecurityGroups:  []string{"sg-1", "sg-2"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "LATEST",
 				}).Return([]*ecs.Task{
 					&taskWithENI,
 					&taskWithNoENI,
@@ -247,6 +281,9 @@ func TestEnvRunner_Run(t *testing.T) {
 				App: inApp,
 				Env: inEnv,
 
+				OS:   tc.os,
+				Arch: tc.arch,
+
 				VPCGetter:            MockVPCGetter,
 				ClusterGetter:        MockClusterGetter,
 				Starter:              mockStarter,
@@ -255,7 +292,7 @@ func TestEnvRunner_Run(t *testing.T) {
 
 			tasks, err := task.Run()
 			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedTasks, tasks)
