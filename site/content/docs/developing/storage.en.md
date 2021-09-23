@@ -43,6 +43,9 @@ This will create an RDS Aurora Serverless cluster that uses PostgreSQL engine wi
 ## File Systems
 There are two ways to use an EFS file system with Copilot: using managed EFS, and importing your own filesystem.
 
+!!! Attention
+    EFS is not supported for Windows-based services.
+
 ### Managed EFS
 The easiest way to get started using EFS for service- or job-level storage is via Copilot's built-in managed EFS capability. To get started, simply enable the `efs` key in the manifest under your volume's name.
 ```yaml
