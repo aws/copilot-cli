@@ -5,7 +5,7 @@ Sidecars are additional containers that run along side the main container. They 
     Sidecars are not supported for Request-Driven Web Services.  
 
 !!! Attention
-    If your service runs on Windows OS, [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/) are not supported. Please check if your sidecar container enables Windows.
+    If your main container is using a Windows image, [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/) are not supported. Please check if your sidecar container supports Windows.
 
 
 AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/).
