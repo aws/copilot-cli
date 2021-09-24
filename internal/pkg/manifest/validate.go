@@ -858,14 +858,15 @@ func validateNoCircularDependencies(opts validateNoCircularDependenciesOpts) err
 	if err != nil {
 		return err
 	}
-	if dependencies.IsAcyclic() {
+	acyclic, cycle := dependencies.IsAcyclic()
+	if acyclic {
 		return nil
 	}
-	if len(dependencies.Cycle) == 1 {
-		return fmt.Errorf("container %s cannot depend on itself", dependencies.Cycle[0])
+	if len(cycle) == 1 {
+		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
 	}
-	sort.SliceStable(dependencies.Cycle, func(i, j int) bool { return dependencies.Cycle[i] < dependencies.Cycle[j] })
-	return fmt.Errorf("circular container dependency chain includes the following containers: %s", dependencies.Cycle)
+	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
+	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
 func buildDependencyGraph(opts validateNoCircularDependenciesOpts) (*graph.Graph, error) {

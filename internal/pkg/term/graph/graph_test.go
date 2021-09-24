@@ -46,6 +46,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 		"non acyclic": {
 			graph: Graph{
 				Nodes: map[string][]string{
+					"K": {"F"},
 					"A": {"B", "C"},
 					"B": {"D", "E"},
 					"E": {"G"},
@@ -73,20 +74,11 @@ func TestGraph_IsAcyclic(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			got := tc.graph.IsAcyclic()
+			gotAcyclic, gotCycle := tc.graph.IsAcyclic()
 
 			// THEN
-			require.Equal(t, tc.isAcyclic, got)
-			var uniqueGotCycleElement []string
-			currElement := make(map[string]bool)
-			for _, node := range tc.graph.Cycle {
-				if _, ok := currElement[node]; ok {
-					continue
-				}
-				uniqueGotCycleElement = append(uniqueGotCycleElement, node)
-				currElement[node] = true
-			}
-			require.ElementsMatch(t, tc.cycle, uniqueGotCycleElement)
+			require.Equal(t, tc.isAcyclic, gotAcyclic)
+			require.ElementsMatch(t, tc.cycle, gotCycle)
 		})
 	}
 }
