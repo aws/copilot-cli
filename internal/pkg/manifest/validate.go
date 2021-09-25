@@ -65,12 +65,12 @@ func (l *LoadBalancedWebServiceConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+	if err = validateDependencies(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
 		imageConfig:       &l.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return err
+		return fmt.Errorf("validate dependencies: %w", err)
 	}
 	return nil
 }
@@ -106,12 +106,12 @@ func (b *BackendServiceConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+	if err = validateDependencies(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
 		imageConfig:       &b.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return err
+		return fmt.Errorf("validate dependencies: %w", err)
 	}
 	return nil
 }
@@ -162,12 +162,12 @@ func (w *WorkerServiceConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+	if err = validateNoCircularDependencies(validateDependenciesOpts{
 		sidecarConfig:     w.Sidecars,
 		imageConfig:       &w.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return err
+		return fmt.Errorf("validate dependencies: %w", err)
 	}
 	return nil
 }
@@ -209,12 +209,12 @@ func (s *ScheduledJobConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateNoCircularDependencies(validateNoCircularDependenciesOpts{
+	if err = validateDependencies(validateDependenciesOpts{
 		sidecarConfig:     s.Sidecars,
 		imageConfig:       &s.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return err
+		return fmt.Errorf("validate dependencies: %w", err)
 	}
 	return nil
 }
@@ -265,23 +265,8 @@ func (i *Image) Validate() error {
 			mustExist:   true,
 		}
 	}
-	if err = i.validateDependsOn(); err != nil {
+	if err = i.DependsOn.Validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
-	}
-	return nil
-}
-
-func (i *Image) validateDependsOn() error {
-	if i.DependsOn == nil {
-		return nil
-	}
-	if err := i.DependsOn.Validate(); err != nil {
-		return err
-	}
-	for name, status := range i.DependsOn {
-		if ok, err := isEssentialStatus(strings.ToUpper(status), name); !ok {
-			return err
-		}
 	}
 	return nil
 }
@@ -713,29 +698,10 @@ func (s *SidecarConfig) Validate() error {
 	if err := s.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
-	if err := s.validateDependsOn(); err != nil {
+	if err := s.DependsOn.Validate(); err != nil {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
 	return s.ImageOverride.Validate()
-}
-
-func (s *SidecarConfig) validateDependsOn() error {
-	if s.DependsOn == nil {
-		return nil
-	}
-	if err := s.DependsOn.Validate(); err != nil {
-		return err
-	}
-	for name, status := range s.DependsOn {
-		if ok, err := isSidecarEssentialStatus(strings.ToUpper(status), name); s.isEssential() && !ok {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *SidecarConfig) isEssential() bool {
-	return s.Essential == nil || aws.BoolValue(s.Essential)
 }
 
 // Validate returns nil if NetworkConfig is configured correctly.
@@ -847,13 +813,75 @@ func (*OverrideRule) Validate() error {
 	return nil
 }
 
-type validateNoCircularDependenciesOpts struct {
+type validateDependenciesOpts struct {
 	mainContainerName string
 	sidecarConfig     map[string]*SidecarConfig
 	imageConfig       *Image
 }
 
-func validateNoCircularDependencies(opts validateNoCircularDependenciesOpts) error {
+func validateDependencies(opts validateDependenciesOpts) error {
+	if err := validateImageDependsOnStatus(opts); err != nil {
+		return err
+	}
+	if err := validateSidecarsDependsOnStatus(opts); err != nil {
+		return err
+	}
+	return validateNoCircularDependencies(opts)
+}
+
+func validateImageDependsOnStatus(opts validateDependenciesOpts) error {
+	if opts.imageConfig == nil || opts.imageConfig.DependsOn == nil {
+		return nil
+	}
+	for name, status := range opts.imageConfig.DependsOn {
+		if !isEssentialContainer(name, opts) {
+			continue
+		}
+		if err := isValidEssentialStatus(name, strings.ToUpper(status)); err != nil {
+			return fmt.Errorf("validate %s container dependencies status: %w", opts.mainContainerName, err)
+		}
+	}
+	return nil
+}
+
+func validateSidecarsDependsOnStatus(opts validateDependenciesOpts) error {
+	if opts.sidecarConfig == nil {
+		return nil
+	}
+	for s, config := range opts.sidecarConfig {
+		if config.DependsOn == nil {
+			return nil
+		}
+		for name, status := range config.DependsOn {
+			if !isEssentialContainer(name, opts) {
+				continue
+			}
+			if err := isValidEssentialStatus(name, strings.ToUpper(status)); err != nil {
+				return fmt.Errorf("validate %s container dependencies status: %w", s, err)
+			}
+		}
+	}
+	return nil
+}
+
+func isEssentialContainer(name string, opts validateDependenciesOpts) bool {
+	if opts.sidecarConfig == nil {
+		return false
+	}
+	return name == opts.mainContainerName || opts.sidecarConfig[name].Essential == nil ||
+		aws.BoolValue(opts.sidecarConfig[name].Essential)
+}
+
+func isValidEssentialStatus(name, status string) error {
+	for _, allowed := range essentialContainerValidStatuses {
+		if status == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf("essential container %s can only have status < %s | %s >", name, dependsOnStart, dependsOnHealthy)
+}
+
+func validateNoCircularDependencies(opts validateDependenciesOpts) error {
 	dependencies, err := buildDependencyGraph(opts)
 	if err != nil {
 		return err
@@ -869,7 +897,7 @@ func validateNoCircularDependencies(opts validateNoCircularDependenciesOpts) err
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
-func buildDependencyGraph(opts validateNoCircularDependenciesOpts) (*graph.Graph, error) {
+func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 	dependencyGraph := graph.NewGraph()
 	// Add any sidecar dependencies.
 	for name, sidecar := range opts.sidecarConfig {
@@ -888,20 +916,4 @@ func buildDependencyGraph(opts validateNoCircularDependenciesOpts) (*graph.Graph
 		dependencyGraph.Add(opts.mainContainerName, dep)
 	}
 	return dependencyGraph, nil
-}
-
-func isSidecarEssentialStatus(status string, container string) (bool, error) {
-	if status == dependsOnStart {
-		return true, nil
-	}
-	return false, fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
-}
-
-func isEssentialStatus(status string, container string) (bool, error) {
-	for _, allowed := range essentialContainerValidStatuses {
-		if status == allowed {
-			return true, nil
-		}
-	}
-	return false, fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 }

@@ -89,7 +89,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
+			wantedErrorMsgPrefix: `validate dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -174,7 +174,7 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
+			wantedErrorMsgPrefix: `validate dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -285,7 +285,7 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
+			wantedErrorMsgPrefix: `validate dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -375,7 +375,7 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("circular container dependency chain includes the following containers: [bar foo]"),
+			wantedErrorMsgPrefix: `validate dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -448,7 +448,7 @@ func TestImage_Validate(t *testing.T) {
 			Image: Image{
 				Location: aws.String("mockLocation"),
 				DependsOn: DependsOn{
-					"foo": "complete",
+					"foo": "bar",
 				},
 			},
 			wantedErrorMsgPrefix: `validate "depends_on":`,
@@ -471,31 +471,21 @@ func TestImage_Validate(t *testing.T) {
 		})
 	}
 }
-func TestImage_validateDependsOn(t *testing.T) {
+func TestDependsOn_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		in     Image
+		in     DependsOn
 		wanted error
 	}{
 		"should return an error if dependency status is invalid": {
-			in: Image{
-				DependsOn: DependsOn{
-					"foo": "bar",
-				},
+			in: DependsOn{
+				"foo": "bar",
 			},
 			wanted: errors.New("container dependency status must be one of < START | COMPLETE | SUCCESS | HEALTHY >"),
-		},
-		"should return an error if it is not a valid essential status": {
-			in: Image{
-				DependsOn: DependsOn{
-					"foo": "complete",
-				},
-			},
-			wanted: errors.New("essential container dependencies can only have status < START | HEALTHY >"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.validateDependsOn()
+			err := tc.in.Validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -1121,41 +1111,6 @@ func TestSidecarConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestSidecarConfig_validateDependsOn(t *testing.T) {
-	testCases := map[string]struct {
-		in     SidecarConfig
-		wanted error
-	}{
-		"should return an error if dependency status is invalid": {
-			in: SidecarConfig{
-				DependsOn: DependsOn{
-					"foo": "bar",
-				},
-			},
-			wanted: errors.New("container dependency status must be one of < START | COMPLETE | SUCCESS | HEALTHY >"),
-		},
-		"should return an error if it is not a valid essential status": {
-			in: SidecarConfig{
-				DependsOn: DependsOn{
-					"foo": "complete",
-				},
-			},
-			wanted: errors.New("essential sidecar container dependencies can only have status < START >"),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := tc.in.validateDependsOn()
-
-			if tc.wanted != nil {
-				require.EqualError(t, err, tc.wanted.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestNetworkConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config NetworkConfig
@@ -1250,6 +1205,93 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateNoCircularDependencies(t *testing.T) {
+	testCases := map[string]struct {
+		in     validateDependenciesOpts
+		wanted error
+	}{
+		"should return an error if main container dependencies status is invalid": {
+			in: validateDependenciesOpts{
+				mainContainerName: "mockMainContainer",
+				imageConfig: &Image{
+					DependsOn: DependsOn{
+						"foo": "complete",
+						"bar": "complete",
+					},
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {},
+					"bar": {Essential: aws.Bool(false)},
+				},
+			},
+			wanted: fmt.Errorf("validate mockMainContainer container dependencies status: essential container foo can only have status < START | HEALTHY >"),
+		},
+		"should return an error if sidecar container dependencies status is invalid": {
+			in: validateDependenciesOpts{
+				mainContainerName: "mockMainContainer",
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: DependsOn{
+							"mockMainContainer": "success",
+						},
+					},
+				},
+			},
+			wanted: fmt.Errorf("validate foo container dependencies status: essential container mockMainContainer can only have status < START | HEALTHY >"),
+		},
+		"should return an error if container depends on itself": {
+			in: validateDependenciesOpts{
+				mainContainerName: "mockMainContainer",
+				imageConfig: &Image{
+					DependsOn: DependsOn{
+						"mockMainContainer": "healthy",
+					},
+				},
+			},
+			wanted: fmt.Errorf("container mockMainContainer cannot depend on itself"),
+		},
+		"should return an error if container dependencies graph is cyclic": {
+			in: validateDependenciesOpts{
+				mainContainerName: "alpha",
+				imageConfig: &Image{
+					DependsOn: DependsOn{
+						"beta": "healthy",
+					},
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"beta": {
+						DependsOn: DependsOn{
+							"gamma": "healthy",
+						},
+					},
+					"gamma": {
+						DependsOn: DependsOn{
+							"alpha": "healthy",
+						},
+					},
+					"zeta": {
+						DependsOn: DependsOn{
+							"alpha": "healthy",
+						},
+					},
+				},
+			},
+			wanted: fmt.Errorf("circular container dependency chain includes the following containers: [alpha beta gamma]"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateDependencies(tc.in)
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
