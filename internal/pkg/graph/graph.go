@@ -15,7 +15,7 @@ const (
 
 // Graph represents a directed graph.
 type Graph struct {
-	nodes map[string][]string
+	nodes map[string]neighbors
 }
 
 // Edge represents one edge of a directed graph.
@@ -24,10 +24,12 @@ type Edge struct {
 	To   string
 }
 
+type neighbors map[string]bool
+
 // New initiates a new Graph.
 func New() *Graph {
 	return &Graph{
-		nodes: make(map[string][]string),
+		nodes: make(map[string]neighbors),
 	}
 }
 
@@ -36,16 +38,10 @@ func (g *Graph) Add(edge Edge) {
 	fromNode, toNode := edge.From, edge.To
 	// Add origin node if doesn't exist.
 	if _, ok := g.nodes[fromNode]; !ok {
-		g.nodes[fromNode] = []string{}
+		g.nodes[fromNode] = make(neighbors)
 	}
-	// Check if edge exists between from and to Nodes.
-	for _, node := range g.nodes[fromNode] {
-		if node == toNode {
-			return
-		}
-	}
-	// Add edge if not there already.
-	g.nodes[fromNode] = append(g.nodes[fromNode], toNode)
+	// Add edge.
+	g.nodes[fromNode][toNode] = true
 }
 
 type findCycleTempVars struct {
@@ -84,7 +80,7 @@ func (g *Graph) IsAcyclic() ([]string, bool) {
 
 func (g *Graph) hasCycles(temp *findCycleTempVars, currNode string) bool {
 	temp.status[currNode] = visiting
-	for _, node := range g.nodes[currNode] {
+	for node := range g.nodes[currNode] {
 		if temp.status[node] == unvisited {
 			temp.nodeParent[node] = currNode
 			if g.hasCycles(temp, node) {
