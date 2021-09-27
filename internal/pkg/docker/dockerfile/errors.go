@@ -11,7 +11,7 @@ type ErrInvalidPort struct {
 }
 
 func (e ErrInvalidPort) Error() string {
-	return fmt.Sprintf("port represented at %s is invalid or unparseable", e.Match)
+	return fmt.Sprintf("parse EXPOSE: port represented at %s is invalid or unparseable", e.Match)
 }
 
 // ErrNoExpose means there were no documented EXPOSE statements in the given dockerfile.
@@ -20,5 +20,5 @@ type ErrNoExpose struct {
 }
 
 func (e ErrNoExpose) Error() string {
-	return fmt.Sprintf("no EXPOSE statements in Dockerfile %s", e.Dockerfile)
+	return fmt.Sprintf("parse EXPOSE: no EXPOSE statements in Dockerfile %s", e.Dockerfile)
 }
