@@ -15,13 +15,22 @@ func TestGraph_Add(t *testing.T) {
 		graph := New()
 
 		// WHEN
-		graph.Add("A", "B")
-		graph.Add("B", "A")
-		graph.Add("A", "C")
+		graph.Add(Edge{
+			From: "A",
+			To:   "B",
+		})
+		graph.Add(Edge{
+			From: "B",
+			To:   "A",
+		})
+		graph.Add(Edge{
+			From: "A",
+			To:   "C",
+		})
 
 		// THEN
-		require.ElementsMatch(t, graph.Nodes["A"], []string{"B", "C"})
-		require.ElementsMatch(t, graph.Nodes["B"], []string{"A"})
+		require.ElementsMatch(t, graph.nodes["A"], []string{"B", "C"})
+		require.ElementsMatch(t, graph.nodes["B"], []string{"A"})
 	})
 }
 
@@ -34,7 +43,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 	}{
 		"small non acyclic graph": {
 			graph: Graph{
-				Nodes: map[string][]string{
+				nodes: map[string][]string{
 					"A": {"B", "C"},
 					"B": {"A"},
 				},
@@ -45,7 +54,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 		},
 		"non acyclic": {
 			graph: Graph{
-				Nodes: map[string][]string{
+				nodes: map[string][]string{
 					"K": {"F"},
 					"A": {"B", "C"},
 					"B": {"D", "E"},
@@ -60,7 +69,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 		},
 		"acyclic": {
 			graph: Graph{
-				Nodes: map[string][]string{
+				nodes: map[string][]string{
 					"A": {"B", "C"},
 					"B": {"D"},
 					"E": {"G"},

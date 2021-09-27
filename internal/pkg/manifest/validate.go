@@ -891,7 +891,10 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
 				return nil, fmt.Errorf("container %s does not exist", dep)
 			}
-			dependencyGraph.Add(name, dep)
+			dependencyGraph.Add(graph.Edge{
+				From: name,
+				To:   dep,
+			})
 		}
 	}
 	// Add any image dependencies.
@@ -899,7 +902,10 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
 			return nil, fmt.Errorf("container %s does not exist", dep)
 		}
-		dependencyGraph.Add(opts.mainContainerName, dep)
+		dependencyGraph.Add(graph.Edge{
+			From: opts.mainContainerName,
+			To:   dep,
+		})
 	}
 	return dependencyGraph, nil
 }
