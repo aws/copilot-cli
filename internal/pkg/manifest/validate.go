@@ -627,7 +627,15 @@ func (v *Volume) Validate() error {
 }
 
 // Validate returns nil if MountPointOpts is configured correctly.
-func (*MountPointOpts) Validate() error {
+func (m *MountPointOpts) Validate() error {
+	if m == nil {
+		return nil
+	}
+	if aws.StringValue(m.ContainerPath) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
+	}
 	return nil
 }
 
@@ -695,7 +703,7 @@ func (l *Logging) Validate() error {
 func (s *SidecarConfig) Validate() error {
 	for ind, mp := range s.MountPoints {
 		if err := mp.Validate(); err != nil {
-			return fmt.Errorf(`validate "mount_points[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "mount_points[%d]": %w`, ind, err)
 		}
 	}
 	if err := s.HealthCheck.Validate(); err != nil {
@@ -705,6 +713,19 @@ func (s *SidecarConfig) Validate() error {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
 	return s.ImageOverride.Validate()
+}
+
+// Validate returns nil if SidecarMountPoint is configured correctly.
+func (s *SidecarMountPoint) Validate() error {
+	if s == nil {
+		return nil
+	}
+	if aws.StringValue(s.SourceVolume) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "source_volume",
+		}
+	}
+	return s.MountPointOpts.Validate()
 }
 
 // Validate returns nil if NetworkConfig is configured correctly.

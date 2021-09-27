@@ -1136,6 +1136,14 @@ func TestSidecarConfig_Validate(t *testing.T) {
 
 		wantedErrorPrefix string
 	}{
+		"error if fail to validate mount_points": {
+			config: SidecarConfig{
+				MountPoints: []SidecarMountPoint{
+					{},
+				},
+			},
+			wantedErrorPrefix: `validate "mount_points[0]": `,
+		},
 		"error if fail to validate depends_on": {
 			config: SidecarConfig{
 				DependsOn: DependsOn{
@@ -1153,6 +1161,52 @@ func TestSidecarConfig_Validate(t *testing.T) {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
 			} else {
 				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestSidecarMountPoint_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     SidecarMountPoint
+		wanted error
+	}{
+		"should return an error if source_volume is not set": {
+			in:     SidecarMountPoint{},
+			wanted: errors.New(`"source_volume" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMountPointOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     MountPointOpts
+		wanted error
+	}{
+		"should return an error if path is not set": {
+			in:     MountPointOpts{},
+			wanted: errors.New(`"path" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
