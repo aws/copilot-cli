@@ -30,6 +30,8 @@ var (
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+
+	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -810,7 +812,16 @@ func (d *DeadLetterQueue) Validate() error {
 }
 
 // Validate returns nil if OverrideRule is configured correctly.
-func (*OverrideRule) Validate() error {
+func (r *OverrideRule) Validate() error {
+	if r == nil {
+		return nil
+	}
+	for _, s := range invalidTaskDefOverridePathRegexp {
+		re := regexp.MustCompile(fmt.Sprintf(`^%s$`, s))
+		if re.MatchString(r.Path) {
+			return fmt.Errorf("%s cannot be overidden with a custom value", s)
+		}
+	}
 	return nil
 }
 

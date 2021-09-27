@@ -75,6 +75,17 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
+		"error if fail to validate taskdef override": {
+			lbConfig: LoadBalancedWebServiceConfig{
+				ImageConfig: testImageConfig,
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
+		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
@@ -161,6 +172,17 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate taskdef override": {
+			config: BackendServiceConfig{
+				ImageConfig: testImageConfig,
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
 		"error if fail to validate dependencies": {
 			config: BackendServiceConfig{
@@ -273,6 +295,17 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
+		"error if fail to validate taskdef override": {
+			config: WorkerServiceConfig{
+				ImageConfig: testImageConfig,
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
+		},
 		"error if fail to validate dependencies": {
 			config: WorkerServiceConfig{
 				ImageConfig: testImageConfig,
@@ -359,6 +392,20 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 				On:          JobTriggerConfig{},
 			},
 			wantedErrorMsgPrefix: `validate "on": `,
+		},
+		"error if fail to validate taskdef override": {
+			config: ScheduledJobConfig{
+				ImageConfig: testImageConfig,
+				On: JobTriggerConfig{
+					Schedule: aws.String("mockSchedule"),
+				},
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
 		"error if fail to validate dependencies": {
 			config: ScheduledJobConfig{
@@ -1200,6 +1247,31 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 		"should return an error if schedule is empty": {
 			in:     &JobTriggerConfig{},
 			wanted: errors.New(`"schedule" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestOverrideRule_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     OverrideRule
+		wanted error
+	}{
+		"should return an error if override rule is invalid": {
+			in: OverrideRule{
+				Path: "ContainerDefinitions[1].Name",
+			},
+			wanted: errors.New(`ContainerDefinitions\[\d+\].Name cannot be overidden with a custom value`),
 		},
 	}
 	for name, tc := range testCases {
