@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -1025,17 +1026,9 @@ func TestStorage_Validate(t *testing.T) {
 							Enabled: aws.Bool(true),
 						},
 					},
-					"bar": {
-						EFS: EFSConfigOrBool{
-							Advanced: EFSVolumeConfiguration{
-								UID:           aws.Uint32(123),
-								RootDirectory: aws.String("mockDir"),
-							},
-						},
-					},
 				},
 			},
-			wantedErrorPrefix: `validate "volumes[bar]": `,
+			wantedErrorPrefix: `validate "volumes[foo]": `,
 		},
 	}
 	for name, tc := range testCases {
@@ -1107,6 +1100,13 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"uid" must be specified if "gid" is specified`),
 		},
+		"error if uid is 0": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				UID: aws.Uint32(0),
+				GID: aws.Uint32(0),
+			},
+			wantedError: fmt.Errorf(`"uid" must not be 0`),
+		},
 		"error if AuthorizationConfig is not configured correctly": {
 			EFSVolumeConfiguration: EFSVolumeConfiguration{
 				AuthConfig: AuthorizationConfig{
@@ -1115,6 +1115,12 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 				RootDirectory: aws.String("mockDir"),
 			},
 			wantedError: fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`),
+		},
+		"error if root_dir is invalid": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				RootDirectory: aws.String("!!!!"),
+			},
+			wantedError: fmt.Errorf(`validate "root_dir": path can only contain the characters a-zA-Z0-9.-_/`),
 		},
 	}
 	for name, tc := range testCases {
@@ -1190,6 +1196,11 @@ func TestSidecarMountPoint_Validate(t *testing.T) {
 }
 
 func TestMountPointOpts_Validate(t *testing.T) {
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]rune, maxDockerContainerPathLength+1)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
 	testCases := map[string]struct {
 		in     MountPointOpts
 		wanted error
@@ -1197,6 +1208,18 @@ func TestMountPointOpts_Validate(t *testing.T) {
 		"should return an error if path is not set": {
 			in:     MountPointOpts{},
 			wanted: errors.New(`"path" must be specified`),
+		},
+		"should return an error if path is too long": {
+			in: MountPointOpts{
+				ContainerPath: aws.String(string(b)),
+			},
+			wanted: errors.New(`validate "path": path must be less than 242 bytes in length`),
+		},
+		"should return an error if path is invalid": {
+			in: MountPointOpts{
+				ContainerPath: aws.String("!!!!!!"),
+			},
+			wanted: errors.New(`validate "path": path can only contain the characters a-zA-Z0-9.-_/`),
 		},
 	}
 	for name, tc := range testCases {

@@ -17,16 +17,24 @@ import (
 	"github.com/dustin/go-humanize/english"
 )
 
-// Container dependency status constants.
 const (
+	// Container dependency status constants.
 	dependsOnStart    = "START"
 	dependsOnComplete = "COMPLETE"
 	dependsOnSuccess  = "SUCCESS"
 	dependsOnHealthy  = "HEALTHY"
+
+	// In docker containers, max path length is 242.
+	// https://github.com/moby/moby/issues/1413
+	maxDockerContainerPathLength = 242
+	// Max path length in EFS is 255 bytes.
+	// https://docs.aws.amazon.com/efs/latest/ug/troubleshooting-efs-fileop-errors.html#filenametoolong
+	maxEFSPathLength = 255
 )
 
 var (
 	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	pathRegexp         = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
@@ -610,6 +618,9 @@ func (*ExecuteCommandConfig) Validate() error {
 
 // Validate returns nil if Storage is configured correctly.
 func (s *Storage) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
 	for k, v := range s.Volumes {
 		if err := v.Validate(); err != nil {
 			return fmt.Errorf(`validate "volumes[%s]": %w`, k, err)
@@ -631,10 +642,14 @@ func (m *MountPointOpts) Validate() error {
 	if m == nil {
 		return nil
 	}
-	if aws.StringValue(m.ContainerPath) == "" {
+	path := aws.StringValue(m.ContainerPath)
+	if path == "" {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
 		}
+	}
+	if err := validatePath(path, maxDockerContainerPathLength); err != nil {
+		return fmt.Errorf(`validate "path": %w`, err)
 	}
 	return nil
 }
@@ -670,6 +685,9 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			conditionalFields: []string{"gid"},
 		}
 	}
+	if e.UID != nil && *e.UID == 0 {
+		return fmt.Errorf(`"uid" must not be 0`)
+	}
 	if err := e.AuthConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "auth": %w`, err)
 	}
@@ -679,6 +697,11 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			return nil
 		}
 		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
+	}
+	if e.RootDirectory != nil {
+		if err := validatePath(aws.StringValue(e.RootDirectory), maxEFSPathLength); err != nil {
+			return fmt.Errorf(`validate "root_dir": %w`, err)
+		}
 	}
 	return nil
 }
@@ -940,4 +963,20 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 		})
 	}
 	return dependencyGraph, nil
+}
+
+// Validate that paths contain only an approved set of characters to guard against command injection.
+// We can accept 0-9A-Za-z-_.
+func validatePath(input string, maxLength int) error {
+	if len(input) > maxLength {
+		return fmt.Errorf("path must be less than %d bytes in length", maxLength)
+	}
+	if len(input) == 0 {
+		return nil
+	}
+	m := pathRegexp.FindStringSubmatch(input)
+	if len(m) == 0 {
+		return fmt.Errorf("path can only contain the characters a-zA-Z0-9.-_/")
+	}
+	return nil
 }
