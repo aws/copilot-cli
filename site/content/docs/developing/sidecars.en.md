@@ -14,36 +14,6 @@ There are two ways of adding sidecars using the Copilot manifest: by specifying 
 ### General sidecars
 You'll need to provide the URL for the sidecar image. Optionally, you can specify the port you'd like to expose and the credential parameter for [private registry](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html).
 
-``` yaml
-sidecars:
-  <sidecar name>:
-    # Port of the container to expose. (Optional)
-    port: <port number>
-    # Image URL for the sidecar container. (Required)
-    image: <image url>
-    # ARN of the secret containing the private repository credentials. (Optional)
-    credentialsParameter: <credential>
-    # Environment variables for the sidecar container.
-    variables: <env var>
-    # Secrets to expose to the sidecar container.
-    secrets: <secret>
-    # Mount paths for EFS volumes specified at the service level. (Optional)
-    mount_points:
-      - # Source volume to mount in this sidecar. (Required)
-        source_volume: <named volume>
-        # The path inside the sidecar container at which to mount the volume. (Required)
-        path: <path>
-        # Whether to allow the sidecar read-only access to the volume. (Default true)
-        read_only: <bool>
-    # Optional Docker labels to apply to this container.
-    labels:
-      {label key} : <label value>
-    # Optional container dependencies to apply to this container.
-    depends_on:
-      {container name}: <condition>
-
-```
-
 {% include 'sidecar-config.en.md' %}
 
 <div class="separator"></div>

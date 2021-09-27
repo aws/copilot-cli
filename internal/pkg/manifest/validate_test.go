@@ -94,7 +94,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.lbConfig.Validate("mockWorkload")
+			gotErr := tc.lbConfig.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -179,7 +179,7 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate("mockWorkload")
+			gotErr := tc.config.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -215,7 +215,7 @@ func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate("mockWorkload")
+			gotErr := tc.config.Validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -290,7 +290,7 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate("mockWorkload")
+			gotErr := tc.config.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -380,7 +380,7 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate("mockWorkload")
+			gotErr := tc.config.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1223,7 +1223,7 @@ func TestValidateContainerDeps(t *testing.T) {
 		"should return an error if main container dependencies status is invalid": {
 			in: validateDependenciesOpts{
 				mainContainerName: "mockMainContainer",
-				imageConfig: &Image{
+				imageConfig: Image{
 					DependsOn: DependsOn{
 						"mockMainContainer": "complete",
 					},
@@ -1244,10 +1244,34 @@ func TestValidateContainerDeps(t *testing.T) {
 			},
 			wanted: fmt.Errorf("validate foo container dependencies status: essential container mockMainContainer can only have status START or HEALTHY"),
 		},
+		"should return an error if a main container dependency does not exist": {
+			in: validateDependenciesOpts{
+				mainContainerName: "mockMainContainer",
+				imageConfig: Image{
+					DependsOn: DependsOn{
+						"foo": "healthy",
+					},
+				},
+			},
+			wanted: fmt.Errorf("container foo does not exist"),
+		},
+		"should return an error if a sidecar container dependency does not exist": {
+			in: validateDependenciesOpts{
+				mainContainerName: "mockMainContainer",
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						DependsOn: DependsOn{
+							"bar": "healthy",
+						},
+					},
+				},
+			},
+			wanted: fmt.Errorf("container bar does not exist"),
+		},
 		"should return an error if container depends on itself": {
 			in: validateDependenciesOpts{
 				mainContainerName: "mockMainContainer",
-				imageConfig: &Image{
+				imageConfig: Image{
 					DependsOn: DependsOn{
 						"mockMainContainer": "healthy",
 					},
@@ -1258,7 +1282,7 @@ func TestValidateContainerDeps(t *testing.T) {
 		"should return an error if container dependencies graph is cyclic": {
 			in: validateDependenciesOpts{
 				mainContainerName: "alpha",
-				imageConfig: &Image{
+				imageConfig: Image{
 					DependsOn: DependsOn{
 						"beta": "healthy",
 					},

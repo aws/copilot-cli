@@ -33,7 +33,7 @@ var (
 )
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
-func (l *LoadBalancedWebServiceConfig) Validate(name string) error {
+func (l *LoadBalancedWebServiceConfig) Validate() error {
 	var err error
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -68,8 +68,8 @@ func (l *LoadBalancedWebServiceConfig) Validate(name string) error {
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
-		imageConfig:       &l.ImageConfig.Image,
-		mainContainerName: name,
+		imageConfig:       l.ImageConfig.Image,
+		mainContainerName: l.name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -77,7 +77,7 @@ func (l *LoadBalancedWebServiceConfig) Validate(name string) error {
 }
 
 // Validate returns nil if BackendServiceConfig is configured correctly.
-func (b *BackendServiceConfig) Validate(name string) error {
+func (b *BackendServiceConfig) Validate() error {
 	var err error
 	if err = b.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -109,8 +109,8 @@ func (b *BackendServiceConfig) Validate(name string) error {
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
-		imageConfig:       &b.ImageConfig.Image,
-		mainContainerName: name,
+		imageConfig:       b.ImageConfig.Image,
+		mainContainerName: b.name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -118,7 +118,7 @@ func (b *BackendServiceConfig) Validate(name string) error {
 }
 
 // Validate returns nil if RequestDrivenWebService is configured correctly.
-func (r *RequestDrivenWebServiceConfig) Validate(name string) error {
+func (r *RequestDrivenWebServiceConfig) Validate() error {
 	var err error
 	if err = r.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -133,7 +133,7 @@ func (r *RequestDrivenWebServiceConfig) Validate(name string) error {
 }
 
 // Validate returns nil if WorkerServiceConfig is configured correctly.
-func (w *WorkerServiceConfig) Validate(name string) error {
+func (w *WorkerServiceConfig) Validate() error {
 	var err error
 	if err = w.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -163,10 +163,10 @@ func (w *WorkerServiceConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateNoCircularDependencies(validateDependenciesOpts{
+	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     w.Sidecars,
-		imageConfig:       &w.ImageConfig.Image,
-		mainContainerName: name,
+		imageConfig:       w.ImageConfig.Image,
+		mainContainerName: w.name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -174,7 +174,7 @@ func (w *WorkerServiceConfig) Validate(name string) error {
 }
 
 // Validate returns nil if ScheduledJobConfig is configured correctly.
-func (s *ScheduledJobConfig) Validate(name string) error {
+func (s *ScheduledJobConfig) Validate() error {
 	var err error
 	if err = s.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -212,8 +212,8 @@ func (s *ScheduledJobConfig) Validate(name string) error {
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     s.Sidecars,
-		imageConfig:       &s.ImageConfig.Image,
-		mainContainerName: name,
+		imageConfig:       s.ImageConfig.Image,
+		mainContainerName: s.name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -279,14 +279,14 @@ func (d *DependsOn) Validate() error {
 	}
 	for _, v := range *d {
 		status := strings.ToUpper(v)
-		var validStatus bool
+		var isValid bool
 		for _, allowed := range dependsOnValidStatuses {
 			if status == allowed {
-				validStatus = true
+				isValid = true
 				break
 			}
 		}
-		if !validStatus {
+		if !isValid {
 			return fmt.Errorf("container dependency status must be one of %s", english.WordSeries([]string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}, "or"))
 		}
 	}
@@ -817,21 +817,21 @@ func (*OverrideRule) Validate() error {
 type validateDependenciesOpts struct {
 	mainContainerName string
 	sidecarConfig     map[string]*SidecarConfig
-	imageConfig       *Image
+	imageConfig       Image
 }
 
 func validateContainerDeps(opts validateDependenciesOpts) error {
-	if err := validateImageDependsOnStatus(opts); err != nil {
+	if err := validateImageDependsOnEssentialStatus(opts); err != nil {
 		return err
 	}
-	if err := validateSidecarsDependsOnStatus(opts); err != nil {
+	if err := validateSidecarsDependsOnEssentialStatus(opts); err != nil {
 		return err
 	}
 	return validateNoCircularDependencies(opts)
 }
 
-func validateImageDependsOnStatus(opts validateDependenciesOpts) error {
-	if opts.imageConfig == nil || opts.imageConfig.DependsOn == nil {
+func validateImageDependsOnEssentialStatus(opts validateDependenciesOpts) error {
+	if opts.imageConfig.DependsOn == nil {
 		return nil
 	}
 	for name, status := range opts.imageConfig.DependsOn {
@@ -845,7 +845,7 @@ func validateImageDependsOnStatus(opts validateDependenciesOpts) error {
 	return nil
 }
 
-func validateSidecarsDependsOnStatus(opts validateDependenciesOpts) error {
+func validateSidecarsDependsOnEssentialStatus(opts validateDependenciesOpts) error {
 	if opts.sidecarConfig == nil {
 		return nil
 	}
@@ -869,7 +869,7 @@ func isEssentialContainer(name string, opts validateDependenciesOpts) bool {
 	if name == opts.mainContainerName {
 		return true
 	}
-	if opts.sidecarConfig == nil {
+	if opts.sidecarConfig == nil || opts.sidecarConfig[name] == nil {
 		return false
 	}
 	return opts.sidecarConfig[name].Essential == nil || aws.BoolValue(opts.sidecarConfig[name].Essential)
@@ -889,13 +889,14 @@ func validateNoCircularDependencies(opts validateDependenciesOpts) error {
 	if err != nil {
 		return err
 	}
-	cycle, acyclic := dependencies.IsAcyclic()
-	if acyclic {
+	cycle, ok := dependencies.IsAcyclic()
+	if ok {
 		return nil
 	}
 	if len(cycle) == 1 {
 		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
 	}
+	// Stablize unit tests.
 	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
@@ -906,7 +907,7 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 	for name, sidecar := range opts.sidecarConfig {
 		for dep := range sidecar.DependsOn {
 			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
-				return nil, errInvalidContainer
+				return nil, fmt.Errorf("container %s does not exist", dep)
 			}
 			dependencyGraph.Add(name, dep)
 		}
@@ -914,7 +915,7 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 	// Add any image dependencies.
 	for dep := range opts.imageConfig.DependsOn {
 		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
-			return nil, errInvalidContainer
+			return nil, fmt.Errorf("container %s does not exist", dep)
 		}
 		dependencyGraph.Add(opts.mainContainerName, dep)
 	}
