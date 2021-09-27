@@ -28,8 +28,8 @@ const (
 var (
 	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
 
-	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
-	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 )
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -837,19 +837,19 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 			isEssential: config.Essential == nil || aws.BoolValue(config.Essential),
 		}
 	}
-	if err := validateDependsOnEssentialStatus(containerDependencies); err != nil {
+	if err := validateDepsForEssentialContainers(containerDependencies); err != nil {
 		return err
 	}
 	return validateNoCircularDependencies(opts)
 }
 
-func validateDependsOnEssentialStatus(deps map[string]containerDependency) error {
+func validateDepsForEssentialContainers(deps map[string]containerDependency) error {
 	for name, containerDep := range deps {
 		for dep, status := range containerDep.dependsOn {
 			if !deps[dep].isEssential {
 				continue
 			}
-			if err := isValidEssentialStatus(dep, strings.ToUpper(status)); err != nil {
+			if err := validateEssentialContainerDependency(dep, strings.ToUpper(status)); err != nil {
 				return fmt.Errorf("validate %s container dependencies status: %w", name, err)
 			}
 		}
@@ -857,8 +857,8 @@ func validateDependsOnEssentialStatus(deps map[string]containerDependency) error
 	return nil
 }
 
-func isValidEssentialStatus(name, status string) error {
-	for _, allowed := range essentialContainerValidStatuses {
+func validateEssentialContainerDependency(name, status string) error {
+	for _, allowed := range essentialContainerDependsOnValidStatuses {
 		if status == allowed {
 			return nil
 		}
