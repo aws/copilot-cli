@@ -4,13 +4,13 @@
 // Package graph provides functionality for directed graphs.
 package graph
 
-// nodeColor denotes the color of a node when running DFS in a graph.
-type nodeColor int
+// nodeStatus denotes the visiting status of a node when running DFS in a graph.
+type nodeStatus int
 
 const (
-	white nodeColor = iota + 1
-	gray
-	black
+	unvisited nodeStatus = iota + 1
+	visiting
+	visited
 )
 
 // Graph represents a directed graph.
@@ -45,7 +45,7 @@ func (g *Graph) Add(fromNode, toNode string) {
 }
 
 type findCycleTempVars struct {
-	color      map[string]nodeColor
+	status     map[string]nodeStatus
 	nodeParent map[string]string
 	cycleStart string
 	cycleEnd   string
@@ -54,20 +54,20 @@ type findCycleTempVars struct {
 // IsAcyclic checks if the graph is acyclic. If not, return the first detected cycle.
 func (g *Graph) IsAcyclic() ([]string, bool) {
 	var cycle []string
-	color := make(map[string]nodeColor)
+	status := make(map[string]nodeStatus)
 	for node := range g.Nodes {
-		color[node] = white
+		status[node] = unvisited
 	}
 	temp := findCycleTempVars{
-		color:      color,
+		status:     status,
 		nodeParent: make(map[string]string),
 	}
-	// We will run a series of DFS in the graph. Initially all vertices are colored white (unvisited).
-	// From each white node, start the DFS, mark it gray while entering and mark it black on exit.
-	// If DFS moves to a gray node, then we have found a cycle. The cycle itself can be reconstructed using parent map.
+	// We will run a series of DFS in the graph. Initially all vertices are marked unvisited.
+	// From each unvisited node, start the DFS, mark it visiting while entering and mark it visited on exit.
+	// If DFS moves to a visiting node, then we have found a cycle. The cycle itself can be reconstructed using parent map.
 	// See https://cp-algorithms.com/graph/finding-cycle.html
 	for node := range g.Nodes {
-		if color[node] == white && g.hasCycles(&temp, node) {
+		if status[node] == unvisited && g.hasCycles(&temp, node) {
 			for n := temp.cycleStart; n != temp.cycleEnd; n = temp.nodeParent[n] {
 				cycle = append(cycle, n)
 			}
@@ -79,19 +79,19 @@ func (g *Graph) IsAcyclic() ([]string, bool) {
 }
 
 func (g *Graph) hasCycles(temp *findCycleTempVars, currNode string) bool {
-	temp.color[currNode] = gray
+	temp.status[currNode] = visiting
 	for _, node := range g.Nodes[currNode] {
-		if temp.color[node] == white {
+		if temp.status[node] == unvisited {
 			temp.nodeParent[node] = currNode
 			if g.hasCycles(temp, node) {
 				return true
 			}
-		} else if temp.color[node] == gray {
+		} else if temp.status[node] == visiting {
 			temp.cycleStart = currNode
 			temp.cycleEnd = node
 			return true
 		}
 	}
-	temp.color[currNode] = black
+	temp.status[currNode] = visited
 	return false
 }
