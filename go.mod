@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.40.45
 	github.com/briandowns/spinner v1.15.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.12.0
+	github.com/fatih/color v1.13.0
 	github.com/fatih/structs v1.1.0
 	github.com/golang/mock v1.6.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
