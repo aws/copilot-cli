@@ -70,7 +70,7 @@ func (l *LoadBalancedWebServiceConfig) Validate(name string) error {
 		imageConfig:       &l.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return fmt.Errorf("validate dependencies: %w", err)
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -111,7 +111,7 @@ func (b *BackendServiceConfig) Validate(name string) error {
 		imageConfig:       &b.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return fmt.Errorf("validate dependencies: %w", err)
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -167,7 +167,7 @@ func (w *WorkerServiceConfig) Validate(name string) error {
 		imageConfig:       &w.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return fmt.Errorf("validate dependencies: %w", err)
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -214,7 +214,7 @@ func (s *ScheduledJobConfig) Validate(name string) error {
 		imageConfig:       &s.ImageConfig.Image,
 		mainContainerName: name,
 	}); err != nil {
-		return fmt.Errorf("validate dependencies: %w", err)
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -865,11 +865,13 @@ func validateSidecarsDependsOnStatus(opts validateDependenciesOpts) error {
 }
 
 func isEssentialContainer(name string, opts validateDependenciesOpts) bool {
+	if name == opts.mainContainerName {
+		return true
+	}
 	if opts.sidecarConfig == nil {
 		return false
 	}
-	return name == opts.mainContainerName || opts.sidecarConfig[name].Essential == nil ||
-		aws.BoolValue(opts.sidecarConfig[name].Essential)
+	return opts.sidecarConfig[name].Essential == nil || aws.BoolValue(opts.sidecarConfig[name].Essential)
 }
 
 func isValidEssentialStatus(name, status string) error {

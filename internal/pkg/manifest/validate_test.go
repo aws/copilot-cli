@@ -89,7 +89,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate dependencies: `,
+			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -174,7 +174,7 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate dependencies: `,
+			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -285,7 +285,7 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate dependencies: `,
+			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -375,7 +375,7 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate dependencies: `,
+			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -1215,7 +1215,7 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestValidateNoCircularDependencies(t *testing.T) {
+func TestValidateDependencies(t *testing.T) {
 	testCases := map[string]struct {
 		in     validateDependenciesOpts
 		wanted error
@@ -1225,16 +1225,11 @@ func TestValidateNoCircularDependencies(t *testing.T) {
 				mainContainerName: "mockMainContainer",
 				imageConfig: &Image{
 					DependsOn: DependsOn{
-						"foo": "complete",
-						"bar": "complete",
+						"mockMainContainer": "complete",
 					},
 				},
-				sidecarConfig: map[string]*SidecarConfig{
-					"foo": {},
-					"bar": {Essential: aws.Bool(false)},
-				},
 			},
-			wanted: fmt.Errorf("validate mockMainContainer container dependencies status: essential container foo can only have status < START | HEALTHY >"),
+			wanted: fmt.Errorf("validate mockMainContainer container dependencies status: essential container mockMainContainer can only have status < START | HEALTHY >"),
 		},
 		"should return an error if sidecar container dependencies status is invalid": {
 			in: validateDependenciesOpts{

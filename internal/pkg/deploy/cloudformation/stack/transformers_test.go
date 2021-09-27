@@ -1501,7 +1501,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 			inSidecars: map[string]*manifest.SidecarConfig{
 				"sidecar": {},
 			},
-			wantedError: errEssentialSidecarStatus,
+			wantedError: errEssentialContainerStatus,
 		},
 		"invalid set essential container depdendency": {
 			inImage: &manifest.Image{
@@ -1514,7 +1514,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 					Essential: aws.Bool(true),
 				},
 			},
-			wantedError: errEssentialSidecarStatus,
+			wantedError: errEssentialContainerStatus,
 		},
 		"good essential container dependency": {
 			inImage: &manifest.Image{

@@ -41,7 +41,6 @@ var (
 	errInvalidContainer             = errors.New("container dependency does not exist")
 	errInvalidDependsOnStatus       = fmt.Errorf("container dependency status must be one of < %s | %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy)
 	errEssentialContainerStatus     = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
-	errEssentialSidecarStatus       = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
 	errInvalidPubSubTopicName       = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
 	errInvalidSvcName               = errors.New("service names cannot be empty")
 	errSvcNameTooLong               = errors.New("service names must not exceed 255 characters")
@@ -189,7 +188,7 @@ func isEssentialStatus(status string, container string, c convertSidecarOpts) (b
 		if status == dependsOnStart {
 			return true, nil
 		}
-		return false, errEssentialSidecarStatus
+		return false, errEssentialContainerStatus
 	}
 
 	for _, allowed := range essentialContainerValidStatuses {
