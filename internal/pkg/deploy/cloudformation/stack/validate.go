@@ -32,28 +32,25 @@ var (
 
 // Conditional errors.
 var (
-	errAccessPointWithRootDirectory  = errors.New("`root_directory` must be empty or \"/\" when `access_point` is specified")
-	errAccessPointWithoutIAM         = errors.New("`iam` must be true when `access_point` is specified")
-	errUIDWithNonManagedFS           = errors.New("UID and GID cannot be specified with non-managed EFS")
-	errInvalidUIDGIDConfig           = errors.New("must specify both UID and GID, or neither")
-	errInvalidEFSConfig              = errors.New("bad EFS configuration: cannot specify both bool and config")
-	errReservedUID                   = errors.New("UID must not be 0")
-	errInvalidContainer              = errors.New("container dependency does not exist")
-	errInvalidDependsOnStatus        = fmt.Errorf("container dependency status must be one of < %s | %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy)
-	errInvalidSidecarDependsOnStatus = fmt.Errorf("sidecar container dependency status must be one of < %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess)
-	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
-	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
-	errInvalidPubSubTopicName        = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
-	errInvalidSvcName                = errors.New("service names cannot be empty")
-	errSvcNameTooLong                = errors.New("service names must not exceed 255 characters")
-	errSvcNameBadFormat              = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	errAccessPointWithRootDirectory = errors.New("`root_directory` must be empty or \"/\" when `access_point` is specified")
+	errAccessPointWithoutIAM        = errors.New("`iam` must be true when `access_point` is specified")
+	errUIDWithNonManagedFS          = errors.New("UID and GID cannot be specified with non-managed EFS")
+	errInvalidUIDGIDConfig          = errors.New("must specify both UID and GID, or neither")
+	errInvalidEFSConfig             = errors.New("bad EFS configuration: cannot specify both bool and config")
+	errReservedUID                  = errors.New("UID must not be 0")
+	errInvalidContainer             = errors.New("container dependency does not exist")
+	errInvalidDependsOnStatus       = fmt.Errorf("container dependency status must be one of < %s | %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy)
+	errEssentialContainerStatus     = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
+	errInvalidPubSubTopicName       = errors.New("topic names can only contain letters, numbers, underscores, and hypthens")
+	errInvalidSvcName               = errors.New("service names cannot be empty")
+	errSvcNameTooLong               = errors.New("service names must not exceed 255 characters")
+	errSvcNameBadFormat             = errors.New("service names must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 )
 
 // Container dependency status options.
 var (
 	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
-	sidecarDependsOnValidStatuses   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
 )
 
 // Regex options.
@@ -167,15 +164,6 @@ func isSidecar(container string, sidecars map[string]*manifest.SidecarConfig) bo
 }
 
 func isValidStatusForContainer(status string, container string, c convertSidecarOpts) (bool, error) {
-	if isSidecar(container, c.sidecarConfig) {
-		for _, allowed := range sidecarDependsOnValidStatuses {
-			if status == allowed {
-				return true, nil
-			}
-		}
-		return false, errInvalidSidecarDependsOnStatus
-	}
-
 	for _, allowed := range dependsOnValidStatuses {
 		if status == allowed {
 			return true, nil
@@ -200,7 +188,7 @@ func isEssentialStatus(status string, container string, c convertSidecarOpts) (b
 		if status == dependsOnStart {
 			return true, nil
 		}
-		return false, errEssentialSidecarStatus
+		return false, errEssentialContainerStatus
 	}
 
 	for _, allowed := range essentialContainerValidStatuses {

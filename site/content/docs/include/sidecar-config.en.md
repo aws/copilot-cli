@@ -5,6 +5,9 @@ Port of the container to expose (optional).
 <a id="image" href="#image" class="field">`image`</a> <span class="type">String</span>  
 Image URL for the sidecar container (required).
 
+<a id="essential" href="#essential" class="field">`essential`</a> <span class="type">Bool</span>  
+Whether the sidecar container is an essential container (optional, default true).
+
 <a id="credentialsParameter" href="#credentialsParameter" class="field">`credentialsParameter`</a> <span class="type">String</span>  
 ARN of the secret containing the private repository credentials (optional).
 

@@ -8,14 +8,28 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/dustin/go-humanize/english"
+)
+
+// Container dependency status constants.
+const (
+	dependsOnStart    = "START"
+	dependsOnComplete = "COMPLETE"
+	dependsOnSuccess  = "SUCCESS"
+	dependsOnHealthy  = "HEALTHY"
 )
 
 var (
 	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
+
+	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 )
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -38,7 +52,7 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for k, v := range l.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = l.Network.Validate(); err != nil {
@@ -49,8 +63,15 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range l.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     l.Sidecars,
+		imageConfig:       l.ImageConfig.Image,
+		mainContainerName: l.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -72,7 +93,7 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for k, v := range b.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = b.Network.Validate(); err != nil {
@@ -83,8 +104,15 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range b.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     b.Sidecars,
+		imageConfig:       b.ImageConfig.Image,
+		mainContainerName: b.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -121,7 +149,7 @@ func (w *WorkerServiceConfig) Validate() error {
 	}
 	for k, v := range w.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = w.Network.Validate(); err != nil {
@@ -132,8 +160,15 @@ func (w *WorkerServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range w.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     w.Sidecars,
+		imageConfig:       w.ImageConfig.Image,
+		mainContainerName: w.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -155,7 +190,7 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for k, v := range s.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = s.Network.Validate(); err != nil {
@@ -172,8 +207,15 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range s.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     s.Sidecars,
+		imageConfig:       s.ImageConfig.Image,
+		mainContainerName: s.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -222,6 +264,30 @@ func (i *Image) Validate() error {
 			firstField:  "build",
 			secondField: "location",
 			mustExist:   true,
+		}
+	}
+	if err = i.DependsOn.Validate(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if DependsOn is configured correctly.
+func (d *DependsOn) Validate() error {
+	if d == nil {
+		return nil
+	}
+	for _, v := range *d {
+		status := strings.ToUpper(v)
+		var isValid bool
+		for _, allowed := range dependsOnValidStatuses {
+			if status == allowed {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return fmt.Errorf("container dependency status must be one of %s", english.WordSeries([]string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}, "or"))
 		}
 	}
 	return nil
@@ -357,15 +423,25 @@ func (p *PlatformString) Validate() error {
 	if p == nil {
 		return nil
 	}
-	// TODO: Consolidate with "UnmarshalYAML".
+	if err := validatePlatform(p); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
-// TODO: add validation once "feat/pencere" is merged.
 func (p *PlatformArgs) Validate() error {
 	if p.isEmpty() {
 		return nil
+	}
+	if !p.bothSpecified() {
+		return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
+	}
+	if err := validateOS(p.OSFamily); err != nil {
+		return err
+	}
+	if err := validateArch(p.Arch); err != nil {
+		return err
 	}
 	return nil
 }
@@ -623,6 +699,9 @@ func (s *SidecarConfig) Validate() error {
 	if err := s.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
+	if err := s.DependsOn.Validate(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
 	return s.ImageOverride.Validate()
 }
 
@@ -733,4 +812,100 @@ func (d *DeadLetterQueue) Validate() error {
 // Validate returns nil if OverrideRule is configured correctly.
 func (*OverrideRule) Validate() error {
 	return nil
+}
+
+type validateDependenciesOpts struct {
+	mainContainerName string
+	sidecarConfig     map[string]*SidecarConfig
+	imageConfig       Image
+}
+
+type containerDependency struct {
+	dependsOn   DependsOn
+	isEssential bool
+}
+
+func validateContainerDeps(opts validateDependenciesOpts) error {
+	containerDependencies := make(map[string]containerDependency)
+	containerDependencies[opts.mainContainerName] = containerDependency{
+		dependsOn:   opts.imageConfig.DependsOn,
+		isEssential: true,
+	}
+	for name, config := range opts.sidecarConfig {
+		containerDependencies[name] = containerDependency{
+			dependsOn:   config.DependsOn,
+			isEssential: config.Essential == nil || aws.BoolValue(config.Essential),
+		}
+	}
+	if err := validateDepsForEssentialContainers(containerDependencies); err != nil {
+		return err
+	}
+	return validateNoCircularDependencies(opts)
+}
+
+func validateDepsForEssentialContainers(deps map[string]containerDependency) error {
+	for name, containerDep := range deps {
+		for dep, status := range containerDep.dependsOn {
+			if !deps[dep].isEssential {
+				continue
+			}
+			if err := validateEssentialContainerDependency(dep, strings.ToUpper(status)); err != nil {
+				return fmt.Errorf("validate %s container dependencies status: %w", name, err)
+			}
+		}
+	}
+	return nil
+}
+
+func validateEssentialContainerDependency(name, status string) error {
+	for _, allowed := range essentialContainerDependsOnValidStatuses {
+		if status == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf("essential container %s can only have status %s", name, english.WordSeries([]string{dependsOnStart, dependsOnHealthy}, "or"))
+}
+
+func validateNoCircularDependencies(opts validateDependenciesOpts) error {
+	dependencies, err := buildDependencyGraph(opts)
+	if err != nil {
+		return err
+	}
+	cycle, ok := dependencies.IsAcyclic()
+	if ok {
+		return nil
+	}
+	if len(cycle) == 1 {
+		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
+	}
+	// Stablize unit tests.
+	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
+	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
+}
+
+func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
+	dependencyGraph := graph.New()
+	// Add any sidecar dependencies.
+	for name, sidecar := range opts.sidecarConfig {
+		for dep := range sidecar.DependsOn {
+			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+				return nil, fmt.Errorf("container %s does not exist", dep)
+			}
+			dependencyGraph.Add(graph.Edge{
+				From: name,
+				To:   dep,
+			})
+		}
+	}
+	// Add any image dependencies.
+	for dep := range opts.imageConfig.DependsOn {
+		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+			return nil, fmt.Errorf("container %s does not exist", dep)
+		}
+		dependencyGraph.Add(graph.Edge{
+			From: opts.mainContainerName,
+			To:   dep,
+		})
+	}
+	return dependencyGraph, nil
 }

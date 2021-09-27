@@ -75,21 +75,24 @@ type OverrideRule struct {
 	Value yaml.Node `yaml:"value"`
 }
 
+// DependsOn represents container dependency for a container.
+type DependsOn map[string]string
+
 // Image represents the workload's container image.
 type Image struct {
 	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
 	Location     *string           `yaml:"location"`        // Use an existing image instead.
 	Credentials  *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
-	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+	DependsOn    DependsOn         `yaml:"depends_on,flow"` // Add any sidecar dependencies.
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (i *Image) UnmarshalYAML(node *yaml.Node) error {
+func (i *Image) UnmarshalYAML(value *yaml.Node) error {
 	type image Image
-	if err := node.Decode((*image)(i)); err != nil {
+	if err := value.Decode((*image)(i)); err != nil {
 		return err
 	}
 	if !i.Build.isEmpty() && i.Location != nil {
@@ -430,7 +433,7 @@ type SidecarConfig struct {
 	Secrets       map[string]string    `yaml:"secrets"`
 	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
 	DockerLabels  map[string]string    `yaml:"labels"`
-	DependsOn     map[string]string    `yaml:"depends_on"`
+	DependsOn     DependsOn            `yaml:"depends_on"`
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
 }
