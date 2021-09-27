@@ -13,7 +13,8 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/term/graph"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/dustin/go-humanize/english"
 )
 
 // Container dependency status constants.
@@ -65,7 +66,7 @@ func (l *LoadBalancedWebServiceConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateDependencies(validateDependenciesOpts{
+	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
 		imageConfig:       &l.ImageConfig.Image,
 		mainContainerName: name,
@@ -106,7 +107,7 @@ func (b *BackendServiceConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateDependencies(validateDependenciesOpts{
+	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
 		imageConfig:       &b.ImageConfig.Image,
 		mainContainerName: name,
@@ -209,7 +210,7 @@ func (s *ScheduledJobConfig) Validate(name string) error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
-	if err = validateDependencies(validateDependenciesOpts{
+	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     s.Sidecars,
 		imageConfig:       &s.ImageConfig.Image,
 		mainContainerName: name,
@@ -286,7 +287,7 @@ func (d *DependsOn) Validate() error {
 			}
 		}
 		if !validStatus {
-			return fmt.Errorf("container dependency status must be one of < %s | %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy)
+			return fmt.Errorf("container dependency status must be one of %s", english.WordSeries([]string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}, "or"))
 		}
 	}
 	return nil
@@ -819,7 +820,7 @@ type validateDependenciesOpts struct {
 	imageConfig       *Image
 }
 
-func validateDependencies(opts validateDependenciesOpts) error {
+func validateContainerDeps(opts validateDependenciesOpts) error {
 	if err := validateImageDependsOnStatus(opts); err != nil {
 		return err
 	}
@@ -880,7 +881,7 @@ func isValidEssentialStatus(name, status string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("essential container %s can only have status < %s | %s >", name, dependsOnStart, dependsOnHealthy)
+	return fmt.Errorf("essential container %s can only have status %s", name, english.WordSeries([]string{dependsOnStart, dependsOnHealthy}, "or"))
 }
 
 func validateNoCircularDependencies(opts validateDependenciesOpts) error {
@@ -888,7 +889,7 @@ func validateNoCircularDependencies(opts validateDependenciesOpts) error {
 	if err != nil {
 		return err
 	}
-	acyclic, cycle := dependencies.IsAcyclic()
+	cycle, acyclic := dependencies.IsAcyclic()
 	if acyclic {
 		return nil
 	}
@@ -900,7 +901,7 @@ func validateNoCircularDependencies(opts validateDependenciesOpts) error {
 }
 
 func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
-	dependencyGraph := graph.NewGraph()
+	dependencyGraph := graph.New()
 	// Add any sidecar dependencies.
 	for name, sidecar := range opts.sidecarConfig {
 		for dep := range sidecar.DependsOn {

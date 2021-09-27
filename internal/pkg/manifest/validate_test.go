@@ -480,7 +480,7 @@ func TestDependsOn_Validate(t *testing.T) {
 			in: DependsOn{
 				"foo": "bar",
 			},
-			wanted: errors.New("container dependency status must be one of < START | COMPLETE | SUCCESS | HEALTHY >"),
+			wanted: errors.New("container dependency status must be one of START, COMPLETE, SUCCESS or HEALTHY"),
 		},
 	}
 	for name, tc := range testCases {
@@ -1215,7 +1215,7 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestValidateDependencies(t *testing.T) {
+func TestValidateContainerDeps(t *testing.T) {
 	testCases := map[string]struct {
 		in     validateDependenciesOpts
 		wanted error
@@ -1229,7 +1229,7 @@ func TestValidateDependencies(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf("validate mockMainContainer container dependencies status: essential container mockMainContainer can only have status < START | HEALTHY >"),
+			wanted: fmt.Errorf("validate mockMainContainer container dependencies status: essential container mockMainContainer can only have status START or HEALTHY"),
 		},
 		"should return an error if sidecar container dependencies status is invalid": {
 			in: validateDependenciesOpts{
@@ -1242,7 +1242,7 @@ func TestValidateDependencies(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf("validate foo container dependencies status: essential container mockMainContainer can only have status < START | HEALTHY >"),
+			wanted: fmt.Errorf("validate foo container dependencies status: essential container mockMainContainer can only have status START or HEALTHY"),
 		},
 		"should return an error if container depends on itself": {
 			in: validateDependenciesOpts{
@@ -1286,7 +1286,7 @@ func TestValidateDependencies(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateDependencies(tc.in)
+			err := validateContainerDeps(tc.in)
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())

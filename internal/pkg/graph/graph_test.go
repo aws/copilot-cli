@@ -12,7 +12,7 @@ import (
 func TestGraph_Add(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// GIVEN
-		graph := NewGraph()
+		graph := New()
 
 		// WHEN
 		graph.Add("A", "B")
@@ -74,7 +74,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			gotAcyclic, gotCycle := tc.graph.IsAcyclic()
+			gotCycle, gotAcyclic := tc.graph.IsAcyclic()
 
 			// THEN
 			require.Equal(t, tc.isAcyclic, gotAcyclic)

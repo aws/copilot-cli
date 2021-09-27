@@ -1,9 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package graph provides functionality for graphes.
+// Package graph provides functionality for directed graphs.
 package graph
 
+// nodeColor denotes the color of a node when running DFS in a graph.
 type nodeColor int
 
 const (
@@ -17,8 +18,8 @@ type Graph struct {
 	Nodes map[string][]string
 }
 
-// NewGraph initiates a new Graph.
-func NewGraph() *Graph {
+// New initiates a new Graph.
+func New() *Graph {
 	return &Graph{
 		Nodes: make(map[string][]string),
 	}
@@ -51,7 +52,7 @@ type findCycleTempVars struct {
 }
 
 // IsAcyclic checks if the graph is acyclic. If not, return the first detected cycle.
-func (g *Graph) IsAcyclic() (bool, []string) {
+func (g *Graph) IsAcyclic() ([]string, bool) {
 	var cycle []string
 	color := make(map[string]nodeColor)
 	for node := range g.Nodes {
@@ -71,10 +72,10 @@ func (g *Graph) IsAcyclic() (bool, []string) {
 				cycle = append(cycle, n)
 			}
 			cycle = append(cycle, temp.cycleEnd)
-			return false, cycle
+			return cycle, false
 		}
 	}
-	return true, nil
+	return nil, true
 }
 
 func (g *Graph) hasCycles(temp *findCycleTempVars, currNode string) bool {
