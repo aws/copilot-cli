@@ -820,59 +820,41 @@ type validateDependenciesOpts struct {
 	imageConfig       Image
 }
 
+type containerDependency struct {
+	dependsOn   DependsOn
+	isEssential bool
+}
+
 func validateContainerDeps(opts validateDependenciesOpts) error {
-	if err := validateImageDependsOnEssentialStatus(opts); err != nil {
-		return err
+	containerDependencies := make(map[string]containerDependency)
+	containerDependencies[opts.mainContainerName] = containerDependency{
+		dependsOn:   opts.imageConfig.DependsOn,
+		isEssential: true,
 	}
-	if err := validateSidecarsDependsOnEssentialStatus(opts); err != nil {
+	for name, config := range opts.sidecarConfig {
+		containerDependencies[name] = containerDependency{
+			dependsOn:   config.DependsOn,
+			isEssential: config.Essential == nil || aws.BoolValue(config.Essential),
+		}
+	}
+	if err := validateDependsOnEssentialStatus(containerDependencies); err != nil {
 		return err
 	}
 	return validateNoCircularDependencies(opts)
 }
 
-func validateImageDependsOnEssentialStatus(opts validateDependenciesOpts) error {
-	if opts.imageConfig.DependsOn == nil {
-		return nil
-	}
-	for name, status := range opts.imageConfig.DependsOn {
-		if !isEssentialContainer(name, opts) {
-			continue
-		}
-		if err := isValidEssentialStatus(name, strings.ToUpper(status)); err != nil {
-			return fmt.Errorf("validate %s container dependencies status: %w", opts.mainContainerName, err)
-		}
-	}
-	return nil
-}
-
-func validateSidecarsDependsOnEssentialStatus(opts validateDependenciesOpts) error {
-	if opts.sidecarConfig == nil {
-		return nil
-	}
-	for s, config := range opts.sidecarConfig {
-		if config.DependsOn == nil {
-			return nil
-		}
-		for name, status := range config.DependsOn {
-			if !isEssentialContainer(name, opts) {
+func validateDependsOnEssentialStatus(deps map[string]containerDependency) error {
+	for name, containerDep := range deps {
+		for dep, status := range containerDep.dependsOn {
+			if !deps[dep].isEssential {
 				continue
 			}
-			if err := isValidEssentialStatus(name, strings.ToUpper(status)); err != nil {
-				return fmt.Errorf("validate %s container dependencies status: %w", s, err)
+			if err := isValidEssentialStatus(dep, strings.ToUpper(status)); err != nil {
+				return fmt.Errorf("validate %s container dependencies status: %w", name, err)
 			}
 		}
 	}
 	return nil
-}
-
-func isEssentialContainer(name string, opts validateDependenciesOpts) bool {
-	if name == opts.mainContainerName {
-		return true
-	}
-	if opts.sidecarConfig == nil || opts.sidecarConfig[name] == nil {
-		return false
-	}
-	return opts.sidecarConfig[name].Essential == nil || aws.BoolValue(opts.sidecarConfig[name].Essential)
 }
 
 func isValidEssentialStatus(name, status string) error {
