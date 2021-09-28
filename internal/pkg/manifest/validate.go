@@ -855,11 +855,19 @@ func (t *TopicSubscription) Validate() error {
 }
 
 // Validate returns nil if SQSQueue is configured correctly.
-func (s *SQSQueue) Validate() error {
-	if s.IsEmpty() {
+func (q *SQSQueueOrBool) Validate() error {
+	if q.IsEmpty() {
 		return nil
 	}
-	if err := s.DeadLetter.Validate(); err != nil {
+	return q.Advanced.Validate()
+}
+
+// Validate returns nil if SQSQueue is configured correctly.
+func (q *SQSQueue) Validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	if err := q.DeadLetter.Validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
 	}
 	return nil

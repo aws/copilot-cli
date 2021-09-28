@@ -14,6 +14,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func newMockSQSQueueOrBool() SQSQueueOrBool {
+	return SQSQueueOrBool{
+		Advanced: newMockSQSQueue(),
+	}
+}
+
+func newMockSQSQueue() SQSQueue {
+	duration111Seconds := 111 * time.Second
+	return SQSQueue{
+		Retention:  &duration111Seconds,
+		Delay:      &duration111Seconds,
+		Timeout:    &duration111Seconds,
+		DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+	}
+}
+
 func TestNewWorkerSvc(t *testing.T) {
 	testCases := map[string]struct {
 		inProps WorkerServiceProps
@@ -425,7 +441,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			},
 		},
 	}
-	duration111Seconds := 111 * time.Second
 	mockWorkerServiceWithSubscribeNilOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
@@ -437,12 +452,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					{
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
-						Queue: SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
@@ -468,12 +478,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						{
 							Name:    aws.String("name"),
 							Service: aws.String("svc"),
-							Queue: SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-							},
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -491,12 +496,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					{
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
-						Queue: SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
@@ -524,12 +524,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						{
 							Name:    aws.String("name"),
 							Service: aws.String("svc"),
-							Queue: SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-							},
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -547,12 +542,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					{
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
-						Queue: SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
@@ -582,12 +572,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						{
 							Name:    aws.String("name"),
 							Service: aws.String("svc"),
-							Queue: SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-							},
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -607,12 +592,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: SQSQueue{
-						Retention:  &duration111Seconds,
-						Delay:      &duration111Seconds,
-						Timeout:    &duration111Seconds,
-						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-					},
+					Queue: newMockSQSQueue(),
 				},
 			},
 		},
@@ -624,12 +604,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
-				Queue: SQSQueue{
-					Retention:  &duration111Seconds,
-					Delay:      &duration111Seconds,
-					Timeout:    &duration111Seconds,
-					DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-				},
+				Queue: newMockSQSQueue(),
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
@@ -653,12 +628,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: SQSQueue{
-						Retention:  &duration111Seconds,
-						Delay:      &duration111Seconds,
-						Timeout:    &duration111Seconds,
-						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-					},
+					Queue: newMockSQSQueue(),
 				},
 			},
 		},
@@ -840,12 +810,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							{
 								Name:    aws.String("name"),
 								Service: aws.String("svc"),
-								Queue: SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -868,12 +833,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							{
 								Name:    aws.String("name"),
 								Service: aws.String("svc"),
-								Queue: SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -899,12 +859,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							{
 								Name:    aws.String("name"),
 								Service: aws.String("svc"),
-								Queue: SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -927,12 +882,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							{
 								Name:    aws.String("name"),
 								Service: aws.String("svc"),
-								Queue: SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -955,12 +905,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							{
 								Name:    aws.String("name"),
 								Service: aws.String("svc"),
-								Queue: SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -986,12 +931,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							{
 								Name:    aws.String("name"),
 								Service: aws.String("svc"),
-								Queue: SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -1010,12 +950,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
-						Queue: SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1032,12 +967,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
-						Queue: SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1057,12 +987,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Image: Image{},
 					},
 					Subscribe: SubscribeConfig{
-						Queue: SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1267,6 +1192,64 @@ func TestDeadLetterQueue_IsEmpty(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestSQSQueueOrBool_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct SQSQueueOrBool
+		wantedError  error
+	}{
+		"with boolean": {
+			inContent: []byte(`queue: true`),
+
+			wantedStruct: SQSQueueOrBool{
+				Enabled: aws.Bool(true),
+			},
+		},
+		"with advanced case": {
+			inContent: []byte(`queue:
+  retention: 5s
+  delay: 1m
+  timeout: 5m
+  dead_letter:
+    tries: 10`),
+
+			wantedStruct: SQSQueueOrBool{
+				Advanced: SQSQueue{
+					Retention: durationp(5 * time.Second),
+					Delay:     durationp(1 * time.Minute),
+					Timeout:   durationp(5 * time.Minute),
+					DeadLetter: DeadLetterQueue{
+						Tries: uint16P(10),
+					},
+				},
+			},
+		},
+		"invalid type": {
+			inContent: []byte(`queue: 10`),
+
+			wantedError: errUnmarshalQueueOpts,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var sc TopicSubscription
+			err := yaml.Unmarshal(tc.inContent, &sc)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.Enabled, sc.Queue.Enabled)
+				require.Equal(t, tc.wantedStruct.Advanced.DeadLetter, sc.Queue.Advanced.DeadLetter)
+				require.Equal(t, tc.wantedStruct.Advanced.Delay, sc.Queue.Advanced.Delay)
+				require.Equal(t, tc.wantedStruct.Advanced.Retention, sc.Queue.Advanced.Retention)
+				require.Equal(t, tc.wantedStruct.Advanced.Timeout, sc.Queue.Advanced.Timeout)
+			}
 		})
 	}
 }

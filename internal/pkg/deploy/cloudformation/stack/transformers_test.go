@@ -1697,6 +1697,9 @@ func Test_convertSubscribe(t *testing.T) {
 					{
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
+						Queue: manifest.SQSQueueOrBool{
+							Enabled: aws.Bool(true),
+						},
 					},
 				},
 				Queue: manifest.SQSQueue{},
@@ -1706,6 +1709,7 @@ func Test_convertSubscribe(t *testing.T) {
 					{
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
+						Queue:   &template.SQSQueue{},
 					},
 				},
 				Queue: nil,

@@ -803,8 +803,10 @@ func Test_validateTopicsExist(t *testing.T) {
 		{
 			Name:    aws.String("orders"),
 			Service: aws.String("database"),
-			Queue: manifest.SQSQueue{
-				Retention: &duration10Hours,
+			Queue: manifest.SQSQueueOrBool{
+				Advanced: manifest.SQSQueue{
+					Retention: &duration10Hours,
+				},
 			},
 		},
 	}

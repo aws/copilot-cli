@@ -343,8 +343,10 @@ subscribe:
 								{
 									Name:    aws.String("publisher2"),
 									Service: aws.String("testpubjob"),
-									Queue: SQSQueue{
-										Timeout: &duration15Seconds,
+									Queue: SQSQueueOrBool{
+										Advanced: SQSQueue{
+											Timeout: &duration15Seconds,
+										},
 									},
 								},
 							},

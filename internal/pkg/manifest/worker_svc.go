@@ -4,15 +4,21 @@
 package manifest
 
 import (
+	"errors"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
+)
+
+var (
+	errUnmarshalQueueOpts = errors.New(`cannot unmarshal "queue" field into bool or map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -51,9 +57,44 @@ func (s *SubscribeConfig) IsEmpty() bool {
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
-	Name    *string  `yaml:"name"`
-	Service *string  `yaml:"service"`
-	Queue   SQSQueue `yaml:"queue"`
+	Name    *string        `yaml:"name"`
+	Service *string        `yaml:"service"`
+	Queue   SQSQueueOrBool `yaml:"queue"`
+}
+
+// SQSQueueOrBool contains custom unmarshaling logic for the `queue` field in the manifest.
+type SQSQueueOrBool struct {
+	Advanced SQSQueue
+	Enabled  *bool
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (q *SQSQueueOrBool) IsEmpty() bool {
+	return q.Advanced.IsEmpty() && q.Enabled == nil
+}
+
+// UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueue to be specified as a
+// string or a struct alternately.
+func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&q.Advanced); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !q.Advanced.IsEmpty() {
+		// Unmarshaled successfully to q.Advanced, unset q.Enabled, and return.
+		q.Enabled = nil
+		return nil
+	}
+
+	if err := value.Decode(&q.Enabled); err != nil {
+		return errUnmarshalQueueOpts
+	}
+	return nil
 }
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
