@@ -97,7 +97,7 @@ Required. The name of the SNS topic to subscribe to.
 Required. The service this SNS topic is exposed by. Together with the topic name, this uniquely identifies an SNS topic in the copilot environment.
 
 <span class="parent-field">topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
-Optional. Define SQS queue for the topic. If specified as a boolean, only default queue configuration will be used. Specify this field as a map for more customization of this topic-specific queue.
+Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
 {% include 'image-config.en.md' %}
 

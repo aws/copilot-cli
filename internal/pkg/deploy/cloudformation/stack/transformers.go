@@ -725,12 +725,16 @@ func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app,
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, aws.StringValue(t.Name), err)
 	}
+	if aws.BoolValue(t.Queue.Enabled) {
+		return &template.TopicSubscription{
+			Name:    t.Name,
+			Service: t.Service,
+			Queue:   &template.SQSQueue{},
+		}, nil
+	}
 	queue, err := convertQueue(t.Queue.Advanced)
 	if err != nil {
 		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, aws.StringValue(t.Name), err)
-	}
-	if aws.BoolValue(t.Queue.Enabled) {
-		queue = &template.SQSQueue{}
 	}
 	return &template.TopicSubscription{
 		Name:    t.Name,
