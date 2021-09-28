@@ -455,7 +455,9 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
-
+	if err := mft.Validate(); err != nil {
+		return nil, fmt.Errorf("validate manifest for environment %s: %s", o.envName, err)
+	}
 	o.appliedManifest = envMft // cache the results.
 	return envMft, nil
 }

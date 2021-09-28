@@ -58,10 +58,16 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	for name, tc := range testCases {
 		mft, err := manifest.UnmarshalWorkload(manifestBytes)
 		require.NoError(t, err)
+
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
+
+		err = mft.Validate()
+		require.NoError(t, err)
+
 		v, ok := envMft.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
+
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
 			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,

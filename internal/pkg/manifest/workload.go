@@ -54,6 +54,7 @@ var (
 // WorkloadManifest represents a workload manifest.
 type WorkloadManifest interface {
 	ApplyEnv(envName string) (WorkloadManifest, error)
+	Validate() error
 }
 
 // WorkloadProps contains properties for creating a new workload manifest.

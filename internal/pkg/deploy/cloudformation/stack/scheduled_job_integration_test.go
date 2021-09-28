@@ -32,10 +32,16 @@ func TestScheduledJob_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
+
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
+
 	envMft, err := mft.ApplyEnv(envName)
 	require.NoError(t, err)
+
+	err = mft.Validate()
+	require.NoError(t, err)
+
 	v, ok := envMft.(*manifest.ScheduledJob)
 	require.True(t, ok)
 

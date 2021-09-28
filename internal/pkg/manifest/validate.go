@@ -39,8 +39,8 @@ var (
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
-// Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
-func (l *LoadBalancedWebServiceConfig) Validate() error {
+// Validate returns nil if LoadBalancedWebService is configured correctly.
+func (l *LoadBalancedWebService) Validate() error {
 	var err error
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -73,18 +73,24 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	name := aws.StringValue(l.Name)
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
 		imageConfig:       l.ImageConfig.Image,
-		mainContainerName: l.name,
+		mainContainerName: name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
 
-// Validate returns nil if BackendServiceConfig is configured correctly.
-func (b *BackendServiceConfig) Validate() error {
+// Validate returns nil if BackendService is configured correctly.
+func (b *BackendService) Validate() error {
 	var err error
 	if err = b.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -114,10 +120,16 @@ func (b *BackendServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	name := aws.StringValue(b.Name)
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
 		imageConfig:       b.ImageConfig.Image,
-		mainContainerName: b.name,
+		mainContainerName: name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -125,7 +137,7 @@ func (b *BackendServiceConfig) Validate() error {
 }
 
 // Validate returns nil if RequestDrivenWebService is configured correctly.
-func (r *RequestDrivenWebServiceConfig) Validate() error {
+func (r *RequestDrivenWebService) Validate() error {
 	var err error
 	if err = r.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -140,7 +152,7 @@ func (r *RequestDrivenWebServiceConfig) Validate() error {
 }
 
 // Validate returns nil if WorkerServiceConfig is configured correctly.
-func (w *WorkerServiceConfig) Validate() error {
+func (w *WorkerService) Validate() error {
 	var err error
 	if err = w.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -170,18 +182,24 @@ func (w *WorkerServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	name := aws.StringValue(w.Name)
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     w.Sidecars,
 		imageConfig:       w.ImageConfig.Image,
-		mainContainerName: w.name,
+		mainContainerName: name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
 
-// Validate returns nil if ScheduledJobConfig is configured correctly.
-func (s *ScheduledJobConfig) Validate() error {
+// Validate returns nil if ScheduledJob is configured correctly.
+func (s *ScheduledJob) Validate() error {
 	var err error
 	if err = s.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -217,10 +235,16 @@ func (s *ScheduledJobConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	name := aws.StringValue(s.Name)
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     s.Sidecars,
 		imageConfig:       s.ImageConfig.Image,
-		mainContainerName: s.name,
+		mainContainerName: name,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
