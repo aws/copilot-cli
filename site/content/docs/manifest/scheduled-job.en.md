@@ -8,7 +8,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
     type: Scheduled Job
 
     on:
-      schedule: @daily
+      schedule: "@daily"
     cpu: 256
     memory: 512
     retries: 3
@@ -22,11 +22,11 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
       LOG_LEVEL: info
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
-      
+
     # You can override any of the values defined above by environment.
     environments:
       prod:
-        cpu: 2048               # Larger CPU value for prod environment 
+        cpu: 2048               # Larger CPU value for prod environment
         memory: 4096
     ```
 

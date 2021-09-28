@@ -8,7 +8,7 @@ name: report-generator
 type: Scheduled Job
 
 on:
-  schedule: @daily
+  schedule: "@daily"
 cpu: 256
 memory: 512
 retries: 3
@@ -22,11 +22,11 @@ variables:
   LOG_LEVEL: info
 secrets:
   GITHUB_TOKEN: GITHUB_TOKEN
-      
+
 # You can override any of the values defined above by environment.
 environments:
   prod:
-    cpu: 2048               # Larger CPU value for prod environment 
+    cpu: 2048               # Larger CPU value for prod environment
     memory: 4096
 ```
 
@@ -72,7 +72,7 @@ image:
   build: path/to/dockerfile
 ```
 このコマンドを実行した場合と同じ結果になります。  
-`$ docker build --file path/to/dockerfile path/to` 
+`$ docker build --file path/to/dockerfile path/to`
 
 Map 型も指定できます:
 
@@ -117,7 +117,7 @@ image:
     nginx: start
     startup: success
 ```
-上記の例では、タスクのメインコンテナは `nginx` サイドカーが起動し、`startup` コンテナが正常に完了してから起動します。 
+上記の例では、タスクのメインコンテナは `nginx` サイドカーが起動し、`startup` コンテナが正常に完了してから起動します。
 
 <div class="separator"></div>
 
