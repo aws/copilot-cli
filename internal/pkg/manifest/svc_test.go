@@ -337,18 +337,20 @@ subscribe:
 						Subscribe: SubscribeConfig{
 							Topics: []TopicSubscription{
 								{
-									Name:    "publisher1",
-									Service: "testpubsvc",
+									Name:    aws.String("publisher1"),
+									Service: aws.String("testpubsvc"),
 								},
 								{
-									Name:    "publisher2",
-									Service: "testpubjob",
-									Queue: &SQSQueue{
-										Timeout: &duration15Seconds,
+									Name:    aws.String("publisher2"),
+									Service: aws.String("testpubjob"),
+									Queue: SQSQueueOrBool{
+										Advanced: SQSQueue{
+											Timeout: &duration15Seconds,
+										},
 									},
 								},
 							},
-							Queue: &SQSQueue{
+							Queue: SQSQueue{
 								Delay: &duration15Seconds,
 								DeadLetter: DeadLetterQueue{
 									Tries: aws.Uint16(5),

@@ -17,8 +17,8 @@ import (
 	"github.com/dustin/go-humanize/english"
 )
 
-// Container dependency status constants.
 const (
+	// Container dependency status constants.
 	dependsOnStart    = "START"
 	dependsOnComplete = "COMPLETE"
 	dependsOnSuccess  = "SUCCESS"
@@ -26,10 +26,17 @@ const (
 )
 
 var (
-	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+
+	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -608,6 +615,9 @@ func (*ExecuteCommandConfig) Validate() error {
 
 // Validate returns nil if Storage is configured correctly.
 func (s *Storage) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
 	for k, v := range s.Volumes {
 		if err := v.Validate(); err != nil {
 			return fmt.Errorf(`validate "volumes[%s]": %w`, k, err)
@@ -625,7 +635,19 @@ func (v *Volume) Validate() error {
 }
 
 // Validate returns nil if MountPointOpts is configured correctly.
-func (*MountPointOpts) Validate() error {
+func (m *MountPointOpts) Validate() error {
+	if m == nil {
+		return nil
+	}
+	path := aws.StringValue(m.ContainerPath)
+	if path == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
+	}
+	if err := validateVolumePath(path); err != nil {
+		return fmt.Errorf(`validate "path": %w`, err)
+	}
 	return nil
 }
 
@@ -660,6 +682,9 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			conditionalFields: []string{"gid"},
 		}
 	}
+	if e.UID != nil && *e.UID == 0 {
+		return fmt.Errorf(`"uid" must not be 0`)
+	}
 	if err := e.AuthConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "auth": %w`, err)
 	}
@@ -669,6 +694,11 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			return nil
 		}
 		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
+	}
+	if e.RootDirectory != nil {
+		if err := validateVolumePath(aws.StringValue(e.RootDirectory)); err != nil {
+			return fmt.Errorf(`validate "root_dir": %w`, err)
+		}
 	}
 	return nil
 }
@@ -693,7 +723,7 @@ func (l *Logging) Validate() error {
 func (s *SidecarConfig) Validate() error {
 	for ind, mp := range s.MountPoints {
 		if err := mp.Validate(); err != nil {
-			return fmt.Errorf(`validate "mount_points[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "mount_points[%d]": %w`, ind, err)
 		}
 	}
 	if err := s.HealthCheck.Validate(); err != nil {
@@ -703,6 +733,19 @@ func (s *SidecarConfig) Validate() error {
 		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
 	return s.ImageOverride.Validate()
+}
+
+// Validate returns nil if SidecarMountPoint is configured correctly.
+func (s *SidecarMountPoint) Validate() error {
+	if s == nil {
+		return nil
+	}
+	if aws.StringValue(s.SourceVolume) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "source_volume",
+		}
+	}
+	return s.MountPointOpts.Validate()
 }
 
 // Validate returns nil if NetworkConfig is configured correctly.
@@ -764,29 +807,47 @@ func (*JobFailureHandlerConfig) Validate() error {
 func (p *PublishConfig) Validate() error {
 	for ind, topic := range p.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
 	}
 	return nil
 }
 
 // Validate returns nil if Topic is configured correctly.
-func (*Topic) Validate() error {
-	return nil
+func (t *Topic) Validate() error {
+	return validatePubSubName(aws.StringValue(t.Name))
 }
 
 // Validate returns nil if SubscribeConfig is configured correctly.
-func (p *SubscribeConfig) Validate() error {
-	for ind, topic := range p.Topics {
+func (s *SubscribeConfig) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
+	for ind, topic := range s.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
+	}
+	if err := s.Queue.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue": %w`, err)
 	}
 	return nil
 }
 
 // Validate returns nil if TopicSubscription is configured correctly.
 func (t *TopicSubscription) Validate() error {
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return err
+	}
+	svcName := aws.StringValue(t.Service)
+	if svcName == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "service",
+		}
+	}
+	if !isValidSubSvcName(svcName) {
+		return fmt.Errorf("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	}
 	if err := t.Queue.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue": %w`, err)
 	}
@@ -794,8 +855,19 @@ func (t *TopicSubscription) Validate() error {
 }
 
 // Validate returns nil if SQSQueue is configured correctly.
-func (s *SQSQueue) Validate() error {
-	if err := s.DeadLetter.Validate(); err != nil {
+func (q *SQSQueueOrBool) Validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	return q.Advanced.Validate()
+}
+
+// Validate returns nil if SQSQueue is configured correctly.
+func (q *SQSQueue) Validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	if err := q.DeadLetter.Validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
 	}
 	return nil
@@ -810,7 +882,16 @@ func (d *DeadLetterQueue) Validate() error {
 }
 
 // Validate returns nil if OverrideRule is configured correctly.
-func (*OverrideRule) Validate() error {
+func (r *OverrideRule) Validate() error {
+	if r == nil {
+		return nil
+	}
+	for _, s := range invalidTaskDefOverridePathRegexp {
+		re := regexp.MustCompile(fmt.Sprintf(`^%s$`, s))
+		if re.MatchString(r.Path) {
+			return fmt.Errorf(`"%s" cannot be overridden with a custom value`, s)
+		}
+	}
 	return nil
 }
 
@@ -908,4 +989,45 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 		})
 	}
 	return dependencyGraph, nil
+}
+
+// Validate that paths contain only an approved set of characters to guard against command injection.
+// We can accept 0-9A-Za-z-_.
+func validateVolumePath(input string) error {
+	if len(input) == 0 {
+		return nil
+	}
+	m := volumesPathRegexp.FindStringSubmatch(input)
+	if len(m) == 0 {
+		return fmt.Errorf("path can only contain the characters a-zA-Z0-9.-_/")
+	}
+	return nil
+}
+
+func validatePubSubName(name string) error {
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(name) {
+		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hypthens`)
+	}
+	return nil
+}
+
+func isValidSubSvcName(name string) bool {
+	if !awsNameRegexp.MatchString(name) {
+		return false
+	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(name)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(name)
+	return len(trailingMatch) == 0
 }

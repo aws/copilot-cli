@@ -444,11 +444,11 @@ func isCorrectSvcNameFormat(s string) bool {
 }
 
 func validateTopicSubscription(ts manifest.TopicSubscription) error {
-	if err := validatePubSubName(ts.Name); err != nil {
+	if err := validatePubSubName(aws.StringValue(ts.Name)); err != nil {
 		return err
 	}
 
-	if err := validateSvcName(ts.Service); err != nil {
+	if err := validateSvcName(aws.StringValue(ts.Service)); err != nil {
 		return err
 	}
 

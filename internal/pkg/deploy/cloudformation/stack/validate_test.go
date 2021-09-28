@@ -533,20 +533,20 @@ func TestValidateTopicSubscription(t *testing.T) {
 	}{
 		"good case": {
 			inTS: manifest.TopicSubscription{
-				Name:    "name2",
-				Service: "svc",
+				Name:    aws.String("name2"),
+				Service: aws.String("svc"),
 			},
 			wantErr: nil,
 		},
 		"empty name": {
 			inTS: manifest.TopicSubscription{
-				Service: "svc",
+				Service: aws.String("svc"),
 			},
 			wantErr: errMissingPublishTopicField,
 		},
 		"empty svc name": {
 			inTS: manifest.TopicSubscription{
-				Name: "theName",
+				Name: aws.String("theName"),
 			},
 			wantErr: errInvalidSvcName,
 		},

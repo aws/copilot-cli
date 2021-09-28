@@ -75,6 +75,28 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
+		"error if fail to validate publish config": {
+			lbConfig: LoadBalancedWebServiceConfig{
+				ImageConfig: testImageConfig,
+				PublishConfig: PublishConfig{
+					Topics: []Topic{
+						{},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
+		},
+		"error if fail to validate taskdef override": {
+			lbConfig: LoadBalancedWebServiceConfig{
+				ImageConfig: testImageConfig,
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
+		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebServiceConfig{
 				ImageConfig: testImageConfig,
@@ -161,6 +183,28 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate publish config": {
+			config: BackendServiceConfig{
+				ImageConfig: testImageConfig,
+				PublishConfig: PublishConfig{
+					Topics: []Topic{
+						{},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
+		},
+		"error if fail to validate taskdef override": {
+			config: BackendServiceConfig{
+				ImageConfig: testImageConfig,
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
 		"error if fail to validate dependencies": {
 			config: BackendServiceConfig{
@@ -273,6 +317,30 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
+		"error if fail to validate subscribe": {
+			config: WorkerServiceConfig{
+				ImageConfig: testImageConfig,
+				Subscribe: SubscribeConfig{
+					Topics: []TopicSubscription{
+						{
+							Name: aws.String("mockTopic"),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "subscribe": `,
+		},
+		"error if fail to validate taskdef override": {
+			config: WorkerServiceConfig{
+				ImageConfig: testImageConfig,
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
+		},
 		"error if fail to validate dependencies": {
 			config: WorkerServiceConfig{
 				ImageConfig: testImageConfig,
@@ -359,6 +427,34 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 				On:          JobTriggerConfig{},
 			},
 			wantedErrorMsgPrefix: `validate "on": `,
+		},
+		"error if fail to validate publish config": {
+			config: ScheduledJobConfig{
+				ImageConfig: testImageConfig,
+				On: JobTriggerConfig{
+					Schedule: aws.String("mockSchedule"),
+				},
+				PublishConfig: PublishConfig{
+					Topics: []Topic{
+						{},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
+		},
+		"error if fail to validate taskdef override": {
+			config: ScheduledJobConfig{
+				ImageConfig: testImageConfig,
+				On: JobTriggerConfig{
+					Schedule: aws.String("mockSchedule"),
+				},
+				TaskDefOverrides: []OverrideRule{
+					{
+						Path: "Family",
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
 		"error if fail to validate dependencies": {
 			config: ScheduledJobConfig{
@@ -978,17 +1074,9 @@ func TestStorage_Validate(t *testing.T) {
 							Enabled: aws.Bool(true),
 						},
 					},
-					"bar": {
-						EFS: EFSConfigOrBool{
-							Advanced: EFSVolumeConfiguration{
-								UID:           aws.Uint32(123),
-								RootDirectory: aws.String("mockDir"),
-							},
-						},
-					},
 				},
 			},
-			wantedErrorPrefix: `validate "volumes[bar]": `,
+			wantedErrorPrefix: `validate "volumes[foo]": `,
 		},
 	}
 	for name, tc := range testCases {
@@ -1060,6 +1148,13 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"uid" must be specified if "gid" is specified`),
 		},
+		"error if uid is 0": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				UID: aws.Uint32(0),
+				GID: aws.Uint32(0),
+			},
+			wantedError: fmt.Errorf(`"uid" must not be 0`),
+		},
 		"error if AuthorizationConfig is not configured correctly": {
 			EFSVolumeConfiguration: EFSVolumeConfiguration{
 				AuthConfig: AuthorizationConfig{
@@ -1068,6 +1163,12 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 				RootDirectory: aws.String("mockDir"),
 			},
 			wantedError: fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`),
+		},
+		"error if root_dir is invalid": {
+			EFSVolumeConfiguration: EFSVolumeConfiguration{
+				RootDirectory: aws.String("!!!!"),
+			},
+			wantedError: fmt.Errorf(`validate "root_dir": path can only contain the characters a-zA-Z0-9.-_/`),
 		},
 	}
 	for name, tc := range testCases {
@@ -1089,6 +1190,14 @@ func TestSidecarConfig_Validate(t *testing.T) {
 
 		wantedErrorPrefix string
 	}{
+		"error if fail to validate mount_points": {
+			config: SidecarConfig{
+				MountPoints: []SidecarMountPoint{
+					{},
+				},
+			},
+			wantedErrorPrefix: `validate "mount_points[0]": `,
+		},
 		"error if fail to validate depends_on": {
 			config: SidecarConfig{
 				DependsOn: DependsOn{
@@ -1106,6 +1215,58 @@ func TestSidecarConfig_Validate(t *testing.T) {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
 			} else {
 				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestSidecarMountPoint_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     SidecarMountPoint
+		wanted error
+	}{
+		"should return an error if source_volume is not set": {
+			in:     SidecarMountPoint{},
+			wanted: errors.New(`"source_volume" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMountPointOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     MountPointOpts
+		wanted error
+	}{
+		"should return an error if path is not set": {
+			in:     MountPointOpts{},
+			wanted: errors.New(`"path" must be specified`),
+		},
+		"should return an error if path is invalid": {
+			in: MountPointOpts{
+				ContainerPath: aws.String("!!!!!!"),
+			},
+			wanted: errors.New(`validate "path": path can only contain the characters a-zA-Z0-9.-_/`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -1200,6 +1361,154 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 		"should return an error if schedule is empty": {
 			in:     &JobTriggerConfig{},
 			wanted: errors.New(`"schedule" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPublishConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config PublishConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate topics": {
+			config: PublishConfig{
+				Topics: []Topic{
+					{},
+				},
+			},
+			wantedErrorPrefix: `validate "topics[0]": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestTopic_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     Topic
+		wanted error
+	}{
+		"should return an error if name is empty": {
+			in:     Topic{},
+			wanted: errors.New(`"name" must be specified`),
+		},
+		"should return an error if name is not valid": {
+			in: Topic{
+				Name: aws.String("!@#"),
+			},
+			wanted: errors.New(`"name" can only contain letters, numbers, underscores, and hypthens`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSubscribeConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config SubscribeConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate topics": {
+			config: SubscribeConfig{
+				Topics: []TopicSubscription{
+					{
+						Name: aws.String("mockTopic"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "topics[0]": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestTopicSubscription_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     TopicSubscription
+		wanted error
+	}{
+		"should return an error if topic name is empty": {
+			in:     TopicSubscription{},
+			wanted: errors.New(`"name" must be specified`),
+		},
+		"should return an error if service is empty": {
+			in: TopicSubscription{
+				Name: aws.String("mockTopic"),
+			},
+			wanted: errors.New(`"service" must be specified`),
+		},
+		"should return an error if service is in invalid format": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic"),
+				Service: aws.String("!!!!!"),
+			},
+			wanted: errors.New("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestOverrideRule_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     OverrideRule
+		wanted error
+	}{
+		"should return an error if override rule is invalid": {
+			in: OverrideRule{
+				Path: "ContainerDefinitions[1].Name",
+			},
+			wanted: errors.New(`"ContainerDefinitions\[\d+\].Name" cannot be overridden with a custom value`),
 		},
 	}
 	for name, tc := range testCases {
