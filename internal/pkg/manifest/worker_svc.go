@@ -41,14 +41,19 @@ type WorkerServiceConfig struct {
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
 	Topics []TopicSubscription `yaml:"topics"`
-	Queue  *SQSQueue           `yaml:"queue"`
+	Queue  SQSQueue            `yaml:"queue"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (s *SubscribeConfig) IsEmpty() bool {
+	return s.Topics == nil && s.Queue.IsEmpty()
 }
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
-	Name    string    `yaml:"name"`
-	Service string    `yaml:"service"`
-	Queue   *SQSQueue `yaml:"queue"`
+	Name    *string  `yaml:"name"`
+	Service *string  `yaml:"service"`
+	Queue   SQSQueue `yaml:"queue"`
 }
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
@@ -57,6 +62,12 @@ type SQSQueue struct {
 	Delay      *time.Duration  `yaml:"delay"`
 	Timeout    *time.Duration  `yaml:"timeout"`
 	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (q *SQSQueue) IsEmpty() bool {
+	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
+		q.DeadLetter.IsEmpty()
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.

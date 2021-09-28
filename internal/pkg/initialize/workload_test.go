@@ -722,8 +722,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 			inTopics: []manifest.TopicSubscription{
 				{
-					Name:    "theTopic",
-					Service: "publisher",
+					Name:    aws.String("theTopic"),
+					Service: aws.String("publisher"),
 				},
 			},
 

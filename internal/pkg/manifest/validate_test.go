@@ -6,7 +6,6 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -75,6 +74,17 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate publish config": {
+			lbConfig: LoadBalancedWebServiceConfig{
+				ImageConfig: testImageConfig,
+				PublishConfig: PublishConfig{
+					Topics: []Topic{
+						{},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
 		},
 		"error if fail to validate taskdef override": {
 			lbConfig: LoadBalancedWebServiceConfig{
@@ -173,6 +183,17 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate publish config": {
+			config: BackendServiceConfig{
+				ImageConfig: testImageConfig,
+				PublishConfig: PublishConfig{
+					Topics: []Topic{
+						{},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
 		},
 		"error if fail to validate taskdef override": {
 			config: BackendServiceConfig{
@@ -296,6 +317,19 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
+		"error if fail to validate subscribe": {
+			config: WorkerServiceConfig{
+				ImageConfig: testImageConfig,
+				Subscribe: SubscribeConfig{
+					Topics: []TopicSubscription{
+						{
+							Name: aws.String("mockTopic"),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "subscribe": `,
+		},
 		"error if fail to validate taskdef override": {
 			config: WorkerServiceConfig{
 				ImageConfig: testImageConfig,
@@ -393,6 +427,20 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 				On:          JobTriggerConfig{},
 			},
 			wantedErrorMsgPrefix: `validate "on": `,
+		},
+		"error if fail to validate publish config": {
+			config: ScheduledJobConfig{
+				ImageConfig: testImageConfig,
+				On: JobTriggerConfig{
+					Schedule: aws.String("mockSchedule"),
+				},
+				PublishConfig: PublishConfig{
+					Topics: []Topic{
+						{},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
 		},
 		"error if fail to validate taskdef override": {
 			config: ScheduledJobConfig{
@@ -1196,11 +1244,6 @@ func TestSidecarMountPoint_Validate(t *testing.T) {
 }
 
 func TestMountPointOpts_Validate(t *testing.T) {
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, maxDockerContainerPathLength+1)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
 	testCases := map[string]struct {
 		in     MountPointOpts
 		wanted error
@@ -1208,12 +1251,6 @@ func TestMountPointOpts_Validate(t *testing.T) {
 		"should return an error if path is not set": {
 			in:     MountPointOpts{},
 			wanted: errors.New(`"path" must be specified`),
-		},
-		"should return an error if path is too long": {
-			in: MountPointOpts{
-				ContainerPath: aws.String(string(b)),
-			},
-			wanted: errors.New(`validate "path": path must be less than 242 bytes in length`),
 		},
 		"should return an error if path is invalid": {
 			in: MountPointOpts{
@@ -1324,6 +1361,129 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 		"should return an error if schedule is empty": {
 			in:     &JobTriggerConfig{},
 			wanted: errors.New(`"schedule" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPublishConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config PublishConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate topics": {
+			config: PublishConfig{
+				Topics: []Topic{
+					{},
+				},
+			},
+			wantedErrorPrefix: `validate "topics[0]": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestTopic_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     Topic
+		wanted error
+	}{
+		"should return an error if name is empty": {
+			in:     Topic{},
+			wanted: errors.New(`"name" must be specified`),
+		},
+		"should return an error if name is not valid": {
+			in: Topic{
+				Name: aws.String("!@#"),
+			},
+			wanted: errors.New(`"name" can only contain letters, numbers, underscores, and hypthens`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSubscribeConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config SubscribeConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate topics": {
+			config: SubscribeConfig{
+				Topics: []TopicSubscription{
+					{
+						Name: aws.String("mockTopic"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "topics[0]": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestTopicSubscription_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     TopicSubscription
+		wanted error
+	}{
+		"should return an error if topic name is empty": {
+			in:     TopicSubscription{},
+			wanted: errors.New(`"name" must be specified`),
+		},
+		"should return an error if service is empty": {
+			in: TopicSubscription{
+				Name: aws.String("mockTopic"),
+			},
+			wanted: errors.New(`"service" must be specified`),
+		},
+		"should return an error if service is in invalid format": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic"),
+				Service: aws.String("!!!!!"),
+			},
+			wanted: errors.New("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen"),
 		},
 	}
 	for name, tc := range testCases {

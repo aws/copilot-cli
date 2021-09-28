@@ -156,12 +156,12 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 				},
 				Topics: []TopicSubscription{
 					{
-						Name:    "testTopic",
-						Service: "service4TestTopic",
+						Name:    aws.String("testTopic"),
+						Service: aws.String("service4TestTopic"),
 					},
 					{
-						Name:    "testTopic2",
-						Service: "service4TestTopic2",
+						Name:    aws.String("testTopic2"),
+						Service: aws.String("service4TestTopic2"),
 					},
 				},
 			},
@@ -276,8 +276,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "topicName",
-						Service: "bestService",
+						Name:    aws.String("topicName"),
+						Service: aws.String("bestService"),
 					},
 				},
 			},
@@ -316,8 +316,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "topicName2",
-							Service: "bestService2",
+							Name:    aws.String("topicName2"),
+							Service: aws.String("bestService2"),
 						},
 					},
 				},
@@ -435,9 +435,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue: SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -466,9 +466,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue: SQSQueue{
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
@@ -489,9 +489,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue: SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -522,9 +522,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue: SQSQueue{
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
@@ -545,9 +545,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue: SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -580,9 +580,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue: SQSQueue{
 								Retention:  &duration111Seconds,
 								Delay:      &duration111Seconds,
 								Timeout:    &duration111Seconds,
@@ -601,13 +601,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
-				Queue: nil,
+				Queue: SQSQueue{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: &SQSQueue{
+					Queue: SQSQueue{
 						Retention:  &duration111Seconds,
 						Delay:      &duration111Seconds,
 						Timeout:    &duration111Seconds,
@@ -624,7 +624,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
-				Queue: &SQSQueue{
+				Queue: SQSQueue{
 					Retention:  &duration111Seconds,
 					Delay:      &duration111Seconds,
 					Timeout:    &duration111Seconds,
@@ -635,7 +635,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: nil,
+					Queue: SQSQueue{},
 				},
 			},
 		},
@@ -647,13 +647,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
-				Queue: &SQSQueue{},
+				Queue: SQSQueue{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: &SQSQueue{
+					Queue: SQSQueue{
 						Retention:  &duration111Seconds,
 						Delay:      &duration111Seconds,
 						Timeout:    &duration111Seconds,
@@ -739,8 +739,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "topicName2",
-								Service: "bestService2",
+								Name:    aws.String("topicName2"),
+								Service: aws.String("bestService2"),
 							},
 						},
 					},
@@ -838,9 +838,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueue{
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -866,9 +866,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueue{
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -897,9 +897,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueue{
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -925,9 +925,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueue{
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -953,9 +953,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueue{
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -984,9 +984,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueue{
 									Retention:  &duration111Seconds,
 									Delay:      &duration111Seconds,
 									Timeout:    &duration111Seconds,
@@ -1010,7 +1010,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
-						Queue: &SQSQueue{
+						Queue: SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -1032,7 +1032,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
-						Queue: &SQSQueue{
+						Queue: SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -1057,7 +1057,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Image: Image{},
 					},
 					Subscribe: SubscribeConfig{
-						Queue: &SQSQueue{
+						Queue: SQSQueue{
 							Retention:  &duration111Seconds,
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
@@ -1237,60 +1237,6 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
 			actual, _ := svc.ApplyEnv("test")
-
-			// THEN
-			require.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
-func TestWorkerSvc_Subscriptions(t *testing.T) {
-	testCases := map[string]struct {
-		inSubscription SubscribeConfig
-		expected       []TopicSubscription
-	}{
-		"subscription specified": {
-			inSubscription: SubscribeConfig{
-				Topics: []TopicSubscription{
-					{
-						Name:    "orders",
-						Service: "database",
-					},
-					{
-						Name:    "events",
-						Service: "api",
-					},
-				},
-				Queue: &SQSQueue{
-					Retention: durationp(4 * 24 * time.Hour),
-				},
-			},
-			expected: []TopicSubscription{
-				{
-					Name:    "orders",
-					Service: "database",
-				},
-				{
-					Name:    "events",
-					Service: "api",
-				},
-			},
-		},
-		"no topics": {
-			inSubscription: SubscribeConfig{},
-			expected:       nil,
-		},
-	}
-	for name, tc := range testCases {
-		// GIVEN
-		svc := WorkerService{
-			WorkerServiceConfig: WorkerServiceConfig{
-				Subscribe: tc.inSubscription,
-			},
-		}
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			actual := svc.Subscriptions()
 
 			// THEN
 			require.Equal(t, tc.expected, actual)

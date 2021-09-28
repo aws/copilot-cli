@@ -23,18 +23,15 @@ const (
 	dependsOnComplete = "COMPLETE"
 	dependsOnSuccess  = "SUCCESS"
 	dependsOnHealthy  = "HEALTHY"
-
-	// In docker containers, max path length is 242.
-	// https://github.com/moby/moby/issues/1413
-	maxDockerContainerPathLength = 242
-	// Max path length in EFS is 255 bytes.
-	// https://docs.aws.amazon.com/efs/latest/ug/troubleshooting-efs-fileop-errors.html#filenametoolong
-	maxEFSPathLength = 255
 )
 
 var (
-	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
-	pathRegexp         = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
+	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	pathRegexp          = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
@@ -648,7 +645,7 @@ func (m *MountPointOpts) Validate() error {
 			missingField: "path",
 		}
 	}
-	if err := validatePath(path, maxDockerContainerPathLength); err != nil {
+	if err := validatePath(path); err != nil {
 		return fmt.Errorf(`validate "path": %w`, err)
 	}
 	return nil
@@ -699,7 +696,7 @@ func (e *EFSVolumeConfiguration) Validate() error {
 		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
 	}
 	if e.RootDirectory != nil {
-		if err := validatePath(aws.StringValue(e.RootDirectory), maxEFSPathLength); err != nil {
+		if err := validatePath(aws.StringValue(e.RootDirectory)); err != nil {
 			return fmt.Errorf(`validate "root_dir": %w`, err)
 		}
 	}
@@ -810,29 +807,47 @@ func (*JobFailureHandlerConfig) Validate() error {
 func (p *PublishConfig) Validate() error {
 	for ind, topic := range p.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
 	}
 	return nil
 }
 
 // Validate returns nil if Topic is configured correctly.
-func (*Topic) Validate() error {
-	return nil
+func (t *Topic) Validate() error {
+	return validatePubSubName(aws.StringValue(t.Name))
 }
 
 // Validate returns nil if SubscribeConfig is configured correctly.
-func (p *SubscribeConfig) Validate() error {
-	for ind, topic := range p.Topics {
+func (s *SubscribeConfig) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
+	for ind, topic := range s.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
+	}
+	if err := s.Queue.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue": %w`, err)
 	}
 	return nil
 }
 
 // Validate returns nil if TopicSubscription is configured correctly.
 func (t *TopicSubscription) Validate() error {
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return err
+	}
+	svcName := aws.StringValue(t.Service)
+	if svcName == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "service",
+		}
+	}
+	if !isValidSubSvcName(svcName) {
+		return fmt.Errorf("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	}
 	if err := t.Queue.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue": %w`, err)
 	}
@@ -841,6 +856,9 @@ func (t *TopicSubscription) Validate() error {
 
 // Validate returns nil if SQSQueue is configured correctly.
 func (s *SQSQueue) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
 	if err := s.DeadLetter.Validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
 	}
@@ -967,10 +985,7 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
 // We can accept 0-9A-Za-z-_.
-func validatePath(input string, maxLength int) error {
-	if len(input) > maxLength {
-		return fmt.Errorf("path must be less than %d bytes in length", maxLength)
-	}
+func validatePath(input string) error {
 	if len(input) == 0 {
 		return nil
 	}
@@ -979,4 +994,32 @@ func validatePath(input string, maxLength int) error {
 		return fmt.Errorf("path can only contain the characters a-zA-Z0-9.-_/")
 	}
 	return nil
+}
+
+func validatePubSubName(name string) error {
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(name) {
+		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hypthens`)
+	}
+	return nil
+}
+
+func isValidSubSvcName(name string) bool {
+	if !awsNameRegexp.MatchString(name) {
+		return false
+	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(name)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(name)
+	return len(trailingMatch) == 0
 }
