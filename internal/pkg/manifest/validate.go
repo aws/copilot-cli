@@ -27,7 +27,7 @@ const (
 
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
-	pathRegexp          = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
+	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
 	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
 	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
 	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
@@ -645,7 +645,7 @@ func (m *MountPointOpts) Validate() error {
 			missingField: "path",
 		}
 	}
-	if err := validatePath(path); err != nil {
+	if err := validateVolumePath(path); err != nil {
 		return fmt.Errorf(`validate "path": %w`, err)
 	}
 	return nil
@@ -696,7 +696,7 @@ func (e *EFSVolumeConfiguration) Validate() error {
 		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
 	}
 	if e.RootDirectory != nil {
-		if err := validatePath(aws.StringValue(e.RootDirectory)); err != nil {
+		if err := validateVolumePath(aws.StringValue(e.RootDirectory)); err != nil {
 			return fmt.Errorf(`validate "root_dir": %w`, err)
 		}
 	}
@@ -889,7 +889,7 @@ func (r *OverrideRule) Validate() error {
 	for _, s := range invalidTaskDefOverridePathRegexp {
 		re := regexp.MustCompile(fmt.Sprintf(`^%s$`, s))
 		if re.MatchString(r.Path) {
-			return fmt.Errorf("%s cannot be overidden with a custom value", s)
+			return fmt.Errorf(`"%s" cannot be overridden with a custom value`, s)
 		}
 	}
 	return nil
@@ -993,11 +993,11 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
 // We can accept 0-9A-Za-z-_.
-func validatePath(input string) error {
+func validateVolumePath(input string) error {
 	if len(input) == 0 {
 		return nil
 	}
-	m := pathRegexp.FindStringSubmatch(input)
+	m := volumesPathRegexp.FindStringSubmatch(input)
 	if len(m) == 0 {
 		return fmt.Errorf("path can only contain the characters a-zA-Z0-9.-_/")
 	}

@@ -1508,7 +1508,7 @@ func TestOverrideRule_Validate(t *testing.T) {
 			in: OverrideRule{
 				Path: "ContainerDefinitions[1].Name",
 			},
-			wanted: errors.New(`ContainerDefinitions\[\d+\].Name cannot be overidden with a custom value`),
+			wanted: errors.New(`"ContainerDefinitions\[\d+\].Name" cannot be overridden with a custom value`),
 		},
 	}
 	for name, tc := range testCases {

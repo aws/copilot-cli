@@ -679,12 +679,10 @@ func validateSubscriptionKey(val interface{}) error {
 	if err != nil {
 		return errSubscribeBadFormat
 	}
-	err = validatePubSubName(aws.StringValue(sub.Name))
-	if err != nil {
+	if err := validatePubSubName(aws.StringValue(sub.Name)); err != nil {
 		return fmt.Errorf("invalid topic subscription topic name `%s`: %w", aws.StringValue(sub.Name), err)
 	}
-	err = basicNameValidation(aws.StringValue(sub.Service))
-	if err != nil {
+	if err = basicNameValidation(aws.StringValue(sub.Service)); err != nil {
 		return fmt.Errorf("invalid topic subscription service name `%s`: %w", aws.StringValue(sub.Service), err)
 	}
 	return nil
