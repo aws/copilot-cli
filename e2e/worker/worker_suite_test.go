@@ -34,20 +34,10 @@ var _ = BeforeSuite(func() {
 	var err error
 	cli, err = client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
-	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-worker-%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.SvcDelete(lbwsServiceName)
-	Expect(err).NotTo(HaveOccurred())
-
-	_, err = cli.SvcDelete(workerServiceName)
-	Expect(err).NotTo(HaveOccurred())
-
-	_, err = cli.EnvDelete(envName)
-	Expect(err).NotTo(HaveOccurred())
-
-	_, err = cli.AppDelete()
+	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
 })
