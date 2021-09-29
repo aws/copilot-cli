@@ -148,6 +148,11 @@ func (r *RequestDrivenWebService) Validate() error {
 	if err = r.PublishConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "publish": %w`, err)
 	}
+	if aws.StringValue(r.Name) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
 	return nil
 }
 

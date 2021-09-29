@@ -365,7 +365,7 @@ func (o *deployJobOpts) manifest() (interface{}, error) {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
 	if err := mft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest for environment %s: %s", o.envName, err)
+		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
 	}
 	return envMft, nil
 }

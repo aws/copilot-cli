@@ -287,10 +287,14 @@ func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config RequestDrivenWebService
 
-		wantedErrorPrefix string
+		wantedErrorMsgPrefix string
+		wantedError          error
 	}{
 		"error if fail to validate image": {
 			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					ImageConfig: ImageWithPort{
 						Image: Image{
@@ -300,18 +304,36 @@ func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "image": `,
+			wantedErrorMsgPrefix: `validate "image": `,
+		},
+		"error if name is not set": {
+			config: RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+						},
+						Port: uint16P(80),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"name" must be specified`),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.config.Validate()
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }
