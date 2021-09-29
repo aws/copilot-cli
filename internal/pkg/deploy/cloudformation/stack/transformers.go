@@ -43,24 +43,17 @@ var (
 	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
 )
 
-type convertSidecarOpts struct {
-	sidecarConfig map[string]*manifest.SidecarConfig
-	imageConfig   *manifest.Image
-	workloadName  string
-}
-
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
-	if s.sidecarConfig == nil {
+func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
+	if s == nil {
 		return nil, nil
 	}
 	var sidecars []*template.SidecarOpts
-	for name, config := range s.sidecarConfig {
+	for name, config := range s {
 		port, protocol, err := parsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
 		}
-		convertDependsOnStatus(&s)
 		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err
@@ -81,7 +74,7 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 			Variables:    config.Variables,
 			MountPoints:  mp,
 			DockerLabels: config.DockerLabels,
-			DependsOn:    config.DependsOn,
+			DependsOn:    convertDependsOn(config.DependsOn),
 			EntryPoint:   entrypoint,
 			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
@@ -105,32 +98,16 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 	}
 }
 
-// convertDependsOnStatus converts image and sidecar depends on fields to have upper case statuses
-func convertDependsOnStatus(s *convertSidecarOpts) {
-	if s.sidecarConfig != nil {
-		for _, sidecar := range s.sidecarConfig {
-			if sidecar.DependsOn == nil {
-				continue
-			}
-			for name, status := range sidecar.DependsOn {
-				sidecar.DependsOn[name] = strings.ToUpper(status)
-			}
-		}
-	}
-	if s.imageConfig != nil && s.imageConfig.DependsOn != nil {
-		for name, status := range s.imageConfig.DependsOn {
-			s.imageConfig.DependsOn[name] = strings.ToUpper(status)
-		}
-	}
-}
-
-// convertDependsOn converts an Image DependsOn field to a template DependsOn version
-func convertImageDependsOn(s convertSidecarOpts) map[string]string {
-	if s.imageConfig == nil || s.imageConfig.DependsOn == nil {
+// convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
+func convertDependsOn(d manifest.DependsOn) map[string]string {
+	if d == nil {
 		return nil
 	}
-	convertDependsOnStatus(&s)
-	return s.imageConfig.DependsOn
+	dependsOn := make(map[string]string)
+	for name, status := range d {
+		dependsOn[name] = strings.ToUpper(status)
+	}
+	return dependsOn
 }
 
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
@@ -310,9 +287,9 @@ func convertTaskDefOverrideRules(inRules []manifest.OverrideRule) []override.Rul
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(wlName *string, in manifest.Storage) (*template.StorageOpts, error) {
+func convertStorageOpts(wlName *string, in manifest.Storage) *template.StorageOpts {
 	if in.IsEmpty() {
-		return nil, nil
+		return nil
 	}
 	return &template.StorageOpts{
 		Ephemeral:         convertEphemeral(in.Ephemeral),
@@ -320,7 +297,7 @@ func convertStorageOpts(wlName *string, in manifest.Storage) (*template.StorageO
 		MountPoints:       convertMountPoints(in.Volumes),
 		EFSPerms:          convertEFSPermissions(in.Volumes),
 		ManagedVolumeInfo: convertManagedFSInfo(wlName, in.Volumes),
-	}, nil
+	}
 }
 
 func convertEphemeral(in *int) *int {
@@ -550,23 +527,18 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
 	for _, topic := range topics {
-		t := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
-		publishers.Topics = append(publishers.Topics, t)
+		publishers.Topics = append(publishers.Topics, &template.Topic{
+			Name:      topic.Name,
+			AccountID: accountID,
+			Partition: partition.ID(),
+			Region:    region,
+			App:       app,
+			Env:       env,
+			Svc:       svc,
+		})
 	}
 
 	return &publishers, nil
-}
-
-func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc string) *template.Topic {
-	return &template.Topic{
-		Name:      t.Name,
-		AccountID: accountID,
-		Partition: partition,
-		Region:    region,
-		App:       app,
-		Env:       env,
-		Svc:       svc,
-	}
 }
 
 func convertSubscribe(s manifest.SubscribeConfig, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {

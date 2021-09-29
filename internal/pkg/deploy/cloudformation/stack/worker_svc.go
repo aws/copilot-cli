@@ -78,12 +78,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: s.manifest.Sidecars,
-		imageConfig:   &s.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(s.manifest.Name),
-	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -100,10 +95,6 @@ func (s *WorkerService) Template() (string, error) {
 		autoscaling = advancedCount.Autoscaling
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
-	}
-	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
 	}
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
@@ -133,11 +124,11 @@ func (s *WorkerService) Template() (string, error) {
 		DesiredCountLambda:             desiredCountLambda.String(),
 		EnvControllerLambda:            envControllerLambda.String(),
 		BacklogPerTaskCalculatorLambda: backlogPerTaskLambda.String(),
-		Storage:                        storage,
+		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                        convertNetworkConfig(s.manifest.Network),
 		EntryPoint:                     entrypoint,
 		Command:                        command,
-		DependsOn:                      convertImageDependsOn(convSidecarOpts),
+		DependsOn:                      convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:           aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
 		Subscribe:                      subscribe,

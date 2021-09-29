@@ -18,7 +18,6 @@ import (
 
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
-	mockWorkloadName := "frontend"
 	mockMap := map[string]string{"foo": "bar"}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
@@ -26,7 +25,6 @@ func Test_convertSidecar(t *testing.T) {
 		inEssential       bool
 		inLabels          map[string]string
 		inDependsOn       map[string]string
-		inImg             manifest.Image
 		inImageOverride   manifest.ImageOverride
 		inHealthCheck     manifest.ContainerHealthCheck
 		circDepContainers []string
@@ -68,7 +66,7 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(true),
 			},
 		},
-		"good essential container dependencies": {
+		"good container dependencies": {
 			inPort:      aws.String("2000"),
 			inEssential: true,
 			inDependsOn: map[string]string{
@@ -83,24 +81,6 @@ func Test_convertSidecar(t *testing.T) {
 				Secrets:    mockMap,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
-				DependsOn: map[string]string{
-					"frontend": "START",
-				},
-			},
-		},
-		"good nonessential container dependencies": {
-			inEssential: false,
-			inDependsOn: map[string]string{
-				"frontend": "start",
-			},
-
-			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
-				CredsParam: mockCredsParam,
-				Image:      mockImage,
-				Secrets:    mockMap,
-				Variables:  mockMap,
-				Essential:  aws.Bool(false),
 				DependsOn: map[string]string{
 					"frontend": "START",
 				},
@@ -240,11 +220,7 @@ func Test_convertSidecar(t *testing.T) {
 					HealthCheck:   tc.inHealthCheck,
 				},
 			}
-			got, err := convertSidecar(convertSidecarOpts{
-				sidecarConfig: sidecar,
-				imageConfig:   &tc.inImg,
-				workloadName:  mockWorkloadName,
-			})
+			got, err := convertSidecar(sidecar)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -799,7 +775,6 @@ func Test_convertStorageOpts(t *testing.T) {
 		inVolumes   map[string]*manifest.Volume
 		inEphemeral *int
 		wantOpts    template.StorageOpts
-		wantErr     string
 	}{
 		"minimal configuration": {
 			inVolumes: map[string]*manifest.Volume{
@@ -1141,18 +1116,13 @@ func Test_convertStorageOpts(t *testing.T) {
 			}
 
 			// WHEN
-			got, err := convertStorageOpts(aws.String("fe"), s)
+			got := convertStorageOpts(aws.String("fe"), s)
 
 			// THEN
-			if tc.wantErr != "" {
-				require.EqualError(t, err, tc.wantErr)
-			} else {
-				require.NoError(t, err)
-				require.ElementsMatch(t, tc.wantOpts.EFSPerms, got.EFSPerms)
-				require.ElementsMatch(t, tc.wantOpts.MountPoints, got.MountPoints)
-				require.ElementsMatch(t, tc.wantOpts.Volumes, got.Volumes)
-				require.Equal(t, tc.wantOpts.ManagedVolumeInfo, got.ManagedVolumeInfo)
-			}
+			require.ElementsMatch(t, tc.wantOpts.EFSPerms, got.EFSPerms)
+			require.ElementsMatch(t, tc.wantOpts.MountPoints, got.MountPoints)
+			require.ElementsMatch(t, tc.wantOpts.Volumes, got.Volumes)
+			require.Equal(t, tc.wantOpts.ManagedVolumeInfo, got.ManagedVolumeInfo)
 		})
 	}
 }
@@ -1264,45 +1234,6 @@ func Test_convertEphemeral(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := convertEphemeral(tc.inEphemeral)
-			require.Equal(t, got, tc.wanted)
-		})
-	}
-}
-
-func Test_convertImageDependsOn(t *testing.T) {
-	mockWorkloadName := "frontend"
-	testCases := map[string]struct {
-		inImage           *manifest.Image
-		inSidecars        map[string]*manifest.SidecarConfig
-		circDepContainers []string
-
-		wanted map[string]string
-	}{
-		"no container dependencies": {
-			inImage: &manifest.Image{},
-			wanted:  nil,
-		},
-		"good essential container dependency": {
-			inImage: &manifest.Image{
-				DependsOn: map[string]string{
-					"sidecar": "start",
-				},
-			},
-			inSidecars: map[string]*manifest.SidecarConfig{
-				"sidecar": {},
-			},
-			wanted: map[string]string{
-				"sidecar": "START",
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := convertImageDependsOn(convertSidecarOpts{
-				sidecarConfig: tc.inSidecars,
-				imageConfig:   tc.inImage,
-				workloadName:  mockWorkloadName,
-			})
 			require.Equal(t, got, tc.wanted)
 		})
 	}

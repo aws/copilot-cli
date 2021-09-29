@@ -123,12 +123,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: j.manifest.Sidecars,
-		imageConfig:   &j.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(j.manifest.Name),
-	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(j.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
@@ -140,22 +135,14 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
 	}
-
 	stateMachine, err := j.stateMachineOpts()
 	if err != nil {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
-
-	storage, err := convertStorageOpts(j.manifest.Name, j.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
-	}
-
 	envControllerLambda, err := j.parser.Read(envControllerPath)
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-
 	entrypoint, err := convertEntryPoint(j.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -175,11 +162,11 @@ func (j *ScheduledJob) Template() (string, error) {
 		HealthCheck:              convertContainerHealthCheck(j.manifest.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(j.manifest.Logging),
 		DockerLabels:             j.manifest.ImageConfig.Image.DockerLabels,
-		Storage:                  storage,
+		Storage:                  convertStorageOpts(j.manifest.Name, j.manifest.Storage),
 		Network:                  convertNetworkConfig(j.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                convertImageDependsOn(convSidecarOpts),
+		DependsOn:                convertDependsOn(j.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
