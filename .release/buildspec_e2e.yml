@@ -120,7 +120,15 @@ batch:
           APP_REGION: eu-west-1
           TESTENV_REGION: eu-west-1
           PRODENV_REGION: eu-central-1
-
+    - identifier: worker
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:5.0
+        variables:
+          TEST_SUITE: worker
+          APP_REGION: eu-central-1
 
 phases:
   install:
