@@ -23,18 +23,20 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		lbConfig LoadBalancedWebServiceConfig
+		lbConfig LoadBalancedWebService
 
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate image": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
-						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -42,22 +44,26 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "image": `,
 		},
 		"error if fail to validate http": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				RoutingRule: RoutingRule{
-					TargetContainer:          aws.String("mockTargetContainer"),
-					TargetContainerCamelCase: aws.String("mockTargetContainer"),
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRule{
+						TargetContainer:          aws.String("mockTargetContainer"),
+						TargetContainerCamelCase: aws.String("mockTargetContainer"),
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "http": `,
 		},
 		"error if fail to validate sidecars": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: DependsOn{
-							"foo": "bar",
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: DependsOn{
+								"foo": "bar",
+							},
 						},
 					},
 				},
@@ -65,49 +71,66 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				Network: NetworkConfig{
-					vpcConfig{
-						SecurityGroups: []string{},
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					Network: NetworkConfig{
+						vpcConfig{
+							SecurityGroups: []string{},
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
 		"error if fail to validate publish config": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				PublishConfig: PublishConfig{
-					Topics: []Topic{
-						{},
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{},
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
 		},
 		"error if fail to validate taskdef override": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskDefOverrides: []OverrideRule{
-					{
-						Path: "Family",
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskDefOverrides: []OverrideRule{
+						{
+							Path: "Family",
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
+		"error if name is not set": {
+			lbConfig: LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+				},
+			},
+			wantedError: fmt.Errorf(`"name" must be specified`),
+		},
 		"error if fail to validate dependencies": {
-			lbConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: testImageConfig,
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: map[string]string{"bar": "healthy"},
-						Essential: aws.Bool(false),
-					},
-					"bar": {
-						DependsOn: map[string]string{"foo": "healthy"},
-						Essential: aws.Bool(false),
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: map[string]string{"bar": "healthy"},
+							Essential: aws.Bool(false),
+						},
+						"bar": {
+							DependsOn: map[string]string{"foo": "healthy"},
+							Essential: aws.Bool(false),
+						},
 					},
 				},
 			},
@@ -142,18 +165,20 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		config BackendServiceConfig
+		config BackendService
 
 		wantedErrorMsgPrefix string
 		wantedError          error
 	}{
 		"error if fail to validate image": {
-			config: BackendServiceConfig{
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
-						Image: Image{
-							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-							Location: aws.String("mockLocation"),
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -161,12 +186,14 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "image": `,
 		},
 		"error if fail to validate sidecars": {
-			config: BackendServiceConfig{
-				ImageConfig: testImageConfig,
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: DependsOn{
-							"foo": "bar",
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: DependsOn{
+								"foo": "bar",
+							},
 						},
 					},
 				},
@@ -174,47 +201,64 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
-			config: BackendServiceConfig{
-				ImageConfig: testImageConfig,
-				Network: NetworkConfig{
-					vpcConfig{
-						SecurityGroups: []string{},
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					Network: NetworkConfig{
+						vpcConfig{
+							SecurityGroups: []string{},
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
 		"error if fail to validate publish config": {
-			config: BackendServiceConfig{
-				ImageConfig: testImageConfig,
-				PublishConfig: PublishConfig{
-					Topics: []Topic{
-						{},
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{},
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
 		},
 		"error if fail to validate taskdef override": {
-			config: BackendServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskDefOverrides: []OverrideRule{
-					{
-						Path: "Family",
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskDefOverrides: []OverrideRule{
+						{
+							Path: "Family",
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
+		"error if name is not set": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+				},
+			},
+			wantedError: fmt.Errorf(`"name" must be specified`),
+		},
 		"error if fail to validate dependencies": {
-			config: BackendServiceConfig{
-				ImageConfig: testImageConfig,
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: map[string]string{"bar": "start"},
-					},
-					"bar": {
-						DependsOn: map[string]string{"foo": "start"},
+			config: BackendService{
+				Workload: Workload{Name: aws.String("mockName")},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: map[string]string{"bar": "start"},
+						},
+						"bar": {
+							DependsOn: map[string]string{"foo": "start"},
+						},
 					},
 				},
 			},
@@ -241,31 +285,55 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 
 func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		config RequestDrivenWebServiceConfig
+		config RequestDrivenWebService
 
-		wantedErrorPrefix string
+		wantedErrorMsgPrefix string
+		wantedError          error
 	}{
 		"error if fail to validate image": {
-			config: RequestDrivenWebServiceConfig{
-				ImageConfig: ImageWithPort{
-					Image: Image{
-						Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-						Location: aws.String("mockLocation"),
+			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							Location: aws.String("mockLocation"),
+						},
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "image": `,
+			wantedErrorMsgPrefix: `validate "image": `,
+		},
+		"error if name is not set": {
+			config: RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+						},
+						Port: uint16P(80),
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"name" must be specified`),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.config.Validate()
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }
@@ -277,29 +345,33 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		config WorkerServiceConfig
+		config WorkerService
 
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate image": {
-			config: WorkerServiceConfig{
-				ImageConfig: ImageWithHealthcheck{
-					Image: Image{
-						Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-						Location: aws.String("mockLocation"),
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							Location: aws.String("mockLocation"),
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "image": `,
 		},
 		"error if fail to validate sidecars": {
-			config: WorkerServiceConfig{
-				ImageConfig: testImageConfig,
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: DependsOn{
-							"foo": "bar",
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: DependsOn{
+								"foo": "bar",
+							},
 						},
 					},
 				},
@@ -307,23 +379,27 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
-			config: WorkerServiceConfig{
-				ImageConfig: testImageConfig,
-				Network: NetworkConfig{
-					vpcConfig{
-						SecurityGroups: []string{},
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					Network: NetworkConfig{
+						vpcConfig{
+							SecurityGroups: []string{},
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
 		"error if fail to validate subscribe": {
-			config: WorkerServiceConfig{
-				ImageConfig: testImageConfig,
-				Subscribe: SubscribeConfig{
-					Topics: []TopicSubscription{
-						{
-							Name: aws.String("mockTopic"),
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name: aws.String("mockTopic"),
+							},
 						},
 					},
 				},
@@ -331,25 +407,38 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "subscribe": `,
 		},
 		"error if fail to validate taskdef override": {
-			config: WorkerServiceConfig{
-				ImageConfig: testImageConfig,
-				TaskDefOverrides: []OverrideRule{
-					{
-						Path: "Family",
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskDefOverrides: []OverrideRule{
+						{
+							Path: "Family",
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
+		"error if name is not set": {
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+				},
+			},
+			wantedError: fmt.Errorf(`"name" must be specified`),
+		},
 		"error if fail to validate dependencies": {
-			config: WorkerServiceConfig{
-				ImageConfig: testImageConfig,
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: map[string]string{"bar": "start"},
-					},
-					"bar": {
-						DependsOn: map[string]string{"foo": "start"},
+			config: WorkerService{
+				Workload: Workload{Name: aws.String("mockWorkload")},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: map[string]string{"bar": "start"},
+						},
+						"bar": {
+							DependsOn: map[string]string{"foo": "start"},
+						},
 					},
 				},
 			},
@@ -381,29 +470,33 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		config ScheduledJobConfig
+		config ScheduledJob
 
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate image": {
-			config: ScheduledJobConfig{
-				ImageConfig: ImageWithHealthcheck{
-					Image: Image{
-						Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
-						Location: aws.String("mockLocation"),
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
+							Location: aws.String("mockLocation"),
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "image": `,
 		},
 		"error if fail to validate sidecars": {
-			config: ScheduledJobConfig{
-				ImageConfig: testImageConfig,
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: DependsOn{
-							"foo": "bar",
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: DependsOn{
+								"foo": "bar",
+							},
 						},
 					},
 				},
@@ -411,63 +504,85 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
 		},
 		"error if fail to validate network": {
-			config: ScheduledJobConfig{
-				ImageConfig: testImageConfig,
-				Network: NetworkConfig{
-					vpcConfig{
-						SecurityGroups: []string{},
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					Network: NetworkConfig{
+						vpcConfig{
+							SecurityGroups: []string{},
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
 		"error if fail to validate on": {
-			config: ScheduledJobConfig{
-				ImageConfig: testImageConfig,
-				On:          JobTriggerConfig{},
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On:          JobTriggerConfig{},
+				},
 			},
 			wantedErrorMsgPrefix: `validate "on": `,
 		},
 		"error if fail to validate publish config": {
-			config: ScheduledJobConfig{
-				ImageConfig: testImageConfig,
-				On: JobTriggerConfig{
-					Schedule: aws.String("mockSchedule"),
-				},
-				PublishConfig: PublishConfig{
-					Topics: []Topic{
-						{},
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+					},
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{},
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
 		},
 		"error if fail to validate taskdef override": {
-			config: ScheduledJobConfig{
-				ImageConfig: testImageConfig,
-				On: JobTriggerConfig{
-					Schedule: aws.String("mockSchedule"),
-				},
-				TaskDefOverrides: []OverrideRule{
-					{
-						Path: "Family",
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+					},
+					TaskDefOverrides: []OverrideRule{
+						{
+							Path: "Family",
+						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
 		},
-		"error if fail to validate dependencies": {
-			config: ScheduledJobConfig{
-				ImageConfig: testImageConfig,
-				On: JobTriggerConfig{
-					Schedule: aws.String("mockSchedule"),
-				},
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						DependsOn: map[string]string{"bar": "start"},
+		"error if name is not set": {
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
 					},
-					"bar": {
-						DependsOn: map[string]string{"foo": "start"},
+				},
+			},
+			wantedError: fmt.Errorf(`"name" must be specified`),
+		},
+		"error if fail to validate dependencies": {
+			config: ScheduledJob{
+				Workload: Workload{Name: aws.String("mockWorkload")},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"foo": {
+							DependsOn: map[string]string{"bar": "start"},
+						},
+						"bar": {
+							DependsOn: map[string]string{"foo": "start"},
+						},
 					},
 				},
 			},

@@ -35,6 +35,9 @@ func TestRDWS_Template(t *testing.T) {
 	envMft, err := mft.ApplyEnv(envName)
 	require.NoError(t, err, "apply test env to manifest")
 
+	err = mft.Validate()
+	require.NoError(t, err)
+
 	v, ok := envMft.(*manifest.RequestDrivenWebService)
 	require.True(t, ok)
 

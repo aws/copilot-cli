@@ -220,6 +220,7 @@ image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
+  port: 80
 `)
 	mockManifestWithBadPlatform := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
@@ -228,6 +229,7 @@ image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
+  port: 80
 `)
 	mockManifestWithGoodPlatform := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
@@ -236,22 +238,26 @@ image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
+  port: 80
 `)
 	mockMftNoBuild := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
   location: foo/bar
+  port: 80
 `)
 	mockMftBuildString := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
   build: path/to/Dockerfile
+  port: 80
 `)
 	mockMftNoContext := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
   build:
-    dockerfile: path/to/Dockerfile`)
+    dockerfile: path/to/Dockerfile
+  port: 80`)
 
 	tests := map[string]struct {
 		inputSvc   string
@@ -830,6 +836,14 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 							Name: aws.String(mockSvcName),
 						},
 						LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
+							ImageConfig: manifest.ImageWithPortAndHealthcheck{
+								ImageWithPort: manifest.ImageWithPort{
+									Image: manifest.Image{
+										Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+									},
+									Port: aws.Uint16(80),
+								},
+							},
 							RoutingRule: manifest.RoutingRule{
 								Alias: tc.inAliases,
 							},
@@ -1106,6 +1120,12 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 							Name: aws.String(mockSvcName),
 						},
 						RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
+							ImageConfig: manifest.ImageWithPort{
+								Image: manifest.Image{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
+								Port: aws.Uint16(80),
+							},
 							RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
 								Alias: aws.String(tc.inAlias),
 							},
@@ -1249,7 +1269,13 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 						Workload: manifest.Workload{
 							Name: aws.String(mockSvcName),
 						},
-						WorkerServiceConfig: manifest.WorkerServiceConfig{},
+						WorkerServiceConfig: manifest.WorkerServiceConfig{
+							ImageConfig: manifest.ImageWithHealthcheck{
+								Image: manifest.Image{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
+							},
+						},
 					}, nil
 				},
 			}

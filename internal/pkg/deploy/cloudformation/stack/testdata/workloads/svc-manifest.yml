@@ -27,6 +27,7 @@ memory: 512
 # Number of tasks that should be running in your service.
 count:
   range: 2-10
+  cpu_percentage: 70
 storage:
   volumes:
     persistence:

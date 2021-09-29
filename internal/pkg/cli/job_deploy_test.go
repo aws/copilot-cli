@@ -202,22 +202,27 @@ image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
-`)
+on:
+  schedule: "@daily"`)
 	mockMftNoBuild := []byte(`name: mailer
 type: 'Scheduled Job'
 image:
   location: foo/bar
-`)
+on:
+  schedule: "@daily"`)
 	mockMftBuildString := []byte(`name: mailer
 type: 'Scheduled Job'
 image:
   build: path/to/Dockerfile
-`)
+on:
+  schedule: "@daily"`)
 	mockMftNoContext := []byte(`name: mailer
 type: 'Scheduled Job'
 image:
   build:
-    dockerfile: path/to/Dockerfile`)
+    dockerfile: path/to/Dockerfile
+on:
+  schedule: "@daily"`)
 
 	tests := map[string]struct {
 		inputSvc   string
