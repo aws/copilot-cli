@@ -46,9 +46,10 @@ var (
 	errUnmarshalPlatformOpts = errors.New("unable to unmarshal platform field into string or compose-style map")
 	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
-	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
-	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
-	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
+	errUnmarshalExec         = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
+	errUnmarshalEntryPoint   = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
+	errUnmarshalAlias        = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
+	errUnmarshalCommand      = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -497,9 +498,6 @@ func (c *NetworkConfig) UnmarshalYAML(value *yaml.Node) error {
 	if conf.VPC.isEmpty() { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
 		conf.VPC = defaultVPCConf
 	}
-	if !conf.VPC.isValidPlacement() {
-		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", string(*conf.VPC.Placement), subnetPlacements)
-	}
 	*c = NetworkConfig(conf)
 	return nil
 }
@@ -515,18 +513,6 @@ type vpcConfig struct {
 
 func (c *vpcConfig) isEmpty() bool {
 	return c.Placement == nil && c.SecurityGroups == nil
-}
-
-func (c *vpcConfig) isValidPlacement() bool {
-	if c.Placement == nil {
-		return false
-	}
-	for _, allowed := range subnetPlacements {
-		if string(*c.Placement) == allowed {
-			return true
-		}
-	}
-	return false
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
@@ -646,15 +632,6 @@ func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	if !p.PlatformArgs.isEmpty() {
-		if !p.PlatformArgs.bothSpecified() {
-			return errors.New(`fields 'osfamily' and 'architecture' must either both be specified or both be empty.`)
-		}
-		if err := validateOS(p.PlatformArgs.OSFamily); err != nil {
-			return fmt.Errorf("validate OS: %w", err)
-		}
-		if err := validateArch(p.PlatformArgs.Arch); err != nil {
-			return fmt.Errorf("validate arch: %w", err)
-		}
 		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
 		p.PlatformString = nil
 		return nil

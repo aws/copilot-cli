@@ -23,6 +23,10 @@ const (
 	dependsOnComplete = "COMPLETE"
 	dependsOnSuccess  = "SUCCESS"
 	dependsOnHealthy  = "HEALTHY"
+
+	// Min and Max values for task ephemeral storage in GiB.
+	ephemeralMinValueGiB = 20
+	ephemeralMaxValueGiB = 200
 )
 
 var (
@@ -647,9 +651,22 @@ func (s *Storage) Validate() error {
 	if s.IsEmpty() {
 		return nil
 	}
+	if s.Ephemeral != nil {
+		ephemeral := aws.IntValue(s.Ephemeral)
+		if ephemeral < ephemeralMinValueGiB || ephemeral > ephemeralMaxValueGiB {
+			return fmt.Errorf(`validate "ephemeral": ephemeral storage must be between 20 GiB and 200 GiB`)
+		}
+	}
+	var hasManagedVolume bool
 	for k, v := range s.Volumes {
 		if err := v.Validate(); err != nil {
 			return fmt.Errorf(`validate "volumes[%s]": %w`, k, err)
+		}
+		if !v.EmptyVolume() && v.EFS.UseManagedFS() {
+			if hasManagedVolume {
+				return fmt.Errorf("cannot specify more than one managed volume per service")
+			}
+			hasManagedVolume = true
 		}
 	}
 	return nil

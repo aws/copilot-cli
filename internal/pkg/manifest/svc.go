@@ -259,9 +259,6 @@ func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
 	if qs.IsEmpty() {
 		return 0, errors.New(`"queue_delay" must be specified in order to calculate the acceptable backlog`)
 	}
-	if err := qs.Validate(); err != nil {
-		return 0, err
-	}
 	v := math.Ceil(float64(*qs.AcceptableLatency) / float64(*qs.AvgProcessingTime))
 	return int(v), nil
 }

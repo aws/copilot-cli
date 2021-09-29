@@ -132,10 +132,6 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
-	}
 	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for job %s: %w`, j.name, err)
@@ -183,7 +179,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Network:                  convertNetworkConfig(j.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                dependencies,
+		DependsOn:                convertImageDependsOn(convSidecarOpts),
 		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,

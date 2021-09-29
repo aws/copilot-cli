@@ -332,33 +332,6 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 
 			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
 		},
-		"returns error if platform string invalid": {
-			inContent: []byte(`platform: linus/mad64`),
-
-			wantedError: errors.New("validate platform: platform linus/mad64 is invalid; the valid platform is: linux/amd64"),
-		},
-		"returns error if only args.os specified": {
-			inContent: []byte(`platform:
-  osfamily: linux`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
-		},
-		"returns error if only args.arch specified": {
-			inContent: []byte(`platform:
-  architecture: amd64`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
-		},
-		"returns error if args.os invalid": {
-			inContent: []byte(`platform:
-  osfamily: OSFamilia
-  architecture: amd64`),
-			wantedError: errors.New("validate OS: OS OSFamilia is invalid; the valid operating system is: linux"),
-		},
-		"returns error if args.arch invalid": {
-			inContent: []byte(`platform:
-  osfamily: linux
-  architecture: abc123`),
-			wantedError: errors.New("validate arch: architecture abc123 is invalid; the valid architecture is: amd64"),
-		},
 		"platform string": {
 			inContent: []byte(`platform: linux/amd64`),
 
@@ -703,14 +676,6 @@ network:
 					Placement: &PublicSubnetPlacement,
 				},
 			},
-		},
-		"returns error if placement option is invalid": {
-			data: `
-network:
-  vpc:
-    placement: 'tartarus'
-`,
-			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus' must be one of []string{"public", "private"}`),
 		},
 		"unmarshals successfully for public placement with security groups": {
 			data: `

@@ -205,7 +205,7 @@ func (e *Alias) IsEmpty() bool {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *Alias) UnmarshalYAML(value *yaml.Node) error {
 	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
-		return errUnmarshalEntryPoint
+		return errUnmarshalAlias
 	}
 	return nil
 }

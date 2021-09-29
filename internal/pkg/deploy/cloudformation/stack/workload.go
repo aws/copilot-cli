@@ -6,7 +6,6 @@ package stack
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -58,17 +57,6 @@ const (
 const (
 	ecsWkldLogRetentionDefault = 30
 )
-
-// Matches alphanumeric characters and -._
-var pathRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
-
-// Max path length in EFS is 255 bytes.
-// https://docs.aws.amazon.com/efs/latest/ug/troubleshooting-efs-fileop-errors.html#filenametoolong
-const maxEFSPathLength = 255
-
-// In docker containers, max path length is 242.
-// https://github.com/moby/moby/issues/1413
-const maxDockerContainerPathLength = 242
 
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.

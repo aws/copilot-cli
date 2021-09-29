@@ -83,13 +83,11 @@ func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-
 	if !q.Advanced.IsEmpty() {
 		// Unmarshaled successfully to q.Advanced, unset q.Enabled, and return.
 		q.Enabled = nil
 		return nil
 	}
-
 	if err := value.Decode(&q.Enabled); err != nil {
 		return errUnmarshalQueueOpts
 	}
