@@ -1490,7 +1490,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 					Essential: aws.Bool(false),
 				},
 			},
-			wantedError: errInvalidSidecarDependsOnStatus,
+			wantedError: errInvalidDependsOnStatus,
 		},
 		"invalid implied essential container depdendency": {
 			inImage: &manifest.Image{
@@ -1501,7 +1501,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 			inSidecars: map[string]*manifest.SidecarConfig{
 				"sidecar": {},
 			},
-			wantedError: errEssentialSidecarStatus,
+			wantedError: errEssentialContainerStatus,
 		},
 		"invalid set essential container depdendency": {
 			inImage: &manifest.Image{
@@ -1514,7 +1514,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 					Essential: aws.Bool(true),
 				},
 			},
-			wantedError: errEssentialSidecarStatus,
+			wantedError: errEssentialContainerStatus,
 		},
 		"good essential container dependency": {
 			inImage: &manifest.Image{
@@ -1661,11 +1661,11 @@ func Test_convertSubscribe(t *testing.T) {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
 					},
 				},
-				Queue: &manifest.SQSQueue{
+				Queue: manifest.SQSQueue{
 					Retention: &duration111Seconds,
 					Delay:     &duration111Seconds,
 					Timeout:   &duration111Seconds,
@@ -1695,28 +1695,32 @@ func Test_convertSubscribe(t *testing.T) {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue: manifest.SQSQueueOrBool{
+							Enabled: aws.Bool(true),
+						},
 					},
 				},
-				Queue: &manifest.SQSQueue{},
+				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
+						Queue:   &template.SQSQueue{},
 					},
 				},
-				Queue: &template.SQSQueue{},
+				Queue: nil,
 			},
 		},
 		"invalid topic name": {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    "t@p!c1~",
-						Service: "service1",
+						Name:    aws.String("t@p!c1~"),
+						Service: aws.String("service1"),
 					},
 				},
 			},
@@ -1726,8 +1730,8 @@ func Test_convertSubscribe(t *testing.T) {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    "topic1",
-						Service: "s#rv!ce1~",
+						Name:    aws.String("topic1"),
+						Service: aws.String("s#rv!ce1~"),
 					},
 				},
 			},
@@ -1737,11 +1741,11 @@ func Test_convertSubscribe(t *testing.T) {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
 					},
 				},
-				Queue: &manifest.SQSQueue{
+				Queue: manifest.SQSQueue{
 					Delay: &duration5Days,
 				},
 			},

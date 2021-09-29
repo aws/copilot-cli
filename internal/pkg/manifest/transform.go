@@ -26,6 +26,7 @@ var defaultTransformers = []mergo.Transformers{
 	rangeTransformer{},
 	efsConfigOrBoolTransformer{},
 	efsVolumeConfigurationTransformer{},
+	sqsQueueOrBoolTransformer{},
 }
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
@@ -291,6 +292,31 @@ func (t efsVolumeConfigurationTransformer) Transformer(typ reflect.Type) func(ds
 
 		if !srcStruct.EmptyBYOConfig() {
 			dstStruct.unsetUIDConfig()
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type sqsQueueOrBoolTransformer struct{}
+
+// Transformer returns custom merge logic for SQSQueueOrBool's fields.
+func (q sqsQueueOrBoolTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(SQSQueueOrBool{}) {
+		return nil
+	}
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(SQSQueueOrBool), src.Interface().(SQSQueueOrBool)
+
+		if !srcStruct.Advanced.IsEmpty() {
+			dstStruct.Enabled = nil
+		}
+
+		if srcStruct.Enabled != nil {
+			dstStruct.Advanced = SQSQueue{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

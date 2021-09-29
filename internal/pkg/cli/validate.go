@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/afero"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -678,13 +679,11 @@ func validateSubscriptionKey(val interface{}) error {
 	if err != nil {
 		return errSubscribeBadFormat
 	}
-	err = validatePubSubName(sub.Name)
-	if err != nil {
-		return fmt.Errorf("invalid topic subscription topic name `%s`: %w", sub.Name, err)
+	if err := validatePubSubName(aws.StringValue(sub.Name)); err != nil {
+		return fmt.Errorf("invalid topic subscription topic name `%s`: %w", aws.StringValue(sub.Name), err)
 	}
-	err = basicNameValidation(sub.Service)
-	if err != nil {
-		return fmt.Errorf("invalid topic subscription service name `%s`: %w", sub.Service, err)
+	if err = basicNameValidation(aws.StringValue(sub.Service)); err != nil {
+		return fmt.Errorf("invalid topic subscription service name `%s`: %w", aws.StringValue(sub.Service), err)
 	}
 	return nil
 }
@@ -715,7 +714,7 @@ func validateTopicsExist(subscriptions []manifest.TopicSubscription, topicARNs [
 	}
 
 	for _, ts := range subscriptions {
-		topicName := fmt.Sprintf(resourceNameFormat, app, env, ts.Service, ts.Name)
+		topicName := fmt.Sprintf(resourceNameFormat, app, env, aws.StringValue(ts.Service), aws.StringValue(ts.Name))
 		if !contains(topicName, validTopicResources) {
 			return fmt.Errorf(fmtErrTopicSubscriptionNotAllowed, topicName, env)
 		}

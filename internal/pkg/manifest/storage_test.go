@@ -15,7 +15,7 @@ type testVolume struct {
 	EFS EFSConfigOrBool `yaml:"efs"`
 }
 
-func Test_UnmarshalEFS(t *testing.T) {
+func TestEFSConfigOrBool_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		manifest []byte
 		want     testVolume
@@ -47,7 +47,7 @@ efs:
 				},
 			},
 		},
-		"with just managed ": {
+		"with just managed": {
 			manifest: []byte(`
 efs: true`),
 			want: testVolume{

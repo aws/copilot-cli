@@ -899,11 +899,11 @@ func (o *deploySvcOpts) buildWorkerQueueNames() string {
 	sb := new(strings.Builder)
 	first := true
 	for _, subscription := range o.subscriptions {
-		if subscription.Queue == nil {
+		if subscription.Queue.IsEmpty() {
 			continue
 		}
-		topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
-		topicName := template.StripNonAlphaNumFunc(subscription.Name)
+		topicSvc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
+		topicName := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
 		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
 		if first {
 			sb.WriteString(subName)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -484,8 +485,8 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	subscriptions := make([]manifest.TopicSubscription, 0, len(topics))
 	for _, t := range topics {
 		subscriptions = append(subscriptions, manifest.TopicSubscription{
-			Name:    t.Name(),
-			Service: t.Workload(),
+			Name:    aws.String(t.Name()),
+			Service: aws.String(t.Workload()),
 		})
 	}
 	o.topics = subscriptions
@@ -500,8 +501,8 @@ func parseSerializedSubscription(input string) (manifest.TopicSubscription, erro
 		return manifest.TopicSubscription{}, fmt.Errorf("parse subscription from key: %s", input)
 	}
 	return manifest.TopicSubscription{
-		Name:    attrs[2],
-		Service: attrs[1],
+		Name:    aws.String(attrs[2]),
+		Service: aws.String(attrs[1]),
 	}, nil
 }
 

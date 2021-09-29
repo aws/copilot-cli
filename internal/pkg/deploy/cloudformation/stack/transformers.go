@@ -723,22 +723,28 @@ func convertSubscribe(s manifest.SubscribeConfig, validTopicARNs []string, accou
 func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
 	err := validateTopicSubscription(t)
 	if err != nil {
-		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, aws.StringValue(t.Name), err)
 	}
-	queue, err := convertQueue(t.Queue)
+	if aws.BoolValue(t.Queue.Enabled) {
+		return &template.TopicSubscription{
+			Name:    t.Name,
+			Service: t.Service,
+			Queue:   &template.SQSQueue{},
+		}, nil
+	}
+	queue, err := convertQueue(t.Queue.Advanced)
 	if err != nil {
-		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, aws.StringValue(t.Name), err)
 	}
-
 	return &template.TopicSubscription{
-		Name:    aws.String(t.Name),
-		Service: aws.String(t.Service),
+		Name:    t.Name,
+		Service: t.Service,
 		Queue:   queue,
 	}, nil
 }
 
-func convertQueue(q *manifest.SQSQueue) (*template.SQSQueue, error) {
-	if q == nil {
+func convertQueue(q manifest.SQSQueue) (*template.SQSQueue, error) {
+	if q.IsEmpty() {
 		return nil, nil
 	}
 	retention, err := convertRetention(q.Retention)

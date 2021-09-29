@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/spf13/afero"
@@ -796,14 +797,16 @@ func Test_validateTopicsExist(t *testing.T) {
 	duration10Hours := 10 * time.Hour
 	testGoodTopics := []manifest.TopicSubscription{
 		{
-			Name:    "events",
-			Service: "database",
+			Name:    aws.String("events"),
+			Service: aws.String("database"),
 		},
 		{
-			Name:    "orders",
-			Service: "database",
-			Queue: &manifest.SQSQueue{
-				Retention: &duration10Hours,
+			Name:    aws.String("orders"),
+			Service: aws.String("database"),
+			Queue: manifest.SQSQueueOrBool{
+				Advanced: manifest.SQSQueue{
+					Retention: &duration10Hours,
+				},
 			},
 		},
 	}

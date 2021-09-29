@@ -108,8 +108,8 @@ Outputs:
 				testWorkerSvcManifestWithBadSubscribe.Subscribe = manifest.SubscribeConfig{
 					Topics: []manifest.TopicSubscription{
 						{
-							Name:    "name",
-							Service: "un@cept#ble",
+							Name:    aws.String("name"),
+							Service: aws.String("un@cept#ble"),
 						},
 					},
 				}

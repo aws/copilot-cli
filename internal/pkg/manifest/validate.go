@@ -8,14 +8,35 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/dustin/go-humanize/english"
+)
+
+const (
+	// Container dependency status constants.
+	dependsOnStart    = "START"
+	dependsOnComplete = "COMPLETE"
+	dependsOnSuccess  = "SUCCESS"
+	dependsOnHealthy  = "HEALTHY"
 )
 
 var (
-	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
+
+	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+
+	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -38,7 +59,7 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for k, v := range l.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = l.Network.Validate(); err != nil {
@@ -49,8 +70,15 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range l.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     l.Sidecars,
+		imageConfig:       l.ImageConfig.Image,
+		mainContainerName: l.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -72,7 +100,7 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for k, v := range b.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = b.Network.Validate(); err != nil {
@@ -83,8 +111,15 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range b.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     b.Sidecars,
+		imageConfig:       b.ImageConfig.Image,
+		mainContainerName: b.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -121,7 +156,7 @@ func (w *WorkerServiceConfig) Validate() error {
 	}
 	for k, v := range w.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = w.Network.Validate(); err != nil {
@@ -132,8 +167,15 @@ func (w *WorkerServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range w.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     w.Sidecars,
+		imageConfig:       w.ImageConfig.Image,
+		mainContainerName: w.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -155,7 +197,7 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for k, v := range s.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = s.Network.Validate(); err != nil {
@@ -172,8 +214,15 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range s.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     s.Sidecars,
+		imageConfig:       s.ImageConfig.Image,
+		mainContainerName: s.name,
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
 }
@@ -222,6 +271,30 @@ func (i *Image) Validate() error {
 			firstField:  "build",
 			secondField: "location",
 			mustExist:   true,
+		}
+	}
+	if err = i.DependsOn.Validate(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if DependsOn is configured correctly.
+func (d *DependsOn) Validate() error {
+	if d == nil {
+		return nil
+	}
+	for _, v := range *d {
+		status := strings.ToUpper(v)
+		var isValid bool
+		for _, allowed := range dependsOnValidStatuses {
+			if status == allowed {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return fmt.Errorf("container dependency status must be one of %s", english.WordSeries([]string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}, "or"))
 		}
 	}
 	return nil
@@ -357,15 +430,25 @@ func (p *PlatformString) Validate() error {
 	if p == nil {
 		return nil
 	}
-	// TODO: Consolidate with "UnmarshalYAML".
+	if err := validatePlatform(p); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
-// TODO: add validation once "feat/pencere" is merged.
 func (p *PlatformArgs) Validate() error {
 	if p.isEmpty() {
 		return nil
+	}
+	if !p.bothSpecified() {
+		return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
+	}
+	if err := validateOS(p.OSFamily); err != nil {
+		return err
+	}
+	if err := validateArch(p.Arch); err != nil {
+		return err
 	}
 	return nil
 }
@@ -532,6 +615,9 @@ func (*ExecuteCommandConfig) Validate() error {
 
 // Validate returns nil if Storage is configured correctly.
 func (s *Storage) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
 	for k, v := range s.Volumes {
 		if err := v.Validate(); err != nil {
 			return fmt.Errorf(`validate "volumes[%s]": %w`, k, err)
@@ -549,7 +635,19 @@ func (v *Volume) Validate() error {
 }
 
 // Validate returns nil if MountPointOpts is configured correctly.
-func (*MountPointOpts) Validate() error {
+func (m *MountPointOpts) Validate() error {
+	if m == nil {
+		return nil
+	}
+	path := aws.StringValue(m.ContainerPath)
+	if path == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
+	}
+	if err := validateVolumePath(path); err != nil {
+		return fmt.Errorf(`validate "path": %w`, err)
+	}
 	return nil
 }
 
@@ -584,6 +682,9 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			conditionalFields: []string{"gid"},
 		}
 	}
+	if e.UID != nil && *e.UID == 0 {
+		return fmt.Errorf(`"uid" must not be 0`)
+	}
 	if err := e.AuthConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "auth": %w`, err)
 	}
@@ -593,6 +694,11 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			return nil
 		}
 		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
+	}
+	if e.RootDirectory != nil {
+		if err := validateVolumePath(aws.StringValue(e.RootDirectory)); err != nil {
+			return fmt.Errorf(`validate "root_dir": %w`, err)
+		}
 	}
 	return nil
 }
@@ -617,13 +723,29 @@ func (l *Logging) Validate() error {
 func (s *SidecarConfig) Validate() error {
 	for ind, mp := range s.MountPoints {
 		if err := mp.Validate(); err != nil {
-			return fmt.Errorf(`validate "mount_points[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "mount_points[%d]": %w`, ind, err)
 		}
 	}
 	if err := s.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
+	if err := s.DependsOn.Validate(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
 	return s.ImageOverride.Validate()
+}
+
+// Validate returns nil if SidecarMountPoint is configured correctly.
+func (s *SidecarMountPoint) Validate() error {
+	if s == nil {
+		return nil
+	}
+	if aws.StringValue(s.SourceVolume) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "source_volume",
+		}
+	}
+	return s.MountPointOpts.Validate()
 }
 
 // Validate returns nil if NetworkConfig is configured correctly.
@@ -685,29 +807,47 @@ func (*JobFailureHandlerConfig) Validate() error {
 func (p *PublishConfig) Validate() error {
 	for ind, topic := range p.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
 	}
 	return nil
 }
 
 // Validate returns nil if Topic is configured correctly.
-func (*Topic) Validate() error {
-	return nil
+func (t *Topic) Validate() error {
+	return validatePubSubName(aws.StringValue(t.Name))
 }
 
 // Validate returns nil if SubscribeConfig is configured correctly.
-func (p *SubscribeConfig) Validate() error {
-	for ind, topic := range p.Topics {
+func (s *SubscribeConfig) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
+	for ind, topic := range s.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
+	}
+	if err := s.Queue.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue": %w`, err)
 	}
 	return nil
 }
 
 // Validate returns nil if TopicSubscription is configured correctly.
 func (t *TopicSubscription) Validate() error {
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return err
+	}
+	svcName := aws.StringValue(t.Service)
+	if svcName == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "service",
+		}
+	}
+	if !isValidSubSvcName(svcName) {
+		return fmt.Errorf("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	}
 	if err := t.Queue.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue": %w`, err)
 	}
@@ -715,8 +855,19 @@ func (t *TopicSubscription) Validate() error {
 }
 
 // Validate returns nil if SQSQueue is configured correctly.
-func (s *SQSQueue) Validate() error {
-	if err := s.DeadLetter.Validate(); err != nil {
+func (q *SQSQueueOrBool) Validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	return q.Advanced.Validate()
+}
+
+// Validate returns nil if SQSQueue is configured correctly.
+func (q *SQSQueue) Validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	if err := q.DeadLetter.Validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
 	}
 	return nil
@@ -731,6 +882,152 @@ func (d *DeadLetterQueue) Validate() error {
 }
 
 // Validate returns nil if OverrideRule is configured correctly.
-func (*OverrideRule) Validate() error {
+func (r *OverrideRule) Validate() error {
+	if r == nil {
+		return nil
+	}
+	for _, s := range invalidTaskDefOverridePathRegexp {
+		re := regexp.MustCompile(fmt.Sprintf(`^%s$`, s))
+		if re.MatchString(r.Path) {
+			return fmt.Errorf(`"%s" cannot be overridden with a custom value`, s)
+		}
+	}
 	return nil
+}
+
+type validateDependenciesOpts struct {
+	mainContainerName string
+	sidecarConfig     map[string]*SidecarConfig
+	imageConfig       Image
+}
+
+type containerDependency struct {
+	dependsOn   DependsOn
+	isEssential bool
+}
+
+func validateContainerDeps(opts validateDependenciesOpts) error {
+	containerDependencies := make(map[string]containerDependency)
+	containerDependencies[opts.mainContainerName] = containerDependency{
+		dependsOn:   opts.imageConfig.DependsOn,
+		isEssential: true,
+	}
+	for name, config := range opts.sidecarConfig {
+		containerDependencies[name] = containerDependency{
+			dependsOn:   config.DependsOn,
+			isEssential: config.Essential == nil || aws.BoolValue(config.Essential),
+		}
+	}
+	if err := validateDepsForEssentialContainers(containerDependencies); err != nil {
+		return err
+	}
+	return validateNoCircularDependencies(opts)
+}
+
+func validateDepsForEssentialContainers(deps map[string]containerDependency) error {
+	for name, containerDep := range deps {
+		for dep, status := range containerDep.dependsOn {
+			if !deps[dep].isEssential {
+				continue
+			}
+			if err := validateEssentialContainerDependency(dep, strings.ToUpper(status)); err != nil {
+				return fmt.Errorf("validate %s container dependencies status: %w", name, err)
+			}
+		}
+	}
+	return nil
+}
+
+func validateEssentialContainerDependency(name, status string) error {
+	for _, allowed := range essentialContainerDependsOnValidStatuses {
+		if status == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf("essential container %s can only have status %s", name, english.WordSeries([]string{dependsOnStart, dependsOnHealthy}, "or"))
+}
+
+func validateNoCircularDependencies(opts validateDependenciesOpts) error {
+	dependencies, err := buildDependencyGraph(opts)
+	if err != nil {
+		return err
+	}
+	cycle, ok := dependencies.IsAcyclic()
+	if ok {
+		return nil
+	}
+	if len(cycle) == 1 {
+		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
+	}
+	// Stablize unit tests.
+	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
+	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
+}
+
+func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
+	dependencyGraph := graph.New()
+	// Add any sidecar dependencies.
+	for name, sidecar := range opts.sidecarConfig {
+		for dep := range sidecar.DependsOn {
+			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+				return nil, fmt.Errorf("container %s does not exist", dep)
+			}
+			dependencyGraph.Add(graph.Edge{
+				From: name,
+				To:   dep,
+			})
+		}
+	}
+	// Add any image dependencies.
+	for dep := range opts.imageConfig.DependsOn {
+		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+			return nil, fmt.Errorf("container %s does not exist", dep)
+		}
+		dependencyGraph.Add(graph.Edge{
+			From: opts.mainContainerName,
+			To:   dep,
+		})
+	}
+	return dependencyGraph, nil
+}
+
+// Validate that paths contain only an approved set of characters to guard against command injection.
+// We can accept 0-9A-Za-z-_.
+func validateVolumePath(input string) error {
+	if len(input) == 0 {
+		return nil
+	}
+	m := volumesPathRegexp.FindStringSubmatch(input)
+	if len(m) == 0 {
+		return fmt.Errorf("path can only contain the characters a-zA-Z0-9.-_/")
+	}
+	return nil
+}
+
+func validatePubSubName(name string) error {
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(name) {
+		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hypthens`)
+	}
+	return nil
+}
+
+func isValidSubSvcName(name string) bool {
+	if !awsNameRegexp.MatchString(name) {
+		return false
+	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(name)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(name)
+	return len(trailingMatch) == 0
 }

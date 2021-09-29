@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -695,8 +696,8 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					gomock.Any(),
 				).Return([]manifest.TopicSubscription{
 					{
-						Name:    "thetopic",
-						Service: "theservice",
+						Name:    aws.String("thetopic"),
+						Service: aws.String("theservice"),
 					},
 				}, nil)
 			},

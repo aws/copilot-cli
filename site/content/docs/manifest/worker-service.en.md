@@ -55,7 +55,7 @@ The architecture type for your service. [Worker Services](../concepts/services.e
 <div class="separator"></div>
 
 <a id="subscribe" href="#subscribe" class="field">`subscribe`</a> <span class="type">Map</span>
-The `subscribe` section allows worker services to create subscriptions to the SNS topics exposed by other Copilot services in the same application and environment. Each topic can define its own SQS queue, but by default all topics are subscribed to the worker service's default queue. 
+The `subscribe` section allows worker services to create subscriptions to the SNS topics exposed by other Copilot services in the same application and environment. Each topic can define its own SQS queue, but by default all topics are subscribed to the worker service's default queue.
 
 ```yaml
 subscribe:
@@ -63,7 +63,7 @@ subscribe:
     - name: events
       service: api
       queue: # Define a topic-specific queue for the api-events topic.
-        timeout: 20s 
+        timeout: 20s
     - name: events
       service: fe
   queue: # By default, messages from all topics will go to a shared queue.
@@ -95,6 +95,9 @@ Required. The name of the SNS topic to subscribe to.
 
 <span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>
 Required. The service this SNS topic is exposed by. Together with the topic name, this uniquely identifies an SNS topic in the copilot environment.
+
+<span class="parent-field">topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
+Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
 {% include 'image-config.en.md' %}
 
@@ -171,8 +174,8 @@ Scale up or down based on the average memory your service should maintain.
 
 <span class="parent-field">count.</span><a id="count-queue-delay" href="#count-queue-delay" class="field">`queue_delay`</a> <span class="type">Integer</span>   
 Scale up or down to maintain an acceptable queue latency by tracking against the acceptable backlog per task.  
-The acceptable backlog per task is calculated by dividing `acceptable_latency` by `msg_processing_time`. For example, if you can tolerate consuming a message within 10 minutes 
-of its arrival and it takes your task on average 250 milliseconds to process a message, then `acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400`. Therefore, each task can hold up to 
+The acceptable backlog per task is calculated by dividing `acceptable_latency` by `msg_processing_time`. For example, if you can tolerate consuming a message within 10 minutes
+of its arrival and it takes your task on average 250 milliseconds to process a message, then `acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400`. Therefore, each task can hold up to
 2,400 messages.   
 A target tracking policy is set up on your behalf to ensure your service scales up and down to maintain <= 2400 messages per task. To learn more see [docs](https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html).
 

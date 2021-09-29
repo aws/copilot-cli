@@ -213,7 +213,7 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 					Essential: aws.Bool(false),
 				},
 			},
-			wantErr: errInvalidSidecarDependsOnStatus,
+			wantErr: errInvalidDependsOnStatus,
 		},
 		"error when container dependency status is invalid": {
 			inSidecar: &manifest.SidecarConfig{
@@ -238,7 +238,7 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 					Essential: aws.Bool(true),
 				},
 			},
-			wantErr: errEssentialSidecarStatus,
+			wantErr: errEssentialContainerStatus,
 		},
 		"error when implied essential sidecar has a status besides start": {
 			inSidecar: &manifest.SidecarConfig{
@@ -250,7 +250,7 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 				"sidecar":  {},
 				"sidecar2": {},
 			},
-			wantErr: errEssentialSidecarStatus,
+			wantErr: errEssentialContainerStatus,
 		},
 		"error when essential container dependency status is invalid": {
 			inSidecar: &manifest.SidecarConfig{
@@ -452,7 +452,7 @@ func TestValidateImageDependsOn(t *testing.T) {
 			inSidecars: map[string]*manifest.SidecarConfig{
 				"sidecar": {},
 			},
-			wantErr: errInvalidSidecarDependsOnStatus,
+			wantErr: errInvalidDependsOnStatus,
 		},
 		"error when set essential sidecar container has a status besides start": {
 			inImage: &manifest.Image{
@@ -465,7 +465,7 @@ func TestValidateImageDependsOn(t *testing.T) {
 					Essential: aws.Bool(true),
 				},
 			},
-			wantErr: errEssentialSidecarStatus,
+			wantErr: errEssentialContainerStatus,
 		},
 		"error when implied essential sidecar container has a status besides start": {
 			inImage: &manifest.Image{
@@ -476,7 +476,7 @@ func TestValidateImageDependsOn(t *testing.T) {
 			inSidecars: map[string]*manifest.SidecarConfig{
 				"sidecar": {},
 			},
-			wantErr: errEssentialSidecarStatus,
+			wantErr: errEssentialContainerStatus,
 		},
 	}
 	for name, tc := range testCases {
@@ -533,20 +533,20 @@ func TestValidateTopicSubscription(t *testing.T) {
 	}{
 		"good case": {
 			inTS: manifest.TopicSubscription{
-				Name:    "name2",
-				Service: "svc",
+				Name:    aws.String("name2"),
+				Service: aws.String("svc"),
 			},
 			wantErr: nil,
 		},
 		"empty name": {
 			inTS: manifest.TopicSubscription{
-				Service: "svc",
+				Service: aws.String("svc"),
 			},
 			wantErr: errMissingPublishTopicField,
 		},
 		"empty svc name": {
 			inTS: manifest.TopicSubscription{
-				Name: "theName",
+				Name: aws.String("theName"),
 			},
 			wantErr: errInvalidSvcName,
 		},
