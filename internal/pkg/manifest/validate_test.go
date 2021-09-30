@@ -156,12 +156,11 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 }
 
 func TestBackendServiceConfig_Validate(t *testing.T) {
-	testImageConfig := ImageWithPortAndHealthcheck{
-		ImageWithPort: ImageWithPort{
+	testImageConfig := ImageWithHealthcheckAndOptionalPort{
+		ImageWithOptionalPort: ImageWithOptionalPort{
 			Image: Image{
 				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
 			},
-			Port: uint16P(80),
 		},
 	}
 	testCases := map[string]struct {
@@ -173,8 +172,8 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 		"error if fail to validate image": {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Build:    BuildArgsOrString{BuildString: aws.String("mockBuild")},
 								Location: aws.String("mockLocation"),
