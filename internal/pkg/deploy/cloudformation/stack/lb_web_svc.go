@@ -105,25 +105,16 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: s.manifest.Sidecars,
-		imageConfig:   &s.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(s.manifest.Name),
-	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
-	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
 	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 
-	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
+	advancedCount, err := convertAdvancedCount(s.manifest.Count.AdvancedCount)
 	if err != nil {
 		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
 	}
@@ -138,10 +129,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		capacityProviders = advancedCount.Cps
 	}
 
-	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
-	}
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -187,11 +174,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		RulePriorityLambda:       rulePriorityLambda.String(),
 		DesiredCountLambda:       desiredCountLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
-		Storage:                  storage,
+		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                dependencies,
+		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,

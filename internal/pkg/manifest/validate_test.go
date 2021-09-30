@@ -1179,8 +1179,15 @@ func TestStorage_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		Storage Storage
 
-		wantedErrorPrefix string
+		wantedErrorMsgPrefix string
+		wantedError          error
 	}{
+		"error if ephemeral is invalid": {
+			Storage: Storage{
+				Ephemeral: aws.Int(19),
+			},
+			wantedError: fmt.Errorf(`validate "ephemeral": ephemeral storage must be between 20 GiB and 200 GiB`),
+		},
 		"error if fail to validate volumes": {
 			Storage: Storage{
 				Volumes: map[string]*Volume{
@@ -1191,18 +1198,78 @@ func TestStorage_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "volumes[foo]": `,
+			wantedErrorMsgPrefix: `validate "volumes[foo]": `,
+		},
+		"error if storage has more than one managed volume": {
+			Storage: Storage{
+				Volumes: map[string]*Volume{
+					"foo": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+					"bar": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("cannot specify more than one managed volume per service"),
+		},
+		"valid": {
+			Storage: Storage{
+				Volumes: map[string]*Volume{
+					"foo": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+					"bar": {
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(false),
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+					"foobar": {
+						EFS: EFSConfigOrBool{
+							Advanced: EFSVolumeConfiguration{
+								FileSystemID: aws.String("fs-1234567"),
+							},
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+				},
+			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.Storage.Validate()
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }

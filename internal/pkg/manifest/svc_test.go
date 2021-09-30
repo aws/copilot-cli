@@ -787,13 +787,6 @@ func TestQueueScaling_AcceptableBacklogPerTask(t *testing.T) {
 			in:        QueueScaling{},
 			wantedErr: errors.New(`"queue_delay" must be specified in order to calculate the acceptable backlog`),
 		},
-		"should return an error if queue scaling is invalid": {
-			in: QueueScaling{
-				AcceptableLatency: durationp(1 * time.Second),
-				AvgProcessingTime: durationp(0 * time.Second),
-			},
-			wantedErr: errors.New("some error"),
-		},
 		"should round up to an integer if backlog number has a decimal": {
 			in: QueueScaling{
 				AcceptableLatency: durationp(10 * time.Second),

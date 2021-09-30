@@ -102,37 +102,6 @@ Outputs:
 			},
 			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
 		},
-		"failed parsing subscribe template": {
-			setUpManifest: func(svc *WorkerService) {
-				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
-				testWorkerSvcManifestWithBadSubscribe.Subscribe = manifest.SubscribeConfig{
-					Topics: []manifest.TopicSubscription{
-						{
-							Name:    aws.String("name"),
-							Service: aws.String("un@cept#ble"),
-						},
-					},
-				}
-				svc.manifest = testWorkerSvcManifestWithBadSubscribe
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
-				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				svc.parser = m
-				svc.addons = mockTemplater{
-					tpl: `
-Resources:
-  AdditionalResourcesPolicy:
-    Type: AWS::IAM::ManagedPolicy
-Outputs:
-  AdditionalResourcesPolicyArn:
-    Value: hello`,
-				}
-			},
-			wantedErr: fmt.Errorf(`invalid topic subscription "name": %w`, errSvcNameBadFormat),
-		},
 		"failed parsing Auto Scaling template": {
 			setUpManifest: func(svc *WorkerService) {
 				testWorkerSvcManifestWithBadAutoScaling := manifest.NewWorkerService(baseProps)
