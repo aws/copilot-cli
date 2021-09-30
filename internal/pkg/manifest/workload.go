@@ -125,6 +125,18 @@ type ImageWithPort struct {
 	Port  *uint16 `yaml:"port"`
 }
 
+// ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
+type ImageWithHealthcheckAndOptionalPort struct {
+	ImageWithOptionalPort `yaml:",inline"`
+	HealthCheck           ContainerHealthCheck `yaml:"healthcheck"`
+}
+
+// ImageWithOptionalPort represents a container image with an optional exposed port.
+type ImageWithOptionalPort struct {
+	Image Image   `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
+}
+
 // GetLocation returns the location of the image.
 func (i Image) GetLocation() string {
 	return aws.StringValue(i.Location)

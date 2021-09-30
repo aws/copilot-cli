@@ -237,8 +237,8 @@ secrets:
 						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
-						ImageConfig: ImageWithPortAndHealthcheck{
-							ImageWithPort: ImageWithPort{
+						ImageConfig: ImageWithHealthcheckAndOptionalPort{
+							ImageWithOptionalPort: ImageWithOptionalPort{
 								Image: Image{
 									Build: BuildArgsOrString{
 										BuildString: aws.String("./subscribers/Dockerfile"),

@@ -272,8 +272,28 @@ func (i *ImageWithPortAndHealthcheck) Validate() error {
 	return nil
 }
 
+// Validate returns nil if ImageWithHealthcheckAndOptionalPort is configured correctly.
+func (i *ImageWithHealthcheckAndOptionalPort) Validate() error {
+	var err error
+	if err = i.ImageWithOptionalPort.Validate(); err != nil {
+		return err
+	}
+	if err = i.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
+	}
+	return nil
+}
+
 // Validate returns nil if ImageWithHealthcheck is configured correctly.
 func (i *ImageWithHealthcheck) Validate() error {
+	if err := i.Image.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate returns nil if ImageWithOptionalPort is configured correctly.
+func (i *ImageWithOptionalPort) Validate() error {
 	if err := i.Image.Validate(); err != nil {
 		return err
 	}
