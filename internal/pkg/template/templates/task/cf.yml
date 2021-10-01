@@ -68,7 +68,7 @@ Resources:
             ValueFrom: {{$valueFrom}}{{end}}
           {{- end}}
       Family: !Join ['-', ["copilot", !Ref TaskName]]
-      RuntimePlatform: !If [HasCustomPlatform, [{OperatingSystemFamily: !Ref OS, CpuArchitecture: !Ref Arch}], !Ref "AWS::NoValue"]
+      RuntimePlatform: !If [HasCustomPlatform, {OperatingSystemFamily: !Ref OS, CpuArchitecture: !Ref Arch}, !Ref "AWS::NoValue"]
       RequiresCompatibilities:
         - "FARGATE"
       NetworkMode: awsvpc
