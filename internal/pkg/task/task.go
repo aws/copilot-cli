@@ -49,6 +49,12 @@ type Task struct {
 
 const (
 	startedBy = "copilot-task"
+
+	// Platform options.
+	osLinux                 = "LINUX"
+	osWindowsServer2019Core = "WINDOWS_SERVER_2019_CORE"
+	osWindowsServer2019Full = "WINDOWS_SERVER_2019_FULL"
+	archX86                 = "X86_64"
 )
 
 var (
@@ -77,4 +83,14 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	}
 	// Even if ENI information is not found for some tasks, we still want to return the other information as we can
 	return tasks
+}
+
+// ValidOSs returns all valid CFN-friendly operating systems.
+func ValidOSs() []string {
+	return []string{osWindowsServer2019Core, osWindowsServer2019Full}
+}
+
+// ValidArchs returns all valid CFN-friendly architectures.
+func ValidArchs() []string {
+	return []string{archX86}
 }
