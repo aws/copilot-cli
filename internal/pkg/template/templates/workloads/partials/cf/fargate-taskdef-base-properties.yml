@@ -10,5 +10,5 @@ EphemeralStorage:
   SizeInGiB: {{.Storage.Ephemeral}}
 {{- end}}
 {{- end}}
-ExecutionRoleArn: !Ref ExecutionRole
-TaskRoleArn: !Ref TaskRole
+ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+TaskRoleArn: !GetAtt TaskRole.Arn
