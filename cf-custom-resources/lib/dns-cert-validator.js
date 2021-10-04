@@ -176,16 +176,19 @@ const requestCertificate = async function (
     envHostedZoneId
   );
 
-  await acm
-    .waitFor("certificateValidated", {
-      // Wait up to 9 minutes and 30 seconds
-      $waiter: {
-        delay: 30,
-        maxAttempts: 19,
-      },
-      CertificateArn: reqCertResponse.CertificateArn,
-    })
-    .promise();
+  throw new Error(
+      "wow an error?!"
+  );
+  // await acm
+  //   .waitFor("certificateValidated", {
+  //     // Wait up to 9 minutes and 30 seconds
+  //     $waiter: {
+  //       delay: 1,
+  //       maxAttempts: 1,
+  //     },
+  //     CertificateArn: reqCertResponse.CertificateArn,
+  //   })
+  //   .promise();
 
   return reqCertResponse.CertificateArn;
 };
