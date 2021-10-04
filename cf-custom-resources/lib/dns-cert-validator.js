@@ -1,5 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
+/* jshint node: true */
+/* jshint esversion: 8 */
+
 "use strict";
 
 const aws = require("aws-sdk");
@@ -41,7 +45,7 @@ let report = function (
     const https = require("https");
     const { URL } = require("url");
 
-    var responseBody = JSON.stringify({
+    let responseBody = JSON.stringify({
       Status: responseStatus,
       Reason: reason,
       PhysicalResourceId: physicalResourceId || context.logStreamName,
@@ -94,6 +98,7 @@ let report = function (
  * @param {string} aliases the custom domain aliases
  * @param {string} envHostedZoneId the environment Route53 Hosted Zone ID
  * @param {string} rootDnsRole the IAM role ARN that can manage domainName
+ * @param {region} region the environment region
  * @returns {string} Validated certificate ARN
  */
 const requestCertificate = async function (
@@ -108,12 +113,12 @@ const requestCertificate = async function (
 ) {
   const crypto = require("crypto");
   const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
-  // For backward compatiblity, and make sure the SANs we use are unique.
-  const uniqueSansToUse = new Set([certDomain, `*.${certDomain}`]);
+  // For backward compatibility, and make sure the SANs we use are unique.
+  const uniqueSansToUse = new Set([certDomain, `*.${certDomain}`, ]);
   for (const alias of aliases) {
     uniqueSansToUse.add(alias);
   }
-  const sansToUse = [...uniqueSansToUse];
+  const sansToUse = [...uniqueSansToUse, ];
   const reqCertResponse = await acm
     .requestCertificate({
       DomainName: certDomain,
@@ -147,7 +152,7 @@ const requestCertificate = async function (
       })
       .promise();
     options = Certificate.DomainValidationOptions || [];
-    var readyRecordsNum = 0;
+    let readyRecordsNum = 0;
     for (const option of options) {
       if (option.ResourceRecord) {
         readyRecordsNum++;
@@ -296,9 +301,9 @@ const deleteHostedZoneRecords = async function (
   // Make sure DNS validation records are unique. For example: "example.com" and "*.example.com"
   // might have the same DNS validation record.
   const filteredRecordOption = [];
-  var uniqueValidateRecordNames = new Set();
+  let uniqueValidateRecordNames = new Set();
   for (const option of recordOptionsToDelete) {
-    var id = `${option.ResourceRecord.Name} ${option.ResourceRecord.Value}`;
+    let id = `${option.ResourceRecord.Name} ${option.ResourceRecord.Value}`;
     if (uniqueValidateRecordNames.has(id)) {
       continue;
     }
@@ -383,7 +388,7 @@ const deleteCertificate = async function (
 
       inUseByResources = Certificate.InUseBy || [];
       options = Certificate.DomainValidationOptions || [];
-      var ok = false;
+      let ok = false;
       for (const option of options) {
         if (!option.ResourceRecord) {
           ok = false;
@@ -481,13 +486,15 @@ const getAllAliases = function (aliases) {
   } catch (error) {
     throw new Error(`Cannot parse ${aliases} into JSON format.`);
   }
-  var aliasList = [];
-  for (var m in obj) {
-    aliasList.push(...obj[m]);
+  let aliasList = [];
+
+  for (const [_, aliases] of Object.entries(obj)) {
+    aliasList.push(...aliases);
   }
+
   return new Set(
     aliasList.filter(function (itm) {
-      return getDomainType(itm) != domainTypes.OtherDomainZone;
+      return getDomainType(itm) !== domainTypes.OtherDomainZone;
     })
   );
 };
@@ -512,7 +519,7 @@ const clients = function (region, rootDnsRole) {
   const envRoute53 = new aws.Route53();
   const appRoute53 = new aws.Route53({
     credentials: new aws.ChainableTemporaryCredentials({
-      params: { RoleArn: rootDnsRole },
+      params: { RoleArn: rootDnsRole, },
       masterCredentials: new aws.EnvironmentCredentials("AWS"),
     }),
   });
@@ -520,18 +527,18 @@ const clients = function (region, rootDnsRole) {
     // Used by the test suite, since waiters aren't mockable yet
     envRoute53.waitFor = appRoute53.waitFor = acm.waitFor = waiter;
   }
-  return [acm, envRoute53, appRoute53];
+  return [acm, envRoute53, appRoute53, ];
 };
 
 /**
  * Main certificate manager handler, invoked by Lambda
  */
 exports.certificateRequestHandler = async function (event, context) {
-  var responseData = {};
-  var physicalResourceId = event.PhysicalResourceId;
-  var certificateArn;
+  let responseData = {};
+  let physicalResourceId = event.PhysicalResourceId;
+  let certificateArn;
   const props = event.ResourceProperties;
-  const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
+  const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName, ];
   domainTypes = {
     EnvDomainZone: {
       regex: new RegExp(`^([^\.]+\.)?${env}.${app}.${domain}`),
@@ -549,8 +556,8 @@ exports.certificateRequestHandler = async function (event, context) {
   };
 
   try {
-    var certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
-    var aliases = await getAllAliases(props.Aliases);
+    let certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
+    let aliases = await getAllAliases(props.Aliases);
     switch (event.RequestType) {
       case "Create":
         certificateArn = await requestCertificate(
@@ -568,13 +575,13 @@ exports.certificateRequestHandler = async function (event, context) {
       case "Update":
         // Exit early if cert doesn't change.
         if (event.OldResourceProperties) {
-          var prevAliases = await getAllAliases(
+          let prevAliases = await getAllAliases(
             event.OldResourceProperties.Aliases
           );
-          var aliasesToDelete = [...prevAliases].filter(function (itm) {
+          let aliasesToDelete = [...prevAliases,].filter(function (itm) {
             return !aliases.has(itm);
           });
-          var aliasesToAdd = [...aliases].filter(function (itm) {
+          let aliasesToAdd = [...aliases,].filter(function (itm) {
             return !prevAliases.has(itm);
           });
           if (aliasesToAdd.length + aliasesToDelete.length === 0) {
