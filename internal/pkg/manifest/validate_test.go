@@ -76,7 +76,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							SecurityGroups: []string{},
+							Placement: (*Placement)(aws.String("")),
 						},
 					},
 				},
@@ -205,7 +205,7 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							SecurityGroups: []string{},
+							Placement: (*Placement)(aws.String("")),
 						},
 					},
 				},
@@ -383,7 +383,7 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							SecurityGroups: []string{},
+							Placement: (*Placement)(aws.String("")),
 						},
 					},
 				},
@@ -508,7 +508,7 @@ func TestScheduledJobConfig_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							SecurityGroups: []string{},
+							Placement: (*Placement)(aws.String("")),
 						},
 					},
 				},
@@ -1462,7 +1462,7 @@ func TestNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: NetworkConfig{
 				VPC: vpcConfig{
-					SecurityGroups: []string{},
+					Placement: (*Placement)(aws.String("")),
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -1489,7 +1489,7 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: vpcConfig{
-				SecurityGroups: []string{},
+				Placement: (*Placement)(aws.String("")),
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -1508,12 +1508,14 @@ func TestVpcConfig_Validate(t *testing.T) {
 }
 
 func TestPlacement_Validate(t *testing.T) {
+	mockEmptyPlacement := Placement("")
 	mockInvalidPlacement := Placement("external")
 	testCases := map[string]struct {
 		in     *Placement
 		wanted error
 	}{
 		"should return an error if placement is empty": {
+			in:     &mockEmptyPlacement,
 			wanted: errors.New(`"placement" cannot be empty`),
 		},
 		"should return an error if placement is invalid": {
@@ -1529,6 +1531,34 @@ func TestPlacement_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wanted.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config AppRunnerInstanceConfig
+
+		wantedErrorPrefix string
+	}{
+		"error if fail to validate platforms": {
+			config: AppRunnerInstanceConfig{
+				Platform: PlatformArgsOrString{
+					PlatformString: (*PlatformString)(aws.String("")),
+				},
+			},
+			wantedErrorPrefix: `validate "platform": `,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else {
+				require.NoError(t, gotErr)
 			}
 		})
 	}
