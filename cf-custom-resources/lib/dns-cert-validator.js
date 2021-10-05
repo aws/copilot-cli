@@ -82,14 +82,14 @@ let report = function (
   });
 };
 
-const aliasesChanged = async function (
+const aliasesChanged = function (
     oldResourceProperties,
     aliases,
 ) {
   if (!oldResourceProperties) {
     return true;
   }
-  let prevAliases = await getAllAliases(
+  let prevAliases = getAllAliases(
       oldResourceProperties.Aliases
   );
   let aliasesToDelete = [...prevAliases,].filter(function (itm) {
@@ -109,7 +109,7 @@ const aliasesChanged = async function (
  * @param {string} appName the application name
  * @param {string} envName the environment name
  * @param {string} certDomain the domain of the certificate
- * @param {string} aliases the custom domain aliases
+ * @param {string[]} aliases the custom domain aliases
  * @param {string[]} sansToUse the subject alternative name to add to the certificate
  * @param {object} acm the AWS ACM client to use for sending requests
  * @returns {string} ARN of the requested certificate
@@ -228,8 +228,8 @@ const validateCertificate = async function(
     .waitFor("certificateValidated", {
       // Wait up to 9 minutes and 30 seconds
       $waiter: {
-        delay: 1,
-        maxAttempts: 1,
+        delay: 30,
+        maxAttempts: 19,
       },
       CertificateArn: certificateARN,
     })
@@ -594,7 +594,7 @@ exports.certificateRequestHandler = async function (event, context) {
   };
 
   let certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
-  let aliases = await getAllAliases(props.Aliases);
+  let aliases = getAllAliases(props.Aliases);
   const uniqueSansToUse = new Set([certDomain, `*.${certDomain}`, ]);
   for (const alias of aliases) {
     uniqueSansToUse.add(alias);
@@ -622,8 +622,7 @@ exports.certificateRequestHandler = async function (event, context) {
         break;
       case "Update":
         // Exit early if cert doesn't change.
-        let shouldUpdate = await aliasesChanged(event.OldResourceProperties, aliases);
-        if (!shouldUpdate) {
+        if (!aliasesChanged(event.OldResourceProperties, aliases)) {
           break;
         }
         response = await requestCertificate(
