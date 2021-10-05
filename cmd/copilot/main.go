@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/version"
-	"github.com/mattn/go-colorable"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +25,7 @@ func init() {
 	cobra.EnableCommandSorting = false // Maintain the order in which we add commands.
 }
 
-func run() int {
-	defer colorable.EnableColorsStdout(nil)()
-
+func main() {
 	cmd := buildRootCmd()
 	if err := cmd.Execute(); err != nil {
 		var ac actionRecommender
@@ -36,13 +33,8 @@ func run() int {
 			log.Infoln(ac.RecommendActions())
 		}
 		log.Errorln(err.Error())
-		return 1
+		os.Exit(1)
 	}
-	return 0
-}
-
-func main() {
-	os.Exit(run())
 }
 
 func buildRootCmd() *cobra.Command {
@@ -59,6 +51,9 @@ func buildRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+
+	cmd.SetOut(log.OutputWriter)
+	cmd.SetErr(log.DiagnosticWriter)
 
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.
