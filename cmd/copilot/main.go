@@ -52,6 +52,9 @@ func buildRootCmd() *cobra.Command {
 		SilenceErrors: true,
 	}
 
+	cmd.SetOut(log.OutputWriter)
+	cmd.SetErr(log.DiagnosticWriter)
+
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.
 	cmd.Version = version.Version
