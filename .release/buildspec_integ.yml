@@ -15,8 +15,8 @@ phases:
       nodejs: 12
     commands:
       - 'cd $HOME/.goenv && git pull --ff-only && cd -'
-      - 'goenv install 1.16.6'
-      - 'goenv global 1.16.6'
+      - 'goenv install 1.17.1'
+      - 'goenv global 1.17.1'
   build:
     commands:
       - echo `git rev-parse HEAD` # Do not delete; for pipeline logging purposes
