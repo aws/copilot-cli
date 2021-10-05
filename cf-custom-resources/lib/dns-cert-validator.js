@@ -98,7 +98,7 @@ const aliasesChanged = function (
   let aliasesToAdd = [...aliases,].filter(function (itm) {
     return !prevAliases.has(itm);
   });
-  return !aliasesToAdd.length + aliasesToDelete.length === 0;
+  return aliasesToAdd.length + aliasesToDelete.length !== 0;
 };
 
 /**
