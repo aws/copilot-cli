@@ -36,9 +36,16 @@
     StartPeriod: {{$sidecar.HealthCheck.StartPeriod}}
     Timeout: {{$sidecar.HealthCheck.Timeout}}
 {{- end}}
-{{- if $sidecar.Variables}}
   Environment:
-  {{- range $name, $value := $sidecar.Variables}}
+  - Name: COPILOT_APPLICATION_NAME
+    Value: !Sub '${AppName}'
+  - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+    Value: {{$.ServiceDiscoveryEndpoint}}
+  - Name: COPILOT_ENVIRONMENT_NAME
+    Value: !Sub '${EnvName}'
+  - Name: COPILOT_SERVICE_NAME
+    Value: !Sub '${WorkloadName}'
+{{- if $sidecar.Variables}}{{- range $name, $value := $sidecar.Variables}}
   - Name: {{$name}}
     Value: {{$value | printf "%q"}}
   {{- end}}
