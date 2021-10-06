@@ -78,7 +78,7 @@ func isValid(typ reflect.Type) error {
 			return nil
 		}
 	}
-	// For slice and map, validate individual member.
+	// For slice and map, validate its member type.
 	if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
 		if err := isValid(typ.Elem()); err != nil {
 			return err
