@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 var basicKinds = []reflect.Kind{
@@ -30,6 +31,7 @@ func basicTypesString() []string {
 		types = append(types, k.String())
 	}
 	types = append(types, reflect.TypeOf(time.Duration(0)).String())
+	types = append(types, reflect.TypeOf(yaml.Node{}).String())
 	return types
 }
 
@@ -60,17 +62,15 @@ func Test_ValidateAudit(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := isValid(reflect.ValueOf(tc.mft))
+			err := isValid(reflect.ValueOf(tc.mft).Type())
 			require.NoError(t, err)
 		})
 	}
 }
 
-func isValid(v reflect.Value) error {
-	typ := v.Type()
+func isValid(typ reflect.Type) error {
 	if typ.Kind() == reflect.Ptr {
-		v = v.Elem()
-		typ = v.Type()
+		typ = typ.Elem()
 	}
 	// Skip if it is a type that doesn't need to implement Validate().
 	for _, k := range basicTypesString() {
@@ -79,19 +79,9 @@ func isValid(v reflect.Value) error {
 		}
 	}
 	// For slice and map, validate individual member.
-	if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
-		for i := 0; i < v.Len(); i++ {
-			if err := isValid(v.Index(i)); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if typ.Kind() == reflect.Map {
-		for _, k := range v.MapKeys() {
-			if err := isValid(v.MapIndex(k)); err != nil {
-				return err
-			}
+	if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
+		if err := isValid(typ.Elem()); err != nil {
+			return err
 		}
 		return nil
 	}
@@ -105,16 +95,13 @@ func isValid(v reflect.Value) error {
 	if typ.Kind() != reflect.Struct {
 		return nil
 	}
-	for i := 0; i < v.NumField(); i++ {
-		fieldValue := v.Field(i)
-		if fieldValue.Type().Kind() == reflect.Ptr {
-			fieldValue = fieldValue.Elem()
-		}
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
 		// Skip private fields.
-		if !fieldValue.CanSet() {
+		if !field.IsExported() {
 			continue
 		}
-		if err := isValid(fieldValue); err != nil {
+		if err := isValid(field.Type); err != nil {
 			return err
 		}
 	}
