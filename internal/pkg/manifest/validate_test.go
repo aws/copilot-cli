@@ -828,28 +828,28 @@ func TestTaskConfig_Validate(t *testing.T) {
 	}
 }
 
-// func TestPlatformString_Validate(t *testing.T) {
-// 	testCases := map[string]struct {
-// 		in     PlatformString
-// 		wanted error
-// 	}{
-// 		"error if platform string is invalid": {
-// 			in:     PlatformString("foobar"),
-// 			wanted: fmt.Errorf("platform foobar is invalid; the valid platform is: linux/amd64"),
-// 		},
-// 	}
-// 	for name, tc := range testCases {
-// 		t.Run(name, func(t *testing.T) {
-// 			err := tc.in.Validate()
+func TestPlatformString_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     PlatformString
+		wanted error
+	}{
+		"error if platform string is invalid": {
+			in:     PlatformString("foobar"),
+			wanted: fmt.Errorf("platform foobar is invalid; the valid platform is: linux/amd64"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
 
-// 			if tc.wanted != nil {
-// 				require.EqualError(t, err, tc.wanted.Error())
-// 			} else {
-// 				require.NoError(t, err)
-// 			}
-// 		})
-// 	}
-// }
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 func TestPlatformArgs_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     PlatformArgs

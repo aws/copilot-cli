@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,8 +29,7 @@ func basicTypesString() []string {
 	for _, k := range basicKinds {
 		types = append(types, k.String())
 	}
-	types = append(types, reflect.TypeOf(map[string]string{}).String())
-	types = append(types, reflect.TypeOf([]string{}).String())
+	types = append(types, reflect.TypeOf(time.Duration(0)).String())
 	return types
 }
 
@@ -45,19 +43,19 @@ func Test_ValidateAudit(t *testing.T) {
 		mft manifest.WorkloadManifest
 	}{
 		"backend service": {
-			mft: manifest.BackendService{},
+			mft: &manifest.BackendService{},
 		},
 		"load balanced web service": {
-			mft: manifest.LoadBalancedWebService{},
+			mft: &manifest.LoadBalancedWebService{},
 		},
 		"request-driven web service": {
-			mft: manifest.RequestDrivenWebService{},
+			mft: &manifest.RequestDrivenWebService{},
 		},
 		"schedule job": {
-			mft: manifest.ScheduledJob{},
+			mft: &manifest.ScheduledJob{},
 		},
 		"worker service": {
-			mft: manifest.WorkerService{},
+			mft: &manifest.WorkerService{},
 		},
 	}
 	for name, tc := range testCases {
@@ -71,11 +69,14 @@ func Test_ValidateAudit(t *testing.T) {
 func isValid(v reflect.Value) error {
 	typ := v.Type()
 	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
+		v = v.Elem()
+		typ = v.Type()
 	}
 	// Skip if it is a type that doesn't need to implement Validate().
-	if exceptionType(typ) {
-		return nil
+	for _, k := range basicTypesString() {
+		if typ.String() == k {
+			return nil
+		}
 	}
 	// For slice and map, validate individual member.
 	if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
@@ -105,26 +106,17 @@ func isValid(v reflect.Value) error {
 		return nil
 	}
 	for i := 0; i < v.NumField(); i++ {
-		if err := isValid(v.Field(i)); err != nil {
+		fieldValue := v.Field(i)
+		if fieldValue.Type().Kind() == reflect.Ptr {
+			fieldValue = fieldValue.Elem()
+		}
+		// Skip private fields.
+		if !fieldValue.CanSet() {
+			continue
+		}
+		if err := isValid(fieldValue); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func exceptionType(typ reflect.Type) bool {
-	for _, k := range basicTypesString() {
-		if typ.String() == k {
-			return true
-		}
-	}
-	var tpl template.Parser
-	if typ == reflect.TypeOf(&tpl).Elem() {
-		return true
-	}
-	var duration time.Duration
-	if typ == reflect.TypeOf(&duration).Elem() {
-		return true
-	}
-	return false
 }
