@@ -59,6 +59,8 @@ var (
 		platformString(OSWindows, ArchX86),
 	}
 
+	DefaultPlatform = platformString(OSLinux, ArchAMD64)
+
 	// validAdvancedPlatforms are all of the OsFamily/Arch combinations that the PlatformArgs field may accept.
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
@@ -71,8 +73,6 @@ var (
 
 	// All placement options.
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
-
-	defaultPlatform = platformString(OSLinux, ArchAMD64)
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
@@ -741,7 +741,7 @@ func platformString(os, arch string) string {
 // RedirectPlatform returns a platform that's supported for the given manifest type.
 func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	// Return nil if passed the default platform.
-	if platformString(os, arch) == defaultPlatform {
+	if platformString(os, arch) == DefaultPlatform {
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.

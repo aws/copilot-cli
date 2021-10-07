@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
@@ -678,7 +680,9 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
-						Platform:       manifest.PlatformArgsOrString{},
+						Platform: manifest.PlatformArgsOrString{
+							PlatformString: aws.String("windows/amd64"),
+						},
 					},
 					Port: 80,
 				}).Return("manifest/path", nil)
