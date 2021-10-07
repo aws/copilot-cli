@@ -458,7 +458,7 @@ func (o *initSvcOpts) legitimizePlatform() error {
 		return nil
 	}
 	if platform != detectedPlatform {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", dockerengine.PlatformString(dockerengine.OSLinux, dockerengine.ArchAMD64))
+		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", platform)
 	}
 	if platform != manifest.DefaultPlatform && o.wkldType != manifest.RequestDrivenWebServiceType {
 		log.Warning("See 'platform' field in your manifest.\n")
