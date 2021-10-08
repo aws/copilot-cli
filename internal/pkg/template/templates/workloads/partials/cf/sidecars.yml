@@ -37,23 +37,8 @@
     Timeout: {{$sidecar.HealthCheck.Timeout}}
 {{- end}}
   Environment:
-  - Name: COPILOT_APPLICATION_NAME
-    Value: !Sub '${AppName}'
-  - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
-    Value: {{$.ServiceDiscoveryEndpoint}}
-  - Name: COPILOT_ENVIRONMENT_NAME
-    Value: !Sub '${EnvName}'
-  - Name: COPILOT_SERVICE_NAME
-    Value: !Sub '${WorkloadName}'
-{{- if $sidecar.Variables}}{{- range $name, $value := $sidecar.Variables}}
-  - Name: {{$name}}
-    Value: {{$value | printf "%q"}}
-  {{- end}}
-  {{- if $sidecar.MountPoints}}
-  - Name: COPILOT_MOUNT_POINTS
-    Value: '{{jsonMountPoints $sidecar.MountPoints}}'
-  {{- end}}
-{{- end}}
+{{include "envvars-copilot" $ | indent 2}}
+{{include "envvars" . | indent 2}}
 {{- if $sidecar.Secrets}}
   Secrets:
   {{- range $name, $valueFrom := $sidecar.Secrets}}
@@ -82,9 +67,9 @@
   RepositoryCredentials:
     CredentialsParameter: {{$sidecar.CredsParam}}
 {{- end}}
-{{- if $sidecar.MountPoints}}
+{{- if $sidecar.Storage.MountPoints}}
   MountPoints:
-  {{- range $mp := $sidecar.MountPoints}}
+  {{- range $mp := $sidecar.Storage.MountPoints}}
     - SourceVolume: {{$mp.SourceVolume}}
       ReadOnly: {{$mp.ReadOnly}}
       ContainerPath: '{{$mp.ContainerPath}}'

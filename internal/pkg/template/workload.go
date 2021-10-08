@@ -52,6 +52,7 @@ var (
 	partialsWorkloadCFTemplateNames = []string{
 		"loggroup",
 		"envvars",
+		"envvars-copilot",
 		"secrets",
 		"executionrole",
 		"taskrole",
@@ -90,15 +91,17 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name         *string
-	Image        *string
-	Essential    *bool
-	Port         *string
-	Protocol     *string
-	CredsParam   *string
-	Variables    map[string]string
-	Secrets      map[string]string
-	MountPoints  []*MountPoint
+	Name       *string
+	Image      *string
+	Essential  *bool
+	Port       *string
+	Protocol   *string
+	CredsParam *string
+	Variables  map[string]string
+	Secrets    map[string]string
+	Storage    struct {
+		MountPoints []*MountPoint
+	}
 	DockerLabels map[string]string
 	DependsOn    map[string]string
 	EntryPoint   []string

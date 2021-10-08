@@ -1,0 +1,34 @@
+- Name: COPILOT_APPLICATION_NAME
+  Value: !Sub '${AppName}'
+- Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+  Value: {{.ServiceDiscoveryEndpoint}}
+- Name: COPILOT_ENVIRONMENT_NAME
+  Value: !Sub '${EnvName}'
+- Name: COPILOT_SERVICE_NAME
+  Value: !Sub '${WorkloadName}'
+{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
+- Name: {{toSnakeCase $var}}
+  Value:
+    Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}
+{{- if .Publish}}{{- if .Publish.Topics}}
+- Name: COPILOT_SNS_TOPIC_ARNS
+  Value: '{{jsonSNSTopics .Publish.Topics}}'
+{{- end}}{{- end}}
+{{- if eq .WorkloadType "Worker Service"}}
+- Name: COPILOT_QUEUE_URI
+  Value: !Ref EventsQueue
+{{- end}}
+{{- if .Subscribe}}{{if .Subscribe.HasTopicQueues}}
+- Name: COPILOT_TOPIC_QUEUE_URIS
+  Value: !Sub
+    - '{{jsonQueueURIs .Subscribe.Topics}}'
+    - {{- range $topic := .Subscribe.Topics}}
+      {{- if and $topic.Queue $topic.Service $topic.Name}}
+        {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}URL: !Ref {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue
+      {{- end}}
+      {{- end}}
+{{- end}}{{- end}}
+{{- if eq .WorkloadType "Load Balanced Web Service"}}
+- Name: COPILOT_LB_DNS
+  Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{- end}}

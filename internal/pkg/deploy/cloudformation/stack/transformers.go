@@ -72,7 +72,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			CredsParam:   config.CredsParam,
 			Secrets:      config.Secrets,
 			Variables:    config.Variables,
-			MountPoints:  mp,
+			Storage:      struct{ MountPoints []*template.MountPoint }{MountPoints: mp},
 			DockerLabels: config.DockerLabels,
 			DependsOn:    convertDependsOn(config.DependsOn),
 			EntryPoint:   entrypoint,

@@ -86,14 +86,14 @@ Resources:
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
-          - Name: LOG_LEVEL
-            Value: "info"
-          - Name: COPILOT_MOUNT_POINTS
-            Value: '{"persistence":"/etc/scratch"}'
           - Name: COPILOT_SNS_TOPIC_ARNS
             Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs"}'
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          - Name: LOG_LEVEL
+            Value: "info"
+          - Name: COPILOT_MOUNT_POINTS
+            Value: '{"persistence":"/etc/scratch"}'
           
           LogConfiguration:
             LogDriver: awslogs
@@ -127,6 +127,10 @@ Resources:
               Value: !Sub '${EnvName}'
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub '${WorkloadName}'
+            - Name: COPILOT_SNS_TOPIC_ARNS
+              Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs"}'
+            - Name: COPILOT_LB_DNS
+              Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
             - Name: NGINX_PORT
               Value: "80"
           LogConfiguration:
