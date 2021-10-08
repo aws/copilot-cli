@@ -150,7 +150,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts:   defaultOpts,
 			inOS:        "OStrich",
 			inArch:      "X86_64",
-			wantedError: errors.New("operating system OStrich is invalid; valid operating systems are: WINDOWS_SERVER_2019_CORE and WINDOWS_SERVER_2019_FULL"),
+			wantedError: errors.New("operating system OStrich is invalid; valid operating systems are: WINDOWS_SERVER_2019_CORE and WINDOWS_SERVER_2019_FULL and LINUX"),
 		},
 		"invalid arch": {
 			basicOpts:   defaultOpts,
