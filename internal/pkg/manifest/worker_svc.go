@@ -31,6 +31,11 @@ type WorkerService struct {
 	parser template.Parser
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (s *WorkerService) Publish() []Topic {
+	return s.WorkerServiceConfig.PublishConfig.Topics
+}
+
 // WorkerServiceConfig holds the configuration that can be overridden per environments.
 type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
@@ -39,6 +44,7 @@ type WorkerServiceConfig struct {
 	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	Subscribe        SubscribeConfig           `yaml:"subscribe"`
+	PublishConfig    PublishConfig             `yaml:"publish"`
 	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }

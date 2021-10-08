@@ -220,6 +220,9 @@ func (w WorkerServiceConfig) Validate() error {
 	if err = w.Subscribe.Validate(); err != nil {
 		return fmt.Errorf(`validate "subscribe": %w`, err)
 	}
+	if err = w.PublishConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "publish": %w`, err)
+	}
 	for ind, taskDefOverride := range w.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)

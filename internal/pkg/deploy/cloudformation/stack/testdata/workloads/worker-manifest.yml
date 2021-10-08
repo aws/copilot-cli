@@ -23,6 +23,10 @@ count:
     msg_processing_time: 1s
 exec: true     # Enable running commands in your container.
 
+publish:
+  topics:
+    - name: givesOtherdogs
+
 subscribe:
   queue:
     delay: 1s
