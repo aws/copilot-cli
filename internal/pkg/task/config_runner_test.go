@@ -256,8 +256,8 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 
 			securityGroups: []string{"sg-1", "sg-2"},
 
-			os:   "windows",
-			arch: "amd64",
+			os:   "WINDOWS_SERVER_2019_CORE",
+			arch: "X86_64",
 
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)

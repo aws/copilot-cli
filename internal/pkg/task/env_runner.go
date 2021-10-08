@@ -6,8 +6,6 @@ package task
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -81,7 +79,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 	}
 
 	platformVersion := "LATEST"
-	for _, windowsOS := range manifest.WindowsOSFamilies {
+	for _, windowsOS := range validWindowsOSs {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"
 		}

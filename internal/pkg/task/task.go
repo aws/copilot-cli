@@ -59,6 +59,8 @@ const (
 
 var (
 	fmtTaskFamilyName = "copilot-%s"
+
+	validWindowsOSs = []string{osWindowsServer2019Core, osWindowsServer2019Full}
 )
 
 func taskFamilyName(groupName string) string {
