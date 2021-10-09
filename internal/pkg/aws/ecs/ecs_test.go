@@ -864,6 +864,7 @@ func TestECS_RunTask(t *testing.T) {
 		taskFamilyName  string
 		startedBy       string
 		platformVersion string
+		enableExec      bool
 	}
 
 	runTaskInput := input{
@@ -874,6 +875,7 @@ func TestECS_RunTask(t *testing.T) {
 		taskFamilyName:  "my-task",
 		startedBy:       "task",
 		platformVersion: "LATEST",
+		enableExec:      true,
 	}
 	ecsTasks := []*ecs.Task{
 		{
@@ -1062,6 +1064,7 @@ func TestECS_RunTask(t *testing.T) {
 				SecurityGroups:  tc.securityGroups,
 				StartedBy:       tc.startedBy,
 				PlatformVersion: tc.platformVersion,
+				EnableExec:      tc.enableExec,
 			})
 
 			if tc.wantedError != nil {
