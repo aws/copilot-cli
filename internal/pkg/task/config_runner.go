@@ -70,9 +70,11 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 		r.Subnets = subnets
 	}
 	platformVersion := "LATEST"
+	enableExec := true
 	for _, windowsOS := range validWindowsOSs {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"
+			enableExec = false
 		}
 	}
 
@@ -84,6 +86,7 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 		TaskFamilyName:  taskFamilyName(r.GroupName),
 		StartedBy:       startedBy,
 		PlatformVersion: platformVersion,
+		EnableExec:      enableExec,
 	})
 	if err != nil {
 		return nil, &errRunTask{

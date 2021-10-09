@@ -60,6 +60,7 @@ type RunTaskInput struct {
 	TaskFamilyName  string
 	StartedBy       string
 	PlatformVersion string
+	EnableExec      bool
 }
 
 // ExecuteCommandInput holds the fields needed to execute commands in a running container.
@@ -331,7 +332,7 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 				SecurityGroups: aws.StringSlice(input.SecurityGroups),
 			},
 		},
-		EnableExecuteCommand: aws.Bool(true),
+		EnableExecuteCommand: aws.Bool(input.EnableExec),
 		PlatformVersion:      aws.String(input.PlatformVersion),
 		PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 	})

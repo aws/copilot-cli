@@ -79,9 +79,11 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 	}
 
 	platformVersion := "LATEST"
+	enableExec := true
 	for _, windowsOS := range validWindowsOSs {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"
+			enableExec = false
 		}
 	}
 
@@ -93,6 +95,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		TaskFamilyName:  taskFamilyName(r.GroupName),
 		StartedBy:       startedBy,
 		PlatformVersion: platformVersion,
+		EnableExec:      enableExec,
 	})
 	if err != nil {
 		return nil, &errRunTask{
