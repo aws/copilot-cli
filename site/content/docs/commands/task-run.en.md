@@ -88,3 +88,8 @@ Run a task with a command.
 ```
 $ copilot task run --command "python migrate-script.py"
 ```
+
+Run a Windows task with the minimum cpu and memory values.
+```
+$ copilot task run --platform-os WINDOWS_SERVER_2019_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
+```
