@@ -405,6 +405,19 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "subscribe": `,
 		},
+		"error if fail to validate publish": {
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
+		},
 		"error if fail to validate taskdef override": {
 			config: WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{

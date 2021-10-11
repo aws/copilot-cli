@@ -5,7 +5,7 @@
       'aws:copilot:description': 'A SNS topic to broadcast {{$topic.Name}} events'
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Sub '${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
+      TopicName: !Sub '${AWS::StackName}-{{$topic.Name}}'
       KmsMasterKeyId: 'alias/aws/sns'
 
 {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
