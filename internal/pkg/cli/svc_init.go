@@ -450,20 +450,20 @@ func (o *initSvcOpts) legitimizePlatform() error {
 		return fmt.Errorf("get docker engine platform: %w", err)
 	}
 	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
-	platform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
+	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
 	if err != nil {
 		return fmt.Errorf("redirect docker engine platform: %w", err)
 	}
-	if platform == "" {
+	if redirectedPlatform == "" {
 		return nil
 	}
-	if platform != detectedPlatform {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", platform)
+	if redirectedPlatform != detectedPlatform {
+		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", redirectedPlatform)
 	}
 	if o.wkldType != manifest.RequestDrivenWebServiceType {
 		log.Warning("See 'platform' field in your manifest.\n")
 	}
-	o.platform = &platform
+	o.platform = &redirectedPlatform
 	return nil
 }
 
