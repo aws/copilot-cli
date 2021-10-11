@@ -59,7 +59,7 @@ var (
 		platformString(OSWindows, ArchX86),
 	}
 
-	DefaultPlatform = platformString(OSLinux, ArchAMD64)
+	defaultPlatform = platformString(OSLinux, ArchAMD64)
 
 	// validAdvancedPlatforms are all of the OsFamily/Arch combinations that the PlatformArgs field may accept.
 	validAdvancedPlatforms = []PlatformArgs{
@@ -741,7 +741,7 @@ func platformString(os, arch string) string {
 // RedirectPlatform returns a platform that's supported for the given manifest type.
 func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	// Return nil if passed the default platform.
-	if platformString(os, arch) == DefaultPlatform {
+	if platformString(os, arch) == defaultPlatform {
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.

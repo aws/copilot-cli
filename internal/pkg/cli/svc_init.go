@@ -460,7 +460,7 @@ func (o *initSvcOpts) legitimizePlatform() error {
 	if platform != detectedPlatform {
 		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", platform)
 	}
-	if platform != manifest.DefaultPlatform && o.wkldType != manifest.RequestDrivenWebServiceType {
+	if o.wkldType != manifest.RequestDrivenWebServiceType {
 		log.Warning("See 'platform' field in your manifest.\n")
 	}
 	o.platform = &platform

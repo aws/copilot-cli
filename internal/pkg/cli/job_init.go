@@ -346,9 +346,7 @@ func (o *initJobOpts) legitimizePlatform() error {
 	if platform != detectedPlatform {
 		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", platform)
 	}
-	if platform != manifest.DefaultPlatform {
-		log.Warningf("See 'platform' field in your manifest.\n")
-	}
+	log.Warningf("See 'platform' field in your manifest.\n")
 	o.platform = &platform
 	return nil
 }
