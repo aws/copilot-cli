@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
@@ -249,8 +250,9 @@ publish:
 				}
 				fmt.Printf("response: %s\n", string(body))
 				// The counter service add to the counter when the worker service processes a message
-				if string(body) != "5" {
-					return fmt.Errorf("the message content is '%s', but expected '%s'", string(body), "5")
+				count, _ := strconv.Atoi(string(body))
+				if count < 5 {
+					return fmt.Errorf("the counter is %v, but expected to be at least %v", count, 5)
 				}
 				return nil
 			}, "100s", "10s").ShouldNot(HaveOccurred())
