@@ -30,8 +30,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				return map[string][]byte{
 					"templates/workloads/services/backend/cf.yml":                         []byte(baseContent),
 					"templates/workloads/partials/cf/loggroup.yml":                        []byte("loggroup"),
-					"templates/workloads/partials/cf/envvars.yml":                         []byte("envvars"),
-					"templates/workloads/partials/cf/envvars-copilot.yml":                 []byte("envvars-copilot"),
+					"templates/workloads/partials/cf/envvars-container.yml":               []byte("envvars-container"),
+					"templates/workloads/partials/cf/envvars-common.yml":                  []byte("envvars-common"),
 					"templates/workloads/partials/cf/secrets.yml":                         []byte("secrets"),
 					"templates/workloads/partials/cf/executionrole.yml":                   []byte("executionrole"),
 					"templates/workloads/partials/cf/taskrole.yml":                        []byte("taskrole"),
@@ -58,8 +58,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				}
 			},
 			wantedContent: `  loggroup
-  envvars
-  envvars-copilot
+  envvars-container
+  envvars-common
   secrets
   executionrole
   taskrole

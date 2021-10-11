@@ -37,8 +37,9 @@
     Timeout: {{$sidecar.HealthCheck.Timeout}}
 {{- end}}
   Environment:
-{{include "envvars-copilot" $ | indent 2}}
-{{include "envvars" . | indent 2}}
+{{/* "$" denotes the parent WorkloadOpts, whereas "." is the individual container. */}}
+{{include "envvars-common" $ | indent 2}}
+{{include "envvars-container" . | indent 2}}
 {{- if $sidecar.Secrets}}
   Secrets:
   {{- range $name, $valueFrom := $sidecar.Secrets}}
