@@ -146,17 +146,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inArch:      "X86_64",
 			wantedError: errors.New("must specify either both `--platform-os` and `--platform-arch` or neither"),
 		},
-		"invalid os": {
+		"invalid platform": {
 			basicOpts:   defaultOpts,
 			inOS:        "OStrich",
-			inArch:      "X86_64",
-			wantedError: errors.New("operating system OStrich is invalid; valid operating systems are: WINDOWS_SERVER_2019_CORE, WINDOWS_SERVER_2019_FULL and LINUX"),
-		},
-		"invalid arch": {
-			basicOpts:   defaultOpts,
-			inOS:        "WINDOWS_SERVER_2019_CORE",
 			inArch:      "MAD666",
-			wantedError: errors.New("architecture MAD666 is invalid; the valid architecture is: X86_64"),
+			wantedError: errors.New("platform OStrich/MAD666 is invalid; valid platforms are: WINDOWS_SERVER_2019_CORE/X86_64, WINDOWS_SERVER_2019_FULL/X86_64 and LINUX/X86_64"),
 		},
 		"invalid number of tasks": {
 			basicOpts: basicOpts{

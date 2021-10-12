@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -92,7 +94,7 @@ func ValidOSs() []string {
 	return []string{osWindowsServer2019Core, osWindowsServer2019Full, osLinux}
 }
 
-// ValidArchs returns all valid CFN-friendly architectures.
-func ValidArchs() []string {
-	return []string{archX86}
+// ValidPlatforms returns all valid CFN-friendly platforms.
+func ValidPlatforms() []string {
+	return []string{dockerengine.PlatformString(osWindowsServer2019Core, archX86), dockerengine.PlatformString(osWindowsServer2019Full, archX86), dockerengine.PlatformString(osLinux, archX86)}
 }

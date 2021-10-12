@@ -306,10 +306,7 @@ func (o *runTaskOpts) Validate() error {
 	if noOS, noArch := o.os == "", o.arch == ""; noOS != noArch {
 		return fmt.Errorf("must specify either both `--%s` and `--%s` or neither", osFlag, archFlag)
 	}
-	if err := o.validateOS(); err != nil {
-		return err
-	}
-	if err := o.validateArch(); err != nil {
+	if err := o.validatePlatform(); err != nil {
 		return err
 	}
 
@@ -356,30 +353,17 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
-func (o *runTaskOpts) validateOS() error {
+func (o *runTaskOpts) validatePlatform() error {
 	if o.os == "" {
 		return nil
 	}
-	validOSs := task.ValidOSs()
-	for _, validOS := range validOSs {
-		if o.os == validOS {
+	validPlatforms := task.ValidPlatforms()
+	for _, validPlatform := range validPlatforms {
+		if dockerengine.PlatformString(o.os, o.arch) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("operating system %s is invalid; %s: %s", o.os, english.PluralWord(len(validOSs), "the valid operating system is", "valid operating systems are"), english.WordSeries(validOSs, "and"))
-}
-
-func (o *runTaskOpts) validateArch() error {
-	if o.arch == "" {
-		return nil
-	}
-	validArchs := task.ValidArchs()
-	for _, validArch := range validArchs {
-		if o.arch == validArch {
-			return nil
-		}
-	}
-	return fmt.Errorf("architecture %s is invalid; %s: %s", o.arch, english.PluralWord(len(validArchs), "the valid architecture is", "valid architectures are"), english.WordSeries(validArchs, "and"))
+	return fmt.Errorf("platform %s is invalid; %s: %s", dockerengine.PlatformString(o.os, o.arch), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 }
 
 func (o *runTaskOpts) validateFlagsWithCluster() error {

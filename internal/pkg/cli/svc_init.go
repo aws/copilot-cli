@@ -458,10 +458,7 @@ func (o *initSvcOpts) legitimizePlatform() error {
 		return nil
 	}
 	if redirectedPlatform != detectedPlatform {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", redirectedPlatform)
-	}
-	if o.wkldType != manifest.RequestDrivenWebServiceType {
-		log.Warning("See 'platform' field in your manifest.\n")
+		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
 	}
 	o.platform = &redirectedPlatform
 	return nil

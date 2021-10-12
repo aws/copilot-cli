@@ -344,9 +344,8 @@ func (o *initJobOpts) legitimizePlatform() error {
 		return nil
 	}
 	if redirectedPlatform != detectedPlatform {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", redirectedPlatform)
+		log.Warningf("Your architecture type %s is currently unsupported.\nSetting %s in your manifest instead.\n", color.HighlightCode(detectedArch), color.HighlightCode(fmt.Sprintf("platform: %s", redirectedPlatform)))
 	}
-	log.Warningf("See 'platform' field in your manifest.\n")
 	o.platform = &redirectedPlatform
 	return nil
 }
