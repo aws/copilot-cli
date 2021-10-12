@@ -354,15 +354,16 @@ func (o *runTaskOpts) Validate() error {
 }
 
 func (o *runTaskOpts) validatePlatform() error {
-	if o.os == "" || o.arch == "" {
+	if o.os == "" {
 		return nil
 	}
-	for _, validPlatform := range manifest.ValidShortPlatforms {
+	validPlatforms := task.ValidPlatforms()
+	for _, validPlatform := range validPlatforms {
 		if dockerengine.PlatformString(o.os, o.arch) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", dockerengine.PlatformString(o.os, o.arch), english.PluralWord(len(manifest.ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(manifest.ValidShortPlatforms, "and"))
+	return fmt.Errorf("platform %s is invalid; %s: %s", dockerengine.PlatformString(o.os, o.arch), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 }
 
 func (o *runTaskOpts) validateFlagsWithCluster() error {
@@ -454,7 +455,7 @@ func (o *runTaskOpts) validateFlagsWithWindows() error {
 }
 
 func isWindowsOS(os string) bool {
-	for _, windowsOS := range manifest.WindowsOSFamilies {
+	for _, windowsOS := range task.ValidOSs() {
 		if os == windowsOS {
 			return true
 		}

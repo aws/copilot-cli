@@ -122,6 +122,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -166,6 +167,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -198,6 +200,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{
 					&taskWithENI,
 					&taskWithNoENI,
@@ -240,6 +243,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -250,14 +254,14 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				},
 			},
 		},
-		"successfully kick off task with platform version for windows": {
+		"successfully kick off task with platform version and disabled exec for windows": {
 			count:     1,
 			groupName: "my-task",
 
 			securityGroups: []string{"sg-1", "sg-2"},
 
-			os:   "windows",
-			arch: "amd64",
+			os:   "WINDOWS_SERVER_2019_CORE",
+			arch: "X86_64",
 
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
@@ -275,6 +279,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "1.0.0",
+					EnableExec:      false,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 

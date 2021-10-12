@@ -59,6 +59,8 @@ var (
 		platformString(OSWindows, ArchX86),
 	}
 
+	defaultPlatform = platformString(OSLinux, ArchAMD64)
+
 	// validAdvancedPlatforms are all of the OsFamily/Arch combinations that the PlatformArgs field may accept.
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
@@ -71,8 +73,6 @@ var (
 
 	// All placement options.
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
-
-	defaultPlatform = platformString(OSLinux, ArchAMD64)
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")

@@ -6,8 +6,6 @@ package task
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
@@ -72,9 +70,11 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 		r.Subnets = subnets
 	}
 	platformVersion := "LATEST"
-	for _, windowsOS := range manifest.WindowsOSFamilies {
+	enableExec := true
+	for _, windowsOS := range validWindowsOSs {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"
+			enableExec = false
 		}
 	}
 
@@ -86,6 +86,7 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 		TaskFamilyName:  taskFamilyName(r.GroupName),
 		StartedBy:       startedBy,
 		PlatformVersion: platformVersion,
+		EnableExec:      enableExec,
 	})
 	if err != nil {
 		return nil, &errRunTask{

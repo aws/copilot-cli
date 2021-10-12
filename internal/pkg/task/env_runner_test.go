@@ -157,6 +157,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return(nil, errors.New("error running task"))
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -182,6 +183,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -195,8 +197,8 @@ func TestEnvRunner_Run(t *testing.T) {
 		"run in env with windows os success": {
 			count:     1,
 			groupName: "my-task",
-			os:        "windows",
-			arch:      "amd64",
+			os:        "WINDOWS_SERVER_2019_FULL",
+			arch:      "X86_64",
 
 			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
@@ -211,6 +213,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "1.0.0",
+					EnableExec:      false,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -238,6 +241,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{
 					&taskWithENI,
 					&taskWithNoENI,
