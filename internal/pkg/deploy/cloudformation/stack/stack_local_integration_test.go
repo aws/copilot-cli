@@ -5,7 +5,6 @@
 package stack_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -60,7 +59,6 @@ func Test_Stack_Local_Integration(t *testing.T) {
 		wantedCFNBytes, err := ioutil.ReadFile(path)
 		require.NoError(t, err)
 
-		fmt.Println(tpl)
 		require.Contains(t, tpl, string(wantedCFNBytes))
 	})
 
