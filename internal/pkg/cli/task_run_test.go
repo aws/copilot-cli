@@ -138,25 +138,19 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid with os but not arch": {
 			basicOpts:   defaultOpts,
-			inOS:        "windows",
+			inOS:        "WINDOWS_SERVER_2019_CORE",
 			wantedError: errors.New("must specify either both `--platform-os` and `--platform-arch` or neither"),
 		},
 		"invalid with arch but not os": {
 			basicOpts:   defaultOpts,
-			inArch:      "amd64",
+			inArch:      "X86_64",
 			wantedError: errors.New("must specify either both `--platform-os` and `--platform-arch` or neither"),
 		},
-		"invalid os": {
+		"invalid platform": {
 			basicOpts:   defaultOpts,
 			inOS:        "OStrich",
-			inArch:      "amd64",
-			wantedError: errors.New("platform OStrich/amd64 is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
-		},
-		"invalid arch": {
-			basicOpts:   defaultOpts,
-			inOS:        "windows",
 			inArch:      "MAD666",
-			wantedError: errors.New("platform windows/MAD666 is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+			wantedError: errors.New("platform OStrich/MAD666 is invalid; valid platforms are: WINDOWS_SERVER_2019_CORE/X86_64, WINDOWS_SERVER_2019_FULL/X86_64 and LINUX/X86_64"),
 		},
 		"invalid number of tasks": {
 			basicOpts: basicOpts{
@@ -180,8 +174,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    260,
 				inMemory: 512,
 			},
-			inOS:        "windows",
-			inArch:      "amd64",
+			inOS:        "WINDOWS_SERVER_2019_CORE",
+			inArch:      "X86_64",
 			wantedError: errors.New("CPU 260 must be at least 1024 for a Windows-based task"),
 		},
 		"invalid memory": {
@@ -198,8 +192,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    1024,
 				inMemory: 2000,
 			},
-			inOS:        "windows",
-			inArch:      "x86_64",
+			inOS:        "WINDOWS_SERVER_2019_CORE",
+			inArch:      "X86_64",
 			wantedError: errors.New("memory 2000 must be at least 2048 for a Windows-based task"),
 		},
 		"both dockerfile and image name specified": {

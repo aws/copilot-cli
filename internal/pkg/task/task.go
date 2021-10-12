@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -49,10 +51,18 @@ type Task struct {
 
 const (
 	startedBy = "copilot-task"
+
+	// Platform options.
+	osLinux                 = "LINUX"
+	osWindowsServer2019Core = "WINDOWS_SERVER_2019_CORE"
+	osWindowsServer2019Full = "WINDOWS_SERVER_2019_FULL"
+	archX86                 = "X86_64"
 )
 
 var (
 	fmtTaskFamilyName = "copilot-%s"
+
+	validWindowsOSs = []string{osWindowsServer2019Core, osWindowsServer2019Full}
 )
 
 func taskFamilyName(groupName string) string {
@@ -77,4 +87,14 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	}
 	// Even if ENI information is not found for some tasks, we still want to return the other information as we can
 	return tasks
+}
+
+// ValidOSs returns all valid CFN-friendly operating systems.
+func ValidOSs() []string {
+	return []string{osWindowsServer2019Core, osWindowsServer2019Full, osLinux}
+}
+
+// ValidPlatforms returns all valid CFN-friendly platforms.
+func ValidPlatforms() []string {
+	return []string{dockerengine.PlatformString(osWindowsServer2019Core, archX86), dockerengine.PlatformString(osWindowsServer2019Full, archX86), dockerengine.PlatformString(osLinux, archX86)}
 }
