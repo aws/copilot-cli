@@ -540,6 +540,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	case *manifest.LoadBalancedWebService:
 		if o.targetApp.Domain == "" && !t.Alias.IsEmpty() {
 			log.Errorf(aliasUsedWithoutDomainFriendlyTest)
+			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
