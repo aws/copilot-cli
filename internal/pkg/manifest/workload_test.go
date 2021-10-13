@@ -389,14 +389,22 @@ func TestPlatformArgsOrString_OS(t *testing.T) {
 		"should return OS when platform is a map": {
 			in: &PlatformArgsOrString{
 				PlatformArgs: PlatformArgs{
-					OSFamily: aws.String("windows_server_core"),
+					OSFamily: aws.String("windows_server_2019_core"),
 					Arch:     aws.String("x86_64"),
 				},
 			},
-			wanted: "windows_server_core",
+			wanted: "windows_server_2019_core",
+		},
+		"should return lowercase OS": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("wINdows_sERver_2019_cORe"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2019_core",
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.OS())
@@ -418,11 +426,17 @@ func TestPlatformArgsOrString_Arch(t *testing.T) {
 		"should return arch when platform is a map": {
 			in: &PlatformArgsOrString{
 				PlatformArgs: PlatformArgs{
-					OSFamily: aws.String("windows_server_core"),
+					OSFamily: aws.String("windows_server_2019_core"),
 					Arch:     aws.String("x86_64"),
 				},
 			},
 			wanted: "x86_64",
+		},
+		"should return lowercase arch": {
+			in: &PlatformArgsOrString{
+				PlatformString: aws.String("windows_server_2019_core/aMd64"),
+			},
+			wanted: "amd64",
 		},
 	}
 
