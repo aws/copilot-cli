@@ -34,13 +34,13 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 <div class="separator"></div>
 
 <a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String or Map</span>  
-Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+Non-default operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
 
-If you're building a Windows container, you may override the generated string,
+Override the generated string to build with a different valid `osfamily` or `architecture`. For example, Windows users might change the string
 ```yaml
 platform: windows/amd64
 ```
-which defaults to `WINDOWS_SERVER_2019_CORE`, with a map:
+which defaults to `WINDOWS_SERVER_2019_CORE`, using a map:
 ```yaml
 platform:
   osfamily: windows_server_2019_full
