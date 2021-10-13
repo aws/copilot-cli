@@ -1,7 +1,9 @@
 - Name: !Ref WorkloadName
   Image: !Ref ContainerImage
 {{include "secrets" . | indent 2}}
-{{include "envvars" . | indent 2}}
+  Environment:
+{{include "envvars-common" . | indent 2}}
+{{include "envvars-container" . | indent 2}}
 {{include "logconfig" . | indent 2}}
 {{include "image-overrides" . | indent 2}}
 {{- if .Storage -}}
