@@ -1,0 +1,134 @@
+PublicNetworkLoadBalancer:
+  Metadata:
+    'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'
+  Condition: CreateNLB # TODO: Add a condition in service template.
+  Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+  Properties:
+    IpAddressType: ipv4
+    Scheme: internet-facing
+    SecurityGroups: [ !GetAtt PublicNetworkLoadBalancerSecurityGroup.GroupId ]
+    Subnets:
+      Fn::importValue:
+        !Sub ${AppName}-${EnvName}-PublicSubnets
+    Type: String
+    # Name: omitted. Let CFN generates one for us.
+    # SubnetMappings: omitted. Specify `Subnets` instead. `SubnetMappings` is used when we need a static Elastic IP address to be associated with a subnet.
+    # Tags: omitted. The template has app/env/service tags, which should be propagated to this lb resource.
+    # LoadBalancerAttributes: omitted.
+    #    - The three available attributes for an NLB are: deletion_protection, access_logs, cross_zone load balancing. All are disabled by default.
+
+PublicNetworkLoadBalancerSecurityGroup:
+  Metadata:
+    'aws:copilot:description': 'A security group for your load balancer allowing tcp, udp and tls traffic'
+  Condition: CreateNLB # TODO: Add a condition in service template.
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Access to the public facing network load balancer
+    SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow from anyone on port {{ .ListenerPort }}
+        FromPort: {{ .ListenerPort }}
+        IpProtocol: {{ .Protocol }}
+        ToPort: {{ .ListenerPort }}
+    Tags:
+      - Key: Name
+        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
+    VpcId:
+      Fn::importValue:
+        !Sub ${AppName}-${EnvName}-VpcId
+    # GroupName: omitted. Let CFN generates one for us.
+    # SecurityGroupEgress: omitted. Default is to allow all outbound traffic.
+
+NLBListener:
+  Type: AWS::ElasticLoadBalancingV2::Listener
+  Properties:
+    DefaultActions:
+      - TargetGroupArn: !Ref NLBTargetGroup
+        Type: forward
+    LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+    Port: {{ .ListenerPort }}
+    Protocol: {{ .Protocol }}
+{{- if eq .Protocol "TLS }}
+{{- if .AlpnPolicy}}
+    AlpnPolicy: {{ .AlpnPolicy }}
+{{- end}}
+    Certificates:
+      - CertificateArn:
+          Fn::importValue:
+            !Sub ${AppName}-${EnvName}-HTTPSCert # TODO: need to export this resource from env stack. Also, maybe rename HTTPS Cert to just Cert.
+{{- if .SSLPolicy }}
+    SslPolicy: {{ .SSLPolicy }}
+{{- end}}
+{{- end}}
+
+NLBTargetGroup:
+  Metadata:
+    'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
+    {{- if .HTTPHealthCheck.SuccessCodes }}
+    Matcher:
+      HttpCode: {{.HTTPHealthCheck.SuccessCodes}}
+    {{- end }}
+    {{- if .HTTPHealthCheck.HealthyThreshold }}
+    HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
+    {{- end }}
+    {{- if .HTTPHealthCheck.UnhealthyThreshold }}
+    UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}}
+    {{- end }}
+    {{- if .HTTPHealthCheck.Interval }}
+    HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}}
+    {{- end }}
+    {{- if .HTTPHealthCheck.Timeout }}
+    HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
+    {{- end }}
+    Port: !Ref ContainerPort
+    Protocol: {{ .Protocol }}
+    TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+      - Key: stickiness.enabled
+        Value: !Ref Stickiness
+      - Key: deregistration_delay.connection_termination.enabled
+        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
+      - Key: preserve_client_ip.enabled
+        Value: false # NOTE: Default is false for TCP/TLS. Must be true for UDP / UCP_UDP # TODO: remove this comment & exclude this attribute from template.
+      - Key: proxy_protocol_v2.enabled
+        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
+    TargetType: ip
+    VpcId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-VpcId"
+    # HealthCheckEnabled: Omitted. Always enabled for ip target.
+    # HealthCheckPort: Omitted. Default is traffic-port.
+    # HealthCheckProtocol: Omitted. Default is TCP for NLB. UDP/TCP_UDP/TLS are not supported.
+    # IpAddressType: Omitted. Default is ipv4.
+    # Name: Omitted. Let CFN generates one.
+    # Tags: Omitted. Propagated from stack.
+    # ProtocolVersion: Only needed for HTTP/HTTPS protocol.
+    # Targets: Omitted.
+    # TargetGroupAttributes.stickiness.type: Omitted, since the only possible value for NLB is source_ip.
+
+{{- if not .Aliases}}
+NLBDNSAlias:
+  Type: AWS::Route53::RecordSetGroup
+  Condition: HTTPSLoadBalancer
+  Properties:
+    HostedZoneId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-HostedZone"
+    Comment: !Sub "NetworkLoadBalancer alias for service ${WorkloadName}"
+    RecordSets:
+      - Name:
+          !Join
+          - '.'
+          - - !Sub "${WorkloadName}-nlb"
+            - Fn::ImportValue:
+                !Sub "${AppName}-${EnvName}-SubDomain"
+            - ""
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
+          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{- end}}
