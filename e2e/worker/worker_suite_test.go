@@ -19,15 +19,16 @@ var (
 )
 
 const (
-	lbwsServiceName   = "frontend"
-	workerServiceName = "worker"
+	lbwsServiceName    = "frontend"
+	workerServiceName  = "worker"
+	counterServiceName = "counter"
 
 	envName = "test"
 )
 
 func TestWorker(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "App Runner Suite")
+	RunSpecs(t, "Worker Service Suite")
 }
 
 var _ = BeforeSuite(func() {

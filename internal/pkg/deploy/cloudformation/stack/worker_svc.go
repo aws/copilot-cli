@@ -108,6 +108,10 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	if err != nil {
+		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
+	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		Variables:                      s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                        s.manifest.WorkerServiceConfig.Secrets,
@@ -132,6 +136,7 @@ func (s *WorkerService) Template() (string, error) {
 		CredentialsParameter:           aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
 		Subscribe:                      subscribe,
+		Publish:                        publishers,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)

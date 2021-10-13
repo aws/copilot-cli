@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.40.54
+	github.com/aws/aws-sdk-go v1.40.59
 	github.com/briandowns/spinner v1.15.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
@@ -16,7 +16,7 @@ require (
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/imdario/mergo v0.3.12
 	github.com/lnquy/cron v1.1.1
-	github.com/moby/buildkit v0.8.3
+	github.com/moby/buildkit v0.9.1
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
 	github.com/robfig/cron/v3 v3.0.1
@@ -32,9 +32,10 @@ require (
 )
 
 require (
-	github.com/containerd/typeurl v1.0.1 // indirect
+	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/docker/docker v20.10.0-beta1.0.20201110211921-af34b94a78a1+incompatible // indirect
+	github.com/docker/docker v20.10.7+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect

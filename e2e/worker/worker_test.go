@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
@@ -91,6 +92,21 @@ publish:
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("adds a topic to push to the service", func() {
+			Expect("./copilot/worker/manifest.yml").Should(BeAnExistingFile())
+			f, err := os.OpenFile("./copilot/worker/manifest.yml", os.O_APPEND|os.O_WRONLY, 0644)
+			Expect(err).NotTo(HaveOccurred())
+			defer f.Close()
+			// Append publish section to manifest.
+			_, err = f.WriteString(`
+publish:
+  topics:
+  - name: processed-msg-count
+`)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("deploys the worker service", func() {
 			_, err := cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     workerServiceName,
@@ -99,6 +115,58 @@ publish:
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("should have the SQS queue and service discovery injected as env vars", func() {
+			svc, err := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    workerServiceName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			var hasQueueURI bool
+			var svcDiscovery bool
+			var hasTopic bool
+			for _, envVar := range svc.Variables {
+				switch envVar.Name {
+				case "COPILOT_QUEUE_URI":
+					hasQueueURI = true
+				case "COPILOT_SERVICE_DISCOVERY_ENDPOINT":
+					svcDiscovery = true
+				case "COPILOT_SNS_TOPIC_ARNS":
+					hasTopic = true
+				}
+			}
+			if !hasQueueURI {
+				Expect(errors.New("worker service is missing env var 'COPILOT_QUEUE_URI'")).NotTo(HaveOccurred())
+			}
+			if !svcDiscovery {
+				Expect(errors.New("worker service is missing env var 'COPILOT_SERVICE_DISCOVERY_ENDPOINT'")).NotTo(HaveOccurred())
+			}
+			if !hasTopic {
+				Expect(errors.New("worker service is missing env var 'COPILOT_SNS_TOPIC_ARNS'")).NotTo(HaveOccurred())
+			}
+		})
+	})
+
+	Context("deploys the counter service", func() {
+		It("svc init should succeed", func() {
+			_, err := cli.SvcInit(&client.SvcInitRequest{
+				Name:               counterServiceName,
+				SvcType:            "Worker Service",
+				Dockerfile:         "./counter/Dockerfile",
+				TopicSubscriptions: []string{fmt.Sprintf("%s:%s", workerServiceName, "processed-msg-count")},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("deploys the counter service", func() {
+			_, err := cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     counterServiceName,
+				EnvName:  envName,
+				ImageTag: "gallopinggurdey",
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("should have the SQS queue and service discovery injected as env vars", func() {
 			svc, err := cli.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
@@ -155,6 +223,39 @@ publish:
 				}
 				return nil
 			}, "60s", "1s").ShouldNot(HaveOccurred())
+		})
+
+		It("frontend service should eventually have at least 5 message consumed", func() {
+			svc, err := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    lbwsServiceName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(svc.Routes)).To(Equal(1))
+			route := svc.Routes[0]
+			Expect(route.Environment).To(Equal(envName))
+			Eventually(func() error {
+				resp, err := http.Get(fmt.Sprintf("%s/count", route.URL))
+				if err != nil {
+					return err
+				}
+				if resp.StatusCode != http.StatusOK {
+					return fmt.Errorf("response status is %d and not %d", resp.StatusCode, http.StatusOK)
+				}
+
+				body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("response: %s\n", string(body))
+				// The counter service add to the counter when the worker service processes a message
+				count, _ := strconv.Atoi(string(body))
+				if count < 5 {
+					return fmt.Errorf("the counter is %v, but expected to be at least %v", count, 5)
+				}
+				return nil
+			}, "100s", "10s").ShouldNot(HaveOccurred())
 		})
 	})
 })
