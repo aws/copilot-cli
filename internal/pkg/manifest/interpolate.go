@@ -7,15 +7,16 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 )
 
 const (
-	predefinedEnvVarKeyForAppName = "COPILOT_APPLICATION_NAME"
-	predefinedEnvVarKeyForEnvName = "COPILOT_ENVIRONMENT_NAME"
+	reservedEnvVarKeyForAppName = "COPILOT_APPLICATION_NAME"
+	reservedEnvVarKeyForEnvName = "COPILOT_ENVIRONMENT_NAME"
 )
 
 var (
-	// Modified from docker/compose.
+	// Taken from docker/compose.
 	// Environment variable names consist solely of uppercase letters, digits, and underscore,
 	// and do not begin with a digit. （https://pubs.opengroup.org/onlinepubs/007904875/basedefs/xbd_chap08.html）
 	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
@@ -25,16 +26,11 @@ type interpolator struct {
 	predefinedEnvVars map[string]string
 }
 
-type predefinedEnvVar struct {
-	appName string
-	envName string
-}
-
-func newInterpolator(envVars predefinedEnvVar) *interpolator {
+func newInterpolator(appName, envName string) *interpolator {
 	return &interpolator{
 		predefinedEnvVars: map[string]string{
-			predefinedEnvVarKeyForAppName: envVars.appName,
-			predefinedEnvVarKeyForEnvName: envVars.envName,
+			reservedEnvVarKeyForAppName: appName,
+			reservedEnvVarKeyForEnvName: envName,
 		},
 	}
 }
@@ -48,18 +44,18 @@ func (i *interpolator) substitute(s string) (string, error) {
 	for _, match := range matches {
 		// https://pkg.go.dev/regexp#Regexp.FindAllStringSubmatch
 		key := match[1]
-		currSegmentRegex := regexp.MustCompile(fmt.Sprintf(`\${%s}`, key))
+		currSegment := fmt.Sprintf("${%s}", key)
 		predefinedVal, isPredefined := i.predefinedEnvVars[key]
-		osVal := os.Getenv(key)
-		if isPredefined && osVal != "" {
-			return "", fmt.Errorf(`predefined environment variable "%s" cannot be overridden with "%s"`, key, osVal)
+		osVal, isEnvVarSet := os.LookupEnv(key)
+		if isPredefined && isEnvVarSet && predefinedVal != osVal {
+			return "", fmt.Errorf(`predefined environment variable "%s" cannot be overridden by OS environment variable with the same name`, key)
 		}
 		if isPredefined {
-			replaced = currSegmentRegex.ReplaceAllString(replaced, predefinedVal)
+			replaced = strings.ReplaceAll(replaced, currSegment, predefinedVal)
 			continue
 		}
-		if osVal != "" {
-			replaced = currSegmentRegex.ReplaceAllString(replaced, osVal)
+		if isEnvVarSet {
+			replaced = strings.ReplaceAll(replaced, currSegment, osVal)
 			continue
 		}
 		return "", fmt.Errorf(`environment variable "%s" is not defined`, key)

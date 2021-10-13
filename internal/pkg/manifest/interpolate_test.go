@@ -30,26 +30,28 @@ func TestInterpolator_substitute(t *testing.T) {
 				"COPILOT_ENVIRONMENT_NAME": "prod",
 			},
 
-			wantedErr: fmt.Errorf(`predefined environment variable "COPILOT_ENVIRONMENT_NAME" cannot be overridden with "prod"`),
+			wantedErr: fmt.Errorf(`predefined environment variable "COPILOT_ENVIRONMENT_NAME" cannot be overridden by OS environment variable with the same name`),
 		},
 		"success": {
-			inputStr: "${accountID}.dkr.ecr.us-east-1.amazonaws.com/vault/${COPILOT_ENVIRONMENT_NAME}:${tag}",
+			inputStr: "${accountID}.dkr.ecr.${region}.amazonaws.com/vault/${COPILOT_ENVIRONMENT_NAME}:${tag}",
 			inputEnvVar: map[string]string{
-				"accountID": "1234567890",
-				"tag":       "latest",
+				"accountID":                "1234567890",
+				"tag":                      "latest",
+				"COPILOT_APPLICATION_NAME": "myApp",
+				"region":                   "",
 			},
 
-			wanted: "1234567890.dkr.ecr.us-east-1.amazonaws.com/vault/test:latest",
+			wanted: "1234567890.dkr.ecr..amazonaws.com/vault/test:latest",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			itpl := newInterpolator(predefinedEnvVar{
-				appName: "myApp",
-				envName: "test",
-			})
+			itpl := newInterpolator(
+				"myApp",
+				"test",
+			)
 			for k, v := range tc.inputEnvVar {
 				require.NoError(t, os.Setenv(k, v))
 				defer func(key string) {
