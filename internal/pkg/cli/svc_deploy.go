@@ -53,7 +53,7 @@ const (
 
 var aliasUsedWithoutDomainFriendlyTest = fmt.Sprintf("To use %s, first run %s to associate your application with your own domain.\n",
 	color.HighlightCode("alias"),
-	color.HighlightCode("copilot app init --domain <your.domain>"))
+	color.HighlightCode("copilot app init --domain example.com"))
 
 type deployWkldVars struct {
 	appName        string
