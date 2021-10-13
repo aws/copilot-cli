@@ -33,15 +33,16 @@ func TestInterpolator_substitute(t *testing.T) {
 			wantedErr: fmt.Errorf(`predefined environment variable "COPILOT_ENVIRONMENT_NAME" cannot be overridden by OS environment variable with the same name`),
 		},
 		"success": {
-			inputStr: "${accountID}.dkr.ecr.${region}.amazonaws.com/vault/${COPILOT_ENVIRONMENT_NAME}:${tag}",
+			inputStr: "${0accountID}.dkr.${repo-provider}.${region}.amazonaws.com/vault/${COPILOT_ENVIRONMENT_NAME}:${tag}",
 			inputEnvVar: map[string]string{
-				"accountID":                "1234567890",
+				"0accountID":               "1234567890",
+				"repo-provider":            "ecr",
 				"tag":                      "latest",
 				"COPILOT_APPLICATION_NAME": "myApp",
 				"region":                   "",
 			},
 
-			wanted: "1234567890.dkr.ecr..amazonaws.com/vault/test:latest",
+			wanted: "${0accountID}.dkr.${repo-provider}..amazonaws.com/vault/test:latest",
 		},
 	}
 
