@@ -36,17 +36,10 @@
     StartPeriod: {{$sidecar.HealthCheck.StartPeriod}}
     Timeout: {{$sidecar.HealthCheck.Timeout}}
 {{- end}}
-{{- if $sidecar.Variables}}
   Environment:
-  {{- range $name, $value := $sidecar.Variables}}
-  - Name: {{$name}}
-    Value: {{$value | printf "%q"}}
-  {{- end}}
-  {{- if $sidecar.MountPoints}}
-  - Name: COPILOT_MOUNT_POINTS
-    Value: '{{jsonMountPoints $sidecar.MountPoints}}'
-  {{- end}}
-{{- end}}
+{{/* "$" denotes the parent WorkloadOpts, whereas "." is the individual container. */}}
+{{include "envvars-common" $ | indent 2}}
+{{include "envvars-container" . | indent 2}}
 {{- if $sidecar.Secrets}}
   Secrets:
   {{- range $name, $valueFrom := $sidecar.Secrets}}
@@ -75,9 +68,9 @@
   RepositoryCredentials:
     CredentialsParameter: {{$sidecar.CredsParam}}
 {{- end}}
-{{- if $sidecar.MountPoints}}
+{{- if $sidecar.Storage.MountPoints}}
   MountPoints:
-  {{- range $mp := $sidecar.MountPoints}}
+  {{- range $mp := $sidecar.Storage.MountPoints}}
     - SourceVolume: {{$mp.SourceVolume}}
       ReadOnly: {{$mp.ReadOnly}}
       ContainerPath: '{{$mp.ContainerPath}}'
