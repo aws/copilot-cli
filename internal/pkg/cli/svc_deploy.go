@@ -76,6 +76,7 @@ type deploySvcOpts struct {
 	ws                  wsSvcDirReader
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator     func(app, env string) interpolator
 	s3                  artifactUploader
 	cmd                 runner
 	addons              templater
@@ -138,6 +139,9 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 				return nil, fmt.Errorf("new app describer for application %s: %w", appName, err)
 			}
 			return d, nil
+		},
+		newInterpolator: func(app, env string) interpolator {
+			return manifest.NewInterpolator(app, env)
 		},
 		cmd:            exec.NewCmd(),
 		sessProvider:   sessions.NewProvider(),
@@ -451,7 +455,11 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest file: %w", o.name, err)
 	}
-	mft, err := o.unmarshal(raw)
+	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for manifest: %w", err)
+	}
+	mft, err := o.unmarshal([]byte(interpolated))
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}

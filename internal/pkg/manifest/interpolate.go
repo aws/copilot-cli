@@ -22,12 +22,14 @@ var (
 	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
 )
 
-type interpolator struct {
+// Interpolator interpolates values into a manifest.
+type Interpolator struct {
 	predefinedEnvVars map[string]string
 }
 
-func newInterpolator(appName, envName string) *interpolator {
-	return &interpolator{
+// NewInterpolator initiates a new Interpolator.
+func NewInterpolator(appName, envName string) *Interpolator {
+	return &Interpolator{
 		predefinedEnvVars: map[string]string{
 			reservedEnvVarKeyForAppName: appName,
 			reservedEnvVarKeyForEnvName: envName,
@@ -35,10 +37,11 @@ func newInterpolator(appName, envName string) *interpolator {
 	}
 }
 
-func (i *interpolator) substitute(s string) (string, error) {
+// Interpolate substitutes environment variables in a string.
+func (i *Interpolator) Interpolate(s string) (string, error) {
 	matches := interpolatorEnvVarRegExp.FindAllStringSubmatch(s, -1)
 	if len(matches) == 0 {
-		return "", nil
+		return s, nil
 	}
 	replaced := s
 	for _, match := range matches {

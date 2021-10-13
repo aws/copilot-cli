@@ -352,11 +352,15 @@ type svcCfnTemplates struct {
 func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
 	raw, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read service manifest: %w", err)
 	}
-	mft, err := manifest.UnmarshalWorkload(raw)
+	interpolated, err := manifest.NewInterpolator(o.appName, env.Name).Interpolate(string(raw))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("interpolate environment variables for manifest: %w", err)
+	}
+	mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal workload: %w", err)
 	}
 	envMft, err := mft.ApplyEnv(o.envName)
 	if err != nil {
