@@ -15,8 +15,10 @@ const (
 )
 
 var (
-	// Modified from docker/compose
-	interpolatorRegexp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
+	// Modified from docker/compose.
+	// Environment variable names consist solely of uppercase letters, digits, and underscore,
+	// and do not begin with a digit. （https://pubs.opengroup.org/onlinepubs/007904875/basedefs/xbd_chap08.html）
+	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
 )
 
 type interpolator struct {
@@ -38,7 +40,7 @@ func newInterpolator(envVars predefinedEnvVar) *interpolator {
 }
 
 func (i *interpolator) substitute(s string) (string, error) {
-	matches := interpolatorRegexp.FindAllStringSubmatch(s, -1)
+	matches := interpolatorEnvVarRegExp.FindAllStringSubmatch(s, -1)
 	if len(matches) == 0 {
 		return "", nil
 	}
@@ -46,22 +48,21 @@ func (i *interpolator) substitute(s string) (string, error) {
 	for _, match := range matches {
 		// https://pkg.go.dev/regexp#Regexp.FindAllStringSubmatch
 		key := match[1]
-		subTextRegexp := regexp.MustCompile(fmt.Sprintf(`\${%s}`, key))
+		currSegmentRegex := regexp.MustCompile(fmt.Sprintf(`\${%s}`, key))
 		predefinedVal, isPredefined := i.predefinedEnvVars[key]
-		if isPredefined {
-			replaced = subTextRegexp.ReplaceAllString(replaced, predefinedVal)
-		}
 		osVal := os.Getenv(key)
-		if osVal == "" {
-			if isPredefined {
-				continue
-			}
-			return "", fmt.Errorf(`environment variable "%s" is not defined`, key)
-		}
-		if isPredefined {
+		if isPredefined && osVal != "" {
 			return "", fmt.Errorf(`predefined environment variable "%s" cannot be overridden with "%s"`, key, osVal)
 		}
-		replaced = subTextRegexp.ReplaceAllString(replaced, osVal)
+		if isPredefined {
+			replaced = currSegmentRegex.ReplaceAllString(replaced, predefinedVal)
+			continue
+		}
+		if osVal != "" {
+			replaced = currSegmentRegex.ReplaceAllString(replaced, osVal)
+			continue
+		}
+		return "", fmt.Errorf(`environment variable "%s" is not defined`, key)
 	}
 	return replaced, nil
 }
