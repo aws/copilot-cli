@@ -95,7 +95,7 @@ NLBDNSAlias:
     HostedZoneId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-HostedZone"
-    Comment: !Sub "NetworkLoadBalancer alias for service ${WorkloadName}"
+    Comment: !Sub "Default NetworkLoadBalancer alias for service ${WorkloadName}"
     RecordSets:
       - Name:
           !Join
