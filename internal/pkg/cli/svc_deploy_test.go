@@ -285,7 +285,7 @@ image:
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return("", mockError),
 				)
 			},
-			wantErr: fmt.Errorf("interpolate environment variables for manifest: %w", mockError),
+			wantErr: fmt.Errorf("interpolate environment variables for serviceA manifest: %w", mockError),
 		},
 		"should return error if workspace methods fail": {
 			inputSvc: "serviceA",
@@ -615,7 +615,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
 			},
-			wantErr: fmt.Errorf("interpolate environment variables for manifest: %w", mockError),
+			wantErr: fmt.Errorf("interpolate environment variables for mockSvc manifest: %w", mockError),
 		},
 		"fail to get app resources": {
 			inBuildRequire: true,

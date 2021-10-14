@@ -249,7 +249,7 @@ on:
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return("", mockError),
 				)
 			},
-			wantErr: fmt.Errorf("interpolate environment variables for manifest: %w", mockError),
+			wantErr: fmt.Errorf("interpolate environment variables for mailer manifest: %w", mockError),
 		},
 		"should return error if workspace methods fail": {
 			inputSvc: "mailer",

@@ -73,6 +73,7 @@ type packageSvcOpts struct {
 	sel               wsSelector
 	prompt            prompter
 	identity          identityService
+	newInterpolator   func(app, env string) interpolator
 	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 	newEndpointGetter func(app, env string) (endpointGetter, error)
 	snsTopicGetter    deployedEnvironmentLister
@@ -112,6 +113,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		addonsWriter:     ioutil.Discard,
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		snsTopicGetter:   deployStore,
+		newInterpolator:  newManifestInterpolator,
 	}
 	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
 	if err != nil {
@@ -354,9 +356,9 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, fmt.Errorf("read service manifest: %w", err)
 	}
-	interpolated, err := manifest.NewInterpolator(o.appName, env.Name).Interpolate(string(raw))
+	interpolated, err := o.newInterpolator(o.appName, env.Name).Interpolate(string(raw))
 	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for manifest: %w", err)
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
 	}
 	mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
 	if err != nil {

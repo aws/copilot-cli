@@ -140,15 +140,17 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 			}
 			return d, nil
 		},
-		newInterpolator: func(app, env string) interpolator {
-			return manifest.NewInterpolator(app, env)
-		},
-		cmd:            exec.NewCmd(),
-		sessProvider:   sessions.NewProvider(),
-		snsTopicGetter: deployStore,
+		newInterpolator: newManifestInterpolator,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessions.NewProvider(),
+		snsTopicGetter:  deployStore,
 	}
 	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
+}
+
+func newManifestInterpolator(app, env string) interpolator {
+	return manifest.NewInterpolator(app, env)
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -457,7 +459,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	}
 	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
 	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for manifest: %w", err)
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
 	}
 	mft, err := o.unmarshal([]byte(interpolated))
 	if err != nil {

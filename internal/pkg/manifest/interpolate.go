@@ -22,7 +22,7 @@ var (
 	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
 )
 
-// Interpolator interpolates values into a manifest.
+// Interpolator can substitute variables in a manifest.
 type Interpolator struct {
 	predefinedEnvVars map[string]string
 }
