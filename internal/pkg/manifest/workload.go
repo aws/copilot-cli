@@ -758,7 +758,7 @@ func validateShortPlatform(platform *string) error {
 		return nil
 	}
 	for _, validPlatform := range ValidShortPlatforms {
-		if aws.StringValue(platform) == validPlatform {
+		if strings.ToLower(aws.StringValue(platform)) == validPlatform {
 			return nil
 		}
 	}
