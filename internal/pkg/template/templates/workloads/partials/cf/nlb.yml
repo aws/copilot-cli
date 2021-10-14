@@ -6,7 +6,6 @@ PublicNetworkLoadBalancer:
   Properties:
     IpAddressType: ipv4
     Scheme: internet-facing
-    SecurityGroups: [ !GetAtt PublicNetworkLoadBalancerSecurityGroup.GroupId ]
     Subnets:
       Fn::importValue:
         !Sub ${AppName}-${EnvName}-PublicSubnets
@@ -16,28 +15,6 @@ PublicNetworkLoadBalancer:
     # Tags: omitted. The template has app/env/service tags, which should be propagated to this lb resource.
     # LoadBalancerAttributes: omitted.
     #    - The three available attributes for an NLB are: deletion_protection, access_logs, cross_zone load balancing. All are disabled by default.
-
-PublicNetworkLoadBalancerSecurityGroup:
-  Metadata:
-    'aws:copilot:description': 'A security group for your load balancer allowing tcp, udp and tls traffic'
-  Condition: CreateNLB # TODO: Add a condition in service template.
-  Type: AWS::EC2::SecurityGroup
-  Properties:
-    GroupDescription: Access to the public facing network load balancer
-    SecurityGroupIngress:
-      - CidrIp: 0.0.0.0/0
-        Description: Allow from anyone on port {{ .ListenerPort }}
-        FromPort: {{ .ListenerPort }}
-        IpProtocol: {{ .Protocol }}
-        ToPort: {{ .ListenerPort }}
-    Tags:
-      - Key: Name
-        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
-    VpcId:
-      Fn::importValue:
-        !Sub ${AppName}-${EnvName}-VpcId
-    # GroupName: omitted. Let CFN generates one for us.
-    # SecurityGroupEgress: omitted. Default is to allow all outbound traffic.
 
 NLBListener:
   Type: AWS::ElasticLoadBalancingV2::Listener
