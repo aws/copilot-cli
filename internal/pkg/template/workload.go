@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -59,7 +58,8 @@ var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
 		"loggroup",
-		"envvars",
+		"envvars-container",
+		"envvars-common",
 		"secrets",
 		"executionrole",
 		"taskrole",
@@ -111,11 +111,17 @@ type SidecarOpts struct {
 	CredsParam   *string
 	Variables    map[string]string
 	Secrets      map[string]string
-	MountPoints  []*MountPoint
+	Storage      SidecarStorageOpts
 	DockerLabels map[string]string
 	DependsOn    map[string]string
 	EntryPoint   []string
 	Command      []string
+	HealthCheck  *ContainerHealthCheck
+}
+
+// SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
+type SidecarStorageOpts struct {
+	MountPoints []*MountPoint
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -200,6 +206,15 @@ type AdvancedCount struct {
 	Spot        *int
 	Autoscaling *AutoscalingOpts
 	Cps         []*CapacityProviderStrategy
+}
+
+// ContainerHealthCheck holds configuration for container health check.
+type ContainerHealthCheck struct {
+	Command     []string
+	Interval    *int64
+	Retries     *int64
+	StartPeriod *int64
+	Timeout     *int64
 }
 
 // CapacityProviderStrategy holds the configuration needed for a
@@ -360,7 +375,7 @@ type WorkloadOpts struct {
 
 	// Additional options for service templates.
 	WorkloadType        string
-	HealthCheck         *ecs.HealthCheck
+	HealthCheck         *ContainerHealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	DeregistrationDelay *int64
 	AllowedSourceIps    []string
@@ -383,6 +398,7 @@ type WorkloadOpts struct {
 // ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
 type ParseRequestDrivenWebServiceInput struct {
 	Variables           map[string]string
+	StartCommand        *string
 	Tags                map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	EnableHealthCheck   bool
@@ -476,7 +492,7 @@ func withSvcParsingFuncs() ParseOption {
 			"toSnakeCase":         ToSnakeCaseFunc,
 			"hasSecrets":          hasSecrets,
 			"fmtSlice":            FmtSliceFunc,
-			"quoteSlice":          QuotePSliceFunc,
+			"quoteSlice":          QuoteSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
 			"jsonSNSTopics":       generateSNSJSON,

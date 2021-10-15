@@ -27,7 +27,7 @@ type BackendService struct {
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
 type BackendServiceConfig struct {
-	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
+	ImageConfig      ImageWithHealthcheckAndOptionalPort `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
@@ -52,7 +52,7 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	// Apply overrides.
 	svc.Name = stringP(props.Name)
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
-	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	svc.BackendServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.BackendServiceConfig.Platform = props.Platform
@@ -99,7 +99,7 @@ func (s *BackendService) BuildRequired() (bool, error) {
 
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory.
 func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.BuildConfig(wsRoot)
+	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -152,12 +152,15 @@ func newDefaultBackendService() *BackendService {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{},
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
+					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
+						workloadType: BackendServiceType,
+					},
 				},
 				ExecuteCommand: ExecuteCommand{
 					Enable: aws.Bool(false),
@@ -165,7 +168,7 @@ func newDefaultBackendService() *BackendService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
 		},

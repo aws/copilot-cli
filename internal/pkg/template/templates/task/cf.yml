@@ -74,8 +74,8 @@ Resources:
       NetworkMode: awsvpc
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref DefaultExecutionRole]
-      TaskRoleArn: !If [HasTaskRole, !Ref TaskRole, !Ref DefaultTaskRole]
+      ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !GetAtt DefaultExecutionRole.Arn]
+      TaskRoleArn: !If [HasTaskRole, !Ref TaskRole, !GetAtt DefaultTaskRole.Arn]
   DefaultExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'

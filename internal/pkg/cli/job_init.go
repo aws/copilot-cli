@@ -112,7 +112,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		sel:          sel,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 		initParser: func(path string) dockerfileParser {
-			return dockerfile.NewDockerfile(fs, path)
+			return dockerfile.New(fs, path)
 		},
 	}, nil
 }
@@ -193,6 +193,11 @@ func (o *initJobOpts) Execute() error {
 	if err = o.legitimizePlatform(); err != nil {
 		return err
 	}
+	var platformStrPtr *manifest.PlatformString
+	if o.platform != nil {
+		val := manifest.PlatformString(*o.platform)
+		platformStrPtr = &val
+	}
 
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -202,7 +207,7 @@ func (o *initJobOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: o.platform,
+				PlatformString: platformStrPtr,
 			},
 		},
 

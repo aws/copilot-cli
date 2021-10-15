@@ -5,6 +5,7 @@ package sessions
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -139,4 +140,60 @@ func TestCreds(t *testing.T) {
 
 		})
 	}
+}
+
+func TestProvider_FromProfile(t *testing.T) {
+	t.Run("error if region is missing", func(t *testing.T) {
+		ogRegion := os.Getenv("AWS_REGION")
+		ogDefaultRegion := os.Getenv("AWS_DEFAULT_REGION")
+		defer func() {
+			err := restoreEnvVar("AWS_REGION", ogRegion)
+			require.NoError(t, err)
+
+			err = restoreEnvVar("AWS_DEFAULT_REGION", ogDefaultRegion)
+			require.NoError(t, err)
+		}()
+
+		// Since "walk-like-an-egyptian" is (very likely) a non-existent profile, whether the region information
+		// is missing depends on whether the `AWS_REGION` environment variable is set.
+		err := os.Unsetenv("AWS_REGION")
+		require.NoError(t, err)
+		err = os.Unsetenv("AWS_DEFAULT_REGION")
+		require.NoError(t, err)
+
+		// When
+		sess, err := NewProvider().FromProfile("walk-like-an-egyptian")
+
+		// THEN
+		require.NotNil(t, err)
+		require.EqualError(t, errors.New("missing region configuration"), err.Error())
+		require.Nil(t, sess)
+	})
+
+	t.Run("region information present", func(t *testing.T) {
+		ogRegion := os.Getenv("AWS_REGION")
+		defer func() {
+			err := restoreEnvVar("AWS_REGION", ogRegion)
+			require.NoError(t, err)
+		}()
+
+		// Since "walk-like-an-egyptian" is (very likely) a non-existent profile, whether the region information
+		// is missing depends on whether the `AWS_REGION` environment variable is set.
+		err := os.Setenv("AWS_REGION", "us-west-2")
+		require.NoError(t, err)
+
+		// WHEN
+		sess, err := NewProvider().FromProfile("walk-like-an-egyptian")
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "us-west-2", *sess.Config.Region)
+	})
+}
+
+func restoreEnvVar(key string, originalValue string) error {
+	if originalValue == "" {
+		return os.Unsetenv(key)
+	}
+	return os.Setenv(key, originalValue)
 }

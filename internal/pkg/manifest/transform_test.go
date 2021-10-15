@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 
@@ -333,6 +334,7 @@ func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 }
 
 func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
+	mockPlatformStr := PlatformString("mockString")
 	testCases := map[string]struct {
 		original func(p *PlatformArgsOrString)
 		override func(p *PlatformArgsOrString)
@@ -340,7 +342,7 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 	}{
 		"string set to empty if args is not nil": {
 			original: func(p *PlatformArgsOrString) {
-				p.PlatformString = aws.String("mockString")
+				p.PlatformString = &mockPlatformStr
 			},
 			override: func(p *PlatformArgsOrString) {
 				p.PlatformArgs = PlatformArgs{
@@ -363,10 +365,10 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 				}
 			},
 			override: func(p *PlatformArgsOrString) {
-				p.PlatformString = aws.String("mockString")
+				p.PlatformString = &mockPlatformStr
 			},
 			wanted: func(p *PlatformArgsOrString) {
-				p.PlatformString = aws.String("mockString")
+				p.PlatformString = &mockPlatformStr
 			},
 		},
 	}
@@ -513,6 +515,7 @@ func TestCountTransformer_Transformer(t *testing.T) {
 }
 
 func TestAdvancedCountTransformer_Transformer(t *testing.T) {
+	mockPerc := Percentage(80)
 	testCases := map[string]struct {
 		original func(a *AdvancedCount)
 		override func(a *AdvancedCount)
@@ -526,14 +529,14 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = aws.Int(1024)
+				a.CPU = &mockPerc
 				a.Requests = aws.Int(42)
 			},
 			wanted: func(a *AdvancedCount) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = aws.Int(1024)
+				a.CPU = &mockPerc
 				a.Requests = aws.Int(42)
 			},
 		},
@@ -542,7 +545,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = aws.Int(1024)
+				a.CPU = &mockPerc
 				a.Requests = aws.Int(42)
 			},
 			override: func(a *AdvancedCount) {
@@ -751,6 +754,64 @@ func TestEfsVolumeConfigurationTransformer_Transformer(t *testing.T) {
 
 			// Use imageTransformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(efsVolumeConfigurationTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
+func TestSQSQueueOrBoolTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(e *SQSQueueOrBool)
+		override func(e *SQSQueueOrBool)
+		wanted   func(e *SQSQueueOrBool)
+	}{
+		"bool set to empty if config is not nil": {
+			original: func(e *SQSQueueOrBool) {
+				e.Enabled = aws.Bool(true)
+			},
+			override: func(e *SQSQueueOrBool) {
+				e.Advanced = SQSQueue{
+					Retention: durationp(5 * time.Second),
+				}
+			},
+			wanted: func(e *SQSQueueOrBool) {
+				e.Advanced = SQSQueue{
+					Retention: durationp(5 * time.Second),
+				}
+			},
+		},
+		"config set to empty if bool is not nil": {
+			original: func(e *SQSQueueOrBool) {
+				e.Advanced = SQSQueue{
+					Retention: durationp(5 * time.Second),
+				}
+			},
+			override: func(e *SQSQueueOrBool) {
+				e.Enabled = aws.Bool(true)
+			},
+			wanted: func(e *SQSQueueOrBool) {
+				e.Enabled = aws.Bool(true)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted SQSQueueOrBool
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use imageTransformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(sqsQueueOrBoolTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

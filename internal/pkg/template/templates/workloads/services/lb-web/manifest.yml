@@ -16,9 +16,9 @@ http:
 
 # Configuration for your containers and service.
 image:
-{{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
+{{- if .ImageConfig.Image.Build.BuildArgs.Dockerfile}}
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
-  build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
+  build: {{.ImageConfig.Image.Build.BuildArgs.Dockerfile}}
 {{- end}}
 {{- if .ImageConfig.Image.Location}}
   location: {{.ImageConfig.Image.Location}}

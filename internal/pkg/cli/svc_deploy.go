@@ -51,6 +51,10 @@ const (
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
 )
 
+var aliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
+	color.HighlightCode("http.alias"),
+	color.HighlightCode("copilot app init --domain example.com"))
+
 type deployWkldVars struct {
 	appName        string
 	name           string
@@ -455,7 +459,9 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
-
+	if err := envMft.Validate(); err != nil {
+		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
+	}
 	o.appliedManifest = envMft // cache the results.
 	return envMft, nil
 }
@@ -532,6 +538,10 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
+		if o.targetApp.Domain == "" && !t.Alias.IsEmpty() {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -545,6 +555,10 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
+		if o.targetApp.Domain == "" && t.Alias != nil {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
 		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
 			return apprunner.New(s)
 		})
@@ -899,11 +913,11 @@ func (o *deploySvcOpts) buildWorkerQueueNames() string {
 	sb := new(strings.Builder)
 	first := true
 	for _, subscription := range o.subscriptions {
-		if subscription.Queue == nil {
+		if subscription.Queue.IsEmpty() {
 			continue
 		}
-		topicSvc := template.StripNonAlphaNumFunc(subscription.Service)
-		topicName := template.StripNonAlphaNumFunc(subscription.Name)
+		topicSvc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
+		topicName := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
 		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
 		if first {
 			sb.WriteString(subName)

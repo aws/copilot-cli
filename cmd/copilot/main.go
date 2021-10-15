@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -15,6 +16,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type actionRecommender interface {
+	RecommendActions() string
+}
+
 func init() {
 	color.DisableColorBasedOnEnvVar()
 	cobra.EnableCommandSorting = false // Maintain the order in which we add commands.
@@ -23,6 +28,10 @@ func init() {
 func main() {
 	cmd := buildRootCmd()
 	if err := cmd.Execute(); err != nil {
+		var ac actionRecommender
+		if errors.As(err, &ac) {
+			log.Infoln(ac.RecommendActions())
+		}
 		log.Errorln(err.Error())
 		os.Exit(1)
 	}
@@ -42,6 +51,9 @@ func buildRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+
+	cmd.SetOut(log.OutputWriter)
+	cmd.SetErr(log.DiagnosticWriter)
 
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.

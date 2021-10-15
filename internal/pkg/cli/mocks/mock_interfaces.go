@@ -4310,10 +4310,10 @@ func (m *MockdockerfileParser) EXPECT() *MockdockerfileParserMockRecorder {
 }
 
 // GetExposedPorts mocks base method.
-func (m *MockdockerfileParser) GetExposedPorts() ([]uint16, error) {
+func (m *MockdockerfileParser) GetExposedPorts() ([]dockerfile.Port, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetExposedPorts")
-	ret0, _ := ret[0].([]uint16)
+	ret0, _ := ret[0].([]dockerfile.Port)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

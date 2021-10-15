@@ -78,7 +78,7 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env strin
 				env:    env,
 				app:    app.Name,
 				rc:     rc,
-				image:  mft.ImageConfig,
+				image:  mft.ImageConfig.Image,
 				addons: addons,
 				parser: parser,
 			},
@@ -117,6 +117,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 
 	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 		Variables:         s.manifest.Variables,
+		StartCommand:      s.manifest.StartCommand,
 		Tags:              s.manifest.Tags,
 		NestedStack:       outputs,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),

@@ -13,10 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -58,10 +57,16 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	for name, tc := range testCases {
 		mft, err := manifest.UnmarshalWorkload(manifestBytes)
 		require.NoError(t, err)
+
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
+
+		err = envMft.Validate()
+		require.NoError(t, err)
+
 		v, ok := envMft.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
+
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
 			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
@@ -93,6 +98,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 			actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
 			actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
+
 			actualBytes = []byte(actualString)
 			mActual := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(actualBytes, mActual))

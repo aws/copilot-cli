@@ -130,6 +130,7 @@ type runTaskOpts struct {
 	defaultClusterGetter defaultClusterGetter
 	publicIPGetter       publicIPGetter
 
+	provider          sessionProvider
 	sess              *session.Session
 	targetEnvironment *config.Environment
 
@@ -138,6 +139,10 @@ type runTaskOpts struct {
 	configureRepository  func() error
 	// NOTE: configureEventsWriter is only called when tailing logs (i.e. --follow is specified)
 	configureEventsWriter func(tasks []*task.Task)
+
+	configureECSServiceDescriber func(session *session.Session) ecs.ECSServiceDescriber
+	configureServiceDescriber    func(session *session.Session) ecs.ServiceDescriber
+	configureJobDescriber        func(session *session.Session) ecs.JobDescriber
 
 	// Functions to generate a task run command.
 	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
@@ -154,10 +159,11 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
-		fs:      &afero.Afero{Fs: afero.NewOsFs()},
-		store:   store,
-		sel:     selector.NewSelect(prompt.New(), store),
-		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
+		fs:       &afero.Afero{Fs: afero.NewOsFs()},
+		store:    store,
+		sel:      selector.NewSelect(prompt.New(), store),
+		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
+		provider: sessions.NewProvider(),
 	}
 
 	opts.configureRuntimeOpts = func() error {
@@ -184,6 +190,16 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
 		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
+	}
+
+	opts.configureECSServiceDescriber = func(session *session.Session) ecs.ECSServiceDescriber {
+		return awsecs.New(session)
+	}
+	opts.configureServiceDescriber = func(session *session.Session) ecs.ServiceDescriber {
+		return ecs.New(session)
+	}
+	opts.configureJobDescriber = func(session *session.Session) ecs.JobDescriber {
+		return ecs.New(session)
 	}
 
 	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
@@ -250,7 +266,6 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 	var sess *session.Session
 	var env *config.Environment
 
-	provider := sessions.NewProvider()
 	if o.env != "" {
 		var err error
 		env, err = o.targetEnv()
@@ -258,13 +273,13 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 			return err
 		}
 
-		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
+		sess, err = o.provider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
 	} else {
 		var err error
-		sess, err = provider.Default()
+		sess, err = o.provider.Default()
 		if err != nil {
 			return fmt.Errorf("get default session: %w", err)
 		}
@@ -581,11 +596,10 @@ func (o *runTaskOpts) generateCommand() error {
 
 func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
 	var cmd cliStringer
-	sess, err := sessions.NewProvider().Default()
+	sess, err := o.provider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("get default session: %s", err)
 	}
-
 	if arn.IsARN(o.generateCommandTarget) {
 		clusterName, serviceName, err := o.parseARN()
 		if err != nil {
@@ -593,7 +607,6 @@ func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
 		}
 		return o.runTaskCommandFromECSService(sess, clusterName, serviceName)
 	}
-
 	parts := strings.Split(o.generateCommandTarget, "/")
 	switch len(parts) {
 	case 2:
@@ -629,7 +642,7 @@ func (o *runTaskOpts) parseARN() (string, string, error) {
 }
 
 func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, clusterName, serviceName string) (cliStringer, error) {
-	cmd, err := o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+	cmd, err := o.runTaskRequestFromECSService(o.configureECSServiceDescriber(sess), clusterName, serviceName)
 	if err != nil {
 		var errMultipleContainers *ecs.ErrMultipleContainersInTaskDef
 		if errors.As(err, &errMultipleContainers) {
@@ -649,12 +662,12 @@ func (o *runTaskOpts) runTaskCommandFromWorkload(sess *session.Session, appName,
 	var cmd cliStringer
 	switch workloadType {
 	case workloadTypeJob:
-		cmd, err = o.runTaskRequestFromJob(ecs.New(sess), appName, envName, workloadName)
+		cmd, err = o.runTaskRequestFromJob(o.configureJobDescriber(sess), appName, envName, workloadName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from job %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
 		}
 	case workloadTypeSvc:
-		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, workloadName)
+		cmd, err = o.runTaskRequestFromService(o.configureServiceDescriber(sess), appName, envName, workloadName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
 		}

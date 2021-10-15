@@ -68,8 +68,8 @@ Resources:
         - FARGATE
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
-      TaskRoleArn: !Ref TaskRole
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
@@ -87,16 +87,15 @@ Resources:
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
-          - Name: LOG_LEVEL
-            Value: "info"
-          - Name: COPILOT_MOUNT_POINTS
-            Value: '{"persistence":"/etc/scratch"}'
           - Name: COPILOT_SNS_TOPIC_ARNS
             Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-fe-givesdogs"}'
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-          
-          
+          - Name: LOG_LEVEL
+            Value: "info"
+          - Name: COPILOT_MOUNT_POINTS
+            Value: '{"persistence":"/etc/scratch"}'
+
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -262,10 +261,19 @@ Resources:
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
       RoleARN: !GetAtt AutoScalingRole.Arn
-  
-  
-  
-  
+
+  AutoScalingPolicyECSServiceAverageCPUUtilization:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageCPUUtilization, ScalingPolicy]]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        TargetValue: 70
 
   EnvControllerAction:
     Metadata:

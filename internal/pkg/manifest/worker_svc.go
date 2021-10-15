@@ -10,10 +10,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
+)
+
+var (
+	errUnmarshalQueueOpts = errors.New(`cannot unmarshal "queue" field into bool or map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -26,6 +31,11 @@ type WorkerService struct {
 	parser template.Parser
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (s *WorkerService) Publish() []Topic {
+	return s.WorkerServiceConfig.PublishConfig.Topics
+}
+
 // WorkerServiceConfig holds the configuration that can be overridden per environments.
 type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
@@ -34,6 +44,7 @@ type WorkerServiceConfig struct {
 	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	Subscribe        SubscribeConfig           `yaml:"subscribe"`
+	PublishConfig    PublishConfig             `yaml:"publish"`
 	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
@@ -41,14 +52,52 @@ type WorkerServiceConfig struct {
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
 	Topics []TopicSubscription `yaml:"topics"`
-	Queue  *SQSQueue           `yaml:"queue"`
+	Queue  SQSQueue            `yaml:"queue"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (s *SubscribeConfig) IsEmpty() bool {
+	return s.Topics == nil && s.Queue.IsEmpty()
 }
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
-	Name    string    `yaml:"name"`
-	Service string    `yaml:"service"`
-	Queue   *SQSQueue `yaml:"queue"`
+	Name    *string        `yaml:"name"`
+	Service *string        `yaml:"service"`
+	Queue   SQSQueueOrBool `yaml:"queue"`
+}
+
+// SQSQueueOrBool contains custom unmarshaling logic for the `queue` field in the manifest.
+type SQSQueueOrBool struct {
+	Advanced SQSQueue
+	Enabled  *bool
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (q *SQSQueueOrBool) IsEmpty() bool {
+	return q.Advanced.IsEmpty() && q.Enabled == nil
+}
+
+// UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueue to be specified as a
+// string or a struct alternately.
+func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&q.Advanced); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+	if !q.Advanced.IsEmpty() {
+		// Unmarshaled successfully to q.Advanced, unset q.Enabled, and return.
+		q.Enabled = nil
+		return nil
+	}
+	if err := value.Decode(&q.Enabled); err != nil {
+		return errUnmarshalQueueOpts
+	}
+	return nil
 }
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
@@ -57,6 +106,12 @@ type SQSQueue struct {
 	Delay      *time.Duration  `yaml:"delay"`
 	Timeout    *time.Duration  `yaml:"timeout"`
 	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (q *SQSQueue) IsEmpty() bool {
+	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
+		q.DeadLetter.IsEmpty()
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
@@ -85,7 +140,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	// Apply overrides.
 	svc.Name = stringP(props.Name)
 	svc.WorkerServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
-	svc.WorkerServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	svc.WorkerServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.WorkerServiceConfig.Platform = props.Platform
 	if isWindowsPlatform(props.Platform) {
@@ -118,7 +173,7 @@ func (s *WorkerService) BuildRequired() (bool, error) {
 
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
 func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.BuildConfig(wsRoot)
+	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
@@ -185,6 +240,9 @@ func newDefaultWorkerService() *WorkerService {
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
+					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
+						workloadType: WorkerServiceType,
+					},
 				},
 				ExecuteCommand: ExecuteCommand{
 					Enable: aws.Bool(false),
@@ -192,7 +250,7 @@ func newDefaultWorkerService() *WorkerService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: aws.String(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
 		},

@@ -362,6 +362,9 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
+	if err := envMft.Validate(); err != nil {
+		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
+	}
 	imgNeedsBuild, err := manifest.ServiceDockerfileBuildRequired(envMft)
 	if err != nil {
 		return nil, err

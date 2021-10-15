@@ -103,10 +103,11 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  mft.ImageConfig,
+				image:  mft.ImageConfig.Image,
 				parser: parser,
 				addons: addons,
 			},
+			logRetention:        mft.Logging.Retention,
 			tc:                  mft.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
@@ -122,18 +123,9 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: j.manifest.Sidecars,
-		imageConfig:   &j.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(j.manifest.Name),
-	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(j.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
-	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
 	}
 	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
@@ -143,22 +135,14 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
 	}
-
 	stateMachine, err := j.stateMachineOpts()
 	if err != nil {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
-
-	storage, err := convertStorageOpts(j.manifest.Name, j.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
-	}
-
 	envControllerLambda, err := j.parser.Read(envControllerPath)
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-
 	entrypoint, err := convertEntryPoint(j.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -175,15 +159,15 @@ func (j *ScheduledJob) Template() (string, error) {
 		Sidecars:                 sidecars,
 		ScheduleExpression:       schedule,
 		StateMachine:             stateMachine,
-		HealthCheck:              j.manifest.ImageConfig.HealthCheckOpts(),
+		HealthCheck:              convertContainerHealthCheck(j.manifest.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(j.manifest.Logging),
-		DockerLabels:             j.manifest.ImageConfig.DockerLabels,
-		Storage:                  storage,
+		DockerLabels:             j.manifest.ImageConfig.Image.DockerLabels,
+		Storage:                  convertStorageOpts(j.manifest.Name, j.manifest.Storage),
 		Network:                  convertNetworkConfig(j.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                dependencies,
-		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Credentials),
+		DependsOn:                convertDependsOn(j.manifest.ImageConfig.Image.DependsOn),
+		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(j.manifest.Platform),

@@ -80,11 +80,12 @@ type EnvShowRequest struct {
 
 // SvcInitRequest contains the parameters for calling copilot svc init.
 type SvcInitRequest struct {
-	Name       string
-	SvcType    string
-	Dockerfile string
-	Image      string
-	SvcPort    string
+	Name               string
+	SvcType            string
+	Dockerfile         string
+	Image              string
+	SvcPort            string
+	TopicSubscriptions []string
 }
 
 // SvcShowRequest contains the parameters for calling copilot svc show.
@@ -313,6 +314,9 @@ func (cli *CLI) SvcInit(opts *SvcInitRequest) (string, error) {
 	}
 	if opts.Image != "" {
 		args = append(args, "--image", opts.Image)
+	}
+	if len(opts.TopicSubscriptions) > 0 {
+		args = append(args, "--subscribe-topics", strings.Join(opts.TopicSubscriptions, ","))
 	}
 	return cli.exec(
 		exec.Command(cli.path, args...))
@@ -920,7 +924,7 @@ func (cli *CLI) exec(command *exec.Cmd) (string, error) {
 
 	contents := sess.Wait(100000000).Out.Contents()
 	if exitCode := sess.ExitCode(); exitCode != 0 {
-		return string(contents), fmt.Errorf("received non 0 exit code")
+		return string(sess.Err.Contents()), fmt.Errorf("received non 0 exit code")
 	}
 
 	return string(contents), nil

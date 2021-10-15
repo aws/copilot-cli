@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -185,8 +184,8 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.WorkloadOpts{
 					WorkloadType: manifest.BackendServiceType,
-					HealthCheck: &ecs.HealthCheck{
-						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
+					HealthCheck: &template.ContainerHealthCheck{
+						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    aws.Int64(5),
 						Retries:     aws.Int64(3),
 						StartPeriod: aws.Int64(0),
@@ -246,7 +245,8 @@ Outputs:
 
 			if tc.setUpManifest != nil {
 				tc.setUpManifest(conf)
-				conf.manifest.Network.VPC.Placement = aws.String(manifest.PrivateSubnetPlacement)
+				privatePlacement := manifest.Placement(manifest.PrivateSubnetPlacement)
+				conf.manifest.Network.VPC.Placement = &privatePlacement
 				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
 

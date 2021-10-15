@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -12,6 +13,36 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
+
+func TestImage_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedError error
+	}{
+		"error if both build and location are set": {
+			inContent: []byte(`build: mockBuild
+location: mockLocation`),
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"success": {
+			inContent: []byte(`location: mockLocation`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			i := Image{}
+			err := yaml.Unmarshal(tc.inContent, &i)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "mockLocation", aws.StringValue(i.Location))
+			}
+		})
+	}
+}
 
 func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
@@ -287,6 +318,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 }
 
 func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
+	mockPlatformStr := PlatformString("linux/amd64")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -337,7 +369,7 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 			inContent: []byte(`platform: linux/amd64`),
 
 			wantedStruct: PlatformArgsOrString{
-				PlatformString: aws.String("linux/amd64"),
+				PlatformString: &mockPlatformStr,
 			},
 		},
 		"both os/arch specified with valid values": {
@@ -799,17 +831,9 @@ network:
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
-		},
-		"returns error if placement option is invalid": {
-			data: `
-network:
-  vpc:
-    placement: 'tartarus'
-`,
-			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus' must be one of []string{"public", "private"}`),
 		},
 		"unmarshals successfully for public placement with security groups": {
 			data: `
@@ -822,7 +846,7 @@ network:
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
-					Placement:      stringP(PublicSubnetPlacement),
+					Placement:      &PublicSubnetPlacement,
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},
 			},

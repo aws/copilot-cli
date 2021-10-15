@@ -19,14 +19,13 @@ import (
 	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"gopkg.in/yaml.v3"
 )
 
 // AWS VPC subnet placement options.
 const (
-	PublicSubnetPlacement  = "public"
-	PrivateSubnetPlacement = "private"
+	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
+	defaultDockerfileName = "Dockerfile"
 )
 
 // Platform options.
@@ -45,6 +44,10 @@ const (
 )
 
 var (
+	// AWS VPC subnet placement options.
+	PublicSubnetPlacement  = Placement("public")
+	PrivateSubnetPlacement = Placement("private")
+
 	// WorkloadTypes holds all workload manifest types.
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
 
@@ -72,28 +75,27 @@ var (
 	}
 
 	// All placement options.
-	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
+	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 
 	// Error definitions.
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
 	errUnmarshalPlatformOpts = errors.New("unable to unmarshal platform field into string or compose-style map")
 	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
-	errUnmarshalExec         = errors.New("unable to unmarshal exec field into boolean or exec configuration")
-	errUnmarshalEntryPoint   = errors.New("unable to unmarshal entrypoint into string or slice of strings")
-	errUnmarshalCommand      = errors.New("unable to unmarshal command into string or slice of strings")
+
+	errUnmarshalExec         = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
+	errUnmarshalEntryPoint   = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
+	errUnmarshalAlias        = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
+	errUnmarshalCommand      = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 
 	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
-)
 
-const (
-	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
-	defaultDockerfileName = "Dockerfile"
 )
 
 // WorkloadManifest represents a workload manifest.
 type WorkloadManifest interface {
 	ApplyEnv(envName string) (WorkloadManifest, error)
+	Validate() error
 }
 
 // WorkloadProps contains properties for creating a new workload manifest.
@@ -115,18 +117,39 @@ type OverrideRule struct {
 	Value yaml.Node `yaml:"value"`
 }
 
+// DependsOn represents container dependency for a container.
+type DependsOn map[string]string
+
 // Image represents the workload's container image.
 type Image struct {
 	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
 	Location     *string           `yaml:"location"`        // Use an existing image instead.
 	Credentials  *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
-	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+	DependsOn    DependsOn         `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (i *Image) UnmarshalYAML(value *yaml.Node) error {
+	type image Image
+	if err := value.Decode((*image)(i)); err != nil {
+		return err
+	}
+	if !i.Build.isEmpty() && i.Location != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "build",
+			secondField: "location",
+			mustExist:   true,
+		}
+	}
+	return nil
 }
 
 // ImageWithHealthcheck represents a container image with health check.
 type ImageWithHealthcheck struct {
-	Image       `yaml:",inline"`
+	Image       Image                `yaml:",inline"`
 	HealthCheck ContainerHealthCheck `yaml:"healthcheck"`
 }
 
@@ -138,7 +161,19 @@ type ImageWithPortAndHealthcheck struct {
 
 // ImageWithPort represents a container image with an exposed port.
 type ImageWithPort struct {
-	Image `yaml:",inline"`
+	Image Image   `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
+}
+
+// ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
+type ImageWithHealthcheckAndOptionalPort struct {
+	ImageWithOptionalPort `yaml:",inline"`
+	HealthCheck           ContainerHealthCheck `yaml:"healthcheck"`
+}
+
+// ImageWithOptionalPort represents a container image with an optional exposed port.
+type ImageWithOptionalPort struct {
+	Image Image   `yaml:",inline"`
 	Port  *uint16 `yaml:"port"`
 }
 
@@ -225,19 +260,19 @@ type ImageOverride struct {
 	Command    CommandOverride    `yaml:"command"`
 }
 
-// EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
+// EntryPointOverride is a custom type which supports unmarshalling "entrypoint" yaml which
 // can either be of type string or type slice of string.
 type EntryPointOverride stringSliceOrString
 
-// CommandOverride is a custom type which supports unmarshaling "command" yaml which
+// CommandOverride is a custom type which supports unmarshalling "command" yaml which
 // can either be of type string or type slice of string.
 type CommandOverride stringSliceOrString
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the EntryPointOverride
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
+// UnmarshalYAML overrides the default YAML unmarshalling logic for the EntryPointOverride
+// struct, allowing it to perform more complex unmarshalling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
 		return errUnmarshalEntryPoint
 	}
 	return nil
@@ -254,9 +289,9 @@ func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the CommandOverride
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), unmarshal); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (c *CommandOverride) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), value); err != nil {
 		return errUnmarshalCommand
 	}
 	return nil
@@ -276,8 +311,8 @@ type stringSliceOrString struct {
 	StringSlice []string
 }
 
-func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(interface{}) error) error {
-	if err := unmarshal(&s.StringSlice); err != nil {
+func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, value *yaml.Node) error {
+	if err := value.Decode(&s.StringSlice); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -292,7 +327,7 @@ func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(i
 		return nil
 	}
 
-	return unmarshal(&s.String)
+	return value.Decode(&s.String)
 }
 
 func toStringSlice(s *stringSliceOrString) ([]string, error) {
@@ -328,9 +363,9 @@ func (b *BuildArgsOrString) isEmpty() bool {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&b.BuildArgs); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (b *BuildArgsOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&b.BuildArgs); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -345,7 +380,7 @@ func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return nil
 	}
 
-	if err := unmarshal(&b.BuildString); err != nil {
+	if err := value.Decode(&b.BuildString); err != nil {
 		return errUnmarshalBuildOpts
 	}
 	return nil
@@ -378,9 +413,9 @@ type ExecuteCommand struct {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ExecuteCommand
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (e *ExecuteCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&e.Config); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (e *ExecuteCommand) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&e.Config); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -393,7 +428,7 @@ func (e *ExecuteCommand) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return nil
 	}
 
-	if err := unmarshal(&e.Enable); err != nil {
+	if err := value.Decode(&e.Enable); err != nil {
 		return errUnmarshalExec
 	}
 	return nil
@@ -412,6 +447,7 @@ func (e ExecuteCommandConfig) IsEmpty() bool {
 
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
+	Retention      *int              `yaml:"retention"`
 	Image          *string           `yaml:"image"`
 	Destination    map[string]string `yaml:"destination,flow"`
 	EnableMetadata *bool             `yaml:"enableMetadata"`
@@ -443,15 +479,16 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port          *string             `yaml:"port"`
-	Image         *string             `yaml:"image"`
-	Essential     *bool               `yaml:"essential"`
-	CredsParam    *string             `yaml:"credentialsParameter"`
-	Variables     map[string]string   `yaml:"variables"`
-	Secrets       map[string]string   `yaml:"secrets"`
-	MountPoints   []SidecarMountPoint `yaml:"mount_points"`
-	DockerLabels  map[string]string   `yaml:"labels"`
-	DependsOn     map[string]string   `yaml:"depends_on"`
+	Port          *string              `yaml:"port"`
+	Image         *string              `yaml:"image"`
+	Essential     *bool                `yaml:"essential"`
+	CredsParam    *string              `yaml:"credentialsParameter"`
+	Variables     map[string]string    `yaml:"variables"`
+	Secrets       map[string]string    `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
+	DockerLabels  map[string]string    `yaml:"labels"`
+	DependsOn     DependsOn            `yaml:"depends_on"`
+	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 	ImageOverride `yaml:",inline"`
 }
 
@@ -472,7 +509,8 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	if t.Platform.PlatformString == nil {
 		return nil, nil
 	}
-	return t.Platform.PlatformString, nil
+	val := string(*t.Platform.PlatformString)
+	return &val, nil
 }
 
 // PublishConfig represents the configurable options for setting up publishers.
@@ -497,47 +535,36 @@ func (c *NetworkConfig) IsEmpty() bool {
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
 // If the user specified a placement that's not valid then throw an error.
-func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (c *NetworkConfig) UnmarshalYAML(value *yaml.Node) error {
 	type networkWithDefaults NetworkConfig
+	publicPlacement := Placement(PublicSubnetPlacement)
 	defaultVPCConf := vpcConfig{
-		Placement: stringP(PublicSubnetPlacement),
+		Placement: &publicPlacement,
 	}
 	conf := networkWithDefaults{
 		VPC: defaultVPCConf,
 	}
-	if err := unmarshal(&conf); err != nil {
+	if err := value.Decode(&conf); err != nil {
 		return err
 	}
 	if conf.VPC.isEmpty() { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
 		conf.VPC = defaultVPCConf
 	}
-	if !conf.VPC.isValidPlacement() {
-		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
-	}
 	*c = NetworkConfig(conf)
 	return nil
 }
 
+// Placement represents where to place tasks (public or private subnets).
+type Placement string
+
 // vpcConfig represents the security groups and subnets attached to a task.
 type vpcConfig struct {
-	Placement      *string  `yaml:"placement"`
+	*Placement     `yaml:"placement"`
 	SecurityGroups []string `yaml:"security_groups"`
 }
 
 func (c *vpcConfig) isEmpty() bool {
 	return c.Placement == nil && c.SecurityGroups == nil
-}
-
-func (c *vpcConfig) isValidPlacement() bool {
-	if c.Placement == nil {
-		return false
-	}
-	for _, allowed := range subnetPlacements {
-		if *c.Placement == allowed {
-			return true
-		}
-	}
-	return false
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
@@ -588,9 +615,9 @@ type ContainerHealthCheck struct {
 	StartPeriod *time.Duration `yaml:"start_period"`
 }
 
-// newDefaultContainerHealthCheck returns container health check configuration
+// NewDefaultContainerHealthCheck returns container health check configuration
 // that's identical to a load balanced web service's defaults.
-func newDefaultContainerHealthCheck() *ContainerHealthCheck {
+func NewDefaultContainerHealthCheck() *ContainerHealthCheck {
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 		Interval:    durationp(10 * time.Second),
@@ -605,8 +632,8 @@ func (hc ContainerHealthCheck) IsEmpty() bool {
 	return hc.Command == nil && hc.Interval == nil && hc.Retries == nil && hc.Timeout == nil && hc.StartPeriod == nil
 }
 
-// applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
-func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
+// ApplyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
+func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	if hc.Command == nil && other.Command != nil {
 		hc.Command = other.Command
 	}
@@ -624,45 +651,22 @@ func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
 	}
 }
 
-func (hc *ContainerHealthCheck) healthCheckOpts() *ecs.HealthCheck {
-	// Make sure that unset fields in the healthcheck gets a default value.
-	hc.applyIfNotSet(newDefaultContainerHealthCheck())
-	return &ecs.HealthCheck{
-		Command:     aws.StringSlice(hc.Command),
-		Interval:    aws.Int64(int64(hc.Interval.Seconds())),
-		Retries:     aws.Int64(int64(*hc.Retries)),
-		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
-		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
-	}
-}
-
-// HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
-func (i ImageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck.IsEmpty() {
-		return nil
-	}
-	return i.HealthCheck.healthCheckOpts()
-}
-
-func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck.IsEmpty() {
-		return nil
-	}
-	return i.HealthCheck.healthCheckOpts()
-}
+// PlatformString represents the platform string consisting of OS family and architecture type.
+// For example: "windows/x86"
+type PlatformString string
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type PlatformArgs.
 type PlatformArgsOrString struct {
-	PlatformString *string
-	PlatformArgs   PlatformArgs
+	*PlatformString
+	PlatformArgs PlatformArgs
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the PlatformArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&p.PlatformArgs); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&p.PlatformArgs); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -682,7 +686,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 		p.PlatformString = nil
 		return nil
 	}
-	if err := unmarshal(&p.PlatformString); err != nil {
+	if err := value.Decode(&p.PlatformString); err != nil {
 		return errUnmarshalPlatformOpts
 	}
 	if err := validateShortPlatform(p.PlatformString); err != nil {

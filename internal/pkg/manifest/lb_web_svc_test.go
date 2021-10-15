@@ -67,6 +67,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						Memory: aws.Int(512),
 						Count: Count{
 							Value: aws.Int(1),
+							AdvancedCount: AdvancedCount{
+								workloadType: LoadBalancedWebServiceType,
+							},
 						},
 						ExecuteCommand: ExecuteCommand{
 							Enable: aws.Bool(false),
@@ -74,7 +77,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},
@@ -260,7 +263,12 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
-	mockRange := IntRangeBand("1-10")
+	var (
+		mockIPNet1 = IPNet("10.1.0.0/24")
+		mockIPNet2 = IPNet("10.1.1.0/24")
+		mockRange  = IntRangeBand("1-10")
+		mockPerc   = Percentage(80)
+	)
 	testCases := map[string]struct {
 		in         *LoadBalancedWebService
 		envToApply string
@@ -438,7 +446,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      stringP("public"),
+							Placement:      &PublicSubnetPlacement,
 							SecurityGroups: []string{"sg-123"},
 						},
 					},
@@ -595,7 +603,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      stringP("public"),
+							Placement:      &PublicSubnetPlacement,
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -609,7 +617,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								CPU:   &mockPerc,
 							},
 						},
 					},
@@ -635,7 +643,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: nil,
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								CPU:   &mockPerc,
 							},
 						},
 					},
@@ -660,13 +668,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								CPU:   &mockPerc,
 							},
 						},
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      stringP("public"),
+							Placement:      &PublicSubnetPlacement,
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -684,13 +692,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: nil,
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								CPU:   &mockPerc,
 							},
 						},
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      stringP("public"),
+							Placement:      &PublicSubnetPlacement,
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -1120,13 +1128,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: []string{"ip1", "ip2"},
+						AllowedSourceIps: []IPNet{mockIPNet1},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						RoutingRule: RoutingRule{
-							AllowedSourceIps: []string{"ip1", "ip3"},
+							AllowedSourceIps: []IPNet{mockIPNet2},
 						},
 					},
 				},
@@ -1143,7 +1151,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: []string{"ip1", "ip3"},
+						AllowedSourceIps: []IPNet{mockIPNet2},
 					},
 				},
 			},
@@ -1159,7 +1167,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: []string{"ip1", "ip2"},
+						AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
@@ -1184,7 +1192,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("another-path"),
 						},
-						AllowedSourceIps: []string{"ip1", "ip2"},
+						AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 					},
 				},
 			},
@@ -1200,7 +1208,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("path"),
 						},
-						AllowedSourceIps: []string{"ip1", "ip2"},
+						AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
@@ -1209,7 +1217,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							HealthCheck: HealthCheckArgsOrString{
 								HealthCheckPath: aws.String("another-path"),
 							},
-							AllowedSourceIps: []string{},
+							AllowedSourceIps: []IPNet{},
 						},
 					},
 				},
@@ -1226,7 +1234,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("another-path"),
 						},
-						AllowedSourceIps: []string{},
+						AllowedSourceIps: []IPNet{},
 					},
 				},
 			},
@@ -1406,7 +1414,7 @@ func Test_Temp(t *testing.T) {
 			},
 			Port: aws.Uint16(5000),
 		},
-		HealthCheck: *newDefaultContainerHealthCheck(),
+		HealthCheck: *NewDefaultContainerHealthCheck(),
 	}
 	t.Run("temporary", func(t *testing.T) {
 		// WHEN
@@ -1450,7 +1458,7 @@ func Test_Temp(t *testing.T) {
 							},
 							Port: aws.Uint16(5000),
 						},
-						HealthCheck: *newDefaultContainerHealthCheck(),
+						HealthCheck: *NewDefaultContainerHealthCheck(),
 					},
 				},
 			},

@@ -220,6 +220,7 @@ image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
+  port: 80
 `)
 	mockManifestWithBadPlatform := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
@@ -228,6 +229,7 @@ image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
+  port: 80
 `)
 	mockManifestWithGoodPlatform := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
@@ -236,22 +238,26 @@ image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
+  port: 80
 `)
 	mockMftNoBuild := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
   location: foo/bar
+  port: 80
 `)
 	mockMftBuildString := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
   build: path/to/Dockerfile
+  port: 80
 `)
 	mockMftNoContext := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
   build:
-    dockerfile: path/to/Dockerfile`)
+    dockerfile: path/to/Dockerfile
+  port: 80`)
 
 	tests := map[string]struct {
 		inputSvc   string
@@ -597,6 +603,21 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("get application %s resources from region us-west-2: %w", mockAppName, mockError),
 		},
+		"alias used while app is not associated with a domain": {
+			inAliases: manifest.Alias{String: aws.String("mockAlias")},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: errors.New("alias specified when application is not associated with a domain"),
+		},
 		"cannot to find ECR repo": {
 			inBuildRequire: true,
 			inEnvironment: &config.Environment{
@@ -830,6 +851,14 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 							Name: aws.String(mockSvcName),
 						},
 						LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
+							ImageConfig: manifest.ImageWithPortAndHealthcheck{
+								ImageWithPort: manifest.ImageWithPort{
+									Image: manifest.Image{
+										Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+									},
+									Port: aws.Uint16(80),
+								},
+							},
 							RoutingRule: manifest.RoutingRule{
 								Alias: tc.inAliases,
 							},
@@ -880,6 +909,22 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 		wantURLs map[string]string
 		wantErr  error
 	}{
+		"alias used while app is not associated with a domain": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+
+			wantErr: errors.New("alias specified when application is not associated with a domain"),
+		},
 		"fail to get identity for rd web service": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
@@ -1106,6 +1151,12 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 							Name: aws.String(mockSvcName),
 						},
 						RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
+							ImageConfig: manifest.ImageWithPort{
+								Image: manifest.Image{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
+								Port: aws.Uint16(80),
+							},
 							RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
 								Alias: aws.String(tc.inAlias),
 							},
@@ -1249,7 +1300,13 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 						Workload: manifest.Workload{
 							Name: aws.String(mockSvcName),
 						},
-						WorkerServiceConfig: manifest.WorkerServiceConfig{},
+						WorkerServiceConfig: manifest.WorkerServiceConfig{
+							ImageConfig: manifest.ImageWithHealthcheck{
+								Image: manifest.Image{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
+							},
+						},
 					}, nil
 				},
 			}

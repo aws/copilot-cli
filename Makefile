@@ -41,7 +41,7 @@ release-docker:
 
 .PHONY: compile-local
 compile-local:
-	go build -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
+	CGO_ENABLED=0 go build -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
 .PHONY: compile-windows
 compile-windows:

@@ -14,6 +14,5 @@ Number of times to retry before container is deemed unhealthy. Default is 2.
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-timeout" href="#image-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 How long to wait before considering the health check failed, in seconds. Default is 5s.
 
-<span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-start-period" href="#image-healthcheck-start-period" class="field">`start_period`</a> <span class="type">Duration</span>  
-Grace period within which to provide containers time to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.
-
+<span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-start-period" href="#image-healthcheck-start-period" class="field">`start_period`</a> <span class="type">Duration</span>
+Length of grace period for containers to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.

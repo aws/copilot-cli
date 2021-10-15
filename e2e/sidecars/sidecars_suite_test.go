@@ -5,6 +5,8 @@ package sidecars_test
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -54,4 +56,12 @@ func BeforeAll(fn func()) {
 			first = false
 		}
 	})
+}
+
+// exponentialBackoffWithJitter backoff exponentially with jitter based on 200ms base
+// component of backoff fixed to ensure minimum total wait time on
+// slow targets.
+func exponentialBackoffWithJitter(attempt int) {
+	base := int(math.Pow(2, float64(attempt)))
+	time.Sleep(time.Duration((rand.Intn(50)*base + base*150) * int(time.Millisecond)))
 }

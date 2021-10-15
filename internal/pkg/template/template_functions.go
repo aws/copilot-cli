@@ -90,20 +90,6 @@ func QuoteSliceFunc(elems []string) []string {
 	return quotedElems
 }
 
-// QuotePSliceFunc places quotation marks around all
-// dereferenced elements of elems and returns a []string slice.
-func QuotePSliceFunc(elems []*string) []string {
-	var quotedElems []string
-	if len(elems) == 0 {
-		return quotedElems
-	}
-	quotedElems = make([]string, len(elems))
-	for i, el := range elems {
-		quotedElems[i] = strconv.Quote(*el)
-	}
-	return quotedElems
-}
-
 // generateMountPointJSON turns a list of MountPoint objects into a JSON string:
 // `{"myEFSVolume": "/var/www", "myEBSVolume": "/usr/data"}`
 // This function must be called on an array of correctly constructed MountPoint objects.

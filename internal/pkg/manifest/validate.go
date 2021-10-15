@@ -4,19 +4,66 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/dustin/go-humanize/english"
+)
+
+const (
+	// Container dependency status constants.
+	dependsOnStart    = "START"
+	dependsOnComplete = "COMPLETE"
+	dependsOnSuccess  = "SUCCESS"
+	dependsOnHealthy  = "HEALTHY"
+
+	// Min and Max values for task ephemeral storage in GiB.
+	ephemeralMinValueGiB = 20
+	ephemeralMaxValueGiB = 200
 )
 
 var (
-	intRangeBandRegexp = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
+
+	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+
+	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
+// Validate returns nil if LoadBalancedWebService is configured correctly.
+func (l LoadBalancedWebService) Validate() error {
+	var err error
+	if err = l.LoadBalancedWebServiceConfig.Validate(); err != nil {
+		return err
+	}
+	if err = l.Workload.Validate(); err != nil {
+		return err
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     l.Sidecars,
+		imageConfig:       l.ImageConfig.Image,
+		mainContainerName: aws.StringValue(l.Name),
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	return nil
+}
+
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
-func (l *LoadBalancedWebServiceConfig) Validate() error {
+func (l LoadBalancedWebServiceConfig) Validate() error {
 	var err error
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -35,7 +82,7 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for k, v := range l.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = l.Network.Validate(); err != nil {
@@ -46,14 +93,33 @@ func (l *LoadBalancedWebServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range l.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
 	return nil
 }
 
+// Validate returns nil if BackendService is configured correctly.
+func (b BackendService) Validate() error {
+	var err error
+	if err = b.BackendServiceConfig.Validate(); err != nil {
+		return err
+	}
+	if err = b.Workload.Validate(); err != nil {
+		return err
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     b.Sidecars,
+		imageConfig:       b.ImageConfig.Image,
+		mainContainerName: aws.StringValue(b.Name),
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	return nil
+}
+
 // Validate returns nil if BackendServiceConfig is configured correctly.
-func (b *BackendServiceConfig) Validate() error {
+func (b BackendServiceConfig) Validate() error {
 	var err error
 	if err = b.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -69,7 +135,7 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for k, v := range b.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = b.Network.Validate(); err != nil {
@@ -80,14 +146,22 @@ func (b *BackendServiceConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range b.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
 	return nil
 }
 
 // Validate returns nil if RequestDrivenWebService is configured correctly.
-func (r *RequestDrivenWebServiceConfig) Validate() error {
+func (r RequestDrivenWebService) Validate() error {
+	if err := r.RequestDrivenWebServiceConfig.Validate(); err != nil {
+		return err
+	}
+	return r.Workload.Validate()
+}
+
+// Validate returns nil if RequestDrivenWebServiceConfig is configured correctly.
+func (r RequestDrivenWebServiceConfig) Validate() error {
 	var err error
 	if err = r.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -101,8 +175,27 @@ func (r *RequestDrivenWebServiceConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if WorkerService is configured correctly.
+func (w WorkerService) Validate() error {
+	var err error
+	if err = w.WorkerServiceConfig.Validate(); err != nil {
+		return err
+	}
+	if err = w.Workload.Validate(); err != nil {
+		return err
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     w.Sidecars,
+		imageConfig:       w.ImageConfig.Image,
+		mainContainerName: aws.StringValue(w.Name),
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	return nil
+}
+
 // Validate returns nil if WorkerServiceConfig is configured correctly.
-func (w *WorkerServiceConfig) Validate() error {
+func (w WorkerServiceConfig) Validate() error {
 	var err error
 	if err = w.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -118,7 +211,7 @@ func (w *WorkerServiceConfig) Validate() error {
 	}
 	for k, v := range w.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = w.Network.Validate(); err != nil {
@@ -127,16 +220,38 @@ func (w *WorkerServiceConfig) Validate() error {
 	if err = w.Subscribe.Validate(); err != nil {
 		return fmt.Errorf(`validate "subscribe": %w`, err)
 	}
+	if err = w.PublishConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "publish": %w`, err)
+	}
 	for ind, taskDefOverride := range w.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
 	return nil
 }
 
+// Validate returns nil if ScheduledJob is configured correctly.
+func (s ScheduledJob) Validate() error {
+	var err error
+	if err = s.ScheduledJobConfig.Validate(); err != nil {
+		return err
+	}
+	if err = s.Workload.Validate(); err != nil {
+		return err
+	}
+	if err = validateContainerDeps(validateDependenciesOpts{
+		sidecarConfig:     s.Sidecars,
+		imageConfig:       s.ImageConfig.Image,
+		mainContainerName: aws.StringValue(s.Name),
+	}); err != nil {
+		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	return nil
+}
+
 // Validate returns nil if ScheduledJobConfig is configured correctly.
-func (s *ScheduledJobConfig) Validate() error {
+func (s ScheduledJobConfig) Validate() error {
 	var err error
 	if err = s.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
@@ -152,7 +267,7 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for k, v := range s.Sidecars {
 		if err = v.Validate(); err != nil {
-			return fmt.Errorf(`validate sidecars[%s]: %w`, k, err)
+			return fmt.Errorf(`validate "sidecars[%s]": %w`, k, err)
 		}
 	}
 	if err = s.Network.Validate(); err != nil {
@@ -169,14 +284,24 @@ func (s *ScheduledJobConfig) Validate() error {
 	}
 	for ind, taskDefOverride := range s.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
-			return fmt.Errorf(`validate taskdef_overrides[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if Workload is configured correctly.
+func (w Workload) Validate() error {
+	if w.Name == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
 		}
 	}
 	return nil
 }
 
 // Validate returns nil if ImageWithPortAndHealthcheck is configured correctly.
-func (i *ImageWithPortAndHealthcheck) Validate() error {
+func (i ImageWithPortAndHealthcheck) Validate() error {
 	var err error
 	if err = i.ImageWithPort.Validate(); err != nil {
 		return err
@@ -187,8 +312,28 @@ func (i *ImageWithPortAndHealthcheck) Validate() error {
 	return nil
 }
 
+// Validate returns nil if ImageWithHealthcheckAndOptionalPort is configured correctly.
+func (i ImageWithHealthcheckAndOptionalPort) Validate() error {
+	var err error
+	if err = i.ImageWithOptionalPort.Validate(); err != nil {
+		return err
+	}
+	if err = i.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
+	}
+	return nil
+}
+
 // Validate returns nil if ImageWithHealthcheck is configured correctly.
-func (i *ImageWithHealthcheck) Validate() error {
+func (i ImageWithHealthcheck) Validate() error {
+	if err := i.Image.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate returns nil if ImageWithOptionalPort is configured correctly.
+func (i ImageWithOptionalPort) Validate() error {
 	if err := i.Image.Validate(); err != nil {
 		return err
 	}
@@ -196,7 +341,7 @@ func (i *ImageWithHealthcheck) Validate() error {
 }
 
 // Validate returns nil if ImageWithPort is configured correctly.
-func (i *ImageWithPort) Validate() error {
+func (i ImageWithPort) Validate() error {
 	if err := i.Image.Validate(); err != nil {
 		return err
 	}
@@ -209,7 +354,7 @@ func (i *ImageWithPort) Validate() error {
 }
 
 // Validate returns nil if Image is configured correctly.
-func (i *Image) Validate() error {
+func (i Image) Validate() error {
 	var err error
 	if err = i.Build.Validate(); err != nil {
 		return fmt.Errorf(`validate "build": %w`, err)
@@ -221,11 +366,35 @@ func (i *Image) Validate() error {
 			mustExist:   true,
 		}
 	}
+	if err = i.DependsOn.Validate(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if DependsOn is configured correctly.
+func (d DependsOn) Validate() error {
+	if d == nil {
+		return nil
+	}
+	for _, v := range d {
+		status := strings.ToUpper(v)
+		var isValid bool
+		for _, allowed := range dependsOnValidStatuses {
+			if status == allowed {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return fmt.Errorf("container dependency status must be one of %s", english.WordSeries([]string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}, "or"))
+		}
+	}
 	return nil
 }
 
 // Validate returns nil if BuildArgsOrString is configured correctly.
-func (b *BuildArgsOrString) Validate() error {
+func (b BuildArgsOrString) Validate() error {
 	if b.isEmpty() {
 		return nil
 	}
@@ -236,17 +405,17 @@ func (b *BuildArgsOrString) Validate() error {
 }
 
 // Validate returns nil if DockerBuildArgs is configured correctly.
-func (*DockerBuildArgs) Validate() error {
+func (DockerBuildArgs) Validate() error {
 	return nil
 }
 
 // Validate returns nil if ContainerHealthCheck is configured correctly.
-func (*ContainerHealthCheck) Validate() error {
+func (ContainerHealthCheck) Validate() error {
 	return nil
 }
 
 // Validate returns nil if ImageOverride is configured correctly.
-func (i *ImageOverride) Validate() error {
+func (i ImageOverride) Validate() error {
 	var err error
 	if err = i.EntryPoint.Validate(); err != nil {
 		return fmt.Errorf(`validate "entrypoint": %w`, err)
@@ -258,17 +427,17 @@ func (i *ImageOverride) Validate() error {
 }
 
 // Validate returns nil if EntryPointOverride is configured correctly.
-func (*EntryPointOverride) Validate() error {
+func (EntryPointOverride) Validate() error {
 	return nil
 }
 
 // Validate returns nil if CommandOverride is configured correctly.
-func (*CommandOverride) Validate() error {
+func (CommandOverride) Validate() error {
 	return nil
 }
 
 // Validate returns nil if RoutingRule is configured correctly.
-func (r *RoutingRule) Validate() error {
+func (r RoutingRule) Validate() error {
 	var err error
 	if err = r.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
@@ -282,11 +451,17 @@ func (r *RoutingRule) Validate() error {
 			secondField: "targetContainer",
 		}
 	}
+	for ind, ip := range r.AllowedSourceIps {
+		if err = ip.Validate(); err != nil {
+			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
+		}
+	}
+
 	return nil
 }
 
 // Validate returns nil if HealthCheckArgsOrString is configured correctly.
-func (h *HealthCheckArgsOrString) Validate() error {
+func (h HealthCheckArgsOrString) Validate() error {
 	if h.IsEmpty() {
 		return nil
 	}
@@ -294,7 +469,7 @@ func (h *HealthCheckArgsOrString) Validate() error {
 }
 
 // Validate returns nil if HTTPHealthCheckArgs is configured correctly.
-func (h *HTTPHealthCheckArgs) Validate() error {
+func (h HTTPHealthCheckArgs) Validate() error {
 	if h.isEmpty() {
 		return nil
 	}
@@ -302,12 +477,20 @@ func (h *HTTPHealthCheckArgs) Validate() error {
 }
 
 // Validate returns nil if Alias is configured correctly.
-func (*Alias) Validate() error {
+func (Alias) Validate() error {
+	return nil
+}
+
+// Validate returns nil if IPNet is configured correctly.
+func (ip IPNet) Validate() error {
+	if _, _, err := net.ParseCIDR(string(ip)); err != nil {
+		return fmt.Errorf("parse IPNet %s: %w", string(ip), err)
+	}
 	return nil
 }
 
 // Validate returns nil if TaskConfig is configured correctly.
-func (t *TaskConfig) Validate() error {
+func (t TaskConfig) Validate() error {
 	var err error
 	if err = t.Platform.Validate(); err != nil {
 		return fmt.Errorf(`validate "platform": %w`, err)
@@ -325,49 +508,135 @@ func (t *TaskConfig) Validate() error {
 }
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
-func (p *PlatformArgsOrString) Validate() error {
+func (p PlatformArgsOrString) Validate() error {
+	if p.PlatformString != nil {
+		if err := p.PlatformString.Validate(); err != nil {
+			return err
+		}
+	}
 	return p.PlatformArgs.Validate()
 }
 
+// Validate returns nil if PlatformString is configured correctly.
+func (p PlatformString) Validate() error {
+	if err := validatePlatform(&p); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Validate returns nil if PlatformArgsOrString is configured correctly.
-// TODO: add validation once "feat/pencere" is merged.
-func (p *PlatformArgs) Validate() error {
+func (p PlatformArgs) Validate() error {
 	if p.isEmpty() {
 		return nil
+	}
+	if !p.bothSpecified() {
+		return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
+	}
+	if err := validateOS(p.OSFamily); err != nil {
+		return err
+	}
+	if err := validateArch(p.Arch); err != nil {
+		return err
 	}
 	return nil
 }
 
 // Validate returns nil if Count is configured correctly.
-func (c *Count) Validate() error {
+func (c Count) Validate() error {
 	return c.AdvancedCount.Validate()
 }
 
 // Validate returns nil if AdvancedCount is configured correctly.
-func (a *AdvancedCount) Validate() error {
+func (a AdvancedCount) Validate() error {
 	if a.IsEmpty() {
 		return nil
 	}
+	if len(a.validScalingFields()) == 0 {
+		return fmt.Errorf("cannot have autoscaling options for workloads of type '%s'", a.workloadType)
+	}
+	// Validate spot and remaining autoscaling fields.
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
 			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
+			secondField: fmt.Sprintf("range/%s", strings.Join(a.validScalingFields(), "/")),
 		}
 	}
 	if err := a.Range.Validate(); err != nil {
 		return fmt.Errorf(`validate "range": %w`, err)
 	}
-	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
+
+	// Validate combinations with "range".
+	if a.Range.IsEmpty() && a.hasScalingFieldsSet() {
 		return &errFieldMustBeSpecified{
 			missingField:      "range",
-			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
+			conditionalFields: a.validScalingFields(),
+		}
+	}
+	if !a.Range.IsEmpty() && !a.hasScalingFieldsSet() {
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields:    a.validScalingFields(),
+			conditionalField: "range",
+		}
+	}
+
+	// Validate individual custom autoscaling options.
+	if err := a.QueueScaling.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue_delay": %w`, err)
+	}
+	if a.CPU != nil {
+		if err := a.CPU.Validate(); err != nil {
+			return fmt.Errorf(`validate "cpu_percentage": %w`, err)
+		}
+	}
+	if a.Memory != nil {
+		if err := a.Memory.Validate(); err != nil {
+			return fmt.Errorf(`validate "memory_percentage": %w`, err)
 		}
 	}
 	return nil
 }
 
+// Validate returns nil if Percentage is configured correctly.
+func (p Percentage) Validate() error {
+	if val := int(p); val < 0 || val > 100 {
+		return fmt.Errorf("percentage value %v must be an integer from 0 to 100", val)
+	}
+	return nil
+}
+
+// Validate returns nil if QueueScaling is configured correctly.
+func (qs QueueScaling) Validate() error {
+	if qs.IsEmpty() {
+		return nil
+	}
+	if qs.AcceptableLatency == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "acceptable_latency",
+			conditionalFields: []string{"msg_processing_time"},
+		}
+	}
+	if qs.AvgProcessingTime == nil {
+		return &errFieldMustBeSpecified{
+			missingField:      "msg_processing_time",
+			conditionalFields: []string{"acceptable_latency"},
+		}
+	}
+	latency, process := *qs.AcceptableLatency, *qs.AvgProcessingTime
+	if latency == 0 {
+		return errors.New(`"acceptable_latency" cannot be 0`)
+	}
+	if process == 0 {
+		return errors.New(`"msg_processing_time" cannot be 0`)
+	}
+	if process > latency {
+		return errors.New(`"msg_processing_time" cannot be longer than "acceptable_latency"`)
+	}
+	return nil
+}
+
 // Validate returns nil if Range is configured correctly.
-func (r *Range) Validate() error {
+func (r Range) Validate() error {
 	if r.IsEmpty() {
 		return nil
 	}
@@ -378,8 +647,8 @@ func (r *Range) Validate() error {
 }
 
 // Validate returns nil if IntRangeBand is configured correctly.
-func (r *IntRangeBand) Validate() error {
-	str := string(*r)
+func (r IntRangeBand) Validate() error {
+	str := string(r)
 	minMax := intRangeBandRegexp.FindStringSubmatch(str)
 	// Valid minMax example: ["1-2", "1", "2"]
 	if len(minMax) != 3 {
@@ -404,7 +673,7 @@ func (r *IntRangeBand) Validate() error {
 }
 
 // Validate returns nil if RangeConfig is configured correctly.
-func (r *RangeConfig) Validate() error {
+func (r RangeConfig) Validate() error {
 	if r.Min == nil || r.Max == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "min/max",
@@ -421,7 +690,7 @@ func (r *RangeConfig) Validate() error {
 }
 
 // Validate returns nil if ExecuteCommand is configured correctly.
-func (e *ExecuteCommand) Validate() error {
+func (e ExecuteCommand) Validate() error {
 	if !e.Config.IsEmpty() {
 		return e.Config.Validate()
 	}
@@ -429,22 +698,38 @@ func (e *ExecuteCommand) Validate() error {
 }
 
 // Validate returns nil if ExecuteCommandConfig is configured correctly.
-func (*ExecuteCommandConfig) Validate() error {
+func (ExecuteCommandConfig) Validate() error {
 	return nil
 }
 
 // Validate returns nil if Storage is configured correctly.
-func (s *Storage) Validate() error {
+func (s Storage) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
+	if s.Ephemeral != nil {
+		ephemeral := aws.IntValue(s.Ephemeral)
+		if ephemeral < ephemeralMinValueGiB || ephemeral > ephemeralMaxValueGiB {
+			return fmt.Errorf(`validate "ephemeral": ephemeral storage must be between 20 GiB and 200 GiB`)
+		}
+	}
+	var hasManagedVolume bool
 	for k, v := range s.Volumes {
 		if err := v.Validate(); err != nil {
 			return fmt.Errorf(`validate "volumes[%s]": %w`, k, err)
+		}
+		if !v.EmptyVolume() && v.EFS.UseManagedFS() {
+			if hasManagedVolume {
+				return fmt.Errorf("cannot specify more than one managed volume per service")
+			}
+			hasManagedVolume = true
 		}
 	}
 	return nil
 }
 
 // Validate returns nil if Volume is configured correctly.
-func (v *Volume) Validate() error {
+func (v Volume) Validate() error {
 	if err := v.EFS.Validate(); err != nil {
 		return fmt.Errorf(`validate "efs": %w`, err)
 	}
@@ -452,12 +737,21 @@ func (v *Volume) Validate() error {
 }
 
 // Validate returns nil if MountPointOpts is configured correctly.
-func (*MountPointOpts) Validate() error {
+func (m MountPointOpts) Validate() error {
+	path := aws.StringValue(m.ContainerPath)
+	if path == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
+	}
+	if err := validateVolumePath(path); err != nil {
+		return fmt.Errorf(`validate "path": %w`, err)
+	}
 	return nil
 }
 
 // Validate returns nil if EFSConfigOrBool is configured correctly.
-func (e *EFSConfigOrBool) Validate() error {
+func (e EFSConfigOrBool) Validate() error {
 	if e.IsEmpty() {
 		return nil
 	}
@@ -465,7 +759,7 @@ func (e *EFSConfigOrBool) Validate() error {
 }
 
 // Validate returns nil if EFSVolumeConfiguration is configured correctly.
-func (e *EFSVolumeConfiguration) Validate() error {
+func (e EFSVolumeConfiguration) Validate() error {
 	if e.IsEmpty() {
 		return nil
 	}
@@ -487,6 +781,9 @@ func (e *EFSVolumeConfiguration) Validate() error {
 			conditionalFields: []string{"gid"},
 		}
 	}
+	if e.UID != nil && *e.UID == 0 {
+		return fmt.Errorf(`"uid" must not be 0`)
+	}
 	if err := e.AuthConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "auth": %w`, err)
 	}
@@ -497,11 +794,16 @@ func (e *EFSVolumeConfiguration) Validate() error {
 		}
 		return fmt.Errorf(`"root_dir" must be either empty or "/" and "auth.iam" must be true when "access_point_id" is used`)
 	}
+	if e.RootDirectory != nil {
+		if err := validateVolumePath(aws.StringValue(e.RootDirectory)); err != nil {
+			return fmt.Errorf(`validate "root_dir": %w`, err)
+		}
+	}
 	return nil
 }
 
 // Validate returns nil if AuthorizationConfig is configured correctly.
-func (a *AuthorizationConfig) Validate() error {
+func (a AuthorizationConfig) Validate() error {
 	if a.IsEmpty() {
 		return nil
 	}
@@ -509,7 +811,7 @@ func (a *AuthorizationConfig) Validate() error {
 }
 
 // Validate returns nil if Logging is configured correctly.
-func (l *Logging) Validate() error {
+func (l Logging) Validate() error {
 	if l.IsEmpty() {
 		return nil
 	}
@@ -517,17 +819,33 @@ func (l *Logging) Validate() error {
 }
 
 // Validate returns nil if SidecarConfig is configured correctly.
-func (s *SidecarConfig) Validate() error {
+func (s SidecarConfig) Validate() error {
 	for ind, mp := range s.MountPoints {
 		if err := mp.Validate(); err != nil {
-			return fmt.Errorf(`validate "mount_points[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "mount_points[%d]": %w`, ind, err)
 		}
+	}
+	if err := s.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
+	}
+	if err := s.DependsOn.Validate(); err != nil {
+		return fmt.Errorf(`validate "depends_on": %w`, err)
 	}
 	return s.ImageOverride.Validate()
 }
 
+// Validate returns nil if SidecarMountPoint is configured correctly.
+func (s SidecarMountPoint) Validate() error {
+	if aws.StringValue(s.SourceVolume) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "source_volume",
+		}
+	}
+	return s.MountPointOpts.Validate()
+}
+
 // Validate returns nil if NetworkConfig is configured correctly.
-func (n *NetworkConfig) Validate() error {
+func (n NetworkConfig) Validate() error {
 	if n.IsEmpty() {
 		return nil
 	}
@@ -538,55 +856,104 @@ func (n *NetworkConfig) Validate() error {
 }
 
 // Validate returns nil if vpcConfig is configured correctly.
-func (v *vpcConfig) Validate() error {
+func (v vpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
+	}
+	if v.Placement != nil {
+		if err := v.Placement.Validate(); err != nil {
+			return fmt.Errorf(`validate "placement": %w`, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if Placement is configured correctly.
+func (p Placement) Validate() error {
+	if string(p) == "" {
+		return fmt.Errorf(`"placement" cannot be empty`)
+	}
+	for _, allowed := range subnetPlacements {
+		if string(p) == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf(`"placement" %s must be one of %s`, string(p), strings.Join(subnetPlacements, ", "))
+}
+
+// Validate returns nil if AppRunnerInstanceConfig is configured correctly.
+func (r AppRunnerInstanceConfig) Validate() error {
+	if err := r.Platform.Validate(); err != nil {
+		return fmt.Errorf(`validate "platform": %w`, err)
 	}
 	return nil
 }
 
 // Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
-func (r *RequestDrivenWebServiceHttpConfig) Validate() error {
+func (r RequestDrivenWebServiceHttpConfig) Validate() error {
 	return r.HealthCheckConfiguration.Validate()
 }
 
 // Validate returns nil if JobTriggerConfig is configured correctly.
-func (*JobTriggerConfig) Validate() error {
+func (c JobTriggerConfig) Validate() error {
+	if c.Schedule == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "schedule",
+		}
+	}
 	return nil
 }
 
 // Validate returns nil if JobFailureHandlerConfig is configured correctly.
-func (*JobFailureHandlerConfig) Validate() error {
+func (JobFailureHandlerConfig) Validate() error {
 	return nil
 }
 
 // Validate returns nil if PublishConfig is configured correctly.
-func (p *PublishConfig) Validate() error {
+func (p PublishConfig) Validate() error {
 	for ind, topic := range p.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
 	}
 	return nil
 }
 
 // Validate returns nil if Topic is configured correctly.
-func (*Topic) Validate() error {
-	return nil
+func (t Topic) Validate() error {
+	return validatePubSubName(aws.StringValue(t.Name))
 }
 
 // Validate returns nil if SubscribeConfig is configured correctly.
-func (p *SubscribeConfig) Validate() error {
-	for ind, topic := range p.Topics {
+func (s SubscribeConfig) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
+	for ind, topic := range s.Topics {
 		if err := topic.Validate(); err != nil {
-			return fmt.Errorf(`validate "topics[%d]: %w`, ind, err)
+			return fmt.Errorf(`validate "topics[%d]": %w`, ind, err)
 		}
+	}
+	if err := s.Queue.Validate(); err != nil {
+		return fmt.Errorf(`validate "queue": %w`, err)
 	}
 	return nil
 }
 
 // Validate returns nil if TopicSubscription is configured correctly.
-func (t *TopicSubscription) Validate() error {
+func (t TopicSubscription) Validate() error {
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return err
+	}
+	svcName := aws.StringValue(t.Service)
+	if svcName == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "service",
+		}
+	}
+	if !isValidSubSvcName(svcName) {
+		return fmt.Errorf("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	}
 	if err := t.Queue.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue": %w`, err)
 	}
@@ -594,15 +961,26 @@ func (t *TopicSubscription) Validate() error {
 }
 
 // Validate returns nil if SQSQueue is configured correctly.
-func (s *SQSQueue) Validate() error {
-	if err := s.DeadLetter.Validate(); err != nil {
+func (q SQSQueueOrBool) Validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	return q.Advanced.Validate()
+}
+
+// Validate returns nil if SQSQueue is configured correctly.
+func (q SQSQueue) Validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	if err := q.DeadLetter.Validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
 	}
 	return nil
 }
 
 // Validate returns nil if DeadLetterQueue is configured correctly.
-func (d *DeadLetterQueue) Validate() error {
+func (d DeadLetterQueue) Validate() error {
 	if d.IsEmpty() {
 		return nil
 	}
@@ -610,6 +988,149 @@ func (d *DeadLetterQueue) Validate() error {
 }
 
 // Validate returns nil if OverrideRule is configured correctly.
-func (*OverrideRule) Validate() error {
+func (r OverrideRule) Validate() error {
+	for _, s := range invalidTaskDefOverridePathRegexp {
+		re := regexp.MustCompile(fmt.Sprintf(`^%s$`, s))
+		if re.MatchString(r.Path) {
+			return fmt.Errorf(`"%s" cannot be overridden with a custom value`, s)
+		}
+	}
 	return nil
+}
+
+type validateDependenciesOpts struct {
+	mainContainerName string
+	sidecarConfig     map[string]*SidecarConfig
+	imageConfig       Image
+}
+
+type containerDependency struct {
+	dependsOn   DependsOn
+	isEssential bool
+}
+
+func validateContainerDeps(opts validateDependenciesOpts) error {
+	containerDependencies := make(map[string]containerDependency)
+	containerDependencies[opts.mainContainerName] = containerDependency{
+		dependsOn:   opts.imageConfig.DependsOn,
+		isEssential: true,
+	}
+	for name, config := range opts.sidecarConfig {
+		containerDependencies[name] = containerDependency{
+			dependsOn:   config.DependsOn,
+			isEssential: config.Essential == nil || aws.BoolValue(config.Essential),
+		}
+	}
+	if err := validateDepsForEssentialContainers(containerDependencies); err != nil {
+		return err
+	}
+	return validateNoCircularDependencies(opts)
+}
+
+func validateDepsForEssentialContainers(deps map[string]containerDependency) error {
+	for name, containerDep := range deps {
+		for dep, status := range containerDep.dependsOn {
+			if !deps[dep].isEssential {
+				continue
+			}
+			if err := validateEssentialContainerDependency(dep, strings.ToUpper(status)); err != nil {
+				return fmt.Errorf("validate %s container dependencies status: %w", name, err)
+			}
+		}
+	}
+	return nil
+}
+
+func validateEssentialContainerDependency(name, status string) error {
+	for _, allowed := range essentialContainerDependsOnValidStatuses {
+		if status == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf("essential container %s can only have status %s", name, english.WordSeries([]string{dependsOnStart, dependsOnHealthy}, "or"))
+}
+
+func validateNoCircularDependencies(opts validateDependenciesOpts) error {
+	dependencies, err := buildDependencyGraph(opts)
+	if err != nil {
+		return err
+	}
+	cycle, ok := dependencies.IsAcyclic()
+	if ok {
+		return nil
+	}
+	if len(cycle) == 1 {
+		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
+	}
+	// Stablize unit tests.
+	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
+	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
+}
+
+func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
+	dependencyGraph := graph.New()
+	// Add any sidecar dependencies.
+	for name, sidecar := range opts.sidecarConfig {
+		for dep := range sidecar.DependsOn {
+			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+				return nil, fmt.Errorf("container %s does not exist", dep)
+			}
+			dependencyGraph.Add(graph.Edge{
+				From: name,
+				To:   dep,
+			})
+		}
+	}
+	// Add any image dependencies.
+	for dep := range opts.imageConfig.DependsOn {
+		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+			return nil, fmt.Errorf("container %s does not exist", dep)
+		}
+		dependencyGraph.Add(graph.Edge{
+			From: opts.mainContainerName,
+			To:   dep,
+		})
+	}
+	return dependencyGraph, nil
+}
+
+// Validate that paths contain only an approved set of characters to guard against command injection.
+// We can accept 0-9A-Za-z-_.
+func validateVolumePath(input string) error {
+	if len(input) == 0 {
+		return nil
+	}
+	m := volumesPathRegexp.FindStringSubmatch(input)
+	if len(m) == 0 {
+		return fmt.Errorf("path can only contain the characters a-zA-Z0-9.-_/")
+	}
+	return nil
+}
+
+func validatePubSubName(name string) error {
+	if name == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(name) {
+		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hypthens`)
+	}
+	return nil
+}
+
+func isValidSubSvcName(name string) bool {
+	if !awsNameRegexp.MatchString(name) {
+		return false
+	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(name)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(name)
+	return len(trailingMatch) == 0
 }

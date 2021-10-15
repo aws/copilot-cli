@@ -5,7 +5,9 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -54,9 +56,9 @@ func (r *Range) Parse() (min int, max int, err error) {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the RangeOpts
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (r *Range) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&r.RangeConfig); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (r *Range) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.RangeConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -71,7 +73,7 @@ func (r *Range) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	if err := unmarshal(&r.Value); err != nil {
+	if err := value.Decode(&r.Value); err != nil {
 		return errUnmarshalRangeOpts
 	}
 	return nil
@@ -123,9 +125,9 @@ type Count struct {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Count
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&c.AdvancedCount); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (c *Count) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&c.AdvancedCount); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -134,8 +136,11 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if err := c.AdvancedCount.IsValid(); err != nil {
-		return err
+	if c.AdvancedCount.Spot != nil && (c.AdvancedCount.hasAutoscaling()) {
+		return &errFieldMutualExclusive{
+			firstField:  "spot",
+			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
+		}
 	}
 
 	if !c.AdvancedCount.IsEmpty() {
@@ -143,7 +148,7 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	if err := unmarshal(&c.Value); err != nil {
+	if err := value.Decode(&c.Value); err != nil {
 		return errUnmarshalCountOpts
 	}
 	return nil
@@ -170,21 +175,27 @@ func (c *Count) Desired() (*int, error) {
 	return aws.Int(min), nil
 }
 
+// Percentage represents a valid percentage integer ranging from 0 to 100.
+type Percentage int
+
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
 	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
 	Range        Range          `yaml:"range"`
-	CPU          *int           `yaml:"cpu_percentage"`
-	Memory       *int           `yaml:"memory_percentage"`
+	CPU          *Percentage    `yaml:"cpu_percentage"`
+	Memory       *Percentage    `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
+	QueueScaling QueueScaling   `yaml:"queue_delay"`
+
+	workloadType string
 }
 
 // IsEmpty returns whether AdvancedCount is empty.
 func (a *AdvancedCount) IsEmpty() bool {
 	return a.Range.IsEmpty() && a.CPU == nil && a.Memory == nil &&
-		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil
+		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil && a.QueueScaling.IsEmpty()
 }
 
 // IgnoreRange returns whether desiredCount is specified on spot capacity
@@ -193,29 +204,33 @@ func (a *AdvancedCount) IgnoreRange() bool {
 }
 
 func (a *AdvancedCount) hasAutoscaling() bool {
-	return !a.Range.IsEmpty() || a.CPU != nil || a.Memory != nil ||
-		a.Requests != nil || a.ResponseTime != nil
+	return !a.Range.IsEmpty() || a.hasScalingFieldsSet()
 }
 
-// IsValid checks to make sure Spot fields are compatible with other values in AdvancedCount
-func (a *AdvancedCount) IsValid() error {
-	// Spot translates to desiredCount; cannot specify with autoscaling
-	if a.Spot != nil && a.hasAutoscaling() {
-		return &errFieldMutualExclusive{
-			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time",
-		}
+func (a *AdvancedCount) validScalingFields() []string {
+	switch a.workloadType {
+	case LoadBalancedWebServiceType:
+		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
+	case BackendServiceType:
+		return []string{"cpu_percentage", "memory_percentage"}
+	case WorkerServiceType:
+		return []string{"cpu_percentage", "memory_percentage", "queue_delay"}
+	default:
+		return nil
 	}
+}
 
-	// Range must be specified if using autoscaling
-	if a.Range.IsEmpty() && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
-		return &errFieldMustBeSpecified{
-			missingField:      "range",
-			conditionalFields: []string{"cpu_percentage", "memory_percentage", "requests", "response_time"},
-		}
+func (a *AdvancedCount) hasScalingFieldsSet() bool {
+	switch a.workloadType {
+	case LoadBalancedWebServiceType:
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
+	case BackendServiceType:
+		return a.CPU != nil || a.Memory != nil
+	case WorkerServiceType:
+		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty()
+	default:
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
 	}
-
-	return nil
 }
 
 func (a *AdvancedCount) unsetAutoscaling() {
@@ -224,6 +239,28 @@ func (a *AdvancedCount) unsetAutoscaling() {
 	a.Memory = nil
 	a.Requests = nil
 	a.ResponseTime = nil
+	a.QueueScaling = QueueScaling{}
+}
+
+// QueueScaling represents the configuration to scale a service based on a SQS queue.
+type QueueScaling struct {
+	AcceptableLatency *time.Duration `yaml:"acceptable_latency"`
+	AvgProcessingTime *time.Duration `yaml:"msg_processing_time"`
+}
+
+// IsEmpty returns true if the QueueScaling is set.
+func (qs *QueueScaling) IsEmpty() bool {
+	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil
+}
+
+// AcceptableBacklogPerTask returns the total number of messages that each task can accumulate in the queue
+// while maintaining the AcceptableLatency given the AvgProcessingTime.
+func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
+	if qs.IsEmpty() {
+		return 0, errors.New(`"queue_delay" must be specified in order to calculate the acceptable backlog`)
+	}
+	v := math.Ceil(float64(*qs.AcceptableLatency) / float64(*qs.AvgProcessingTime))
+	return int(v), nil
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
@@ -268,9 +305,9 @@ type HealthCheckArgsOrString struct {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&hc.HealthCheckArgs); err != nil {
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (hc *HealthCheckArgsOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&hc.HealthCheckArgs); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -285,7 +322,7 @@ func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) err
 		return nil
 	}
 
-	if err := unmarshal(&hc.HealthCheckPath); err != nil {
+	if err := value.Decode(&hc.HealthCheckPath); err != nil {
 		return errUnmarshalHealthCheckArgs
 	}
 	return nil

@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -49,17 +51,17 @@ const (
 	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	// For a GitHub repository.
 	githubURL       = "github.com"
-	defaultGHBranch = "main"
+	defaultGHBranch = deploy.DefaultPipelineBranch
 	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
 	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
 	awsURL          = "aws.amazon.com"
 	ccIdentifier    = "codecommit"
-	defaultCCBranch = "main"
+	defaultCCBranch = deploy.DefaultPipelineBranch
 	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
 	bbURL           = "bitbucket.org"
-	defaultBBBranch = "main"
+	defaultBBBranch = deploy.DefaultPipelineBranch
 	fmtBBRepoURL    = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
 )
 

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -395,7 +396,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
+				m.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
 			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
@@ -413,7 +414,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return(defaultSvcPortString, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
+				m.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
 			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
@@ -431,7 +432,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
+				m.EXPECT().GetExposedPorts().Return(nil, errors.New("expose error"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
 			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
@@ -449,7 +450,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("100000", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
+				m.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
 			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
@@ -465,7 +466,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
+				m.EXPECT().GetExposedPorts().Return([]dockerfile.Port{{Port: 80, Protocol: "", RawString: "80"}}, nil)
 			},
 			mockSel:          func(m *mocks.MockdockerfileSelector) {},
 			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
@@ -726,8 +727,8 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					gomock.Any(),
 				).Return([]manifest.TopicSubscription{
 					{
-						Name:    "thetopic",
-						Service: "theservice",
+						Name:    aws.String("thetopic"),
+						Service: aws.String("theservice"),
 					},
 				}, nil)
 			},

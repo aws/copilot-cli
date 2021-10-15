@@ -98,6 +98,10 @@ Resources:
               - ecr:CompleteLayerUpload
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': phonetool}}
+          - Effect: Allow
+            Action:
+              - codestar-connections:UseConnection
+            Resource: !Ref SourceConnection
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -272,6 +276,7 @@ Resources:
                 ConnectionArn: !Ref SourceConnection
                 FullRepositoryId: huanjani/sample
                 BranchName: main
+                OutputArtifactFormat: CODEBUILD_CLONE_REF
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1

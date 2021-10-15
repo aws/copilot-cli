@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -72,7 +73,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	// Apply overrides.
 	svc.Name = stringP(props.Name)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
-	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.LoadBalancedWebServiceConfig.Platform = props.Platform
@@ -103,6 +104,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
+					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
+						workloadType: LoadBalancedWebServiceType,
+					},
 				},
 				ExecuteCommand: ExecuteCommand{
 					Enable: aws.Bool(false),
@@ -110,7 +114,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement: &PublicSubnetPlacement,
 				},
 			},
 		},
@@ -153,7 +157,7 @@ func (t TaskConfig) IsWindows() bool {
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.BuildConfig(wsRoot)
+	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -191,9 +195,9 @@ type RoutingRule struct {
 	Alias               Alias                   `yaml:"alias"`
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string  `yaml:"target_container"`
-	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
+	TargetContainer          *string `yaml:"target_container"`
+	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
 }
 
 // windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
@@ -214,6 +218,9 @@ func (s *LoadBalancedWebService) windowsCompatibility() error {
 	return nil
 }
 
+// IPNet represents an IP network string. For example: 10.1.0.0/16
+type IPNet string
+
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
 // can either be of type string or type slice of string.
 type Alias stringSliceOrString
@@ -225,10 +232,10 @@ func (e *Alias) IsEmpty() bool {
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
 // struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (e *Alias) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
-		return errUnmarshalEntryPoint
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (e *Alias) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
+		return errUnmarshalAlias
 	}
 	return nil
 }

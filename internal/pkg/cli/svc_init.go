@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -169,7 +170,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		if opts.df != nil {
 			return opts.df
 		}
-		opts.df = dockerfile.NewDockerfile(opts.fs, opts.dockerfilePath)
+		opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 		return opts.df
 	}
 	return opts, nil
@@ -252,11 +253,16 @@ func (o *initSvcOpts) Execute() error {
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.dockerfile(o.dockerfilePath))
 		if err != nil {
-			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
+			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
 	if err = o.legitimizePlatform(); err != nil {
 		return err
+	}
+	var platformStrPtr *manifest.PlatformString
+	if o.platform != nil {
+		val := manifest.PlatformString(*o.platform)
+		platformStrPtr = &val
 	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -266,7 +272,7 @@ func (o *initSvcOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: o.platform,
+				PlatformString: platformStrPtr,
 			},
 			Topics: o.topics,
 		},
@@ -392,7 +398,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		return nil
 	}
 
-	var ports []uint16
+	var ports []dockerfile.Port
 	if o.dockerfilePath != "" && o.image == "" {
 		// Check for exposed ports.
 		ports, err = o.dockerfile(o.dockerfilePath).GetExposedPorts()
@@ -408,10 +414,10 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		case 0:
 			// There were no ports detected, keep the default port prompt.
 		case 1:
-			o.port = ports[0]
+			o.port = ports[0].Port
 			return nil
 		default:
-			defaultPort = strconv.Itoa(int(ports[0]))
+			defaultPort = strconv.Itoa(int(ports[0].Port))
 		}
 	}
 	// Skip asking if it is a backend or worker service.
@@ -495,8 +501,8 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	subscriptions := make([]manifest.TopicSubscription, 0, len(topics))
 	for _, t := range topics {
 		subscriptions = append(subscriptions, manifest.TopicSubscription{
-			Name:    t.Name(),
-			Service: t.Workload(),
+			Name:    aws.String(t.Name()),
+			Service: aws.String(t.Workload()),
 		})
 	}
 	o.topics = subscriptions
@@ -511,8 +517,8 @@ func parseSerializedSubscription(input string) (manifest.TopicSubscription, erro
 		return manifest.TopicSubscription{}, fmt.Errorf("parse subscription from key: %s", input)
 	}
 	return manifest.TopicSubscription{
-		Name:    attrs[2],
-		Service: attrs[1],
+		Name:    aws.String(attrs[2]),
+		Service: aws.String(attrs[1]),
 	}, nil
 }
 

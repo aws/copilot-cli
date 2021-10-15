@@ -23,19 +23,26 @@ import (
 )
 
 const (
-	workerManifestPath = "worker-manifest.yml"
-	workerStackPath    = "worker-test.stack.yml"
-	workerParamsPath   = "worker-test.params.json"
+	workerManifestPath       = "worker-manifest.yml"
+	workerStackPath          = "worker-test.stack.yml"
+	workerParamsPath         = "worker-test.params.json"
+	backlogPerTaskLambdaPath = "custom-resources/backlog-per-task-calculator.js"
 )
 
 func TestWorkerService_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", workerManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
+
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
+
 	envMft, err := mft.ApplyEnv(envName)
 	require.NoError(t, err)
+
+	err = envMft.Validate()
+	require.NoError(t, err)
+
 	v, ok := envMft.(*manifest.WorkerService)
 	require.True(t, ok)
 
@@ -48,13 +55,18 @@ func TestWorkerService_Template(t *testing.T) {
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
 	regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
+
 	parser := template.New()
 	envController, err := parser.Read(envControllerPath)
 	require.NoError(t, err)
 	envControllerZipFile := envController.String()
+
 	dynamicDesiredCount, err := parser.Read(dynamicDesiredCountPath)
 	require.NoError(t, err)
 	dynamicDesiredCountZipFile := dynamicDesiredCount.String()
+
+	backlogPerTaskLambda, err := parser.Read(backlogPerTaskLambdaPath)
+	require.NoError(t, err)
 
 	t.Run("CF Template should be equal", func(t *testing.T) {
 		actualBytes := []byte(tpl)
@@ -64,6 +76,7 @@ func TestWorkerService_Template(t *testing.T) {
 		// Cut out zip file for more readable output
 		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 		actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
+		actualString = strings.ReplaceAll(actualString, backlogPerTaskLambda.String(), "mockBacklogPerTaskLambda")
 		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))

@@ -14,6 +14,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func newMockSQSQueueOrBool() SQSQueueOrBool {
+	return SQSQueueOrBool{
+		Advanced: newMockSQSQueue(),
+	}
+}
+
+func newMockSQSQueue() SQSQueue {
+	duration111Seconds := 111 * time.Second
+	return SQSQueue{
+		Retention:  &duration111Seconds,
+		Delay:      &duration111Seconds,
+		Timeout:    &duration111Seconds,
+		DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+	}
+}
+
 func TestNewWorkerSvc(t *testing.T) {
 	testCases := map[string]struct {
 		inProps WorkerServiceProps
@@ -55,7 +71,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},
@@ -96,7 +112,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},
@@ -156,12 +172,12 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 				},
 				Topics: []TopicSubscription{
 					{
-						Name:    "testTopic",
-						Service: "service4TestTopic",
+						Name:    aws.String("testTopic"),
+						Service: aws.String("service4TestTopic"),
 					},
 					{
-						Name:    "testTopic2",
-						Service: "service4TestTopic2",
+						Name:    aws.String("testTopic2"),
+						Service: aws.String("service4TestTopic2"),
 					},
 				},
 			},
@@ -188,6 +204,7 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 }
 
 func TestWorkerSvc_ApplyEnv(t *testing.T) {
+	mockPerc := Percentage(70)
 	mockWorkerServiceWithNoEnvironments := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
@@ -275,8 +292,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "topicName",
-						Service: "bestService",
+						Name:    aws.String("topicName"),
+						Service: aws.String("bestService"),
 					},
 				},
 			},
@@ -293,7 +310,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					Count: Count{
 						AdvancedCount: AdvancedCount{
-							CPU: aws.Int(70),
+							CPU: &mockPerc,
 						},
 					},
 					CPU: aws.Int(512),
@@ -315,8 +332,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "topicName2",
-							Service: "bestService2",
+							Name:    aws.String("topicName2"),
+							Service: aws.String("bestService2"),
 						},
 					},
 				},
@@ -424,7 +441,6 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			},
 		},
 	}
-	duration111Seconds := 111 * time.Second
 	mockWorkerServiceWithSubscribeNilOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
@@ -434,14 +450,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
@@ -465,14 +476,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-							},
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -488,14 +494,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
@@ -521,14 +522,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-							},
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -544,14 +540,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Subscribe: SubscribeConfig{
 				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
@@ -579,14 +570,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				Subscribe: SubscribeConfig{
 					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-							},
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -600,18 +586,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
-				Queue: nil,
+				Queue: SQSQueue{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: &SQSQueue{
-						Retention:  &duration111Seconds,
-						Delay:      &duration111Seconds,
-						Timeout:    &duration111Seconds,
-						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-					},
+					Queue: newMockSQSQueue(),
 				},
 			},
 		},
@@ -623,18 +604,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
-				Queue: &SQSQueue{
-					Retention:  &duration111Seconds,
-					Delay:      &duration111Seconds,
-					Timeout:    &duration111Seconds,
-					DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-				},
+				Queue: newMockSQSQueue(),
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: nil,
+					Queue: SQSQueue{},
 				},
 			},
 		},
@@ -646,18 +622,13 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
 			Subscribe: SubscribeConfig{
-				Queue: &SQSQueue{},
+				Queue: SQSQueue{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
 				Subscribe: SubscribeConfig{
-					Queue: &SQSQueue{
-						Retention:  &duration111Seconds,
-						Delay:      &duration111Seconds,
-						Timeout:    &duration111Seconds,
-						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-					},
+					Queue: newMockSQSQueue(),
 				},
 			},
 		},
@@ -714,7 +685,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(256),
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								CPU: aws.Int(70),
+								CPU: &mockPerc,
 							},
 						},
 						Variables: map[string]string{
@@ -738,8 +709,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "topicName2",
-								Service: "bestService2",
+								Name:    aws.String("topicName2"),
+								Service: aws.String("bestService2"),
 							},
 						},
 					},
@@ -837,14 +808,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -865,14 +831,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -896,14 +857,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -924,14 +880,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -952,14 +903,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -983,14 +929,9 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Subscribe: SubscribeConfig{
 						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -1009,12 +950,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1031,12 +967,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1056,12 +987,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Image: Image{},
 					},
 					Subscribe: SubscribeConfig{
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-						},
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1084,6 +1010,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 
 func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
+	mockPerc := Percentage(80)
 	testCases := map[string]struct {
 		svcCount Count
 		envCount Count
@@ -1094,7 +1021,7 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
 					Range: Range{Value: &mockRange},
-					CPU:   aws.Int(80),
+					CPU:   &mockPerc,
 				},
 			},
 			envCount: Count{},
@@ -1104,7 +1031,7 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								CPU:   &mockPerc,
 							},
 						},
 					},
@@ -1242,60 +1169,6 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	}
 }
 
-func TestWorkerSvc_Subscriptions(t *testing.T) {
-	testCases := map[string]struct {
-		inSubscription SubscribeConfig
-		expected       []TopicSubscription
-	}{
-		"subscription specified": {
-			inSubscription: SubscribeConfig{
-				Topics: []TopicSubscription{
-					{
-						Name:    "orders",
-						Service: "database",
-					},
-					{
-						Name:    "events",
-						Service: "api",
-					},
-				},
-				Queue: &SQSQueue{
-					Retention: durationPointer(4 * 24 * time.Hour),
-				},
-			},
-			expected: []TopicSubscription{
-				{
-					Name:    "orders",
-					Service: "database",
-				},
-				{
-					Name:    "events",
-					Service: "api",
-				},
-			},
-		},
-		"no topics": {
-			inSubscription: SubscribeConfig{},
-			expected:       nil,
-		},
-	}
-	for name, tc := range testCases {
-		// GIVEN
-		svc := WorkerService{
-			WorkerServiceConfig: WorkerServiceConfig{
-				Subscribe: tc.inSubscription,
-			},
-		}
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			actual := svc.Subscriptions()
-
-			// THEN
-			require.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
 func TestDeadLetterQueue_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     DeadLetterQueue
@@ -1319,6 +1192,64 @@ func TestDeadLetterQueue_IsEmpty(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestSQSQueueOrBool_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct SQSQueueOrBool
+		wantedError  error
+	}{
+		"with boolean": {
+			inContent: []byte(`queue: true`),
+
+			wantedStruct: SQSQueueOrBool{
+				Enabled: aws.Bool(true),
+			},
+		},
+		"with advanced case": {
+			inContent: []byte(`queue:
+  retention: 5s
+  delay: 1m
+  timeout: 5m
+  dead_letter:
+    tries: 10`),
+
+			wantedStruct: SQSQueueOrBool{
+				Advanced: SQSQueue{
+					Retention: durationp(5 * time.Second),
+					Delay:     durationp(1 * time.Minute),
+					Timeout:   durationp(5 * time.Minute),
+					DeadLetter: DeadLetterQueue{
+						Tries: uint16P(10),
+					},
+				},
+			},
+		},
+		"invalid type": {
+			inContent: []byte(`queue: 10`),
+
+			wantedError: errUnmarshalQueueOpts,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var sc TopicSubscription
+			err := yaml.Unmarshal(tc.inContent, &sc)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.Enabled, sc.Queue.Enabled)
+				require.Equal(t, tc.wantedStruct.Advanced.DeadLetter, sc.Queue.Advanced.DeadLetter)
+				require.Equal(t, tc.wantedStruct.Advanced.Delay, sc.Queue.Advanced.Delay)
+				require.Equal(t, tc.wantedStruct.Advanced.Retention, sc.Queue.Advanced.Retention)
+				require.Equal(t, tc.wantedStruct.Advanced.Timeout, sc.Queue.Advanced.Timeout)
+			}
 		})
 	}
 }

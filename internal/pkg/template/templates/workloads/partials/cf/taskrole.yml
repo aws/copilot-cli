@@ -99,7 +99,7 @@ TaskRole:
               Action: 'sns:Publish'
               Resource:
               {{- range $topic := .Publish.Topics}}
-                - !Ref {{$topic.Name}}SNSTopic
+                - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
               {{- end}}
       {{- end}}{{- end}}
 
