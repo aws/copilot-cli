@@ -695,18 +695,18 @@ func (p *PlatformArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) 
 func (p *PlatformArgsOrString) OS() string {
 	if p := aws.StringValue(p.PlatformString); p != "" {
 		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
-		return args[0]
+		return strings.ToLower(args[0])
 	}
-	return aws.StringValue(p.PlatformArgs.OSFamily)
+	return strings.ToLower(aws.StringValue(p.PlatformArgs.OSFamily))
 }
 
 // Arch returns the architecture.
 func (p *PlatformArgsOrString) Arch() string {
 	if p := aws.StringValue(p.PlatformString); p != "" {
 		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
-		return args[1]
+		return strings.ToLower(args[1])
 	}
-	return aws.StringValue(p.PlatformArgs.Arch)
+	return strings.ToLower(aws.StringValue(p.PlatformArgs.Arch))
 }
 
 // PlatformArgs represents the specifics of a target OS.
@@ -758,7 +758,7 @@ func validateShortPlatform(platform *string) error {
 		return nil
 	}
 	for _, validPlatform := range ValidShortPlatforms {
-		if aws.StringValue(platform) == validPlatform {
+		if strings.ToLower(aws.StringValue(platform)) == validPlatform {
 			return nil
 		}
 	}
