@@ -11,7 +11,7 @@ AWS 上での一般的なパターンは、メッセージの配信と処理を�
 ## パブリッシャーからのメッセージ送信
 
 既存のサービスから SNS へのメッセージのパブリッシュを許可するには、Manifest に `publish` フィールドを設定するだけです。
-トピックの機能を表す名前が必要です。
+SNS トピックの機能を表す名前を付けましょう。
 
 ```yaml
 # api サービス用の manifest.yml
@@ -42,7 +42,7 @@ const out = await client.send(new PublishCommand({
 ## Worker Service でトピックをサブスクライブ
 
 Worker Service で既存の SNS トピックをサブスクライブするには、Worker Service の Manifest を編集する必要があります。
-Manifest の [`subscribe`](../manifest/worker-service/#subscribe) フィールドを使用して、Environment 内の他のサービスが公開する既存の SNS トピックへのサブスクリプションを定義します。この例では、前セクションの `api` サービスが公開する `orders` トピックを使用しています。また Worker Service のキューをカスタマイズして、DLQ(デッドレターキュー) を使えるようにします。
+Manifest の [`subscribe`](../manifest/worker-service/#subscribe) フィールドを使用して、Environment 内の他のサービスが公開する既存の SNS トピックへのサブスクリプションを定義します。この例では、前セクションの `api` サービスが公開する `ordersTopic` トピックを使用しています。また Worker Service のキューをカスタマイズして、DLQ(デッドレターキュー) を使えるようにします。
 `tries` フィールドは失敗したメッセージを DLQ に送信し、失敗についての詳細な分析する前に、何回再配送を試みるかを SQS に伝えます。
 
 
@@ -59,7 +59,7 @@ subscribe:
       tries: 5
 ```
 
-Copilot は、この Worker Service のキューと、`api` サービスの `orders`トピックの間にサブスクリプションを作成します。また、キューの URI を、コンテナ内の環境変数 `COPILOT_QUEUE_URI` に注入します。
+Copilot は、この Worker Service のキューと、`api` サービスの `ordersTopic`トピックの間にサブスクリプションを作成します。また、キューの URI を、コンテナ内の環境変数 `COPILOT_QUEUE_URI` に注入します。
 
 ### Javascript での例
 

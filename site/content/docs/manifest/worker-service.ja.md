@@ -174,7 +174,7 @@ Service が保つべき平均メモリ使用率を指定し、それによって
 
 <span class="parent-field">count.</span><a id="count-queue-delay" href="#count-queue-delay" class="field">`queue_delay`</a> <span class="type">Integer</span>
 タスク単位の許容可能なバックログをトラッキングし、許容可能なキュー遅延を維持するようにスケールアップ・ダウンします。
-タスク単位の教養可能なバックログとは、`acceptable_latency` を `msg_processing_time`で割る事で計算されます。例えば、メッセージが到着後、10分以内に処理出れば良いとします。またメッセージを処理するのに平均 250 ミリ秒かかるとすると、この時、`acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400` となります。各タスクは2,400 件のメッセージを処理することになります。
+タスク単位の許容可能なバックログとは、`acceptable_latency` を `msg_processing_time`で割る事で計算されます。例えば、メッセージが到着後、10分以内に処理できれば良いとします。またメッセージを処理するのに平均 250 ミリ秒かかるとすると、この時、`acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400` となります。各タスクは2,400 件のメッセージを処理することになります。
 ターゲットトラッキングポリシーはタスクあたり 2400メッセージ以下の処理となる様に Service をスケールアップ・ダウンします。詳細については、[docs](https://docs.aws.amazon.com/ja_jp/autoscaling/ec2/userguide/as-using-sqs-queue.html)を確認してください.
 
 <span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-acceptable-latency" href="#count-queue-delay-acceptable-latency" class="field">`acceptable_latency`</a> <span class="type">Duration</span>

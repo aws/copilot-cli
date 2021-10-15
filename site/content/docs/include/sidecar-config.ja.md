@@ -6,7 +6,7 @@
 サイドカーコンテナのイメージ URL。(必須項目)
 
 <a id="essential" href="#essential" class="field">`essential`</a> <span class="type">Bool</span>
-サイドカーコンテナがエッセンシャルコンテナかどうか。(任意項目。デフォルトでは true)
+サイドカーコンテナが必須のコンテナかどうか。(任意項目。デフォルトでは true)
 
 <a id="credentialsParameter" href="#credentialsParameter" class="field">`credentialsParameter`</a> <span class="type">String</span>  
 プライベートレジストリの認証情報を保存している秘密情報の ARN。(任意項目)
