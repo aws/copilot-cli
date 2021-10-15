@@ -4,12 +4,11 @@ PublicNetworkLoadBalancer:
   Condition: CreateNLB # TODO: Add a condition in service template.
   Type: AWS::ElasticLoadBalancingV2::LoadBalancer
   Properties:
-    IpAddressType: ipv4
     Scheme: internet-facing
     Subnets:
       Fn::importValue:
         !Sub ${AppName}-${EnvName}-PublicSubnets
-    Type: String
+    Type: network
     # Name: omitted. Let CFN generates one for us.
     # SubnetMappings: omitted. Specify `Subnets` instead. `SubnetMappings` is used when we need a static Elastic IP address to be associated with a subnet.
     # Tags: omitted. The template has app/env/service tags, which should be propagated to this lb resource.
@@ -23,16 +22,15 @@ NLBListener:
       - TargetGroupArn: !Ref NLBTargetGroup
         Type: forward
     LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-    Port: {{ .ListenerPort }}
-    Protocol: {{ .Protocol }}
-{{- if eq .Protocol "TLS }}
+    Port: {{ .NLB.Listener.Port }}
+    Protocol: {{ .NLB.Listener.Protocol }}
+{{- if eq .Protocol TLS }}
 {{- if .AlpnPolicy}}
     AlpnPolicy: {{ .AlpnPolicy }}
 {{- end}}
     Certificates:
       - CertificateArn:
-          Fn::importValue:
-            !Sub ${AppName}-${EnvName}-HTTPSCert # TODO: need to export this resource from env stack. Also, maybe rename HTTPS Cert to just Cert.
+          !GetAtt EnvControllerAction.HTTPSCert
 {{- if .SSLPolicy }}
     SslPolicy: {{ .SSLPolicy }}
 {{- end}}
@@ -43,11 +41,6 @@ NLBTargetGroup:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
-    HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
-    {{- if .HTTPHealthCheck.SuccessCodes }}
-    Matcher:
-      HttpCode: {{.HTTPHealthCheck.SuccessCodes}}
-    {{- end }}
     {{- if .HTTPHealthCheck.HealthyThreshold }}
     HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
     {{- end }}
@@ -61,7 +54,7 @@ NLBTargetGroup:
     HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
     {{- end }}
     Port: !Ref ContainerPort
-    Protocol: {{ .Protocol }}
+    Protocol: {{ .NLB.Listener.Protocol }}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
         Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
@@ -89,6 +82,8 @@ NLBTargetGroup:
 
 {{- if not .Aliases}}
 NLBDNSAlias:
+  Metadata:
+    'aws:copilot:description': 'The default alias record for the NLB'
   Type: AWS::Route53::RecordSetGroup
   Condition: HTTPSLoadBalancer
   Properties:
