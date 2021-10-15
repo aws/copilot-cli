@@ -51,6 +51,10 @@ const (
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
 )
 
+var aliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
+	color.HighlightCode("http.alias"),
+	color.HighlightCode("copilot app init --domain example.com"))
+
 type deployWkldVars struct {
 	appName        string
 	name           string
@@ -534,6 +538,10 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
+		if o.targetApp.Domain == "" && !t.Alias.IsEmpty() {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -547,6 +555,10 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
+		if o.targetApp.Domain == "" && t.Alias != nil {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
 		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
 			return apprunner.New(s)
 		})

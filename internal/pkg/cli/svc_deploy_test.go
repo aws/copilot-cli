@@ -603,6 +603,21 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("get application %s resources from region us-west-2: %w", mockAppName, mockError),
 		},
+		"alias used while app is not associated with a domain": {
+			inAliases: manifest.Alias{String: aws.String("mockAlias")},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: errors.New("alias specified when application is not associated with a domain"),
+		},
 		"cannot to find ECR repo": {
 			inBuildRequire: true,
 			inEnvironment: &config.Environment{
@@ -894,6 +909,22 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 		wantURLs map[string]string
 		wantErr  error
 	}{
+		"alias used while app is not associated with a domain": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployRDSvcMocks) {
+				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+
+			wantErr: errors.New("alias specified when application is not associated with a domain"),
+		},
 		"fail to get identity for rd web service": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
