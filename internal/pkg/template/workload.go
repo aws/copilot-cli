@@ -51,7 +51,8 @@ var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
 		"loggroup",
-		"envvars",
+		"envvars-container",
+		"envvars-common",
 		"secrets",
 		"executionrole",
 		"taskrole",
@@ -98,12 +99,17 @@ type SidecarOpts struct {
 	CredsParam   *string
 	Variables    map[string]string
 	Secrets      map[string]string
-	MountPoints  []*MountPoint
+	Storage      SidecarStorageOpts
 	DockerLabels map[string]string
 	DependsOn    map[string]string
 	EntryPoint   []string
 	Command      []string
 	HealthCheck  *ContainerHealthCheck
+}
+
+// SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
+type SidecarStorageOpts struct {
+	MountPoints []*MountPoint
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
