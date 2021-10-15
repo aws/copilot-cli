@@ -61,7 +61,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
 
-		err = mft.Validate()
+		err = envMft.Validate()
 		require.NoError(t, err)
 
 		v, ok := envMft.(*manifest.LoadBalancedWebService)

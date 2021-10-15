@@ -7,9 +7,6 @@ name: dogworker
 type: Worker Service
 
 # Configuration for your containers and service.
-image:
-  # Docker build arguments.
-  build: ./Dockerfile
 
 cpu: 256       # Number of CPU units for the task.
 memory: 512    # Amount of memory in MiB used by the task.
@@ -49,7 +46,8 @@ subscribe:
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
 # You can override any of the values defined above by environment.
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
+environments:
+  test:
+    image:
+      location: amazon/ecs-example
 
