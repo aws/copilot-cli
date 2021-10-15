@@ -24,7 +24,7 @@ NLBListener:
     LoadBalancerArn: !Ref PublicNetworkLoadBalancer
     Port: {{ .NLB.Listener.Port }}
     Protocol: {{ .NLB.Listener.Protocol }}
-{{- if eq .Protocol TLS }}
+{{- if eq .Protocol "TLS" }}
 {{- if .AlpnPolicy}}
     AlpnPolicy: {{ .AlpnPolicy }}
 {{- end}}
@@ -90,7 +90,7 @@ NLBDNSAlias:
     HostedZoneId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-HostedZone"
-    Comment: !Sub "NetworkLoadBalancer alias for service ${WorkloadName}"
+    Comment: !Sub "Default NetworkLoadBalancer alias for service ${WorkloadName}"
     RecordSets:
       - Name:
           !Join
