@@ -66,7 +66,7 @@ Service 名。
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービス検出](../developing/service-discovery.ja.md)の利用により他の Service からはアクセスできます。
 
-{% include 'image-config.ja.md' %}
+{% include 'image-config-with-port.ja.md' %}
 
 {% include 'image-healthcheck.ja.md' %}
 
