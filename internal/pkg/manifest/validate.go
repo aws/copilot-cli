@@ -513,7 +513,7 @@ func (p PlatformArgsOrString) Validate() error {
 		if !p.PlatformArgs.bothSpecified() {
 			return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
 		}
-		return p.Validate()
+		return p.PlatformArgs.Validate()
 	}
 	if p.PlatformString != nil {
 		if err := validateShortPlatform(p.PlatformString); err != nil {
