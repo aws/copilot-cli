@@ -17,7 +17,7 @@ require (
 	github.com/imdario/mergo v0.3.12
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.9.1
-	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.16.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.6.0
