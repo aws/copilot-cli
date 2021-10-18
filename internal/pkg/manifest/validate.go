@@ -513,16 +513,20 @@ func (p PlatformArgsOrString) Validate() error {
 		if !p.PlatformArgs.bothSpecified() {
 			return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
 		}
-		if err := validateAdvancedPlatform(p.PlatformArgs); err != nil {
-			return err
-		}
-		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
-		return nil
+		return p.Validate()
 	}
 	if p.PlatformString != nil {
 		if err := validateShortPlatform(p.PlatformString); err != nil {
 			return fmt.Errorf("validate platform: %w", err)
 		}
+	}
+	return nil
+}
+
+// Validate returns nil if PlatformArgs is configured correctly.
+func (p PlatformArgs) Validate()error {
+	if err := validateAdvancedPlatform(p); err != nil {
+		return err
 	}
 	return nil
 }
