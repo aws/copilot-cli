@@ -1023,11 +1023,14 @@ type containerDependency struct {
 }
 
 func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
+	if opts.routingRule.TargetContainer == nil && opts.routingRule.TargetContainerCamelCase == nil {
+		return nil
+	}
 	targetContainer := aws.StringValue(opts.routingRule.TargetContainerCamelCase)
 	if opts.routingRule.TargetContainer != nil {
 		targetContainer = aws.StringValue(opts.routingRule.TargetContainer)
 	}
-	if targetContainer == "" || targetContainer == opts.mainContainerName {
+	if targetContainer == opts.mainContainerName {
 		return nil
 	}
 	sidecar, ok := opts.sidecarConfig[targetContainer]
