@@ -794,7 +794,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 		"error if fail to validate platform": {
 			TaskConfig: TaskConfig{
 				Platform: PlatformArgsOrString{
-					PlatformString: (*PlatformString)(aws.String("foobar")),
+					PlatformString: aws.String("foobar"),
 				},
 			},
 			wantedErrorPrefix: `validate "platform": `,
@@ -841,52 +841,60 @@ func TestTaskConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPlatformString_Validate(t *testing.T) {
+func TestPlatformArgsOrString_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		in     PlatformString
+		in     PlatformArgsOrString
 		wanted error
 	}{
 		"error if platform string is invalid": {
-			in:     PlatformString("foobar"),
-			wanted: fmt.Errorf("platform foobar is invalid; the valid platform is: linux/amd64"),
+			in:     PlatformArgsOrString{PlatformString: aws.String("foobar")},
+			wanted: fmt.Errorf("validate platform: platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
 		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
-
-			if tc.wanted != nil {
-				require.EqualError(t, err, tc.wanted.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-func TestPlatformArgs_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		in     PlatformArgs
-		wanted error
-	}{
 		"error if only osfamily is specified": {
-			in: PlatformArgs{
+		in: PlatformArgsOrString{
+			PlatformArgs: PlatformArgs{
 				OSFamily: aws.String("linux"),
+			},
+		},
+			wanted: fmt.Errorf(`fields "osfamily" and "architecture" must either both be specified or both be empty`),
+		},
+		"error if only architecture is specified": {
+			in: PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					Arch: aws.String("X86_64"),
+				},
 			},
 			wanted: fmt.Errorf(`fields "osfamily" and "architecture" must either both be specified or both be empty`),
 		},
 		"error if osfamily is invalid": {
-			in: PlatformArgs{
+		in: PlatformArgsOrString{
+			PlatformArgs: PlatformArgs{
 				OSFamily: aws.String("foo"),
 				Arch:     aws.String("amd64"),
 			},
-			wanted: fmt.Errorf("OS foo is invalid; the valid operating system is: linux"),
+		},
+			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
 		},
 		"error if arch is invalid": {
-			in: PlatformArgs{
+		in: PlatformArgsOrString{
+			PlatformArgs: PlatformArgs{
 				OSFamily: aws.String("linux"),
 				Arch:     aws.String("bar"),
 			},
-			wanted: fmt.Errorf("architecture bar is invalid; the valid architecture is: amd64"),
+		},
+			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+		},
+		"return nil if platform string valid": {
+			in:     PlatformArgsOrString{PlatformString: aws.String("windows/amd64")},
+		},
+		"return nil if platform args valid": {
+			in: PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("linux"),
+					Arch:     aws.String("amd64"),
+				},
+			},
+			wanted: nil,
 		},
 	}
 	for name, tc := range testCases {
@@ -901,6 +909,7 @@ func TestPlatformArgs_Validate(t *testing.T) {
 		})
 	}
 }
+
 func TestAdvancedCount_Validate(t *testing.T) {
 	var (
 		mockPerc    = Percentage(70)
@@ -1559,7 +1568,7 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 		"error if fail to validate platforms": {
 			config: AppRunnerInstanceConfig{
 				Platform: PlatformArgsOrString{
-					PlatformString: (*PlatformString)(aws.String("")),
+					PlatformString: aws.String(""),
 				},
 			},
 			wantedErrorPrefix: `validate "platform": `,

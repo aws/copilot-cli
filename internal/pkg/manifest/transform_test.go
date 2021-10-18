@@ -334,7 +334,7 @@ func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 }
 
 func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
-	mockPlatformStr := PlatformString("mockString")
+	mockPlatformStr := aws.String("mockString")
 	testCases := map[string]struct {
 		original func(p *PlatformArgsOrString)
 		override func(p *PlatformArgsOrString)
@@ -342,7 +342,7 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 	}{
 		"string set to empty if args is not nil": {
 			original: func(p *PlatformArgsOrString) {
-				p.PlatformString = &mockPlatformStr
+				p.PlatformString = mockPlatformStr
 			},
 			override: func(p *PlatformArgsOrString) {
 				p.PlatformArgs = PlatformArgs{
@@ -365,10 +365,10 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 				}
 			},
 			override: func(p *PlatformArgsOrString) {
-				p.PlatformString = &mockPlatformStr
+				p.PlatformString = mockPlatformStr
 			},
 			wanted: func(p *PlatformArgsOrString) {
-				p.PlatformString = &mockPlatformStr
+				p.PlatformString = mockPlatformStr
 			},
 		},
 	}

@@ -193,12 +193,6 @@ func (o *initJobOpts) Execute() error {
 	if err = o.legitimizePlatform(); err != nil {
 		return err
 	}
-	var platformStrPtr *manifest.PlatformString
-	if o.platform != nil {
-		val := manifest.PlatformString(*o.platform)
-		platformStrPtr = &val
-	}
-
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -207,7 +201,7 @@ func (o *initJobOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: platformStrPtr,
+				PlatformString: o.platform,
 			},
 		},
 

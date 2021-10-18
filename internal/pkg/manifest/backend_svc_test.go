@@ -122,8 +122,8 @@ func TestNewBackendSvc(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
@@ -152,7 +152,7 @@ func TestNewBackendSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},

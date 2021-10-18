@@ -68,7 +68,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 							AdvancedCount: AdvancedCount{
-								workloadType: LoadBalancedWebServiceType,
+								workloadType: "Load Balanced Web Service",
 							},
 						},
 						ExecuteCommand: ExecuteCommand{
@@ -100,8 +100,8 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 
 			wanted: &LoadBalancedWebService{
 				Workload: Workload{
-					Name: aws.String("subscribers"),
-					Type: aws.String(LoadBalancedWebServiceType),
+					Name: stringP("subscribers"),
+					Type: stringP(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: ImageWithPortAndHealthcheck{
@@ -137,6 +137,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						},
 						Count: Count{
 							Value: aws.Int(1),
+							AdvancedCount: AdvancedCount{
+								workloadType: "Load Balanced Web Service",
+							},
 						},
 						ExecuteCommand: ExecuteCommand{
 							Enable: aws.Bool(false),
@@ -144,7 +147,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement: &PublicSubnetPlacement,
 						},
 					},
 				},

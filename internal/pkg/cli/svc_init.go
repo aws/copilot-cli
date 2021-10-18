@@ -259,11 +259,6 @@ func (o *initSvcOpts) Execute() error {
 	if err = o.legitimizePlatform(); err != nil {
 		return err
 	}
-	var platformStrPtr *manifest.PlatformString
-	if o.platform != nil {
-		val := manifest.PlatformString(*o.platform)
-		platformStrPtr = &val
-	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -272,7 +267,7 @@ func (o *initSvcOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: platformStrPtr,
+				PlatformString: o.platform,
 			},
 			Topics: o.topics,
 		},

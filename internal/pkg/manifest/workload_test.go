@@ -318,7 +318,6 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 }
 
 func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
-	mockPlatformStr := PlatformString("linux/amd64")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -331,58 +330,6 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
   architecture: amd64`),
 
 			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
-		},
-		"returns error if platform string invalid": {
-			inContent: []byte(`platform: linus/mad64`),
-
-			wantedError: errors.New("validate platform: platform linus/mad64 is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
-		},
-		"returns error if only args.os specified": {
-			inContent: []byte(`platform:
-  osfamily: linux`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty"),
-		},
-		"returns error if only args.arch specified": {
-			inContent: []byte(`platform:
-  architecture: amd64`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty"),
-		},
-		"returns error if args.os invalid": {
-			inContent: []byte(`platform:
-  osfamily: OSFamilia
-  architecture: amd64`),
-			wantedError: errors.New("platform pair ('OSFamilia', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of" +
-				" ('linux', 'x86_64'), ('linux', 'amd64')," +
-				" ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64')," +
-				" ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
-		},
-		"returns error if args.arch invalid": {
-			inContent: []byte(`platform:
-  osfamily: linux
-  architecture: abc123`),
-			wantedError: errors.New("platform pair ('linux', 'abc123') is invalid: fields ('osfamily', 'architecture') must be one of" +
-				" ('linux', 'x86_64'), ('linux', 'amd64')," +
-				" ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64')," +
-				" ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
-		},
-		"platform string": {
-			inContent: []byte(`platform: linux/amd64`),
-
-			wantedStruct: PlatformArgsOrString{
-				PlatformString: &mockPlatformStr,
-			},
-		},
-		"both os/arch specified with valid values": {
-			inContent: []byte(`platform:
-  osfamily: linux
-  architecture: amd64`),
-			wantedStruct: PlatformArgsOrString{
-				PlatformString: nil,
-				PlatformArgs: PlatformArgs{
-					OSFamily: aws.String("linux"),
-					Arch:     aws.String("amd64"),
-				},
-			},
 		},
 		"error if unmarshalable": {
 			inContent: []byte(`platform:

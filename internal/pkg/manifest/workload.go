@@ -14,8 +14,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
-	"github.com/dustin/go-humanize/english"
-
 	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -651,14 +649,10 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 	}
 }
 
-// PlatformString represents the platform string consisting of OS family and architecture type.
-// For example: "windows/x86"
-type PlatformString string
-
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type PlatformArgs.
 type PlatformArgsOrString struct {
-	*PlatformString
+	PlatformString *string
 	PlatformArgs PlatformArgs
 }
 
@@ -674,23 +668,13 @@ func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-
 	if !p.PlatformArgs.isEmpty() {
-		if !p.PlatformArgs.bothSpecified() {
-			return errors.New(`fields 'osfamily' and 'architecture' must either both be specified or both be empty`)
-		}
-		if err := validateAdvancedPlatform(p.PlatformArgs); err != nil {
-			return err
-		}
 		// Unmarshaled successfully to p.PlatformArgs, unset p.PlatformString, and return.
 		p.PlatformString = nil
 		return nil
 	}
 	if err := value.Decode(&p.PlatformString); err != nil {
 		return errUnmarshalPlatformOpts
-	}
-	if err := validateShortPlatform(p.PlatformString); err != nil {
-		return fmt.Errorf("validate platform: %w", err)
 	}
 	return nil
 }
@@ -755,35 +739,6 @@ func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	// All architectures must be 'amd64' (the only one currently supported); leave OS as is.
 	// If a string is returned, the platform is not the default platform but is supported (except for more obscure platforms).
 	return platformString(os, ArchAMD64), nil
-}
-
-func validateShortPlatform(platform *string) error {
-	if platform == nil {
-		return nil
-	}
-	for _, validPlatform := range ValidShortPlatforms {
-		if strings.ToLower(aws.StringValue(platform)) == validPlatform {
-			return nil
-		}
-	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
-}
-
-func validateAdvancedPlatform(platform PlatformArgs) error {
-	var ss []string
-	for _, p := range validAdvancedPlatforms {
-		ss = append(ss, p.String())
-	}
-	prettyValidPlatforms := strings.Join(ss, ", ")
-
-	os := strings.ToLower(aws.StringValue(platform.OSFamily))
-	arch := strings.ToLower(aws.StringValue(platform.Arch))
-	for _, p := range validAdvancedPlatforms {
-		if os == aws.StringValue(p.OSFamily) && arch == aws.StringValue(p.Arch) {
-			return nil
-		}
-	}
-	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", platform.String(), prettyValidPlatforms)
 }
 
 func isWindowsPlatform(platform PlatformArgsOrString) bool {
