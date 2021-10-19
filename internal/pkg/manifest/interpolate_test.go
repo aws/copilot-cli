@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInterpolator_substitute(t *testing.T) {
+func TestInterpolator_Interpolate(t *testing.T) {
 	testCases := map[string]struct {
 		inputEnvVar map[string]string
 		inputStr    string
@@ -44,12 +44,17 @@ func TestInterpolator_substitute(t *testing.T) {
 
 			wanted: "${0accountID}.dkr.${repo-provider}..amazonaws.com/vault/test:latest",
 		},
+		"success with no matches": {
+			inputStr: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
+
+			wanted: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			itpl := newInterpolator(
+			itpl := NewInterpolator(
 				"myApp",
 				"test",
 			)
@@ -59,7 +64,7 @@ func TestInterpolator_substitute(t *testing.T) {
 					require.NoError(t, os.Unsetenv(key))
 				}(k)
 			}
-			actual, actualErr := itpl.substitute(tc.inputStr)
+			actual, actualErr := itpl.Interpolate(tc.inputStr)
 
 			// THEN
 			if tc.wantedErr != nil {

@@ -211,6 +211,26 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 }
 
 func TestPackageSvcOpts_Execute(t *testing.T) {
+	lbwsMft := `name: api
+type: Load Balanced Web Service
+image:
+  build: ./Dockerfile
+  port: 80
+http:
+  path: 'api'
+cpu: 256
+memory: 512
+count: 1`
+	rdwsMft := `name: api
+type: Request-Driven Web Service
+image:
+  build: ./Dockerfile
+  port: 80
+http:
+  alias: 'hunter.com'
+cpu: 256
+memory: 512
+count: 1`
 	testCases := map[string]struct {
 		inVars packageSvcVars
 
@@ -252,16 +272,10 @@ func TestPackageSvcOpts_Execute(t *testing.T) {
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
 					ReadServiceManifest("api").
-					Return([]byte(`name: api
-type: Load Balanced Web Service
-image:
-  build: ./Dockerfile
-  port: 80
-http:
-  path: 'api'
-cpu: 256
-memory: 512
-count: 1`), nil)
+					Return([]byte(lbwsMft), nil)
+
+				mockItpl := mocks.NewMockinterpolator(ctrl)
+				mockItpl.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
 
 				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
 				mockCfn.EXPECT().
@@ -282,6 +296,9 @@ count: 1`), nil)
 				opts.initAddonsClient = func(opts *packageSvcOpts) error {
 					opts.addonsClient = mockAddons
 					return nil
+				}
+				opts.newInterpolator = func(app, env string) interpolator {
+					return mockItpl
 				}
 				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
 					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
@@ -330,16 +347,10 @@ count: 1`), nil)
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
 					ReadServiceManifest("api").
-					Return([]byte(`name: api
-type: Request-Driven Web Service
-image:
-  build: ./Dockerfile
-  port: 80
-http:
-  alias: 'hunter.com'
-cpu: 256
-memory: 512
-count: 1`), nil)
+					Return([]byte(rdwsMft), nil)
+
+				mockItpl := mocks.NewMockinterpolator(ctrl)
+				mockItpl.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
 
 				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
 				mockCfn.EXPECT().
@@ -360,6 +371,9 @@ count: 1`), nil)
 				opts.initAddonsClient = func(opts *packageSvcOpts) error {
 					opts.addonsClient = mockAddons
 					return nil
+				}
+				opts.newInterpolator = func(app, env string) interpolator {
+					return mockItpl
 				}
 				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
 					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)

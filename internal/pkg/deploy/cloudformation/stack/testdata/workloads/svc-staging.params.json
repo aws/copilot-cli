@@ -3,7 +3,7 @@
     "AppName": "my-app",
     "EnvName": "staging",
     "WorkloadName": "fe",
-    "ContainerImage": "",
+    "ContainerImage": "123456789000.dkr.ecr.us-east-1.amazonaws.com/vault/e2e:cicdtest",
     "AddonsTemplateURL": "",
     "TaskCPU": "256",
     "TaskMemory": "512",

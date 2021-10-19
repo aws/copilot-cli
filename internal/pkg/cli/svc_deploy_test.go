@@ -39,6 +39,8 @@ type deploySvcMocks struct {
 	mockServiceDeployer    *mocks.MockserviceDeployer
 	mockSpinner            *mocks.Mockprogress
 	mockServiceUpdater     *mocks.MockserviceUpdater
+	mockInterpolator       *mocks.Mockinterpolator
+	mockDeployStore        *mocks.MockdeployedEnvironmentLister
 }
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
@@ -275,11 +277,22 @@ image:
 			},
 			wantErr: fmt.Errorf("read service %s manifest file: %w", "serviceA", mockError),
 		},
+		"should return error if interpolation fail": {
+			inputSvc: "serviceA",
+			setupMocks: func(m deploySvcMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadServiceManifest(gomock.Any()).Return(mockManifest, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return("", mockError),
+				)
+			},
+			wantErr: fmt.Errorf("interpolate environment variables for serviceA manifest: %w", mockError),
+		},
 		"should return error if workspace methods fail": {
 			inputSvc: "serviceA",
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest(gomock.Any()).Return(mockManifest, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("", mockError),
 				)
 			},
@@ -290,6 +303,7 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithBadPlatform, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockManifestWithBadPlatform)).Return(string(mockManifestWithBadPlatform), nil),
 				)
 			},
 			wantErr: fmt.Errorf("unmarshal service serviceA manifest: unmarshal to load balanced web service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
@@ -299,6 +313,7 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithGoodPlatform, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockManifestWithGoodPlatform)).Return(string(mockManifestWithGoodPlatform), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
@@ -314,6 +329,7 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftNoBuild, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoBuild)).Return(string(mockMftNoBuild), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Times(0),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Times(0),
 				)
@@ -324,6 +340,7 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifest, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Return("", mockError),
 				)
@@ -335,6 +352,7 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifest, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
@@ -349,6 +367,7 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftBuildString, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockMftBuildString)).Return(string(mockMftBuildString), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
@@ -363,6 +382,7 @@ image:
 			setupMocks: func(m deploySvcMocks) {
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftNoContext, nil),
+					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoContext)).Return(string(mockMftNoContext), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
@@ -381,9 +401,11 @@ image:
 
 			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
 			mockimageBuilderPusher := mocks.NewMockimageBuilderPusher(ctrl)
+			mockInterpolator := mocks.NewMockinterpolator(ctrl)
 			mocks := deploySvcMocks{
 				mockWs:                 mockWorkspace,
 				mockimageBuilderPusher: mockimageBuilderPusher,
+				mockInterpolator:       mockInterpolator,
 			}
 			test.setupMocks(mocks)
 			opts := deploySvcOpts{
@@ -393,6 +415,9 @@ image:
 				unmarshal:          manifest.UnmarshalWorkload,
 				imageBuilderPusher: mockimageBuilderPusher,
 				ws:                 mockWorkspace,
+				newInterpolator: func(app, env string) interpolator {
+					return mockInterpolator
+				},
 			}
 
 			gotErr := opts.configureContainerImage()
@@ -585,6 +610,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
 		},
+		"fail to interpolate manifest": {
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
+			},
+			wantErr: fmt.Errorf("interpolate environment variables for mockSvc manifest: %w", mockError),
+		},
 		"fail to get app resources": {
 			inBuildRequire: true,
 			inEnvironment: &config.Environment{
@@ -596,6 +628,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: mockAppName,
 				}, "us-west-2").Return(nil, mockError)
@@ -614,6 +647,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			wantErr: errors.New("alias specified when application is not associated with a domain"),
@@ -630,6 +664,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name:      mockAppName,
 					AccountID: "1234567890",
@@ -652,6 +687,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("", mockError)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -669,6 +705,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v0.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -686,6 +723,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 
@@ -703,6 +741,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
@@ -719,6 +758,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 			},
@@ -736,6 +776,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
@@ -757,6 +798,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
@@ -787,6 +829,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -804,6 +847,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
@@ -826,6 +870,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				mockServiceDeployer:    mocks.NewMockserviceDeployer(ctrl),
 				mockServiceUpdater:     mocks.NewMockserviceUpdater(ctrl),
 				mockSpinner:            mocks.NewMockprogress(ctrl),
+				mockInterpolator:       mocks.NewMockinterpolator(ctrl),
 			}
 			tc.mock(m)
 
@@ -845,6 +890,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				endpointGetter:    m.mockEndpointGetter,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
+				newInterpolator: func(app, env string) interpolator {
+					return m.mockInterpolator
+				},
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return &manifest.LoadBalancedWebService{
 						Workload: manifest.Workload{
@@ -889,6 +937,7 @@ type deployRDSvcMocks struct {
 	mockEndpointGetter     *mocks.MockendpointGetter
 	mockIdentity           *mocks.MockidentityService
 	mockUploader           *mocks.MockcustomResourcesUploader
+	mockInterpolator       *mocks.Mockinterpolator
 }
 
 func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
@@ -920,6 +969,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 
@@ -937,6 +987,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{}, errors.New("some error"))
 			},
@@ -955,6 +1006,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
@@ -980,6 +1032,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
@@ -1001,6 +1054,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
@@ -1022,6 +1076,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
@@ -1043,6 +1098,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
@@ -1064,6 +1120,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
@@ -1092,6 +1149,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
@@ -1126,6 +1184,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				mockEndpointGetter:     mocks.NewMockendpointGetter(ctrl),
 				mockIdentity:           mocks.NewMockidentityService(ctrl),
 				mockUploader:           mocks.NewMockcustomResourcesUploader(ctrl),
+				mockInterpolator:       mocks.NewMockinterpolator(ctrl),
 			}
 			tc.mock(m)
 
@@ -1139,6 +1198,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				appCFN: m.mockAppResourcesGetter,
 				newAppVersionGetter: func(s string) (versionGetter, error) {
 					return m.mockAppVersionGetter, nil
+				},
+				newInterpolator: func(app, env string) interpolator {
+					return m.mockInterpolator
 				},
 				newSvcUpdater:     func(f func(*session.Session) serviceUpdater) {},
 				endpointGetter:    m.mockEndpointGetter,
@@ -1197,23 +1259,15 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 		inEnvironment  *config.Environment
 		inBuildRequire bool
 
-		mockWorkspace          func(m *mocks.MockwsSvcDirReader)
-		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
-		mockAppVersionGetter   func(m *mocks.MockversionGetter)
-		mockEndpointGetter     func(m *mocks.MockendpointGetter)
-		mockDeployStore        func(m *mocks.MockdeployedEnvironmentLister)
+		mock func(m *deploySvcMocks)
 
 		wantErr error
 	}{
 		"fail to read service manifest": {
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return(nil, mockError)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return(nil, mockError)
 			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
-			mockEndpointGetter:     func(m *mocks.MockendpointGetter) {},
-			mockDeployStore:        func(m *mocks.MockdeployedEnvironmentLister) {},
-			wantErr:                fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
+			wantErr: fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
 		},
 		"fail to get deployed topics": {
 			inEnvironment: &config.Environment{
@@ -1224,16 +1278,11 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				Name:   mockAppName,
 				Domain: "mockDomain",
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-			},
-			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
-				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockDeployStore.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
 			},
 			wantErr: fmt.Errorf("get SNS topics for app mockApp and environment mockEnv: %w", mockError),
 		},
@@ -1246,16 +1295,11 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				Name:   mockAppName,
 				Domain: "mockDomain",
 			},
-			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
-			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
-				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockEnv.mockApp.local", nil)
-			},
-			mockDeployStore: func(m *mocks.MockdeployedEnvironmentLister) {
-				m.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockEnv.mockApp.local", nil)
+				m.mockDeployStore.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
 					*topic,
 				}, nil)
 			},
@@ -1266,17 +1310,13 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-
-			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
-			mockAppResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
-			mockAppVersionGetter := mocks.NewMockversionGetter(ctrl)
-			mockEndpointGetter := mocks.NewMockendpointGetter(ctrl)
-			mockDeployStore := mocks.NewMockdeployedEnvironmentLister(ctrl)
-			tc.mockWorkspace(mockWorkspace)
-			tc.mockAppResourcesGetter(mockAppResourcesGetter)
-			tc.mockAppVersionGetter(mockAppVersionGetter)
-			tc.mockEndpointGetter(mockEndpointGetter)
-			tc.mockDeployStore(mockDeployStore)
+			m := &deploySvcMocks{
+				mockWs:             mocks.NewMockwsSvcDirReader(ctrl),
+				mockEndpointGetter: mocks.NewMockendpointGetter(ctrl),
+				mockDeployStore:    mocks.NewMockdeployedEnvironmentLister(ctrl),
+				mockInterpolator:   mocks.NewMockinterpolator(ctrl),
+			}
+			tc.mock(m)
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
@@ -1284,17 +1324,16 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 					appName: mockAppName,
 					envName: mockEnvName,
 				},
-				ws:            mockWorkspace,
-				buildRequired: tc.inBuildRequire,
-				appCFN:        mockAppResourcesGetter,
-				newAppVersionGetter: func(s string) (versionGetter, error) {
-					return mockAppVersionGetter, nil
-				},
+				ws:                m.mockWs,
+				buildRequired:     tc.inBuildRequire,
 				newSvcUpdater:     func(f func(*session.Session) serviceUpdater) {},
-				endpointGetter:    mockEndpointGetter,
-				snsTopicGetter:    mockDeployStore,
+				endpointGetter:    m.mockEndpointGetter,
+				snsTopicGetter:    m.mockDeployStore,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
+				newInterpolator: func(app, env string) interpolator {
+					return m.mockInterpolator
+				},
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return &manifest.WorkerService{
 						Workload: manifest.Workload{

@@ -8,6 +8,7 @@ package stack_test
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -51,13 +52,23 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			svcParamsPath: "svc-prod.params.json",
 		},
 	}
+	val, exist := os.LookupEnv("TAG")
+	require.NoError(t, os.Setenv("TAG", "cicdtest"))
+	defer func() {
+		if !exist {
+			require.NoError(t, os.Unsetenv("TAG"))
+			return
+		}
+		require.NoError(t, os.Setenv("TAG", val))
+	}()
 	path := filepath.Join("testdata", "workloads", svcManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	for name, tc := range testCases {
-		mft, err := manifest.UnmarshalWorkload(manifestBytes)
+		interpolated, err := manifest.NewInterpolator(appName, tc.envName).Interpolate(string(manifestBytes))
 		require.NoError(t, err)
-
+		mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
+		require.NoError(t, err)
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
 
