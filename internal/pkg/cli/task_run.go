@@ -372,6 +372,8 @@ func (o *runTaskOpts) validatePlatform() error {
 	if o.os == "" {
 		return nil
 	}
+	o.os = strings.ToUpper(o.os)
+	o.arch = strings.ToUpper(o.arch)
 	validPlatforms := task.ValidPlatforms()
 	for _, validPlatform := range validPlatforms {
 		if dockerengine.PlatformString(o.os, o.arch) == validPlatform {
