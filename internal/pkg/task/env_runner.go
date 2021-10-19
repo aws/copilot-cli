@@ -38,7 +38,6 @@ type EnvRunner struct {
 
 	// Platform configuration
 	OS   string
-	Arch string
 
 	// Interfaces to interact with dependencies. Must not be nil.
 	VPCGetter            VPCGetter
@@ -84,6 +83,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"
 			enableExec = false
+			break
 		}
 	}
 

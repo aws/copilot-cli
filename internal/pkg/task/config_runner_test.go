@@ -318,7 +318,6 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				Starter:       mockStarter,
 
 				OS:   tc.os,
-				Arch: tc.arch,
 			}
 
 			tasks, err := task.Run()

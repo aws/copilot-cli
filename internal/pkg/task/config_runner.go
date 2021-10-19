@@ -38,7 +38,6 @@ type ConfigRunner struct {
 
 	// Platform configuration
 	OS   string
-	Arch string
 }
 
 // Run runs tasks given subnets, security groups and the cluster, and returns the tasks.
@@ -75,6 +74,7 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"
 			enableExec = false
+			break
 		}
 	}
 
