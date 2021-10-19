@@ -292,7 +292,7 @@ image:
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifestWithBadPlatform, nil),
 				)
 			},
-			wantErr: errors.New("validate manifest against environment : validate \"platform\": validate platform: platform linus/abc123 is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+			wantErr: errors.New("validate manifest against environment : validate \"platform\": platform linus/abc123 is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
 		},
 		"success with valid platform": {
 			inputSvc: "serviceA",

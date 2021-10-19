@@ -848,7 +848,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}{
 		"error if platform string is invalid": {
 			in:     PlatformArgsOrString{PlatformString: aws.String("foobar")},
-			wanted: fmt.Errorf("validate platform: platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+			wanted: fmt.Errorf("platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
 		},
 		"error if only osfamily is specified": {
 		in: PlatformArgsOrString{

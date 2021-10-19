@@ -509,25 +509,42 @@ func (t TaskConfig) Validate() error {
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
 func (p PlatformArgsOrString) Validate() error {
+	if p.IsEmpty() {
+		return nil
+	}
 	if !p.PlatformArgs.isEmpty() {
-		if !p.PlatformArgs.bothSpecified() {
-			return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
-		}
 		return p.PlatformArgs.Validate()
 	}
 	if p.PlatformString != nil {
-		if err := validateShortPlatform(p.PlatformString); err != nil {
-			return fmt.Errorf("validate platform: %w", err)
+		for _, validPlatform := range ValidShortPlatforms {
+			if strings.ToLower(aws.StringValue(p.PlatformString)) == validPlatform {
+				return nil
+			}
 		}
+		return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(p.PlatformString), english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
 	}
 	return nil
 }
 
 // Validate returns nil if PlatformArgs is configured correctly.
 func (p PlatformArgs) Validate()error {
-	if err := validateAdvancedPlatform(p); err != nil {
-		return err
+	if !p.bothSpecified() {
+		return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
 	}
+	var ss []string
+	for _, p := range validAdvancedPlatforms {
+		ss = append(ss, p.String())
+	}
+	prettyValidPlatforms := strings.Join(ss, ", ")
+
+	os := strings.ToLower(aws.StringValue(p.OSFamily))
+	arch := strings.ToLower(aws.StringValue(p.Arch))
+	for _, vap := range validAdvancedPlatforms {
+		if os == aws.StringValue(vap.OSFamily) && arch == aws.StringValue(vap.Arch) {
+			return nil
+		}
+	}
+	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", p.String(), prettyValidPlatforms)
 	return nil
 }
 
@@ -1124,31 +1141,3 @@ func isValidSubSvcName(name string) bool {
 	return len(trailingMatch) == 0
 }
 
-func validateShortPlatform(platform *string) error {
-	if platform == nil {
-		return nil
-	}
-	for _, validPlatform := range ValidShortPlatforms {
-		if strings.ToLower(aws.StringValue(platform)) == validPlatform {
-			return nil
-		}
-	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(platform), english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
-}
-
-func validateAdvancedPlatform(platform PlatformArgs) error {
-	var ss []string
-	for _, p := range validAdvancedPlatforms {
-		ss = append(ss, p.String())
-	}
-	prettyValidPlatforms := strings.Join(ss, ", ")
-
-	os := strings.ToLower(aws.StringValue(platform.OSFamily))
-	arch := strings.ToLower(aws.StringValue(platform.Arch))
-	for _, p := range validAdvancedPlatforms {
-		if os == aws.StringValue(p.OSFamily) && arch == aws.StringValue(p.Arch) {
-			return nil
-		}
-	}
-	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", platform.String(), prettyValidPlatforms)
-}
