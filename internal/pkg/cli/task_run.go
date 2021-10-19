@@ -325,11 +325,11 @@ func (o *runTaskOpts) Validate() error {
 		return err
 	}
 
-	if o.cpu < 0 {
+	if o.cpu <= 0 {
 		return errCPUNotPositive
 	}
 
-	if o.memory < 0 {
+	if o.memory <= 0 {
 		return errMemNotPositive
 	}
 
