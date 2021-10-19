@@ -52,10 +52,15 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			svcParamsPath: "svc-prod.params.json",
 		},
 	}
+	val, exist := os.LookupEnv("TAG")
 	require.NoError(t, os.Setenv("TAG", "cicdtest"))
-	defer func(key string) {
-		require.NoError(t, os.Unsetenv(key))
-	}("TAG")
+	defer func() {
+		if !exist {
+			require.NoError(t, os.Unsetenv("TAG"))
+			return
+		}
+		require.NoError(t, os.Setenv("TAG", val))
+	}()
 	path := filepath.Join("testdata", "workloads", svcManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)

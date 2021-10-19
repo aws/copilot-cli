@@ -647,6 +647,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			wantErr: errors.New("alias specified when application is not associated with a domain"),
@@ -968,6 +969,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			},
 			mock: func(m *deployRDSvcMocks) {
 				m.mockWorkspace.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 
