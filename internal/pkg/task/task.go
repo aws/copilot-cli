@@ -89,9 +89,9 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	return tasks
 }
 
-// ValidOSs returns all valid CFN-friendly operating systems.
-func ValidOSs() []string {
-	return []string{osWindowsServer2019Core, osWindowsServer2019Full, osLinux}
+// ValidWindowsOSs returns all valid CFN-friendly Windows operating systems.
+func ValidWindowsOSs() []string {
+	return []string{osWindowsServer2019Core, osWindowsServer2019Full}
 }
 
 // ValidPlatforms returns all valid CFN-friendly platforms.

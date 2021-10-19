@@ -472,7 +472,7 @@ func (o *runTaskOpts) validateFlagsWithWindows() error {
 }
 
 func isWindowsOS(os string) bool {
-	for _, windowsOS := range task.ValidOSs() {
+	for _, windowsOS := range task.ValidWindowsOSs() {
 		if os == windowsOS {
 			return true
 		}
