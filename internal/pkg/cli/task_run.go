@@ -252,7 +252,6 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		Subnets:        o.subnets,
 		SecurityGroups: o.securityGroups,
 		OS:             o.os,
-		Arch:           o.arch,
 
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
