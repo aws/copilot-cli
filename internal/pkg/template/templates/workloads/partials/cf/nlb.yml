@@ -20,15 +20,10 @@ NLBListener:
     Port: {{ .NLB.Listener.Port }}
     Protocol: {{ .NLB.Listener.Protocol }}
 {{- if eq .Protocol "TLS" }}
-{{- if .AlpnPolicy}}
-    AlpnPolicy: {{ .AlpnPolicy }}
-{{- end}}
     Certificates:
       - CertificateArn:
           !GetAtt EnvControllerAction.HTTPSCert
-{{- if .SSLPolicy }}
-    SslPolicy: {{ .SSLPolicy }}
-{{- end}}
+    SslPolicy: {{ if .SSLPolicy }}{{ .SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
 {{- end}}
 
 NLBTargetGroup:
