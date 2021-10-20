@@ -119,7 +119,11 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
-    DependsOn: WaitUntilListenerRuleIsCreated
+    DependsOn:
+     - WaitUntilListenerRuleIsCreated
+    {{- if .NLB}}
+     - NLBListener
+    {{- end}}
     Properties:
 {{include "service-base-properties" . | indent 6}}
       # This may need to be adjusted if the container takes a while to start up
@@ -128,6 +132,11 @@ Resources:
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort
           TargetGroupArn: !Ref TargetGroup
+  {{- if .NLB}}
+        - ContainerName: {{.NLB.Listener.TargetContainer}}
+          ContainerPort:  {{.NLB.Listener.TargetPort}}
+          TargetGroupArn: !Ref NLBTargetGroup
+  {{- end}}
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref ContainerPort
@@ -414,6 +423,10 @@ Resources:
       Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
       Timeout: "1"
       Count: 0
+
+{{- if .NLB}}
+{{include "nlb" . | indent 2}}
+{{- end}}
 
 {{include "efs-access-point" . | indent 2}}
 
