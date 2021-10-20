@@ -20,6 +20,11 @@ var (
 	// Environment variable names consist solely of uppercase letters, digits, and underscore,
 	// and do not begin with a digit. （https://pubs.opengroup.org/onlinepubs/007904875/basedefs/xbd_chap08.html）
 	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
+	// A yaml comment
+	// 1. starts with "#"
+	// 2. must not proceed a non whitespace character
+	// 3. ends with zero or more "\n"
+	yamlCommentRegExp = regexp.MustCompile(`(^\s*|\s+)#.*\n*`)
 )
 
 // Interpolator substitutes variables in a manifest.
@@ -39,6 +44,33 @@ func NewInterpolator(appName, envName string) *Interpolator {
 
 // Interpolate substitutes environment variables in a string.
 func (i *Interpolator) Interpolate(s string) (string, error) {
+	var replaced, interpolated string
+	var err error
+	rest := s
+	for {
+		// Only get the first match.
+		matches := yamlCommentRegExp.FindAllString(rest, 1)
+		if len(matches) == 0 {
+			break
+		}
+		comment := matches[0]
+		splitedRest := strings.SplitN(rest, comment, 2)
+		interpolated, err = i.interpolatePart(splitedRest[0])
+		if err != nil {
+			return "", err
+		}
+		replaced += fmt.Sprint(interpolated, comment)
+		rest = splitedRest[1]
+	}
+	interpolated, err = i.interpolatePart(rest)
+	if err != nil {
+		return "", err
+	}
+	replaced += interpolated
+	return replaced, nil
+}
+
+func (i *Interpolator) interpolatePart(s string) (string, error) {
 	matches := interpolatorEnvVarRegExp.FindAllStringSubmatch(s, -1)
 	if len(matches) == 0 {
 		return s, nil

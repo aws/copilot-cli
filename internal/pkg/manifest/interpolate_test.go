@@ -32,22 +32,55 @@ func TestInterpolator_Interpolate(t *testing.T) {
 
 			wantedErr: fmt.Errorf(`predefined environment variable "COPILOT_ENVIRONMENT_NAME" cannot be overridden by OS environment variable with the same name`),
 		},
+		"success with no matches": {
+			inputStr: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
+
+			wanted: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
+		},
 		"success": {
-			inputStr: "${0accountID}.dkr.${repo-provider}.${region}.amazonaws.com/vault/${COPILOT_ENVIRONMENT_NAME}:${tag}",
+			inputStr: `# The manifest for the ${name} service.
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: loadtester
+type: Backend Service
+
+# Your service is reachable at "http://loadtester.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:80" but is not public.
+
+# Configuration for your containers and service.
+image:
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  location: ${0accountID}.dkr.${repo-provider}.${region}.amazonaws.com/vault/${COPILOT_ENVIRONMENT_NAME}:${tag}
+  port: 80
+
+cpu: 256#${CPU}
+memory: 512    # ${Memory}
+`,
 			inputEnvVar: map[string]string{
 				"0accountID":               "1234567890",
 				"repo-provider":            "ecr",
 				"tag":                      "latest",
 				"COPILOT_APPLICATION_NAME": "myApp",
 				"region":                   "",
+				"CPU":                      "512",
 			},
 
-			wanted: "${0accountID}.dkr.${repo-provider}..amazonaws.com/vault/test:latest",
-		},
-		"success with no matches": {
-			inputStr: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
+			wanted: `# The manifest for the ${name} service.
 
-			wanted: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: loadtester
+type: Backend Service
+
+# Your service is reachable at "http://loadtester.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:80" but is not public.
+
+# Configuration for your containers and service.
+image:
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  location: ${0accountID}.dkr.${repo-provider}..amazonaws.com/vault/test:latest
+  port: 80
+
+cpu: 256#512
+memory: 512    # ${Memory}
+`,
 		},
 	}
 
