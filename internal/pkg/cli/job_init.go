@@ -190,8 +190,13 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-	if err = o.legitimizePlatform(); err != nil {
-		return err
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image == "" {
+		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		if err != nil {
+			return err
+		}
+		o.platform = platform
 	}
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -322,30 +327,6 @@ func (o *initJobOpts) askSchedule() error {
 	}
 
 	o.schedule = schedule
-	return nil
-}
-
-func (o *initJobOpts) legitimizePlatform() error {
-	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
-	if o.image != "" {
-		return nil
-	}
-	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
-	if err != nil {
-		return fmt.Errorf("get docker engine platform: %w", err)
-	}
-	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
-	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
-	if err != nil {
-		return fmt.Errorf("redirect docker engine platform: %w", err)
-	}
-	if redirectedPlatform == "" {
-		return nil
-	}
-	if redirectedPlatform != detectedPlatform {
-		log.Warningf("Your architecture type %s is currently unsupported.\nSetting %s in your manifest instead.\n", color.HighlightCode(detectedArch), color.HighlightCode(fmt.Sprintf("platform: %s", redirectedPlatform)))
-	}
-	o.platform = &redirectedPlatform
 	return nil
 }
 

@@ -256,8 +256,13 @@ func (o *initSvcOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-	if err = o.legitimizePlatform(); err != nil {
-		return err
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image == "" {
+		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		if err != nil {
+			return err
+		}
+		o.platform = platform
 	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -441,28 +446,23 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	return nil
 }
 
-func (o *initSvcOpts) legitimizePlatform() error {
-	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
-	if o.image != "" {
-		return nil
-	}
-	detectedOs, detectedArch, err := o.dockerEngine.GetPlatform()
+func legitimizePlatform(engine dockerEngine, wkldType string) (*string, error) {
+	detectedOs, detectedArch, err := engine.GetPlatform()
 	if err != nil {
-		return fmt.Errorf("get docker engine platform: %w", err)
+		return nil, fmt.Errorf("get docker engine platform: %w", err)
 	}
 	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
-	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, o.wkldType)
+	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, wkldType)
 	if err != nil {
-		return fmt.Errorf("redirect docker engine platform: %w", err)
+		return nil, fmt.Errorf("redirect docker engine platform: %w", err)
 	}
 	if redirectedPlatform == "" {
-		return nil
+		return nil, nil
 	}
 	if redirectedPlatform != detectedPlatform {
 		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
 	}
-	o.platform = &redirectedPlatform
-	return nil
+	return &redirectedPlatform, nil
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {
