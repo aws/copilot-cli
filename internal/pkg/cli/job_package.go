@@ -101,6 +101,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			store:            o.store,
 			appCFN:           cloudformation.New(sess),
 			stackWriter:      os.Stdout,
+			newInterpolator:  newManifestInterpolator,
 			paramsWriter:     ioutil.Discard,
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
