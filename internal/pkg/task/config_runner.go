@@ -70,7 +70,7 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 	}
 	platformVersion := "LATEST"
 	enableExec := true
-	for _, windowsOS := range validWindowsOSs {
+	for _, windowsOS := range ValidWindowsOSs {
 		if r.OS == windowsOS {
 			platformVersion = "1.0.0"
 			enableExec = false

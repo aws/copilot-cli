@@ -372,7 +372,7 @@ func (o *runTaskOpts) validatePlatform() error {
 	}
 	o.os = strings.ToUpper(o.os)
 	o.arch = strings.ToUpper(o.arch)
-	validPlatforms := task.ValidPlatforms()
+	validPlatforms := task.ValidCFNPlatforms
 	for _, validPlatform := range validPlatforms {
 		if dockerengine.PlatformString(o.os, o.arch) == validPlatform {
 			return nil
@@ -470,7 +470,7 @@ func (o *runTaskOpts) validateFlagsWithWindows() error {
 }
 
 func isWindowsOS(os string) bool {
-	for _, windowsOS := range task.ValidWindowsOSs() {
+	for _, windowsOS := range task.ValidWindowsOSs {
 		if os == windowsOS {
 			return true
 		}
