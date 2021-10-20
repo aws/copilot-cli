@@ -70,13 +70,10 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 	}
 	platformVersion := "LATEST"
 	enableExec := true
-	for _, windowsOS := range ValidWindowsOSs {
-		if r.OS == windowsOS {
+	if IsValidWindowsOS(r.OS) {
 			platformVersion = "1.0.0"
 			enableExec = false
-			break
 		}
-	}
 
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
 		Cluster:         r.Cluster,

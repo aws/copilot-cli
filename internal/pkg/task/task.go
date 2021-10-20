@@ -67,6 +67,15 @@ var (
 	fmtTaskFamilyName = "copilot-%s"
 )
 
+func IsValidWindowsOS(os string) bool {
+	for _, validWindowsOS := range ValidWindowsOSs {
+		if os == validWindowsOS {
+			return true
+		}
+	}
+	return false
+}
+
 func taskFamilyName(groupName string) string {
 	return fmt.Sprintf(fmtTaskFamilyName, groupName)
 }

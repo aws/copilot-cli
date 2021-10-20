@@ -147,11 +147,6 @@ func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// IsWindows returns whether or not the service is building with a Windows OS.
-func (t TaskConfig) IsWindows() bool {
-	return isWindowsPlatform(t.Platform)
-}
-
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)

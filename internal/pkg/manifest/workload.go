@@ -511,6 +511,11 @@ func (t *TaskConfig) TaskPlatform() (*string, error) {
 	return &val, nil
 }
 
+// IsWindows returns whether or not the service is building with a Windows OS.
+func (t TaskConfig) IsWindows() bool {
+	return isWindowsPlatform(t.Platform)
+}
+
 // PublishConfig represents the configurable options for setting up publishers.
 type PublishConfig struct {
 	Topics []Topic `yaml:"topics"`

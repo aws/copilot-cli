@@ -470,12 +470,7 @@ func (o *runTaskOpts) validateFlagsWithWindows() error {
 }
 
 func isWindowsOS(os string) bool {
-	for _, windowsOS := range task.ValidWindowsOSs {
-		if os == windowsOS {
-			return true
-		}
-	}
-	return false
+	return task.IsValidWindowsOS(os)
 }
 
 // Ask prompts the user for any required or important fields that are not provided.
