@@ -794,7 +794,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 		"error if fail to validate platform": {
 			TaskConfig: TaskConfig{
 				Platform: PlatformArgsOrString{
-					PlatformString: aws.String("foobar"),
+					PlatformString: (*PlatformString)(aws.String("")),
 				},
 			},
 			wantedErrorPrefix: `validate "platform": `,
@@ -847,7 +847,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 		wanted error
 	}{
 		"error if platform string is invalid": {
-			in:     PlatformArgsOrString{PlatformString: aws.String("foobar")},
+			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar"))},
 			wanted: fmt.Errorf("platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
 		},
 		"error if only osfamily is specified": {
@@ -885,7 +885,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
 		},
 		"return nil if platform string valid": {
-			in:     PlatformArgsOrString{PlatformString: aws.String("windows/amd64")},
+			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/amd64"))},
 		},
 		"return nil if platform args valid": {
 			in: PlatformArgsOrString{
@@ -1568,7 +1568,7 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 		"error if fail to validate platforms": {
 			config: AppRunnerInstanceConfig{
 				Platform: PlatformArgsOrString{
-					PlatformString: aws.String(""),
+					PlatformString: (*PlatformString)(aws.String("")),
 				},
 			},
 			wantedErrorPrefix: `validate "platform": `,

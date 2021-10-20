@@ -114,7 +114,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
-				Platform: PlatformArgsOrString{PlatformString: aws.String("windows/amd64")},
+				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
 			},
 			wantedManifest: &BackendService{
 				Workload: Workload{
@@ -137,7 +137,7 @@ func TestNewBackendSvc(t *testing.T) {
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(2048),
 						Platform: PlatformArgsOrString{
-							PlatformString: aws.String("windows/amd64"),
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
 							PlatformArgs: PlatformArgs{
 								OSFamily: nil,
 								Arch:     nil,

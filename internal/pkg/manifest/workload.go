@@ -652,7 +652,7 @@ func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type PlatformArgs.
 type PlatformArgsOrString struct {
-	PlatformString *string
+	*PlatformString
 	PlatformArgs PlatformArgs
 }
 
@@ -681,7 +681,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 
 // OS returns the operating system family.
 func (p *PlatformArgsOrString) OS() string {
-	if p := aws.StringValue(p.PlatformString); p != "" {
+	if p := aws.StringValue((*string)(p.PlatformString)); p != "" {
 		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
 		return strings.ToLower(args[0])
 	}
@@ -690,7 +690,7 @@ func (p *PlatformArgsOrString) OS() string {
 
 // Arch returns the architecture.
 func (p *PlatformArgsOrString) Arch() string {
-	if p := aws.StringValue(p.PlatformString); p != "" {
+	if p := aws.StringValue((*string)(p.PlatformString)); p != "" {
 		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
 		return strings.ToLower(args[1])
 	}
@@ -702,6 +702,9 @@ type PlatformArgs struct {
 	OSFamily *string `yaml:"osfamily,omitempty"`
 	Arch     *string `yaml:"architecture,omitempty"`
 }
+
+// PlatformString represents the string format of Platform.
+type PlatformString string
 
 // String implements the fmt.Stringer interface.
 func (p *PlatformArgs) String() string {

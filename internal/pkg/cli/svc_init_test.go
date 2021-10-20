@@ -682,7 +682,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
 						Platform: manifest.PlatformArgsOrString{
-							PlatformString: aws.String("windows/amd64"),
+							PlatformString: (*manifest.PlatformString)(aws.String("windows/amd64")),
 						},
 					},
 					Port: 80,

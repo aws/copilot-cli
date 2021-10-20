@@ -68,7 +68,7 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     *string
+	platform     *manifest.PlatformString
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -196,7 +196,9 @@ func (o *initJobOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		o.platform = platform
+		if platform != "" {
+			o.platform = &platform
+		}
 	}
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{

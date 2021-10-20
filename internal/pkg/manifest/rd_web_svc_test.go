@@ -559,7 +559,7 @@ func TestRequestDrivenWebService_windowsCompatibility(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					InstanceConfig: AppRunnerInstanceConfig{
 						Platform: PlatformArgsOrString{
-							PlatformString: stringP("windows/amd64"),
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
 							PlatformArgs:   PlatformArgs{},
 						},
 					},

@@ -516,18 +516,13 @@ func (p PlatformArgsOrString) Validate() error {
 		return p.PlatformArgs.Validate()
 	}
 	if p.PlatformString != nil {
-		for _, validPlatform := range ValidShortPlatforms {
-			if strings.ToLower(aws.StringValue(p.PlatformString)) == validPlatform {
-				return nil
-			}
-		}
-		return fmt.Errorf("platform %s is invalid; %s: %s", aws.StringValue(p.PlatformString), english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
+		return p.PlatformString.Validate()
 	}
 	return nil
 }
 
 // Validate returns nil if PlatformArgs is configured correctly.
-func (p PlatformArgs) Validate()error {
+func (p PlatformArgs) Validate() error {
 	if !p.bothSpecified() {
 		return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
 	}
@@ -545,6 +540,15 @@ func (p PlatformArgs) Validate()error {
 		}
 	}
 	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", p.String(), prettyValidPlatforms)
+}
+
+func (p PlatformString) Validate() error {
+	for _, validPlatform := range ValidShortPlatforms {
+		if strings.ToLower(string(p)) == validPlatform {
+			return nil
+		}
+	}
+	return fmt.Errorf("platform %s is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
 }
 
 // Validate returns nil if Count is configured correctly.

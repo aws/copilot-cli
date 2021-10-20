@@ -115,7 +115,7 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     *string
+	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
 
 	// Cache variables
@@ -262,7 +262,9 @@ func (o *initSvcOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		o.platform = platform
+		if platform != "" {
+			o.platform = &platform
+		}
 	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
@@ -446,23 +448,24 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	return nil
 }
 
-func legitimizePlatform(engine dockerEngine, wkldType string) (*string, error) {
+func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.PlatformString, error) {
 	detectedOs, detectedArch, err := engine.GetPlatform()
 	if err != nil {
-		return nil, fmt.Errorf("get docker engine platform: %w", err)
+		return "", fmt.Errorf("get docker engine platform: %w", err)
 	}
 	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
 	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, wkldType)
 	if err != nil {
-		return nil, fmt.Errorf("redirect docker engine platform: %w", err)
+		return "", fmt.Errorf("redirect docker engine platform: %w", err)
 	}
 	if redirectedPlatform == "" {
-		return nil, nil
+		return "", nil
 	}
 	if redirectedPlatform != detectedPlatform {
 		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
 	}
-	return &redirectedPlatform, nil
+	platform := manifest.PlatformString(redirectedPlatform)
+	return platform, nil
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {

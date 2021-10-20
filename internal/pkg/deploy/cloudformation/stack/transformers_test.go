@@ -1410,7 +1410,7 @@ func Test_convertPlatform(t *testing.T) {
 		},
 		"should return windows server core and x86_64 when platform is 'windows/x86_64'": {
 			in: manifest.PlatformArgsOrString{
-				PlatformString: aws.String("windows/x86_64"),
+				PlatformString: (*manifest.PlatformString)(aws.String("windows/amd64")),
 			},
 			out: template.RuntimePlatformOpts{
 				OS:   template.OSWindowsServerCore,
@@ -1419,7 +1419,7 @@ func Test_convertPlatform(t *testing.T) {
 		},
 		"should return linux and x86_64 when platform is 'linux/amd64'": {
 			in: manifest.PlatformArgsOrString{
-				PlatformString: aws.String("linux/amd64"),
+				PlatformString: (*manifest.PlatformString)(aws.String("linux/amd64")),
 			},
 			out: template.RuntimePlatformOpts{
 				OS:   template.OSLinux,

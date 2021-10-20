@@ -93,7 +93,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
-				Platform: PlatformArgsOrString{PlatformString: aws.String("windows/amd64")},
+				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
 
 				Port: 80,
 			},
@@ -129,7 +129,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(2048),
 						Platform: PlatformArgsOrString{
-							PlatformString: aws.String("windows/amd64"),
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
 							PlatformArgs: PlatformArgs{
 								OSFamily: nil,
 								Arch:     nil,
@@ -1265,7 +1265,7 @@ func TestLoadBalancedWebService_ValidateForWindows(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{
-							PlatformString: aws.String("notwindows/abc123"),
+							PlatformString: (*PlatformString)(aws.String("doors/amp64")),
 							PlatformArgs: PlatformArgs{
 								OSFamily: nil,
 								Arch:     nil,
@@ -1305,7 +1305,7 @@ func TestLoadBalancedWebService_ValidateForWindows(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{
-							PlatformString: aws.String("windows/amd64"),
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{

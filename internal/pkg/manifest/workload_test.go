@@ -355,13 +355,14 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 }
 
 func TestPlatformArgsOrString_OS(t *testing.T) {
+	linux := PlatformString("linux/amd64")
 	testCases := map[string]struct {
 		in     *PlatformArgsOrString
 		wanted string
 	}{
 		"should return os when platform is of string format 'os/arch'": {
 			in: &PlatformArgsOrString{
-				PlatformString: aws.String("linux/amd64"),
+				PlatformString: &linux,
 			},
 			wanted: "linux",
 		},
@@ -398,7 +399,7 @@ func TestPlatformArgsOrString_Arch(t *testing.T) {
 	}{
 		"should return arch when platform is of string format 'os/arch'": {
 			in: &PlatformArgsOrString{
-				PlatformString: aws.String("linux/arm"),
+				PlatformString: (*PlatformString)(aws.String("windows/arm")),
 			},
 			wanted: "arm",
 		},
@@ -413,7 +414,7 @@ func TestPlatformArgsOrString_Arch(t *testing.T) {
 		},
 		"should return lowercase arch": {
 			in: &PlatformArgsOrString{
-				PlatformString: aws.String("windows_server_2019_core/aMd64"),
+				PlatformString: (*PlatformString)(aws.String("windows/aMd64")),
 			},
 			wanted: "amd64",
 		},
