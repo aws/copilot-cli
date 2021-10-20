@@ -58,7 +58,7 @@ const (
 	osWindowsServerFull = template.OSWindowsServerFull
 	osWindowsServerCore = template.OSWindowsServerCore
 
-	archX86 = "X86_64"
+	archX86 = template.ArchX86
 )
 
 var (

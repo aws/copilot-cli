@@ -545,7 +545,6 @@ func (p PlatformArgs) Validate()error {
 		}
 	}
 	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", p.String(), prettyValidPlatforms)
-	return nil
 }
 
 // Validate returns nil if Count is configured correctly.
