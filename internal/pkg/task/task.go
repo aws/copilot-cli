@@ -67,6 +67,7 @@ var (
 	fmtTaskFamilyName = "copilot-%s"
 )
 
+// IsValidWindowsOS determines if the OS value is an accepted CFN Windows value.
 func IsValidWindowsOS(os string) bool {
 	for _, validWindowsOS := range ValidWindowsOSs {
 		if os == validWindowsOS {
