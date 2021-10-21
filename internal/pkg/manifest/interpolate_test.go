@@ -46,6 +46,9 @@ type: Backend Service
 
 # Your service is reachable at "http://loadtester.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:80" but is not public.
 
+http:
+  allowed_source_ips:
+    - ${ip}
 # Configuration for your containers and service.
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
@@ -54,6 +57,8 @@ image:
 
 cpu: 256#${CPU}
 memory: 512    # ${Memory}
+variables:
+  ${foo}: ${bar}
 `,
 			inputEnvVar: map[string]string{
 				"0accountID":               "1234567890",
@@ -62,6 +67,8 @@ memory: 512    # ${Memory}
 				"COPILOT_APPLICATION_NAME": "myApp",
 				"region":                   "",
 				"CPU":                      "512",
+				"bar":                      "bar",
+				"ip":                       "10.24.34.0/23",
 			},
 
 			wanted: `# The manifest for the ${name} service.
@@ -70,7 +77,9 @@ memory: 512    # ${Memory}
 name: loadtester
 type: Backend Service
 # Your service is reachable at "http://loadtester.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:80" but is not public.
-
+http:
+  allowed_source_ips:
+    - 10.24.34.0/23
 # Configuration for your containers and service.
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
@@ -78,6 +87,8 @@ image:
   port: 80
 cpu: 256#512
 memory: 512 # ${Memory}
+variables:
+  ${foo}: bar
 `,
 		},
 	}

@@ -57,19 +57,29 @@ func (i *Interpolator) Interpolate(s string) (string, error) {
 }
 
 func (i *Interpolator) applyInterpolation(node *yaml.Node) error {
-	for _, content := range node.Content {
-		if err := i.applyInterpolation(content); err != nil {
+	switch node.Tag {
+	case "!!map":
+		// The content of a map always come in pairs. If the node pair exists, return the map node.
+		// Note that the rest of code massively uses yaml node tree.
+		// Please refer to https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html
+		for idx := 0; idx < len(node.Content); idx += 2 {
+			if err := i.applyInterpolation(node.Content[idx+1]); err != nil {
+				return err
+			}
+		}
+	case "!!str":
+		interpolated, err := i.interpolatePart(node.Value)
+		if err != nil {
 			return err
 		}
+		node.Value = interpolated
+	default:
+		for _, content := range node.Content {
+			if err := i.applyInterpolation(content); err != nil {
+				return err
+			}
+		}
 	}
-	if node.Tag != "!!str" {
-		return nil
-	}
-	interpolated, err := i.interpolatePart(node.Value)
-	if err != nil {
-		return err
-	}
-	node.Value = interpolated
 	return nil
 }
 
