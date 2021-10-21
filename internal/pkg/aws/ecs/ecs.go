@@ -53,12 +53,14 @@ type ECS struct {
 
 // RunTaskInput holds the fields needed to run tasks.
 type RunTaskInput struct {
-	Cluster        string
-	Count          int
-	Subnets        []string
-	SecurityGroups []string
-	TaskFamilyName string
-	StartedBy      string
+	Cluster         string
+	Count           int
+	Subnets         []string
+	SecurityGroups  []string
+	TaskFamilyName  string
+	StartedBy       string
+	PlatformVersion string
+	EnableExec      bool
 }
 
 // ExecuteCommandInput holds the fields needed to execute commands in a running container.
@@ -330,8 +332,8 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 				SecurityGroups: aws.StringSlice(input.SecurityGroups),
 			},
 		},
-		EnableExecuteCommand: aws.Bool(true),
-		PlatformVersion:      aws.String("1.4.0"),
+		EnableExecuteCommand: aws.Bool(input.EnableExec),
+		PlatformVersion:      aws.String(input.PlatformVersion),
 		PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 	})
 	if err != nil {

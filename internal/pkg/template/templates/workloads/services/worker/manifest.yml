@@ -31,7 +31,9 @@ memory: {{.Memory}}    # Amount of memory in MiB used by the task.
 platform: {{.Platform.PlatformString}}  # See https://aws.github.io/copilot-cli/docs/manifest/worker-service/#platform
 {{- end}}
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
+{{- if not .TaskConfig.IsWindows }}
 exec: true     # Enable running commands in your container.
+{{- end}}
 {{if .Subscribe}}{{- if .Subscribe.Topics}}
 # The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 subscribe:

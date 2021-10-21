@@ -1134,7 +1134,7 @@ func Test_NetworkConfigurationForJob(t *testing.T) {
               "Resource": "arn:aws:states:::ecs:runTask.sync",
               "Parameters": {
                 "LaunchType": "FARGATE",
-                "PlatformVersion": "1.4.0",
+                "PlatformVersion": "LATEST",
                 "Cluster": "cluster",
                 "TaskDefinition": "def",
                 "PropagateTags": "TASK_DEFINITION",

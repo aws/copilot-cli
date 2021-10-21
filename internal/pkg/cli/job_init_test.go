@@ -517,7 +517,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return(nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(&initialize.JobProps{
@@ -541,12 +541,18 @@ func TestJobInitOpts_Execute(t *testing.T) {
 		},
 		"fail to init job": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().RedirectPlatform("").Return(nil, nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: errors.New("some error"),
+		},
+		"return error if platform detection fails": {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
+			},
+			wantedErr: errors.New("get docker engine platform: some error"),
 		},
 	}
 	for name, tc := range testCases {
