@@ -642,3 +642,21 @@ func convertAppInformation(app deploy.AppInformation) (delegationRole *string, d
 	}
 	return
 }
+
+func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePlatformOpts {
+	if platform.IsEmpty() {
+		return template.RuntimePlatformOpts{}
+	}
+
+	os := template.OSLinux
+	switch platform.OS() {
+	case manifest.OSWindows, manifest.OSWindowsServer2019Core:
+		os = template.OSWindowsServerCore
+	case manifest.OSWindowsServer2019Full:
+		os = template.OSWindowsServerFull
+	}
+	return template.RuntimePlatformOpts{
+		OS:   os,
+		Arch: template.ArchX86,
+	}
+}

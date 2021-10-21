@@ -5,6 +5,8 @@
 package manifest
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -77,12 +79,16 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	job.ImageConfig.Image.Location = stringP(props.Image)
 	job.ImageConfig.HealthCheck = props.HealthCheck
+	job.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		job.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		job.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	job.On.Schedule = stringP(props.Schedule)
 	if props.Retries != 0 {
 		job.Retries = aws.Int(props.Retries)
 	}
 	job.Timeout = stringP(props.Timeout)
-	job.Platform = props.Platform
 	job.parser = template.New()
 	return job
 }
@@ -115,6 +121,20 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	}
 	j.Environments = nil
 	return &j, nil
+}
+
+// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
+func (j *ScheduledJob) windowsCompatibility() error {
+	if !j.IsWindows() {
+		return nil
+	}
+	// EFS is not supported.
+	for _, volume := range j.Storage.Volumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
+		}
+	}
+	return nil
 }
 
 // Publish returns the list of topics where notifications can be published.
