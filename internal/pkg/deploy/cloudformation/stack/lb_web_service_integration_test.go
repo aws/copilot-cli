@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -65,7 +66,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	for name, tc := range testCases {
-		interpolated, err := manifest.NewInterpolator(appName, tc.envName).Interpolate(string(manifestBytes))
+		interpolated, err := override.NewInterpolator(appName, tc.envName).Interpolate(string(manifestBytes))
 		require.NoError(t, err)
 		mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
 		require.NoError(t, err)

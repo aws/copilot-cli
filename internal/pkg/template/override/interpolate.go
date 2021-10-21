@@ -1,13 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package manifest
+// Package override provides functionality to replace content from vended templates.
+package override
 
 import (
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -20,12 +23,6 @@ var (
 	// Environment variable names consist solely of uppercase letters, digits, and underscore,
 	// and do not begin with a digit. （https://pubs.opengroup.org/onlinepubs/007904875/basedefs/xbd_chap08.html）
 	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
-	// A YAML comment:
-	// 1. starts with "#"
-	// 2. is preceded by at least one whitespace, except for when the line starts with a comment,
-	// then it can be proceeded by zero or more whitespace
-	// 3. ends with zero or more "\n"
-	yamlCommentRegExp = regexp.MustCompile(`(^\s*|\s+)#.*\n*`)
 )
 
 // Interpolator substitutes variables in a manifest.
@@ -45,29 +42,35 @@ func NewInterpolator(appName, envName string) *Interpolator {
 
 // Interpolate substitutes environment variables in a string.
 func (i *Interpolator) Interpolate(s string) (string, error) {
-	var replaced, interpolated string
-	var err error
-	rest := s
-	for {
-		// Only get the first match.
-		comment := yamlCommentRegExp.FindString(rest)
-		if comment == "" {
-			break
-		}
-		splitedRest := strings.SplitN(rest, comment, 2)
-		interpolated, err = i.interpolatePart(splitedRest[0])
-		if err != nil {
-			return "", err
-		}
-		replaced += fmt.Sprint(interpolated, comment)
-		rest = splitedRest[1]
-	}
-	interpolated, err = i.interpolatePart(rest)
+	content, err := unmarshalYAML([]byte(s))
 	if err != nil {
 		return "", err
 	}
-	replaced += interpolated
-	return replaced, nil
+	if err := i.applyInterpolation(content); err != nil {
+		return "", err
+	}
+	out, err := marshalYAML(content)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func (i *Interpolator) applyInterpolation(node *yaml.Node) error {
+	for _, content := range node.Content {
+		if err := i.applyInterpolation(content); err != nil {
+			return err
+		}
+	}
+	if node.Tag != "!!str" {
+		return nil
+	}
+	interpolated, err := i.interpolatePart(node.Value)
+	if err != nil {
+		return err
+	}
+	node.Value = interpolated
+	return nil
 }
 
 func (i *Interpolator) interpolatePart(s string) (string, error) {

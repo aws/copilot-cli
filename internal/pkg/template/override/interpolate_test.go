@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package manifest
+package override
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ func TestInterpolator_Interpolate(t *testing.T) {
 		"success with no matches": {
 			inputStr: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
 
-			wanted: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest",
+			wanted: "1234567890.dkr.ecr.us-west-2.amazonaws.com/vault/test:latest\n",
 		},
 		"success": {
 			inputStr: `# The manifest for the ${name} service.
@@ -69,7 +69,6 @@ memory: 512    # ${Memory}
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: loadtester
 type: Backend Service
-
 # Your service is reachable at "http://loadtester.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:80" but is not public.
 
 # Configuration for your containers and service.
@@ -77,9 +76,8 @@ image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   location: ${0accountID}.dkr.${repo-provider}..amazonaws.com/vault/test:latest
   port: 80
-
 cpu: 256#512
-memory: 512    # ${Memory}
+memory: 512 # ${Memory}
 `,
 		},
 	}
