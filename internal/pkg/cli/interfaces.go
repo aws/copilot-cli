@@ -623,3 +623,7 @@ type timeoutError interface {
 	error
 	Timeout() bool
 }
+
+type interpolator interface {
+	Interpolate(s string) (string, error)
+}

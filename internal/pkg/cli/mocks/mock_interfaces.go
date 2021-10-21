@@ -6567,3 +6567,41 @@ func (mr *MocktimeoutErrorMockRecorder) Timeout() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Timeout", reflect.TypeOf((*MocktimeoutError)(nil).Timeout))
 }
+
+// Mockinterpolator is a mock of interpolator interface.
+type Mockinterpolator struct {
+	ctrl     *gomock.Controller
+	recorder *MockinterpolatorMockRecorder
+}
+
+// MockinterpolatorMockRecorder is the mock recorder for Mockinterpolator.
+type MockinterpolatorMockRecorder struct {
+	mock *Mockinterpolator
+}
+
+// NewMockinterpolator creates a new mock instance.
+func NewMockinterpolator(ctrl *gomock.Controller) *Mockinterpolator {
+	mock := &Mockinterpolator{ctrl: ctrl}
+	mock.recorder = &MockinterpolatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockinterpolator) EXPECT() *MockinterpolatorMockRecorder {
+	return m.recorder
+}
+
+// Interpolate mocks base method.
+func (m *Mockinterpolator) Interpolate(s string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Interpolate", s)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Interpolate indicates an expected call of Interpolate.
+func (mr *MockinterpolatorMockRecorder) Interpolate(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Interpolate", reflect.TypeOf((*Mockinterpolator)(nil).Interpolate), s)
+}
