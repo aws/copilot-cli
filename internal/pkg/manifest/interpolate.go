@@ -20,9 +20,10 @@ var (
 	// Environment variable names consist solely of uppercase letters, digits, and underscore,
 	// and do not begin with a digit. （https://pubs.opengroup.org/onlinepubs/007904875/basedefs/xbd_chap08.html）
 	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
-	// A yaml comment
+	// A YAML comment:
 	// 1. starts with "#"
-	// 2. must not proceed a non whitespace character
+	// 2. is preceded by at least one whitespace, except for when the line starts with a comment,
+	// then it can be proceeded by zero or more whitespace
 	// 3. ends with zero or more "\n"
 	yamlCommentRegExp = regexp.MustCompile(`(^\s*|\s+)#.*\n*`)
 )
@@ -49,11 +50,10 @@ func (i *Interpolator) Interpolate(s string) (string, error) {
 	rest := s
 	for {
 		// Only get the first match.
-		matches := yamlCommentRegExp.FindAllString(rest, 1)
-		if len(matches) == 0 {
+		comment := yamlCommentRegExp.FindString(rest)
+		if comment == "" {
 			break
 		}
-		comment := matches[0]
 		splitedRest := strings.SplitN(rest, comment, 2)
 		interpolated, err = i.interpolatePart(splitedRest[0])
 		if err != nil {
