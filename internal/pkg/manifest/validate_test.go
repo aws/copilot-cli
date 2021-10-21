@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
+func TestLoadBalancedWebService_Validate(t *testing.T) {
 	testImageConfig := ImageWithPortAndHealthcheck{
 		ImageWithPort: ImageWithPort{
 			Image: Image{
@@ -117,6 +117,18 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
 		},
+		"error if fail to validate load balancer target": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRule{
+						TargetContainer: aws.String("foo"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate load balancer target: `,
+		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{Name: aws.String("mockName")},
@@ -155,7 +167,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestBackendServiceConfig_Validate(t *testing.T) {
+func TestBackendService_Validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheckAndOptionalPort{
 		ImageWithOptionalPort: ImageWithOptionalPort{
 			Image: Image{
@@ -282,7 +294,7 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
+func TestRequestDrivenWebService_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config RequestDrivenWebService
 
@@ -337,7 +349,7 @@ func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestWorkerServiceConfig_Validate(t *testing.T) {
+func TestWorkerService_Validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
 			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
@@ -475,7 +487,7 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestScheduledJobConfig_Validate(t *testing.T) {
+func TestScheduledJob_Validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
 			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
@@ -1748,6 +1760,68 @@ func TestOverrideRule_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateLoadBalancerTarget(t *testing.T) {
+	testCases := map[string]struct {
+		in     validateLoadBalancerTargetOpts
+		wanted error
+	}{
+		"should return an error if target container doesn't exist": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule: RoutingRule{
+					TargetContainer: aws.String("foo"),
+				},
+			},
+			wanted: fmt.Errorf("target container foo doesn't exist"),
+		},
+		"should return an error if target container doesn't expose any port": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule: RoutingRule{
+					TargetContainer: aws.String("foo"),
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {},
+				},
+			},
+			wanted: fmt.Errorf("target container foo doesn't expose any port"),
+		},
+		"success with no target container set": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule:       RoutingRule{},
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {},
+				},
+			},
+		},
+		"success": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule: RoutingRule{
+					TargetContainerCamelCase: aws.String("foo"),
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateLoadBalancerTarget(tc.in)
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())

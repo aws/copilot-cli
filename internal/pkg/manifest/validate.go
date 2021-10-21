@@ -52,6 +52,13 @@ func (l LoadBalancedWebService) Validate() error {
 	if err = l.Workload.Validate(); err != nil {
 		return err
 	}
+	if err = validateLoadBalancerTarget(validateLoadBalancerTargetOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		routingRule:       l.RoutingRule,
+		sidecarConfig:     l.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate load balancer target: %w", err)
+	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
 		imageConfig:       l.ImageConfig.Image,
@@ -1013,9 +1020,36 @@ type validateDependenciesOpts struct {
 	imageConfig       Image
 }
 
+type validateLoadBalancerTargetOpts struct {
+	mainContainerName string
+	routingRule       RoutingRule
+	sidecarConfig     map[string]*SidecarConfig
+}
+
 type containerDependency struct {
 	dependsOn   DependsOn
 	isEssential bool
+}
+
+func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
+	if opts.routingRule.TargetContainer == nil && opts.routingRule.TargetContainerCamelCase == nil {
+		return nil
+	}
+	targetContainer := aws.StringValue(opts.routingRule.TargetContainerCamelCase)
+	if opts.routingRule.TargetContainer != nil {
+		targetContainer = aws.StringValue(opts.routingRule.TargetContainer)
+	}
+	if targetContainer == opts.mainContainerName {
+		return nil
+	}
+	sidecar, ok := opts.sidecarConfig[targetContainer]
+	if !ok {
+		return fmt.Errorf("target container %s doesn't exist", targetContainer)
+	}
+	if sidecar.Port == nil {
+		return fmt.Errorf("target container %s doesn't expose any port", targetContainer)
+	}
+	return nil
 }
 
 func validateContainerDeps(opts validateDependenciesOpts) error {

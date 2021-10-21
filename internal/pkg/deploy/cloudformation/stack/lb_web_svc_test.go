@@ -370,14 +370,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			Enable: aws.Bool(true),
 		},
 	}
-	testLBWebServiceManifestWithBadSidecarName := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadSidecarName.TargetContainer = aws.String("xray")
-
-	testLBWebServiceManifestWithBadSidecarPort := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadSidecarPort.TargetContainer = aws.String("xray")
-	testLBWebServiceManifestWithBadSidecarPort.Sidecars = map[string]*manifest.SidecarConfig{
-		"xray": {},
-	}
 	expectedParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadAppNameParamKey),
@@ -561,18 +553,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("false"),
 				},
 			}...),
-		},
-		"with bad sidecar container": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadSidecarName,
-
-			expectedErr: fmt.Errorf("target container xray doesn't exist"),
-		},
-		"with target sidecar container with empty port": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadSidecarPort,
-
-			expectedErr: fmt.Errorf("target container xray doesn't expose any port"),
 		},
 		"with bad count": {
 			httpsEnabled: true,
