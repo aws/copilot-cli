@@ -142,6 +142,11 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.WorkerServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	svc.WorkerServiceConfig.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
@@ -201,6 +206,24 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	}
 	s.Environments = nil
 	return &s, nil
+}
+
+// windowsCompatibility disallows unsupported when deploying Windows containers on Fargate.
+func (s *WorkerService) windowsCompatibility() error {
+	if !s.IsWindows() {
+		return nil
+	}
+	// Exec is not supported.
+	if aws.BoolValue(s.ExecuteCommand.Enable) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported.
+	for _, volume := range s.Storage.Volumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
+		}
+	}
+	return nil
 }
 
 // newDefaultWorkerService returns a Worker service with minimal task sizes and a single replica.

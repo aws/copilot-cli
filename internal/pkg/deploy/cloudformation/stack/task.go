@@ -28,6 +28,8 @@ const (
 	taskExecutionRoleParamKey  = "ExecutionRole"
 	taskCommandParamKey        = "Command"
 	taskEntryPointParamKey     = "EntryPoint"
+	taskOSParamKey             = "OS"
+	taskArchParamKey           = "Arch"
 
 	taskLogRetentionInDays = "1"
 )
@@ -104,6 +106,14 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(taskEntryPointParamKey),
 			ParameterValue: aws.String(strings.Join(t.EntryPoint, ",")),
+		},
+		{
+			ParameterKey:   aws.String(taskOSParamKey),
+			ParameterValue: aws.String(t.OS),
+		},
+		{
+			ParameterKey:   aws.String(taskArchParamKey),
+			ParameterValue: aws.String(t.Arch),
 		},
 	}, nil
 }

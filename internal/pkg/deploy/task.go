@@ -27,6 +27,9 @@ type CreateTaskResourcesInput struct {
 	EnvVars       map[string]string
 	Secrets       map[string]string
 
+	OS   string
+	Arch string
+
 	App string
 	Env string
 

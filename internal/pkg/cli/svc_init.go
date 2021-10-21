@@ -115,7 +115,7 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     *string
+	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
 
 	// Cache variables
@@ -256,22 +256,16 @@ func (o *initSvcOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return fmt.Errorf("get/redirect docker engine platform: %w", err)
-	}
-	o.platform = platform
-	var platformStrPtr *manifest.PlatformString
-	if o.platform != nil {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
-		if o.wkldType != manifest.RequestDrivenWebServiceType {
-			log.Warning("See 'platform' field in your manifest.\n")
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image == "" {
+		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		if err != nil {
+			return err
 		}
-		val := manifest.PlatformString(*o.platform)
-		platformStrPtr = &val
+		if platform != "" {
+			o.platform = &platform
+		}
 	}
-
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -280,7 +274,7 @@ func (o *initSvcOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: platformStrPtr,
+				PlatformString: o.platform,
 			},
 			Topics: o.topics,
 		},
@@ -452,6 +446,26 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	o.port = uint16(portUint)
 
 	return nil
+}
+
+func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.PlatformString, error) {
+	detectedOs, detectedArch, err := engine.GetPlatform()
+	if err != nil {
+		return "", fmt.Errorf("get docker engine platform: %w", err)
+	}
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
+	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, wkldType)
+	if err != nil {
+		return "", fmt.Errorf("redirect docker engine platform: %w", err)
+	}
+	if redirectedPlatform == "" {
+		return "", nil
+	}
+	if redirectedPlatform != detectedPlatform {
+		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
+	}
+	platform := manifest.PlatformString(redirectedPlatform)
+	return platform, nil
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {

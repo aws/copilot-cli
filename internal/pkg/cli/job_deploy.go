@@ -42,6 +42,7 @@ type deployJobOpts struct {
 	store              store
 	ws                 wsJobDirReader
 	unmarshal          func(in []byte) (manifest.WorkloadManifest, error)
+	newInterpolator    func(app, env string) interpolator
 	cmd                runner
 	addons             templater
 	appCFN             appResourcesGetter
@@ -80,14 +81,15 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 	return &deployJobOpts{
 		deployWkldVars: vars,
 
-		store:        store,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:       prompter,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessions.NewProvider(),
+		store:           store,
+		ws:              ws,
+		unmarshal:       manifest.UnmarshalWorkload,
+		spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
+		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:          prompter,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessions.NewProvider(),
+		newInterpolator: newManifestInterpolator,
 	}, nil
 }
 
@@ -356,7 +358,11 @@ func (o *deployJobOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
 	}
-	mft, err := o.unmarshal(raw)
+	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
+	}
+	mft, err := o.unmarshal([]byte(interpolated))
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal job %s manifest: %w", o.name, err)
 	}
