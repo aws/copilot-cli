@@ -59,11 +59,12 @@ const (
 	osWindowsServerCore = template.OSWindowsServerCore
 
 	archX86 = template.ArchX86
+	archARM = template.ArchARM
 )
 
 var (
 	ValidWindowsOSs = []string{osWindowsServerCore, osWindowsServerFull}
-	ValidCFNPlatforms = []string{dockerengine.PlatformString(osWindowsServerCore, archX86), dockerengine.PlatformString(osWindowsServerFull, archX86), dockerengine.PlatformString(osLinux, archX86)}
+	ValidCFNPlatforms = []string{dockerengine.PlatformString(osWindowsServerCore, archX86), dockerengine.PlatformString(osWindowsServerCore, archARM), dockerengine.PlatformString(osWindowsServerFull, archX86), dockerengine.PlatformString(osWindowsServerFull, archARM), dockerengine.PlatformString(osLinux, archX86), dockerengine.PlatformString(osLinux, archARM)}
 	fmtTaskFamilyName = "copilot-%s"
 )
 

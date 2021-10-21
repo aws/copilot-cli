@@ -697,6 +697,37 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			wantedManifestPath: "manifest/path",
 		},
+		"ARM architecture": {
+			inAppName:        "sample",
+			inSvcName:        "frontend",
+			inDockerfilePath: "./Dockerfile",
+			inSvcType:        manifest.LoadBalancedWebServiceType,
+
+			inSvcPort: 80,
+
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "frontend",
+						Type:           "Load Balanced Web Service",
+						DockerfilePath: "./Dockerfile",
+						Platform: manifest.PlatformArgsOrString{
+							PlatformString: (*manifest.PlatformString)(aws.String("windows/arm")),
+						},
+					},
+					Port: 80,
+				}).Return("manifest/path", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().GetPlatform().Return("windows", "arm", nil)
+			},
+
+			wantedManifestPath: "manifest/path",
+		},
 		"worker service": {
 			inAppName:        "sample",
 			inSvcName:        "frontend",
@@ -784,6 +815,23 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
 			},
 			wantedErr: errors.New("get docker engine platform: some error"),
+		},
+		"return error if Windows platform attempted with RDWS": {
+			inAppName:        "sample",
+			inSvcName:        "appRunner",
+			inDockerfilePath: "./Dockerfile",
+			inSvcType:        manifest.RequestDrivenWebServiceType,
+
+			inSvcPort: 80,
+
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().GetPlatform().Return("windows", "amd64", nil)
+			},
+
+			wantedErr: errors.New("Windows is not supported for App Runner services"),
 		},
 		"failure": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {

@@ -47,6 +47,7 @@ const (
 	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
 
 	ArchX86 = "X86_64"
+	ArchARM = "ARM"
 )
 
 // Constants for ARN options.

@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -97,7 +98,7 @@ func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
 	if s.InstanceConfig.Platform.PlatformString == nil {
 		return nil, nil
 	}
-	return aws.String(platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
+	return aws.String(dockerengine.PlatformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -134,7 +135,7 @@ func (s *RequestDrivenWebService) windowsCompatibility() error {
 	}
 	// Error out if user added Windows as platform in manifest.
 	if isWindowsPlatform(s.InstanceConfig.Platform) {
-		return errAppRunnerInvalidPlatformWindows
+		return ErrAppRunnerInvalidPlatformWindows
 	}
 	if s.InstanceConfig.Platform.Arch() != ArchAMD64 || s.InstanceConfig.Platform.Arch() != ArchX86 {
 		return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)

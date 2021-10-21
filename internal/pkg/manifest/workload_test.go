@@ -427,59 +427,6 @@ func TestPlatformArgsOrString_Arch(t *testing.T) {
 	}
 }
 
-func TestRedirectPlatform(t *testing.T) {
-	testCases := map[string]struct {
-		inOS           string
-		inArch         string
-		inWorkloadType string
-
-		wantedPlatform string
-		wantedError    error
-	}{
-		"returns nil if default platform": {
-			inOS:           "linux",
-			inArch:         "amd64",
-			inWorkloadType: LoadBalancedWebServiceType,
-
-			wantedPlatform: "",
-			wantedError:    nil,
-		},
-		"returns error if App Runner + Windows": {
-			inOS:           "windows",
-			inArch:         "amd64",
-			inWorkloadType: RequestDrivenWebServiceType,
-
-			wantedPlatform: "",
-			wantedError:    errors.New("Windows is not supported for App Runner services"),
-		},
-		"targets amd64 if ARM architecture passed in": {
-			inOS:   "linux",
-			inArch: "arm64",
-
-			wantedPlatform: "linux/amd64",
-			wantedError:    nil,
-		},
-		"returns non-default os as is": {
-			inOS:   "windows",
-			inArch: "amd64",
-
-			wantedPlatform: "windows/amd64",
-			wantedError:    nil,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			platform, err := RedirectPlatform(tc.inOS, tc.inArch, tc.inWorkloadType)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedPlatform, platform)
-			}
-		})
-	}
-}
-
 func TestExec_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte

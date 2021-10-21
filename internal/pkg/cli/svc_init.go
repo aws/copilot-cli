@@ -453,19 +453,18 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 	if err != nil {
 		return "", fmt.Errorf("get docker engine platform: %w", err)
 	}
-	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
-	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, wkldType)
-	if err != nil {
-		return "", fmt.Errorf("redirect docker engine platform: %w", err)
-	}
-	if redirectedPlatform == "" {
+	platform := dockerengine.PlatformString(detectedOs, detectedArch)
+	if platform == manifest.DefaultPlatform {
 		return "", nil
 	}
-	if redirectedPlatform != detectedPlatform {
-		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
+	// Return an error if a platform cannot be redirected.
+	if wkldType == manifest.RequestDrivenWebServiceType && detectedOs == manifest.OSWindows {
+		return "", manifest.ErrAppRunnerInvalidPlatformWindows
 	}
-	platform := manifest.PlatformString(redirectedPlatform)
-	return platform, nil
+	if detectedArch == manifest.ArchARM {
+		log.Warningf("Architecture type %s has been detected. If you'd rather build as architecture type %s, please change the 'platform' field in your workload manifest.", detectedOs, color.HighlightCode(manifest.ArchAMD64))
+	}
+	return manifest.PlatformString(platform), nil
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {

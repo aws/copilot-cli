@@ -655,8 +655,16 @@ func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePla
 	case manifest.OSWindowsServer2019Full:
 		os = template.OSWindowsServerFull
 	}
+
+	arch := template.ArchX86
+	switch platform.Arch() {
+	case manifest.ArchAMD64, manifest.ArchX86:
+		arch = template.ArchX86
+	case manifest.ArchARM:
+		arch = template.ArchARM
+	}
 	return template.RuntimePlatformOpts{
 		OS:   os,
-		Arch: template.ArchX86,
+		Arch: arch,
 	}
 }

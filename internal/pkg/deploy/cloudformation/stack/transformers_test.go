@@ -1426,6 +1426,15 @@ func Test_convertPlatform(t *testing.T) {
 				Arch: template.ArchX86,
 			},
 		},
+		"should return linux and arm when platform is 'linux/arm'": {
+			in: manifest.PlatformArgsOrString{
+				PlatformString: (*manifest.PlatformString)(aws.String("linux/arm")),
+			},
+			out: template.RuntimePlatformOpts{
+				OS: template.OSLinux,
+				Arch: template.ArchARM,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
