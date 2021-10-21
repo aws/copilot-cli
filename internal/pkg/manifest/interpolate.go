@@ -1,10 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package override provides functionality to replace content from vended templates.
-package override
+package manifest
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"regexp"
@@ -99,4 +99,22 @@ func (i *Interpolator) interpolatePart(s string) (string, error) {
 		return "", fmt.Errorf(`environment variable "%s" is not defined`, key)
 	}
 	return replaced, nil
+}
+
+func unmarshalYAML(temp []byte) (*yaml.Node, error) {
+	var node yaml.Node
+	if err := yaml.Unmarshal(temp, &node); err != nil {
+		return nil, fmt.Errorf("unmarshal YAML template: %w", err)
+	}
+	return &node, nil
+}
+
+func marshalYAML(content *yaml.Node) ([]byte, error) {
+	var out bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&out)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(content); err != nil {
+		return nil, fmt.Errorf("marshal YAML template: %w", err)
+	}
+	return out.Bytes(), nil
 }

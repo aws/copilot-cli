@@ -16,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/template/override"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
@@ -151,7 +150,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 }
 
 func newManifestInterpolator(app, env string) interpolator {
-	return override.NewInterpolator(app, env)
+	return manifest.NewInterpolator(app, env)
 }
 
 // Validate returns an error if the user inputs are invalid.
