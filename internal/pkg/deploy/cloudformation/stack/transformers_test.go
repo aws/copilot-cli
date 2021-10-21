@@ -1432,7 +1432,7 @@ func Test_convertPlatform(t *testing.T) {
 			},
 			out: template.RuntimePlatformOpts{
 				OS: template.OSLinux,
-				Arch: template.ArchARM,
+				Arch: template.ArchARM64,
 			},
 		},
 	}

@@ -461,8 +461,8 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 	if wkldType == manifest.RequestDrivenWebServiceType && detectedOs == manifest.OSWindows {
 		return "", manifest.ErrAppRunnerInvalidPlatformWindows
 	}
-	if detectedArch == manifest.ArchARM {
-		log.Warningf("Architecture type %s has been detected. If you'd rather build as architecture type %s, please change the 'platform' field in your workload manifest.", detectedOs, color.HighlightCode(manifest.ArchAMD64))
+	if detectedArch == manifest.ArchARM || detectedArch == manifest.ArchARM64 {
+		log.Warningf("Architecture type %s has been detected. If you'd rather build as architecture type %s, please change the 'platform' field in your workload manifest to %s.", detectedOs, manifest.ArchAMD64, color.HighlightCode(dockerengine.PlatformString(detectedOs, manifest.ArchAMD64)))
 	}
 	return manifest.PlatformString(platform), nil
 }

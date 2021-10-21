@@ -32,6 +32,7 @@ const (
 	ArchAMD64 = "amd64"
 	ArchX86   = "x86_64"
 	ArchARM = "arm"
+	ArchARM64 = "arm64"
 )
 
 const (

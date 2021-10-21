@@ -36,6 +36,7 @@ const (
 	ArchAMD64 = dockerengine.ArchAMD64
 	ArchX86   = dockerengine.ArchX86
 	ArchARM = dockerengine.ArchARM
+	ArchARM64 = dockerengine.ArchARM64
 
 	// Minimum CPU and mem values required for Windows-based tasks.
 	MinWindowsTaskCPU    = 1024
@@ -58,9 +59,11 @@ var (
 		dockerengine.PlatformString(OSLinux, ArchAMD64),
 		dockerengine.PlatformString(OSLinux, ArchX86),
 		dockerengine.PlatformString(OSLinux, ArchARM),
+		dockerengine.PlatformString(OSLinux, ArchARM64),
 		dockerengine.PlatformString(OSWindows, ArchAMD64),
 		dockerengine.PlatformString(OSWindows, ArchX86),
 		dockerengine.PlatformString(OSWindows, ArchARM),
+		dockerengine.PlatformString(OSWindows, ArchARM64),
 	}
 
 	DefaultPlatform = dockerengine.PlatformString(OSLinux, ArchAMD64)
@@ -70,12 +73,15 @@ var (
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM)},
+		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM64)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchARM)},
+		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchARM64)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchARM)},
+		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchARM64)},
 	}
 
 	// All placement options.

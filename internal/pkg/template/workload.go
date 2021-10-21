@@ -48,6 +48,7 @@ const (
 
 	ArchX86 = "X86_64"
 	ArchARM = "ARM"
+	ArchARM64 = "ARM64"
 )
 
 // Constants for ARN options.
