@@ -1,15 +1,19 @@
 # Sidecars
 Sidecars are additional containers that run along side the main container. They are usually used to perform peripheral tasks such as logging, configuration, or proxying requests.
 
+!!! Attention
+    Sidecars are not supported for Request-Driven Web Services.  
+
+!!! Attention
+    If your main container is using a Windows image, [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/) are not supported. Please check if your sidecar container supports Windows.
+
+
 AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/).
 
 If you have defined an EFS volume for your main container through the [`storage` field](../developing/storage.en.md) in the manifest, you can also mount that volume in any sidecar containers you have defined.
 
 ## How to add sidecars with Copilot?
 There are two ways of adding sidecars using the Copilot manifest: by specifying [general sidecars](#general-sidecars) or by using [sidecar patterns](#sidecar-patterns).
-
-!!! Attention
-    Sidecars are not supported for Request-Driven Web Services
 
 ### General sidecars
 You'll need to provide the URL for the sidecar image. Optionally, you can specify the port you'd like to expose and the credential parameter for [private registry](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html).

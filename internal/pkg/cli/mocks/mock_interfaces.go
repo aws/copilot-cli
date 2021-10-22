@@ -6313,19 +6313,20 @@ func (mr *MockdockerEngineMockRecorder) CheckDockerEngineRunning() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngine)(nil).CheckDockerEngineRunning))
 }
 
-// RedirectPlatform mocks base method.
-func (m *MockdockerEngine) RedirectPlatform(arg0 string) (*string, error) {
+// GetPlatform mocks base method.
+func (m *MockdockerEngine) GetPlatform() (string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RedirectPlatform", arg0)
-	ret0, _ := ret[0].(*string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "GetPlatform")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
-// RedirectPlatform indicates an expected call of RedirectPlatform.
-func (mr *MockdockerEngineMockRecorder) RedirectPlatform(arg0 interface{}) *gomock.Call {
+// GetPlatform indicates an expected call of GetPlatform.
+func (mr *MockdockerEngineMockRecorder) GetPlatform() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedirectPlatform", reflect.TypeOf((*MockdockerEngine)(nil).RedirectPlatform), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatform", reflect.TypeOf((*MockdockerEngine)(nil).GetPlatform))
 }
 
 // Mockcodestar is a mock of codestar interface.
@@ -6565,4 +6566,42 @@ func (m *MocktimeoutError) Timeout() bool {
 func (mr *MocktimeoutErrorMockRecorder) Timeout() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Timeout", reflect.TypeOf((*MocktimeoutError)(nil).Timeout))
+}
+
+// Mockinterpolator is a mock of interpolator interface.
+type Mockinterpolator struct {
+	ctrl     *gomock.Controller
+	recorder *MockinterpolatorMockRecorder
+}
+
+// MockinterpolatorMockRecorder is the mock recorder for Mockinterpolator.
+type MockinterpolatorMockRecorder struct {
+	mock *Mockinterpolator
+}
+
+// NewMockinterpolator creates a new mock instance.
+func NewMockinterpolator(ctrl *gomock.Controller) *Mockinterpolator {
+	mock := &Mockinterpolator{ctrl: ctrl}
+	mock.recorder = &MockinterpolatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockinterpolator) EXPECT() *MockinterpolatorMockRecorder {
+	return m.recorder
+}
+
+// Interpolate mocks base method.
+func (m *Mockinterpolator) Interpolate(s string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Interpolate", s)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Interpolate indicates an expected call of Interpolate.
+func (mr *MockinterpolatorMockRecorder) Interpolate(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Interpolate", reflect.TypeOf((*Mockinterpolator)(nil).Interpolate), s)
 }

@@ -182,6 +182,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", err
@@ -193,27 +194,20 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return string(overridenTpl), nil
 }
 
-func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string) {
 	containerName := s.name
 	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)
 	// Route load balancer traffic to main container by default.
 	targetContainer = aws.String(containerName)
 	targetPort = aws.String(containerPort)
-	if s.manifest.TargetContainer == nil && s.manifest.TargetContainerCamelCase != nil {
-		s.manifest.TargetContainer = s.manifest.TargetContainerCamelCase
+	if s.manifest.TargetContainer != nil {
+		targetContainer = s.manifest.TargetContainer
 	}
-	mftTargetContainer := s.manifest.TargetContainer
-	if mftTargetContainer != nil {
-		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
-		if ok {
-			if sidecar.Port == nil {
-				return nil, nil, fmt.Errorf("target container %s doesn't expose any port", *mftTargetContainer)
-			}
-			targetContainer = mftTargetContainer
-			targetPort = sidecar.Port
-		} else {
-			return nil, nil, fmt.Errorf("target container %s doesn't exist", *mftTargetContainer)
-		}
+	if s.manifest.TargetContainerCamelCase != nil {
+		targetContainer = s.manifest.TargetContainerCamelCase
+	}
+	if aws.StringValue(targetContainer) != containerName {
+		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
 	}
 	return
 }
@@ -224,10 +218,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort, err := s.loadBalancerTarget()
-	if err != nil {
-		return nil, err
-	}
+	targetContainer, targetPort := s.loadBalancerTarget()
 	return append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),

@@ -13,7 +13,7 @@
       "Resource": "arn:${Partition}:states:::ecs:runTask.sync",
       "Parameters": {
         "LaunchType": "FARGATE",
-        "PlatformVersion": "1.4.0",
+        "PlatformVersion": "{{.Platform.Version}}",
         "Cluster": "${Cluster}",
         "TaskDefinition": "${TaskDefinition}",
         "PropagateTags": "TASK_DEFINITION",
