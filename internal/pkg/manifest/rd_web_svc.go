@@ -94,7 +94,7 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 
 // TaskPlatform returns the platform for the service.
 func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if s.InstanceConfig.Platform.PlatformString == nil {
+	if s.InstanceConfig.Platform.IsEmpty() {
 		return nil, nil
 	}
 	return aws.String(platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
