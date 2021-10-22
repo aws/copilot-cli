@@ -67,7 +67,7 @@ NLBDNSAlias:
   Metadata:
     'aws:copilot:description': 'The default alias record for the NLB'
   Type: AWS::Route53::RecordSetGroup
-  Condition: HTTPSLoadBalancer
+  Condition: DomainEnabled # TODO: Add a condition in service template.
   Properties:
     HostedZoneId:
       Fn::ImportValue:
