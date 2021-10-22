@@ -62,8 +62,6 @@ var (
 		dockerengine.PlatformString(OSLinux, ArchARM64),
 		dockerengine.PlatformString(OSWindows, ArchAMD64),
 		dockerengine.PlatformString(OSWindows, ArchX86),
-		dockerengine.PlatformString(OSWindows, ArchARM),
-		dockerengine.PlatformString(OSWindows, ArchARM64),
 	}
 
 	DefaultPlatform = dockerengine.PlatformString(OSLinux, ArchAMD64)
@@ -74,14 +72,12 @@ var (
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM64)},
+		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchX86)},
+		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchAMD64)},
-		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchARM)},
-		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchARM64)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
-		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchARM)},
-		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchARM64)},
 	}
 
 	// All placement options.
