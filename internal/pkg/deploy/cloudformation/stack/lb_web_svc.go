@@ -154,6 +154,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	for _, ipNet := range s.manifest.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
+
+	nlb := convertNetworkLoadBalancer()
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                s.manifest.Variables,
 		Secrets:                  s.manifest.Secrets,
@@ -183,6 +185,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
+		NLB:                      nlb,
 	})
 	if err != nil {
 		return "", err
