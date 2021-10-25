@@ -26,7 +26,7 @@ Parameters:
     AllowedValues: [true, false]
   DNSDelegated:
     Type: String
-    AllowedValues: [ true, false ]
+    AllowedValues: [true, false]
   LogRetention:
     Type: Number
   AddonsTemplateURL:
