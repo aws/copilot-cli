@@ -133,7 +133,7 @@ Service の平均レスポンスタイムを指定し、それによってスケ
 <!-- textlint-enable ja-technical-writing/no-exclamation-question-mark -->
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
-Copilot は、Service が Environment 内の他の Service と通信できるようにするためのセキュリティグループを常にタスクに対して設定します。本フィールドでは、同セキュリティグループ以外に追加で紐づけたい１つ以上のセキュリティグループ ID を指定します。
+Copilot がタスクに対して自動で設定するセキュリティグループ以外に追加で設定したいセキュリティグループがある場合にそれらの ID を指定します。複数のセキュリティグループ ID を指定可能です。(Copilot が自動設定するセキュリティグループは、同一 Environment 内の Service 間通信を可能にする目的で設定されます。)
 
 <div class="separator"></div>
 
@@ -192,13 +192,13 @@ volumes:
 任意設定項目で、デフォルト値は `true` です。ボリュームを読み取り専用とするかどうかを指定します。`false` に設定した場合、コンテナにファイルシステムへの `elasticfilesystem:ClientWrite` 権限が付与され、それによりボリュームへ書き込めるようになります。
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Boolean or Map</span>  
-詳細な EFS 設定を指定します。Boolean 値を指定した場合、あるいは `uid` と `gid` サブフィールドのみを指定した場合は、Copilot 管理の EFS ファイルシステムと Service 専用の EFS アクセスポイントが作成されます。
+詳細な EFS 設定を指定します。Boolean 値による指定、あるいは `uid` と `gid` サブフィールドのみを指定した場合に、EFS ファイルシステムと Service 専用の EFS アクセスポイントが作成されます。
 
 ```yaml
-// Simple managed EFS
+// Boolean 値を指定する場合
 efs: true
 
-// Managed EFS with custom POSIX info
+// POSIX uid/gid を指定する場合
 efs:
   uid: 10000
   gid: 110000
@@ -240,7 +240,7 @@ logging セクションには、ログ設定を含みます。このセクショ
 任意項目。FireLens ログドライバーにログを送信するときの設定。
 
 <span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Boolean</span>
-任意項目。ログに ECS メタデータを含むかどうか。デフォルトは `true`。
+任意項目。ログに ECS メタデータを含めるかどうか。デフォルトは `true`。
 
 <span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
 任意項目。ログの設定に渡す秘密情報です。

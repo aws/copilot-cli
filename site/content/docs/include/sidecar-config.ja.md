@@ -65,7 +65,7 @@ command: ["ps", "au"]
 各ヘルスチェックの実行間の秒単位の間隔です。デフォルト値は１０秒です。
 
 <span class="parent-field">healthcheck.</span><a id="healthcheck-retries" href="#healthcheck-retries" class="field">`retries`</a> <span class="type">Integer</span>
-コンテナが unhealthy と見なされるまでに、失敗したヘルスチェックを再試行する回数です。1〜10 回を指定できます。デフォルト値は２です。
+コンテナが unhealthy と見なされるまでに、失敗したヘルスチェックを再試行する回数です。デフォルト値は２です。
 
 <span class="parent-field">healthcheck.</span><a id="healthcheck-timeout" href="#healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>
 ヘルスチェックの実行開始から失敗とみなすまでに待機する秒単位の期間です。デフォルト値は５秒です。

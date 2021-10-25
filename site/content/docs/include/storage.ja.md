@@ -45,13 +45,13 @@ volumes:
 任意設定項目で、デフォルト値は `true` です。ボリュームを読み取り専用とするかどうかを指定します。`false` に設定した場合、コンテナにファイルシステムへの `elasticfilesystem:ClientWrite` 権限が付与され、それによりボリュームへ書き込めるようになります。
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Boolean or Map</span>  
-詳細な EFS 設定を指定します。Boolean 値を指定した場合、あるいは `uid` と `gid` サブフィールドのみを指定した場合は、Copilot 管理の EFS ファイルシステムと Service 専用の EFS アクセスポイントが作成されます。
+詳細な EFS 設定を指定します。Boolean 値による指定、あるいは `uid` と `gid` サブフィールドのみを指定した場合に、EFS ファイルシステムと Service 専用の EFS アクセスポイントが作成されます。
 
 ```yaml
-// Simple managed EFS
+// Boolean 値を指定する場合
 efs: true
 
-// Managed EFS with custom POSIX info
+// POSIX uid/gid を指定する場合
 efs:
   uid: 10000
   gid: 110000
