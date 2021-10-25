@@ -23,7 +23,7 @@ NLBListener:
     Certificates:
       - CertificateArn:
           !GetAtt EnvControllerAction.HTTPSCert
-    SslPolicy: {{ if .SSLPolicy }}{{ .SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
+    SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy}}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
 {{- end}}
 
 NLBTargetGroup:
@@ -44,7 +44,7 @@ NLBTargetGroup:
     HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
     {{- end }}
     Port: !Ref ContainerPort
-{{- if eq .NLB.Listener. "TLS"}}
+{{- if eq .NLB.Listener.Protocol "TLS"}}
     Protocol: TCP
 {{- else}}
     Protocol: {{ .NLB.Listener.Protocol }}
@@ -69,9 +69,9 @@ NLBTargetGroup:
 {{- if not .Aliases}}
 NLBDNSAlias:
   Metadata:
-    'aws:copilot:description': 'The default alias record for the NLB'
+    'aws:copilot:description': 'The default alias record for the network load balancer'
   Type: AWS::Route53::RecordSetGroup
-  Condition: DomainEnabled # TODO: Add a condition in service template.
+  Condition: DNSDelegated
   Properties:
     HostedZoneId:
       Fn::ImportValue:
@@ -87,8 +87,8 @@ NLBDNSAlias:
             - ""
         Type: A
         AliasTarget:
-          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
-          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          HostedZoneId: !GetAtt PublicNetworkLoadBalancer.PublicLoadBalancerHostedZone
+          DNSName: !GetAtt PublicNetworkLoadBalancer.PublicLoadBalancerDNSName
 {{- end}}
 
 NLBSecurityGroup:
