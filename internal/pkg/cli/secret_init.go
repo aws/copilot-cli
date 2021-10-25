@@ -402,7 +402,7 @@ func (o *secretInitOpts) askForSecretValues() error {
 // RecommendActions shows recommended actions to do after running `secret init`.
 func (o *secretInitOpts) RecommendActions() error {
 	secretsManifestExample := "secrets:"
-	for secretName, _ := range o.secretValues {
+	for secretName := range o.secretValues {
 		currSecret := fmt.Sprintf("%s: %s", secretName, fmt.Sprintf(fmtSecretParameterNameMftExample, secretName))
 		secretsManifestExample = fmt.Sprintf("%s\n%s", secretsManifestExample, fmt.Sprintf("    %s", currSecret))
 	}
