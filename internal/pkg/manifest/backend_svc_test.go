@@ -108,6 +108,56 @@ func TestNewBackendSvc(t *testing.T) {
 				},
 			},
 		},
+		"with windows platform": {
+			inProps: BackendServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "subscribers",
+					Dockerfile: "./subscribers/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+			},
+			wantedManifest: &BackendService{
+				Workload: Workload{
+					Name: aws.String("subscribers"),
+					Type: aws.String(BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./subscribers/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(1024),
+						Memory: aws.Int(2048),
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
+							PlatformArgs: PlatformArgs{
+								OSFamily: nil,
+								Arch:     nil,
+							},
+						},
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: &PublicSubnetPlacement,
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -136,6 +186,13 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
 				},
 			},
 			wantedTestdata: "backend-svc-nohealthcheck.yml",

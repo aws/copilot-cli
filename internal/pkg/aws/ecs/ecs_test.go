@@ -492,7 +492,7 @@ func TestECS_Tasks(t *testing.T) {
 	}
 }
 
-func TestECS_StoppedServiceTaskss(t *testing.T) {
+func TestECS_StoppedServiceTasks(t *testing.T) {
 	testCases := map[string]struct {
 		clusterName   string
 		serviceName   string
@@ -857,21 +857,25 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 
 func TestECS_RunTask(t *testing.T) {
 	type input struct {
-		cluster        string
-		count          int
-		subnets        []string
-		securityGroups []string
-		taskFamilyName string
-		startedBy      string
+		cluster         string
+		count           int
+		subnets         []string
+		securityGroups  []string
+		taskFamilyName  string
+		startedBy       string
+		platformVersion string
+		enableExec      bool
 	}
 
 	runTaskInput := input{
-		cluster:        "my-cluster",
-		count:          3,
-		subnets:        []string{"subnet-1", "subnet-2"},
-		securityGroups: []string{"sg-1", "sg-2"},
-		taskFamilyName: "my-task",
-		startedBy:      "task",
+		cluster:         "my-cluster",
+		count:           3,
+		subnets:         []string{"subnet-1", "subnet-2"},
+		securityGroups:  []string{"sg-1", "sg-2"},
+		taskFamilyName:  "my-task",
+		startedBy:       "task",
+		platformVersion: "LATEST",
+		enableExec:      true,
 	}
 	ecsTasks := []*ecs.Task{
 		{
@@ -914,7 +918,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).Return(&ecs.RunTaskOutput{
 					Tasks: ecsTasks,
@@ -954,7 +958,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{}, errors.New("error"))
@@ -979,7 +983,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
@@ -1007,7 +1011,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
-					PlatformVersion:      aws.String("1.4.0"),
+					PlatformVersion:      aws.String("LATEST"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
@@ -1053,12 +1057,14 @@ func TestECS_RunTask(t *testing.T) {
 			}
 
 			tasks, err := ecs.RunTask(RunTaskInput{
-				Count:          tc.count,
-				Cluster:        tc.cluster,
-				TaskFamilyName: tc.taskFamilyName,
-				Subnets:        tc.subnets,
-				SecurityGroups: tc.securityGroups,
-				StartedBy:      tc.startedBy,
+				Count:           tc.count,
+				Cluster:         tc.cluster,
+				TaskFamilyName:  tc.taskFamilyName,
+				Subnets:         tc.subnets,
+				SecurityGroups:  tc.securityGroups,
+				StartedBy:       tc.startedBy,
+				PlatformVersion: tc.platformVersion,
+				EnableExec:      tc.enableExec,
 			})
 
 			if tc.wantedError != nil {

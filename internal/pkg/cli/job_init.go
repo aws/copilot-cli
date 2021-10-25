@@ -68,7 +68,7 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     *string
+	platform     *manifest.PlatformString
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -190,19 +190,16 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return err
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image == "" {
+		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		if err != nil {
+			return err
+		}
+		if platform != "" {
+			o.platform = &platform
+		}
 	}
-	o.platform = platform
-	var platformStrPtr *manifest.PlatformString
-	if o.platform != nil {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform to %s in your manifest.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
-		val := manifest.PlatformString(*o.platform)
-		platformStrPtr = &val
-	}
-
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -211,7 +208,7 @@ func (o *initJobOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: platformStrPtr,
+				PlatformString: o.platform,
 			},
 		},
 

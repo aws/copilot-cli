@@ -120,7 +120,7 @@ All paths are relative to your workspace root.
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).
 
 !!! note
-    Only public images stored in [Amazon ECR Public](https://docs.aws.amazon.com/AmazonECR/latest/public/public-repositories.html) is available with AWS App Runner.
+    Only public images stored in [Amazon ECR Public](https://docs.aws.amazon.com/AmazonECR/latest/public/public-repositories.html) are available with AWS App Runner.
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.

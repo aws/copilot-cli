@@ -68,7 +68,7 @@ Service のアーキテクチャタイプ。 [Load Balanced Web Service](../conc
 
 {% include 'http-config.ja.md' %}
 
-{% include 'image-config.ja.md' %}
+{% include 'image-config-with-port.ja.md' %}
 
 {% include 'image-healthcheck.ja.md' %}
 

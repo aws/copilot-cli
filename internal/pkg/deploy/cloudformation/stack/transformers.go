@@ -64,15 +64,17 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		}
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:         aws.String(name),
-			Image:        config.Image,
-			Essential:    config.Essential,
-			Port:         port,
-			Protocol:     protocol,
-			CredsParam:   config.CredsParam,
-			Secrets:      config.Secrets,
-			Variables:    config.Variables,
-			MountPoints:  mp,
+			Name:       aws.String(name),
+			Image:      config.Image,
+			Essential:  config.Essential,
+			Port:       port,
+			Protocol:   protocol,
+			CredsParam: config.CredsParam,
+			Secrets:    config.Secrets,
+			Variables:  config.Variables,
+			Storage: template.SidecarStorageOpts{
+				MountPoints: mp,
+			},
 			DockerLabels: config.DockerLabels,
 			DependsOn:    convertDependsOn(config.DependsOn),
 			EntryPoint:   entrypoint,
@@ -639,4 +641,22 @@ func convertAppInformation(app deploy.AppInformation) (delegationRole *string, d
 		dnsName = &dns
 	}
 	return
+}
+
+func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePlatformOpts {
+	if platform.IsEmpty() {
+		return template.RuntimePlatformOpts{}
+	}
+
+	os := template.OSLinux
+	switch platform.OS() {
+	case manifest.OSWindows, manifest.OSWindowsServer2019Core:
+		os = template.OSWindowsServerCore
+	case manifest.OSWindowsServer2019Full:
+		os = template.OSWindowsServerFull
+	}
+	return template.RuntimePlatformOpts{
+		OS:   os,
+		Arch: template.ArchX86,
+	}
 }

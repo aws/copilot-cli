@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -67,7 +68,77 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 							AdvancedCount: AdvancedCount{
-								workloadType: LoadBalancedWebServiceType,
+								workloadType: "Load Balanced Web Service",
+							},
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: &PublicSubnetPlacement,
+						},
+					},
+				},
+			},
+		},
+		"with windows platform": {
+			props: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "subscribers",
+					Dockerfile: "./subscribers/Dockerfile",
+				},
+				Path: "/",
+				HealthCheck: ContainerHealthCheck{
+					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+				},
+				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+
+				Port: 80,
+			},
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: stringP("subscribers"),
+					Type: stringP(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./subscribers/Dockerfile"),
+									},
+								},
+							},
+							Port: aws.Uint16(80),
+						},
+						HealthCheck: ContainerHealthCheck{
+							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+						},
+					},
+					RoutingRule: RoutingRule{
+						Path: stringP("/"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: stringP("/"),
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(1024),
+						Memory: aws.Int(2048),
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
+							PlatformArgs: PlatformArgs{
+								OSFamily: nil,
+								Arch:     nil,
+							},
+						},
+						Count: Count{
+							Value: aws.Int(1),
+							AdvancedCount: AdvancedCount{
+								workloadType: "Load Balanced Web Service",
 							},
 						},
 						ExecuteCommand: ExecuteCommand{
@@ -166,6 +237,10 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./frontend/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
 				},
 			},
 			wantedTestdata: "lb-svc.yml",
@@ -1176,6 +1251,92 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
+		})
+	}
+}
+
+func TestLoadBalancedWebService_ValidateForWindows(t *testing.T) {
+	testCases := map[string]struct {
+		in        *LoadBalancedWebService
+		wantedErr error
+	}{
+		"returns nil if not windows": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("doors/amp64")),
+							PlatformArgs: PlatformArgs{
+								OSFamily: nil,
+								Arch:     nil,
+							},
+						},
+						ExecuteCommand: ExecuteCommand{
+							Config: ExecuteCommandConfig{
+								Enable: aws.Bool(true)},
+						},
+					},
+				},
+			},
+			wantedErr: nil,
+		},
+		"throws error when windows and exec both present": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{
+							PlatformString: nil,
+							PlatformArgs: PlatformArgs{
+								OSFamily: aws.String("Windows-Server-2019-Full"),
+								Arch:     aws.String("amd64"),
+							},
+						},
+						ExecuteCommand: ExecuteCommand{
+							Config: ExecuteCommandConfig{
+								Enable: aws.Bool(true)},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("'exec' is not supported when deploying a Windows container"),
+		},
+		"throws error when windows and efs both present": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
+						},
+						Storage: Storage{
+							Volumes: map[string]*Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-1234"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedErr: errors.New("'EFS' is not supported when deploying a Windows container"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			err := tc.in.windowsCompatibility()
+
+			// THEN
+			if err != nil {
+				require.EqualError(t, err, tc.wantedErr.Error(), "errors should be returned when disallowed services present")
+			}
 		})
 	}
 }

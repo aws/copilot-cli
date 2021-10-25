@@ -3,7 +3,7 @@
     "AppName": "my-app",
     "EnvName": "test",
     "WorkloadName": "dogworker",
-    "ContainerImage": "",
+    "ContainerImage": "amazon/ecs-example",
     "AddonsTemplateURL": "",
     "TaskCPU": "256",
     "TaskMemory": "512",
