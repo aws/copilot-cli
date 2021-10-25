@@ -43,11 +43,15 @@ type LoadBalancedWebService struct {
 	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
 
+	// Fields for LoadBalancedWebService that needs a Network Load Balancer.
+	dnsDelegationEnabled   bool
+	publicSubnetCIDRBlocks []string
+
 	parser loadBalancedWebSvcReadParser
 }
 
-// NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
-func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
+// NewHTTPLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
+func NewHTTPLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -79,11 +83,53 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 // a environment within an application. It creates an HTTPS listener and assumes that the environment
 // it's being deployed into has an HTTPS configured listener.
 func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
-	webSvc, err := NewLoadBalancedWebService(mft, env, app, rc)
+	webSvc, err := NewHTTPLoadBalancedWebService(mft, env, app, rc)
 	if err != nil {
 		return nil, err
 	}
 	webSvc.httpsEnabled = true
+	return webSvc, nil
+}
+
+// NewNetworkLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file. It creates a
+// Network Load Balancer, with or without an Application Load Balancer.
+func NewNetworkLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig, cidrBlocks []string) (*LoadBalancedWebService, error) {
+	parser := template.New()
+	addons, err := addon.New(aws.StringValue(mft.Name))
+	if err != nil {
+		return nil, fmt.Errorf("new addons: %w", err)
+	}
+	return &LoadBalancedWebService{
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name:   aws.StringValue(mft.Name),
+				env:    env,
+				app:    app,
+				rc:     rc,
+				image:  mft.ImageConfig.Image,
+				parser: parser,
+				addons: addons,
+			},
+			logRetention:        mft.Logging.Retention,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
+		},
+		manifest:               mft,
+		publicSubnetCIDRBlocks: cidrBlocks,
+
+		parser: parser,
+	}, nil
+}
+
+// NewNetworkLoadBalancedWebServiceWithDNS creates a new LoadBalancedWebService stack from a manifest file. It creates a
+// Network Load Balancer, with or without an Application Load Balancer, and use the delegated domain name to create a
+// friendly alias for the Network Load Balancer.
+func NewNetworkLoadBalancedWebServiceWithDNS(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig, cidrBlocks []string) (*LoadBalancedWebService, error) {
+	webSvc, err := NewNetworkLoadBalancedWebService(mft, env, app, rc, cidrBlocks)
+	if err != nil {
+		return nil, err
+	}
+	webSvc.dnsDelegationEnabled = true
 	return webSvc, nil
 }
 

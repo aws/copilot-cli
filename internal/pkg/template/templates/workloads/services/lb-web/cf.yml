@@ -24,6 +24,9 @@ Parameters:
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
+  DNSDelegated:
+    Type: String
+    AllowedValues: [ true, false ]
   LogRetention:
     Type: Number
   AddonsTemplateURL:

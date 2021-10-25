@@ -132,7 +132,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
 				}
 			} else {
-				serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc)
+				serializer, err = stack.NewHTTPLoadBalancedWebService(t, env.Name, app.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 				}
