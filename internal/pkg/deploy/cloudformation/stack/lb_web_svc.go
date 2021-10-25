@@ -30,6 +30,7 @@ const (
 	LBWebServiceTargetContainerParamKey = "TargetContainer"
 	LBWebServiceTargetPortParamKey      = "TargetPort"
 	LBWebServiceStickinessParamKey      = "Stickiness"
+	LBWebServiceDNSDelegatedParamKey    = "DNSDelegated"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -282,6 +283,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 		},
 		{
+			ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegated())),
+		},
+		{
 			ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
 			ParameterValue: targetContainer,
 		},
@@ -294,6 +299,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
 		},
 	}...), nil
+}
+
+func (s *LoadBalancedWebService) dnsDelegated() bool {
+	return s.dnsDelegationEnabled || s.httpsEnabled
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized

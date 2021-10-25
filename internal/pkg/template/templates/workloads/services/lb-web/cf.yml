@@ -46,6 +46,8 @@ Conditions:
       - !Condition HTTPSLoadBalancer
   HTTPSLoadBalancer:
     !Equals [!Ref HTTPSEnabled, true]
+  HasAssociatedDomain:
+    !Equals [!Ref DNSDelegated, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   IsDefaultRootPath:
