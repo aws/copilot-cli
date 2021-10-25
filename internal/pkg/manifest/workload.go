@@ -503,14 +503,14 @@ type TaskConfig struct {
 }
 
 // TaskPlatform returns the platform for the service.
-func (t *TaskConfig) TaskPlatform() (*string, error) {
+func (t *TaskConfig) TaskPlatform() *string {
 	if t.Platform.IsEmpty() {
-		return nil, nil
+		return nil
 	}
 	if t.IsWindows() {
-		return aws.String(platformString(OSWindows, t.Platform.Arch())), nil
+		return aws.String(platformString(OSWindows, t.Platform.Arch()))
 	}
-	return aws.String(platformString(t.Platform.OS(), t.Platform.Arch())), nil
+	return aws.String(platformString(t.Platform.OS(), t.Platform.Arch()))
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.

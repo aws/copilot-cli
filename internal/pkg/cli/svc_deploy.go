@@ -396,7 +396,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArgumen
 func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-		TaskPlatform() (*string, error)
+		TaskPlatform() *string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
@@ -407,10 +407,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
-	platform, err := mf.TaskPlatform()
-	if err != nil {
-		return nil, fmt.Errorf("get platform for service: %w", err)
-	}
+	platform := mf.TaskPlatform()
 	return &dockerengine.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
