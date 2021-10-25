@@ -32,7 +32,8 @@ import (
 )
 
 const (
-	fmtSecretParameterName = "/copilot/%s/%s/secrets/%s"
+	fmtSecretParameterName                       = "/copilot/%s/%s/secrets/%s"
+	fmtSecretParameterNameManifestRecommendation = "/copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/%s"
 )
 
 const (
@@ -414,12 +415,12 @@ func (o *secretInitOpts) RecommendActions() error {
 			if _, ok := secretsPerEnv[envName]; !ok {
 				secretsPerEnv[envName] = make(map[string]string)
 			}
-			secretsPerEnv[envName][template.ToSnakeCaseFunc(secretName)] = fmt.Sprintf(fmtSecretParameterName, o.appName, envName, secretName)
+			secretsPerEnv[envName][template.ToSnakeCaseFunc(secretName)] = fmt.Sprintf(fmtSecretParameterNameManifestRecommendation, secretName)
 		}
 	}
 
 	templateRaw := `{{range $env, $secrets := .SecretsPerEnv -}}
-{{$env}}
+{{$env}}:
   secrets: {{range $secretName, $secretValueFrom := $secrets}}
     {{$secretName}}: {{$secretValueFrom}}
   {{- end}}
