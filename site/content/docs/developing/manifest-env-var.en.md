@@ -1,4 +1,4 @@
-# Environment Variables in Manifest
+# Environment Variables in the Manifest
 
 ## Shell environment variables
 It’s possible to use environment variables in your shell to populate values in your manifest files:
