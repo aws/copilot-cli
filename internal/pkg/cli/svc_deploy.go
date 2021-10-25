@@ -51,6 +51,10 @@ const (
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
 )
 
+var aliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
+	color.HighlightCode("http.alias"),
+	color.HighlightCode("copilot app init --domain example.com"))
+
 type deployWkldVars struct {
 	appName        string
 	name           string
@@ -72,6 +76,7 @@ type deploySvcOpts struct {
 	ws                  wsSvcDirReader
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator     func(app, env string) interpolator
 	s3                  artifactUploader
 	cmd                 runner
 	addons              templater
@@ -135,12 +140,17 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 			}
 			return d, nil
 		},
-		cmd:            exec.NewCmd(),
-		sessProvider:   sessions.NewProvider(),
-		snsTopicGetter: deployStore,
+		newInterpolator: newManifestInterpolator,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessions.NewProvider(),
+		snsTopicGetter:  deployStore,
 	}
 	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
+}
+
+func newManifestInterpolator(app, env string) interpolator {
+	return manifest.NewInterpolator(app, env)
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -447,7 +457,11 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest file: %w", o.name, err)
 	}
-	mft, err := o.unmarshal(raw)
+	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
+	}
+	mft, err := o.unmarshal([]byte(interpolated))
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
@@ -455,7 +469,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
-	if err := mft.Validate(); err != nil {
+	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
 	}
 	o.appliedManifest = envMft // cache the results.
@@ -534,6 +548,10 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
+		if o.targetApp.Domain == "" && !t.Alias.IsEmpty() {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -547,6 +565,10 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
+		if o.targetApp.Domain == "" && t.Alias != nil {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
 		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
 			return apprunner.New(s)
 		})

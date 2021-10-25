@@ -1,3 +1,4 @@
+PlatformVersion: {{.Platform.Version}}
 Cluster:
   Fn::ImportValue:
     !Sub '${AppName}-${EnvName}-ClusterId'

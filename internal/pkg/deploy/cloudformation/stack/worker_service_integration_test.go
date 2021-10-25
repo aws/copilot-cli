@@ -40,7 +40,7 @@ func TestWorkerService_Template(t *testing.T) {
 	envMft, err := mft.ApplyEnv(envName)
 	require.NoError(t, err)
 
-	err = mft.Validate()
+	err = envMft.Validate()
 	require.NoError(t, err)
 
 	v, ok := envMft.(*manifest.WorkerService)

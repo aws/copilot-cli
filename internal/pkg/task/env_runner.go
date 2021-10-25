@@ -36,6 +36,9 @@ type EnvRunner struct {
 	App string
 	Env string
 
+	// Platform configuration
+	OS   string
+
 	// Interfaces to interact with dependencies. Must not be nil.
 	VPCGetter            VPCGetter
 	ClusterGetter        ClusterGetter
@@ -74,13 +77,22 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
 
+	platformVersion := "LATEST"
+	enableExec := true
+	if IsValidWindowsOS(r.OS) {
+		platformVersion = "1.0.0"
+		enableExec = false
+	}
+
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
-		Cluster:        cluster,
-		Count:          r.Count,
-		Subnets:        subnets,
-		SecurityGroups: securityGroups,
-		TaskFamilyName: taskFamilyName(r.GroupName),
-		StartedBy:      startedBy,
+		Cluster:         cluster,
+		Count:           r.Count,
+		Subnets:         subnets,
+		SecurityGroups:  securityGroups,
+		TaskFamilyName:  taskFamilyName(r.GroupName),
+		StartedBy:       startedBy,
+		PlatformVersion: platformVersion,
+		EnableExec:      enableExec,
 	})
 	if err != nil {
 		return nil, &errRunTask{

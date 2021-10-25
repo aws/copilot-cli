@@ -81,6 +81,8 @@ const (
 	entrypointFlag      = "entrypoint"
 	taskDefaultFlag     = "default"
 	generateCommandFlag = "generate-cmd"
+	osFlag              = "platform-os"
+	archFlag            = "platform-arch"
 
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
@@ -162,6 +164,8 @@ Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
 Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
 Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+	osFlagDescription   = fmt.Sprintf(`Optional. Operating system of the task. Must be specified along with '%s'.`, archFlag)
+	archFlagDescription = fmt.Sprintf(`Optional. Architecture of the task. Must be specified along with '%s'.`, osFlag)
 
 	secretNameFlagDescription = fmt.Sprintf(`The name of the secret.
 Mutually exclusive with the --%s flag.`, inputFilePathFlag)

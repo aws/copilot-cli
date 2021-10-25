@@ -137,6 +137,7 @@ func (s *WorkerService) Template() (string, error) {
 		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
 		Subscribe:                      subscribe,
 		Publish:                        publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)

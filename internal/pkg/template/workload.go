@@ -40,6 +40,13 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
+
+	// RuntimePlatform configuration.
+	OSLinux             = "LINUX"
+	OSWindowsServerFull = "WINDOWS_SERVER_2019_FULL"
+	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
+
+	ArchX86 = "X86_64"
 )
 
 // Constants for ARN options.
@@ -51,7 +58,8 @@ var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
 		"loggroup",
-		"envvars",
+		"envvars-container",
+		"envvars-common",
 		"secrets",
 		"executionrole",
 		"taskrole",
@@ -76,6 +84,11 @@ var (
 		"publish",
 		"subscribe",
 	}
+
+	// Operating systems to determine Fargate platform versions.
+	osFamiliesForPV100 = []string{
+		OSWindowsServerFull, OSWindowsServerCore,
+	}
 )
 
 // WorkloadNestedStackOpts holds configuration that's needed if the workload stack has a nested stack.
@@ -98,12 +111,17 @@ type SidecarOpts struct {
 	CredsParam   *string
 	Variables    map[string]string
 	Secrets      map[string]string
-	MountPoints  []*MountPoint
+	Storage      SidecarStorageOpts
 	DockerLabels map[string]string
 	DependsOn    map[string]string
 	EntryPoint   []string
 	Command      []string
 	HealthCheck  *ContainerHealthCheck
+}
+
+// SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
+type SidecarStorageOpts struct {
+	MountPoints []*MountPoint
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -299,6 +317,37 @@ func defaultNetworkOpts() *NetworkOpts {
 	}
 }
 
+// RuntimePlatformOpts holds configuration needed for Platform configuration.
+type RuntimePlatformOpts struct {
+	OS   string
+	Arch string
+}
+
+// IsDefault returns true if the platform matches the default docker image platform of "linux/amd64".
+func (p RuntimePlatformOpts) IsDefault() bool {
+	if p.isEmpty() {
+		return true
+	}
+	if p.OS == OSLinux && p.Arch == ArchX86 {
+		return true
+	}
+	return false
+}
+
+// Version returns the Fargate platform version based on the selected os family.
+func (p RuntimePlatformOpts) Version() string {
+	for _, os := range osFamiliesForPV100 {
+		if p.OS == os {
+			return "1.0.0"
+		}
+	}
+	return "LATEST"
+}
+
+func (p RuntimePlatformOpts) isEmpty() bool {
+	return p.OS == "" && p.Arch == ""
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -315,6 +364,7 @@ type WorkloadOpts struct {
 	Storage                  *StorageOpts
 	Network                  *NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
+	Platform                 RuntimePlatformOpts
 	EntryPoint               []string
 	Command                  []string
 	DomainAlias              string
@@ -354,6 +404,7 @@ type ParseRequestDrivenWebServiceInput struct {
 	EnableHealthCheck   bool
 	EnvControllerLambda string
 	Publish             *PublishOpts
+	Platform            RuntimePlatformOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string

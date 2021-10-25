@@ -596,7 +596,7 @@ type runningTaskSelector interface {
 
 type dockerEngine interface {
 	CheckDockerEngineRunning() error
-	RedirectPlatform(string) (*string, error)
+	GetPlatform() (string, string, error)
 }
 
 type codestar interface {
@@ -622,4 +622,8 @@ type servicePauser interface {
 type timeoutError interface {
 	error
 	Timeout() bool
+}
+
+type interpolator interface {
+	Interpolate(s string) (string, error)
 }
