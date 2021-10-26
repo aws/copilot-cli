@@ -26,7 +26,7 @@ Predefined variables are reserved variables that will be resolved by Copilot whe
 
 ```yaml
 secrets:
-   DB_PASSWORD: /copilot/my-app/${COPILOT_ENVIRONMENT_NAME}/secrets/db_password
+   DB_PASSWORD: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/db_password
 ```
 
 Copilot will substitute `${COPILOT_APPLICATION_NAME}` and `${COPILOT_ENVIRONMENT_NAME}` with the names of the application and the environment where the workload is deployed. For example, when you run
@@ -34,6 +34,3 @@ Copilot will substitute `${COPILOT_APPLICATION_NAME}` and `${COPILOT_ENVIRONMENT
 $ copilot svc deploy --app my-app --env test
 ```
 to deploy the service to the `test` environment in your `my-app` application, Copilot will resolve `/copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/db_password` to `/copilot/my-app/test/secrets/db_password`. (For more information of secret injection, see [here](../developing/secrets.en.md)).
-
-!!! Alert
-    :warning: You cannot override a predefined variable with your shell environment variable. For example, you cannot set `COPILOT_APPLICATION_NAME` to `my-other-app` in your shell environment, and run `copilot svc deploy --app my-app`.  `COPILOT_APPLICATION_NAME` will always resolve to the actual name of the application that the workload is deployed to (in this example, `my-app`), disregarding the shell environment.
