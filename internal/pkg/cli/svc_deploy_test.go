@@ -306,7 +306,7 @@ image:
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifestWithBadPlatform)).Return(string(mockManifestWithBadPlatform), nil),
 				)
 			},
-			wantErr: fmt.Errorf("unmarshal service serviceA manifest: unmarshal to load balanced web service: validate platform: platform %s is invalid; the valid platform is: %s", "linus/abc123", "linux/amd64"),
+			wantErr: errors.New("validate manifest against environment : validate \"platform\": platform linus/abc123 is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
 		},
 		"success with valid platform": {
 			inputSvc: "serviceA",

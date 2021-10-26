@@ -596,7 +596,7 @@ type runningTaskSelector interface {
 
 type dockerEngine interface {
 	CheckDockerEngineRunning() error
-	RedirectPlatform(string) (*string, error)
+	GetPlatform() (string, string, error)
 }
 
 type codestar interface {

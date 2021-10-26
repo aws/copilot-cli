@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
+func TestLoadBalancedWebService_Validate(t *testing.T) {
 	testImageConfig := ImageWithPortAndHealthcheck{
 		ImageWithPort: ImageWithPort{
 			Image: Image{
@@ -117,6 +117,18 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
 		},
+		"error if fail to validate load balancer target": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRule{
+						TargetContainer: aws.String("foo"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate load balancer target: `,
+		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{Name: aws.String("mockName")},
@@ -155,7 +167,7 @@ func TestLoadBalancedWebServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestBackendServiceConfig_Validate(t *testing.T) {
+func TestBackendService_Validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheckAndOptionalPort{
 		ImageWithOptionalPort: ImageWithOptionalPort{
 			Image: Image{
@@ -282,7 +294,7 @@ func TestBackendServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
+func TestRequestDrivenWebService_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config RequestDrivenWebService
 
@@ -337,7 +349,7 @@ func TestRequestDrivenWebServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestWorkerServiceConfig_Validate(t *testing.T) {
+func TestWorkerService_Validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
 			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
@@ -475,7 +487,7 @@ func TestWorkerServiceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestScheduledJobConfig_Validate(t *testing.T) {
+func TestScheduledJob_Validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
 			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
@@ -794,7 +806,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 		"error if fail to validate platform": {
 			TaskConfig: TaskConfig{
 				Platform: PlatformArgsOrString{
-					PlatformString: (*PlatformString)(aws.String("foobar")),
+					PlatformString: (*PlatformString)(aws.String("")),
 				},
 			},
 			wantedErrorPrefix: `validate "platform": `,
@@ -841,52 +853,60 @@ func TestTaskConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPlatformString_Validate(t *testing.T) {
+func TestPlatformArgsOrString_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		in     PlatformString
+		in     PlatformArgsOrString
 		wanted error
 	}{
 		"error if platform string is invalid": {
-			in:     PlatformString("foobar"),
-			wanted: fmt.Errorf("platform foobar is invalid; the valid platform is: linux/amd64"),
+			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar"))},
+			wanted: fmt.Errorf("platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
 		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
-
-			if tc.wanted != nil {
-				require.EqualError(t, err, tc.wanted.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-func TestPlatformArgs_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		in     PlatformArgs
-		wanted error
-	}{
 		"error if only osfamily is specified": {
-			in: PlatformArgs{
+		in: PlatformArgsOrString{
+			PlatformArgs: PlatformArgs{
 				OSFamily: aws.String("linux"),
+			},
+		},
+			wanted: fmt.Errorf(`fields "osfamily" and "architecture" must either both be specified or both be empty`),
+		},
+		"error if only architecture is specified": {
+			in: PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					Arch: aws.String("X86_64"),
+				},
 			},
 			wanted: fmt.Errorf(`fields "osfamily" and "architecture" must either both be specified or both be empty`),
 		},
 		"error if osfamily is invalid": {
-			in: PlatformArgs{
+		in: PlatformArgsOrString{
+			PlatformArgs: PlatformArgs{
 				OSFamily: aws.String("foo"),
 				Arch:     aws.String("amd64"),
 			},
-			wanted: fmt.Errorf("OS foo is invalid; the valid operating system is: linux"),
+		},
+			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
 		},
 		"error if arch is invalid": {
-			in: PlatformArgs{
+		in: PlatformArgsOrString{
+			PlatformArgs: PlatformArgs{
 				OSFamily: aws.String("linux"),
 				Arch:     aws.String("bar"),
 			},
-			wanted: fmt.Errorf("architecture bar is invalid; the valid architecture is: amd64"),
+		},
+			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+		},
+		"return nil if platform string valid": {
+			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/amd64"))},
+		},
+		"return nil if platform args valid": {
+			in: PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("linux"),
+					Arch:     aws.String("amd64"),
+				},
+			},
+			wanted: nil,
 		},
 	}
 	for name, tc := range testCases {
@@ -901,6 +921,7 @@ func TestPlatformArgs_Validate(t *testing.T) {
 		})
 	}
 }
+
 func TestAdvancedCount_Validate(t *testing.T) {
 	var (
 		mockPerc    = Percentage(70)
@@ -1739,6 +1760,68 @@ func TestOverrideRule_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateLoadBalancerTarget(t *testing.T) {
+	testCases := map[string]struct {
+		in     validateLoadBalancerTargetOpts
+		wanted error
+	}{
+		"should return an error if target container doesn't exist": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule: RoutingRule{
+					TargetContainer: aws.String("foo"),
+				},
+			},
+			wanted: fmt.Errorf("target container foo doesn't exist"),
+		},
+		"should return an error if target container doesn't expose any port": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule: RoutingRule{
+					TargetContainer: aws.String("foo"),
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {},
+				},
+			},
+			wanted: fmt.Errorf("target container foo doesn't expose any port"),
+		},
+		"success with no target container set": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule:       RoutingRule{},
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {},
+				},
+			},
+		},
+		"success": {
+			in: validateLoadBalancerTargetOpts{
+				mainContainerName: "mockMainContainer",
+				routingRule: RoutingRule{
+					TargetContainerCamelCase: aws.String("foo"),
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateLoadBalancerTarget(tc.in)
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())

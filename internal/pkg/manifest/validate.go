@@ -52,6 +52,13 @@ func (l LoadBalancedWebService) Validate() error {
 	if err = l.Workload.Validate(); err != nil {
 		return err
 	}
+	if err = validateLoadBalancerTarget(validateLoadBalancerTargetOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		routingRule:       l.RoutingRule,
+		sidecarConfig:     l.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate load balancer target: %w", err)
+	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
 		imageConfig:       l.ImageConfig.Image,
@@ -509,37 +516,46 @@ func (t TaskConfig) Validate() error {
 
 // Validate returns nil if PlatformArgsOrString is configured correctly.
 func (p PlatformArgsOrString) Validate() error {
-	if p.PlatformString != nil {
-		if err := p.PlatformString.Validate(); err != nil {
-			return err
-		}
+	if p.IsEmpty() {
+		return nil
 	}
-	return p.PlatformArgs.Validate()
-}
-
-// Validate returns nil if PlatformString is configured correctly.
-func (p PlatformString) Validate() error {
-	if err := validatePlatform(&p); err != nil {
-		return err
+	if !p.PlatformArgs.isEmpty() {
+		return p.PlatformArgs.Validate()
+	}
+	if p.PlatformString != nil {
+		return p.PlatformString.Validate()
 	}
 	return nil
 }
 
-// Validate returns nil if PlatformArgsOrString is configured correctly.
+// Validate returns nil if PlatformArgs is configured correctly.
 func (p PlatformArgs) Validate() error {
-	if p.isEmpty() {
-		return nil
-	}
 	if !p.bothSpecified() {
 		return errors.New(`fields "osfamily" and "architecture" must either both be specified or both be empty`)
 	}
-	if err := validateOS(p.OSFamily); err != nil {
-		return err
+	var ss []string
+	for _, p := range validAdvancedPlatforms {
+		ss = append(ss, p.String())
 	}
-	if err := validateArch(p.Arch); err != nil {
-		return err
+	prettyValidPlatforms := strings.Join(ss, ", ")
+
+	os := strings.ToLower(aws.StringValue(p.OSFamily))
+	arch := strings.ToLower(aws.StringValue(p.Arch))
+	for _, vap := range validAdvancedPlatforms {
+		if os == aws.StringValue(vap.OSFamily) && arch == aws.StringValue(vap.Arch) {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", p.String(), prettyValidPlatforms)
+}
+
+func (p PlatformString) Validate() error {
+	for _, validPlatform := range ValidShortPlatforms {
+		if strings.ToLower(string(p)) == validPlatform {
+			return nil
+		}
+	}
+	return fmt.Errorf("platform %s is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
 }
 
 // Validate returns nil if Count is configured correctly.
@@ -1004,9 +1020,36 @@ type validateDependenciesOpts struct {
 	imageConfig       Image
 }
 
+type validateLoadBalancerTargetOpts struct {
+	mainContainerName string
+	routingRule       RoutingRule
+	sidecarConfig     map[string]*SidecarConfig
+}
+
 type containerDependency struct {
 	dependsOn   DependsOn
 	isEssential bool
+}
+
+func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
+	if opts.routingRule.TargetContainer == nil && opts.routingRule.TargetContainerCamelCase == nil {
+		return nil
+	}
+	targetContainer := aws.StringValue(opts.routingRule.TargetContainerCamelCase)
+	if opts.routingRule.TargetContainer != nil {
+		targetContainer = aws.StringValue(opts.routingRule.TargetContainer)
+	}
+	if targetContainer == opts.mainContainerName {
+		return nil
+	}
+	sidecar, ok := opts.sidecarConfig[targetContainer]
+	if !ok {
+		return fmt.Errorf("target container %s doesn't exist", targetContainer)
+	}
+	if sidecar.Port == nil {
+		return fmt.Errorf("target container %s doesn't expose any port", targetContainer)
+	}
+	return nil
 }
 
 func validateContainerDeps(opts validateDependenciesOpts) error {
@@ -1134,3 +1177,4 @@ func isValidSubSvcName(name string) bool {
 	trailingMatch := trailingPunctRegExp.FindStringSubmatch(name)
 	return len(trailingMatch) == 0
 }
+

@@ -73,6 +73,7 @@ type VPC struct {
 // Subnet contains the ID and name of a subnet.
 type Subnet struct {
 	Resource
+	CIDRBlock string
 }
 
 // String formats the elements of a VPC into a display-ready string.
@@ -244,6 +245,7 @@ func (c *EC2) ListVPCSubnets(vpcID string) (*VPCSubnets, error) {
 				ID:   aws.StringValue(subnet.SubnetId),
 				Name: name,
 			},
+			CIDRBlock: aws.StringValue(subnet.CidrBlock),
 		}
 		if _, ok := publicSubnetMap[s.ID]; ok {
 			publicSubnets = append(publicSubnets, s)
