@@ -173,6 +173,9 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	if err = r.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
 	}
+	if err = r.InstanceConfig.Validate(); err != nil {
+		return err
+	}
 	if err = r.RequestDrivenWebServiceHttpConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
@@ -549,13 +552,18 @@ func (p PlatformArgs) Validate() error {
 	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", p.String(), prettyValidPlatforms)
 }
 
+// Validate returns nil if PlatformString is configured correctly.
 func (p PlatformString) Validate() error {
+	args := strings.Split(string(p), "/")
+	if len(args) != 2 {
+		return fmt.Errorf("platform '%s' must be in the format [OS]/[Arch]", string(p))
+	}
 	for _, validPlatform := range ValidShortPlatforms {
 		if strings.ToLower(string(p)) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
+	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
 }
 
 // Validate returns nil if Count is configured correctly.

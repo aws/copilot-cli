@@ -317,6 +317,29 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "image": `,
 		},
+		"error if fail to validate instance": {
+			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+						},
+						Port: uint16P(80),
+					},
+					InstanceConfig: AppRunnerInstanceConfig{
+						CPU:      nil,
+						Memory:   nil,
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("mockPlatform")),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("validate \"platform\": platform 'mockPlatform' must be in the format [OS]/[Arch]"),
+		},
 		"error if name is not set": {
 			config: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
@@ -859,8 +882,12 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 		wanted error
 	}{
 		"error if platform string is invalid": {
-			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar"))},
-			wanted: fmt.Errorf("platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar/amd64"))},
+			wanted: fmt.Errorf("platform 'foobar/amd64' is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+		},
+		"error if only half of platform string is specified": {
+			in: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux"))},
+			wanted: fmt.Errorf("platform 'linux' must be in the format [OS]/[Arch]"),
 		},
 		"error if only osfamily is specified": {
 		in: PlatformArgsOrString{

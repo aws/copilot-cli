@@ -689,7 +689,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 // OS returns the operating system family.
 func (p *PlatformArgsOrString) OS() string {
 	if p := aws.StringValue((*string)(p.PlatformString)); p != "" {
-		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
+		args := strings.Split(p, "/")
 		return strings.ToLower(args[0])
 	}
 	return strings.ToLower(aws.StringValue(p.PlatformArgs.OSFamily))
@@ -698,7 +698,7 @@ func (p *PlatformArgsOrString) OS() string {
 // Arch returns the architecture.
 func (p *PlatformArgsOrString) Arch() string {
 	if p := aws.StringValue((*string)(p.PlatformString)); p != "" {
-		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
+		args := strings.Split(p, "/")
 		return strings.ToLower(args[1])
 	}
 	return strings.ToLower(aws.StringValue(p.PlatformArgs.Arch))
