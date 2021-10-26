@@ -53,31 +53,7 @@ type LoadBalancedWebService struct {
 
 // NewHTTPLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
 func NewHTTPLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
-	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
-	return &LoadBalancedWebService{
-		ecsWkld: &ecsWkld{
-			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
-				parser: parser,
-				addons: addons,
-			},
-			logRetention:        mft.Logging.Retention,
-			tc:                  mft.TaskConfig,
-			taskDefOverrideFunc: override.CloudFormationTemplate,
-		},
-		manifest:     mft,
-		httpsEnabled: false,
-
-		parser: parser,
-	}, nil
+	return newLoadBalancedWebService(mft, env, app, rc)
 }
 
 // NewHTTPSLoadBalancedWebService  creates a new LoadBalancedWebService stack from its manifest that needs to be deployed to
@@ -95,31 +71,12 @@ func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, a
 // NewNetworkLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file. It creates a
 // Network Load Balancer, with or without an Application Load Balancer.
 func NewNetworkLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig, cidrBlocks []string) (*LoadBalancedWebService, error) {
-	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
+	s, err := newLoadBalancedWebService(mft, env, app, rc)
 	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
+		return nil, err
 	}
-	return &LoadBalancedWebService{
-		ecsWkld: &ecsWkld{
-			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
-				parser: parser,
-				addons: addons,
-			},
-			logRetention:        mft.Logging.Retention,
-			tc:                  mft.TaskConfig,
-			taskDefOverrideFunc: override.CloudFormationTemplate,
-		},
-		manifest:               mft,
-		publicSubnetCIDRBlocks: cidrBlocks,
-
-		parser: parser,
-	}, nil
+	s.publicSubnetCIDRBlocks = cidrBlocks
+	return s, nil
 }
 
 // NewNetworkLoadBalancedWebServiceWithDNS creates a new LoadBalancedWebService stack from a manifest file. It creates a
@@ -299,6 +256,34 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
 		},
 	}...), nil
+}
+
+func newLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
+	parser := template.New()
+	addons, err := addon.New(aws.StringValue(mft.Name))
+	if err != nil {
+		return nil, fmt.Errorf("new addons: %w", err)
+	}
+	return &LoadBalancedWebService{
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name:   aws.StringValue(mft.Name),
+				env:    env,
+				app:    app,
+				rc:     rc,
+				image:  mft.ImageConfig.Image,
+				parser: parser,
+				addons: addons,
+			},
+			logRetention:        mft.Logging.Retention,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
+		},
+		manifest:     mft,
+		httpsEnabled: false,
+
+		parser: parser,
+	}, nil
 }
 
 func (s *LoadBalancedWebService) dnsDelegated() bool {
