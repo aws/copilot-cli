@@ -504,8 +504,8 @@ type TaskConfig struct {
 	Storage        Storage              `yaml:"storage"`
 }
 
-// TaskPlatform returns the platform for the service.
-func (t *TaskConfig) TaskPlatform() *string {
+// ContainerPlatform returns the platform for the service.
+func (t *TaskConfig) ContainerPlatform() *string {
 	if t.Platform.IsEmpty() {
 		return nil
 	}

@@ -316,7 +316,7 @@ func TestRequestDrivenWebService_Port(t *testing.T) {
 	require.Equal(t, uint16(80), actual)
 }
 
-func TestRequestDrivenWebService_TaskPlatform(t *testing.T) {
+func TestRequestDrivenWebService_ContainerPlatform(t *testing.T) {
 	// GIVEN
 	mft := RequestDrivenWebService{
 		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
@@ -331,7 +331,7 @@ func TestRequestDrivenWebService_TaskPlatform(t *testing.T) {
 		},
 	}
 	// WHEN
-	actual := mft.TaskPlatform()
+	actual := mft.ContainerPlatform()
 
 	// THEN
 	require.Equal(t, aws.String("ososos/arch"), actual)
@@ -347,7 +347,7 @@ func TestRequestDrivenWebService_TaskPlatform(t *testing.T) {
 			},
 	}
 	// WHEN
-	actual = mft.TaskPlatform()
+	actual = mft.ContainerPlatform()
 
 	// THEN
 	require.Equal(t, aws.String("linux/amd64"), actual)

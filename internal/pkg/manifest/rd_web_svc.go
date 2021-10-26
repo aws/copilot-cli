@@ -90,8 +90,8 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the platform for the service.
-func (s *RequestDrivenWebService) TaskPlatform() *string {
+// ContainerPlatform returns the platform for the service.
+func (s *RequestDrivenWebService) ContainerPlatform() *string {
 	if s.InstanceConfig.Platform.IsEmpty() {
 		return aws.String(platformString(OSLinux, ArchAMD64))
 	}

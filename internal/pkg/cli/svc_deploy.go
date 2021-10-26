@@ -396,18 +396,18 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArgumen
 func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-		TaskPlatform() *string
+		ContainerPlatform() *string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and TaskPlatform()", name)
+		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
 	}
 	var tags []string
 	if imageTag != "" {
 		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
-	platform := mf.TaskPlatform()
+	platform := mf.ContainerPlatform()
 	return &dockerengine.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
