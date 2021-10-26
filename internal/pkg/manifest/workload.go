@@ -66,6 +66,8 @@ var (
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
+		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchX86)},
+		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchX86)},
@@ -578,7 +580,6 @@ func (c *vpcConfig) isEmpty() bool {
 func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	type manifest interface {
 		WorkloadManifest
-		windowsCompatibility() error
 	}
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
@@ -603,9 +604,6 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	}
 	if err := yaml.Unmarshal(in, m); err != nil {
 		return nil, fmt.Errorf("unmarshal manifest for %s: %w", typeVal, err)
-	}
-	if err := m.windowsCompatibility(); err != nil {
-		return nil, err
 	}
 	return m, nil
 }

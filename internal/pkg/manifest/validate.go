@@ -103,6 +103,14 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	if l.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: l.ExecuteCommand.Enable,
+			efsVolumes: l.Storage.Volumes,
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -154,6 +162,14 @@ func (b BackendServiceConfig) Validate() error {
 	for ind, taskDefOverride := range b.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
+		}
+	}
+	if b.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: b.ExecuteCommand.Enable,
+			efsVolumes: b.Storage.Volumes,
+		}); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -238,6 +254,14 @@ func (w WorkerServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	if w.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: w.ExecuteCommand.Enable,
+			efsVolumes: w.Storage.Volumes,
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -295,6 +319,14 @@ func (s ScheduledJobConfig) Validate() error {
 	for ind, taskDefOverride := range s.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
+		}
+	}
+	if s.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: s.ExecuteCommand.Enable,
+			efsVolumes: s.Storage.Volumes,
+		}); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -523,10 +555,14 @@ func (p PlatformArgsOrString) Validate() error {
 		return nil
 	}
 	if !p.PlatformArgs.isEmpty() {
-		return p.PlatformArgs.Validate()
+		if err := p.PlatformArgs.Validate(); err != nil {
+			return err
+		}
 	}
 	if p.PlatformString != nil {
-		return p.PlatformString.Validate()
+		if err := p.PlatformString.Validate(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -910,6 +946,15 @@ func (r AppRunnerInstanceConfig) Validate() error {
 	if err := r.Platform.Validate(); err != nil {
 		return fmt.Errorf(`validate "platform": %w`, err)
 	}
+	// Error out if user added Windows as platform in manifest.
+	if isWindowsPlatform(r.Platform) {
+		return errAppRunnerInvalidPlatformWindows
+	}
+	if !r.Platform.IsEmpty() {
+		if r.Platform.Arch() != ArchAMD64 || r.Platform.Arch() != ArchX86 {
+			return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)
+		}
+	}
 	return nil
 }
 
@@ -1037,6 +1082,11 @@ type validateLoadBalancerTargetOpts struct {
 type containerDependency struct {
 	dependsOn   DependsOn
 	isEssential bool
+}
+
+type validateWindowsOpts struct {
+	execEnabled *bool
+	efsVolumes map[string]*Volume
 }
 
 func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
@@ -1184,5 +1234,19 @@ func isValidSubSvcName(name string) bool {
 
 	trailingMatch := trailingPunctRegExp.FindStringSubmatch(name)
 	return len(trailingMatch) == 0
+}
+
+func validateWindows(opts validateWindowsOpts) error {
+	// Exec is not supported for Windows architectures.
+	if aws.BoolValue(opts.execEnabled) {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	// EFS is not supported for Windows architectures.
+	for _, volume := range opts.efsVolumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
+		}
+	}
+	return nil
 }
 
