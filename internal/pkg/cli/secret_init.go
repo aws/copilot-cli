@@ -30,7 +30,7 @@ import (
 
 const (
 	fmtSecretParameterName           = "/copilot/%s/%s/secrets/%s"
-	fmtSecretParameterNameMftExample = "/copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_APPLICATION_NAME}/secrets/%s"
+	fmtSecretParameterNameMftExample = "/copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/%s"
 )
 
 const (
