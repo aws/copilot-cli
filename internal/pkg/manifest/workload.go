@@ -505,14 +505,14 @@ type TaskConfig struct {
 }
 
 // ContainerPlatform returns the platform for the service.
-func (t *TaskConfig) ContainerPlatform() *string {
+func (t *TaskConfig) ContainerPlatform() string {
 	if t.Platform.IsEmpty() {
-		return nil
+		return ""
 	}
 	if t.IsWindows() {
-		return aws.String(platformString(OSWindows, t.Platform.Arch()))
+		return platformString(OSWindows, t.Platform.Arch())
 	}
-	return aws.String(platformString(t.Platform.OS(), t.Platform.Arch()))
+	return platformString(t.Platform.OS(), t.Platform.Arch())
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.

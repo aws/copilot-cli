@@ -91,11 +91,11 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 }
 
 // ContainerPlatform returns the platform for the service.
-func (s *RequestDrivenWebService) ContainerPlatform() *string {
+func (s *RequestDrivenWebService) ContainerPlatform() string {
 	if s.InstanceConfig.Platform.IsEmpty() {
-		return aws.String(platformString(OSLinux, ArchAMD64))
+		return platformString(OSLinux, ArchAMD64)
 	}
-	return aws.String(platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch()))
+	return platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.

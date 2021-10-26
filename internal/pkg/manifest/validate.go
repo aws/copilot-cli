@@ -950,6 +950,7 @@ func (r AppRunnerInstanceConfig) Validate() error {
 	if isWindowsPlatform(r.Platform) {
 		return errAppRunnerInvalidPlatformWindows
 	}
+	// This extra check is because ARM architectures won't work for App Runner services.
 	if !r.Platform.IsEmpty() {
 		if r.Platform.Arch() != ArchAMD64 || r.Platform.Arch() != ArchX86 {
 			return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)

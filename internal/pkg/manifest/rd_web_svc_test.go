@@ -334,7 +334,7 @@ func TestRequestDrivenWebService_ContainerPlatform(t *testing.T) {
 	actual := mft.ContainerPlatform()
 
 	// THEN
-	require.Equal(t, aws.String("ososos/arch"), actual)
+	require.Equal(t, "ososos/arch", actual)
 
 	// GIVEN
 	mft = RequestDrivenWebService{
@@ -350,7 +350,7 @@ func TestRequestDrivenWebService_ContainerPlatform(t *testing.T) {
 	actual = mft.ContainerPlatform()
 
 	// THEN
-	require.Equal(t, aws.String("linux/amd64"), actual)
+	require.Equal(t, "linux/amd64", actual)
 	}
 
 func TestRequestDrivenWebService_Publish(t *testing.T) {

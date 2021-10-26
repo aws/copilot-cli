@@ -396,7 +396,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArgumen
 func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-		ContainerPlatform() *string
+		ContainerPlatform() string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
@@ -414,7 +414,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
-		Platform:   aws.StringValue(platform),
+		Platform:   platform,
 		Tags:       tags,
 	}, nil
 }
