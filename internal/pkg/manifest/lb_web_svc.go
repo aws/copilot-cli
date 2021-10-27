@@ -205,16 +205,15 @@ func (r *RoutingRule) targetContainer() *string {
 
 // NetworkLoadBalancerConfiguration holds options for a network load balancer
 type NetworkLoadBalancerConfiguration struct {
-	Alias           Alias                   `yaml:"alias"`
-	Port            *string                 `yaml:"port"` // TODO: Needs to be a "port" to accept port/protocol
+	Port            *string                 `yaml:"port"`
 	HealthCheck     HealthCheckArgsOrString `yaml:"healthcheck"`
 	TargetContainer *string                 `yaml:"target_container"`
 	TargetPort      *int                    `yaml:"target_port"`
 	SSLPolicy       *string                 `yaml:"ssl_policy"`
 }
 
-func (c *NetworkLoadBalancerConfiguration) isEmpty() bool {
-	return c.Alias.IsEmpty() && c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
+func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
 }
 
 // Enabled returns true if network load balancer is enabled.

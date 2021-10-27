@@ -117,7 +117,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
 		},
-		"error if fail to validate load balancer target": {
+		"error if fail to validate HTTP load balancer target": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
@@ -127,7 +127,24 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate load balancer target: `,
+			wantedErrorMsgPrefix: `validate HTTP load balancer target: `,
+		},
+		"error if fail to validate network load balancer target": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRule{
+						TargetContainer: aws.String("mockName"),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("443"),
+						TargetContainer: aws.String("foo"),
+					},
+
+				},
+			},
+			wantedErrorMsgPrefix: `validate network load balancer target: `,
 		},
 		"error if fail to validate dependencies": {
 			lbConfig: LoadBalancedWebService{
@@ -804,6 +821,7 @@ func TestImage_Validate(t *testing.T) {
 		})
 	}
 }
+
 func TestDependsOn_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     DependsOn
@@ -828,6 +846,7 @@ func TestDependsOn_Validate(t *testing.T) {
 		})
 	}
 }
+
 func TestRoutingRule_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		RoutingRule RoutingRule
@@ -856,6 +875,43 @@ func TestRoutingRule_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.RoutingRule.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		nlb NetworkLoadBalancerConfiguration
+
+		wantedErrorMsgPrefix string
+		wantedError          error
+	}{
+		"success if empty": {
+			nlb: NetworkLoadBalancerConfiguration{},
+		},
+		"error if port unspecified": {
+			nlb: NetworkLoadBalancerConfiguration{
+				TargetContainer: aws.String("main"),
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError: fmt.Errorf(`"port" must be specified`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.nlb.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1994,24 +2050,20 @@ func TestOverrideRule_Validate(t *testing.T) {
 
 func TestValidateLoadBalancerTarget(t *testing.T) {
 	testCases := map[string]struct {
-		in     validateLoadBalancerTargetOpts
+		in     validateTargetContainerOpts
 		wanted error
 	}{
 		"should return an error if target container doesn't exist": {
-			in: validateLoadBalancerTargetOpts{
+			in: validateTargetContainerOpts{
 				mainContainerName: "mockMainContainer",
-				routingRule: RoutingRule{
-					TargetContainer: aws.String("foo"),
-				},
+				targetContainer:   aws.String("foo"),
 			},
 			wanted: fmt.Errorf("target container foo doesn't exist"),
 		},
 		"should return an error if target container doesn't expose any port": {
-			in: validateLoadBalancerTargetOpts{
+			in: validateTargetContainerOpts{
 				mainContainerName: "mockMainContainer",
-				routingRule: RoutingRule{
-					TargetContainer: aws.String("foo"),
-				},
+				targetContainer:   aws.String("foo"),
 				sidecarConfig: map[string]*SidecarConfig{
 					"foo": {},
 				},
@@ -2019,20 +2071,18 @@ func TestValidateLoadBalancerTarget(t *testing.T) {
 			wanted: fmt.Errorf("target container foo doesn't expose any port"),
 		},
 		"success with no target container set": {
-			in: validateLoadBalancerTargetOpts{
+			in: validateTargetContainerOpts{
 				mainContainerName: "mockMainContainer",
-				routingRule:       RoutingRule{},
+				targetContainer:   nil,
 				sidecarConfig: map[string]*SidecarConfig{
 					"foo": {},
 				},
 			},
 		},
 		"success": {
-			in: validateLoadBalancerTargetOpts{
+			in: validateTargetContainerOpts{
 				mainContainerName: "mockMainContainer",
-				routingRule: RoutingRule{
-					TargetContainerCamelCase: aws.String("foo"),
-				},
+				targetContainer:   aws.String("foo"),
 				sidecarConfig: map[string]*SidecarConfig{
 					"foo": {
 						Port: aws.String("80"),
@@ -2043,7 +2093,7 @@ func TestValidateLoadBalancerTarget(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateLoadBalancerTarget(tc.in)
+			err := validateTargetContainer(tc.in)
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
