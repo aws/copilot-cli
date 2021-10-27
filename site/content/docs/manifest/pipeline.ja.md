@@ -62,6 +62,12 @@ Pipeline をトリガーするリポジトリのブランチ名。 GitHub と Co
 <span class="parent-field">source.properties.</span><a id="source-properties-connection-name" href="#source-properties-connection-name" class="field">`connection_name`</a> <span class="type">String</span>  
 既存の CodeStar Connections の接続名。指定しない場合 Copilot は接続を作成します。
 
+<span class="parent-field">source.properties.</span><a id="source-properties-output-artifact-format" href="#source-properties-output-artifact-format" class="field">`output_artifact_format`</a> <span class="type">String</span>
+任意項目。アーティファクトの出力形式です。`CODEBUILD_CLONE_REF` または `CODE_ZIP` を指定します。省略した場合、デフォルトの `CODE_ZIP` が利用されます。
+
+!!! info
+    このプロパティは、`access_token_secret` を使用する[GitHub version 1](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/appendix-github-oauth.html) ソースアクションでは利用できません。
+
 <div class="separator"></div>
 
 <a id="build" href="#build" class="field">`build`</a> <span class="type">Map</span>  
