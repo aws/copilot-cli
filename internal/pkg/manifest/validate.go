@@ -108,7 +108,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 			execEnabled: l.ExecuteCommand.Enable,
 			efsVolumes: l.Storage.Volumes,
 		}); err != nil {
-			return err
+			return fmt.Errorf("validate Windows: %w", err)
 		}
 	}
 	return nil
@@ -169,7 +169,7 @@ func (b BackendServiceConfig) Validate() error {
 			execEnabled: b.ExecuteCommand.Enable,
 			efsVolumes: b.Storage.Volumes,
 		}); err != nil {
-			return err
+			return fmt.Errorf("validate Windows: %w", err)
 		}
 	}
 	return nil
@@ -259,7 +259,7 @@ func (w WorkerServiceConfig) Validate() error {
 			execEnabled: w.ExecuteCommand.Enable,
 			efsVolumes: w.Storage.Volumes,
 		}); err != nil {
-			return err
+			return fmt.Errorf(`validate Windows: %w`, err)
 		}
 	}
 	return nil
@@ -326,7 +326,7 @@ func (s ScheduledJobConfig) Validate() error {
 			execEnabled: s.ExecuteCommand.Enable,
 			efsVolumes: s.Storage.Volumes,
 		}); err != nil {
-			return err
+			return fmt.Errorf(`validate Windows: %w`, err)
 		}
 	}
 	return nil
@@ -555,14 +555,10 @@ func (p PlatformArgsOrString) Validate() error {
 		return nil
 	}
 	if !p.PlatformArgs.isEmpty() {
-		if err := p.PlatformArgs.Validate(); err != nil {
-			return err
-		}
+		return p.PlatformArgs.Validate()
 	}
 	if p.PlatformString != nil {
-		if err := p.PlatformString.Validate(); err != nil {
-			return err
-		}
+		return p.PlatformString.Validate()
 	}
 	return nil
 }
