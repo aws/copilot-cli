@@ -2069,7 +2069,7 @@ func TestValidateWindows(t *testing.T) {
 	}{
 		"should return an error if efs specified": {
 			in: validateWindowsOpts{
-				execEnabled: aws.Bool(true),
+				execEnabled: true,
 			},
 			wantedError: fmt.Errorf(`'exec' is not supported when deploying a Windows container`),
 		},
@@ -2090,7 +2090,7 @@ func TestValidateWindows(t *testing.T) {
 		},
 		"should return nil if neither efs nor exec specified": {
 			in: validateWindowsOpts{
-				execEnabled: aws.Bool(false),
+				execEnabled: false,
 			},
 			wantedError: nil,
 
