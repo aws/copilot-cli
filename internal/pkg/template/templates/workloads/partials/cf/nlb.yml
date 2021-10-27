@@ -1,0 +1,113 @@
+PublicNetworkLoadBalancer:
+  Metadata:
+    'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'
+  Condition: CreateNLB # TODO: Add a condition in service template.
+  Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+  Properties:
+    Scheme: internet-facing
+    Subnets:
+      Fn::importValue:
+        !Sub ${AppName}-${EnvName}-PublicSubnets
+    Type: network
+
+NLBListener:
+  Type: AWS::ElasticLoadBalancingV2::Listener
+  Properties:
+    DefaultActions:
+      - TargetGroupArn: !Ref NLBTargetGroup
+        Type: forward
+    LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+    Port: {{ .NLB.Listener.Port }}
+    Protocol: {{ .NLB.Listener.Protocol }}
+{{- if eq .NLB.Listener.Protocol "TLS" }}
+    Certificates:
+      - CertificateArn:
+          !GetAtt EnvControllerAction.HTTPSCert
+    SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy}}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
+{{- end}}
+
+NLBTargetGroup:
+  Metadata:
+    'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    {{- if .HTTPHealthCheck.HealthyThreshold }}
+    HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
+    {{- end }}
+    {{- if .HTTPHealthCheck.UnhealthyThreshold }}
+    UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}}
+    {{- end }}
+    {{- if .HTTPHealthCheck.Interval }}
+    HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}}
+    {{- end }}
+    {{- if .HTTPHealthCheck.Timeout }}
+    HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
+    {{- end }}
+    Port: !Ref ContainerPort
+{{- if eq .NLB.Listener.Protocol "TLS"}}
+    Protocol: TCP
+{{- else}}
+    Protocol: {{ .NLB.Listener.Protocol }}
+{{- end}}
+    TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+{{- if ne .NLB.Listener. "TLS"}}
+{{ /*Sticky sessions are not supported with TLS listeners and TLS target groups.*/ }}
+      - Key: stickiness.enabled
+        Value: !Ref Stickiness
+{{- end}}
+      - Key: deregistration_delay.connection_termination.enabled
+        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
+      - Key: proxy_protocol_v2.enabled
+        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
+    TargetType: ip
+    VpcId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-VpcId"
+
+{{- if not .Aliases}}
+NLBDNSAlias:
+  Metadata:
+    'aws:copilot:description': 'The default alias record for the network load balancer'
+  Type: AWS::Route53::RecordSetGroup
+  Condition: DNSDelegated
+  Properties:
+    HostedZoneId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-HostedZone"
+    Comment: !Sub "Default NetworkLoadBalancer alias for service ${WorkloadName}"
+    RecordSets:
+      - Name:
+          !Join
+          - '.'
+          - - !Sub "${WorkloadName}-nlb"
+            - Fn::ImportValue:
+                !Sub "${AppName}-${EnvName}-SubDomain"
+            - ""
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt PublicNetworkLoadBalancer.PublicLoadBalancerHostedZone
+          DNSName: !GetAtt PublicNetworkLoadBalancer.PublicLoadBalancerDNSName
+{{- end}}
+
+NLBSecurityGroup:
+  Metadata:
+    'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Allow access from the network load balancer to service
+    SecurityGroupIngress:
+{{range $idx, cidr := .PublicSubnetCIDRs}}
+      - CidrIp: {{$cidr}}
+        Description: Ingress to allow access from Network Load Balancer's subnet.
+        FromPort: {{ .NLB.Listener.Port }}
+        IpProtocol: {{ .NLB.Listener.Protocol }}
+        ToPort: {{ .NLB.Listener.Port }}
+{{end}}
+    Tags:
+      - Key: Name
+        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
+    VpcId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-VpcId"

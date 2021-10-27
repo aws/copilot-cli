@@ -241,10 +241,12 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 				}).Return(&ec2.DescribeSubnetsOutput{
 					Subnets: []*ec2.Subnet{
 						{
-							SubnetId: aws.String("subnet1"),
+							SubnetId:  aws.String("subnet1"),
+							CidrBlock: aws.String("10.0.0.0/24"),
 						},
 						{
-							SubnetId: aws.String("subnet2"),
+							SubnetId:  aws.String("subnet2"),
+							CidrBlock: aws.String("10.0.1.0/24"),
 						},
 						{
 							SubnetId: aws.String("subnet3"),
@@ -254,6 +256,7 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 									Value: aws.String("mySubnet"),
 								},
 							},
+							CidrBlock: aws.String("10.0.2.0/24"),
 						},
 					},
 				}, nil)
@@ -263,19 +266,23 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 					Resource: Resource{
 						ID: "subnet2",
 					},
+					CIDRBlock: "10.0.1.0/24",
 				},
 				{
 					Resource: Resource{
 						ID:   "subnet3",
 						Name: "mySubnet",
 					},
+					CIDRBlock: "10.0.2.0/24",
 				},
 			},
 			wantedPrivateSubnets: []Subnet{
 				{
 					Resource: Resource{
 						ID: "subnet1",
-					}},
+					},
+					CIDRBlock: "10.0.0.0/24",
+				},
 			},
 		},
 	}

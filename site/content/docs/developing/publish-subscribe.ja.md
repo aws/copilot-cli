@@ -10,7 +10,8 @@ AWS 上での一般的なパターンは、メッセージの配信と処理を�
 
 ## パブリッシャーからのメッセージ送信
 
-既存のサービスから SNS へのメッセージのパブリッシュを許可するには、Manifest に `publish` フィールドを設定するだけです。トピックの機能を表す名前と、このトピックをサブスクライブする権限を付与する Worker Service のオプションリストが必要です。これらのサービスは、パブリッシャーの Manifest に書いた時点では必ずしも存在している必要はありません。
+既存のサービスから SNS へのメッセージのパブリッシュを許可するには、Manifest に `publish` フィールドを設定するだけです。
+SNS トピックの機能を表す名前を付けましょう。
 
 ```yaml
 # api サービス用の manifest.yml
@@ -19,11 +20,10 @@ type: Backend Service
 
 publish:
   topics:
-    - name: orders
-      allowed_workers: [orders-worker, receipts-worker]
+    - name: ordersTopic
 ```
 
-これにより、[SNS トピック](https://docs.aws.amazon.com/ja_jp/sns/latest/dg/welcome.html)が作成されます。また、トピックにリソースポリシーが設定され、`orders-worker` と `receipts-worker` という Copilot Service がサブスクリプションを作成できるようになります。
+これにより、[SNS トピック](https://docs.aws.amazon.com/ja_jp/sns/latest/dg/welcome.html)が作成されます。また、トピックにリソースポリシーが設定され、AWS アカウントにある SQS キューがサブスクリプションを作成できるようになります。
 
 また Copilot は、任意の SNS トピックの ARN をコンテナ内の環境変数 `COPILOT_SNS_TOPIC_ARNS` に注入します。
 
@@ -33,15 +33,17 @@ publish:
 ```javascript
 const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
 const client = new SNSClient({ region: "us-west-2" });
-const {orders} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS);
+const {ordersTopic} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS);
 const out = await client.send(new PublishCommand({
    Message: "hello",
-   TopicArn: orders,
+   TopicArn: ordersTopic,
  }));
 ```
 ## Worker Service でトピックをサブスクライブ
 
-Worker Service で既存の SNS トピックをサブスクライブするには、Worker Service の Manifest を編集する必要があります。Manifest の [`subscribe`](../manifest/worker-service/#subscribe) フィールドを使用して、Environment 内の他のサービスが公開する既存の SNS トピックへのサブスクリプションを定義することができます。この例では、前セクションの `api` サービスが公開する `orders` トピックを使用しています。また Worker Service のキューをカスタマイズして、DLQ(デッドレターキュー) を使えるようにします。`tries` フィールドは失敗したメッセージを DLQ に送信し、失敗についての詳細な分析を行う前に、何回再配送を試みるかを SQS に伝えます。
+Worker Service で既存の SNS トピックをサブスクライブするには、Worker Service の Manifest を編集する必要があります。
+Manifest の [`subscribe`](../manifest/worker-service/#subscribe) フィールドを使用して、Environment 内の他のサービスが公開する既存の SNS トピックへのサブスクリプションを定義します。この例では、前セクションの `api` サービスが公開する `ordersTopic` トピックを使用しています。また Worker Service のキューをカスタマイズして、DLQ(デッドレターキュー) を使えるようにします。
+`tries` フィールドは失敗したメッセージを DLQ に送信し、失敗についての詳細な分析する前に、何回再配送を試みるかを SQS に伝えます。
 
 
 ```yaml
@@ -50,14 +52,14 @@ type: Worker Service
 
 subscribe:
   topics:
-    - name: orders
+    - name: ordersTopic
       service: api
   queue:
     dead_letter:
       tries: 5
 ```
 
-Copilot は、この Worker Service のキューと、`api` サービスの `orders`トピックの間にサブスクリプションを作成します。また、キューの URI を、コンテナ内の環境変数 `COPILOT_QUEUE_URI` に注入します。
+Copilot は、この Worker Service のキューと、`api` サービスの `ordersTopic`トピックの間にサブスクリプションを作成します。また、キューの URI を、コンテナ内の環境変数 `COPILOT_QUEUE_URI` に注入します。
 
 ### Javascript での例
 

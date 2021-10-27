@@ -6,10 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
-	txttemplate "text/template"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -24,7 +22,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -32,7 +29,8 @@ import (
 )
 
 const (
-	fmtSecretParameterName = "/copilot/%s/%s/secrets/%s"
+	fmtSecretParameterName           = "/copilot/%s/%s/secrets/%s"
+	fmtSecretParameterNameMftExample = "/copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/%s"
 )
 
 const (
@@ -403,33 +401,15 @@ func (o *secretInitOpts) askForSecretValues() error {
 
 // RecommendActions shows recommended actions to do after running `secret init`.
 func (o *secretInitOpts) RecommendActions() error {
-	type secretInitOutput struct {
-		SecretsPerEnv map[string]map[string]string
+	secretsManifestExample := "secrets:"
+	for secretName := range o.secretValues {
+		currSecret := fmt.Sprintf("%s: %s", secretName, fmt.Sprintf(fmtSecretParameterNameMftExample, secretName))
+		secretsManifestExample = fmt.Sprintf("%s\n%s", secretsManifestExample, fmt.Sprintf("    %s", currSecret))
 	}
-
-	// Transpose secret values so that environment is the first-level key.
-	secretsPerEnv := make(map[string]map[string]string)
-	for secretName, values := range o.secretValues {
-		for envName := range values {
-			if _, ok := secretsPerEnv[envName]; !ok {
-				secretsPerEnv[envName] = make(map[string]string)
-			}
-			secretsPerEnv[envName][template.ToSnakeCaseFunc(secretName)] = fmt.Sprintf(fmtSecretParameterName, o.appName, envName, secretName)
-		}
-	}
-
-	templateRaw := `{{range $env, $secrets := .SecretsPerEnv -}}
-{{$env}}
-  secrets: {{range $secretName, $secretValueFrom := $secrets}}
-    {{$secretName}}: {{$secretValueFrom}}
-  {{- end}}
-{{end}}`
-	tmpl, _ := txttemplate.New("secretInitOutput").Parse(templateRaw)
 
 	log.Infoln("You can refer to these secrets from your manifest file by editing the `secrets` section.")
-	return tmpl.Execute(os.Stdout, secretInitOutput{
-		SecretsPerEnv: secretsPerEnv,
-	})
+	log.Infoln(color.HighlightCode(secretsManifestExample))
+	return nil
 }
 
 type errSecretFailedInSomeEnvironments struct {
