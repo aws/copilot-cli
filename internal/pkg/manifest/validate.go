@@ -103,6 +103,14 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	if l.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: aws.BoolValue(l.ExecuteCommand.Enable),
+			efsVolumes: l.Storage.Volumes,
+		}); err != nil {
+			return fmt.Errorf("validate Windows: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -156,6 +164,14 @@ func (b BackendServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	if b.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: aws.BoolValue(b.ExecuteCommand.Enable),
+			efsVolumes: b.Storage.Volumes,
+		}); err != nil {
+			return fmt.Errorf("validate Windows: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -172,6 +188,9 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	var err error
 	if err = r.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
+	}
+	if err = r.InstanceConfig.Validate(); err != nil {
+		return err
 	}
 	if err = r.RequestDrivenWebServiceHttpConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
@@ -235,6 +254,14 @@ func (w WorkerServiceConfig) Validate() error {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
 		}
 	}
+	if w.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: aws.BoolValue(w.ExecuteCommand.Enable),
+			efsVolumes: w.Storage.Volumes,
+		}); err != nil {
+			return fmt.Errorf(`validate Windows: %w`, err)
+		}
+	}
 	return nil
 }
 
@@ -292,6 +319,14 @@ func (s ScheduledJobConfig) Validate() error {
 	for ind, taskDefOverride := range s.TaskDefOverrides {
 		if err = taskDefOverride.Validate(); err != nil {
 			return fmt.Errorf(`validate "taskdef_overrides[%d]": %w`, ind, err)
+		}
+	}
+	if s.TaskConfig.IsWindows() {
+		if err = validateWindows(validateWindowsOpts{
+			execEnabled: aws.BoolValue(s.ExecuteCommand.Enable),
+			efsVolumes: s.Storage.Volumes,
+		}); err != nil {
+			return fmt.Errorf(`validate Windows: %w`, err)
 		}
 	}
 	return nil
@@ -549,13 +584,18 @@ func (p PlatformArgs) Validate() error {
 	return fmt.Errorf("platform pair %s is invalid: fields ('osfamily', 'architecture') must be one of %s", p.String(), prettyValidPlatforms)
 }
 
+// Validate returns nil if PlatformString is configured correctly.
 func (p PlatformString) Validate() error {
+	args := strings.Split(string(p), "/")
+	if len(args) != 2 {
+		return fmt.Errorf("platform '%s' must be in the format [OS]/[Arch]", string(p))
+	}
 	for _, validPlatform := range ValidShortPlatforms {
 		if strings.ToLower(string(p)) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform %s is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
+	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
 }
 
 // Validate returns nil if Count is configured correctly.
@@ -902,6 +942,16 @@ func (r AppRunnerInstanceConfig) Validate() error {
 	if err := r.Platform.Validate(); err != nil {
 		return fmt.Errorf(`validate "platform": %w`, err)
 	}
+	// Error out if user added Windows as platform in manifest.
+	if isWindowsPlatform(r.Platform) {
+		return errAppRunnerInvalidPlatformWindows
+	}
+	// This extra check is because ARM architectures won't work for App Runner services.
+	if !r.Platform.IsEmpty() {
+		if r.Platform.Arch() != ArchAMD64 || r.Platform.Arch() != ArchX86 {
+			return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)
+		}
+	}
 	return nil
 }
 
@@ -1029,6 +1079,11 @@ type validateLoadBalancerTargetOpts struct {
 type containerDependency struct {
 	dependsOn   DependsOn
 	isEssential bool
+}
+
+type validateWindowsOpts struct {
+	execEnabled bool
+	efsVolumes map[string]*Volume
 }
 
 func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
@@ -1176,5 +1231,17 @@ func isValidSubSvcName(name string) bool {
 
 	trailingMatch := trailingPunctRegExp.FindStringSubmatch(name)
 	return len(trailingMatch) == 0
+}
+
+func validateWindows(opts validateWindowsOpts) error {
+	if opts.execEnabled {
+		return errors.New(`'exec' is not supported when deploying a Windows container`)
+	}
+	for _, volume := range opts.efsVolumes {
+		if !volume.EmptyVolume() {
+			return errors.New(`'EFS' is not supported when deploying a Windows container`)
+		}
+	}
+	return nil
 }
 
