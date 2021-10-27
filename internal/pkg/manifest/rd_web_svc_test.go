@@ -317,42 +317,45 @@ func TestRequestDrivenWebService_Port(t *testing.T) {
 }
 
 func TestRequestDrivenWebService_ContainerPlatform(t *testing.T) {
-	// GIVEN
-	mft := RequestDrivenWebService{
-		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-			InstanceConfig: AppRunnerInstanceConfig{
-				Platform: PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("ososos"),
-						Arch:     aws.String("arch"),
+	t.Run("should return platform string with values found in args", func(t *testing.T) {
+		// GIVEN
+		mft := RequestDrivenWebService{
+			RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+				InstanceConfig: AppRunnerInstanceConfig{
+					Platform: PlatformArgsOrString{
+						PlatformArgs: PlatformArgs{
+							OSFamily: aws.String("ososos"),
+							Arch:     aws.String("arch"),
+						},
 					},
 				},
 			},
-		},
-	}
-	// WHEN
-	actual := mft.ContainerPlatform()
+		}
+		// WHEN
+		actual := mft.ContainerPlatform()
 
-	// THEN
-	require.Equal(t, "ososos/arch", actual)
-
-	// GIVEN
-	mft = RequestDrivenWebService{
-		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-			InstanceConfig: AppRunnerInstanceConfig{
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
+		// THEN
+		require.Equal(t, "ososos/arch", actual)
+	})
+	t.Run("should return default platform if platform field empty", func(t *testing.T) {
+		// GIVEN
+		mft := RequestDrivenWebService{
+			RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+				InstanceConfig: AppRunnerInstanceConfig{
+					Platform: PlatformArgsOrString{
+						PlatformString: nil,
 					},
 				},
 			},
-	}
-	// WHEN
-	actual = mft.ContainerPlatform()
+		}
+		// WHEN
+		actual := mft.ContainerPlatform()
 
-	// THEN
-	require.Equal(t, "linux/amd64", actual)
-	}
+		// THEN
+		require.Equal(t, "linux/amd64", actual)
 
+	})
+}
 func TestRequestDrivenWebService_Publish(t *testing.T) {
 	testCases := map[string]struct {
 		mft *RequestDrivenWebService

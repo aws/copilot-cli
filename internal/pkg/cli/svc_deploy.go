@@ -407,14 +407,13 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
-	platform := mf.ContainerPlatform()
 	return &dockerengine.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
-		Platform:   platform,
+		Platform:   mf.ContainerPlatform(),
 		Tags:       tags,
 	}, nil
 }
