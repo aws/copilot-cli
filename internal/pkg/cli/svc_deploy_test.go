@@ -599,11 +599,11 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 	)
 	tests := map[string]struct {
 		inAliases      manifest.Alias
+		inNLB          manifest.NetworkLoadBalancerConfiguration
 		inApp          *config.Application
 		inEnvironment  *config.Environment
 		inBuildRequire bool
 		inForceDeploy  bool
-		useNLB         bool
 
 		mock func(m *deploySvcMocks)
 
@@ -624,7 +624,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 		},
 		"fail to describe environment": {
 			inBuildRequire: false,
-			useNLB:         true,
+			inNLB: manifest.NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/udp"),
+			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -642,7 +644,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 		},
 		"fail to list subnets": {
 			inBuildRequire: false,
-			useNLB:         true,
+			inNLB: manifest.NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/udp"),
+			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -958,7 +962,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 							RoutingRule: manifest.RoutingRule{
 								Alias: tc.inAliases,
 							},
-							NLBConfig: tc.useNLB,
+							NLBConfig: tc.inNLB,
 						},
 					}, nil
 				},
