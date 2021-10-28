@@ -192,24 +192,6 @@ type RoutingRule struct {
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
 }
 
-// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-func (s *LoadBalancedWebService) windowsCompatibility() error {
-	if !s.IsWindows() {
-		return nil
-	}
-	// Exec is not supported.
-	if aws.BoolValue(s.ExecuteCommand.Enable) {
-		return errors.New(`'exec' is not supported when deploying a Windows container`)
-	}
-	// EFS is not supported.
-	for _, volume := range s.Storage.Volumes {
-		if !volume.EmptyVolume() {
-			return errors.New(`'EFS' is not supported when deploying a Windows container`)
-		}
-	}
-	return nil
-}
-
 // IPNet represents an IP network string. For example: 10.1.0.0/16
 type IPNet string
 

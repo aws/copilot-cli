@@ -390,7 +390,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	rc := stack.RuntimeConfig{
 		AdditionalTags:           app.Tags,
 		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                app.AccountID,
+		AccountID:                env.AccountID,
 		Region:                   env.Region,
 	}
 

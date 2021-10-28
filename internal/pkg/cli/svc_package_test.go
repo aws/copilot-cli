@@ -300,10 +300,12 @@ count: 1`
 				opts.newInterpolator = func(app, env string) interpolator {
 					return mockItpl
 				}
-				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
+				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
 					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
 					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
+					require.Equal(t, rc.AccountID, "1111", "ensure the environment's account is used while rendering stack")
+					require.Equal(t, rc.Region, "us-west-2")
 					return mockStackSerializer, nil
 				}
 				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {

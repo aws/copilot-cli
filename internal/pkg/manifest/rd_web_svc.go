@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -92,12 +90,12 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the platform for the service.
-func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if s.InstanceConfig.Platform.PlatformString == nil {
-		return nil, nil
+// ContainerPlatform returns the platform for the service.
+func (s *RequestDrivenWebService) ContainerPlatform() string {
+	if s.InstanceConfig.Platform.IsEmpty() {
+		return platformString(OSLinux, ArchAMD64)
 	}
-	return aws.String(platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
+	return platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -124,22 +122,6 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 
 	s.Environments = nil
 	return &s, nil
-}
-
-// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-// Here, this method is simply satisfying the WorkloadManifest interface.
-func (s *RequestDrivenWebService) windowsCompatibility() error {
-	if s.InstanceConfig.Platform.IsEmpty() {
-		return nil
-	}
-	// Error out if user added Windows as platform in manifest.
-	if isWindowsPlatform(s.InstanceConfig.Platform) {
-		return errAppRunnerInvalidPlatformWindows
-	}
-	if s.InstanceConfig.Platform.Arch() != ArchAMD64 || s.InstanceConfig.Platform.Arch() != ArchX86 {
-		return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)
-	}
-	return nil
 }
 
 // newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.

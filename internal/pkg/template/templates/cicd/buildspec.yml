@@ -25,12 +25,28 @@ phases:
       - pl_envs=$(echo $pipeline | jq '.stages[].name' | sed 's/"//g')
       - >
         for pl_env in $pl_envs; do
-        ./copilot-linux env upgrade -n $pl_env;
+          ./copilot-linux env upgrade -n $pl_env;
         done;
       # Find all the local services in the workspace.
-      - svcs=$(./copilot-linux svc ls --local --json | jq '.services[].name' | sed 's/"//g')
+      - svc_ls_result=$(./copilot-linux svc ls --local --json)
+      - svc_list=$(echo $svc_ls_result | jq '.services')
+      - >
+        if [ ! "$svc_list" = null ]; then
+          svcs=$(echo $svc_ls_result | jq '.services[].name' | sed 's/"//g');
+        fi
       # Find all the local jobs in the workspace.
-      - jobs=$(./copilot-linux job ls --local --json | jq '.jobs[].name' | sed 's/"//g')
+      - job_ls_result=$(./copilot-linux job ls --local --json)
+      - job_list=$(echo $job_ls_result | jq '.jobs')
+      - >
+        if [ ! "$job_list" = null ]; then
+          jobs=$(echo $job_ls_result | jq '.jobs[].name' | sed 's/"//g');
+        fi
+      # Raise error if no services or jobs are found.
+      - >
+        if [ "$svc_list" = null ] && [ "$job_list" = null ]; then
+          echo "No services or jobs found for the pipeline to deploy. Please create at least one service or job and push the manifest to the remote." 1>&2;
+          exit 1;
+        fi
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
       # We truncate the tag (from the front) to 128 characters, the limit for Docker tags

@@ -148,8 +148,21 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
+		"error if fail to validate windows": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig:       TaskConfig{
+						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate Windows: `,
+		},
 	}
-	for name, tc := range testCases {
+				for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.lbConfig.Validate()
 
@@ -275,6 +288,19 @@ func TestBackendService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
+		"error if fail to validate Windows": {
+			config: BackendService{
+				Workload: Workload{Name: aws.String("mockName")},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig:       TaskConfig{
+						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate Windows: `,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -298,8 +324,8 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config RequestDrivenWebService
 
-		wantedErrorMsgPrefix string
 		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate image": {
 			config: RequestDrivenWebService{
@@ -316,6 +342,29 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "image": `,
+		},
+		"error if fail to validate instance": {
+			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+						},
+						Port: uint16P(80),
+					},
+					InstanceConfig: AppRunnerInstanceConfig{
+						CPU:      nil,
+						Memory:   nil,
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("mockPlatform")),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "platform": `,
 		},
 		"error if name is not set": {
 			config: RequestDrivenWebService{
@@ -334,7 +383,6 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.config.Validate()
-
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
 				return
@@ -467,6 +515,19 @@ func TestWorkerService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
+		},
+		"error if fail to validate windows": {
+			config: WorkerService{
+				Workload: Workload{Name: aws.String("mockName")},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig:       TaskConfig{
+						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate Windows: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -611,6 +672,22 @@ func TestScheduledJob_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
+		},
+		"error if fail to validate windows": {
+			config: ScheduledJob{
+				Workload: Workload{Name: aws.String("mockName")},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+					},
+					TaskConfig:       TaskConfig{
+						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate Windows: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -859,8 +936,12 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 		wanted error
 	}{
 		"error if platform string is invalid": {
-			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar"))},
-			wanted: fmt.Errorf("platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar/amd64"))},
+			wanted: fmt.Errorf("platform 'foobar/amd64' is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+		},
+		"error if only half of platform string is specified": {
+			in: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux"))},
+			wanted: fmt.Errorf("platform 'linux' must be in the format [OS]/[Arch]"),
 		},
 		"error if only osfamily is specified": {
 		in: PlatformArgsOrString{
@@ -885,7 +966,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 				Arch:     aws.String("amd64"),
 			},
 		},
-			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
 		},
 		"error if arch is invalid": {
 		in: PlatformArgsOrString{
@@ -894,7 +975,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 				Arch:     aws.String("bar"),
 			},
 		},
-			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
 		},
 		"return nil if platform string valid": {
 			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/amd64"))},
@@ -1574,8 +1655,8 @@ func TestPlacement_Validate(t *testing.T) {
 func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		config AppRunnerInstanceConfig
-
 		wantedErrorPrefix string
+		wantedError error
 	}{
 		"error if fail to validate platforms": {
 			config: AppRunnerInstanceConfig{
@@ -1585,6 +1666,47 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 			},
 			wantedErrorPrefix: `validate "platform": `,
 		},
+		"error if windows os in PlatformString": {
+			config: AppRunnerInstanceConfig{
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
+						},
+					},
+			wantedError: fmt.Errorf("Windows is not supported for App Runner services"),
+		},
+		"error if windows os in PlatformArgs": {
+					config: AppRunnerInstanceConfig{
+						CPU:      nil,
+						Memory:   nil,
+						Platform: PlatformArgsOrString{
+							PlatformArgs: PlatformArgs{
+								OSFamily: aws.String("windows"),
+								Arch:     aws.String("amd64"),
+							},
+						},
+			},
+			wantedError: fmt.Errorf("Windows is not supported for App Runner services"),
+		},
+		// TODO: after ARM architectures are added to the valid list, these will return the error "App Runner services can only build on amd64 and x86_64 architectures"
+		"error if invalid arch in PlatformString": {
+			config: AppRunnerInstanceConfig{
+				Platform: PlatformArgsOrString{
+					PlatformString: (*PlatformString)(aws.String("linux/arm64")),
+				},
+			},
+			wantedError: fmt.Errorf("validate \"platform\": platform 'linux/arm64' is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+		},
+		"error if invalid arch in PlatformArgs": {
+			config: AppRunnerInstanceConfig{
+				Platform: PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("linux"),
+						Arch:     aws.String("arm64"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf("validate \"platform\": platform pair ('linux', 'arm64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -1592,6 +1714,8 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+			} else if tc.wantedError != nil{
+				require.EqualError(t, gotErr, tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)
 			}
@@ -1931,6 +2055,53 @@ func TestValidateContainerDeps(t *testing.T) {
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateWindows(t *testing.T) {
+	testCases := map[string]struct {
+		in     validateWindowsOpts
+		wantedError error
+	}{
+		"should return an error if efs specified": {
+			in: validateWindowsOpts{
+				execEnabled: true,
+			},
+			wantedError: fmt.Errorf(`'exec' is not supported when deploying a Windows container`),
+		},
+		"error if efs specified": {
+			in: validateWindowsOpts{
+				efsVolumes:  map[string]*Volume{
+					"someVolume": &Volume{
+						EFS: EFSConfigOrBool{
+							Enabled: aws.Bool(true),
+						},
+						MountPointOpts: MountPointOpts{
+							ContainerPath: aws.String("mockPath"),
+						},
+					},
+				},
+			},
+			wantedError: errors.New(`'EFS' is not supported when deploying a Windows container`),
+		},
+		"should return nil if neither efs nor exec specified": {
+			in: validateWindowsOpts{
+				execEnabled: false,
+			},
+			wantedError: nil,
+
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateWindows(tc.in)
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 			}

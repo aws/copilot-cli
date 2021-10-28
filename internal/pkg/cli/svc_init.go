@@ -461,7 +461,7 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 	if redirectedPlatform == "" {
 		return "", nil
 	}
-	if redirectedPlatform != detectedPlatform {
+	if redirectedPlatform != detectedPlatform && wkldType != manifest.RequestDrivenWebServiceType {
 		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
 	}
 	platform := manifest.PlatformString(redirectedPlatform)
