@@ -2174,10 +2174,10 @@ func (m *MockmanifestReader) EXPECT() *MockmanifestReaderMockRecorder {
 }
 
 // ReadWorkloadManifest mocks base method.
-func (m *MockmanifestReader) ReadWorkloadManifest(name string) ([]byte, error) {
+func (m *MockmanifestReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2394,10 +2394,10 @@ func (mr *MockwsSvcReaderMockRecorder) ListServices() *gomock.Call {
 }
 
 // ReadWorkloadManifest mocks base method.
-func (m *MockwsSvcReader) ReadWorkloadManifest(name string) ([]byte, error) {
+func (m *MockwsSvcReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2462,10 +2462,10 @@ func (mr *MockwsSvcDirReaderMockRecorder) ListServices() *gomock.Call {
 }
 
 // ReadWorkloadManifest mocks base method.
-func (m *MockwsSvcDirReader) ReadWorkloadManifest(name string) ([]byte, error) {
+func (m *MockwsSvcDirReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2553,10 +2553,10 @@ func (mr *MockwsJobReaderMockRecorder) ListJobs() *gomock.Call {
 }
 
 // ReadWorkloadManifest mocks base method.
-func (m *MockwsJobReader) ReadWorkloadManifest(name string) ([]byte, error) {
+func (m *MockwsJobReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2659,10 +2659,10 @@ func (mr *MockwsJobDirReaderMockRecorder) ListJobs() *gomock.Call {
 }
 
 // ReadWorkloadManifest mocks base method.
-func (m *MockwsJobDirReader) ReadWorkloadManifest(name string) ([]byte, error) {
+func (m *MockwsJobDirReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2772,10 +2772,10 @@ func (mr *MockwsWlDirReaderMockRecorder) ListWorkloads() *gomock.Call {
 }
 
 // ReadWorkloadManifest mocks base method.
-func (m *MockwsWlDirReader) ReadWorkloadManifest(name string) ([]byte, error) {
+func (m *MockwsWlDirReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -230,7 +230,7 @@ type wsFileDeleter interface {
 }
 
 type manifestReader interface {
-	ReadWorkloadManifest(name string) ([]byte, error)
+	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }
 
 type copilotDirGetter interface {

@@ -248,7 +248,8 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobSchedule:    wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return([]byte(""), nil)
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return([]byte(`name: cuteness-aggregator
+type: Scheduled Job`), nil)
 			},
 
 			wantedSchedule: wantedCronSchedule,

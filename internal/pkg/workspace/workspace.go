@@ -174,7 +174,7 @@ func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
 		}
-		wlType, err := readWorkloadType(manifestBytes)
+		wlType, err := manifestBytes.WorkloadType()
 		if err != nil {
 			return nil, err
 		}
@@ -186,12 +186,13 @@ func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
 }
 
 // ReadWorkloadManifest returns the contents of the workload's manifest under copilot/{name}/manifest.yml.
-func (ws *Workspace) ReadWorkloadManifest(mftDirName string) ([]byte, error) {
-	mft, err := ws.read(mftDirName, manifestFileName)
+func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, error) {
+	raw, err := ws.read(mftDirName, manifestFileName)
 	if err != nil {
 		return nil, err
 	}
-	mftName, err := readWorkloadName(mft)
+	mft := WorkloadManifest(raw)
+	mftName, err := mft.workloadName()
 	if err != nil {
 		return nil, err
 	}
@@ -482,21 +483,25 @@ func RelPath(fullPath string) (string, error) {
 	return path, nil
 }
 
-func readWorkloadName(dat []byte) (string, error) {
+// WorkloadManifest represents raw local workload manifest.
+type WorkloadManifest []byte
+
+func (w WorkloadManifest) workloadName() (string, error) {
 	wl := struct {
 		Name string `yaml:"name"`
 	}{}
-	if err := yaml.Unmarshal(dat, &wl); err != nil {
+	if err := yaml.Unmarshal(w, &wl); err != nil {
 		return "", err
 	}
 	return wl.Name, nil
 }
 
-func readWorkloadType(dat []byte) (string, error) {
+// WorkloadType returns the workload type of the manifest.
+func (w WorkloadManifest) WorkloadType() (string, error) {
 	wl := struct {
 		Type string `yaml:"type"`
 	}{}
-	if err := yaml.Unmarshal(dat, &wl); err != nil {
+	if err := yaml.Unmarshal(w, &wl); err != nil {
 		return "", err
 	}
 	return wl.Type, nil

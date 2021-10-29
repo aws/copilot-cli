@@ -200,18 +200,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			wantedErr: nil,
 		},
-		"return an error if fail to get service type": {
-			inSvcType:        "",
-			inSvcName:        wantedSvcName,
-			inSvcPort:        wantedSvcPort,
-			inDockerfilePath: wantedDockerfilePath,
-
-			setupMocks: func(m initSvcMocks) {
-				m.mockPrompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-			},
-			wantedErr: fmt.Errorf("select service type: some error"),
-		},
 		"returns an error if fail to get service name": {
 			inSvcType:        wantedSvcType,
 			inSvcName:        "",
@@ -223,6 +211,37 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("get service name: some error"),
+		},
+		"skip asking questions if local manifest file exists": {
+			inSvcType: "Worker Service",
+			inSvcName: wantedSvcName,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte(""), nil)
+			},
+		},
+		"return an error if fail to read local manifest": {
+			inSvcType: "Worker Service",
+			inSvcName: wantedSvcName,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, mockError)
+			},
+
+			wantedErr: fmt.Errorf("check if local manifest for service frontend exists: mock error"),
+		},
+		"return an error if fail to get service type": {
+			inSvcType:        "",
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("select service type: some error"),
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,
@@ -462,24 +481,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return([]deploy.Topic{*mockTopic}, nil)
 			},
-		},
-		"skip asking questions if local manifest file exists": {
-			inSvcType: "Worker Service",
-			inSvcName: wantedSvcName,
-
-			setupMocks: func(m initSvcMocks) {
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte(""), nil)
-			},
-		},
-		"return an error if fail to read local manifest": {
-			inSvcType: "Worker Service",
-			inSvcName: wantedSvcName,
-
-			setupMocks: func(m initSvcMocks) {
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, mockError)
-			},
-
-			wantedErr: fmt.Errorf("check if local manifest for service frontend exists: mock error"),
 		},
 	}
 

@@ -160,20 +160,24 @@ func (o *initJobOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initJobOpts) Ask() error {
-	if err := o.askJobType(); err != nil {
-		return err
-	}
 	if err := o.askJobName(); err != nil {
 		return err
 	}
-	_, err := o.mftReader.ReadWorkloadManifest(o.name)
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err == nil {
-		// Return early if local manifest for the service already exists.
+		jobType, err := localMft.WorkloadType()
+		if err != nil {
+			return fmt.Errorf("read type for service %s from local manifest: %w", o.name, err)
+		}
+		o.wkldType = jobType
 		return nil
 	}
 	_, ok := err.(*workspace.ErrFileNotExists)
 	if !ok {
 		return fmt.Errorf("check if local manifest for job %s exists: %w", o.name, err)
+	}
+	if err := o.askJobType(); err != nil {
+		return err
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {

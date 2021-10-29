@@ -219,20 +219,24 @@ func (o *initSvcOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initSvcOpts) Ask() error {
-	if err := o.askSvcType(); err != nil {
-		return err
-	}
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
-	_, err := o.mftReader.ReadWorkloadManifest(o.name)
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err == nil {
-		// Return early if local manifest for the service already exists.
+		svcType, err := localMft.WorkloadType()
+		if err != nil {
+			return fmt.Errorf("read type for service %s from local manifest: %w", o.name, err)
+		}
+		o.wkldType = svcType
 		return nil
 	}
 	_, ok := err.(*workspace.ErrFileNotExists)
 	if !ok {
 		return fmt.Errorf("check if local manifest for service %s exists: %w", o.name, err)
+	}
+	if err := o.askSvcType(); err != nil {
+		return err
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
