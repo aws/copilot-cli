@@ -20,6 +20,15 @@ func (e *ErrFileExists) Error() string {
 	return fmt.Sprintf("file %s already exists", e.FileName)
 }
 
+// ErrFileNotExists means we tried to read a non-existing file.
+type ErrFileNotExists struct {
+	FileName string
+}
+
+func (e *ErrFileNotExists) Error() string {
+	return fmt.Sprintf("file %s does not exists", e.FileName)
+}
+
 // errWorkspaceNotFound means we couldn't locate a workspace root.
 type errWorkspaceNotFound struct {
 	CurrentDirectory      string

@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -23,6 +24,15 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
+
+type initSvcMocks struct {
+	mockPrompt       *mocks.Mockprompter
+	mockSel          *mocks.MockdockerfileSelector
+	mocktopicSel     *mocks.MocktopicSelector
+	mockDockerfile   *mocks.MockdockerfileParser
+	mockDockerEngine *mocks.MockdockerEngine
+	mockMftReader    *mocks.MockmanifestReader
+}
 
 func TestSvcInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -143,11 +153,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		inSubscribeTags  []string
 		inNoSubscribe    bool
 
-		mockPrompt       func(m *mocks.Mockprompter)
-		mockSel          func(m *mocks.MockdockerfileSelector)
-		mocktopicSel     func(m *mocks.MocktopicSelector)
-		mockDockerfile   func(m *mocks.MockdockerfileParser)
-		mockDockerEngine func(m *mocks.MockdockerEngine)
+		setupMocks func(mocks initSvcMocks)
 
 		wantedErr error
 	}{
@@ -157,8 +163,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
 					{
 						Value: manifest.RequestDrivenWebServiceType,
 						Hint:  "App Runner",
@@ -177,28 +183,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        nil,
-		},
-		"return an error if fail to get service type": {
-			inSvcType:        "",
-			inSvcName:        wantedSvcName,
-			inSvcPort:        wantedSvcPort,
-			inDockerfilePath: wantedDockerfilePath,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-			},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        fmt.Errorf("select service type: some error"),
+			wantedErr: nil,
 		},
 		"prompt for service name": {
 			inSvcType:        wantedSvcType,
@@ -206,16 +193,24 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedSvcType)), gomock.Any(), gomock.Any(), gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedSvcType)), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+			wantedErr: nil,
+		},
+		"return an error if fail to get service type": {
+			inSvcType:        "",
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
 			},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        nil,
+			wantedErr: fmt.Errorf("select service type: some error"),
 		},
 		"returns an error if fail to get service name": {
 			inSvcType:        wantedSvcType,
@@ -223,15 +218,11 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			wantedErr:        fmt.Errorf("get service name: some error"),
+			wantedErr: fmt.Errorf("get service name: some error"),
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,
@@ -240,24 +231,18 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inImage:          "mockImage",
 			inDockerfilePath: "",
 
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        nil,
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+			},
 		},
 		"return error if failed to check if docker engine is running": {
 			inSvcType: wantedSvcType,
 			inSvcName: wantedSvcName,
 			inSvcPort: wantedSvcPort,
 
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("check if docker engine is running: some error"),
 		},
@@ -266,15 +251,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcName: wantedSvcName,
 			inSvcPort: wantedSvcPort,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("mockImage", nil)
-			},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
+
 			},
 			wantedErr: nil,
 		},
@@ -283,15 +265,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcName: wantedSvcName,
 			inSvcPort: wantedSvcPort,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("mockImage", nil)
-			},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
+
 			},
 			wantedErr: nil,
 		},
@@ -301,23 +280,18 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("", mockError)
-			},
-			mockSel: func(m *mocks.MockdockerfileSelector) {
-				m.EXPECT().Dockerfile(
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedSvcName)),
 					gomock.Eq(wkldInitDockerfileHelpPrompt),
 					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
-			},
-			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 			wantedErr: fmt.Errorf("get image location: mock error"),
 		},
@@ -326,25 +300,20 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: "",
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("mockImage", nil)
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
-			},
-			mockSel: func(m *mocks.MockdockerfileSelector) {
-				m.EXPECT().Dockerfile(
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedSvcName)),
 					gomock.Eq(wkldInitDockerfileHelpPrompt),
 					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
-			},
-			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 		},
 		"select Dockerfile": {
@@ -353,20 +322,16 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockSel: func(m *mocks.MockdockerfileSelector) {
-				m.EXPECT().Dockerfile(
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedSvcName)),
 					gomock.Eq(wkldInitDockerfileHelpPrompt),
 					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
 					gomock.Any(),
 				).Return("frontend/Dockerfile", nil)
-			},
-			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 			wantedErr: nil,
 		},
@@ -376,16 +341,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			mockSel: func(m *mocks.MockdockerfileSelector) {
-				m.EXPECT().Dockerfile(
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
 				).Return("", errors.New("some error"))
-			},
-			mocktopicSel:   func(m *mocks.MocktopicSelector) {},
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 			wantedErr: fmt.Errorf("select Dockerfile: some error"),
 		},
@@ -394,14 +355,11 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcName:        wantedSvcName,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        nil,
+			wantedErr: nil,
 		},
 		"asks for port if not specified": {
 			inSvcType:        wantedSvcType,
@@ -409,17 +367,13 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0, //invalid port, default case
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
+				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
-			},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        nil,
+			wantedErr: nil,
 		},
 		"errors if port not specified": {
 			inSvcType:        wantedSvcType,
@@ -427,17 +381,13 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0, //invalid port, default case
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
+				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("expose error"))
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return(nil, errors.New("expose error"))
-			},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        fmt.Errorf("get port: some error"),
+			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"errors if port out of range": {
 			inSvcType:        wantedSvcType,
@@ -445,17 +395,13 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0, //invalid port, default case
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
+				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
-			},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			wantedErr:        fmt.Errorf("get port: some error"),
+			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"don't ask if dockerfile has port": {
 			inSvcType:        wantedSvcType,
@@ -463,14 +409,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockDockerfile.EXPECT().GetExposedPorts().Return([]dockerfile.Port{{Port: 80, Protocol: "", RawString: "80"}}, nil)
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]dockerfile.Port{{Port: 80, Protocol: "", RawString: "80"}}, nil)
-			},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 		},
 		"don't use dockerfile port if flag specified": {
 			inSvcType:        wantedSvcType,
@@ -478,12 +420,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        wantedSvcPort,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 		},
 		"skip selecting subscriptions if no-subscriptions flag is set": {
 			inSvcType:     "Worker Service",
@@ -492,12 +431,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inImage:       "mockImage",
 			inNoSubscribe: true,
 
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			wantedErr:        nil,
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+			},
 		},
 		"skip selecting subscriptions if subscribe flag is set": {
 			inSvcType:       "Worker Service",
@@ -507,12 +443,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inNoSubscribe:   false,
 			inSubscribeTags: []string{"svc:name"},
 
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			mocktopicSel:     func(m *mocks.MocktopicSelector) {},
-			wantedErr:        nil,
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+			},
 		},
 		"select subscriptions": {
 			inSvcType:        "Worker Service",
@@ -521,18 +454,32 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inImage:          "mockImage",
 			inDockerfilePath: "",
 
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSel:          func(m *mocks.MockdockerfileSelector) {},
-			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-			mocktopicSel: func(m *mocks.MocktopicSelector) {
-				m.EXPECT().Topics(
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mocktopicSel.EXPECT().Topics(
 					gomock.Eq(svcInitPublisherPrompt),
 					gomock.Eq(svcInitPublisherHelpPrompt),
 					gomock.Any(),
 				).Return([]deploy.Topic{*mockTopic}, nil)
 			},
-			wantedErr: nil,
+		},
+		"skip asking questions if local manifest file exists": {
+			inSvcType: "Worker Service",
+			inSvcName: wantedSvcName,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte(""), nil)
+			},
+		},
+		"return an error if fail to read local manifest": {
+			inSvcType: "Worker Service",
+			inSvcName: wantedSvcName,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, mockError)
+			},
+
+			wantedErr: fmt.Errorf("check if local manifest for service frontend exists: mock error"),
 		},
 	}
 
@@ -547,6 +494,17 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
+			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
+			mocks := initSvcMocks{
+				mockPrompt:       mockPrompt,
+				mockDockerfile:   mockDockerfile,
+				mockSel:          mockSel,
+				mocktopicSel:     mockTopicSel,
+				mockDockerEngine: mockDockerEngine,
+				mockMftReader:    mockManifestReader,
+			}
+			tc.setupMocks(mocks)
+
 			opts := &initSvcOpts{
 				initSvcVars: initSvcVars{
 					initWkldVars: initWkldVars{
@@ -565,15 +523,11 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				},
 				df:           mockDockerfile,
 				prompt:       mockPrompt,
+				mftReader:    mockManifestReader,
 				sel:          mockSel,
 				topicSel:     mockTopicSel,
 				dockerEngine: mockDockerEngine,
 			}
-			tc.mockSel(mockSel)
-			tc.mocktopicSel(mockTopicSel)
-			tc.mockPrompt(mockPrompt)
-			tc.mockDockerfile(mockDockerfile)
-			tc.mockDockerEngine(mockDockerEngine)
 
 			// WHEN
 			err := opts.Ask()

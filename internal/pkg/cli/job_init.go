@@ -65,6 +65,7 @@ type initJobOpts struct {
 	prompt       prompter
 	sel          initJobSelector
 	dockerEngine dockerEngine
+	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -111,6 +112,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
+		mftReader:    ws,
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
@@ -163,6 +165,15 @@ func (o *initJobOpts) Ask() error {
 	}
 	if err := o.askJobName(); err != nil {
 		return err
+	}
+	_, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err == nil {
+		// Return early if local manifest for the service already exists.
+		return nil
+	}
+	_, ok := err.(*workspace.ErrFileNotExists)
+	if !ok {
+		return fmt.Errorf("check if local manifest for job %s exists: %w", o.name, err)
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
@@ -248,7 +259,6 @@ func (o *initJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
 	}
-
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),

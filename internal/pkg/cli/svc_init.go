@@ -112,6 +112,7 @@ type initSvcOpts struct {
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
 	topicSel     topicSelector
+	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -164,6 +165,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		topicSel:     snsSel,
+		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
@@ -223,25 +225,30 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
+	_, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err == nil {
+		// Return early if local manifest for the service already exists.
+		return nil
+	}
+	_, ok := err.(*workspace.ErrFileNotExists)
+	if !ok {
+		return fmt.Errorf("check if local manifest for service %s exists: %w", o.name, err)
+	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
 		return err
 	}
-
 	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
 	}
-
 	if err := o.askSvcPort(); err != nil {
 		return err
 	}
-
 	if err := o.askSvcPublishers(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
