@@ -216,11 +216,6 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
 }
 
-// Enabled returns true if network load balancer is enabled.
-func (c *NetworkLoadBalancerConfiguration) Enabled() bool {
-	return c.isEmpty()
-}
-
 // IPNet represents an IP network string. For example: 10.1.0.0/16
 type IPNet string
 

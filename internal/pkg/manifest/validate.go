@@ -546,7 +546,7 @@ func (ip IPNet) Validate() error {
 
 // Validate returns nil if NetworkLoadBalancerConfiguration is configured correctly.
 func (c NetworkLoadBalancerConfiguration) Validate() error {
-	if c.isEmpty() {
+	if c.IsEmpty() {
 		return nil
 	}
 	if aws.StringValue(c.Port) == ""{

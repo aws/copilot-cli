@@ -1399,6 +1399,29 @@ func TestAlias_IsEmpty(t *testing.T) {
 	}
 }
 
-func TestNetworkLoadBalancerConfiguration_Enabled(t *testing.T) {
-	// TODO: add this
+func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     NetworkLoadBalancerConfiguration
+		wanted bool
+	}{
+		"empty": {
+			in:     NetworkLoadBalancerConfiguration{},
+			wanted: true,
+		},
+		"non empty": {
+			in: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443"),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
 }

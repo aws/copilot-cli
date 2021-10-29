@@ -185,7 +185,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 
-	nlb := convertNetworkLoadBalancer()
+	nlb, err := s.convertNetworkLoadBalancer()
+	if err != nil {
+		return "", err
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                s.manifest.Variables,
 		Secrets:                  s.manifest.Secrets,
@@ -228,7 +231,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return string(overridenTpl), nil
 }
 
-func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string) {
+func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
 	containerName := s.name
 	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)
 	// Route load balancer traffic to main container by default.
@@ -252,7 +255,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort := s.loadBalancerTarget()
+	targetContainer, targetPort := s.httpLoadBalancerTarget()
 	return append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
