@@ -38,12 +38,12 @@ Resources:
             Principal: '*'
             Action: 's3:*'
             Resource: 
-              - !Sub ${ bucket.Arn}/*
-              - !Sub ${ bucket.Arn}
+              - !Sub ${ bucketBucket.Arn}/*
+              - !Sub ${ bucketBucket.Arn}
             Condition: 
               Bool:
                 "aws:SecureTransport": false
-      Bucket: !Ref bucket
+      Bucket: !Ref bucketBucket
 
   bucketAccessPolicy:
     Metadata:
@@ -52,7 +52,7 @@ Resources:
     Properties:
       Description: !Sub
         - Grants CRUD access to the S3 bucket ${Bucket}
-        - { Bucket: !Ref bucket }
+        - { Bucket: !Ref bucketBucket }
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -65,16 +65,16 @@ Resources:
               - s3:PutObjectTagging
               - s3:DeleteObject
               - s3:RestoreObject
-            Resource: !Sub ${ bucket.Arn}/*
+            Resource: !Sub ${ bucketBucket.Arn}/*
           - Sid: S3ListAction
             Effect: Allow
             Action: s3:ListBucket
-            Resource: !Sub ${ bucket.Arn}
+            Resource: !Sub ${ bucketBucket.Arn}
 
 Outputs:
   bucketName:
     Description: "The name of a user-defined bucket."
-    Value: !Ref bucket
+    Value: !Ref bucketBucket
   bucketAccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role"
     Value: !Ref bucketAccessPolicy
