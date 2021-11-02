@@ -229,7 +229,7 @@ func (o *initSvcOpts) Ask() error {
 			return fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
 		}
 		o.wkldType = svcType
-		log.Infof("Local manifest file for service %s is found; Copilot will create from the existing manifest.", o.name)
+		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
 		return nil
 	}
 	var errNotFound *workspace.ErrFileNotExists
