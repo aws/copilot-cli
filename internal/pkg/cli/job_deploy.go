@@ -323,7 +323,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                o.targetApp.AccountID,
+			AccountID:                o.targetEnvironment.AccountID,
 			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
@@ -348,7 +348,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		AddonsTemplateURL:        addonsURL,
 		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                o.targetApp.AccountID,
+		AccountID:                o.targetEnvironment.AccountID,
 		Region:                   o.targetEnvironment.Region,
 	}, nil
 }

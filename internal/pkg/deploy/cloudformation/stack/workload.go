@@ -61,12 +61,14 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	Image                    *ECRImage         // Optional. Image location in an ECR repository.
-	AddonsTemplateURL        string            // Optional. S3 object URL for the addons template.
-	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources in the workload stack.
-	ServiceDiscoveryEndpoint string            // Endpoint for the service discovery namespace in the environment.
-	AccountID                string            // Account ID for constructing ARNs
-	Region                   string            // Region for constructing ARNs
+	Image             *ECRImage         // Optional. Image location in an ECR repository.
+	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
+	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the workload stack.
+
+	// The target environment metadata.
+	ServiceDiscoveryEndpoint string // Endpoint for the service discovery namespace in the environment.
+	AccountID                string
+	Region                   string
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
