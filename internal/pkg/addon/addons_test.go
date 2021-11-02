@@ -86,6 +86,21 @@ func TestAddons_Template(t *testing.T) {
 				ParentErr: nil,
 			},
 		},
+		"ignore addons.parameters.yml files": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).
+					Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
+				return &Addons{
+					wlName: testSvcName,
+					ws:     ws,
+				}
+			},
+			wantedErr: &ErrAddonsNotFound{
+				WlName:    testSvcName,
+				ParentErr: nil,
+			},
+		},
 		"print correct error message for ErrAddonsNotFound": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)

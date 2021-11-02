@@ -18,6 +18,11 @@ const (
 	StackName = "AddonsStack"
 )
 
+var (
+	yamlExtensions     = []string{".yaml", ".yml"}
+	parameterFileNames = []string{"addons.parameters.yml", "addons.parameters.yaml"}
+)
+
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
@@ -58,7 +63,7 @@ func (a *Addons) Template() (string, error) {
 		}
 	}
 
-	yamlFiles := filterYAMLfiles(fnames)
+	yamlFiles := filterFiles(fnames, yamlMatcher, nonParamsMatcher)
 	if len(yamlFiles) == 0 {
 		return "", &ErrAddonsNotFound{
 			WlName: a.wlName,
@@ -86,17 +91,33 @@ func (a *Addons) Template() (string, error) {
 	return string(out), nil
 }
 
-func filterYAMLfiles(files []string) []string {
-	yamlExtensions := []string{".yaml", ".yml"}
-
-	var yamlFiles []string
+func filterFiles(files []string, matchers ...func(string) bool) []string {
+	var matchedFiles []string
 	for _, f := range files {
-		if !contains(yamlExtensions, filepath.Ext(f)) {
-			continue
+		matches := true
+		for _, match := range matchers {
+			if !match(f) {
+				matches = false
+				break
+			}
 		}
-		yamlFiles = append(yamlFiles, f)
+		if matches {
+			matchedFiles = append(matchedFiles, f)
+		}
 	}
-	return yamlFiles
+	return matchedFiles
+}
+
+func yamlMatcher(fileName string) bool {
+	return contains(yamlExtensions, filepath.Ext(fileName))
+}
+
+func paramsMatcher(fileName string) bool {
+	return contains(parameterFileNames, fileName)
+}
+
+func nonParamsMatcher(fileName string) bool {
+	return !paramsMatcher(fileName)
 }
 
 func contains(arr []string, el string) bool {
