@@ -9,7 +9,7 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
 Resources:
-  {{logicalIDSafe .Name}}:
+  {{logicalIDSafe .Name}}Bucket:
     Metadata:
       'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for {{.Name}}'
     Type: AWS::S3::Bucket
@@ -19,7 +19,6 @@ Resources:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
             SSEAlgorithm: AES256
-      BucketName: !Sub '${App}-${Env}-${Name}-{{.Name}}'
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
