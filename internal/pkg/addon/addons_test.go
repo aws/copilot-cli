@@ -257,3 +257,144 @@ func TestAddons_Template(t *testing.T) {
 		})
 	}
 }
+
+func TestAddons_Parameters(t *testing.T) {
+	testCases := map[string]struct {
+		mockAddons func(ctrl *gomock.Controller) *Addons
+
+		wantedParams string
+		wantedErr    string
+	}{
+		"returns ErrAddonsNotFound if there is no addons/ directory defined": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir("api").
+					Return(nil, errors.New("some error"))
+				return &Addons{
+					wlName: "api",
+					ws:     ws,
+				}
+			},
+			wantedErr: (&ErrAddonsNotFound{
+				WlName:    "api",
+				ParentErr: errors.New("some error"),
+			}).Error(),
+		},
+		"returns empty string and nil if there are no parameter files under addons/": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir("api").
+					Return([]string{"database.yml"}, nil)
+				return &Addons{
+					wlName: "api",
+					ws:     ws,
+				}
+			},
+		},
+		"returns an error if there are multiple parameter files defined under addons/": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir("api").
+					Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
+				return &Addons{
+					wlName: "api",
+					ws:     ws,
+				}
+			},
+			wantedErr: "defining addons.parameters.yml and addons.parameters.yaml is not allowed under api addons",
+		},
+		"returns an error if cannot read parameter file under addons/": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir("api").
+					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return(nil, errors.New("some error"))
+				return &Addons{
+					wlName: "api",
+					ws:     ws,
+				}
+			},
+			wantedErr: "read parameter file addons.parameters.yml under api addons: some error",
+		},
+		"returns an error if there are no 'Parameters' field defined in a parameters file": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir("api").
+					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(""), nil)
+				return &Addons{
+					wlName: "api",
+					ws:     ws,
+				}
+			},
+			wantedErr: "must define field 'Parameters' in file addons.parameters.yml under api addons",
+		},
+		"returns an error if reserved parameter fields is redefined in a parameters file": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir("api").
+					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`
+Parameters:
+  App: !Ref AppName
+  Env: !Ref EnvName
+  Name: !Ref WorkloadName
+  EventsQueue: 
+    !Ref EventsQueue
+  DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
+`), nil)
+				return &Addons{
+					wlName: "api",
+					ws:     ws,
+				}
+			},
+			wantedErr: "reserved parameters 'App', 'Env', and 'Name' cannot be declared in addons.parameters.yml under api addons",
+		},
+		"returns the content of Parameters on success": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir("api").
+					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`
+Parameters:
+  EventsQueue: 
+    !Ref EventsQueue
+  ServiceName: !Ref Service
+  SecurityGroupId: 
+    Fn::GetAtt: [ServiceSecurityGroup, Id]
+  DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
+`), nil)
+				return &Addons{
+					wlName: "api",
+					ws:     ws,
+				}
+			},
+			wantedParams: `EventsQueue: !Ref EventsQueue
+ServiceName: !Ref Service
+SecurityGroupId:
+  Fn::GetAtt: [ServiceSecurityGroup, Id]
+DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			addons := tc.mockAddons(ctrl)
+
+			// WHEN
+			actualParams, actualErr := addons.Parameters()
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, actualErr, tc.wantedErr)
+			} else {
+				require.NoError(t, actualErr)
+				require.Equal(t, tc.wantedParams, actualParams)
+			}
+		})
+	}
+}
