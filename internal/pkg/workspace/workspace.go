@@ -197,7 +197,7 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 		return nil, err
 	}
 	if mftName != mftDirName {
-		return nil, fmt.Errorf("name of the manifest and directory do not match")
+		return nil, fmt.Errorf(`name of the manifest "%s" and directory "%s" do not match`, mftName, mftDirName)
 	}
 	return mft, nil
 }
@@ -491,7 +491,7 @@ func (w WorkloadManifest) workloadName() (string, error) {
 		Name string `yaml:"name"`
 	}{}
 	if err := yaml.Unmarshal(w, &wl); err != nil {
-		return "", err
+		return "", fmt.Errorf(`unmarshal manifest file to retrieve "name": %w`, err)
 	}
 	return wl.Name, nil
 }
@@ -502,7 +502,7 @@ func (w WorkloadManifest) WorkloadType() (string, error) {
 		Type string `yaml:"type"`
 	}{}
 	if err := yaml.Unmarshal(w, &wl); err != nil {
-		return "", err
+		return "", fmt.Errorf(`unmarshal manifest file to retrieve "type": %w`, err)
 	}
 	return wl.Type, nil
 }

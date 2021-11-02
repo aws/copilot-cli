@@ -239,7 +239,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, mockError)
 			},
 
-			wantedErr: fmt.Errorf("check if local manifest for job cuteness-aggregator exists: mock error"),
+			wantedErr: fmt.Errorf("read manifest file for job cuteness-aggregator: mock error"),
 		},
 		"skip asking questions if local manifest file exists": {
 			inJobType:        wantedJobType,

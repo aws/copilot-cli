@@ -275,7 +275,7 @@ type: Load Balanced Web Service`))
 				return fs
 			},
 
-			wantedErr: fmt.Errorf("read manifest for workload users: name of the manifest and directory do not match"),
+			wantedErr: fmt.Errorf(`read manifest for workload users: name of the manifest "payment" and directory "users" do not match`),
 		},
 		"retrieve only directories with manifest files": {
 			copilotDir: "/copilot",

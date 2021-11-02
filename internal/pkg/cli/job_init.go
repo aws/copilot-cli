@@ -167,14 +167,15 @@ func (o *initJobOpts) Ask() error {
 	if err == nil {
 		jobType, err := localMft.WorkloadType()
 		if err != nil {
-			return fmt.Errorf("read type for service %s from local manifest: %w", o.name, err)
+			return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
 		}
 		o.wkldType = jobType
+		log.Infof("Local manifest file for job %s is found; Copilot will create from the existing manifest.", o.name)
 		return nil
 	}
-	_, ok := err.(*workspace.ErrFileNotExists)
-	if !ok {
-		return fmt.Errorf("check if local manifest for job %s exists: %w", o.name, err)
+	var errNotFound *workspace.ErrFileNotExists
+	if !errors.As(err, &errNotFound) {
+		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
 	if err := o.askJobType(); err != nil {
 		return err

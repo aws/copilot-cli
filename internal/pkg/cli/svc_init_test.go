@@ -228,7 +228,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, mockError)
 			},
 
-			wantedErr: fmt.Errorf("check if local manifest for service frontend exists: mock error"),
+			wantedErr: fmt.Errorf("read manifest file for service frontend: mock error"),
 		},
 		"return an error if fail to get service type": {
 			inSvcType:        "",
