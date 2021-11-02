@@ -106,7 +106,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	if l.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(l.ExecuteCommand.Enable),
-			efsVolumes: l.Storage.Volumes,
+			efsVolumes:  l.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -167,7 +167,7 @@ func (b BackendServiceConfig) Validate() error {
 	if b.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(b.ExecuteCommand.Enable),
-			efsVolumes: b.Storage.Volumes,
+			efsVolumes:  b.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -197,6 +197,9 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	}
 	if err = r.PublishConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "publish": %w`, err)
+	}
+	if err = r.Network.Validate(); err != nil {
+		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	return nil
 }
@@ -257,7 +260,7 @@ func (w WorkerServiceConfig) Validate() error {
 	if w.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(w.ExecuteCommand.Enable),
-			efsVolumes: w.Storage.Volumes,
+			efsVolumes:  w.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -324,7 +327,7 @@ func (s ScheduledJobConfig) Validate() error {
 	if s.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(s.ExecuteCommand.Enable),
-			efsVolumes: s.Storage.Volumes,
+			efsVolumes:  s.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -911,6 +914,30 @@ func (n NetworkConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if RequestDrivenWebServiceNetworkConfig is configured correctly.
+func (n RequestDrivenWebServiceNetworkConfig) Validate() error {
+	if n.IsEmpty() {
+		return nil
+	}
+	if err := n.VPC.Validate(); err != nil {
+		return fmt.Errorf(`validate "vpc": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if rdwsVpcConfig is configured correctly.
+func (v rdwsVpcConfig) Validate() error {
+	if v.isEmpty() {
+		return nil
+	}
+	if v.Placement != nil {
+		if err := v.Placement.Validate(); err != nil {
+			return fmt.Errorf(`validate "placement": %w`, err)
+		}
+	}
+	return nil
+}
+
 // Validate returns nil if vpcConfig is configured correctly.
 func (v vpcConfig) Validate() error {
 	if v.isEmpty() {
@@ -920,6 +947,17 @@ func (v vpcConfig) Validate() error {
 		if err := v.Placement.Validate(); err != nil {
 			return fmt.Errorf(`validate "placement": %w`, err)
 		}
+	}
+	return nil
+}
+
+// Validate returns nil if rdwsPlacement is configured correctly.
+func (p rdwsPlacement) Validate() error {
+	if err := (Placement)(p).Validate(); err != nil {
+		return err
+	}
+	if string(p) == string(PublicSubnetPlacement) {
+		return fmt.Errorf(`public is not supported for %s`, RequestDrivenWebServiceType)
 	}
 	return nil
 }
@@ -1083,7 +1121,7 @@ type containerDependency struct {
 
 type validateWindowsOpts struct {
 	execEnabled bool
-	efsVolumes map[string]*Volume
+	efsVolumes  map[string]*Volume
 }
 
 func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
@@ -1244,4 +1282,3 @@ func validateWindows(opts validateWindowsOpts) error {
 	}
 	return nil
 }
-
