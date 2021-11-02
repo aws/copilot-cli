@@ -56,11 +56,11 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 		},
 		"renders with Windows platform": {
 			opts: template.WorkloadOpts{
-				Platform:                       template.RuntimePlatformOpts{
+				Platform: template.RuntimePlatformOpts{
 					OS:	"windows",
 					Arch: "x86_64",
 				},
-				ServiceDiscoveryEndpoint:       "test.app.local",
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 	}
