@@ -1,15 +1,18 @@
 # サイドカー
 サイドカーは主となるコンテナと共に実行され補助的な役割を担うコンテナのことです。サイドカーの役割はロギングや設定ファイルの取得、リクエストのプロキシ処理などの周辺的なタスクを実行することです。
 
+!!! attention
+    Request-Driven Web Service はサイドカーの利用をサポートしていません。
+
+!!! Attention
+    メインコンテナに Windows イメージを使用している場合、[FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), [AWS App Mesh](https://aws.amazon.com/app-mesh/) はサポートされていません。お持ちのサイドカーコンテナで Windows をサポートしているか確認してください。
+
 AWS はまた ECS サービスとシームレスに組み合わせられるいくつかのプラグインを提供しており、[FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html) や [AWS X-Ray](https://aws.amazon.com/jp/xray/)、[AWS App Mesh](https://aws.amazon.com/jp/app-mesh/) など多岐に渡ります。
 
 Manifest の中で [`storage` フィールド](../developing/storage.ja.md)を使って主となるコンテナ用の EFS ボリュームを定義した場合、定義した任意のサイドカーコンテナはそのボリュームをマウントできます。
 
 ## Copilot でサイドカーを追加するには？
 Copilot の Manifest でサイドカーを追加したい場合、[サイドカーコンテナを直接定義する](#サイドカーコンテナを直接定義する)あるいは[サイドカーパターン](#サイドカーパターン)を利用する方法があります。
-
-!!! attention
-    Request-Driven Web Service はサイドカーの利用をサポートしていません。
 
 ### サイドカーコンテナを直接定義する
 サイドカーコンテナイメージの URL を指定する必要があります。オプションで公開するポートや[プライベートレジストリ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/private-auth.html)の認証パラメータを指定できます。

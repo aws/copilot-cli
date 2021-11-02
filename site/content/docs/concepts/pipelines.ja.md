@@ -1,9 +1,11 @@
-# Pipeline
-
 <!-- textlint-disable ja-technical-writing/ja-no-mixed-period -->自動化されたリリースプロセスを持つことはソフトウェアデリバリの重要な観点の１つです。Copilot はこれらのセットアップを可能な限り簡単にすることを追求しています 🚀
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period -->
 
 このセクションでは GitHub、Bitbucket、CodeCommit リポジトリにコードの変更がプッシュされた際に自動的なビルドを実行し、Environment へのデプロイと自動テストを実行する CodePipeline を Copilot を使ってセットアップする例を見ていきます。
+
+!!! Attention
+    AWS CodePipeline は OS ファミリーが Windows の Service をサポートしていません。
+    CodePipeline は、Build Stage で Linux ベースの AWS CodeBuild を使用しているため、現時点では Copilot パイプラインで Windows コンテナをビルドすることができません。
 
 <!-- textlint-disable ja-technical-writing/no-exclamation-question-mark -->
 ## Why?
