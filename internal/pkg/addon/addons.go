@@ -113,7 +113,7 @@ func (a *Addons) Parameters() (string, error) {
 		return "", nil
 	}
 	if len(paramFiles) > 1 {
-		return "", fmt.Errorf("defining %s is not allowed under %s addons", english.WordSeries(parameterFileNames, "and"), a.wlName)
+		return "", fmt.Errorf("defining multiple %s is not allowed under %s addons", english.WordSeries(parameterFileNames, "and"), a.wlName)
 	}
 	raw, err := a.ws.ReadAddon(a.wlName, paramFiles[0])
 	if err != nil {

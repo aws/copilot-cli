@@ -301,7 +301,7 @@ func TestAddons_Parameters(t *testing.T) {
 					ws:     ws,
 				}
 			},
-			wantedErr: "defining addons.parameters.yml and addons.parameters.yaml is not allowed under api addons",
+			wantedErr: "defining multiple addons.parameters.yml and addons.parameters.yaml is not allowed under api addons",
 		},
 		"returns an error if cannot read parameter file under addons/": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
