@@ -25,14 +25,36 @@ type RequestDrivenWebService struct {
 // RequestDrivenWebServiceConfig holds the configuration that can be overridden per environments.
 type RequestDrivenWebServiceConfig struct {
 	RequestDrivenWebServiceHttpConfig `yaml:"http,flow"`
-	InstanceConfig                    AppRunnerInstanceConfig `yaml:",inline"`
-	ImageConfig                       ImageWithPort           `yaml:"image"`
-	Variables                         map[string]string       `yaml:"variables"`
-	StartCommand                      *string                 `yaml:"command"`
-	Tags                              map[string]string       `yaml:"tags"`
-	PublishConfig                     PublishConfig           `yaml:"publish"`
+	InstanceConfig                    AppRunnerInstanceConfig              `yaml:",inline"`
+	ImageConfig                       ImageWithPort                        `yaml:"image"`
+	Variables                         map[string]string                    `yaml:"variables"`
+	StartCommand                      *string                              `yaml:"command"`
+	Tags                              map[string]string                    `yaml:"tags"`
+	PublishConfig                     PublishConfig                        `yaml:"publish"`
+	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
 }
 
+// RequestDrivenWebServiceNetworkConfig represents options for network connection to AWS resources for an App Runner service.
+type RequestDrivenWebServiceNetworkConfig struct {
+	VPC rdwsVpcConfig `yaml:"vpc"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (c *RequestDrivenWebServiceNetworkConfig) IsEmpty() bool {
+	return c.VPC.isEmpty()
+}
+
+type rdwsPlacement Placement
+
+type rdwsVpcConfig struct {
+	Placement *rdwsPlacement `yaml:"placement"`
+}
+
+func (c *rdwsVpcConfig) isEmpty() bool {
+	return c.Placement == nil
+}
+
+// RequestDrivenWebServiceHttpConfig represents options for configuring http.
 type RequestDrivenWebServiceHttpConfig struct {
 	HealthCheckConfiguration HealthCheckArgsOrString `yaml:"healthcheck"`
 	Alias                    *string                 `yaml:"alias"`
