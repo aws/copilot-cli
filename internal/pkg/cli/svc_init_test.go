@@ -474,7 +474,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: "",
 
 			setupMocks: func(m initSvcMocks) {
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrWorkspaceNotFound{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mocktopicSel.EXPECT().Topics(
 					gomock.Eq(svcInitPublisherPrompt),
 					gomock.Eq(svcInitPublisherHelpPrompt),
