@@ -93,8 +93,9 @@ func (i ECRImage) GetLocation() string {
 	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
-type templater interface {
+type addons interface {
 	Template() (string, error)
+	Parameters() (string, error)
 }
 
 type location interface {
@@ -111,7 +112,7 @@ type wkld struct {
 	image location
 
 	parser template.Parser
-	addons templater
+	addons addons
 }
 
 // StackName returns the name of the stack.

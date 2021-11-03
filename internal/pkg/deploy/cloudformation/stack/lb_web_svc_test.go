@@ -28,16 +28,20 @@ const (
 	testImageTag     = "manual-bf3678c"
 )
 
-type mockTemplater struct {
+type mockAddons struct {
 	tpl string
 	err error
 }
 
-func (m mockTemplater) Template() (string, error) {
+func (m mockAddons) Template() (string, error) {
 	if m.err != nil {
 		return "", m.err
 	}
 	return m.tpl, nil
+}
+
+func (m mockAddons) Parameters() (string, error) {
+	return "", nil
 }
 
 var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
@@ -160,7 +164,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{err: errors.New("some error")}
+				addons := mockAddons{err: errors.New("some error")}
 				c.parser = m
 				c.wkld.addons = addons
 			},
@@ -174,7 +178,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -215,7 +219,7 @@ Outputs:
 					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
 				c.parser = m
 				c.wkld.addons = addons
 			},
@@ -252,7 +256,7 @@ Outputs:
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
     Type: AWS::IAM::ManagedPolicy

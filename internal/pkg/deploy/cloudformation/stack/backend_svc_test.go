@@ -71,7 +71,7 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{err: errors.New("some error")}
+				svc.addons = mockAddons{err: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
 		},
@@ -90,7 +90,7 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -118,7 +118,7 @@ Outputs:
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -140,7 +140,7 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -207,7 +207,7 @@ Outputs:
 					Command:    []string{"here"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   MyTable:

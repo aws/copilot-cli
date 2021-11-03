@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockTemplater is declared in lb_web_svc_test.go
+// mockAddons is declared in lb_web_svc_test.go
 const (
 	testJobAppName      = "cuteoverload"
 	testJobEnvName      = "test"
@@ -70,7 +70,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					Command:             []string{"world"},
 					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -100,7 +100,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					Command:             []string{"world"},
 					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -135,7 +135,7 @@ Outputs:
 		"error parsing addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				addons := mockTemplater{err: errors.New("some error")}
+				addons := mockAddons{err: errors.New("some error")}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -146,7 +146,7 @@ Outputs:
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},

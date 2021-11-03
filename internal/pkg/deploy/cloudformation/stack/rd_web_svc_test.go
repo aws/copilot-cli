@@ -230,7 +230,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{err: errors.New("some error")}
+				addons := mockAddons{err: errors.New("some error")}
 				c.parser = mockParser
 				c.wkld.addons = addons
 			},
@@ -249,7 +249,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
 				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
 					Variables:           c.manifest.Variables,
@@ -273,7 +273,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -315,7 +315,7 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
 					Variables:           c.manifest.Variables,
 					Tags:                c.manifest.Tags,
@@ -338,7 +338,7 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
 				c.parser = mockParser
 				c.wkld.addons = addons
 			},
