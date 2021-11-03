@@ -54,7 +54,7 @@ type LoadBalancedWebService struct {
 	parser loadBalancedWebSvcReadParser
 }
 
-// NewHTTPLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
+// NewHTTPLoadBalancedWebService creates a new CFN stack with an ECS service and an ALB from a manifest file.
 func NewHTTPLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	return newLoadBalancedWebService(mft, env, app, rc)
 }
