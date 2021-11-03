@@ -210,6 +210,18 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	}, nil
 }
 
+func (w *wkld) addonsParameters() (string, error) {
+	params, err := w.addons.Parameters()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return "", fmt.Errorf("parse addons parameters for %s: %w", w.name, err)
+		}
+		return "", nil
+	}
+	return params, nil
+}
+
 func securityGroupOutputNames(outputs []addon.Output) []string {
 	var securityGroups []string
 	for _, out := range outputs {

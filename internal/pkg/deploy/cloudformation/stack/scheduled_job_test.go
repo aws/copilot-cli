@@ -70,7 +70,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					Command:             []string{"world"},
 					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -135,7 +135,7 @@ Outputs:
 		"error parsing addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				addons := mockAddons{err: errors.New("some error")}
+				addons := mockAddons{tplErr: errors.New("some error")}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -146,7 +146,7 @@ Outputs:
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},

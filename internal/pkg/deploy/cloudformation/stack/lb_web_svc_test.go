@@ -29,19 +29,25 @@ const (
 )
 
 type mockAddons struct {
-	tpl string
-	err error
+	tpl    string
+	tplErr error
+
+	params    string
+	paramsErr error
 }
 
 func (m mockAddons) Template() (string, error) {
-	if m.err != nil {
-		return "", m.err
+	if m.tplErr != nil {
+		return "", m.tplErr
 	}
 	return m.tpl, nil
 }
 
 func (m mockAddons) Parameters() (string, error) {
-	return "", nil
+	if m.paramsErr != nil {
+		return "", m.paramsErr
+	}
+	return m.params, nil
 }
 
 var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
@@ -158,18 +164,29 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedError:    fmt.Errorf("read env controller lambda: some error"),
 		},
-		"unexpected addons parsing error": {
+		"unexpected addons template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockAddons{err: errors.New("some error")}
+				addons := mockAddons{tplErr: errors.New("some error")}
 				c.parser = m
 				c.wkld.addons = addons
 			},
-			wantedTemplate: "",
-			wantedError:    fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
+			wantedError: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
+		},
+		"unexpected addons parameter parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				addons := mockAddons{paramsErr: errors.New("some error")}
+				c.parser = m
+				c.wkld.addons = addons
+			},
+			wantedError: fmt.Errorf("parse addons parameters for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
@@ -219,7 +236,7 @@ Outputs:
 					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockAddons{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				c.parser = m
 				c.wkld.addons = addons
 			},
@@ -239,7 +256,8 @@ Outputs:
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					WorkloadType: manifest.LoadBalancedWebServiceType,
+					AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
+					WorkloadType:      manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 						GracePeriod:     aws.Int64(60),
@@ -282,6 +300,7 @@ Outputs:
     Value: !Ref MySecret
   Hello:
     Value: hello`,
+					params: "ServiceName: !GetAtt Service.Name",
 				}
 				c.parser = m
 				c.addons = addons
