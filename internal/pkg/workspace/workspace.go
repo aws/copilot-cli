@@ -378,7 +378,7 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 		}
 		searchingDir = filepath.Dir(searchingDir)
 	}
-	return "", &errWorkspaceNotFound{
+	return "", &ErrWorkspaceNotFound{
 		CurrentDirectory:      ws.workingDir,
 		ManifestDirectoryName: CopilotDirName,
 		NumberOfLevelsChecked: maximumParentDirsToSearch,
