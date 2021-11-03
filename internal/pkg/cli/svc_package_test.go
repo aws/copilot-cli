@@ -34,7 +34,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 	}{
 		"invalid workspace": {
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Times(0)
+				mockWorkspace.EXPECT().ListServices().Times(0)
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedErrorS: "could not find an application attached to this workspace, please run `app init` first",
@@ -43,7 +43,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
+				mockWorkspace.EXPECT().ListServices().Return(nil, errors.New("some error"))
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -53,7 +53,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Return([]string{"backend"}, nil)
+				mockWorkspace.EXPECT().ListServices().Return([]string{"backend"}, nil)
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -64,7 +64,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			inEnvName: "test",
 
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Times(0)
+				mockWorkspace.EXPECT().ListServices().Times(0)
 				mockStore.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{
 					ApplicationName: "phonetool",
 					EnvironmentName: "test",
@@ -271,7 +271,7 @@ count: 1`
 
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
-					ReadServiceManifest("api").
+					ReadWorkloadManifest("api").
 					Return([]byte(lbwsMft), nil)
 
 				mockItpl := mocks.NewMockinterpolator(ctrl)
@@ -300,10 +300,12 @@ count: 1`
 				opts.newInterpolator = func(app, env string) interpolator {
 					return mockItpl
 				}
-				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
+				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
 					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
 					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
+					require.Equal(t, rc.AccountID, "1111", "ensure the environment's account is used while rendering stack")
+					require.Equal(t, rc.Region, "us-west-2")
 					return mockStackSerializer, nil
 				}
 				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
@@ -346,7 +348,7 @@ count: 1`
 
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
-					ReadServiceManifest("api").
+					ReadWorkloadManifest("api").
 					Return([]byte(rdwsMft), nil)
 
 				mockItpl := mocks.NewMockinterpolator(ctrl)

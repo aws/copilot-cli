@@ -94,10 +94,14 @@ func (e *EFSConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	if !e.Advanced.IsEmpty() {
-		// Unmarshaled successfully to e.Config, unset e.ID, and return.
 		if err := e.Advanced.isValid(); err != nil {
+			// NOTE: `e.Advanced` contains exclusive fields.
+			// Validating that exclusive fields cannot be set simultaneously is necessary during `UnmarshalYAML`
+			// because the `ApplyEnv` stage assumes that no exclusive fields are set together.
+			// Not validating it during `UnmarshalYAML` would potentially cause an invalid manifest being deemed valid.
 			return err
 		}
+		// Unmarshaled successfully to e.Config, unset e.ID, and return.
 		e.Enabled = nil
 		return nil
 	}

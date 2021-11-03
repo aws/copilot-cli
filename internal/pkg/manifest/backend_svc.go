@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"errors"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -125,24 +123,6 @@ func (s BackendService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	}
 	s.Environments = nil
 	return &s, nil
-}
-
-// windowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-func (s *BackendService) windowsCompatibility() error {
-	if !s.IsWindows() {
-		return nil
-	}
-	// Exec is not supported.
-	if aws.BoolValue(s.ExecuteCommand.Enable) {
-		return errors.New(`'exec' is not supported when deploying a Windows container`)
-	}
-	// EFS is not supported.
-	for _, volume := range s.Storage.Volumes {
-		if !volume.EmptyVolume() {
-			return errors.New(`'EFS' is not supported when deploying a Windows container`)
-		}
-	}
-	return nil
 }
 
 // newDefaultBackendService returns a backend service with minimal task sizes and a single replica.

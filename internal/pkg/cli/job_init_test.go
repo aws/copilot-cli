@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
@@ -21,6 +22,13 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
+
+type initJobMocks struct {
+	mockPrompt       *mocks.Mockprompter
+	mockSel          *mocks.MockinitJobSelector
+	mockDockerEngine *mocks.MockdockerEngine
+	mockMftReader    *mocks.MockmanifestReader
+}
 
 func TestJobInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -185,49 +193,66 @@ func TestJobInitOpts_Ask(t *testing.T) {
 		inDockerfilePath string
 		inJobSchedule    string
 
-		mockFileSystem   func(mockFS afero.Fs)
-		mockPrompt       func(m *mocks.Mockprompter)
-		mockSel          func(m *mocks.MockinitJobSelector)
-		mockDockerEngine func(m *mocks.MockdockerEngine)
+		setupMocks func(mocks initJobMocks)
 
 		wantedErr      error
 		wantedSchedule string
 	}{
-		"prompt for job name": {
-			inJobType:        wantedJobType,
-			inJobName:        "",
-			inDockerfilePath: wantedDockerfilePath,
-			inJobSchedule:    wantedCronSchedule,
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(
-					fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(manifest.ScheduledJobType))),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(wantedJobName, nil)
-			},
-			mockSel:          func(m *mocks.MockinitJobSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
-
-			wantedSchedule: wantedCronSchedule,
-		},
 		"error if fail to get job name": {
 			inJobType:        wantedJobType,
 			inJobName:        "",
 			inDockerfilePath: wantedDockerfilePath,
 			inJobSchedule:    wantedCronSchedule,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			setupMocks: func(m initJobMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			mockSel:          func(m *mocks.MockinitJobSelector) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 
 			wantedErr: fmt.Errorf("get job name: some error"),
+		},
+		"prompt for job name": {
+			inJobType:        wantedJobType,
+			inJobName:        "",
+			inDockerfilePath: wantedDockerfilePath,
+			inJobSchedule:    wantedCronSchedule,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Eq(
+					fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(manifest.ScheduledJobType))),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(wantedJobName, nil)
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+			},
+
+			wantedSchedule: wantedCronSchedule,
+		},
+		"error if fail to get local manifest": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inDockerfilePath: wantedDockerfilePath,
+			inJobSchedule:    wantedCronSchedule,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, mockError)
+			},
+
+			wantedErr: fmt.Errorf("read manifest file for job cuteness-aggregator: mock error"),
+		},
+		"skip asking questions if local manifest file exists": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inDockerfilePath: wantedDockerfilePath,
+			inJobSchedule:    wantedCronSchedule,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return([]byte(`name: cuteness-aggregator
+type: Scheduled Job`), nil)
+			},
+
+			wantedSchedule: wantedCronSchedule,
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inJobType:        wantedJobType,
@@ -236,10 +261,9 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: "",
 			inJobSchedule:    wantedCronSchedule,
 
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSel:          func(m *mocks.MockinitJobSelector) {},
-			mockFileSystem:   func(mockFS afero.Fs) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+			},
 
 			wantedSchedule: wantedCronSchedule,
 		},
@@ -248,11 +272,9 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobName:     wantedJobName,
 			inJobSchedule: wantedCronSchedule,
 
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockSel:        func(m *mocks.MockinitJobSelector) {},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
 			},
 
 			wantedErr: fmt.Errorf("check if docker engine is running: some error"),
@@ -262,14 +284,11 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobName:     wantedJobName,
 			inJobSchedule: wantedCronSchedule,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("mockImage", nil)
-			},
-			mockSel:        func(m *mocks.MockinitJobSelector) {},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -279,14 +298,11 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobName:     wantedJobName,
 			inJobSchedule: wantedCronSchedule,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("mockImage", nil)
-			},
-			mockSel:        func(m *mocks.MockinitJobSelector) {},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -296,23 +312,19 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobName:        wantedJobName,
 			inDockerfilePath: "",
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("", mockError)
-			},
-			mockSel: func(m *mocks.MockinitJobSelector) {
-				m.EXPECT().Dockerfile(
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedJobName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedJobName)),
 					gomock.Eq(wkldInitDockerfileHelpPrompt),
 					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
-			},
-			mockFileSystem: func(mockFS afero.Fs) {},
 
 			wantedErr: fmt.Errorf("get image location: mock error"),
 		},
@@ -322,22 +334,18 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobSchedule:    wantedCronSchedule,
 			inDockerfilePath: "",
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
 					Return("mockImage", nil)
-			},
-			mockSel: func(m *mocks.MockinitJobSelector) {
-				m.EXPECT().Dockerfile(
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedJobName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedJobName)),
 					gomock.Eq(wkldInitDockerfileHelpPrompt),
 					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
-			},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -348,19 +356,16 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: "",
 			inJobSchedule:    wantedCronSchedule,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockSel: func(m *mocks.MockinitJobSelector) {
-				m.EXPECT().Dockerfile(
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("cuteness-aggregator/Dockerfile", nil)
-			},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -371,19 +376,16 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: "",
 			inJobSchedule:    wantedCronSchedule,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockSel: func(m *mocks.MockinitJobSelector) {
-				m.EXPECT().Dockerfile(
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
-			},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 
 			wantedErr: fmt.Errorf("select Dockerfile: some error"),
@@ -394,17 +396,15 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inJobSchedule:    "",
 
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockSel: func(m *mocks.MockinitJobSelector) {
-				m.EXPECT().Schedule(
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockSel.EXPECT().Schedule(
 					gomock.Eq(jobInitSchedulePrompt),
 					gomock.Eq(jobInitScheduleHelp),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedCronSchedule, nil)
 			},
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 
 			wantedSchedule: wantedCronSchedule,
 		},
@@ -414,17 +414,15 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inJobSchedule:    "",
 
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockSel: func(m *mocks.MockinitJobSelector) {
-				m.EXPECT().Schedule(
+			setupMocks: func(m initJobMocks) {
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockSel.EXPECT().Schedule(
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", fmt.Errorf("some error"))
 			},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 
 			wantedErr: fmt.Errorf("get schedule: some error"),
 		},
@@ -438,6 +436,14 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockSel := mocks.NewMockinitJobSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
+			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
+			mocks := initJobMocks{
+				mockPrompt:       mockPrompt,
+				mockSel:          mockSel,
+				mockDockerEngine: mockDockerEngine,
+				mockMftReader:    mockManifestReader,
+			}
+			tc.setupMocks(mocks)
 			opts := &initJobOpts{
 				initJobVars: initJobVars{
 					initWkldVars: initWkldVars{
@@ -448,16 +454,11 @@ func TestJobInitOpts_Ask(t *testing.T) {
 					},
 					schedule: tc.inJobSchedule,
 				},
-				fs:           &afero.Afero{Fs: afero.NewMemMapFs()},
 				sel:          mockSel,
 				dockerEngine: mockDockerEngine,
+				mftReader:    mockManifestReader,
 				prompt:       mockPrompt,
 			}
-
-			tc.mockFileSystem(opts.fs)
-			tc.mockPrompt(mockPrompt)
-			tc.mockSel(mockSel)
-			tc.mockDockerEngine(mockDockerEngine)
 
 			// WHEN
 			err := opts.Ask()

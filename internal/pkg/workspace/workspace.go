@@ -120,9 +120,9 @@ func (ws *Workspace) Summary() (*Summary, error) {
 	return nil, &errNoAssociatedApplication{}
 }
 
-// ServiceNames returns the names of the services in the workspace.
-func (ws *Workspace) ServiceNames() ([]string, error) {
-	return ws.workloadNames(func(wlType string) bool {
+// ListServices returns the names of the services in the workspace.
+func (ws *Workspace) ListServices() ([]string, error) {
+	return ws.listWorkloads(func(wlType string) bool {
 		for _, t := range manifest.ServiceTypes {
 			if wlType == t {
 				return true
@@ -132,9 +132,9 @@ func (ws *Workspace) ServiceNames() ([]string, error) {
 	})
 }
 
-// JobNames returns the names of all jobs in the workspace.
-func (ws *Workspace) JobNames() ([]string, error) {
-	return ws.workloadNames(func(wlType string) bool {
+// ListJobs returns the names of all jobs in the workspace.
+func (ws *Workspace) ListJobs() ([]string, error) {
+	return ws.listWorkloads(func(wlType string) bool {
 		for _, t := range manifest.JobTypes {
 			if wlType == t {
 				return true
@@ -144,15 +144,15 @@ func (ws *Workspace) JobNames() ([]string, error) {
 	})
 }
 
-// WorkloadNames returns the name of all the workloads in the workspace.
-func (ws *Workspace) WorkloadNames() ([]string, error) {
-	return ws.workloadNames(func(wlType string) bool {
+// ListWorkloads returns the name of all the workloads in the workspace.
+func (ws *Workspace) ListWorkloads() ([]string, error) {
+	return ws.listWorkloads(func(wlType string) bool {
 		return true
 	})
 }
 
-// workloadNames returns the name of all workloads (either services or jobs) in the workspace.
-func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
+// listWorkloads returns the name of all workloads (either services or jobs) in the workspace.
+func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -170,11 +170,11 @@ func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 			// Swallow the error because we don't want to include any services that we don't have permissions to read.
 			continue
 		}
-		manifestBytes, err := ws.readWorkloadManifest(f.Name())
+		manifestBytes, err := ws.ReadWorkloadManifest(f.Name())
 		if err != nil {
 			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
 		}
-		wlType, err := ws.readWorkloadType(manifestBytes)
+		wlType, err := manifestBytes.WorkloadType()
 		if err != nil {
 			return nil, err
 		}
@@ -185,26 +185,21 @@ func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 	return names, nil
 }
 
-// ReadServiceManifest returns the contents of the service's manifest under copilot/{name}/manifest.yml.
-func (ws *Workspace) ReadServiceManifest(name string) ([]byte, error) {
-	mf, err := ws.readWorkloadManifest(name)
+// ReadWorkloadManifest returns the contents of the workload's manifest under copilot/{name}/manifest.yml.
+func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, error) {
+	raw, err := ws.read(mftDirName, manifestFileName)
 	if err != nil {
-		return nil, fmt.Errorf("read service %s manifest file: %w", name, err)
+		return nil, err
 	}
-	return mf, nil
-}
-
-// ReadJobManifest returns the contents of the job's manifest under copilot/{name}/manifest.yml.
-func (ws *Workspace) ReadJobManifest(name string) ([]byte, error) {
-	mf, err := ws.readWorkloadManifest(name)
+	mft := WorkloadManifest(raw)
+	mftName, err := mft.workloadName()
 	if err != nil {
-		return nil, fmt.Errorf("read job %s manifest file: %w", name, err)
+		return nil, err
 	}
-	return mf, nil
-}
-
-func (ws *Workspace) readWorkloadManifest(name string) ([]byte, error) {
-	return ws.read(name, manifestFileName)
+	if mftName != mftDirName {
+		return nil, fmt.Errorf(`name of the manifest "%s" and directory "%s" do not match`, mftName, mftDirName)
+	}
+	return mft, nil
 }
 
 // ReadPipelineManifest returns the contents of the pipeline manifest under copilot/pipeline.yml.
@@ -390,16 +385,6 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 	}
 }
 
-func (ws *Workspace) readWorkloadType(dat []byte) (string, error) {
-	wl := struct {
-		Type string `yaml:"type"`
-	}{}
-	if err := yaml.Unmarshal(dat, &wl); err != nil {
-		return "", err
-	}
-	return wl.Type, nil
-}
-
 // write flushes the data to a file under the copilot directory joined by path elements.
 func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
 	copilotPath, err := ws.CopilotDirPath()
@@ -432,7 +417,15 @@ func (ws *Workspace) read(elem ...string) ([]byte, error) {
 		return nil, err
 	}
 	pathElems := append([]string{copilotPath}, elem...)
-	return ws.fsUtils.ReadFile(filepath.Join(pathElems...))
+	filename := filepath.Join(pathElems...)
+	exist, err := ws.fsUtils.Exists(filename)
+	if err != nil {
+		return nil, fmt.Errorf("check if manifest file %s exists: %w", filename, err)
+	}
+	if !exist {
+		return nil, &ErrFileNotExists{FileName: filename}
+	}
+	return ws.fsUtils.ReadFile(filename)
 }
 
 // ListDockerfiles returns the list of Dockerfiles within the current
@@ -488,4 +481,28 @@ func RelPath(fullPath string) (string, error) {
 		return "", fmt.Errorf("get relative path of file: %w", err)
 	}
 	return path, nil
+}
+
+// WorkloadManifest represents raw local workload manifest.
+type WorkloadManifest []byte
+
+func (w WorkloadManifest) workloadName() (string, error) {
+	wl := struct {
+		Name string `yaml:"name"`
+	}{}
+	if err := yaml.Unmarshal(w, &wl); err != nil {
+		return "", fmt.Errorf(`unmarshal manifest file to retrieve "name": %w`, err)
+	}
+	return wl.Name, nil
+}
+
+// WorkloadType returns the workload type of the manifest.
+func (w WorkloadManifest) WorkloadType() (string, error) {
+	wl := struct {
+		Type string `yaml:"type"`
+	}{}
+	if err := yaml.Unmarshal(w, &wl); err != nil {
+		return "", fmt.Errorf(`unmarshal manifest file to retrieve "type": %w`, err)
+	}
+	return wl.Type, nil
 }

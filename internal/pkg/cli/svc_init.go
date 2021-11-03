@@ -112,6 +112,7 @@ type initSvcOpts struct {
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
 	topicSel     topicSelector
+	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -164,6 +165,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		topicSel:     snsSel,
+		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
@@ -217,31 +219,41 @@ func (o *initSvcOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initSvcOpts) Ask() error {
-	if err := o.askSvcType(); err != nil {
+	if err := o.askSvcName(); err != nil {
 		return err
 	}
-	if err := o.askSvcName(); err != nil {
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err == nil {
+		svcType, err := localMft.WorkloadType()
+		if err != nil {
+			return fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
+		}
+		o.wkldType = svcType
+		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+		return nil
+	}
+	var errNotFound *workspace.ErrFileNotExists
+	if !errors.As(err, &errNotFound) {
+		return fmt.Errorf("read manifest file for service %s: %w", o.name, err)
+	}
+	if err := o.askSvcType(); err != nil {
 		return err
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
 		return err
 	}
-
 	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
 	}
-
 	if err := o.askSvcPort(); err != nil {
 		return err
 	}
-
 	if err := o.askSvcPublishers(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -461,7 +473,7 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 	if redirectedPlatform == "" {
 		return "", nil
 	}
-	if redirectedPlatform != detectedPlatform {
+	if redirectedPlatform != detectedPlatform && wkldType != manifest.RequestDrivenWebServiceType {
 		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
 	}
 	platform := manifest.PlatformString(redirectedPlatform)
