@@ -397,7 +397,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule:    "",
 
 			setupMocks: func(m initJobMocks) {
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrWorkspaceNotFound{})
 				m.mockSel.EXPECT().Schedule(
 					gomock.Eq(jobInitSchedulePrompt),
 					gomock.Eq(jobInitScheduleHelp),
