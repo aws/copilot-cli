@@ -576,7 +576,7 @@ func (o *initStorageOpts) askAuroraInitialDBName() error {
 }
 
 func (o *initStorageOpts) validateWorkloadName() error {
-	names, err := o.ws.WorkloadNames()
+	names, err := o.ws.ListWorkloads()
 	if err != nil {
 		return fmt.Errorf("retrieve local workload names: %w", err)
 	}

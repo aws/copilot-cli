@@ -241,7 +241,7 @@ func TestWorkspace_Create(t *testing.T) {
 	}
 }
 
-func TestWorkspace_ServiceNames(t *testing.T) {
+func TestWorkspace_ListServices(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
 		fs         func() afero.Fs
@@ -257,6 +257,26 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 			},
 			wantedErr: errors.New("read directory /copilot: open /copilot: file does not exist"),
 		},
+		"return error if directory name and manifest name do not match": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
+
+				fs.Mkdir("/copilot/users", 0755)
+				manifest, _ := fs.Create("/copilot/users/manifest.yml")
+				defer manifest.Close()
+				manifest.Write([]byte(`name: payment
+type: Load Balanced Web Service`))
+
+				// Missing manifest.yml.
+				fs.Mkdir("/copilot/inventory", 0755)
+				return fs
+			},
+
+			wantedErr: fmt.Errorf(`read manifest for workload users: name of the manifest "payment" and directory "users" do not match`),
+		},
 		"retrieve only directories with manifest files": {
 			copilotDir: "/copilot",
 			fs: func() afero.Fs {
@@ -268,13 +288,15 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 				fs.Mkdir("/copilot/users", 0755)
 				manifest, _ := fs.Create("/copilot/users/manifest.yml")
 				defer manifest.Close()
-				manifest.Write([]byte("type: Load Balanced Web Service"))
+				manifest.Write([]byte(`name: users
+type: Load Balanced Web Service`))
 
 				// Valid service directory structure.
 				fs.MkdirAll("/copilot/payments/addons", 0755)
 				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
 				defer manifest2.Close()
-				manifest2.Write([]byte("type: Load Balanced Web Service"))
+				manifest2.Write([]byte(`name: payments
+type: Load Balanced Web Service`))
 
 				// Missing manifest.yml.
 				fs.Mkdir("/copilot/inventory", 0755)
@@ -294,13 +316,15 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 				fs.Mkdir("/copilot/users", 0755)
 				manifest, _ := fs.Create("/copilot/users/manifest.yml")
 				defer manifest.Close()
-				manifest.Write([]byte("type: Scheduled Job"))
+				manifest.Write([]byte(`name: users
+type: Scheduled Job`))
 
 				// Valid service directory structure.
 				fs.MkdirAll("/copilot/payments/addons", 0755)
 				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
 				defer manifest2.Close()
-				manifest2.Write([]byte("type: Load Balanced Web Service"))
+				manifest2.Write([]byte(`name: payments
+type: Load Balanced Web Service`))
 
 				// Missing manifest.yml.
 				fs.Mkdir("/copilot/inventory", 0755)
@@ -320,17 +344,18 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 				},
 			}
 
-			names, err := ws.ServiceNames()
+			names, err := ws.ListServices()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
+				require.NoError(t, err)
 				require.ElementsMatch(t, tc.wantedNames, names)
 			}
 		})
 	}
 }
 
-func TestWorkspace_JobNames(t *testing.T) {
+func TestWorkspace_ListJobs(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
 		fs         func() afero.Fs
@@ -357,13 +382,15 @@ func TestWorkspace_JobNames(t *testing.T) {
 				fs.Mkdir("/copilot/users", 0755)
 				manifest, _ := fs.Create("/copilot/users/manifest.yml")
 				defer manifest.Close()
-				manifest.Write([]byte("type: Scheduled Job"))
+				manifest.Write([]byte(`name: users
+type: Scheduled Job`))
 
 				// Valid service directory structure.
 				fs.MkdirAll("/copilot/payments/addons", 0755)
 				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
 				defer manifest2.Close()
-				manifest2.Write([]byte("type: Scheduled Job"))
+				manifest2.Write([]byte(`name: payments
+type: Scheduled Job`))
 
 				// Missing manifest.yml.
 				fs.Mkdir("/copilot/inventory", 0755)
@@ -383,13 +410,15 @@ func TestWorkspace_JobNames(t *testing.T) {
 				fs.Mkdir("/copilot/users", 0755)
 				manifest, _ := fs.Create("/copilot/users/manifest.yml")
 				defer manifest.Close()
-				manifest.Write([]byte("type: Scheduled Job"))
+				manifest.Write([]byte(`name: users
+type: Scheduled Job`))
 
 				// Valid service directory structure.
 				fs.MkdirAll("/copilot/payments/addons", 0755)
 				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
 				defer manifest2.Close()
-				manifest2.Write([]byte("type: Load Balanced Web Service"))
+				manifest2.Write([]byte(`name: payments
+type: Load Balanced Web Service`))
 
 				// Missing manifest.yml.
 				fs.Mkdir("/copilot/inventory", 0755)
@@ -409,7 +438,7 @@ func TestWorkspace_JobNames(t *testing.T) {
 				},
 			}
 
-			names, err := ws.JobNames()
+			names, err := ws.ListJobs()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
@@ -419,7 +448,7 @@ func TestWorkspace_JobNames(t *testing.T) {
 	}
 }
 
-func TestWorkspace_WorkspaceNames(t *testing.T) {
+func TestWorkspace_ListWorkspaces(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
 		fs         func() afero.Fs
@@ -438,17 +467,20 @@ func TestWorkspace_WorkspaceNames(t *testing.T) {
 				fs.Mkdir("/copilot/frontend", 0755)
 				frontendManifest, _ := fs.Create("/copilot/frontend/manifest.yml")
 				defer frontendManifest.Close()
-				frontendManifest.Write([]byte("type: Load Balanced Web Service"))
+				frontendManifest.Write([]byte(`name: frontend
+type: Load Balanced Web Service`))
 
 				fs.Mkdir("/copilot/users", 0755)
 				userManifest, _ := fs.Create("/copilot/users/manifest.yml")
 				defer userManifest.Close()
-				userManifest.Write([]byte("type: Backend Service"))
+				userManifest.Write([]byte(`name: users
+type: Backend Service`))
 
 				fs.MkdirAll("/copilot/report/addons", 0755)
 				reportManifest, _ := fs.Create("/copilot/report/manifest.yml")
 				defer reportManifest.Close()
-				reportManifest.Write([]byte("type: Scheduled Job"))
+				reportManifest.Write([]byte(`name: report
+type: Scheduled Job`))
 
 				// Missing manifest.yml.
 				fs.Mkdir("/copilot/inventory", 0755)
@@ -468,7 +500,7 @@ func TestWorkspace_WorkspaceNames(t *testing.T) {
 				},
 			}
 
-			names, err := ws.WorkloadNames()
+			names, err := ws.ListWorkloads()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
@@ -519,7 +551,19 @@ func TestWorkspace_read(t *testing.T) {
 		fs         func() afero.Fs
 
 		wantedData []byte
+		wantedErr  error
 	}{
+		"return error if file does not exist": {
+			elems: []string{"webhook", "manifest.yml"},
+
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+
+			wantedErr: fmt.Errorf("file /copilot/webhook/manifest.yml does not exists"),
+		},
 		"read existing file": {
 			elems: []string{"webhook", "manifest.yml"},
 
@@ -548,8 +592,12 @@ func TestWorkspace_read(t *testing.T) {
 
 			data, err := ws.read(tc.elems...)
 
-			require.NoError(t, err)
-			require.Equal(t, tc.wantedData, data)
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedData, data)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
 		})
 	}
 }

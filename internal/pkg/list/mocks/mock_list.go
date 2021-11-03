@@ -102,32 +102,32 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 	return m.recorder
 }
 
-// JobNames mocks base method.
-func (m *MockWorkspace) JobNames() ([]string, error) {
+// ListJobs mocks base method.
+func (m *MockWorkspace) ListJobs() ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "JobNames")
+	ret := m.ctrl.Call(m, "ListJobs")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// JobNames indicates an expected call of JobNames.
-func (mr *MockWorkspaceMockRecorder) JobNames() *gomock.Call {
+// ListJobs indicates an expected call of ListJobs.
+func (mr *MockWorkspaceMockRecorder) ListJobs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockWorkspace)(nil).JobNames))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockWorkspace)(nil).ListJobs))
 }
 
-// ServiceNames mocks base method.
-func (m *MockWorkspace) ServiceNames() ([]string, error) {
+// ListServices mocks base method.
+func (m *MockWorkspace) ListServices() ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceNames")
+	ret := m.ctrl.Call(m, "ListServices")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ServiceNames indicates an expected call of ServiceNames.
-func (mr *MockWorkspaceMockRecorder) ServiceNames() *gomock.Call {
+// ListServices indicates an expected call of ListServices.
+func (mr *MockWorkspaceMockRecorder) ListServices() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockWorkspace)(nil).ServiceNames))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockWorkspace)(nil).ListServices))
 }

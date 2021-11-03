@@ -200,6 +200,16 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
+		"renders a valida template with additional addons parameters": {
+			opts: template.WorkloadOpts{
+				ServiceDiscoveryEndpoint: "test.app.local",
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				AddonsExtraParams: `ServiceName: !Ref Service
+DiscoveryServiceArn:
+  Fn::GetAtt: [DiscoveryService, Arn]
+`,
+			},
+		},
 	}
 
 	for name, tc := range testCases {

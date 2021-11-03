@@ -117,9 +117,9 @@ type ConfigLister interface {
 
 // WsWorkloadLister wraps the method to get workloads in current workspace.
 type WsWorkloadLister interface {
-	ServiceNames() ([]string, error)
-	JobNames() ([]string, error)
-	WorkloadNames() ([]string, error)
+	ListServices() ([]string, error)
+	ListJobs() ([]string, error)
+	ListWorkloads() ([]string, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -860,7 +860,7 @@ func (s *ConfigSelect) retrieveJobs(app string) ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
-	localServiceNames, err := s.ws.ServiceNames()
+	localServiceNames, err := s.ws.ListServices()
 	if err != nil {
 		return nil, err
 	}
@@ -868,7 +868,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
-	localJobNames, err := s.ws.JobNames()
+	localJobNames, err := s.ws.ListJobs()
 	if err != nil {
 		return nil, err
 	}
@@ -876,7 +876,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
-	localWlNames, err := s.ws.WorkloadNames()
+	localWlNames, err := s.ws.ListWorkloads()
 	if err != nil {
 		return nil, err
 	}
