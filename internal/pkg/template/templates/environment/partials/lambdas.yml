@@ -25,19 +25,6 @@ DNSDelegationFunction:
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x
 
-# Resources to enable long ARN formats for the CF execution role.
-EnableLongARNFormatFunction:
-  Type: AWS::Lambda::Function
-  Properties:
-    Code:
-      S3Bucket: {{.ScriptBucketName}}
-      S3Key: {{.EnableLongARNFormatLambda}}
-    Handler: "index.handler"
-    Timeout: 600
-    MemorySize: 512
-    Role: !GetAtt 'CloudformationExecutionRole.Arn'
-    Runtime: nodejs12.x
-
 CustomDomainFunction:
   Condition: HasAliases
   Type: AWS::Lambda::Function

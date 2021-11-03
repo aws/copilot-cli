@@ -173,8 +173,11 @@ func (o *initJobOpts) Ask() error {
 		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
 		return nil
 	}
-	var errNotFound *workspace.ErrFileNotExists
-	if !errors.As(err, &errNotFound) {
+	var (
+		errNotFound *workspace.ErrFileNotExists
+		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+	)
+	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound){
 		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
 	if err := o.askJobType(); err != nil {
