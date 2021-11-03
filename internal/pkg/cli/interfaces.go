@@ -229,12 +229,8 @@ type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
-type svcManifestReader interface {
-	ReadServiceManifest(svcName string) ([]byte, error)
-}
-
-type jobManifestReader interface {
-	ReadJobManifest(jobName string) ([]byte, error)
+type manifestReader interface {
+	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }
 
 type copilotDirGetter interface {
@@ -250,13 +246,13 @@ type wsPipelineWriter interface {
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
 }
 
-type wsServiceLister interface {
-	ServiceNames() ([]string, error)
+type serviceLister interface {
+	ListServices() ([]string, error)
 }
 
 type wsSvcReader interface {
-	wsServiceLister
-	svcManifestReader
+	serviceLister
+	manifestReader
 }
 
 type wsSvcDirReader interface {
@@ -264,17 +260,17 @@ type wsSvcDirReader interface {
 	copilotDirGetter
 }
 
-type wsJobLister interface {
-	JobNames() ([]string, error)
+type jobLister interface {
+	ListJobs() ([]string, error)
 }
 
 type wsJobReader interface {
-	jobManifestReader
-	wsJobLister
+	manifestReader
+	jobLister
 }
 
-type wsWlReader interface {
-	WorkloadNames() ([]string, error)
+type wlLister interface {
+	ListWorkloads() ([]string, error)
 }
 
 type wsJobDirReader interface {
@@ -286,14 +282,14 @@ type wsWlDirReader interface {
 	wsJobReader
 	wsSvcReader
 	copilotDirGetter
-	wsWlReader
+	wlLister
 	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
 }
 
 type wsPipelineReader interface {
 	wsPipelineManifestReader
-	WorkloadNames() ([]string, error)
+	wlLister
 }
 
 type wsAppManager interface {
@@ -303,7 +299,7 @@ type wsAppManager interface {
 
 type wsAddonManager interface {
 	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
-	wsWlReader
+	wlLister
 }
 
 type artifactUploader interface {
