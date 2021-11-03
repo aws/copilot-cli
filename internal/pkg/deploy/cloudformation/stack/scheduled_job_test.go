@@ -62,7 +62,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						Timeout: aws.Int(5400),
 						Retries: aws.Int(3),
 					},
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
@@ -92,7 +92,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						Timeout: aws.Int(5400),
 						Retries: aws.Int(3),
 					},
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},

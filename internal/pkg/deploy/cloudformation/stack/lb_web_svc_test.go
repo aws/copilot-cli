@@ -207,7 +207,7 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
@@ -245,7 +245,7 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},

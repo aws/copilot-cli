@@ -198,7 +198,7 @@ Outputs:
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},
 					},
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.DisablePublicIP,
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},

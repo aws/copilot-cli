@@ -229,9 +229,10 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			wantedError: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")), // TODO
 		},
 		"should be able to parse custom resource URLs when alias is enabled": {
-			inManifest: func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
-				manifest.Alias = aws.String("convex.domain.com")
-				return manifest
+			inManifest: func(mft manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				mft.Alias = aws.String("convex.domain.com")
+				mft.Network.VPC.Placement = (*manifest.RequestDrivenWebServicePlacement)(&manifest.PrivateSubnetPlacement)
+				return mft
 			},
 			inCustomResourceURLs: map[string]string{
 				template.AppRunnerCustomDomainLambdaFileName: "https://mockbucket.s3-us-east-1.amazonaws.com/mockURL1",
@@ -241,14 +242,17 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
 				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
 					Variables:          c.manifest.Variables,
 					Tags:               c.manifest.Tags,
 					EnableHealthCheck:  true,
 					Alias:              aws.String("convex.domain.com"),
 					ScriptBucketName:   &mockBucket,
 					CustomDomainLambda: &mockCustomDomainLambda,
-					AWSSDKLayer:        aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
+					Network: template.NetworkOpts{
+						SubnetsType: "PrivateSubnets",
+					},
+					AWSSDKLayer: aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.wkld.addons = addons
@@ -280,7 +284,7 @@ Outputs:
   Hello:
     Value: hello`,
 				}
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
 					Variables: c.manifest.Variables,
 					Tags:      c.manifest.Tags,
 					NestedStack: &template.WorkloadNestedStackOpts{
@@ -299,7 +303,7 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
 					Variables:         c.manifest.Variables,
 					Tags:              c.manifest.Tags,
 					EnableHealthCheck: true,

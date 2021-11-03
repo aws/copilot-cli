@@ -40,7 +40,7 @@ var awsSDKLayerForRegion = map[string]*string{
 
 type requestDrivenWebSvcReadParser interface {
 	template.ReadParser
-	ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput) (*template.Content, error)
+	ParseRequestDrivenWebService(template.WorkloadOpts) (*template.Content, error)
 }
 
 // RequestDrivenWebService represents the configuration needed to create a CloudFormation stack from a request-drive web service manifest.
@@ -115,7 +115,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 
-	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+	content, err := s.parser.ParseRequestDrivenWebService(template.WorkloadOpts{
 		Variables:         s.manifest.Variables,
 		StartCommand:      s.manifest.StartCommand,
 		Tags:              s.manifest.Tags,
@@ -128,6 +128,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		AWSSDKLayer:          layerARN,
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,
+		Network:              convertRDWSNetworkConfig(s.manifest.Network),
 
 		Publish: publishers,
 	})

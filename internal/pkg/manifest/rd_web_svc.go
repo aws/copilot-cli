@@ -44,10 +44,11 @@ func (c *RequestDrivenWebServiceNetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
-type rdwsPlacement Placement
+// RequestDrivenWebServicePlacement represents where to place tasks for request driven web service.
+type RequestDrivenWebServicePlacement Placement
 
 type rdwsVpcConfig struct {
-	Placement *rdwsPlacement `yaml:"placement"`
+	Placement *RequestDrivenWebServicePlacement `yaml:"placement"`
 }
 
 func (c *rdwsVpcConfig) isEmpty() bool {
