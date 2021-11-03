@@ -956,10 +956,10 @@ func (p rdwsPlacement) Validate() error {
 	if err := (Placement)(p).Validate(); err != nil {
 		return err
 	}
-	if string(p) == string(PublicSubnetPlacement) {
-		return fmt.Errorf(`public is not supported for %s`, RequestDrivenWebServiceType)
+	if string(p) == string(PrivateSubnetPlacement) {
+		return nil
 	}
-	return nil
+	return fmt.Errorf(`placement "%s" is not supported for %s`, string(p), RequestDrivenWebServiceType)
 }
 
 // Validate returns nil if Placement is configured correctly.

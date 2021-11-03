@@ -1734,7 +1734,7 @@ func TestRdwsPlacement_Validate(t *testing.T) {
 	}{
 		"should return an error if placement is public": {
 			in:     (*rdwsPlacement)(aws.String("public")),
-			wanted: errors.New("public is not supported for Request-Driven Web Service"),
+			wanted: errors.New(`placement "public" is not supported for Request-Driven Web Service`),
 		},
 	}
 	for name, tc := range testCases {
