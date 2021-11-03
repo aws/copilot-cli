@@ -25,7 +25,6 @@ var templateFS embed.FS
 const (
 	DNSCertValidatorFileName            = "dns-cert-validator"
 	DNSDelegationFileName               = "dns-delegation"
-	EnableLongARNsFileName              = "enable-long-arns"
 	CustomDomainFileName                = "custom-domain"
 	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
 	AWSSDKLayerFileName                 = "aws-sdk-layer"
@@ -41,7 +40,6 @@ var (
 	envCustomResourceFiles = []string{
 		DNSCertValidatorFileName,
 		DNSDelegationFileName,
-		EnableLongARNsFileName,
 		CustomDomainFileName,
 	}
 	rdWkldCustomResourceFiles = []string{
