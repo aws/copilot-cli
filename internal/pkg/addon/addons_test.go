@@ -301,7 +301,7 @@ func TestAddons_Parameters(t *testing.T) {
 					ws:     ws,
 				}
 			},
-			wantedErr: "defining multiple addons.parameters.yml and addons.parameters.yaml is not allowed under api addons",
+			wantedErr: "defining addons.parameters.yaml and addons.parameters.yml is not allowed under api addons/",
 		},
 		"returns an error if cannot read parameter file under addons/": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -314,7 +314,7 @@ func TestAddons_Parameters(t *testing.T) {
 					ws:     ws,
 				}
 			},
-			wantedErr: "read parameter file addons.parameters.yml under api addons: some error",
+			wantedErr: "read parameter file addons.parameters.yml under api addons/: some error",
 		},
 		"returns an error if there are no 'Parameters' field defined in a parameters file": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -327,7 +327,7 @@ func TestAddons_Parameters(t *testing.T) {
 					ws:     ws,
 				}
 			},
-			wantedErr: "must define field 'Parameters' in file addons.parameters.yml under api addons",
+			wantedErr: "must define field 'Parameters' in file addons.parameters.yml under api addons/",
 		},
 		"returns an error if reserved parameter fields is redefined in a parameters file": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -348,7 +348,7 @@ Parameters:
 					ws:     ws,
 				}
 			},
-			wantedErr: "reserved parameters 'App', 'Env', and 'Name' cannot be declared in addons.parameters.yml under api addons",
+			wantedErr: "reserved parameters 'App', 'Env', and 'Name' cannot be declared in addons.parameters.yml under api addons/",
 		},
 		"returns the content of Parameters on success": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {

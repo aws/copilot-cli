@@ -22,7 +22,14 @@ const (
 
 var (
 	yamlExtensions     = []string{".yaml", ".yml"}
-	parameterFileNames = []string{"addons.parameters.yml", "addons.parameters.yaml"}
+	parameterFileNames = func() []string {
+		const paramFilePrefix = "addons.parameters"
+		var fnames []string
+		for _, ext := range yamlExtensions {
+			fnames = append(fnames, fmt.Sprintf("%s%s", paramFilePrefix, ext))
+		}
+		return fnames
+	}()
 )
 
 type workspaceReader interface {
@@ -113,29 +120,30 @@ func (a *Addons) Parameters() (string, error) {
 		return "", nil
 	}
 	if len(paramFiles) > 1 {
-		return "", fmt.Errorf("defining multiple %s is not allowed under %s addons", english.WordSeries(parameterFileNames, "and"), a.wlName)
+		return "", fmt.Errorf("defining %s is not allowed under %s addons/", english.WordSeries(parameterFileNames, "and"), a.wlName)
 	}
-	raw, err := a.ws.ReadAddon(a.wlName, paramFiles[0])
+	paramFile := paramFiles[0]
+	raw, err := a.ws.ReadAddon(a.wlName, paramFile)
 	if err != nil {
-		return "", fmt.Errorf("read parameter file %s under %s addons: %w", paramFiles[0], a.wlName, err)
+		return "", fmt.Errorf("read parameter file %s under %s addons/: %w", paramFile, a.wlName, err)
 	}
 	content := struct {
 		Parameters yaml.Node `yaml:"Parameters"`
 	}{}
 	if err := yaml.Unmarshal(raw, &content); err != nil {
-		return "", fmt.Errorf("unmarshal 'Parameters' in file %s under %s addons: %w", paramFiles[0], a.wlName, err)
+		return "", fmt.Errorf("unmarshal 'Parameters' in file %s under %s addons/: %w", paramFile, a.wlName, err)
 	}
 	if content.Parameters.IsZero() {
-		return "", fmt.Errorf("must define field 'Parameters' in file %s under %s addons", paramFiles[0], a.wlName)
+		return "", fmt.Errorf("must define field 'Parameters' in file %s under %s addons/", paramFile, a.wlName)
 	}
-	if err := a.validateReservedParameters(content.Parameters, paramFiles[0]); err != nil {
+	if err := a.validateReservedParameters(content.Parameters, paramFile); err != nil {
 		return "", err
 	}
 	buf := new(strings.Builder)
 	encoder := yaml.NewEncoder(buf)
 	encoder.SetIndent(2 /* 2 spaces to indent */)
 	if err := encoder.Encode(content.Parameters); err != nil {
-		return "", fmt.Errorf("marshal contents of 'Parameters' in file %s under %s addons", paramFiles[0], a.wlName)
+		return "", fmt.Errorf("marshal contents of 'Parameters' in file %s under %s addons/", paramFile, a.wlName)
 	}
 	return buf.String(), nil
 }
@@ -147,12 +155,12 @@ func (a *Addons) validateReservedParameters(params yaml.Node, fname string) erro
 		Name yaml.Node `yaml:"Name"`
 	}{}
 	if err := params.Decode(&content); err != nil {
-		return fmt.Errorf("decode content of parameters file %s under %s addons", fname, a.wlName)
+		return fmt.Errorf("decode content of parameters file %s under %s addons/", fname, a.wlName)
 	}
 
 	for _, field := range []yaml.Node{content.App, content.Env, content.Name} {
 		if !field.IsZero() {
-			return fmt.Errorf("reserved parameters 'App', 'Env', and 'Name' cannot be declared in %s under %s addons", fname, a.wlName)
+			return fmt.Errorf("reserved parameters 'App', 'Env', and 'Name' cannot be declared in %s under %s addons/", fname, a.wlName)
 		}
 	}
 	return nil
