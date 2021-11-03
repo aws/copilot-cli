@@ -65,6 +65,7 @@ type initJobOpts struct {
 	prompt       prompter
 	sel          initJobSelector
 	dockerEngine dockerEngine
+	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -111,6 +112,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
+		mftReader:    ws,
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
@@ -158,10 +160,24 @@ func (o *initJobOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initJobOpts) Ask() error {
-	if err := o.askJobType(); err != nil {
+	if err := o.askJobName(); err != nil {
 		return err
 	}
-	if err := o.askJobName(); err != nil {
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err == nil {
+		jobType, err := localMft.WorkloadType()
+		if err != nil {
+			return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
+		}
+		o.wkldType = jobType
+		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+		return nil
+	}
+	var errNotFound *workspace.ErrFileNotExists
+	if !errors.As(err, &errNotFound) {
+		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
+	}
+	if err := o.askJobType(); err != nil {
 		return err
 	}
 	dfSelected, err := o.askDockerfile()
@@ -248,7 +264,6 @@ func (o *initJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
 	}
-
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),

@@ -128,7 +128,7 @@ func (o *packageJobOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	if o.name != "" {
-		names, err := o.ws.JobNames()
+		names, err := o.ws.ListJobs()
 		if err != nil {
 			return fmt.Errorf("list jobs in the workspace: %w", err)
 		}

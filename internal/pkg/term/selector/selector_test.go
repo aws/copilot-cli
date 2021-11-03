@@ -497,7 +497,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 	}{
 		"with no workspace services and no store services": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{}, nil).Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -512,7 +512,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with one workspace service but no store services": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 					}, nil).
@@ -528,7 +528,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with one store service but no workspace services": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{}, nil).
 					Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
@@ -548,7 +548,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with only one service in both workspace and store (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 					}, nil).Times(1)
@@ -572,7 +572,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with multiple workspace services but only one store service (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -598,7 +598,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with multiple store services but only one workspace service (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service3",
 					}, nil).Times(1)
@@ -633,7 +633,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with multiple workspace services and multiple store services, of which multiple overlap": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().ServiceNames().Return(
+					EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -675,7 +675,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with error retrieving services from workspace": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().ServiceNames().Return(
+					EXPECT().ListServices().Return(
 					[]string{""}, errors.New("some error"))
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -686,7 +686,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with error retrieving services from store": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -704,7 +704,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with error selecting services": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().ServiceNames().Return(
+					EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -778,7 +778,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with no workspace jobs and no store jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{}, nil).Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -796,7 +796,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with one workspace job but no store jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{
 						"job1",
 					}, nil).Times(1)
@@ -816,7 +816,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with one store job but no workspace jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{}, nil).Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -841,7 +841,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			setupMocks: func(m workspaceSelectMocks) {
 
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{
 						"resizer",
 					}, nil).Times(1)
@@ -866,7 +866,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with multiple workspace jobs but only one store job (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"job1",
 						"job2",
@@ -892,7 +892,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with multiple store jobs but only one workspace job (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"job3",
 					}, nil).Times(1)
@@ -926,7 +926,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with multiple workspace jobs and multiple store jobs, of which multiple overlap": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"job1",
 						"job2",
@@ -972,7 +972,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with error retrieving jobs from workspace": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{""}, errors.New("some error"))
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -983,7 +983,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with error retrieving jobs from store": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -1000,7 +1000,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with error selecting jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"resizer1",
 						"resizer2",
