@@ -63,7 +63,7 @@ func TestWorkerService_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedErr:      fmt.Errorf("read backlog-per-task-calculator lambda function source code: some error"),
 		},
-		"unexpected addons parsing error": {
+		"unexpected addons template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
@@ -73,6 +73,17 @@ func TestWorkerService_Template(t *testing.T) {
 				svc.addons = mockAddons{tplErr: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
+		},
+		"unexpected addons params parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
+				m := mocks.NewMockworkerSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
+				svc.addons = mockAddons{paramsErr: errors.New("some error")}
+			},
+			wantedErr: fmt.Errorf("parse addons parameters for %s: %w", testServiceName, errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
 			setUpManifest: func(svc *WorkerService) {
