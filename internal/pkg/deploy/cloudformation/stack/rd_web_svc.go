@@ -98,7 +98,11 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
+	if err != nil {
+		return "", err
+	}
+	addonsOutputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +124,8 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		Variables:         s.manifest.Variables,
 		StartCommand:      s.manifest.StartCommand,
 		Tags:              s.manifest.Tags,
-		NestedStack:       outputs,
+		NestedStack:       addonsOutputs,
+		AddonsExtraParams: addonsParams,
 		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
 
 		Alias:                s.manifest.Alias,
