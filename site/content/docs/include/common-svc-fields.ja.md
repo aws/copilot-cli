@@ -34,8 +34,20 @@ command: ["ps", "au"]
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String or Map</span>  
+`docker build --platform` で渡す、デフォルト以外のオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+
+自動生成された文字列を上書きして、異なる `osfamily` や `architecture` でビルドをします。例えば、Windows ユーザーはデフォルトで `WINDOWS_SERVER_2019_CORE` を利用する1つ目の例を、2つ目の例のように Map を使って変更するかもしれません。
+
+```yaml
+platform: windows/amd64
+```
+
+```yaml
+platform:
+  osfamily: windows_server_2019_full
+  architecture: x86_64
+```
 
 <div class="separator"></div>
 
