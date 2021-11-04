@@ -146,16 +146,16 @@ Resources:
         - {{ .AWSSDKLayer }}
 
   CustomDomainAction:
-      Metadata:
-        'aws:copilot:description': 'Associate the domain with the service as well as upserting the domain record and validation records'
-      DependsOn: CustomDomainFunction
-      Type: Custom::CustomDomainFunction
-      Properties:
-        ServiceToken: !GetAtt CustomDomainFunction.Arn
-        ServiceARN: !GetAtt Service.ServiceArn
-        CustomDomain: {{ .Alias }}
-        AppDNSRole: {{ .AppDNSDelegationRole }}
-        AppDNSName: {{ .AppDNSName }}
+    Metadata:
+      'aws:copilot:description': 'Associate the domain with the service as well as upserting the domain record and validation records'
+    DependsOn: CustomDomainFunction
+    Type: Custom::CustomDomainFunction
+    Properties:
+      ServiceToken: !GetAtt CustomDomainFunction.Arn
+      ServiceARN: !GetAtt Service.ServiceArn
+      CustomDomain: {{ .Alias }}
+      AppDNSRole: {{ .AppDNSDelegationRole }}
+      AppDNSName: {{ .AppDNSName }}
 
   CustomResourceRole:
     Type: AWS::IAM::Role
@@ -190,3 +190,5 @@ Resources:
                   - "*"
 {{- end }}
 {{include "publish" . | indent 2}}
+
+{{include "env-controller" . | indent 2}}
