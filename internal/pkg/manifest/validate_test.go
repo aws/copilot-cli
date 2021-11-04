@@ -957,8 +957,8 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 		wanted error
 	}{
 		"error if platform string is invalid": {
-			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar"))},
-			wanted: fmt.Errorf("platform foobar is invalid; valid platforms are: linux/amd64, linux/x86_64, linux/arm, linux/arm64, windows/amd64 and windows/x86_64"),
+			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar/amd64"))},
+			wanted: fmt.Errorf("platform 'foobar/amd64' is invalid; valid platforms are: linux/amd64, linux/x86_64, linux/arm, linux/arm64, windows/amd64 and windows/x86_64"),
 		},
 		"error if only half of platform string is specified": {
 			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux"))},
@@ -1785,25 +1785,24 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("Windows is not supported for App Runner services"),
 		},
-		// TODO: after ARM architectures are added to the valid list, these will return the error "App Runner services can only build on amd64 and x86_64 architectures"
 		"error if invalid arch in PlatformString": {
+			config: AppRunnerInstanceConfig{
+				Platform: PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("linux"),
+						Arch:     aws.String("leg64"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf("validate \"platform\": platform pair ('linux', 'leg64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+		},
+		"error if App Runner + ARM": {
 			config: AppRunnerInstanceConfig{
 				Platform: PlatformArgsOrString{
 					PlatformString: (*PlatformString)(aws.String("linux/arm64")),
 				},
 			},
-			wantedError: fmt.Errorf("validate \"platform\": platform 'linux/arm64' is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
-		},
-		"error if invalid arch in PlatformArgs": {
-			config: AppRunnerInstanceConfig{
-				Platform: PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("linux"),
-						Arch:     aws.String("arm64"),
-					},
-				},
-			},
-			wantedError: fmt.Errorf("validate \"platform\": platform pair ('linux', 'arm64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wantedError: fmt.Errorf("App Runner services can only build on amd64 and x86_64 architectures"),
 		},
 	}
 	for name, tc := range testCases {
