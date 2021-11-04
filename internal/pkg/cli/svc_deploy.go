@@ -552,6 +552,8 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
+
+		var opts []stack.LoadBalancedWebServiceOption
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -560,10 +562,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
-			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
-		} else {
-			conf, err = stack.NewHTTPLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+			opts = append(opts, stack.WithHTTPS())
 		}
+		conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
 		if o.targetApp.Domain == "" && t.Alias != nil {
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
