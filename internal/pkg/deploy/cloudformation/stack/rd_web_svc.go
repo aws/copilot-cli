@@ -94,9 +94,14 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env strin
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *RequestDrivenWebService) Template() (string, error) {
-	envControllerLambda, err := s.parser.Read(envControllerPath)
-	if err != nil {
-		return "", fmt.Errorf("read env controller lambda: %w", err)
+	networkConfig := convertRDWSNetworkConfig(s.manifest.Network)
+	var envControllerLambda string
+	if networkConfig.SubnetsType == template.PrivateSubnetsPlacement {
+		content, err := s.parser.Read(envControllerPath)
+		if err != nil {
+			return "", fmt.Errorf("read env controller lambda: %w", err)
+		}
+		envControllerLambda = content.String()
 	}
 	addonsParams, err := s.addonsParameters()
 	if err != nil {
@@ -130,12 +135,12 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 
 		Alias:                s.manifest.Alias,
 		ScriptBucketName:     bucket,
-		EnvControllerLambda:  envControllerLambda.String(),
+		EnvControllerLambda:  envControllerLambda,
 		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
 		AWSSDKLayer:          layerARN,
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,
-		Network:              convertRDWSNetworkConfig(s.manifest.Network),
+		Network:              networkConfig,
 
 		Publish: publishers,
 	})
