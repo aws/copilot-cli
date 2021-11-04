@@ -18,7 +18,7 @@ image:
 Copilot がコンテナを定義するときに使われるイメージは、`id.dkr.ecr.zone.amazonaws.com/project-name` の tag `version01` が使われます。 
 
 !!! Info
-    現時点では、文字列を入力するフィールドにシェル環境変数を代入できます。`String` (例 `image.location`), `Array of Strings` (例 `entrypoint`), `Map` で値のタイプが `String` (e.g., `secrets`) などが可能です。
+    現時点では、Manifest 内の文字列型フィールドに対してのみシェル環境変数を代入できます。`String` (例 `image.location`), `Array of Strings` (例 `entrypoint`), `Map` で値のタイプが `String` (e.g., `secrets`) などがそれに当たります。
 
 ## 定義済み変数
 定義済み変数は、Manifest を解釈する際に Copilot によって解決される予約された変数です。現在、利用可能な定義済み変数は次のとおりです。
