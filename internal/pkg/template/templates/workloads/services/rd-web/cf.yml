@@ -191,4 +191,6 @@ Resources:
 {{- end }}
 {{include "publish" . | indent 2}}
 
+{{- if eq .Network.SubnetsType "PrivateSubnets"}}
 {{include "env-controller" . | indent 2}}
+{{- end}}
