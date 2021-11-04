@@ -91,10 +91,12 @@ var (
 	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
 
-	errUnmarshalExec         = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
-	errUnmarshalEntryPoint   = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
-	errUnmarshalAlias        = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
-	errUnmarshalCommand      = errors.New(`unable to unmarshal "command" into string or slice of strings`)
+	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
+	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
+	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
+	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
+
+	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -509,13 +511,15 @@ type TaskConfig struct {
 	Storage        Storage              `yaml:"storage"`
 }
 
-// TaskPlatform returns the platform for the service.
-func (t *TaskConfig) TaskPlatform() (*string, error) {
-	if t.Platform.PlatformString == nil {
-		return nil, nil
+// ContainerPlatform returns the platform for the service.
+func (t *TaskConfig) ContainerPlatform() string {
+	if t.Platform.IsEmpty() {
+		return ""
 	}
-	val := string(*t.Platform.PlatformString)
-	return &val, nil
+	if t.IsWindows() {
+		return platformString(OSWindows, t.Platform.Arch())
+	}
+	return platformString(t.Platform.OS(), t.Platform.Arch())
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.
@@ -583,7 +587,6 @@ func (c *vpcConfig) isEmpty() bool {
 func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	type manifest interface {
 		WorkloadManifest
-		windowsCompatibility() error
 	}
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
@@ -608,9 +611,6 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	}
 	if err := yaml.Unmarshal(in, m); err != nil {
 		return nil, fmt.Errorf("unmarshal manifest for %s: %w", typeVal, err)
-	}
-	if err := m.windowsCompatibility(); err != nil {
-		return nil, err
 	}
 	return m, nil
 }
@@ -694,7 +694,7 @@ func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 // OS returns the operating system family.
 func (p *PlatformArgsOrString) OS() string {
 	if p := aws.StringValue((*string)(p.PlatformString)); p != "" {
-		args := strings.Split(p, "/") // There are always at least two elements because of validateShortPlatform.
+		args := strings.Split(p, "/")
 		return strings.ToLower(args[0])
 	}
 	return strings.ToLower(aws.StringValue(p.PlatformArgs.OSFamily))

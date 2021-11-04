@@ -79,10 +79,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, enableLongARN, err := s3.ParseURL(e.in.CustomResourcesURLs[template.EnableLongARNsFileName])
-	if err != nil {
-		return "", err
-	}
 	_, customDomain, err := s3.ParseURL(e.in.CustomResourcesURLs[template.CustomDomainFileName])
 	if err != nil {
 		return "", err
@@ -96,7 +92,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		AppName:                   e.in.App.Name,
 		DNSCertValidatorLambda:    dnsCertValidator,
 		DNSDelegationLambda:       dnsDelegation,
-		EnableLongARNFormatLambda: enableLongARN,
 		CustomDomainLambda:        customDomain,
 		ScriptBucketName:          bucket,
 		ImportVPC:                 e.in.ImportVPCConfig,

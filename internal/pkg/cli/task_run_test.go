@@ -189,7 +189,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			},
 			inOS:        "WINDOWS_SERVER_2019_CORE",
 			inArch:      "X86_64",
-			wantedError: errors.New("CPU 260 must be at least 1024 for a Windows-based task"),
+			wantedError: errors.New("CPU is 260, but it must be at least 1024 for a Windows-based task"),
 		},
 		"invalid memory": {
 			basicOpts: basicOpts{
@@ -207,7 +207,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			},
 			inOS:        "WINDOWS_SERVER_2019_CORE",
 			inArch:      "X86_64",
-			wantedError: errors.New("memory 2000 must be at least 2048 for a Windows-based task"),
+			wantedError: errors.New("memory is 2000, but it must be at least 2048 for a Windows-based task"),
 		},
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,

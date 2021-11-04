@@ -358,6 +358,7 @@ type WorkloadOpts struct {
 	Aliases                  []string
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.
 	Sidecars                 []*SidecarOpts
 	LogConfig                *LogConfigOpts
 	Autoscaling              *AutoscalingOpts
@@ -403,6 +404,7 @@ type ParseRequestDrivenWebServiceInput struct {
 	StartCommand        *string
 	Tags                map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	AddonsExtraParams   string                   // Additional user defined Parameters for the addons stack.
 	EnableHealthCheck   bool
 	EnvControllerLambda string
 	Publish             *PublishOpts

@@ -4,10 +4,13 @@
 package manifest
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -39,6 +42,48 @@ func NewInterpolator(appName, envName string) *Interpolator {
 
 // Interpolate substitutes environment variables in a string.
 func (i *Interpolator) Interpolate(s string) (string, error) {
+	content, err := unmarshalYAML([]byte(s))
+	if err != nil {
+		return "", err
+	}
+	if err := i.applyInterpolation(content); err != nil {
+		return "", err
+	}
+	out, err := marshalYAML(content)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func (i *Interpolator) applyInterpolation(node *yaml.Node) error {
+	switch node.Tag {
+	case "!!map":
+		// The content of a map always come in pairs. If the node pair exists, return the map node.
+		// Note that the rest of code massively uses yaml node tree.
+		// Please refer to https://www.efekarakus.com/2020/05/30/deep-dive-go-yaml-cfn.html
+		for idx := 0; idx < len(node.Content); idx += 2 {
+			if err := i.applyInterpolation(node.Content[idx+1]); err != nil {
+				return err
+			}
+		}
+	case "!!str":
+		interpolated, err := i.interpolatePart(node.Value)
+		if err != nil {
+			return err
+		}
+		node.Value = interpolated
+	default:
+		for _, content := range node.Content {
+			if err := i.applyInterpolation(content); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (i *Interpolator) interpolatePart(s string) (string, error) {
 	matches := interpolatorEnvVarRegExp.FindAllStringSubmatch(s, -1)
 	if len(matches) == 0 {
 		return s, nil
@@ -64,4 +109,22 @@ func (i *Interpolator) Interpolate(s string) (string, error) {
 		return "", fmt.Errorf(`environment variable "%s" is not defined`, key)
 	}
 	return replaced, nil
+}
+
+func unmarshalYAML(temp []byte) (*yaml.Node, error) {
+	var node yaml.Node
+	if err := yaml.Unmarshal(temp, &node); err != nil {
+		return nil, fmt.Errorf("unmarshal YAML template: %w", err)
+	}
+	return &node, nil
+}
+
+func marshalYAML(content *yaml.Node) ([]byte, error) {
+	var out bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&out)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(content); err != nil {
+		return nil, fmt.Errorf("marshal YAML template: %w", err)
+	}
+	return out.Bytes(), nil
 }

@@ -323,7 +323,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                o.targetApp.AccountID,
+			AccountID:                o.targetEnvironment.AccountID,
 			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
@@ -348,13 +348,13 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		AddonsTemplateURL:        addonsURL,
 		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                o.targetApp.AccountID,
+		AccountID:                o.targetEnvironment.AccountID,
 		Region:                   o.targetEnvironment.Region,
 	}, nil
 }
 
 func (o *deployJobOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadJobManifest(o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
 	}
@@ -382,7 +382,7 @@ func (o *deployJobOpts) RecommendActions() error {
 }
 
 func (o *deployJobOpts) validateJobName() error {
-	names, err := o.ws.JobNames()
+	names, err := o.ws.ListJobs()
 	if err != nil {
 		return fmt.Errorf("list jobs in the workspace: %w", err)
 	}
