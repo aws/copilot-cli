@@ -40,7 +40,7 @@ var awsSDKLayerForRegion = map[string]*string{
 
 type requestDrivenWebSvcReadParser interface {
 	template.ReadParser
-	ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput) (*template.Content, error)
+	ParseRequestDrivenWebService(template.WorkloadOpts) (*template.Content, error)
 }
 
 // RequestDrivenWebService represents the configuration needed to create a CloudFormation stack from a request-drive web service manifest.
@@ -94,11 +94,14 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env strin
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *RequestDrivenWebService) Template() (string, error) {
+	envControllerLambda, err := s.parser.Read(envControllerPath)
+	if err != nil {
+		return "", fmt.Errorf("read env controller lambda: %w", err)
+	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
-
 	var layerARN, bucket, dnsDelegationRole, dnsName *string
 	var urls map[string]*string
 	if s.manifest.Alias != nil {
@@ -109,13 +112,11 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		dnsDelegationRole, dnsName = convertAppInformation(s.app)
 		layerARN = awsSDKLayerForRegion[s.rc.Region]
 	}
-
 	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app.Name, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
-
-	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+	content, err := s.parser.ParseRequestDrivenWebService(template.WorkloadOpts{
 		Variables:         s.manifest.Variables,
 		StartCommand:      s.manifest.StartCommand,
 		Tags:              s.manifest.Tags,
@@ -124,10 +125,12 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 
 		Alias:                s.manifest.Alias,
 		ScriptBucketName:     bucket,
+		EnvControllerLambda:  envControllerLambda.String(),
 		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
 		AWSSDKLayer:          layerARN,
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,
+		Network:              convertRDWSNetworkConfig(s.manifest.Network),
 
 		Publish: publishers,
 	})
