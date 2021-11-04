@@ -5,7 +5,7 @@
 
 !!! Attention
     AWS CodePipeline は OS ファミリーが Windows の Service をサポートしていません。
-    CodePipeline は、Build Stage で Linux ベースの AWS CodeBuild を使用しているため、現時点では Copilot パイプラインで Windows コンテナをビルドすることができません。
+    CodePipeline は、Build Stage で Linux ベースの AWS CodeBuild を使用しているため、現時点では Copilot Pipeline で Windows コンテナをビルドすることができません。
 
 <!-- textlint-disable ja-technical-writing/no-exclamation-question-mark -->
 ## Why?
