@@ -15,7 +15,7 @@ image:
   location: id.dkr.ecr.zone.amazonaws.com/project-name:version01
 ```
 
-Copilot がコンテナを定義するときに使われるイメージは、`id.dkr.ecr.zone.amazonaws.com/project-name` の tag `version01` が使われます。 
+これにより、Copilot は `id.dkr.ecr.zone.amazonaws.com/project-name` の tag `version01` であるコンテナイメージを利用してサービスをデプロイします。
 
 !!! Info
     現時点では、文字列を入力するフィールドにシェル環境変数を代入できます。`String` (例 `image.location`), `Array of Strings` (例 `entrypoint`), `Map` で値のタイプが `String` (e.g., `secrets`) などが可能です。

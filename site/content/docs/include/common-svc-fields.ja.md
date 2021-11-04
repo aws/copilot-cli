@@ -43,8 +43,6 @@ command: ["ps", "au"]
 platform: windows/amd64
 ```
 
-Map を使って、デフォルトの `WINDOWS_SERVER_2019_CORE` から変更する可能性があります。
-
 ```yaml
 platform:
   osfamily: windows_server_2019_full
