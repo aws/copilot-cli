@@ -495,10 +495,10 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 }
 
 func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkConfig) template.NetworkOpts {
-	if network.IsEmpty() {
-		return template.NetworkOpts{}
-	}
 	opts := template.NetworkOpts{}
+	if network.IsEmpty() {
+		return opts
+	}
 	if network.VPC.Placement == nil {
 		return opts
 	}
