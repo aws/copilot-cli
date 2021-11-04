@@ -74,7 +74,11 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read backlog-per-task-calculator lambda function source code: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
+	if err != nil {
+		return "", err
+	}
+	addonsOutputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
@@ -115,7 +119,8 @@ func (s *WorkerService) Template() (string, error) {
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		Variables:                      s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                        s.manifest.WorkerServiceConfig.Secrets,
-		NestedStack:                    outputs,
+		NestedStack:                    addonsOutputs,
+		AddonsExtraParams:              addonsParams,
 		Sidecars:                       sidecars,
 		Autoscaling:                    autoscaling,
 		CapacityProviders:              capacityProviders,
@@ -137,7 +142,7 @@ func (s *WorkerService) Template() (string, error) {
 		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
 		Subscribe:                      subscribe,
 		Publish:                        publishers,
-		Platform:                 convertPlatform(s.manifest.Platform),
+		Platform:                       convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)
