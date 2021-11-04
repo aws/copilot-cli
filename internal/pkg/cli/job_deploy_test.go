@@ -45,7 +45,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inJobName: "resizer",
 			mockWs: func(m *mocks.MockwsJobDirReader) {
-				m.EXPECT().JobNames().Return(nil, errors.New("some error"))
+				m.EXPECT().ListJobs().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -55,7 +55,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inJobName: "resizer",
 			mockWs: func(m *mocks.MockwsJobDirReader) {
-				m.EXPECT().JobNames().Return([]string{}, nil)
+				m.EXPECT().ListJobs().Return([]string{}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -77,7 +77,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 			inJobName: "resizer",
 			inEnvName: "test",
 			mockWs: func(m *mocks.MockwsJobDirReader) {
-				m.EXPECT().JobNames().Return([]string{"resizer"}, nil)
+				m.EXPECT().ListJobs().Return([]string{"resizer"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
@@ -236,7 +236,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(nil, mockError),
+					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(nil, mockError),
 				)
 			},
 			wantErr: fmt.Errorf("read job %s manifest: %w", "mailer", mockError),
@@ -245,7 +245,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest(gomock.Any()).Return(mockManifest, nil),
+					m.mockWs.EXPECT().ReadWorkloadManifest(gomock.Any()).Return(mockManifest, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return("", mockError),
 				)
 			},
@@ -255,7 +255,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest(gomock.Any()).Return(mockManifest, nil),
+					m.mockWs.EXPECT().ReadWorkloadManifest(gomock.Any()).Return(mockManifest, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("", mockError),
 				)
@@ -266,7 +266,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockMftNoBuild, nil),
+					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftNoBuild, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoBuild)).Return(string(mockMftNoBuild), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Times(0),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Times(0),
@@ -277,7 +277,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockManifest, nil),
+					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockManifest, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Return("", mockError),
@@ -289,7 +289,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockManifest, nil),
+					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockManifest, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
@@ -304,7 +304,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockMftBuildString, nil),
+					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftBuildString, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockMftBuildString)).Return(string(mockMftBuildString), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
@@ -319,7 +319,7 @@ on:
 			inputSvc: "mailer",
 			setupMocks: func(m deployJobMocks) {
 				gomock.InOrder(
-					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockMftNoContext, nil),
+					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftNoContext, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoContext)).Return(string(mockMftNoContext), nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{

@@ -45,7 +45,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		},
 		"svc not in workspace": {
 			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().WorkloadNames().Return([]string{"bad", "workspace"}, nil)
+				m.EXPECT().ListWorkloads().Return([]string{"bad", "workspace"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -57,7 +57,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		},
 		"workspace error": {
 			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().WorkloadNames().Return(nil, errors.New("wanted err"))
+				m.EXPECT().ListWorkloads().Return(nil, errors.New("wanted err"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 

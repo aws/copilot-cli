@@ -354,7 +354,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 }
 
 func (o *deployJobOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadJobManifest(o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
 	}
@@ -382,7 +382,7 @@ func (o *deployJobOpts) RecommendActions() error {
 }
 
 func (o *deployJobOpts) validateJobName() error {
-	names, err := o.ws.JobNames()
+	names, err := o.ws.ListJobs()
 	if err != nil {
 		return fmt.Errorf("list jobs in the workspace: %w", err)
 	}

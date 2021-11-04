@@ -175,7 +175,7 @@ func (o *updatePipelineOpts) Execute() error {
 
 func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	workloads, err := o.ws.WorkloadNames()
+	workloads, err := o.ws.ListWorkloads()
 	if err != nil {
 		return nil, fmt.Errorf("get workload names from workspace: %w", err)
 	}

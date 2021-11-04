@@ -233,6 +233,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					init:         wlInitializer,
 					sel:          sel,
 					prompt:       prompt,
+					mftReader:    ws,
 					dockerEngine: dockerengine.New(cmd),
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
@@ -253,6 +254,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					init:         wlInitializer,
 					sel:          sel,
 					topicSel:     snsSel,
+					mftReader:    ws,
 					prompt:       prompt,
 					dockerEngine: dockerengine.New(cmd),
 				}
