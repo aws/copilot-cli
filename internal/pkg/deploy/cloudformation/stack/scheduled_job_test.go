@@ -70,7 +70,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					Command:             []string{"world"},
 					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -87,6 +87,8 @@ func TestScheduledJob_Template(t *testing.T) {
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
+					AddonsExtraParams: `ServiceName: !GetAtt Service.Name
+DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 					ScheduleExpression: "cron(0 0 * * ? *)",
 					StateMachine: &template.StateMachineOpts{
 						Timeout: aws.Int(5400),
@@ -126,6 +128,8 @@ Outputs:
     Value: !Ref MySecret
   Hello:
     Value: hello`,
+					params: `ServiceName: !GetAtt Service.Name
+DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 				}
 				j.parser = m
 				j.wkld.addons = addons

@@ -119,7 +119,11 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 
 // Template returns the CloudFormation template for the scheduled job.
 func (j *ScheduledJob) Template() (string, error) {
-	outputs, err := j.addonsOutputs()
+	addonsParams, err := j.addonsParameters()
+	if err != nil {
+		return "", err
+	}
+	addonsOutputs, err := j.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +159,8 @@ func (j *ScheduledJob) Template() (string, error) {
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:                j.manifest.Variables,
 		Secrets:                  j.manifest.Secrets,
-		NestedStack:              outputs,
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		ScheduleExpression:       schedule,
 		StateMachine:             stateMachine,
