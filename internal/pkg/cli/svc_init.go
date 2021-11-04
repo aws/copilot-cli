@@ -468,8 +468,12 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 	if err != nil {
 		return "", fmt.Errorf("get docker engine platform: %w", err)
 	}
-	platform := dockerengine.PlatformString(detectedOs, detectedArch)
-	if platform == manifest.DefaultPlatform {
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
+	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, wkldType)
+	if err != nil {
+		return "", fmt.Errorf("redirect docker engine platform: %w", err)
+	}
+	if redirectedPlatform == "" {
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.
@@ -477,13 +481,14 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 		return "", manifest.ErrAppRunnerInvalidPlatformWindows
 	}
 	if detectedArch == manifest.ArchARM || detectedArch == manifest.ArchARM64 {
-		log.Warningf("Architecture type %s has been detected. If you'd rather build as architecture type %s, please change the 'platform' field in your workload manifest to %s.\n", detectedOs, manifest.ArchAMD64, color.HighlightCode(dockerengine.PlatformString(detectedOs, manifest.ArchAMD64)))
-//=======
-//	if redirectedPlatform != detectedPlatform && wkldType != manifest.RequestDrivenWebServiceType {
-//		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
-//>>>>>>> archer/mainline
+		if wkldType != manifest.RequestDrivenWebServiceType {
+			log.Warningf("Architecture type %s has been detected. We will set platform %s instead. If you'd rather build and run as architecture type %s, please change the 'platform' field in your workload manifest to %s.\n", detectedArch, color.HighlightCode(dockerengine.PlatformString(detectedOs, manifest.ArchAMD64)), manifest.ArchARM64, color.HighlightCode(detectedPlatform))
+		}
+		if wkldType == manifest.RequestDrivenWebServiceType {
+			log.Warningf("Architecture type %s has been detected. At this time, %s architectures are not supported for App Runner workloads. We will set platform %s instead.\n", detectedArch, detectedArch, color.HighlightCode(dockerengine.PlatformString(detectedOs, manifest.ArchAMD64)), manifest.ArchARM64, color.HighlightCode(detectedPlatform))
+		}
 	}
-	return manifest.PlatformString(platform), nil
+	return manifest.PlatformString(redirectedPlatform), nil
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {

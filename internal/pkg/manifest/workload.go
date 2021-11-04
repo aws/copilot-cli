@@ -64,7 +64,7 @@ var (
 		dockerengine.PlatformString(OSWindows, ArchX86),
 	}
 
-	DefaultPlatform = platformString(OSLinux, ArchAMD64)
+	defaultPlatform = platformString(OSLinux, ArchAMD64)
 
 	// validAdvancedPlatforms are all of the OsFamily/Arch combinations that the PlatformArgs field may accept.
 	validAdvancedPlatforms = []PlatformArgs{
@@ -744,14 +744,14 @@ func platformString(os, arch string) string {
 // RedirectPlatform returns a platform that's supported for the given manifest type.
 func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	// Return nil if passed the default platform.
-	if platformString(os, arch) == DefaultPlatform {
+	if platformString(os, arch) == defaultPlatform {
 		return "", nil
 	}
 	// Return an error if a platform cannot be redirected.
 	if wlType == RequestDrivenWebServiceType && os == OSWindows {
 		return "", errAppRunnerInvalidPlatformWindows
 	}
-	// All architectures must be 'amd64' (the only one currently supported); leave OS as is.
+	// All architectures default to 'amd64' (though 'arm64' is now also supported); leave OS as is.
 	// If a string is returned, the platform is not the default platform but is supported (except for more obscure platforms).
 	return platformString(os, ArchAMD64), nil
 }
