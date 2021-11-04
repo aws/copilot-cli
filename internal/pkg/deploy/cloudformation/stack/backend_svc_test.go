@@ -75,6 +75,16 @@ func TestBackendService_Template(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
 		},
+		"unexpected addons parameter parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
+				svc.addons = mockAddons{paramsErr: errors.New("some error")}
+			},
+			wantedErr: fmt.Errorf("parse addons parameters for %s: %w", testServiceName, errors.New("some error")),
+		},
 		"failed parsing sidecars template": {
 			setUpManifest: func(svc *BackendService) {
 				testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
@@ -215,6 +225,7 @@ Resources:
 Outputs:
   MyTable:
     Value: !Ref MyTable`,
+					params: "",
 				}
 			},
 			wantedTemplate: "template",
