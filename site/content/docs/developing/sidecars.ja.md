@@ -5,7 +5,7 @@
     Request-Driven Web Service はサイドカーの利用をサポートしていません。
 
 !!! Attention
-    メインコンテナに Windows イメージを使用している場合、[FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), [AWS App Mesh](https://aws.amazon.com/app-mesh/) はサポートされていません。お持ちのサイドカーコンテナで Windows をサポートしているか確認してください。
+    メインコンテナに Windows イメージを使用している場合、[FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/jp/xray/), [AWS App Mesh](https://aws.amazon.com/jp/app-mesh/) はサポートされていません。利用しようとしているサイドカーコンテナが Windows 環境での実行をサポートしているか確認してください。
 
 AWS はまた ECS サービスとシームレスに組み合わせられるいくつかのプラグインを提供しており、[FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html) や [AWS X-Ray](https://aws.amazon.com/jp/xray/)、[AWS App Mesh](https://aws.amazon.com/jp/app-mesh/) など多岐に渡ります。
 
