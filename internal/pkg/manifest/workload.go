@@ -83,13 +83,12 @@ var (
 	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
 
-	errUnmarshalExec         = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
-	errUnmarshalEntryPoint   = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
-	errUnmarshalAlias        = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
-	errUnmarshalCommand      = errors.New(`unable to unmarshal "command" into string or slice of strings`)
+	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
+	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
+	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
+	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 
 	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
-
 )
 
 // WorkloadManifest represents a workload manifest.

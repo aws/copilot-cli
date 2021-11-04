@@ -45,7 +45,7 @@ $ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --init
 Copilot で EFS ファイルシステムを使う方法は２つあります: Copilot 管理の EFS、あるいは既存の EFS ファイルシステムのインポートです。
 
 !!! Attention
-    EFS は、Windowsベースの service ではサポートされておりません。
+    EFS は、Windows ベースの service ではサポートされておりません。
 
 ### Copilot 管理の EFS
 ```yaml

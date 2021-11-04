@@ -11,5 +11,8 @@ AddonsStack:
       App: !Ref AppName
       Env: !Ref EnvName
       Name: !Ref WorkloadName
+      {{- if .AddonsExtraParams }}
+{{ .AddonsExtraParams | indent 6 }}
+      {{- end}}
     TemplateURL:
       !Ref AddonsTemplateURL
