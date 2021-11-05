@@ -161,6 +161,26 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
 		},
+		"error if fail to validate ARM": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(123),
+								workloadType: LoadBalancedWebServiceType,
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate ARM: `,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -300,6 +320,26 @@ func TestBackendService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if fail to validate ARM": {
+			config: BackendService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: BackendServiceType,
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate ARM: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -549,6 +589,26 @@ func TestWorkerService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if fail to validate ARM": {
+			config: WorkerService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: WorkerServiceType,
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate ARM: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -2195,6 +2255,37 @@ func TestValidateWindows(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := validateWindows(tc.in)
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateARM(t *testing.T) {
+	testCases := map[string]struct {
+		in          validateARMOpts
+		wantedError error
+	}{
+		"should return an error if spot specified": {
+			in: validateARMOpts{
+				Spot: aws.Int(2),
+			},
+			wantedError: fmt.Errorf(`'Fargate Spot' is not supported when deploying on ARM architecture`),
+		},
+		"should return nil if Spot not specified": {
+			in: validateARMOpts{
+				Spot: nil,
+			},
+			wantedError: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateARM(tc.in)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

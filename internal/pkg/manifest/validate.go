@@ -111,6 +111,13 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
 	}
+	if l.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot: l.Count.AdvancedCount.Spot,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -170,6 +177,13 @@ func (b BackendServiceConfig) Validate() error {
 			efsVolumes:  b.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
+		}
+	}
+	if b.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot: b.Count.AdvancedCount.Spot,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
 		}
 	}
 	return nil
@@ -265,6 +279,13 @@ func (w WorkerServiceConfig) Validate() error {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
 	}
+	if w.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot: w.Count.AdvancedCount.Spot,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -330,6 +351,13 @@ func (s ScheduledJobConfig) Validate() error {
 			efsVolumes:  s.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
+		}
+	}
+	if s.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot: s.Count.AdvancedCount.Spot,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
 		}
 	}
 	return nil
@@ -1124,6 +1152,10 @@ type validateWindowsOpts struct {
 	efsVolumes  map[string]*Volume
 }
 
+type validateARMOpts struct {
+	Spot *int
+}
+
 func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
 	if opts.routingRule.TargetContainer == nil && opts.routingRule.TargetContainerCamelCase == nil {
 		return nil
@@ -1279,6 +1311,13 @@ func validateWindows(opts validateWindowsOpts) error {
 		if !volume.EmptyVolume() {
 			return errors.New(`'EFS' is not supported when deploying a Windows container`)
 		}
+	}
+	return nil
+}
+
+func validateARM(opts validateARMOpts) error {
+	if opts.Spot != nil {
+		return errors.New(`'Fargate Spot' is not supported when deploying on ARM architecture`)
 	}
 	return nil
 }

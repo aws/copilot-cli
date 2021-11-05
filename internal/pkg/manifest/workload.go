@@ -527,6 +527,11 @@ func (t TaskConfig) IsWindows() bool {
 	return isWindowsPlatform(t.Platform)
 }
 
+// IsARM returns whether or not the service is building with an ARM Arch.
+func (t TaskConfig) IsARM() bool {
+		return t.Platform.Arch() == ArchARM || t.Platform.Arch() == ArchARM64
+}
+
 // PublishConfig represents the configurable options for setting up publishers.
 type PublishConfig struct {
 	Topics []Topic `yaml:"topics"`
