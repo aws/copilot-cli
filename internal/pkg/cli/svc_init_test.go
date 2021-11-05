@@ -652,7 +652,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			wantedManifestPath: "manifest/path",
 		},
-		"ARM architecture": {
+		"ARM architecture redirects to X86/amd64": {
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
@@ -668,7 +668,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
 						Platform: manifest.PlatformArgsOrString{
-							PlatformString: (*manifest.PlatformString)(aws.String("windows/arm")),
+							PlatformString: (*manifest.PlatformString)(aws.String("linux/amd64")),
 						},
 					},
 					Port: 80,
@@ -678,7 +678,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
-				m.EXPECT().GetPlatform().Return("windows", "arm", nil)
+				m.EXPECT().GetPlatform().Return("linux", "arm", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -786,7 +786,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetPlatform().Return("windows", "amd64", nil)
 			},
 
-			wantedErr: errors.New("Windows is not supported for App Runner services"),
+			wantedErr: errors.New("redirect docker engine platform: Windows is not supported for App Runner services"),
 		},
 		"failure": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
