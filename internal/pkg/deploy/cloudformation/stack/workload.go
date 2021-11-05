@@ -93,8 +93,9 @@ func (i ECRImage) GetLocation() string {
 	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
-type templater interface {
+type addons interface {
 	Template() (string, error)
+	Parameters() (string, error)
 }
 
 type location interface {
@@ -111,7 +112,7 @@ type wkld struct {
 	image location
 
 	parser template.Parser
-	addons templater
+	addons addons
 }
 
 // StackName returns the name of the stack.
@@ -207,6 +208,18 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 		PolicyOutputs:        managedPolicyOutputNames(out),
 		SecurityGroupOutputs: securityGroupOutputNames(out),
 	}, nil
+}
+
+func (w *wkld) addonsParameters() (string, error) {
+	params, err := w.addons.Parameters()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return "", fmt.Errorf("parse addons parameters for %s: %w", w.name, err)
+		}
+		return "", nil
+	}
+	return params, nil
 }
 
 func securityGroupOutputNames(outputs []addon.Output) []string {

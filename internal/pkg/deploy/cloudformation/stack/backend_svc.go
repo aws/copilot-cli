@@ -76,7 +76,11 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
+	if err != nil {
+		return "", err
+	}
+	addonsOutputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
@@ -114,7 +118,8 @@ func (s *BackendService) Template() (string, error) {
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  s.manifest.BackendServiceConfig.Secrets,
-		NestedStack:              outputs,
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		Autoscaling:              autoscaling,
 		CapacityProviders:        capacityProviders,

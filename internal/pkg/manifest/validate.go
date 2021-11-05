@@ -979,8 +979,8 @@ func (v vpcConfig) Validate() error {
 	return nil
 }
 
-// Validate returns nil if rdwsPlacement is configured correctly.
-func (p rdwsPlacement) Validate() error {
+// Validate returns nil if RequestDrivenWebServicePlacement is configured correctly.
+func (p RequestDrivenWebServicePlacement) Validate() error {
 	if err := (Placement)(p).Validate(); err != nil {
 		return err
 	}
