@@ -2270,9 +2270,15 @@ func TestValidateARM(t *testing.T) {
 		in          validateARMOpts
 		wantedError error
 	}{
-		"should return an error if spot specified": {
+		"should return an error if Spot specified inline": {
 			in: validateARMOpts{
 				Spot: aws.Int(2),
+			},
+			wantedError: fmt.Errorf(`'Fargate Spot' is not supported when deploying on ARM architecture`),
+		},
+		"should return an error if Spot specified with spot_from": {
+			in: validateARMOpts{
+				SpotFrom: aws.Int(2),
 			},
 			wantedError: fmt.Errorf(`'Fargate Spot' is not supported when deploying on ARM architecture`),
 		},
