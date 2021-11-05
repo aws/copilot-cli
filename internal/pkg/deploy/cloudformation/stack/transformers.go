@@ -472,14 +472,14 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 }
 
-func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
+func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 	if network.IsEmpty() {
-		return &template.NetworkOpts{
+		return template.NetworkOpts{
 			AssignPublicIP: template.EnablePublicIP,
 			SubnetsType:    template.PublicSubnetsPlacement,
 		}
 	}
-	opts := &template.NetworkOpts{
+	opts := template.NetworkOpts{
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 		SecurityGroups: network.VPC.SecurityGroups,
@@ -489,6 +489,20 @@ func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts 
 	}
 	if *network.VPC.Placement != manifest.PublicSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
+		opts.SubnetsType = template.PrivateSubnetsPlacement
+	}
+	return opts
+}
+
+func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkConfig) template.NetworkOpts {
+	opts := template.NetworkOpts{}
+	if network.IsEmpty() {
+		return opts
+	}
+	if network.VPC.Placement == nil {
+		return opts
+	}
+	if string(*network.VPC.Placement) == string(manifest.PrivateSubnetPlacement) {
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
 	return opts

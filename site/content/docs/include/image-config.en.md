@@ -4,6 +4,8 @@
 The image section contains parameters relating to the Docker build configuration and exposed port.
 
 <span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
+Build a container from a Dockerfile with optional arguments. Mutually exclusive with [`image.location`](#image-location). 
+
 If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
 ```yaml
 image:

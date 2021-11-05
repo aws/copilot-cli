@@ -34,6 +34,9 @@ Copilot はあなたの意図を理解するために最善を尽くしますの
 Dockerfile からコンテナイメージをビルドする代わりに、既存のコンテナイメージ名の指定も可能です。`image.location` と [`image.build`](#image-build) の同時利用はできません。
 `location` フィールドの制約を含む指定方法は Amazon ECS タスク定義の [`image` パラメータ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image)のそれに従います。
 
+!!! note
+    Windows コンテナイメージを指定する場合、Manifest に`platform: windows/amd64`を指定する必要があります。
+
 <span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">String</span>  
 任意項目です。プライベートリポジトリの認証情報の ARN。`credentials` フィールドは、Amazon ECS タスク定義の [`credentialsParameter`](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/private-auth.html) と同じです。 
 

@@ -113,7 +113,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		"renders a valid template with private subnet placement": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
-				Network: &template.NetworkOpts{
+				Network: template.NetworkOpts{
 					AssignPublicIP: "DISABLED",
 					SubnetsType:    "PrivateSubnets",
 				},
@@ -198,6 +198,16 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				EntryPoint:               []string{"/bin/echo", "hello"},
 				Command:                  []string{"world"},
 				ServiceDiscoveryEndpoint: "test.app.local",
+			},
+		},
+		"renders a valida template with additional addons parameters": {
+			opts: template.WorkloadOpts{
+				ServiceDiscoveryEndpoint: "test.app.local",
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				AddonsExtraParams: `ServiceName: !Ref Service
+DiscoveryServiceArn:
+  Fn::GetAtt: [DiscoveryService, Arn]
+`,
 			},
 		},
 	}

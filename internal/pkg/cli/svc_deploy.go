@@ -241,7 +241,7 @@ func (o *deploySvcOpts) RecommendActions() error {
 }
 
 func (o *deploySvcOpts) validateSvcName() error {
-	names, err := o.ws.ServiceNames()
+	names, err := o.ws.ListServices()
 	if err != nil {
 		return fmt.Errorf("list services in the workspace: %w", err)
 	}
@@ -449,7 +449,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 		return o.appliedManifest, nil
 	}
 
-	raw, err := o.ws.ReadServiceManifest(o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest file: %w", o.name, err)
 	}

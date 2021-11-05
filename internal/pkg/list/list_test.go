@@ -102,7 +102,7 @@ farmer              Scheduled Job
 						{Name: "badgoose", Type: "Scheduled Job"},
 						{Name: "farmer", Type: "Scheduled Job"},
 					}, nil)
-				mockWs.EXPECT().JobNames().Return([]string{"badgoose"}, nil)
+				mockWs.EXPECT().ListJobs().Return([]string{"badgoose"}, nil)
 			},
 		},
 		"with failed call to ListJobs": {
@@ -131,7 +131,7 @@ farmer              Scheduled Job
 						{Name: "badgoose", Type: "Scheduled Job"},
 						{Name: "farmer", Type: "Scheduled Job"},
 					}, nil)
-				mockWs.EXPECT().JobNames().Return([]string{}, nil)
+				mockWs.EXPECT().ListJobs().Return([]string{}, nil)
 			},
 		},
 		"with no local jobs json": {
@@ -149,7 +149,7 @@ farmer              Scheduled Job
 						{Name: "badgoose", Type: "Scheduled Job"},
 						{Name: "farmer", Type: "Scheduled Job"},
 					}, nil)
-				mockWs.EXPECT().JobNames().Return([]string{""}, nil)
+				mockWs.EXPECT().ListJobs().Return([]string{""}, nil)
 			},
 		},
 	}
@@ -263,7 +263,7 @@ func TestList_SvcListWriter(t *testing.T) {
 						{Name: "trough", Type: "Backend Service"},
 						{Name: "gaggle", Type: "Load Balanced Web Service"},
 					}, nil)
-				mockWs.EXPECT().ServiceNames().Return([]string{"trough"}, nil)
+				mockWs.EXPECT().ListServices().Return([]string{"trough"}, nil)
 			},
 		},
 		"with failed call to ListJobs": {
@@ -292,7 +292,7 @@ func TestList_SvcListWriter(t *testing.T) {
 						{Name: "trough", Type: "Backend Service"},
 						{Name: "gaggle", Type: "Load Balanced Web Service"},
 					}, nil)
-				mockWs.EXPECT().ServiceNames().Return([]string{}, nil)
+				mockWs.EXPECT().ListServices().Return([]string{}, nil)
 			},
 		},
 		"with no local services json": {
@@ -310,7 +310,7 @@ func TestList_SvcListWriter(t *testing.T) {
 						{Name: "trough", Type: "Backend Service"},
 						{Name: "gaggle", Type: "Load Balanced Web Service"},
 					}, nil)
-				mockWs.EXPECT().ServiceNames().Return([]string{}, nil)
+				mockWs.EXPECT().ListServices().Return([]string{}, nil)
 			},
 		},
 	}
