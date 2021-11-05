@@ -532,6 +532,16 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					output.OutputValue,
 					"InternetGatewayID value should not be nil")
 			},
+			"PublicRouteTableID": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-PublicRouteTableID", envStackName),
+					*output.ExportName,
+					"Should export PublicRouteTableID as stackname-PublicRouteTableID when creating environment with default VPC")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"PublicRouteTableID value should not be nil")
+			},
 			"EnvironmentSecurityGroup": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-EnvironmentSecurityGroup", envStackName),
