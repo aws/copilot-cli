@@ -219,6 +219,10 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		wantedError          error
 	}{
 		"should throw an error if env controller cannot be parsed": {
+			inManifest: func(mft manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
+				mft.Network.VPC.Placement = (*manifest.RequestDrivenWebServicePlacement)(&manifest.PrivateSubnetPlacement)
+				return mft
+			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				mockParser.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
@@ -229,7 +233,6 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		"should throw an error if addons template cannot be parsed": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{tplErr: errors.New("some error")}
 				c.parser = mockParser
 				c.wkld.addons = addons
@@ -272,13 +275,11 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		"should parse template without addons/ directory": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					Variables:           c.manifest.Variables,
-					Tags:                c.manifest.Tags,
-					EnvControllerLambda: "something",
-					EnableHealthCheck:   true,
+					Variables:         c.manifest.Variables,
+					Tags:              c.manifest.Tags,
+					EnableHealthCheck: true,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.addons = addons
@@ -288,7 +289,6 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		"should parse template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
@@ -319,8 +319,7 @@ Outputs:
 						VariableOutputs: []string{"DDBTableName", "Hello"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					EnableHealthCheck:   true,
-					EnvControllerLambda: "something",
+					EnableHealthCheck: true,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.addons = addons
@@ -330,13 +329,11 @@ Outputs:
 		"should return parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					Variables:           c.manifest.Variables,
-					Tags:                c.manifest.Tags,
-					EnableHealthCheck:   true,
-					EnvControllerLambda: "something",
+					Variables:         c.manifest.Variables,
+					Tags:              c.manifest.Tags,
+					EnableHealthCheck: true,
 				}).Return(nil, errors.New("parsing error"))
 				c.parser = mockParser
 				c.addons = addons
@@ -353,7 +350,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				c.parser = mockParser
 				c.wkld.addons = addons
