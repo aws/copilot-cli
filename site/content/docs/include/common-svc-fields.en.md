@@ -63,6 +63,8 @@ If you want to use Fargate Spot capacity to run your services, you can specify a
 count:
   spot: 5
 ```
+!!! info
+    Fargate Spot is not supported for containers running on ARM architecture.
 
 <div class="separator"></div>
 

@@ -38,6 +38,7 @@ The `location` field follows the same definition as the [`image` parameter](http
 
 !!! note
     If you are passing in a Windows image, you must add `platform: windows/amd64` to your manifest.
+    If you are passing in an ARM architecture-based image, you must add `platform: linux/arm64` to your manifest.
 
 <span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">String</span>
 An optional credentials ARN for a private repository. The `credentials` field follows the same definition as the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the Amazon ECS task definition.
