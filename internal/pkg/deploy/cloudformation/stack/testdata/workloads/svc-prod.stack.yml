@@ -43,7 +43,7 @@ Conditions:
   HTTPSLoadBalancer: !Equals [!Ref HTTPSEnabled, true]
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
-Resources: # If a bucket URL is specified, that means the template exists.
+Resources:
   LogGroup:
     Metadata:
       'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
