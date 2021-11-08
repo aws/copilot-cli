@@ -84,6 +84,7 @@ var (
 		"publish",
 		"subscribe",
 		"nlb",
+		"vpc-connector",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -417,6 +418,9 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
+
+	// List of features to enable for testing that are not yet released.
+	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -493,6 +497,7 @@ func withSvcParsingFuncs() ParseOption {
 			"logicalIDSafe":       StripNonAlphaNumFunc,
 			"wordSeries":          english.WordSeries,
 			"pluralWord":          english.PluralWord,
+			"contains":            contains,
 		})
 	}
 }
@@ -528,6 +533,15 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+func contains(list []string, s string) bool {
+	for _, item := range list {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }
 
 // ARN determines the arn for a topic using the SNSTopic name and account information

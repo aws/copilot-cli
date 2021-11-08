@@ -110,7 +110,7 @@ Resources:
         Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory
         InstanceRoleArn: !GetAtt InstanceRole.Arn
-{{- if .EnableHealthCheck }}
+      {{- if .EnableHealthCheck }}
       HealthCheckConfiguration:
         Path: !If [HasHealthCheckPath, !Ref HealthCheckPath, !Ref AWS::NoValue]
         Protocol: HTTP
@@ -118,7 +118,13 @@ Resources:
         Timeout: !If [HasHealthCheckTimeout, !Ref HealthCheckTimeout, !Ref AWS::NoValue]
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
-{{- end }}
+      {{- end }}
+      {{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+      NetworkConfiguration:
+        EgressConfiguration:
+          EgressType: VPC
+          VpcConnectorArn: !GetAtt VpcConnector.Arn
+      {{- end }}
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
@@ -194,3 +200,7 @@ Resources:
 {{- if ne .EnvControllerLambda ""}}
 {{include "env-controller" . | indent 2}}
 {{- end}}
+
+{{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+{{include "vpc-connector" . | indent 2 }}
+{{- end }}

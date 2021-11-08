@@ -1,0 +1,39 @@
+ServiceSecurityGroup:
+  Type: AWS::EC2::SecurityGroup
+  Metadata:
+    'aws:copilot:description': 'A security group for your addons to allow ingress'
+  Properties:
+    GroupDescription: !Join [ '', [ !Ref AppName, '-', !Ref EnvironmentName, !Ref WorkloadName ] ]
+    VpcId:
+      Fn::ImportValue:
+        !Sub '${AppName}-${EnvName}-VpcId'
+    Tags:
+      - Key: Name
+        Value: !Sub 'copilot-${AppName}-${EnvironmentName}-${WorkloadName}'
+
+VpcConnector:
+  Type: AWS::AppRunner::VpcConnector
+  DependsOn: EnvControllerAction # Ensure NAT gateways are created before connecting to a VPC.
+  Metadata:
+    'aws:copilot:description': 'A VPC connector to link your service to private subnets in your environment'
+  Properties:
+    Subnets:
+      Fn::Split:
+        - ","
+        - Fn::ImportValue:
+            !Sub '${AppName}-${EnvName}-PrivateSubnets'
+    SecurityGroups:
+    - !Ref ServiceSecurityGroup
+    Tags:
+      - Key: copilot-application
+        Value: !Ref AppName
+      - Key: copilot-environment
+        Value: !Ref EnvName
+      - Key: copilot-service
+        Value: !Ref WorkloadName
+      {{- if .Tags }}
+      {{- range $name, $value := .Tags }}
+      - Key: {{$name}}
+        Value: {{$value}}
+      {{- end }}
+      {{- end }}
