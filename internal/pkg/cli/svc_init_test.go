@@ -157,44 +157,13 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 		wantedErr error
 	}{
-		"prompt for service type": {
-			inSvcType:        "",
-			inSvcName:        wantedSvcName,
-			inSvcPort:        wantedSvcPort,
-			inDockerfilePath: wantedDockerfilePath,
-
-			setupMocks: func(m initSvcMocks) {
-				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
-					{
-						Value: manifest.RequestDrivenWebServiceType,
-						Hint:  "App Runner",
-					},
-					{
-						Value: manifest.LoadBalancedWebServiceType,
-						Hint:  "Internet to ECS on Fargate",
-					},
-					{
-						Value: manifest.BackendServiceType,
-						Hint:  "ECS on Fargate",
-					},
-					{
-						Value: manifest.WorkerServiceType,
-						Hint:  "Events to SQS to ECS on Fargate",
-					},
-				}), gomock.Any()).
-					Return(wantedSvcType, nil)
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-			},
-			wantedErr: nil,
-		},
 		"prompt for service name": {
 			inSvcType:        wantedSvcType,
-			inSvcName:        "",
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
 			setupMocks: func(m initSvcMocks) {
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedSvcType)), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this service?")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
@@ -242,6 +211,36 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("select service type: some error"),
+		},
+		"prompt for service type": {
+			inSvcType:        "",
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
+					{
+						Value: manifest.RequestDrivenWebServiceType,
+						Hint:  "App Runner",
+					},
+					{
+						Value: manifest.LoadBalancedWebServiceType,
+						Hint:  "Internet to ECS on Fargate",
+					},
+					{
+						Value: manifest.BackendServiceType,
+						Hint:  "ECS on Fargate",
+					},
+					{
+						Value: manifest.WorkerServiceType,
+						Hint:  "Events to SQS to ECS on Fargate",
+					},
+				}), gomock.Any()).
+					Return(wantedSvcType, nil)
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+			},
+			wantedErr: nil,
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,
