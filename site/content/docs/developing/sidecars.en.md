@@ -90,8 +90,14 @@ logging:
   # Secret to pass to the log configuration. (Optional)
   secretOptions:
     <key>: <value>
-  # The full config file path in your custom Fluent Bit image.
+  # The full config file path in your custom Fluent Bit image. (Optional)
   configFilePath: <config file path>
+  # Environment variables for the sidecar container. (Optional)
+  variables:
+    <key>: <value>
+  # Secrets to expose to the sidecar container. (Optional)
+  secrets:
+    <key>: <value>
 ```
 For example:
 
