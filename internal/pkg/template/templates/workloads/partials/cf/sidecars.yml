@@ -1,6 +1,10 @@
 {{if .LogConfig}}
 - Name: firelens_log_router
   Image: {{ .LogConfig.Image }}
+  Environment:
+{{/* "$" denotes the parent WorkloadOpts, whereas "." is the individual container. */}}
+{{include "envvars-common" $ | indent 2}}
+{{include "envvars-container" . | indent 2}}
   FirelensConfiguration:
     Type: fluentbit
     Options:
