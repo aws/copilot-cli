@@ -380,7 +380,7 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 					},
 					Network: RequestDrivenWebServiceNetworkConfig{
 						VPC: rdwsVpcConfig{
-							Placement: (*rdwsPlacement)(aws.String("")),
+							Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
 						},
 					},
 				},
@@ -1627,7 +1627,7 @@ func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: RequestDrivenWebServiceNetworkConfig{
 				VPC: rdwsVpcConfig{
-					Placement: (*rdwsPlacement)(aws.String("")),
+					Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -1654,7 +1654,7 @@ func TestRdwsVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: rdwsVpcConfig{
-				Placement: (*rdwsPlacement)(aws.String("")),
+				Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -1727,13 +1727,13 @@ func TestPlacement_Validate(t *testing.T) {
 	}
 }
 
-func TestRdwsPlacement_Validate(t *testing.T) {
+func TestRequestDrivenWebServicePlacement_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		in     *rdwsPlacement
+		in     *RequestDrivenWebServicePlacement
 		wanted error
 	}{
 		"should return an error if placement is public": {
-			in:     (*rdwsPlacement)(aws.String("public")),
+			in:     (*RequestDrivenWebServicePlacement)(aws.String("public")),
 			wanted: errors.New(`placement "public" is not supported for Request-Driven Web Service`),
 		},
 	}
