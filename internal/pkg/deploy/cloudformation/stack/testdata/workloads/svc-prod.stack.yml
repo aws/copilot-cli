@@ -113,10 +113,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs"}'
             - Name: COPILOT_LB_DNS
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-            - Name: LOG_LEVEL
-              Value: "info"
-            - Name: COPILOT_MOUNT_POINTS
-              Value: '{"persistence":"/etc/scratch"}'
+            - Name: TEST
+              Value: "TEST"
+          Secrets:
+            - Name: GITHUB_TOKEN
+              ValueFrom: GITHUB_TOKEN
           FirelensConfiguration:
             Type: fluentbit
             Options:
@@ -430,7 +431,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 60
+          Value: 60 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
           Value: !Ref Stickiness
       TargetType: ip

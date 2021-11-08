@@ -186,6 +186,8 @@ type LogConfigOpts struct {
 	EnableMetadata *string
 	SecretOptions  map[string]string
 	ConfigFile     *string
+	Variables      map[string]string
+	Secrets        map[string]string
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.

@@ -67,6 +67,10 @@ environments:
         region: us-west-2
         log_group_name: /copilot/sidecar-test-hello
         log_stream_prefix: copilot/
+      variables:
+        TEST: TEST
+      secrets:
+        GITHUB_TOKEN: GITHUB_TOKEN
     sidecars:
       nginx:
         port: 80

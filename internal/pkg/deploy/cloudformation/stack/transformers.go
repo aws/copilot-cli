@@ -272,6 +272,8 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
 		SecretOptions:  lc.SecretOptions,
+		Variables:      lc.Variables,
+		Secrets:        lc.Secrets,
 	}
 }
 
