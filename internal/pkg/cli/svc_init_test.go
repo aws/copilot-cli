@@ -163,7 +163,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 
 			setupMocks: func(m initSvcMocks) {
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this service?")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
