@@ -1,7 +1,7 @@
 ServiceSecurityGroup:
   Type: AWS::EC2::SecurityGroup
   Metadata:
-    'aws:copilot:description': 'A security group for your addons to allow ingress'
+    'aws:copilot:description': 'A security group for your addons/ resources to allow ingress from your service'
   Properties:
     GroupDescription: !Join [ '', [ !Ref AppName, '-', !Ref EnvironmentName, !Ref WorkloadName ] ]
     VpcId:
