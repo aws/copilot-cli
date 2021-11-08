@@ -51,9 +51,9 @@ phases:
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
       # We truncate the tag (from the front) to 128 characters, the limit for Docker tags
       # (https://docs.docker.com/engine/reference/commandline/tag/)
-      - tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}" | rev | cut -c 1-128 | rev)
       - >
         for env in $pl_envs; do
+          tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}-${env}" | rev | cut -c 1-128 | rev)
           for svc in $svcs; do
           ./copilot-linux svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
           done;
@@ -86,6 +86,7 @@ phases:
         for workload in $WORKLOADS; do
           manifest=$(cat $CODEBUILD_SRC_DIR/copilot/$workload/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
           for env in $pl_envs; do
+            tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}-${env}" | rev | cut -c 1-128 | rev)
             images=$(echo $manifest | jq "{base_image: .image, env_image: (.environments?.$env?.image? // {}) }")
             image=$(echo $images | jq 'if (.env_image | length == 0) then .base_image else (.base_image | del(.location)) * .env_image end')
             image_location=$(echo $image | jq '.location')
