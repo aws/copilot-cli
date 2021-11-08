@@ -219,7 +219,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 
 			setupMocks: func(m initJobMocks) {
 				m.mockPrompt.EXPECT().Get(gomock.Eq(
-					fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(manifest.ScheduledJobType))),
+					"What do you want to name this job?"),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),

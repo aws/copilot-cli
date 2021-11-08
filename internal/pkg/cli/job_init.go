@@ -174,10 +174,10 @@ func (o *initJobOpts) Ask() error {
 		return nil
 	}
 	var (
-		errNotFound *workspace.ErrFileNotExists
+		errNotFound          *workspace.ErrFileNotExists
 		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
 	)
-	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound){
+	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
 		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
 	if err := o.askJobType(); err != nil {
@@ -268,7 +268,7 @@ func (o *initJobOpts) askJobName() error {
 		return nil
 	}
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "job"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),
 		func(val interface{}) error {
 			return validateSvcName(val, o.wkldType)
