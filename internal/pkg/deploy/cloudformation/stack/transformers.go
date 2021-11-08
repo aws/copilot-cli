@@ -255,6 +255,11 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	return opts
 }
 
+// TODO: implement this after manifest package is updated with `nlb`.
+func convertNetworkLoadBalancer() *template.NetworkLoadBalancer {
+	return nil
+}
+
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {
 	if e.Config.IsEmpty() && !aws.BoolValue(e.Enable) {
 		return nil

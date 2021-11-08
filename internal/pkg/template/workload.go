@@ -83,6 +83,7 @@ var (
 		"accessrole",
 		"publish",
 		"subscribe",
+		"nlb",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -198,6 +199,21 @@ type HTTPHealthCheckOpts struct {
 	Timeout             *int64
 	DeregistrationDelay *int64
 	GracePeriod         *int64
+}
+
+// NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
+type NetworkLoadBalancerListener struct {
+	Port            int
+	Protocol        string
+	TargetContainer string
+	TargetPort      string
+	SSLPolicy       *string
+}
+
+// NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
+type NetworkLoadBalancer struct {
+	PublicSubnetCIDRs []string
+	Listener          NetworkLoadBalancerListener
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -373,6 +389,7 @@ type WorkloadOpts struct {
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	DeregistrationDelay *int64
 	AllowedSourceIps    []string
+	NLB                 *NetworkLoadBalancer
 
 	// Lambda functions.
 	RulePriorityLambda             string

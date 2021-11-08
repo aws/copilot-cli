@@ -36,12 +36,13 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
-	serializer, err := stack.NewHTTPSLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
+
+	serializer, err := stack.NewLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
 		Image: &stack.ECRImage{
 			RepoURL:  imageURL,
 			ImageTag: imageTag,
 		},
-	})
+	}, stack.WithHTTPS())
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
 	require.NoError(t, err)
