@@ -1,6 +1,18 @@
 {{if .LogConfig}}
 - Name: firelens_log_router
   Image: {{ .LogConfig.Image }}
+  Environment:
+{{include "envvars-common" . | indent 2}}
+{{if .LogConfig.Variables}}{{range $name, $value := .LogConfig.Variables}}
+  - Name: {{$name}}
+    Value: {{$value | printf "%q"}}{{end}}{{end}}
+{{- if .LogConfig.Secrets}}
+  Secrets:
+  {{- range $name, $valueFrom := .LogConfig.Secrets}}
+  - Name: {{$name}}
+    ValueFrom: {{$valueFrom}}
+  {{- end}}
+{{- end}}
   FirelensConfiguration:
     Type: fluentbit
     Options:

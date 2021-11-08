@@ -83,6 +83,8 @@ var (
 		"accessrole",
 		"publish",
 		"subscribe",
+		"nlb",
+		"vpc-connector",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -186,6 +188,8 @@ type LogConfigOpts struct {
 	EnableMetadata *string
 	SecretOptions  map[string]string
 	ConfigFile     *string
+	Variables      map[string]string
+	Secrets        map[string]string
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
@@ -198,6 +202,21 @@ type HTTPHealthCheckOpts struct {
 	Timeout             *int64
 	DeregistrationDelay *int64
 	GracePeriod         *int64
+}
+
+// NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
+type NetworkLoadBalancerListener struct {
+	Port            int
+	Protocol        string
+	TargetContainer string
+	TargetPort      string
+	SSLPolicy       *string
+}
+
+// NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
+type NetworkLoadBalancer struct {
+	PublicSubnetCIDRs []string
+	Listener          NetworkLoadBalancerListener
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -373,6 +392,7 @@ type WorkloadOpts struct {
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	DeregistrationDelay *int64
 	AllowedSourceIps    []string
+	NLB                 *NetworkLoadBalancer
 
 	// Lambda functions.
 	RulePriorityLambda             string
@@ -398,6 +418,9 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
+
+	// List of features to enable for testing that are not yet released.
+	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -474,6 +497,7 @@ func withSvcParsingFuncs() ParseOption {
 			"logicalIDSafe":       StripNonAlphaNumFunc,
 			"wordSeries":          english.WordSeries,
 			"pluralWord":          english.PluralWord,
+			"contains":            contains,
 		})
 	}
 }
@@ -509,6 +533,15 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+func contains(list []string, s string) bool {
+	for _, item := range list {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }
 
 // ARN determines the arn for a topic using the SNSTopic name and account information
