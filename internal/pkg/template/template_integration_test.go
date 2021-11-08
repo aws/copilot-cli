@@ -21,12 +21,21 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 	}{
 		"renders a valid template by default": {
 			opts: template.WorkloadOpts{
-				ServiceDiscoveryEndpoint: "test.app.local"},
+				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+			},
 		},
 		"renders with timeout and no retries": {
 			opts: template.WorkloadOpts{
 				StateMachine: &template.StateMachineOpts{
 					Timeout: aws.Int(3600),
+				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
@@ -36,6 +45,10 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 				StateMachine: &template.StateMachineOpts{
 					Retries: aws.Int(5),
 					Timeout: aws.Int(3600),
+				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
@@ -50,6 +63,10 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					VariableOutputs: []string{"TableName"},
 					SecretOutputs:   []string{"TablePassword"},
 					PolicyOutputs:   []string{"TablePolicy"},
+				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
@@ -87,6 +104,10 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 			},
 		},
 		"renders a valid template with addons with no outputs": {
@@ -94,6 +115,10 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				HTTPHealthCheck: defaultHttpHealthCheck,
 				NestedStack: &template.WorkloadNestedStackOpts{
 					StackName: "AddonsStack",
+				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
@@ -107,15 +132,19 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					SecretOutputs:   []string{"TablePassword"},
 					PolicyOutputs:   []string{"TablePolicy"},
 				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 		"renders a valid template with private subnet placement": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
-				Network: &template.NetworkOpts{
-					AssignPublicIP: "DISABLED",
-					SubnetsType:    "PrivateSubnets",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.DisablePublicIP,
+					SubnetsType:    template.PrivateSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
@@ -124,6 +153,10 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 					EFSPerms: []*template.EFSPermission{
@@ -158,6 +191,10 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				Storage: &template.StorageOpts{
 					EFSPerms: []*template.EFSPermission{
 						{
@@ -185,7 +222,11 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with ephemeral storage": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
@@ -198,6 +239,24 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				EntryPoint:               []string{"/bin/echo", "hello"},
 				Command:                  []string{"world"},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+			},
+		},
+		"renders a valida template with additional addons parameters": {
+			opts: template.WorkloadOpts{
+				ServiceDiscoveryEndpoint: "test.app.local",
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				AddonsExtraParams: `ServiceName: !Ref Service
+DiscoveryServiceArn:
+  Fn::GetAtt: [DiscoveryService, Arn]
+`,
 			},
 		},
 	}

@@ -127,7 +127,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
+	if err != nil {
+		return "", err
+	}
+	addonsOutputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
@@ -186,7 +190,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Variables:                s.manifest.Variables,
 		Secrets:                  s.manifest.Secrets,
 		Aliases:                  aliases,
-		NestedStack:              outputs,
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,

@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -27,14 +25,37 @@ type RequestDrivenWebService struct {
 // RequestDrivenWebServiceConfig holds the configuration that can be overridden per environments.
 type RequestDrivenWebServiceConfig struct {
 	RequestDrivenWebServiceHttpConfig `yaml:"http,flow"`
-	InstanceConfig                    AppRunnerInstanceConfig `yaml:",inline"`
-	ImageConfig                       ImageWithPort           `yaml:"image"`
-	Variables                         map[string]string       `yaml:"variables"`
-	StartCommand                      *string                 `yaml:"command"`
-	Tags                              map[string]string       `yaml:"tags"`
-	PublishConfig                     PublishConfig           `yaml:"publish"`
+	InstanceConfig                    AppRunnerInstanceConfig              `yaml:",inline"`
+	ImageConfig                       ImageWithPort                        `yaml:"image"`
+	Variables                         map[string]string                    `yaml:"variables"`
+	StartCommand                      *string                              `yaml:"command"`
+	Tags                              map[string]string                    `yaml:"tags"`
+	PublishConfig                     PublishConfig                        `yaml:"publish"`
+	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
 }
 
+// RequestDrivenWebServiceNetworkConfig represents options for network connection to AWS resources for a Request-Driven Web Service.
+type RequestDrivenWebServiceNetworkConfig struct {
+	VPC rdwsVpcConfig `yaml:"vpc"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (c *RequestDrivenWebServiceNetworkConfig) IsEmpty() bool {
+	return c.VPC.isEmpty()
+}
+
+// RequestDrivenWebServicePlacement represents where to place tasks for a Request-Driven Web Service.
+type RequestDrivenWebServicePlacement Placement
+
+type rdwsVpcConfig struct {
+	Placement *RequestDrivenWebServicePlacement `yaml:"placement"`
+}
+
+func (c *rdwsVpcConfig) isEmpty() bool {
+	return c.Placement == nil
+}
+
+// RequestDrivenWebServiceHttpConfig represents options for configuring http.
 type RequestDrivenWebServiceHttpConfig struct {
 	HealthCheckConfiguration HealthCheckArgsOrString `yaml:"healthcheck"`
 	Alias                    *string                 `yaml:"alias"`
@@ -92,12 +113,12 @@ func (s *RequestDrivenWebService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// TaskPlatform returns the platform for the service.
-func (s *RequestDrivenWebService) TaskPlatform() (*string, error) {
-	if s.InstanceConfig.Platform.PlatformString == nil {
-		return nil, nil
+// ContainerPlatform returns the platform for the service.
+func (s *RequestDrivenWebService) ContainerPlatform() string {
+	if s.InstanceConfig.Platform.IsEmpty() {
+		return platformString(OSLinux, ArchAMD64)
 	}
-	return aws.String(platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())), nil
+	return platformString(s.InstanceConfig.Platform.OS(), s.InstanceConfig.Platform.Arch())
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
@@ -124,22 +145,6 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 
 	s.Environments = nil
 	return &s, nil
-}
-
-// WindowsCompatibility disallows unsupported services when deploying Windows containers on Fargate.
-// Here, this method is simply satisfying the WorkloadManifest interface.
-func (s *RequestDrivenWebService) windowsCompatibility() error {
-	if s.InstanceConfig.Platform.IsEmpty() {
-		return nil
-	}
-	// Error out if user added Windows as platform in manifest.
-	if isWindowsPlatform(s.InstanceConfig.Platform) {
-		return errAppRunnerInvalidPlatformWindows
-	}
-	if s.InstanceConfig.Platform.Arch() != ArchAMD64 || s.InstanceConfig.Platform.Arch() != ArchX86 {
-		return fmt.Errorf("App Runner services can only build on %s and %s architectures", ArchAMD64, ArchX86)
-	}
-	return nil
 }
 
 // newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.

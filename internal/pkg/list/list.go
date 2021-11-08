@@ -35,8 +35,8 @@ type Store interface {
 
 // Workspace wraps the methods required to interact with a local workspace.
 type Workspace interface {
-	JobNames() ([]string, error)
-	ServiceNames() ([]string, error)
+	ListJobs() ([]string, error)
+	ListServices() ([]string, error)
 }
 
 // JobListWriter holds all the metadata and clients needed to list all jobs in a given
@@ -72,7 +72,7 @@ func (l *JobListWriter) Write(appName string) error {
 		return fmt.Errorf("get %s names: %w", jobWorkloadType, err)
 	}
 	if l.ShowLocalJobs {
-		localWklds, err := l.Ws.JobNames()
+		localWklds, err := l.Ws.ListJobs()
 		if err != nil {
 			return fmt.Errorf("get local %s names: %w", jobWorkloadType, err)
 		}
@@ -100,7 +100,7 @@ func (l *SvcListWriter) Write(appName string) error {
 		return fmt.Errorf("get %s names: %w", svcWorkloadType, err)
 	}
 	if l.ShowLocalSvcs {
-		localWklds, err := l.Ws.ServiceNames()
+		localWklds, err := l.Ws.ListServices()
 		if err != nil {
 			return fmt.Errorf("get local %s names: %w", svcWorkloadType, err)
 		}
