@@ -55,6 +55,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/accessrole.yml":                      []byte("accessrole"),
 					"templates/workloads/partials/cf/publish.yml":                         []byte("publish"),
 					"templates/workloads/partials/cf/subscribe.yml":                       []byte("subscribe"),
+					"templates/workloads/partials/cf/nlb.yml":                             []byte("nlb"),
 				}
 			},
 			wantedContent: `  loggroup
@@ -83,6 +84,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   accessrole
   publish
   subscribe
+  nlb
 `,
 		},
 	}
