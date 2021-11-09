@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -18,7 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws"
-	addon "github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -41,6 +43,8 @@ type deploySvcMocks struct {
 	mockServiceUpdater     *mocks.MockserviceUpdater
 	mockInterpolator       *mocks.Mockinterpolator
 	mockDeployStore        *mocks.MockdeployedEnvironmentLister
+	mockEnvDescriber       *mocks.MockenvDescriber
+	mockSubnetLister       *mocks.MockvpcSubnetLister
 }
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
@@ -599,6 +603,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 		inEnvironment  *config.Environment
 		inBuildRequire bool
 		inForceDeploy  bool
+		useNLB         bool
 
 		mock func(m *deploySvcMocks)
 
@@ -616,6 +621,47 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
 			},
 			wantErr: fmt.Errorf("interpolate environment variables for mockSvc manifest: %w", mockError),
+		},
+		"fail to describe environment": {
+			inBuildRequire: false,
+			useNLB:         true,
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvDescriber.EXPECT().Describe().Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("describe environment mockEnv: some error"),
+		},
+		"fail to list subnets": {
+			inBuildRequire: false,
+			useNLB:         true,
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
+					EnvironmentVPC: describe.EnvironmentVPC{
+						ID: "mockVPCID",
+					},
+				}, nil)
+				m.mockSubnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("list subnets of vpc mockVPCID in environment mockEnv: some error"),
 		},
 		"fail to get app resources": {
 			inBuildRequire: true,
@@ -726,7 +772,6 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-
 			},
 			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
@@ -833,6 +878,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
 			},
 		},
 		"success with force update": {
@@ -871,6 +917,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				mockServiceUpdater:     mocks.NewMockserviceUpdater(ctrl),
 				mockSpinner:            mocks.NewMockprogress(ctrl),
 				mockInterpolator:       mocks.NewMockinterpolator(ctrl),
+				mockEnvDescriber:       mocks.NewMockenvDescriber(ctrl),
+				mockSubnetLister:       mocks.NewMockvpcSubnetLister(ctrl),
 			}
 			tc.mock(m)
 
@@ -910,6 +958,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 							RoutingRule: manifest.RoutingRule{
 								Alias: tc.inAliases,
 							},
+							NLBConfig: tc.useNLB,
 						},
 					}, nil
 				},
@@ -917,6 +966,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				svcUpdater:    m.mockServiceUpdater,
 				newSvcUpdater: func(f func(*session.Session) serviceUpdater) {},
 				spinner:       m.mockSpinner,
+				envDescriber:  m.mockEnvDescriber,
+				subnetLister:  m.mockSubnetLister,
 			}
 
 			gotErr := opts.deploySvc(mockAddonsURL)
@@ -971,6 +1022,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+
 			},
 
 			wantErr: errors.New("alias specified when application is not associated with a domain"),
