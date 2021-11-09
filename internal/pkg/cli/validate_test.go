@@ -324,10 +324,6 @@ func TestValidateStorageType(t *testing.T) {
 			input: "DynamoDB",
 			want:  nil,
 		},
-		//"RDS okay": {
-		//	// Hiding RDS for now.
-		//	input: "RDS",
-		//},
 		"Bad name": {
 			input: "Dropbox",
 			want:  fmt.Errorf(fmtErrInvalidStorageType, "Dropbox", prettify(storageTypes)),

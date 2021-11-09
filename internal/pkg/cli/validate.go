@@ -290,12 +290,10 @@ func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range storageTypes {
-		if storageType == validType {
-			return nil
-		}
+	if !contains(storageType, storageTypes) {
+		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
 	}
-	return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
+	return nil
 }
 
 func validateMySQLDBName(val interface{}) error {
