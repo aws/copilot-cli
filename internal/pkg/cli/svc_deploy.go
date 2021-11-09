@@ -587,7 +587,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 
 		var opts []stack.LoadBalancedWebServiceOption
 
-		// TODO:
+		// TODO: https://github.com/aws/copilot-cli/issues/2918
 		// 1. Should error out if `nlb.alias` is specified with targetApp.Domain == ""
 		// 2. Should validate `nlb.alias` is specified
 		// 3. ALB block should not be executed if http is disabled
