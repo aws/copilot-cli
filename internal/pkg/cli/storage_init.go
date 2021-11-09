@@ -205,7 +205,7 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	if o.storageType != "" {
-		if err := validateStorageType(o.storageType); err != nil {
+		if err := validateStorageType(o.storageType, validateStorageTypeOpts{}); err != nil {
 			return err
 		}
 	}

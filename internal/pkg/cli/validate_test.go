@@ -335,7 +335,7 @@ func TestValidateStorageType(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateStorageType(tc.input)
+			got := validateStorageType(tc.input, validateStorageTypeOpts{})
 			if tc.want == nil {
 				require.Nil(t, got)
 			} else {
