@@ -633,7 +633,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
-				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvDescriber.EXPECT().Describe().Return(nil, errors.New("some error"))
@@ -651,7 +651,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
-				m.mockWs.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
