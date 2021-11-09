@@ -2174,7 +2174,7 @@ func TestValidateWindows(t *testing.T) {
 		"error if efs specified": {
 			in: validateWindowsOpts{
 				efsVolumes: map[string]*Volume{
-					"someVolume": &Volume{
+					"someVolume": {
 						EFS: EFSConfigOrBool{
 							Enabled: aws.Bool(true),
 						},

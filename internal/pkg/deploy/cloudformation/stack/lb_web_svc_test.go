@@ -436,8 +436,9 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		httpsEnabled bool
-		manifest     *manifest.LoadBalancedWebService
+		httpsEnabled         bool
+		dnsDelegationEnabled bool
+		manifest             *manifest.LoadBalancedWebService
 
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error
@@ -467,6 +468,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
+				},
 			}...),
 		},
 		"HTTPS Not Enabled": {
@@ -492,6 +497,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
@@ -521,6 +530,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
+				},
 			}...),
 		},
 		"Stickiness enabled": {
@@ -548,6 +561,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("true"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			}...),
 		},
 		"exec enabled": {
@@ -574,6 +591,43 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+			}...),
+		},
+		"dns delegation enabled": {
+			httpsEnabled:         false,
+			dnsDelegationEnabled: true,
+
+			manifest: testLBWebServiceManifestWithExecEnabled,
+
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
 				},
 			}...),
 		},
@@ -603,8 +657,9 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					},
 					tc: tc.manifest.TaskConfig,
 				},
-				manifest:     tc.manifest,
-				httpsEnabled: tc.httpsEnabled,
+				manifest:             tc.manifest,
+				httpsEnabled:         tc.httpsEnabled,
+				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}
 
 			// WHEN

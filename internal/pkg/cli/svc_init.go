@@ -233,10 +233,10 @@ func (o *initSvcOpts) Ask() error {
 		return nil
 	}
 	var (
-		errNotFound *workspace.ErrFileNotExists
+		errNotFound          *workspace.ErrFileNotExists
 		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
 	)
-	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound){
+	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
 		return fmt.Errorf("read manifest file for service %s: %w", o.name, err)
 	}
 	if err := o.askSvcType(); err != nil {
@@ -332,9 +332,8 @@ func (o *initSvcOpts) askSvcName() error {
 	if o.name != "" {
 		return nil
 	}
-
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "service"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
 		func(val interface{}) error {
 			return validateSvcName(val, o.wkldType)

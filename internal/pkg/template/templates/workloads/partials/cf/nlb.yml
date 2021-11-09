@@ -1,13 +1,14 @@
 PublicNetworkLoadBalancer:
   Metadata:
     'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'
-  Condition: CreateNLB # TODO: Add a condition in service template.
   Type: AWS::ElasticLoadBalancingV2::LoadBalancer
   Properties:
     Scheme: internet-facing
     Subnets:
-      Fn::importValue:
-        !Sub ${AppName}-${EnvName}-PublicSubnets
+      Fn::Split:
+        - ","
+        - Fn::ImportValue:
+            !Sub '${AppName}-${EnvName}-PublicSubnets'
     Type: network
 
 NLBListener:
@@ -23,7 +24,7 @@ NLBListener:
     Certificates:
       - CertificateArn:
           !GetAtt EnvControllerAction.HTTPSCert
-    SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy}}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
+    SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
 {{- end}}
 
 NLBTargetGroup:
@@ -52,8 +53,8 @@ NLBTargetGroup:
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
         Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
-{{- if ne .NLB.Listener. "TLS"}}
-{{ /*Sticky sessions are not supported with TLS listeners and TLS target groups.*/ }}
+{{- if ne .NLB.Listener.Protocol "TLS"}}
+{{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
         Value: !Ref Stickiness
 {{- end}}
@@ -66,12 +67,33 @@ NLBTargetGroup:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
 
+NLBSecurityGroup:
+  Metadata:
+    'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Allow access from the network load balancer to service
+    SecurityGroupIngress:
+{{range $cidr := .NLB.PublicSubnetCIDRs}}
+      - CidrIp: {{$cidr}}
+        Description: Ingress to allow access from Network Load Balancer subnet
+        FromPort: {{ $.NLB.Listener.Port }}
+        IpProtocol: {{ $.NLB.Listener.Protocol }}
+        ToPort: {{ $.NLB.Listener.Port }}
+{{end}}
+    Tags:
+      - Key: Name
+        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
+    VpcId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-VpcId"
+
 {{- if not .Aliases}}
 NLBDNSAlias:
   Metadata:
     'aws:copilot:description': 'The default alias record for the network load balancer'
   Type: AWS::Route53::RecordSetGroup
-  Condition: DNSDelegated
+  Condition: HasAssociatedDomain
   Properties:
     HostedZoneId:
       Fn::ImportValue:
@@ -87,27 +109,6 @@ NLBDNSAlias:
             - ""
         Type: A
         AliasTarget:
-          HostedZoneId: !GetAtt PublicNetworkLoadBalancer.PublicLoadBalancerHostedZone
-          DNSName: !GetAtt PublicNetworkLoadBalancer.PublicLoadBalancerDNSName
+          HostedZoneId: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
+          DNSName: !GetAtt PublicNetworkLoadBalancer.DNSName
 {{- end}}
-
-NLBSecurityGroup:
-  Metadata:
-    'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
-  Type: AWS::EC2::SecurityGroup
-  Properties:
-    GroupDescription: Allow access from the network load balancer to service
-    SecurityGroupIngress:
-{{range $idx, cidr := .PublicSubnetCIDRs}}
-      - CidrIp: {{$cidr}}
-        Description: Ingress to allow access from Network Load Balancer's subnet.
-        FromPort: {{ .NLB.Listener.Port }}
-        IpProtocol: {{ .NLB.Listener.Protocol }}
-        ToPort: {{ .NLB.Listener.Port }}
-{{end}}
-    Tags:
-      - Key: Name
-        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
-    VpcId:
-      Fn::ImportValue:
-        !Sub "${AppName}-${EnvName}-VpcId"

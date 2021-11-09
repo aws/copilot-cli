@@ -12,6 +12,7 @@
     "ContainerPort": "5000",
     "RulePath": "my-svc",
     "HTTPSEnabled": "true",
+    "DNSDelegated": "true",
     "TargetContainer": "my-svc",
     "TargetPort": "5000",
     "Stickiness": "false"
