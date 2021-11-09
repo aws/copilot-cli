@@ -205,7 +205,10 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	if o.storageType != "" {
-		if err := validateStorageType(o.storageType, validateStorageTypeOpts{}); err != nil {
+		if err := validateStorageType(o.storageType, validateStorageTypeOpts{
+			ws:           o.ws,
+			workloadName: o.workloadName,
+		}); err != nil {
 			return err
 		}
 	}
@@ -274,21 +277,6 @@ func (o *initStorageOpts) Ask() error {
 		return err
 	}
 
-	wkld, err := o.store.GetWorkload(o.appName, o.workloadName)
-	if err != nil {
-		return fmt.Errorf("get workload: %w", err)
-	}
-	if wkld.Type == manifest.RequestDrivenWebServiceType && o.storageType == rdsStorageType {
-		log.Warningf(`%s storage is launched in private subnets of your environment's VPC. 
-To reach the database from your %s please enable the HTTP Data API: 
-https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html. 
-
-You will also need to an IAM policy that allows your %s to make Data API calls. 
-You can simply create the policy in the Aurora addon template and create an output. The policy will be automatically attached to your %s:
-https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/#what-does-an-addon-template-look-like
-`, rdsStorageTypeOption, manifest.RequestDrivenWebServiceType, manifest.RequestDrivenWebServiceType, manifest.RequestDrivenWebServiceType)
-	}
-
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.askStorageName(); err != nil {
 		return err
@@ -317,23 +305,36 @@ https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/#what
 }
 
 func (o *initStorageOpts) askStorageType() error {
-	if o.storageType != "" {
-		return nil
+	if o.storageType == "" {
+		var options []prompt.Option
+		for _, st := range storageTypes {
+			options = append(options, storageTypeOptions[st])
+		}
+		storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
+			fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
+			storageInitTypeHelp,
+			options,
+			prompt.WithFinalMessage("Storage type:"))
+		if err != nil {
+			return fmt.Errorf("select storage type: %w", err)
+		}
+		o.storageType = optionToStorageType[storageTypeOption]
 	}
 
-	var options []prompt.Option
-	for _, st := range storageTypes {
-		options = append(options, storageTypeOptions[st])
+	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
+		ws:           o.ws,
+		workloadName: o.workloadName,
+	}); err != nil {
+		if errors.Is(err, errRDWSNotConnectedToVPC) {
+			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
+You can enable VPC connectivity by updating your manifest with:
+%s
+`, manifest.RequestDrivenWebServiceType, o.storageType, color.HiglightCodeBlock(`network:
+  vpc:
+    placement: private`))
+		}
+		return err
 	}
-	storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
-		storageInitTypeHelp,
-		options,
-		prompt.WithFinalMessage("Storage type:"))
-	if err != nil {
-		return fmt.Errorf("select storage type: %w", err)
-	}
-	o.storageType = optionToStorageType[storageTypeOption]
 	return nil
 }
 

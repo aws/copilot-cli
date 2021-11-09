@@ -379,6 +379,21 @@ type: Request-Driven Web Service
 			},
 			want: errors.New("invalid storage type Aurora: Request-Driven Web Service requires a VPC connection"),
 		},
+		"should succeed if Aurora is selected and RDWS is connected to a VPC": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					out: []byte(`
+name: api
+type: Request-Driven Web Service
+network:
+  vpc:
+    placement: private
+`),
+				},
+				workloadName: "api",
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
