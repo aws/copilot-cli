@@ -297,17 +297,23 @@ func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
 	}
 
-	// Validate that Aurora can be initialized with workloads connected to a VPC.
-	if storageType != rdsStorageType || opts.workloadName == "" {
-		return nil
+	if storageType == rdsStorageType {
+		return validateAuroraStorageType(opts.ws, opts.workloadName)
 	}
-	mft, err := opts.ws.ReadWorkloadManifest(opts.workloadName)
+	return nil
+}
+
+func validateAuroraStorageType(ws manifestReader, workloadName string) error {
+	if workloadName == "" {
+		return nil // Workload not yet selected while validating storage type flag.
+	}
+	mft, err := ws.ReadWorkloadManifest(workloadName)
 	if err != nil {
-		return fmt.Errorf("invalid storage type %s: read manifest file for %s: %w", storageType, opts.workloadName, err)
+		return fmt.Errorf("invalid storage type %s: read manifest file for %s: %w", rdsStorageType, workloadName, err)
 	}
 	mftType, err := mft.WorkloadType()
 	if err != nil {
-		return fmt.Errorf("invalid storage type %s: read type of workload from manifest file for %s: %w", storageType, opts.workloadName, err)
+		return fmt.Errorf("invalid storage type %s: read type of workload from manifest file for %s: %w", rdsStorageType, workloadName, err)
 	}
 	if mftType != manifest.RequestDrivenWebServiceType {
 		return nil
@@ -316,10 +322,10 @@ func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 		Network manifest.RequestDrivenWebServiceNetworkConfig `yaml:"network"`
 	}{}
 	if err := yaml.Unmarshal(mft, &data); err != nil {
-		return fmt.Errorf("invalid storage type %s: unmarshal manifest for %s to read network config: %w", storageType, opts.workloadName, err)
+		return fmt.Errorf("invalid storage type %s: unmarshal manifest for %s to read network config: %w", rdsStorageType, workloadName, err)
 	}
 	if data.Network.IsEmpty() {
-		return fmt.Errorf("invalid storage type %s: %w", storageType, errRDWSNotConnectedToVPC)
+		return fmt.Errorf("invalid storage type %s: %w", rdsStorageType, errRDWSNotConnectedToVPC)
 	}
 	return nil
 }

@@ -328,15 +328,15 @@ func TestValidateStorageType(t *testing.T) {
 		optionals validateStorageTypeOpts
 		want      error
 	}{
-		"S3 okay": {
+		"should allow S3 addons": {
 			input: "S3",
 			want:  nil,
 		},
-		"DDB okay": {
+		"should allow DynamoDB allows": {
 			input: "DynamoDB",
 			want:  nil,
 		},
-		"Bad name": {
+		"should return an error if a storage type does not exist": {
 			input: "Dropbox",
 			want:  fmt.Errorf(fmtErrInvalidStorageType, "Dropbox", prettify(storageTypes)),
 		},
