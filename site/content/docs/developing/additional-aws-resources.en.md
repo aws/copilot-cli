@@ -144,12 +144,14 @@ Parameters:
 Finally, update your template file to refer to the new parameter:
 ```yaml
 Parameters:
+  # Required parameters by AWS Copilot.
   App:
     Type: String
   Env:
     Type: String
   Name:
     Type: String
+  # Additional parameters defined in addons.parameters.yml
   ServiceName:
     Type: String
 ```
