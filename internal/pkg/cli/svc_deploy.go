@@ -75,7 +75,7 @@ type deploySvcOpts struct {
 	deployWkldVars
 
 	store               store
-	deployStore *deploy.Store
+	deployStore         *deploy.Store
 	ws                  wsSvcDirReader
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
