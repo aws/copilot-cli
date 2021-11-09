@@ -384,7 +384,7 @@ func (o *deploySvcOpts) publicCIDRBlocks() ([]string, error) {
 	vpcID := envDescription.EnvironmentVPC.ID
 	subnets, err := o.subnetLister.ListVPCSubnets(vpcID)
 	if err != nil {
-		return nil, fmt.Errorf("list VPC subnets of the environmnent %s: %w", o.envName, err)
+		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, o.envName, err)
 	}
 	var cidrBlocks []string
 	for _, subnet := range subnets.Public {

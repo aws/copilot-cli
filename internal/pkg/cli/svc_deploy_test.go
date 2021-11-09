@@ -661,7 +661,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				}, nil)
 				m.mockSubnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(nil, errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("list VPC subnets of the environmnent mockEnv: some error"),
+			wantErr: fmt.Errorf("list subnets of vpc mockVPCID in environment mockEnv: some error"),
 		},
 		"fail to get app resources": {
 			inBuildRequire: true,
