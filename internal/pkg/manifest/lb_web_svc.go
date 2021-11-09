@@ -55,6 +55,7 @@ type LoadBalancedWebServiceConfig struct {
 	Network          NetworkConfig             `yaml:"network"`
 	PublishConfig    PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
+	NLBConfig        bool                      // TODO: placeholder field that will be expanded to NLBConfig struct.
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
