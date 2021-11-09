@@ -190,8 +190,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		Variables:                s.manifest.Variables,
-		Secrets:                  s.manifest.Secrets,
+		Variables:                s.manifest.TaskConfig.Variables,
+		Secrets:                  s.manifest.TaskConfig.Secrets,
 		Aliases:                  aliases,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
