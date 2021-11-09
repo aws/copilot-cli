@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/robfig/cron/v3"
 
 	"github.com/spf13/afero"
@@ -59,6 +61,7 @@ var (
 
 	// Aurora-Serverless-specific errors.
 	errInvalidRDSNameCharacters    = errors.New("value must start with a letter")
+	errRDWSNotConnectedToVPC       = errors.New(fmt.Sprintf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType))
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
@@ -292,6 +295,31 @@ func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 	}
 	if !contains(storageType, storageTypes) {
 		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
+	}
+
+	// Validate that Aurora can be initialized with workloads connected to a VPC.
+	if storageType != rdsStorageType || opts.workloadName == "" {
+		return nil
+	}
+	mft, err := opts.ws.ReadWorkloadManifest(opts.workloadName)
+	if err != nil {
+		return fmt.Errorf("invalid storage type %s: read manifest file for %s: %w", storageType, opts.workloadName, err)
+	}
+	mftType, err := mft.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("invalid storage type %s: read type of workload from manifest file for %s: %w", storageType, opts.workloadName, err)
+	}
+	if mftType != manifest.RequestDrivenWebServiceType {
+		return nil
+	}
+	data := struct {
+		Network manifest.RequestDrivenWebServiceNetworkConfig `yaml:"network"`
+	}{}
+	if err := yaml.Unmarshal(mft, &data); err != nil {
+		return fmt.Errorf("invalid storage type %s: unmarshal manifest for %s to read network config: %w", storageType, opts.workloadName, err)
+	}
+	if data.Network.IsEmpty() {
+		return fmt.Errorf("invalid storage type %s: %w", storageType, errRDWSNotConnectedToVPC)
 	}
 	return nil
 }

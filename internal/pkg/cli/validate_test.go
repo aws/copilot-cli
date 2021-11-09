@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -311,10 +313,20 @@ func TestValidatePath(t *testing.T) {
 	}
 }
 
+type mockManifestReader struct {
+	out workspace.WorkloadManifest
+	err error
+}
+
+func (m mockManifestReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
+	return m.out, m.err
+}
+
 func TestValidateStorageType(t *testing.T) {
 	testCases := map[string]struct {
-		input string
-		want  error
+		input     string
+		optionals validateStorageTypeOpts
+		want      error
 	}{
 		"S3 okay": {
 			input: "S3",
@@ -328,14 +340,53 @@ func TestValidateStorageType(t *testing.T) {
 			input: "Dropbox",
 			want:  fmt.Errorf(fmtErrInvalidStorageType, "Dropbox", prettify(storageTypes)),
 		},
+		"should allow Aurora if workload name is not yet specified": {
+			input: "Aurora",
+			want:  nil,
+		},
+		"should return an error if manifest file cannot be read while initializing an Aurora storage type": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					err: errors.New("some error"),
+				},
+				workloadName: "api",
+			},
+			want: errors.New("invalid storage type Aurora: read manifest file for api: some error"),
+		},
+		"should allow Aurora if the workload type is not a RDWS": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					out: []byte(`
+name: api
+type: Load Balanced Web Service
+`),
+				},
+				workloadName: "api",
+			},
+		},
+		"should return an error if Aurora is selected for a RDWS while not connected to a VPC": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					out: []byte(`
+name: api
+type: Request-Driven Web Service
+`),
+				},
+				workloadName: "api",
+			},
+			want: errors.New("invalid storage type Aurora: Request-Driven Web Service requires a VPC connection"),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateStorageType(tc.input, validateStorageTypeOpts{})
+			got := validateStorageType(tc.input, tc.optionals)
 			if tc.want == nil {
-				require.Nil(t, got)
+				require.NoError(t, got)
 			} else {
-				require.EqualError(t, tc.want, got.Error())
+				require.EqualError(t, got, tc.want.Error())
 			}
 		})
 	}
