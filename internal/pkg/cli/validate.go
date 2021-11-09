@@ -61,7 +61,7 @@ var (
 
 	// Aurora-Serverless-specific errors.
 	errInvalidRDSNameCharacters    = errors.New("value must start with a letter")
-	errRDWSNotConnectedToVPC       = errors.New(fmt.Sprintf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType))
+	errRDWSNotConnectedToVPC       = fmt.Errorf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType)
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
