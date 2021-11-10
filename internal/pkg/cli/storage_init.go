@@ -303,6 +303,8 @@ func (o *initStorageOpts) Ask() error {
 
 func (o *initStorageOpts) askStorageType() error {
 	if o.storageType != "" {
+		// Not all storage options, such as Aurora for RDWS, is available to workloads by default.
+		// We want to fail fast for the user once we know what workload type is the addon for.
 		return o.validateStorageType()
 	}
 	var options []prompt.Option
