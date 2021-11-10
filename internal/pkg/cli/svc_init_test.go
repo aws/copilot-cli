@@ -637,7 +637,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
 						Platform: manifest.PlatformArgsOrString{
-							PlatformString: (*manifest.PlatformString)(aws.String("windows/amd64")),
+							PlatformString: (*manifest.PlatformString)(aws.String("windows/x86_64")),
 						},
 					},
 					Port: 80,
@@ -652,7 +652,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			wantedManifestPath: "manifest/path",
 		},
-		"ARM architecture redirects to X86/amd64": {
+		"ARM architecture redirects to X86_64": {
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
@@ -668,7 +668,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
 						Platform: manifest.PlatformArgsOrString{
-							PlatformString: (*manifest.PlatformString)(aws.String("linux/amd64")),
+							PlatformString: (*manifest.PlatformString)(aws.String("linux/x86_64")),
 						},
 					},
 					Port: 80,

@@ -38,7 +38,7 @@ Non-default operating system and architecture (formatted as `[os]/[arch]`) to pa
 
 Override the generated string to build with a different valid `osfamily` or `architecture`. For example, Windows users might change the string
 ```yaml
-platform: windows/amd64
+platform: windows/x86_64
 ```
 which defaults to `WINDOWS_SERVER_2019_CORE`, using a map:
 ```yaml

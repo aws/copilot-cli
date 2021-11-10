@@ -35,7 +35,7 @@ const (
 
 	ArchAMD64 = dockerengine.ArchAMD64
 	ArchX86   = dockerengine.ArchX86
-	ArchARM = dockerengine.ArchARM
+	ArchARM   = dockerengine.ArchARM
 	ArchARM64 = dockerengine.ArchARM64
 
 	// Minimum CPU and mem values required for Windows-based tasks.
@@ -95,8 +95,6 @@ var (
 	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
 	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
 	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
-
-	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -529,7 +527,7 @@ func (t TaskConfig) IsWindows() bool {
 
 // IsARM returns whether or not the service is building with an ARM Arch.
 func (t TaskConfig) IsARM() bool {
-		return t.Platform.Arch() == ArchARM || t.Platform.Arch() == ArchARM64
+	return IsArmArch(t.Platform.Arch())
 }
 
 // PublishConfig represents the configurable options for setting up publishers.
@@ -754,11 +752,11 @@ func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	}
 	// Return an error if a platform cannot be redirected.
 	if wlType == RequestDrivenWebServiceType && os == OSWindows {
-		return "", errAppRunnerInvalidPlatformWindows
+		return "", ErrAppRunnerInvalidPlatformWindows
 	}
-	// All architectures default to 'amd64' (though 'arm64' is now also supported); leave OS as is.
+	// All architectures default to 'x86_64' (though 'arm64' is now also supported); leave OS as is.
 	// If a string is returned, the platform is not the default platform but is supported (except for more obscure platforms).
-	return platformString(os, ArchAMD64), nil
+	return platformString(os, dockerengine.ArchX86), nil
 }
 
 func isWindowsPlatform(platform PlatformArgsOrString) bool {
@@ -766,6 +764,14 @@ func isWindowsPlatform(platform PlatformArgsOrString) bool {
 		if platform.OS() == win {
 			return true
 		}
+	}
+	return false
+}
+
+// IsArmArch returns whether or not the arch is ARM.
+func IsArmArch(arch string) bool {
+	if strings.ToLower(arch) == ArchARM || strings.ToLower(arch) == ArchARM64 {
+		return true
 	}
 	return false
 }

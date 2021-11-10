@@ -32,16 +32,23 @@ You can omit fields and Copilot will do its best to understand what you mean. Fo
 
 All paths are relative to your workspace root.
 
-<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
-Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).
-The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
+<span class="parent-field">
+image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">
+String</span>  
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive
+with [`image.build`](#image-build). The `location` field follows the same definition as
+the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image)
+in the Amazon ECS task definition.
 
-!!! note
-    If you are passing in a Windows image, you must add `platform: windows/amd64` to your manifest.
-    If you are passing in an ARM architecture-based image, you must add `platform: linux/arm64` to your manifest.
+!!! note If you are passing in a Windows image, you must add `platform: windows/x86_64` to your manifest. If you are
+passing in an ARM architecture-based image, you must add `platform: linux/x86_64` to your manifest.
 
-<span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">String</span>
-An optional credentials ARN for a private repository. The `credentials` field follows the same definition as the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the Amazon ECS task definition.
+<span class="parent-field">
+image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">
+String</span>
+An optional credentials ARN for a private repository. The `credentials` field follows the same definition as
+the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the
+Amazon ECS task definition.
 
 <span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a> <span class="type">Map</span>  
 An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.

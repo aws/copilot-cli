@@ -36,6 +36,7 @@ $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command 
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Evrl9Vux31k" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-!!! info
-    1. Please make sure `exec: true` is set in your manifest before deploying the service.
-    2. Please note that this will update the service's Fargate Platform Version to 1.4.0. Updating the Platform Version results in [replacing your service](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html#cfn-ecs-service-platformversion) which will result in downtime for your service.
+!!! info 1. Please make sure `exec: true` is set in your manifest before deploying the service. 2. Please note that this
+will update the service's Fargate Platform Version to 1.4.0. Updating the Platform Version results
+in [replacing your service](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html#cfn-ecs-service-platformversion)
+which will result in downtime for your service. 3. `exec` is not supported for Windows containers.

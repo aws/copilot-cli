@@ -671,10 +671,7 @@ func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePla
 	}
 
 	arch := template.ArchX86
-	switch platform.Arch() {
-	case manifest.ArchAMD64, manifest.ArchX86:
-		arch = template.ArchX86
-	case manifest.ArchARM, manifest.ArchARM64:
+	if manifest.IsArmArch(platform.Arch()) {
 		arch = template.ArchARM64
 	}
 	return template.RuntimePlatformOpts{

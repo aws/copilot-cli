@@ -452,18 +452,18 @@ func TestRedirectPlatform(t *testing.T) {
 			wantedPlatform: "",
 			wantedError:    errors.New("Windows is not supported for App Runner services"),
 		},
-		"targets amd64 if ARM architecture passed in": {
+		"targets x86_64 if ARM architecture passed in": {
 			inOS:   "linux",
 			inArch: "arm64",
 
-			wantedPlatform: "linux/amd64",
+			wantedPlatform: "linux/x86_64",
 			wantedError:    nil,
 		},
 		"returns non-default os as is": {
 			inOS:   "windows",
 			inArch: "amd64",
 
-			wantedPlatform: "windows/amd64",
+			wantedPlatform: "windows/x86_64",
 			wantedError:    nil,
 		},
 	}
