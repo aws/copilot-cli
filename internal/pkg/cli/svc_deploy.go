@@ -602,7 +602,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			opts = append(opts, stack.WithHTTPS())
 			opts = append(opts, stack.WithDNSDelegation())
 		}
-		if t.NLBConfig {
+		if !t.NLBConfig.IsEmpty() {
 			cidrBlocks, err := o.publicCIDRBlocks()
 			if err != nil {
 				return nil, err

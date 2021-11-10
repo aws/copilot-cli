@@ -50,12 +50,12 @@ type LoadBalancedWebServiceConfig struct {
 	ImageOverride    `yaml:",inline"`
 	RoutingRule      `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
-	Logging          Logging                   `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Network          NetworkConfig             `yaml:"network"`
-	PublishConfig    PublishConfig             `yaml:"publish"`
-	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
-	NLBConfig        bool                      // TODO: placeholder field that will be expanded to NLBConfig struct.
+	Logging          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig                    `yaml:"network"`
+	PublishConfig    PublishConfig                    `yaml:"publish"`
+	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
+	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -191,6 +191,29 @@ type RoutingRule struct {
 	TargetContainer          *string `yaml:"target_container"`
 	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
+}
+
+func (r *RoutingRule) targetContainer() *string {
+	if r.TargetContainer == nil && r.TargetContainerCamelCase == nil {
+		return nil
+	}
+	if r.TargetContainer != nil {
+		return r.TargetContainer
+	}
+	return r.TargetContainerCamelCase
+}
+
+// NetworkLoadBalancerConfiguration holds options for a network load balancer
+type NetworkLoadBalancerConfiguration struct {
+	Port            *string                 `yaml:"port"`
+	HealthCheck     HealthCheckArgsOrString `yaml:"healthcheck"`
+	TargetContainer *string                 `yaml:"target_container"`
+	TargetPort      *int                    `yaml:"target_port"`
+	SSLPolicy       *string                 `yaml:"ssl_policy"`
+}
+
+func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
 }
 
 // IPNet represents an IP network string. For example: 10.1.0.0/16
