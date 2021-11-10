@@ -41,6 +41,16 @@ type DynamoDB struct {
 	parser template.Parser
 }
 
+// MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
+// Implements the encoding.BinaryMarshaler interface.
+func (d *DynamoDB) MarshalBinary() ([]byte, error) {
+	content, err := d.parser.Parse(dynamoDbAddonPath, *d, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
 // S3 contains configuration options which fully describe an S3 bucket.
 // Implements the encoding.BinaryMarshaler interface.
 type S3 struct {
@@ -49,12 +59,32 @@ type S3 struct {
 	parser template.Parser
 }
 
+// MarshalBinary serializes the S3 object into a binary YAML CF template.
+// Implements the encoding.BinaryMarshaler interface.
+func (s *S3) MarshalBinary() ([]byte, error) {
+	content, err := s.parser.Parse(s3AddonPath, *s, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
 // RDS contains configuration options which fully describe a RDS Aurora Serverless cluster.
 // Implements the encoding.BinaryMarshaler interface.
 type RDS struct {
 	RDSProps
 
 	parser template.Parser
+}
+
+// MarshalBinary serializes the RDS object into a binary YAML CF template.
+// Implements the encoding.BinaryMarshaler interface.
+func (r *RDS) MarshalBinary() ([]byte, error) {
+	content, err := r.parser.Parse(rdsAddonPath, *r, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
 }
 
 // StorageProps holds basic input properties for addon.NewDynamoDB() or addon.NewS3().
@@ -67,6 +97,15 @@ type S3Props struct {
 	*StorageProps
 }
 
+// NewS3 creates a new S3 marshaler which can be used to write CF via addonWriter.
+func NewS3(input *S3Props) *S3 {
+	return &S3{
+		S3Props: *input,
+
+		parser: template.New(),
+	}
+}
+
 // DynamoDBProps contains DynamoDB-specific properties for addon.NewDynamoDB().
 type DynamoDBProps struct {
 	*StorageProps
@@ -77,17 +116,14 @@ type DynamoDBProps struct {
 	HasLSI       bool
 }
 
-// DDBAttribute holds the attribute definition of a DynamoDB attribute (keys, local secondary indices).
-type DDBAttribute struct {
-	Name     *string
-	DataType *string // Must be one of "N", "S", "B"
-}
+// NewDynamoDB creates a DynamoDB cloudformation template specifying attributes,
+// primary key schema, and local secondary index configuration.
+func NewDynamoDB(input *DynamoDBProps) *DynamoDB {
+	return &DynamoDB{
+		DynamoDBProps: *input,
 
-// DDBLocalSecondaryIndex holds a representation of an LSI.
-type DDBLocalSecondaryIndex struct {
-	PartitionKey *string
-	SortKey      *string
-	Name         *string
+		parser: template.New(),
+	}
 }
 
 // RDSProps holds RDS-specific properties for addon.NewRDS().
@@ -104,56 +140,7 @@ type RDSProps struct {
 	Envs []string
 }
 
-// MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
-// Implements the encoding.BinaryMarshaler interface.
-func (d *DynamoDB) MarshalBinary() ([]byte, error) {
-	content, err := d.parser.Parse(dynamoDbAddonPath, *d, template.WithFuncs(storageTemplateFunctions))
-	if err != nil {
-		return nil, err
-	}
-	return content.Bytes(), nil
-}
-
-// NewDynamoDB creates a DynamoDB cloudformation template specifying attributes,
-// primary key schema, and local secondary index configuration.
-func NewDynamoDB(input *DynamoDBProps) *DynamoDB {
-	return &DynamoDB{
-		DynamoDBProps: *input,
-
-		parser: template.New(),
-	}
-}
-
-// MarshalBinary serializes the S3 object into a binary YAML CF template.
-// Implements the encoding.BinaryMarshaler interface.
-func (s *S3) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(s3AddonPath, *s, template.WithFuncs(storageTemplateFunctions))
-	if err != nil {
-		return nil, err
-	}
-	return content.Bytes(), nil
-}
-
-// NewS3 creates a new S3 marshaler which can be used to write CF via addonWriter.
-func NewS3(input *S3Props) *S3 {
-	return &S3{
-		S3Props: *input,
-
-		parser: template.New(),
-	}
-}
-
-// MarshalBinary serializes the RDS object into a binary YAML CF template.
-// Implements the encoding.BinaryMarshaler interface.
-func (r *RDS) MarshalBinary() ([]byte, error) {
-	content, err := r.parser.Parse(rdsAddonPath, *r, template.WithFuncs(storageTemplateFunctions))
-	if err != nil {
-		return nil, err
-	}
-	return content.Bytes(), nil
-}
-
-// NewRDS creates a new RDS marshaler which can be used to write CF via addonWriter.
+// NewRDS creates a new RDS marshaler which can be used to write a RDS CloudFormation template.
 func NewRDS(input RDSProps) *RDS {
 	return &RDS{
 		RDSProps: input,
@@ -218,6 +205,12 @@ func (p *DynamoDBProps) BuildLocalSecondaryIndex(noLSI bool, lsiSorts []string) 
 	return true, nil
 }
 
+// DDBAttribute holds the attribute definition of a DynamoDB attribute (keys, local secondary indices).
+type DDBAttribute struct {
+	Name     *string
+	DataType *string // Must be one of "N", "S", "B"
+}
+
 // DDBAttributeFromKey parses the DDB type and name out of keys specified in the form "Email:S"
 func DDBAttributeFromKey(input string) (DDBAttribute, error) {
 	attrs := regexpMatchAttribute.FindStringSubmatch(input)
@@ -229,6 +222,13 @@ func DDBAttributeFromKey(input string) (DDBAttribute, error) {
 		Name:     &attrs[1],
 		DataType: &upperString,
 	}, nil
+}
+
+// DDBLocalSecondaryIndex holds a representation of an LSI.
+type DDBLocalSecondaryIndex struct {
+	PartitionKey *string
+	SortKey      *string
+	Name         *string
 }
 
 func newLSI(partitionKey string, lsis []string) ([]DDBLocalSecondaryIndex, error) {
