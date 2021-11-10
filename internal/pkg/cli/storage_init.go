@@ -205,10 +205,7 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	if o.storageType != "" {
-		if err := validateStorageType(o.storageType, validateStorageTypeOpts{
-			ws:           o.ws,
-			workloadName: o.workloadName,
-		}); err != nil {
+		if err := o.validateStorageType(); err != nil {
 			return err
 		}
 	}
@@ -305,22 +302,26 @@ func (o *initStorageOpts) Ask() error {
 }
 
 func (o *initStorageOpts) askStorageType() error {
-	if o.storageType == "" {
-		var options []prompt.Option
-		for _, st := range storageTypes {
-			options = append(options, storageTypeOptions[st])
-		}
-		storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
-			fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
-			storageInitTypeHelp,
-			options,
-			prompt.WithFinalMessage("Storage type:"))
-		if err != nil {
-			return fmt.Errorf("select storage type: %w", err)
-		}
-		o.storageType = optionToStorageType[storageTypeOption]
+	if o.storageType != "" {
+		return o.validateStorageType()
 	}
+	var options []prompt.Option
+	for _, st := range storageTypes {
+		options = append(options, storageTypeOptions[st])
+	}
+	storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
+		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
+		storageInitTypeHelp,
+		options,
+		prompt.WithFinalMessage("Storage type:"))
+	if err != nil {
+		return fmt.Errorf("select storage type: %w", err)
+	}
+	o.storageType = optionToStorageType[storageTypeOption]
+	return o.validateStorageType()
+}
 
+func (o *initStorageOpts) validateStorageType() error {
 	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
 		ws:           o.ws,
 		workloadName: o.workloadName,
