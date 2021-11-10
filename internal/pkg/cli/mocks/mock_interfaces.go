@@ -2945,6 +2945,21 @@ func (mr *MockwsAddonManagerMockRecorder) ListWorkloads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwsAddonManager)(nil).ListWorkloads))
 }
 
+// ReadWorkloadManifest mocks base method.
+func (m *MockwsAddonManager) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
+	ret0, _ := ret[0].(workspace.WorkloadManifest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest.
+func (mr *MockwsAddonManagerMockRecorder) ReadWorkloadManifest(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadWorkloadManifest), name)
+}
+
 // WriteAddon mocks base method.
 func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error) {
 	m.ctrl.T.Helper()

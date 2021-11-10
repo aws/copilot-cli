@@ -82,9 +82,14 @@ func HighlightResource(s string) string {
 	return HiBlue.Sprint(s)
 }
 
-// HighlightCode wraps the string with the ` character, colors it to denote it's a code block, and returns it.
+// HighlightCode wraps the string s with the ` character, colors it to denote it's code, and returns it.
 func HighlightCode(s string) string {
 	return HiCyan.Sprintf("`%s`", s)
+}
+
+// HiglightCodeBlock wraps the string s with ``` characters, colors it to denote it's a multi-line code block, and returns it.
+func HiglightCodeBlock(s string) string {
+	return HiCyan.Sprintf("```\n%s\n```", s)
 }
 
 // Prod colors the string to mark it is a prod environment.

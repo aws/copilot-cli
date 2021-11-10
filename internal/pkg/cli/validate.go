@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/robfig/cron/v3"
 
 	"github.com/spf13/afero"
@@ -59,6 +61,7 @@ var (
 
 	// Aurora-Serverless-specific errors.
 	errInvalidRDSNameCharacters    = errors.New("value must start with a letter")
+	errRDWSNotConnectedToVPC       = fmt.Errorf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType)
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
@@ -280,17 +283,51 @@ func validatePath(fs afero.Fs, val interface{}) error {
 	return nil
 }
 
-func validateStorageType(val interface{}) error {
+type validateStorageTypeOpts struct {
+	ws           manifestReader
+	workloadName string
+}
+
+func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 	storageType, ok := val.(string)
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range storageTypes {
-		if storageType == validType {
-			return nil
-		}
+	if !contains(storageType, storageTypes) {
+		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
 	}
-	return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
+
+	if storageType == rdsStorageType {
+		return validateAuroraStorageType(opts.ws, opts.workloadName)
+	}
+	return nil
+}
+
+func validateAuroraStorageType(ws manifestReader, workloadName string) error {
+	if workloadName == "" {
+		return nil // Workload not yet selected while validating storage type flag.
+	}
+	mft, err := ws.ReadWorkloadManifest(workloadName)
+	if err != nil {
+		return fmt.Errorf("invalid storage type %s: read manifest file for %s: %w", rdsStorageType, workloadName, err)
+	}
+	mftType, err := mft.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("invalid storage type %s: read type of workload from manifest file for %s: %w", rdsStorageType, workloadName, err)
+	}
+	if mftType != manifest.RequestDrivenWebServiceType {
+		return nil
+	}
+	data := struct {
+		Network manifest.RequestDrivenWebServiceNetworkConfig `yaml:"network"`
+	}{}
+	if err := yaml.Unmarshal(mft, &data); err != nil {
+		return fmt.Errorf("invalid storage type %s: unmarshal manifest for %s to read network config: %w", rdsStorageType, workloadName, err)
+	}
+	if data.Network.IsEmpty() {
+		return fmt.Errorf("invalid storage type %s: %w", rdsStorageType, errRDWSNotConnectedToVPC)
+	}
+	return nil
 }
 
 func validateMySQLDBName(val interface{}) error {

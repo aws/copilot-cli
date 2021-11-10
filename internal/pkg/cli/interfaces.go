@@ -301,6 +301,7 @@ type wsAppManager interface {
 
 type wsAddonManager interface {
 	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
+	manifestReader
 	wlLister
 }
 
