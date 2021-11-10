@@ -101,7 +101,12 @@ Resources:
               - Name: {{toSnakeCase $var}}
                 Value:
                   Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
-              {{- end}}
+              {{- end }}
+              {{- range $var := .NestedStack.SecretOutputs }}
+              - Name: {{toSnakeCase $var}}_ARN
+                Value:
+                  Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
+              {{- end }}
               {{- end}}
             {{- if .StartCommand }}
             StartCommand: {{.StartCommand}}
