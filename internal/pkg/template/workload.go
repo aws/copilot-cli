@@ -216,6 +216,7 @@ type NetworkLoadBalancerListener struct {
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
 type NetworkLoadBalancer struct {
 	PublicSubnetCIDRs []string
+	MainContainerPort string
 	Listener          NetworkLoadBalancerListener
 }
 

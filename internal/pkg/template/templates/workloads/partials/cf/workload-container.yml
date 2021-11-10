@@ -23,6 +23,16 @@
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
     - ContainerPort: !Ref ContainerPort
+  {{- if .NLB}}
+  {{if ne .NLB.Listener.TargetPort .NLB.MainContainerPort}}
+    - ContainerPort: {{.NLB.Listener.TargetPort}}
+      {{- if eq .NLB.Listener.Protocol "UDP" }}
+      Protocol: udp
+      {{- else }}
+      Protocol: tcp
+      {{- end }}
+  {{- end}}
+  {{- end}}
 {{- end}}
 {{- if eq .WorkloadType "Backend Service"}}
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]

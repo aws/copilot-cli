@@ -303,6 +303,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (*template.Network
 			TargetPort: targetPort,
 			SSLPolicy: nlbConfig.SSLPolicy,
 		},
+		MainContainerPort: strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10),
 	}, nil
 }
 
