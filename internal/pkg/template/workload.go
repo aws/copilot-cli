@@ -534,7 +534,7 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	if o.NLB != nil {
-		parameters = append(parameters, "NLB") // Invoke env controller so that the
+		parameters = append(parameters, "NLB") // Invoke env controller so that the env controller action is invoked, retrieving the exported HTTPSCert ARN.
 	}
 	return parameters
 }
