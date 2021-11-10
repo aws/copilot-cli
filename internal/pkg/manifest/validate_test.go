@@ -172,7 +172,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Spot: aws.Int(123),
+								Spot:         aws.Int(123),
 								workloadType: LoadBalancedWebServiceType,
 							},
 						},

@@ -29,12 +29,12 @@ func TestEnv_Template(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().ParseEnv(&template.EnvOpts{
-					AppName:                   "project",
-					ScriptBucketName:          "mockbucket",
-					DNSCertValidatorLambda:    "mockkey1",
-					DNSDelegationLambda:       "mockkey2",
-					CustomDomainLambda:        "mockkey4",
-					ImportVPC:                 nil,
+					AppName:                "project",
+					ScriptBucketName:       "mockbucket",
+					DNSCertValidatorLambda: "mockkey1",
+					DNSDelegationLambda:    "mockkey2",
+					CustomDomainLambda:     "mockkey4",
+					ImportVPC:              nil,
 					VPCConfig: &config.AdjustVPC{
 						CIDR:               DefaultVPCCIDR,
 						PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),

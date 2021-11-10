@@ -1431,7 +1431,7 @@ func Test_convertPlatform(t *testing.T) {
 				PlatformString: (*manifest.PlatformString)(aws.String("linux/arm")),
 			},
 			out: template.RuntimePlatformOpts{
-				OS: template.OSLinux,
+				OS:   template.OSLinux,
 				Arch: template.ArchARM64,
 			},
 		},

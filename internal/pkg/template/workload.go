@@ -46,8 +46,8 @@ const (
 	OSWindowsServerFull = "WINDOWS_SERVER_2019_FULL"
 	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
 
-	ArchX86 = "X86_64"
-	ArchARM = "ARM"
+	ArchX86   = "X86_64"
+	ArchARM   = "ARM"
 	ArchARM64 = "ARM64"
 )
 

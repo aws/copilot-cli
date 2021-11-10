@@ -113,7 +113,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	}
 	if l.TaskConfig.IsARM() {
 		if err = validateARM(validateARMOpts{
-			Spot: l.Count.AdvancedCount.Spot,
+			Spot:     l.Count.AdvancedCount.Spot,
 			SpotFrom: l.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
@@ -182,7 +182,7 @@ func (b BackendServiceConfig) Validate() error {
 	}
 	if b.TaskConfig.IsARM() {
 		if err = validateARM(validateARMOpts{
-			Spot: b.Count.AdvancedCount.Spot,
+			Spot:     b.Count.AdvancedCount.Spot,
 			SpotFrom: b.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
@@ -283,7 +283,7 @@ func (w WorkerServiceConfig) Validate() error {
 	}
 	if w.TaskConfig.IsARM() {
 		if err = validateARM(validateARMOpts{
-			Spot: w.Count.AdvancedCount.Spot,
+			Spot:     w.Count.AdvancedCount.Spot,
 			SpotFrom: w.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
@@ -358,7 +358,7 @@ func (s ScheduledJobConfig) Validate() error {
 	}
 	if s.TaskConfig.IsARM() {
 		if err = validateARM(validateARMOpts{
-			Spot: s.Count.AdvancedCount.Spot,
+			Spot:     s.Count.AdvancedCount.Spot,
 			SpotFrom: s.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
@@ -1014,7 +1014,7 @@ func (r AppRunnerInstanceConfig) Validate() error {
 	}
 	// Error out if user added Windows as platform in manifest.
 	if isWindowsPlatform(r.Platform) {
-		return errAppRunnerInvalidPlatformWindows
+		return ErrAppRunnerInvalidPlatformWindows
 	}
 	// This extra check is because ARM architectures won't work for App Runner services.
 	if !r.Platform.IsEmpty() {
@@ -1157,7 +1157,7 @@ type validateWindowsOpts struct {
 }
 
 type validateARMOpts struct {
-	Spot *int
+	Spot     *int
 	SpotFrom *int
 }
 

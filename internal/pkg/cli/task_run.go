@@ -236,7 +236,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			App: o.appName,
 			Env: o.env,
 
-			OS:   o.os,
+			OS: o.os,
 
 			VPCGetter:            vpcGetter,
 			ClusterGetter:        ecs.New(o.sess),

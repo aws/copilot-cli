@@ -37,7 +37,7 @@ type EnvRunner struct {
 	Env string
 
 	// Platform configuration
-	OS   string
+	OS string
 
 	// Interfaces to interact with dependencies. Must not be nil.
 	VPCGetter            VPCGetter
