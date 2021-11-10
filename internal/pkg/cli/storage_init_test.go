@@ -981,6 +981,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inParameterGroup: "mygroup",
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {

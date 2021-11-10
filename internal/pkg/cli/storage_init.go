@@ -169,6 +169,9 @@ type initStorageOpts struct {
 
 	sel    wsSelector
 	prompt prompter
+
+	// Cached data.
+	workloadType string
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -649,7 +652,23 @@ func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
 	}, nil
 }
 
-func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
+func (o *initStorageOpts) readWorkloadType() (string, error) {
+	if o.workloadType != "" {
+		return o.workloadType, nil
+	}
+	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
+	if err != nil {
+		return "", fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
+	}
+	t, err := mft.WorkloadType()
+	if err != nil {
+		return "", fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
+	}
+	o.workloadType = t
+	return o.workloadType, nil
+}
+
+func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDBTemplate, error) {
 	props := addon.DynamoDBProps{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
@@ -672,19 +691,19 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 		}
 	}
 
-	return addon.NewDynamoDB(&props), nil
+	return addon.NewDDBTemplate(&props), nil
 }
 
-func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
+func (o *initStorageOpts) newS3Addon() (*addon.S3Template, error) {
 	props := &addon.S3Props{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
 		},
 	}
-	return addon.NewS3(props), nil
+	return addon.NewS3Template(props), nil
 }
 
-func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
+func (o *initStorageOpts) newRDSAddon() (*addon.RDSTemplate, error) {
 	var engine string
 	switch o.rdsEngine {
 	case engineTypeMySQL:
@@ -700,12 +719,18 @@ func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
 		return nil, err
 	}
 
-	return addon.NewRDS(addon.RDSProps{
+	workloadType, err := o.readWorkloadType()
+	if err != nil {
+		return nil, err
+	}
+
+	return addon.NewRDSTemplate(addon.RDSProps{
 		ClusterName:    o.storageName,
 		Engine:         engine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
+		WorkloadType:   workloadType,
 	}), nil
 }
 
