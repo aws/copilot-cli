@@ -1001,7 +1001,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
 
-			wantedErr: fmt.Errorf("addon already exists: %w", fileExistsError),
+			wantedErr: fmt.Errorf("addon file already exists: %w", fileExistsError),
 		},
 		"unrecognized error handled": {
 			inAppName:     wantedAppName,

@@ -593,57 +593,60 @@ func (o *initStorageOpts) validateWorkloadName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
-	addonCf, err := o.newAddon()
+	addonBlobs, err := o.addonBlobs()
 	if err != nil {
 		return err
 	}
 
-	addonPath, err := o.ws.WriteAddon(addonCf, o.workloadName, o.storageName)
-	if err != nil {
-		e, ok := err.(*workspace.ErrFileExists)
-		if !ok {
+	for _, addon := range addonBlobs {
+		addonPath, err := o.ws.WriteAddon(addon.blob, o.workloadName, addon.name)
+		if err != nil {
+			e, ok := err.(*workspace.ErrFileExists)
+			if !ok {
+				return err
+			}
+			return fmt.Errorf("addon file already exists: %w", e)
+		}
+		addonPath, err = relPath(addonPath)
+		if err != nil {
 			return err
 		}
-		return fmt.Errorf("addon already exists: %w", e)
+		log.Successf("Wrote CloudFormation %s at %s\n",
+			color.HighlightUserInput(addon.description),
+			color.HighlightResource(addonPath),
+		)
 	}
-	addonPath, err = relPath(addonPath)
-	if err != nil {
-		return err
-	}
-
-	addonMsgFmt := "Wrote CloudFormation template for %[1]s %[2]s at %[3]s\n"
-	var addonFriendlyText string
-	switch o.storageType {
-	case dynamoDBStorageType:
-		addonFriendlyText = dynamoDBTableFriendlyText
-	case s3StorageType:
-		addonFriendlyText = s3BucketFriendlyText
-	case rdsStorageType:
-		addonFriendlyText = rdsFriendlyText
-	default:
-		return fmt.Errorf(fmtErrInvalidStorageType, o.storageType, prettify(storageTypes))
-	}
-	log.Successf(addonMsgFmt,
-		color.Emphasize(addonFriendlyText),
-		color.HighlightUserInput(o.storageName),
-		color.HighlightResource(addonPath),
-	)
 	log.Infoln()
-
 	return nil
 }
 
-func (o *initStorageOpts) newAddon() (encoding.BinaryMarshaler, error) {
+type addonBlob struct {
+	name        string
+	description string
+	blob        encoding.BinaryMarshaler
+}
+
+func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
+	var templateBlob encoding.BinaryMarshaler
+	err := fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
 	switch o.storageType {
 	case dynamoDBStorageType:
-		return o.newDynamoDBAddon()
+		templateBlob, err = o.newDynamoDBAddon()
 	case s3StorageType:
-		return o.newS3Addon()
+		templateBlob, err = o.newS3Addon()
 	case rdsStorageType:
-		return o.newRDSAddon()
-	default:
-		return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
+		templateBlob, err = o.newRDSAddon()
 	}
+	if err != nil {
+		return nil, err
+	}
+	return []addonBlob{
+		{
+			name:        o.storageName,
+			description: "template",
+			blob:        templateBlob,
+		},
+	}, nil
 }
 
 func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
