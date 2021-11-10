@@ -174,7 +174,7 @@ Resources:
       Protocol: HTTP
   HTTPSListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn: HTTPSCert
+    DependsOn: HTTPSCertArn
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
@@ -356,6 +356,11 @@ Outputs:
     Value: !Ref HTTPSListener
     Export:
       Name: !Sub ${AWS::StackName}-HTTPSListenerArn
+  HTTPSCertArn:
+    Condition: DelegateDNS
+    Value: !Ref HTTPSCert
+    Export:
+      Name: !Sub ${AWS::StackName}-HTTPSCert
   DefaultHTTPTargetGroupArn:
     Condition: CreateALB
     Value: !Ref DefaultHTTPTargetGroup

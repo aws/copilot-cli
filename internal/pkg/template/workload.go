@@ -532,6 +532,9 @@ func envControllerParameters(o WorkloadOpts) []string {
 	if o.Storage != nil && o.Storage.requiresEFSCreation() {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
+	if o.NLB != nil {
+		parameters = append(parameters, "NLB") // Invoke env controller so that the
+	}
 	return parameters
 }
 

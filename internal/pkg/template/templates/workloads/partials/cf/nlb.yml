@@ -23,7 +23,7 @@ NLBListener:
 {{- if eq .NLB.Listener.Protocol "TLS" }}
     Certificates:
       - CertificateArn:
-          !GetAtt EnvControllerAction.HTTPSCert
+          !GetAtt EnvControllerAction.HTTPSCertArn
     SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
 {{- end}}
 
@@ -78,7 +78,11 @@ NLBSecurityGroup:
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
         FromPort: {{ $.NLB.Listener.Port }}
+        {{- if eq $.NLB.Listener.Protocol "TLS" }}
+        IpProtocol: TCP
+        {{- else }}
         IpProtocol: {{ $.NLB.Listener.Protocol }}
+        {{- end }}
         ToPort: {{ $.NLB.Listener.Port }}
 {{end}}
     Tags:
