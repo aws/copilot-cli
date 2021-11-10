@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -73,6 +75,7 @@ type deploySvcOpts struct {
 	deployWkldVars
 
 	store               store
+	deployStore         *deploy.Store
 	ws                  wsSvcDirReader
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
@@ -89,6 +92,8 @@ type deploySvcOpts struct {
 	endpointGetter      endpointGetter
 	snsTopicGetter      deployedEnvironmentLister
 	identity            identityService
+	subnetLister        vpcSubnetLister
+	envDescriber        envDescriber
 
 	spinner progress
 	sel     wsSelector
@@ -128,6 +133,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		deployWkldVars: vars,
 
 		store:     store,
+		deployStore: deployStore,
 		ws:        ws,
 		unmarshal: manifest.UnmarshalWorkload,
 		spinner:   termprogress.NewSpinner(log.DiagnosticWriter),
@@ -305,6 +311,18 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("assuming environment manager role: %w", err)
 	}
 
+	d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+		DeployStore: o.deployStore,
+	})
+	if err != nil {
+		return fmt.Errorf("create describer for environment %s in application %s: %w", o.envName, o.appName, err)
+	}
+	o.envDescriber = d
+	o.subnetLister = ec2.New(envSession)
+
 	// ECR client against tools account profile AND target environment region.
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
 	registry := ecr.New(defaultSessEnvRegion)
@@ -356,6 +374,23 @@ func (o *deploySvcOpts) configureClients() error {
 	id := identity.New(defaultSess)
 	o.identity = id
 	return nil
+}
+
+func (o *deploySvcOpts) publicCIDRBlocks() ([]string, error) {
+	envDescription, err := o.envDescriber.Describe()
+	if err != nil {
+		return nil, fmt.Errorf("describe environment %s: %w", o.envName, err)
+	}
+	vpcID := envDescription.EnvironmentVPC.ID
+	subnets, err := o.subnetLister.ListVPCSubnets(vpcID)
+	if err != nil {
+		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, o.envName, err)
+	}
+	var cidrBlocks []string
+	for _, subnet := range subnets.Public {
+		cidrBlocks = append(cidrBlocks, subnet.CIDRBlock)
+	}
+	return cidrBlocks, nil
 }
 
 func (o *deploySvcOpts) configureContainerImage() error {
@@ -477,6 +512,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	if err != nil {
 		return nil, err
 	}
+
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        addonsURL,
@@ -550,6 +586,11 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		}
 
 		var opts []stack.LoadBalancedWebServiceOption
+
+		// TODO: https://github.com/aws/copilot-cli/issues/2918
+		// 1. Should error out if `nlb.alias` is specified with targetApp.Domain == ""
+		// 2. Should validate `nlb.alias` is specified
+		// 3. ALB block should not be executed if http is disabled
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -559,6 +600,14 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 				return nil, err
 			}
 			opts = append(opts, stack.WithHTTPS())
+			opts = append(opts, stack.WithDNSDelegation())
+		}
+		if !t.NLBConfig.IsEmpty() {
+			cidrBlocks, err := o.publicCIDRBlocks()
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, stack.WithNLB(cidrBlocks))
 		}
 		conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
