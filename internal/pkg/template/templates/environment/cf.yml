@@ -174,7 +174,7 @@ Resources:
       Protocol: HTTP
   HTTPSListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn: HTTPSCertArn
+    DependsOn: HTTPSCert
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
