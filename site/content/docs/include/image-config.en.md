@@ -32,30 +32,27 @@ You can omit fields and Copilot will do its best to understand what you mean. Fo
 
 All paths are relative to your workspace root.
 
-<span class="parent-field">
-image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">
-String</span>  
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">
+String</span>
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive
-with [`image.build`](#image-build). The `location` field follows the same definition as
-the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image)
-in the Amazon ECS task definition.
+  with [`image.build`](#image-build).
+The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
 !!! warning
     If you are passing in a Windows image, you must add `platform: windows/x86_64` to your manifest.
 
     If you are passing in an ARM architecture-based image, you must add `platform: linux/x86_64` to your manifest.
 
-<span class="parent-field">
-image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">
+<span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">
 String</span>
 An optional credentials ARN for a private repository. The `credentials` field follows the same definition as
-the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the
-Amazon ECS task definition.
+  the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the
+  Amazon ECS task definition.
 
-<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a> <span class="type">Map</span>  
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a> <span class="type">Map</span>
 An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
 
-<span class="parent-field">image.</span><a id="image-depends-on" href="#image-depends-on" class="field">`depends_on`</a> <span class="type">Map</span>  
+<span class="parent-field">image.</span><a id="image-depends-on" href="#image-depends-on" class="field">`depends_on`</a> <span class="type">Map</span>
 An optional key/value map of [Container Dependencies](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDependency.html) to add to the container. The key of the map is a container name and the value is the condition to depend on. Valid conditions are: `start`, `healthy`, `complete`, and `success`. You cannot specify a `complete` or `success` dependency on an essential container.
 
 For example:
