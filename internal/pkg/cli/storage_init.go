@@ -334,7 +334,7 @@ func (o *initStorageOpts) validateStorageType() error {
 			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
 You can enable VPC connectivity by updating your manifest with:
 %s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HiglightCodeBlock(`network:
+`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
   vpc:
     placement: private`))
 		}
@@ -791,15 +791,25 @@ func (o *initStorageOpts) RecommendActions() error {
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
-
+		if o.workloadType == manifest.RequestDrivenWebServiceType {
+			newVar = fmt.Sprintf("%s_ARN", newVar)
+			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
+const client = new AWS.SecretsManager({
+    region: process.env.AWS_DEFAULT_REGION,
+});
+const dbSecret = await client.getSecretValue({SecretId: %s}).promise();
+const {username, host, dbname, password, port} = JSON.parse(dbSecret);
+`, newVar)
+		}
 	}
 
 	actionRetrieveEnvVar := fmt.Sprintf(
 		`Update %s's code to leverage the injected environment variable %s.
-For example, in JavaScript you can write %s.`,
+For example, in JavaScript you can write:
+%s`,
 		o.workloadName,
 		newVar,
-		color.HighlightCode(retrieveEnvVarCode))
+		color.HighlightCodeBlock(retrieveEnvVarCode))
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
