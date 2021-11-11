@@ -91,6 +91,12 @@ var (
 	osFamiliesForPV100 = []string{
 		OSWindowsServerFull, OSWindowsServerCore,
 	}
+
+	// Changing the suffix version number will force trigger the env controller for once.
+	// The suffix version number should be the latest environment template version at the time when a force trigger needs to happen.
+	// This is useful when we add a new output in the environment stack, and we need to reference
+	// the new output from the workload stack. See example: https://github.com/aws/copilot-cli/pull/3018
+	forceTriggerEnvController = "ForceTriggerEnvController-v1.7.0"
 )
 
 // WorkloadNestedStackOpts holds configuration that's needed if the workload stack has a nested stack.
@@ -533,9 +539,8 @@ func envControllerParameters(o WorkloadOpts) []string {
 	if o.Storage != nil && o.Storage.requiresEFSCreation() {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
-	if o.NLB != nil {
-		parameters = append(parameters, "NLB") // Invoke env controller so that the env controller action is invoked, retrieving the exported HTTPSCert ARN.
-	}
+
+	parameters = append(parameters, forceTriggerEnvController)
 	return parameters
 }
 

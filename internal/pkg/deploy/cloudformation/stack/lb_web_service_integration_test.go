@@ -30,6 +30,8 @@ const (
 	rulePriorityPath        = "custom-resources/alb-rule-priority-generator.js"
 )
 
+var regExpForceTriggerEnvController = regexp.MustCompile(`ForceTriggerEnvController-v\d+\.\d+.\d+`)
+
 func TestLoadBalancedWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
 		envName       string
@@ -109,6 +111,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 			actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
 			actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
+			actualString = regExpForceTriggerEnvController.ReplaceAllString(actualString, "ForceTriggerEnvController")
 
 			actualBytes = []byte(actualString)
 			mActual := make(map[interface{}]interface{})

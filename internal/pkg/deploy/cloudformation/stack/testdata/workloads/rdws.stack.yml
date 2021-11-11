@@ -201,7 +201,7 @@ Resources:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
       EnvStack: !Sub '${AppName}-${EnvName}'
-      Parameters: [NATWorkloads,]
+      Parameters: [NATWorkloads, ForceTriggerEnvController]
   
   EnvControllerFunction:
     Type: AWS::Lambda::Function

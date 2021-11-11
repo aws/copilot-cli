@@ -77,6 +77,7 @@ func TestWorkerService_Template(t *testing.T) {
 		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 		actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
 		actualString = strings.ReplaceAll(actualString, backlogPerTaskLambda.String(), "mockBacklogPerTaskLambda")
+		actualString = regExpForceTriggerEnvController.ReplaceAllString(actualString, "ForceTriggerEnvController")
 		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
