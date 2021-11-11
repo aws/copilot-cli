@@ -153,15 +153,15 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts:   defaultOpts,
 			inOS:        "OStrich",
 			inArch:      "MAD666",
-			wantedError: errors.New("platform OSTRICH/MAD666 is invalid; valid platforms are: WINDOWS_SERVER_2019_CORE/X86_64, WINDOWS_SERVER_2019_FULL/X86_64 and LINUX/X86_64"),
+			wantedError: errors.New("platform OSTRICH/MAD666 is invalid; valid platforms are: WINDOWS_SERVER_2019_CORE/X86_64, WINDOWS_SERVER_2019_FULL/X86_64, LINUX/X86_64 and LINUX/ARM64"),
 		},
 		"uppercase any lowercase before validating": {
-			basicOpts:   basicOpts{
-				inCount: 1,
-				inCPU: 1024,
+			basicOpts: basicOpts{
+				inCount:  1,
+				inCPU:    1024,
 				inMemory: 2048,
 			},
-			inOS: "windows_server_2019_core",
+			inOS:        "windows_server_2019_core",
 			inArch:      "x86_64",
 			wantedError: nil,
 		},

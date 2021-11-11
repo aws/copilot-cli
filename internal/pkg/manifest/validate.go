@@ -111,6 +111,14 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
 	}
+	if l.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot:     l.Count.AdvancedCount.Spot,
+			SpotFrom: l.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -170,6 +178,14 @@ func (b BackendServiceConfig) Validate() error {
 			efsVolumes:  b.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
+		}
+	}
+	if b.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot:     b.Count.AdvancedCount.Spot,
+			SpotFrom: b.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
 		}
 	}
 	return nil
@@ -265,6 +281,14 @@ func (w WorkerServiceConfig) Validate() error {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
 	}
+	if w.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot:     w.Count.AdvancedCount.Spot,
+			SpotFrom: w.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -330,6 +354,14 @@ func (s ScheduledJobConfig) Validate() error {
 			efsVolumes:  s.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
+		}
+	}
+	if s.TaskConfig.IsARM() {
+		if err = validateARM(validateARMOpts{
+			Spot:     s.Count.AdvancedCount.Spot,
+			SpotFrom: s.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
+		}); err != nil {
+			return fmt.Errorf("validate ARM: %w", err)
 		}
 	}
 	return nil
@@ -982,7 +1014,7 @@ func (r AppRunnerInstanceConfig) Validate() error {
 	}
 	// Error out if user added Windows as platform in manifest.
 	if isWindowsPlatform(r.Platform) {
-		return errAppRunnerInvalidPlatformWindows
+		return ErrAppRunnerInvalidPlatformWindows
 	}
 	// This extra check is because ARM architectures won't work for App Runner services.
 	if !r.Platform.IsEmpty() {
@@ -1122,6 +1154,11 @@ type containerDependency struct {
 type validateWindowsOpts struct {
 	execEnabled bool
 	efsVolumes  map[string]*Volume
+}
+
+type validateARMOpts struct {
+	Spot     *int
+	SpotFrom *int
 }
 
 func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
@@ -1279,6 +1316,13 @@ func validateWindows(opts validateWindowsOpts) error {
 		if !volume.EmptyVolume() {
 			return errors.New(`'EFS' is not supported when deploying a Windows container`)
 		}
+	}
+	return nil
+}
+
+func validateARM(opts validateARMOpts) error {
+	if opts.Spot != nil || opts.SpotFrom != nil {
+		return errors.New(`'Fargate Spot' is not supported when deploying on ARM architecture`)
 	}
 	return nil
 }

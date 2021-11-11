@@ -285,7 +285,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				App: inApp,
 				Env: inEnv,
 
-				OS:   tc.os,
+				OS: tc.os,
 
 				VPCGetter:            MockVPCGetter,
 				ClusterGetter:        MockClusterGetter,

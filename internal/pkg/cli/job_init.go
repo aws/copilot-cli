@@ -174,10 +174,10 @@ func (o *initJobOpts) Ask() error {
 		return nil
 	}
 	var (
-		errNotFound *workspace.ErrFileNotExists
+		errNotFound          *workspace.ErrFileNotExists
 		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
 	)
-	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound){
+	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
 		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
 	if err := o.askJobType(); err != nil {

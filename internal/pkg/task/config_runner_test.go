@@ -317,7 +317,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				ClusterGetter: mockClusterGetter,
 				Starter:       mockStarter,
 
-				OS:   tc.os,
+				OS: tc.os,
 			}
 
 			tasks, err := task.Run()

@@ -35,6 +35,8 @@ const (
 
 	ArchAMD64 = dockerengine.ArchAMD64
 	ArchX86   = dockerengine.ArchX86
+	ArchARM   = dockerengine.ArchARM
+	ArchARM64 = dockerengine.ArchARM64
 
 	// Minimum CPU and mem values required for Windows-based tasks.
 	MinWindowsTaskCPU    = 1024
@@ -54,10 +56,12 @@ var (
 
 	// ValidShortPlatforms are all of the os/arch combinations that the PlatformString field may accept.
 	ValidShortPlatforms = []string{
-		platformString(OSLinux, ArchAMD64),
-		platformString(OSLinux, ArchX86),
-		platformString(OSWindows, ArchAMD64),
-		platformString(OSWindows, ArchX86),
+		dockerengine.PlatformString(OSLinux, ArchAMD64),
+		dockerengine.PlatformString(OSLinux, ArchX86),
+		dockerengine.PlatformString(OSLinux, ArchARM),
+		dockerengine.PlatformString(OSLinux, ArchARM64),
+		dockerengine.PlatformString(OSWindows, ArchAMD64),
+		dockerengine.PlatformString(OSWindows, ArchX86),
 	}
 
 	defaultPlatform = platformString(OSLinux, ArchAMD64)
@@ -66,6 +70,8 @@ var (
 	validAdvancedPlatforms = []PlatformArgs{
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
+		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM)},
+		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM64)},
 		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchX86)},
@@ -78,6 +84,8 @@ var (
 	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 
 	// Error definitions.
+	ErrAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
+
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
 	errUnmarshalPlatformOpts = errors.New("unable to unmarshal platform field into string or compose-style map")
 	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
@@ -87,8 +95,6 @@ var (
 	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
 	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
 	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
-
-	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -519,6 +525,11 @@ func (t TaskConfig) IsWindows() bool {
 	return isWindowsPlatform(t.Platform)
 }
 
+// IsARM returns whether or not the service is building with an ARM Arch.
+func (t TaskConfig) IsARM() bool {
+	return IsArmArch(t.Platform.Arch())
+}
+
 // PublishConfig represents the configurable options for setting up publishers.
 type PublishConfig struct {
 	Topics []Topic `yaml:"topics"`
@@ -692,7 +703,7 @@ func (p *PlatformArgsOrString) OS() string {
 	return strings.ToLower(aws.StringValue(p.PlatformArgs.OSFamily))
 }
 
-// Arch returns the architecture.
+// Arch returns the architecture of PlatformArgsOrString.
 func (p *PlatformArgsOrString) Arch() string {
 	if p := aws.StringValue((*string)(p.PlatformString)); p != "" {
 		args := strings.Split(p, "/")
@@ -741,11 +752,11 @@ func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 	}
 	// Return an error if a platform cannot be redirected.
 	if wlType == RequestDrivenWebServiceType && os == OSWindows {
-		return "", errAppRunnerInvalidPlatformWindows
+		return "", ErrAppRunnerInvalidPlatformWindows
 	}
-	// All architectures must be 'amd64' (the only one currently supported); leave OS as is.
+	// All architectures default to 'x86_64' (though 'arm64' is now also supported); leave OS as is.
 	// If a string is returned, the platform is not the default platform but is supported (except for more obscure platforms).
-	return platformString(os, ArchAMD64), nil
+	return platformString(os, dockerengine.ArchX86), nil
 }
 
 func isWindowsPlatform(platform PlatformArgsOrString) bool {
@@ -753,6 +764,14 @@ func isWindowsPlatform(platform PlatformArgsOrString) bool {
 		if platform.OS() == win {
 			return true
 		}
+	}
+	return false
+}
+
+// IsArmArch returns whether or not the arch is ARM.
+func IsArmArch(arch string) bool {
+	if strings.ToLower(arch) == ArchARM || strings.ToLower(arch) == ArchARM64 {
+		return true
 	}
 	return false
 }
