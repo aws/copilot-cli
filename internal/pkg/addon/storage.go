@@ -92,6 +92,20 @@ func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// RDSParams represents the addons.parameters.yml file for a RDS Aurora Serverless cluster.
+type RDSParams struct {
+	parser template.Parser
+}
+
+// MarshalBinary serializes the content of the params file into binary.
+func (r *RDSParams) MarshalBinary() ([]byte, error) {
+	content, err := r.parser.Parse(rdsRDWSParamsPath, *r, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
 // StorageProps holds basic input properties for addon.NewDDBTemplate() or addon.NewS3Template().
 type StorageProps struct {
 	Name string
@@ -146,6 +160,13 @@ func NewRDSTemplate(input RDSProps) *RDSTemplate {
 	return &RDSTemplate{
 		RDSProps: input,
 
+		parser: template.New(),
+	}
+}
+
+// NewRDSParams creates a new RDS parameters marshaler.
+func NewRDSParams() *RDSParams {
+	return &RDSParams{
 		parser: template.New(),
 	}
 }

@@ -184,6 +184,51 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 	}
 }
 
+func TestRDSParams_MarshalBinary(t *testing.T) {
+	testCases := map[string]struct {
+		mockDependencies func(ctrl *gomock.Controller, r *RDSParams)
+
+		wantedBinary []byte
+		wantedError  error
+	}{
+		"error parsing template": {
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSParams) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Any(), *r, gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("some error"),
+		},
+		"renders param file with expected path": {
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSParams) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsRDWSParamsPath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("bloop")}, nil)
+
+			},
+			wantedBinary: []byte("bloop"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			params := &RDSParams{}
+			tc.mockDependencies(ctrl, params)
+
+			// WHEN
+			b, err := params.MarshalBinary()
+
+			// THEN
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedBinary, b)
+		})
+	}
+}
+
 func TestDDBAttributeFromKey(t *testing.T) {
 	testCases := map[string]struct {
 		input     string

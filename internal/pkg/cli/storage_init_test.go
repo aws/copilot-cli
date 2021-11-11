@@ -972,9 +972,24 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			wantedErr: nil,
 		},
-		"happy calls for RDS": {
-			inSvcName: wantedSvcName,
+		"happy calls for RDS with LBWS": {
+			inSvcName:        wantedSvcName,
+			inStorageType:    rdsStorageType,
+			inStorageName:    "mycluster",
+			inEngine:         engineTypeMySQL,
+			inParameterGroup: "mygroup",
 
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
+			wantedErr: nil,
+		},
+		"happy calls for RDS with a RDWS": {
+			inSvcName:        wantedSvcName,
 			inStorageType:    rdsStorageType,
 			inStorageName:    "mycluster",
 			inEngine:         engineTypeMySQL,
@@ -983,6 +998,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "addons.parameters").Return("/frontend/addons/addons.parameters.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
