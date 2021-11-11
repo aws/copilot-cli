@@ -360,7 +360,7 @@ Outputs:
     Condition: DelegateDNS
     Value: !Ref HTTPSCert
     Export:
-      Name: !Sub ${AWS::StackName}-HTTPSCert
+      Name: !Sub ${AWS::StackName}-HTTPSCertArn
   DefaultHTTPTargetGroupArn:
     Condition: CreateALB
     Value: !Ref DefaultHTTPTargetGroup

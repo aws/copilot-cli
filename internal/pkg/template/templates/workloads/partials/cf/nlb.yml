@@ -13,6 +13,9 @@ PublicNetworkLoadBalancer:
 
 NLBListener:
   Type: AWS::ElasticLoadBalancingV2::Listener
+{{- if eq .NLB.Listener.Protocol "TLS"}}
+  DependsOn: EnvControllerAction
+{{- end }}
   Properties:
     DefaultActions:
       - TargetGroupArn: !Ref NLBTargetGroup
@@ -23,7 +26,7 @@ NLBListener:
 {{- if eq .NLB.Listener.Protocol "TLS" }}
     Certificates:
       - CertificateArn:
-          !GetAtt EnvControllerAction.HTTPSCertArn
+          Fn::ImportValue: !Sub '${AppName}-${EnvName}-HTTPSCertArn'
     SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
 {{- end}}
 
