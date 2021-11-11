@@ -40,8 +40,10 @@ with [`image.build`](#image-build). The `location` field follows the same defini
 the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image)
 in the Amazon ECS task definition.
 
-!!! note If you are passing in a Windows image, you must add `platform: windows/x86_64` to your manifest. If you are
-passing in an ARM architecture-based image, you must add `platform: linux/x86_64` to your manifest.
+!!! warning
+    If you are passing in a Windows image, you must add `platform: windows/x86_64` to your manifest.
+
+    If you are passing in an ARM architecture-based image, you must add `platform: linux/x86_64` to your manifest.
 
 <span class="parent-field">
 image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">
