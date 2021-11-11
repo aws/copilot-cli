@@ -1,10 +1,10 @@
 <div class="separator"></div>
 
-<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
+<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>
 The image section contains parameters relating to the Docker build configuration and exposed port.
 
-<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
-Build a container from a Dockerfile with optional arguments. Mutually exclusive with [`image.location`](#image-location). 
+<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>
+Build a container from a Dockerfile with optional arguments. Mutually exclusive with [`image.location`](#image-location).
 
 If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
 ```yaml
@@ -32,22 +32,17 @@ You can omit fields and Copilot will do its best to understand what you mean. Fo
 
 All paths are relative to your workspace root.
 
-<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">
-String</span>
-Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive
-  with [`image.build`](#image-build).
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).
 The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
 !!! warning
     If you are passing in a Windows image, you must add `platform: windows/x86_64` to your manifest.
 
-    If you are passing in an ARM architecture-based image, you must add `platform: linux/x86_64` to your manifest.
+    If you are passing in an ARM architecture-based image, you must add `platform: linux/arm64` to your manifest.
 
-<span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">
-String</span>
-An optional credentials ARN for a private repository. The `credentials` field follows the same definition as
-  the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the
-  Amazon ECS task definition.
+<span class="parent-field">image.</span><a id="image-credential" href="#image-credential" class="field">`credentials`</a> <span class="type">String</span>
+An optional credentials ARN for a private repository. The `credentials` field follows the same definition as the [`credentialsParameter`](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) in the Amazon ECS task definition.
 
 <span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a> <span class="type">Map</span>
 An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
@@ -63,4 +58,4 @@ image:
     nginx: start
     startup: success
 ```
-In the above example, the task's main container will only start after the `nginx` sidecar has started and the `startup` container has completed successfully.  
+In the above example, the task's main container will only start after the `nginx` sidecar has started and the `startup` container has completed successfully.
