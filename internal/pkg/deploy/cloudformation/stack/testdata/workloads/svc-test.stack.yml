@@ -289,7 +289,7 @@ Resources:
       Workload: !Ref WorkloadName
       Aliases: [example.com]
       EnvStack: !Sub '${AppName}-${EnvName}'
-      Parameters: [ALBWorkloads, Aliases, ForceTriggerEnvController]
+      Parameters: [ALBWorkloads, Aliases,]
   
   EnvControllerFunction:
     Type: AWS::Lambda::Function

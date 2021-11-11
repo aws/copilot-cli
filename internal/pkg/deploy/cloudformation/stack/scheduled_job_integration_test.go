@@ -60,7 +60,6 @@ func TestScheduledJob_Template(t *testing.T) {
 		actualString := string(actualBytes)
 		// Cut out zip file from EnvControllerAction for more readable output
 		actualString = strings.ReplaceAll(actualString, zipFile, "Abracadabra")
-		actualString = regExpForceTriggerEnvController.ReplaceAllString(actualString, "ForceTriggerEnvController")
 		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))

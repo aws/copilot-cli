@@ -63,7 +63,6 @@ func TestRDWS_Template(t *testing.T) {
 	envControllerZipFile := envController.String()
 	// Cut out zip file for more readable output
 	actualTemplate = strings.ReplaceAll(actualTemplate, envControllerZipFile, "mockEnvControllerZipFile")
-	actualTemplate = regExpForceTriggerEnvController.ReplaceAllString(actualTemplate, "ForceTriggerEnvController")
 
 	// Compare the two.
 	wanted := make(map[interface{}]interface{})

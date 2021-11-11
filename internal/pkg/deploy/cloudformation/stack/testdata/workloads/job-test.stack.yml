@@ -47,7 +47,6 @@ Resources:
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters:
       - EFSWorkloads
-      - ForceTriggerEnvController
 
   EnvControllerFunction:
     Type: AWS::Lambda::Function
