@@ -595,11 +595,14 @@ func (o *initStorageOpts) validateWorkloadName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
+	if err := o.readWorkloadType(); err != nil {
+		return err
+	}
+
 	addonBlobs, err := o.addonBlobs()
 	if err != nil {
 		return err
 	}
-
 	for _, addon := range addonBlobs {
 		path, err := o.ws.WriteAddon(addon.blob, o.workloadName, addon.name)
 		if err != nil {
@@ -675,11 +678,7 @@ func (o *initStorageOpts) newAddonParams() (encoding.BinaryMarshaler, error) {
 	if o.storageType != rdsStorageType {
 		return nil, errUnavailableAddonParams
 	}
-	workloadType, err := o.readWorkloadType()
-	if err != nil {
-		return nil, err
-	}
-	if workloadType != manifest.RequestDrivenWebServiceType {
+	if o.workloadType != manifest.RequestDrivenWebServiceType {
 		return nil, errUnavailableAddonParams
 	}
 	return addon.NewRDSParams(), nil
@@ -736,18 +735,13 @@ func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 		return nil, err
 	}
 
-	workloadType, err := o.readWorkloadType()
-	if err != nil {
-		return nil, err
-	}
-
 	return addon.NewRDSTemplate(addon.RDSProps{
 		ClusterName:    o.storageName,
 		Engine:         engine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
-		WorkloadType:   workloadType,
+		WorkloadType:   o.workloadType,
 	}), nil
 }
 
@@ -763,20 +757,17 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 	return envNames, nil
 }
 
-func (o *initStorageOpts) readWorkloadType() (string, error) {
-	if o.workloadType != "" {
-		return o.workloadType, nil
-	}
+func (o *initStorageOpts) readWorkloadType() error {
 	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
 	if err != nil {
-		return "", fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
+		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
 	}
 	t, err := mft.WorkloadType()
 	if err != nil {
-		return "", fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
+		return fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
 	}
 	o.workloadType = t
-	return o.workloadType, nil
+	return nil
 }
 
 func (o *initStorageOpts) RecommendActions() error {
