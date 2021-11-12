@@ -87,8 +87,8 @@ func HighlightCode(s string) string {
 	return HiCyan.Sprintf("`%s`", s)
 }
 
-// HiglightCodeBlock wraps the string s with ``` characters, colors it to denote it's a multi-line code block, and returns it.
-func HiglightCodeBlock(s string) string {
+// HighlightCodeBlock wraps the string s with ``` characters, colors it to denote it's a multi-line code block, and returns it.
+func HighlightCodeBlock(s string) string {
 	return HiCyan.Sprintf("```\n%s\n```", s)
 }
 

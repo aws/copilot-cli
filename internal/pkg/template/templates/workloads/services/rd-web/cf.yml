@@ -101,7 +101,12 @@ Resources:
               - Name: {{toSnakeCase $var}}
                 Value:
                   Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
-              {{- end}}
+              {{- end }}
+              {{- range $var := .NestedStack.SecretOutputs }}
+              - Name: {{toSnakeCase $var}}_ARN
+                Value:
+                  Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
+              {{- end }}
               {{- end}}
             {{- if .StartCommand }}
             StartCommand: {{.StartCommand}}
@@ -123,7 +128,7 @@ Resources:
       NetworkConfiguration:
         EgressConfiguration:
           EgressType: VPC
-          VpcConnectorArn: !GetAtt VpcConnector.Arn
+          VpcConnectorArn: !Ref VpcConnector
       {{- end }}
       Tags:
         - Key: copilot-application
