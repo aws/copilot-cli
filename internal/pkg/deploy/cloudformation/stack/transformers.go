@@ -6,7 +6,6 @@ package stack
 import (
 	"fmt"
 	"hash/crc32"
-	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -32,7 +32,6 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
-	defaultNLBProtocol = "TCP_UDP"
 )
 
 // Supported capacityproviders for Fargate services
@@ -255,55 +254,6 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		opts.GracePeriod = aws.Int64(int64(hc.HealthCheckArgs.GracePeriod.Seconds()))
 	}
 	return opts
-}
-
-func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (*template.NetworkLoadBalancer, error) {
-	nlbConfig := s.manifest.NLBConfig
-	if nlbConfig.IsEmpty() {
-		return nil, nil
-	}
-
-	// Parse listener port and protocol.
-	port, protocol, err := parsePortMapping(nlbConfig.Port)
-	if err != nil {
-		return nil, err
-	}
-	if protocol == nil {
-		protocol = aws.String(defaultNLBProtocol)
-	}
-
-	// Configure target container and port.
-	targetContainer := s.name
-	if nlbConfig.TargetContainer != nil {
-		targetContainer = aws.StringValue(nlbConfig.TargetContainer)
-	}
-
-	// By default, the target port is the same as listener port.
-	targetPort := aws.StringValue(port)
-	if targetContainer != s.name {
-		// If the target container is a sidecar container, the target port is the exposed sidecar port.
-		sideCarPort := s.manifest.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
-		port, _, err := parsePortMapping(sideCarPort)
-		if err != nil {
-			return nil, err
-		}
-		targetPort = aws.StringValue(port)
-	}
-	// Finally, if a target port is explicitly specified, use that value.
-	if nlbConfig.TargetPort != nil {
-		targetPort = strconv.Itoa(aws.IntValue(nlbConfig.TargetPort))
-	}
-
-	return &template.NetworkLoadBalancer{
-		PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
-		Listener: template.NetworkLoadBalancerListener{
-			Port: aws.StringValue(port),
-			Protocol: strings.ToUpper(aws.StringValue(protocol)),
-			TargetContainer: targetContainer,
-			TargetPort: targetPort,
-			SSLPolicy: nlbConfig.SSLPolicy,
-		},
-	}, nil
 }
 
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {
