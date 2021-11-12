@@ -1,0 +1,16 @@
+syntax = "proto3";
+package helloworld;
+option go_package = "./;helloworld";
+
+// The greeting service definition.
+service Greeter {
+  // Sends a greeting
+  rpc SayHello (Empty) returns (HelloReply) {}
+}
+
+message Empty {}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}
