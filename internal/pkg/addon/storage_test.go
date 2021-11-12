@@ -16,27 +16,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDynamoDB_MarshalBinary(t *testing.T) {
+func TestDynamoDBTemplate_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, ddb *DynamoDB)
+		mockDependencies func(ctrl *gomock.Controller, ddb *DynamoDBTemplate)
 
 		wantedBinary []byte
 		wantedError  error
 	}{
 		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDB) {
+			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDBTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbAddonPath, *ddb, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(dynamoDbTemplatePath, *ddb, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
 		},
 		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDB) {
+			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDBTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbAddonPath, *ddb, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse(dynamoDbTemplatePath, *ddb, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -49,7 +49,7 @@ func TestDynamoDB_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			addon := &DynamoDB{}
+			addon := &DynamoDBTemplate{}
 			tc.mockDependencies(ctrl, addon)
 
 			// WHEN
@@ -62,27 +62,27 @@ func TestDynamoDB_MarshalBinary(t *testing.T) {
 	}
 }
 
-func TestS3_MarshalBinary(t *testing.T) {
+func TestS3Template_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, s3 *S3)
+		mockDependencies func(ctrl *gomock.Controller, s3 *S3Template)
 
 		wantedBinary []byte
 		wantedError  error
 	}{
 		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, s3 *S3) {
+			mockDependencies: func(ctrl *gomock.Controller, s3 *S3Template) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3AddonPath, *s3, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(s3TemplatePath, *s3, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
 		},
 		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, s3 *S3) {
+			mockDependencies: func(ctrl *gomock.Controller, s3 *S3Template) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3AddonPath, *s3, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse(s3TemplatePath, *s3, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -95,7 +95,7 @@ func TestS3_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			addon := &S3{}
+			addon := &S3Template{}
 			tc.mockDependencies(ctrl, addon)
 
 			// WHEN
@@ -108,17 +108,18 @@ func TestS3_MarshalBinary(t *testing.T) {
 	}
 }
 
-func TestRDS_MarshalBinary(t *testing.T) {
+func TestRDSTemplate_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
+		workloadType     string
 		engine           string
-		mockDependencies func(ctrl *gomock.Controller, r *RDS)
+		mockDependencies func(ctrl *gomock.Controller, r *RDSTemplate)
 
 		wantedBinary []byte
 		wantedError  error
 	}{
 		"error parsing template": {
 			engine: RDSEngineTypePostgreSQL,
-			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
 				m.EXPECT().Parse(gomock.Any(), *r, gomock.Any()).Return(nil, errors.New("some error"))
@@ -127,10 +128,10 @@ func TestRDS_MarshalBinary(t *testing.T) {
 		},
 		"renders postgresql content": {
 			engine: RDSEngineTypePostgreSQL,
-			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsAddonPath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq(rdsTemplatePath), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("psql")}, nil)
 
 			},
@@ -138,12 +139,23 @@ func TestRDS_MarshalBinary(t *testing.T) {
 		},
 		"renders mysql content": {
 			engine: RDSEngineTypeMySQL,
-			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
-				m.EXPECT().Parse(gomock.Eq(rdsAddonPath), *r, gomock.Any()).
+				m.EXPECT().Parse(gomock.Eq(rdsTemplatePath), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 
+			},
+			wantedBinary: []byte("mysql"),
+		},
+		"renders rdws rds template": {
+			workloadType: "Request-Driven Web Service",
+			engine:       RDSEngineTypeMySQL,
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsRDWSTemplatePath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 			},
 			wantedBinary: []byte("mysql"),
 		},
@@ -154,15 +166,61 @@ func TestRDS_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			addon := &RDS{
+			addon := &RDSTemplate{
 				RDSProps: RDSProps{
-					Engine: tc.engine,
+					WorkloadType: tc.workloadType,
+					Engine:       tc.engine,
 				},
 			}
 			tc.mockDependencies(ctrl, addon)
 
 			// WHEN
 			b, err := addon.MarshalBinary()
+
+			// THEN
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedBinary, b)
+		})
+	}
+}
+
+func TestRDSParams_MarshalBinary(t *testing.T) {
+	testCases := map[string]struct {
+		mockDependencies func(ctrl *gomock.Controller, r *RDSParams)
+
+		wantedBinary []byte
+		wantedError  error
+	}{
+		"error parsing template": {
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSParams) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Any(), *r, gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("some error"),
+		},
+		"renders param file with expected path": {
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSParams) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsRDWSParamsPath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("bloop")}, nil)
+
+			},
+			wantedBinary: []byte("bloop"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			params := &RDSParams{}
+			tc.mockDependencies(ctrl, params)
+
+			// WHEN
+			b, err := params.MarshalBinary()
 
 			// THEN
 			require.Equal(t, tc.wantedError, err)

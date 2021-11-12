@@ -128,7 +128,7 @@ Resources:
       NetworkConfiguration:
         EgressConfiguration:
           EgressType: VPC
-          VpcConnectorArn: !GetAtt VpcConnector.Arn
+          VpcConnectorArn: !Ref VpcConnector
       {{- end }}
       Tags:
         - Key: copilot-application
