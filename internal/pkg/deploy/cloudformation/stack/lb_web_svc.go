@@ -45,10 +45,12 @@ type LoadBalancedWebService struct {
 	httpsEnabled bool
 
 	// Fields for LoadBalancedWebService that needs a Network Load Balancer.
-	dnsDelegationEnabled bool // This field is true if the application is associated with a domain. When an ALB is enabled,
+
+	// dnsDelegationEnabled is true if the application is associated with a domain. When an ALB is enabled,
 	// `httpsEnabled` has the same value with `dnsDelegationEnabled`, because we enabled https
 	// automatically the app is associated with a domain. When an ALB is disabled, `httpsEnabled`
 	// should always be false; hence they could have different values at this time.
+	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 
 	parser loadBalancedWebSvcReadParser
