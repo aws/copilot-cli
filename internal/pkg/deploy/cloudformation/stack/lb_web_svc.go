@@ -45,10 +45,10 @@ type LoadBalancedWebService struct {
 	httpsEnabled bool
 
 	// Fields for LoadBalancedWebService that needs a Network Load Balancer.
-	dnsDelegationEnabled   bool // This field is true if the application is associated with a domain. When an ALB is enabled,
-									// `httpsEnabled` has the same value with `dnsDelegationEnabled`, because we enabled https
-									// automatically the app is associated with a domain. When an ALB is disabled, `httpsEnabled`
-									// should always be false; hence they could have different values at this time.
+	dnsDelegationEnabled bool // This field is true if the application is associated with a domain. When an ALB is enabled,
+	// `httpsEnabled` has the same value with `dnsDelegationEnabled`, because we enabled https
+	// automatically the app is associated with a domain. When an ALB is disabled, `httpsEnabled`
+	// should always be false; hence they could have different values at this time.
 	publicSubnetCIDRBlocks []string
 
 	parser loadBalancedWebSvcReadParser
@@ -81,7 +81,7 @@ func WithDNSDelegation() func(s *LoadBalancedWebService) {
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
-func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig, opts  ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
+func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig, opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
@@ -220,6 +220,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
 		NLB:                      nlb,
+		ProtocolVersion:          s.manifest.ProtocolVersion,
 	})
 	if err != nil {
 		return "", err
