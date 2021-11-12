@@ -34,7 +34,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 	}{
 		"invalid workspace": {
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Times(0)
+				mockWorkspace.EXPECT().ListServices().Times(0)
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedErrorS: "could not find an application attached to this workspace, please run `app init` first",
@@ -43,7 +43,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
+				mockWorkspace.EXPECT().ListServices().Return(nil, errors.New("some error"))
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -53,7 +53,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Return([]string{"backend"}, nil)
+				mockWorkspace.EXPECT().ListServices().Return([]string{"backend"}, nil)
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -64,7 +64,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			inEnvName: "test",
 
 			setupMocks: func() {
-				mockWorkspace.EXPECT().ServiceNames().Times(0)
+				mockWorkspace.EXPECT().ListServices().Times(0)
 				mockStore.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{
 					ApplicationName: "phonetool",
 					EnvironmentName: "test",
@@ -211,6 +211,26 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 }
 
 func TestPackageSvcOpts_Execute(t *testing.T) {
+	lbwsMft := `name: api
+type: Load Balanced Web Service
+image:
+  build: ./Dockerfile
+  port: 80
+http:
+  path: 'api'
+cpu: 256
+memory: 512
+count: 1`
+	rdwsMft := `name: api
+type: Request-Driven Web Service
+image:
+  build: ./Dockerfile
+  port: 80
+http:
+  alias: 'hunter.com'
+cpu: 256
+memory: 512
+count: 1`
 	testCases := map[string]struct {
 		inVars packageSvcVars
 
@@ -251,17 +271,11 @@ func TestPackageSvcOpts_Execute(t *testing.T) {
 
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
-					ReadServiceManifest("api").
-					Return([]byte(`name: api
-type: Load Balanced Web Service
-image:
-  build: ./Dockerfile
-  port: 80
-http:
-  path: 'api'
-cpu: 256
-memory: 512
-count: 1`), nil)
+					ReadWorkloadManifest("api").
+					Return([]byte(lbwsMft), nil)
+
+				mockItpl := mocks.NewMockinterpolator(ctrl)
+				mockItpl.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
 
 				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
 				mockCfn.EXPECT().
@@ -283,10 +297,15 @@ count: 1`), nil)
 					opts.addonsClient = mockAddons
 					return nil
 				}
-				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
+				opts.newInterpolator = func(app, env string) interpolator {
+					return mockItpl
+				}
+				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
 					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
 					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
+					require.Equal(t, rc.AccountID, "1111", "ensure the environment's account is used while rendering stack")
+					require.Equal(t, rc.Region, "us-west-2")
 					return mockStackSerializer, nil
 				}
 				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
@@ -329,17 +348,11 @@ count: 1`), nil)
 
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
-					ReadServiceManifest("api").
-					Return([]byte(`name: api
-type: Request-Driven Web Service
-image:
-  build: ./Dockerfile
-  port: 80
-http:
-  alias: 'hunter.com'
-cpu: 256
-memory: 512
-count: 1`), nil)
+					ReadWorkloadManifest("api").
+					Return([]byte(rdwsMft), nil)
+
+				mockItpl := mocks.NewMockinterpolator(ctrl)
+				mockItpl.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
 
 				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
 				mockCfn.EXPECT().
@@ -360,6 +373,9 @@ count: 1`), nil)
 				opts.initAddonsClient = func(opts *packageSvcOpts) error {
 					opts.addonsClient = mockAddons
 					return nil
+				}
+				opts.newInterpolator = func(app, env string) interpolator {
+					return mockItpl
 				}
 				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
 					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)

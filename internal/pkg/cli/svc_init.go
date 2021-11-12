@@ -112,10 +112,11 @@ type initSvcOpts struct {
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
 	topicSel     topicSelector
+	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     *string
+	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
 
 	// Cache variables
@@ -164,6 +165,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		topicSel:     snsSel,
+		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
@@ -217,31 +219,44 @@ func (o *initSvcOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initSvcOpts) Ask() error {
-	if err := o.askSvcType(); err != nil {
+	if err := o.askSvcName(); err != nil {
 		return err
 	}
-	if err := o.askSvcName(); err != nil {
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err == nil {
+		svcType, err := localMft.WorkloadType()
+		if err != nil {
+			return fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
+		}
+		o.wkldType = svcType
+		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+		return nil
+	}
+	var (
+		errNotFound          *workspace.ErrFileNotExists
+		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+	)
+	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
+		return fmt.Errorf("read manifest file for service %s: %w", o.name, err)
+	}
+	if err := o.askSvcType(); err != nil {
 		return err
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
 		return err
 	}
-
 	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
 	}
-
 	if err := o.askSvcPort(); err != nil {
 		return err
 	}
-
 	if err := o.askSvcPublishers(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -256,22 +271,16 @@ func (o *initSvcOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return fmt.Errorf("get/redirect docker engine platform: %w", err)
-	}
-	o.platform = platform
-	var platformStrPtr *manifest.PlatformString
-	if o.platform != nil {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform %s instead.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
-		if o.wkldType != manifest.RequestDrivenWebServiceType {
-			log.Warning("See 'platform' field in your manifest.\n")
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image == "" {
+		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		if err != nil {
+			return err
 		}
-		val := manifest.PlatformString(*o.platform)
-		platformStrPtr = &val
+		if platform != "" {
+			o.platform = &platform
+		}
 	}
-
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -280,7 +289,7 @@ func (o *initSvcOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: platformStrPtr,
+				PlatformString: o.platform,
 			},
 			Topics: o.topics,
 		},
@@ -323,9 +332,8 @@ func (o *initSvcOpts) askSvcName() error {
 	if o.name != "" {
 		return nil
 	}
-
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "service"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
 		func(val interface{}) error {
 			return validateSvcName(val, o.wkldType)
@@ -452,6 +460,26 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	o.port = uint16(portUint)
 
 	return nil
+}
+
+func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.PlatformString, error) {
+	detectedOs, detectedArch, err := engine.GetPlatform()
+	if err != nil {
+		return "", fmt.Errorf("get docker engine platform: %w", err)
+	}
+	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
+	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, wkldType)
+	if err != nil {
+		return "", fmt.Errorf("redirect docker engine platform: %w", err)
+	}
+	if redirectedPlatform == "" {
+		return "", nil
+	}
+	if redirectedPlatform != detectedPlatform && wkldType != manifest.RequestDrivenWebServiceType {
+		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
+	}
+	platform := manifest.PlatformString(redirectedPlatform)
+	return platform, nil
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {

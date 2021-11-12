@@ -32,6 +32,10 @@ publish:
   topics:
     - name: customers
 
+network:
+  vpc:
+    placement: private
+
 # Optional fields for more advanced use-cases.
 #
 # variables:                    # Pass environment variables as key value pairs.

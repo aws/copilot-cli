@@ -1,6 +1,11 @@
 # サイドカー
-
 サイドカーは主となるコンテナと共に実行され補助的な役割を担うコンテナのことです。サイドカーの役割はロギングや設定ファイルの取得、リクエストのプロキシ処理などの周辺的なタスクを実行することです。
+
+!!! attention
+    Request-Driven Web Service はサイドカーの利用をサポートしていません。
+
+!!! Attention
+    メインコンテナに Windows イメージを使用している場合、[FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/jp/xray/), [AWS App Mesh](https://aws.amazon.com/jp/app-mesh/) はサポートされていません。利用しようとしているサイドカーコンテナが Windows 環境での実行をサポートしているか確認してください。
 
 AWS はまた ECS サービスとシームレスに組み合わせられるいくつかのプラグインを提供しており、[FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html) や [AWS X-Ray](https://aws.amazon.com/jp/xray/)、[AWS App Mesh](https://aws.amazon.com/jp/app-mesh/) など多岐に渡ります。
 
@@ -9,40 +14,8 @@ Manifest の中で [`storage` フィールド](../developing/storage.ja.md)を�
 ## Copilot でサイドカーを追加するには？
 Copilot の Manifest でサイドカーを追加したい場合、[サイドカーコンテナを直接定義する](#サイドカーコンテナを直接定義する)あるいは[サイドカーパターン](#サイドカーパターン)を利用する方法があります。
 
-!!! attention
-    Request-Driven Web Service はサイドカーの利用をサポートしていません。
-
 ### サイドカーコンテナを直接定義する
 サイドカーコンテナイメージの URL を指定する必要があります。オプションで公開するポートや[プライベートレジストリ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/private-auth.html)の認証パラメータを指定できます。
-
-``` yaml
-sidecars:
-  <sidecar name>:
-    # 公開するポート (オプション)
-    port: <port number>
-    # サイドカーコンテナイメージの URL (必須)
-    image: <image url>
-    # プライベートレジストリの認証情報を保存している秘密情報の ARN (オプション)
-    credentialsParameter: <credential>
-    # サイドカーコンテナの環境変数 (オプション)
-    variables: <env var>
-    # サイドカーコンテナで用いる秘密情報 (オプション)
-    secrets: <secret>
-    # サービスレベルで指定する EFS ボリュームのマウントパス (オプション)
-    mount_points:
-      - # サイドカーからマウントするときのソースボリューム (必須)
-        source_volume: <named volume>
-        # サイドカーからボリュームをマウントするときのパス (必須)
-        path: <path>
-        # サイドカーにボリュームに対する読み込みのみを許可するかどうか (デフォルトでは true)
-        read_only: <bool>
-    # コンテナに付与する Docker ラベル (オプション)
-    labels:
-      {label key} : <label value>
-    # このコンテナに適用するコンテナの依存関係 (オプション)
-    depends_on:
-      {container name}: <condition>
-```
 
 {% include 'sidecar-config.ja.md' %}
 

@@ -10,14 +10,11 @@
         - FARGATE
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
-      TaskRoleArn: !Ref TaskRole
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
-          # We pipe certain environment variables directly into the task definition.
-          # This lets customers have access to, for example, their LB endpoint - which they'd
-          # have no way of otherwise determining.
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'

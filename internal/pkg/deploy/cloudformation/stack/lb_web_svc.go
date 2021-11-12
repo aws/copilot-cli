@@ -30,6 +30,7 @@ const (
 	LBWebServiceTargetContainerParamKey = "TargetContainer"
 	LBWebServiceTargetPortParamKey      = "TargetPort"
 	LBWebServiceStickinessParamKey      = "Stickiness"
+	LBWebServiceDNSDelegatedParamKey    = "DNSDelegated"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -43,17 +44,50 @@ type LoadBalancedWebService struct {
 	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
 
+	// Fields for LoadBalancedWebService that needs a Network Load Balancer.
+	dnsDelegationEnabled   bool // This field is true if the application is associated with a domain. When an ALB is enabled,
+									// `httpsEnabled` has the same value with `dnsDelegationEnabled`, because we enabled https
+									// automatically the app is associated with a domain. When an ALB is disabled, `httpsEnabled`
+									// should always be false; hence they could have different values at this time.
+	publicSubnetCIDRBlocks []string
+
 	parser loadBalancedWebSvcReadParser
 }
 
-// NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
-func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
+// LoadBalancedWebServiceOption represents an option to apply to a LoadBalancedWebService.
+type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
+
+// WithHTTPS enables HTTPS for a LoadBalancedWebService. It creates an HTTPS listener and assumes that the environment
+// the service is being deployed into has an HTTPS configured listener.
+func WithHTTPS() func(s *LoadBalancedWebService) {
+	return func(s *LoadBalancedWebService) {
+		s.dnsDelegationEnabled = true
+		s.httpsEnabled = true
+	}
+}
+
+// WithNLB enables Network Load Balancer in a LoadBalancedWebService.
+func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
+	return func(s *LoadBalancedWebService) {
+		s.publicSubnetCIDRBlocks = cidrBlocks
+	}
+}
+
+// WithDNSDelegation enables DNS delegation for a LoadBalancedWebService.
+func WithDNSDelegation() func(s *LoadBalancedWebService) {
+	return func(s *LoadBalancedWebService) {
+		s.dnsDelegationEnabled = true
+	}
+}
+
+// NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
+func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig, opts  ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	return &LoadBalancedWebService{
+	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
 				name:   aws.StringValue(mft.Name),
@@ -72,19 +106,11 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 		httpsEnabled: false,
 
 		parser: parser,
-	}, nil
-}
-
-// NewHTTPSLoadBalancedWebService  creates a new LoadBalancedWebService stack from its manifest that needs to be deployed to
-// a environment within an application. It creates an HTTPS listener and assumes that the environment
-// it's being deployed into has an HTTPS configured listener.
-func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
-	webSvc, err := NewLoadBalancedWebService(mft, env, app, rc)
-	if err != nil {
-		return nil, err
 	}
-	webSvc.httpsEnabled = true
-	return webSvc, nil
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s, nil
 }
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
@@ -101,29 +127,24 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: s.manifest.Sidecars,
-		imageConfig:   &s.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(s.manifest.Name),
+	addonsOutputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
 	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
-	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
 	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 
-	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
+	advancedCount, err := convertAdvancedCount(s.manifest.Count.AdvancedCount)
 	if err != nil {
 		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
 	}
@@ -138,10 +159,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		capacityProviders = advancedCount.Cps
 	}
 
-	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
-	}
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -167,11 +184,17 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	for _, ipNet := range s.manifest.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
+
+	nlb, err := s.convertNetworkLoadBalancer()
+	if err != nil {
+		return "", err
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		Variables:                s.manifest.Variables,
-		Secrets:                  s.manifest.Secrets,
+		Variables:                s.manifest.TaskConfig.Variables,
+		Secrets:                  s.manifest.TaskConfig.Secrets,
 		Aliases:                  aliases,
-		NestedStack:              outputs,
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
@@ -187,14 +210,16 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		RulePriorityLambda:       rulePriorityLambda.String(),
 		DesiredCountLambda:       desiredCountLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
-		Storage:                  storage,
+		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                dependencies,
+		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
+		NLB:                      nlb,
 	})
 	if err != nil {
 		return "", err
@@ -206,27 +231,20 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return string(overridenTpl), nil
 }
 
-func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
 	containerName := s.name
 	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)
 	// Route load balancer traffic to main container by default.
 	targetContainer = aws.String(containerName)
 	targetPort = aws.String(containerPort)
-	if s.manifest.TargetContainer == nil && s.manifest.TargetContainerCamelCase != nil {
-		s.manifest.TargetContainer = s.manifest.TargetContainerCamelCase
+	if s.manifest.TargetContainer != nil {
+		targetContainer = s.manifest.TargetContainer
 	}
-	mftTargetContainer := s.manifest.TargetContainer
-	if mftTargetContainer != nil {
-		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
-		if ok {
-			if sidecar.Port == nil {
-				return nil, nil, fmt.Errorf("target container %s doesn't expose any port", *mftTargetContainer)
-			}
-			targetContainer = mftTargetContainer
-			targetPort = sidecar.Port
-		} else {
-			return nil, nil, fmt.Errorf("target container %s doesn't exist", *mftTargetContainer)
-		}
+	if s.manifest.TargetContainerCamelCase != nil {
+		targetContainer = s.manifest.TargetContainerCamelCase
+	}
+	if aws.StringValue(targetContainer) != containerName {
+		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
 	}
 	return
 }
@@ -237,10 +255,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort, err := s.loadBalancerTarget()
-	if err != nil {
-		return nil, err
-	}
+	targetContainer, targetPort := s.httpLoadBalancerTarget()
 	return append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
@@ -255,6 +270,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 		},
 		{
+			ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegated())),
+		},
+		{
 			ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
 			ParameterValue: targetContainer,
 		},
@@ -267,6 +286,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
 		},
 	}...), nil
+}
+
+func (s *LoadBalancedWebService) dnsDelegated() bool {
+	return s.dnsDelegationEnabled || s.httpsEnabled
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized

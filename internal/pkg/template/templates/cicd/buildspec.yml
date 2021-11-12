@@ -22,22 +22,38 @@ phases:
       - export COLOR="false"
       # First, upgrade the cloudformation stack of every environment in the pipeline.
       - pipeline=$(cat $CODEBUILD_SRC_DIR/copilot/pipeline.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
-      - pl_envs=$(echo $pipeline | jq '.stages[].name' | sed 's/"//g')
+      - pl_envs=$(echo $pipeline | jq -r '.stages[].name')
       - >
         for pl_env in $pl_envs; do
-        ./copilot-linux env upgrade -n $pl_env;
+          ./copilot-linux env upgrade -n $pl_env;
         done;
       # Find all the local services in the workspace.
-      - svcs=$(./copilot-linux svc ls --local --json | jq '.services[].name' | sed 's/"//g')
+      - svc_ls_result=$(./copilot-linux svc ls --local --json)
+      - svc_list=$(echo $svc_ls_result | jq '.services')
+      - >
+        if [ ! "$svc_list" = null ]; then
+          svcs=$(echo $svc_ls_result | jq -r '.services[].name');
+        fi
       # Find all the local jobs in the workspace.
-      - jobs=$(./copilot-linux job ls --local --json | jq '.jobs[].name' | sed 's/"//g')
+      - job_ls_result=$(./copilot-linux job ls --local --json)
+      - job_list=$(echo $job_ls_result | jq '.jobs')
+      - >
+        if [ ! "$job_list" = null ]; then
+          jobs=$(echo $job_ls_result | jq -r '.jobs[].name');
+        fi
+      # Raise error if no services or jobs are found.
+      - >
+        if [ "$svc_list" = null ] && [ "$job_list" = null ]; then
+          echo "No services or jobs found for the pipeline to deploy. Please create at least one service or job and push the manifest to the remote." 1>&2;
+          exit 1;
+        fi
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
       # We truncate the tag (from the front) to 128 characters, the limit for Docker tags
       # (https://docs.docker.com/engine/reference/commandline/tag/)
-      - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID" | rev | cut -c 1-128 | rev)
       - >
         for env in $pl_envs; do
+          tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}-${env}" | rev | cut -c 1-128 | rev)
           for svc in $svcs; do
           ./copilot-linux svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
           done;
@@ -69,49 +85,52 @@ phases:
       - >
         for workload in $WORKLOADS; do
           manifest=$(cat $CODEBUILD_SRC_DIR/copilot/$workload/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
-          image_location=$(echo $manifest | jq '.image.location')
-          if [ ! "$image_location" = null ]; then
-            echo "skipping image building because location is provided as $image_location";
-            continue
-          fi
-          base_dockerfile=$(echo $manifest | jq '.image.build')
-          build_dockerfile=$(echo $manifest| jq 'if .image.build?.dockerfile? then .image.build.dockerfile else "" end' | sed 's/"//g')
-          build_context=$(echo $manifest| jq 'if .image.build?.context? then .image.build.context else "" end' | sed 's/"//g')
-          build_target=$(echo $manifest| jq 'if .image.build?.target? then .image.build.target else "" end' | sed 's/"//g')
-          dockerfile_args=$(echo $manifest | jq 'if .image.build?.args? then .image.build.args else "" end | to_entries?')
-          build_cache_from=$(echo $manifest | jq 'if .image.build?.cache_from? then .image.build.cache_from else "" end')
-          df_rel_path=$( echo $base_dockerfile | sed 's/"//g')
-          if [ -n "$build_dockerfile" ]; then 
-            df_rel_path=$build_dockerfile
-          fi
-          df_path=$df_rel_path
-          df_dir_path=$(dirname "$df_path")
-          if [ -n "$build_context" ]; then
-            df_dir_path=$build_context
-          fi
-          build_args=
-          if [ -n "$dockerfile_args" ]; then
-            for arg in $(echo $dockerfile_args | jq -r '.[] | "\(.key)=\(.value)"'); do 
-              build_args="$build_args--build-arg $arg "
-            done
-          fi
-          if [ -n "$build_target" ]; then
-            build_args="$build_args--target $build_target "
-          fi
-          if [ -n "$build_cache_from" ]; then
-            for arg in $(echo $build_cache_from | jq -r '.[]'); do
-              build_args="$build_args--cache-from $arg "
-            done
-          fi
-          echo "Name: $workload"
-          echo "Relative Dockerfile path: $df_rel_path"
-          echo "Docker build context: $df_dir_path"
-          echo "Docker build args: $build_args"
-          echo "Running command: docker build -t $workload:$tag $build_args-f $df_path $df_dir_path";
-          docker build -t $workload:$tag $build_args-f $df_path $df_dir_path;
-          image_id=$(docker images -q $workload:$tag);
           for env in $pl_envs; do
-            repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$workload-$env.params.json | jq '.Parameters.ContainerImage' | sed 's/"//g');
+            tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}-${env}" | rev | cut -c 1-128 | rev)
+            images=$(echo $manifest | jq "{base_image: .image, env_image: (.environments?.$env?.image? // {}) }")
+            image=$(echo $images | jq 'if (.env_image | length == 0) then .base_image else (.base_image | del(.location)) * .env_image end')
+            image_location=$(echo $image | jq '.location')
+            if [ ! "$image_location" = null ]; then
+              echo "skipping image building because location is provided as $image_location";
+              continue
+            fi
+            base_dockerfile=$(echo $image | jq '.build')
+            build_dockerfile=$(echo $image | jq -r '.build?.dockerfile? // ""')
+            build_context=$(echo $image | jq -r '.build?.context? // ""')
+            build_target=$(echo $image | jq -r '.build?.target? // ""')
+            dockerfile_args=$(echo $image | jq '.build?.args? // "" | to_entries?')
+            build_cache_from=$(echo $image | jq -r '.build?.cache_from? // ""')
+            df_rel_path=$( echo $base_dockerfile | sed 's/"//g')
+            if [ -n "$build_dockerfile" ]; then 
+              df_rel_path=$build_dockerfile
+            fi
+            df_path=$df_rel_path
+            df_dir_path=$(dirname "$df_path")
+            if [ -n "$build_context" ]; then
+              df_dir_path=$build_context
+            fi
+            build_args=
+            if [ -n "$dockerfile_args" ]; then
+              for arg in $(echo $dockerfile_args | jq -r '.[] | "\(.key)=\(.value)"'); do 
+                build_args="$build_args--build-arg $arg "
+              done
+            fi
+            if [ -n "$build_target" ]; then
+              build_args="$build_args--target $build_target "
+            fi
+            if [ -n "$build_cache_from" ]; then
+              for arg in $(echo $build_cache_from | jq -r '.[]'); do
+                build_args="$build_args--cache-from $arg "
+              done
+            fi
+            echo "Name: $workload"
+            echo "Relative Dockerfile path: $df_rel_path"
+            echo "Docker build context: $df_dir_path"
+            echo "Docker build args: $build_args"
+            echo "Running command: docker build -t $workload:$tag $build_args-f $df_path $df_dir_path";
+            docker build -t $workload:$tag $build_args-f $df_path $df_dir_path;
+            image_id=$(docker images -q $workload:$tag);
+            repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$workload-$env.params.json | jq -r '.Parameters.ContainerImage');
             region=$(echo $repo | cut -d'.' -f4);
             $(aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$region.amazonaws.com);
             docker tag $image_id $repo;

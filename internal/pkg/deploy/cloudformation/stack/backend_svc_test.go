@@ -71,9 +71,19 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{err: errors.New("some error")}
+				svc.addons = mockAddons{tplErr: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
+		},
+		"unexpected addons parameter parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
+				svc.addons = mockAddons{paramsErr: errors.New("some error")}
+			},
+			wantedErr: fmt.Errorf("parse addons parameters for %s: %w", testServiceName, errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
 			setUpManifest: func(svc *BackendService) {
@@ -90,7 +100,7 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -118,7 +128,7 @@ Outputs:
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -140,7 +150,7 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -198,7 +208,7 @@ Outputs:
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},
 					},
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.DisablePublicIP,
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},
@@ -207,7 +217,7 @@ Outputs:
 					Command:    []string{"here"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   MyTable:
@@ -215,6 +225,7 @@ Resources:
 Outputs:
   MyTable:
     Value: !Ref MyTable`,
+					params: "",
 				}
 			},
 			wantedTemplate: "template",

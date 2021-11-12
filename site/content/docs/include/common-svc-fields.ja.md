@@ -34,8 +34,20 @@ command: ["ps", "au"]
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String or Map</span>  
+`docker build --platform` で渡す、デフォルト以外のオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+
+自動生成された文字列を上書きして、異なる `osfamily` や `architecture` でビルドをします。例えば、Windows ユーザーはデフォルトで `WINDOWS_SERVER_2019_CORE` を利用する1つ目の例を、2つ目の例のように Map を使って変更するかもしれません。
+
+```yaml
+platform: windows/amd64
+```
+
+```yaml
+platform:
+  osfamily: windows_server_2019_full
+  architecture: x86_64
+```
 
 <div class="separator"></div>
 
@@ -133,7 +145,7 @@ Service の平均レスポンスタイムを指定し、それによってスケ
 <!-- textlint-enable ja-technical-writing/no-exclamation-question-mark -->
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
-Copilot は、Service が Environment 内の他の Service と通信できるようにするためのセキュリティグループを常にタスクに対して設定します。本フィールドでは、同セキュリティグループ以外に追加で紐づけたい１つ以上のセキュリティグループ ID を指定します。
+Copilot がタスクに対して自動で設定するセキュリティグループ以外に追加で設定したいセキュリティグループがある場合にそれらの ID を指定します。複数のセキュリティグループ ID を指定可能です。(Copilot が自動設定するセキュリティグループは、同一 Environment 内の Service 間通信を可能にする目的で設定されます。)
 
 <div class="separator"></div>
 
@@ -192,13 +204,13 @@ volumes:
 任意設定項目で、デフォルト値は `true` です。ボリュームを読み取り専用とするかどうかを指定します。`false` に設定した場合、コンテナにファイルシステムへの `elasticfilesystem:ClientWrite` 権限が付与され、それによりボリュームへ書き込めるようになります。
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Boolean or Map</span>  
-詳細な EFS 設定を指定します。Boolean 値を指定した場合、あるいは `uid` と `gid` サブフィールドのみを指定した場合は、Copilot 管理の EFS ファイルシステムと Service 専用の EFS アクセスポイントが作成されます。
+詳細な EFS 設定を指定します。Boolean 値による指定、あるいは `uid` と `gid` サブフィールドのみを指定した場合に、EFS ファイルシステムと Service 専用の EFS アクセスポイントが作成されます。
 
 ```yaml
-// Simple managed EFS
+// Boolean 値を指定する場合
 efs: true
 
-// Managed EFS with custom POSIX info
+// POSIX uid/gid を指定する場合
 efs:
   uid: 10000
   gid: 110000
@@ -228,21 +240,24 @@ EFS に関連する認可設定を指定します。
 <div class="separator"></div>
 
 <a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
-logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
+logging セクションには、ログ設定を含みます。このセクションでは、コンテナの [FireLens](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のパラメータを設定できます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
 
-<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
+<span class="parent-field">logging.</span><a id="retention" href="#logging-retention" class="field">`retention`</a> <span class="type">Integer</span>
+任意項目。 ログイベントを保持する日数。設定可能な値については、[こちら](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)を確認してください。省略した場合、デフォルトの 30 が設定されます。
+
+<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">String</span>
 任意項目。使用する Fluent Bit のイメージ。デフォルト値は `amazon/aws-for-fluent-bit:latest`。
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 任意項目。FireLens ログドライバーにログを送信するときの設定。
 
-<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
-任意項目。ログに ECS メタデータを含むかどうか。デフォルトは `true`。
+<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Boolean</span>
+任意項目。ログに ECS メタデータを含めるかどうか。デフォルトは `true`。
 
 <span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
 任意項目。ログの設定に渡す秘密情報です。
 
-<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
+<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">String</span>
 任意項目。カスタムの Fluent Bit イメージ内の設定ファイルのフルパス。
 
 <div class="separator"></div>

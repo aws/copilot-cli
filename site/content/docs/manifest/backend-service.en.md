@@ -64,7 +64,7 @@ The name of your service.
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 The architecture type for your service. [Backend Services](../concepts/services.en.md#backend-service) are not reachable from the internet, but can be reached with [service discovery](../developing/service-discovery.en.md) from your other services.
 
-{% include 'image-config.en.md' %}
+{% include 'image-config-with-port.en.md' %}
 
 {% include 'image-healthcheck.en.md' %}
 
@@ -155,4 +155,3 @@ Scale up or down based on the average memory your service should maintain.
 {% include 'taskdef-overrides.en.md' %}
 
 {% include 'environments.en.md' %}
-

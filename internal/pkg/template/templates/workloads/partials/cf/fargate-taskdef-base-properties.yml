@@ -1,4 +1,9 @@
 Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
+{{- if not .Platform.IsDefault}}
+RuntimePlatform:
+  OperatingSystemFamily: {{.Platform.OS}}
+  CpuArchitecture: {{.Platform.Arch}}
+{{- end }}
 NetworkMode: awsvpc
 RequiresCompatibilities:
   - FARGATE
@@ -10,5 +15,5 @@ EphemeralStorage:
   SizeInGiB: {{.Storage.Ephemeral}}
 {{- end}}
 {{- end}}
-ExecutionRoleArn: !Ref ExecutionRole
-TaskRoleArn: !Ref TaskRole
+ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+TaskRoleArn: !GetAtt TaskRole.Arn

@@ -30,7 +30,7 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 	}{
 		"invalid workspace": {
 			setupMocks: func() {
-				mockWorkspace.EXPECT().JobNames().Times(0)
+				mockWorkspace.EXPECT().ListJobs().Times(0)
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedErrorS: "could not find an application attached to this workspace, please run `app init` first",
@@ -39,7 +39,7 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inJobName: "resizer",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().JobNames().Return(nil, errors.New("some error"))
+				mockWorkspace.EXPECT().ListJobs().Return(nil, errors.New("some error"))
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -49,7 +49,7 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inJobName: "resizer",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().JobNames().Return([]string{"other-job"}, nil)
+				mockWorkspace.EXPECT().ListJobs().Return([]string{"other-job"}, nil)
 				mockStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -60,7 +60,7 @@ func TestPackageJobOpts_Validate(t *testing.T) {
 			inEnvName: "test",
 
 			setupMocks: func() {
-				mockWorkspace.EXPECT().JobNames().Times(0)
+				mockWorkspace.EXPECT().ListJobs().Times(0)
 				mockStore.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{
 					ApplicationName: "phonetool",
 					EnvironmentName: "test",

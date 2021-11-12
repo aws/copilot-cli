@@ -143,6 +143,11 @@ Service のインスタンスに割り当てる CPU ユニット数。指定可�
 
 <div class="separator"></div>
 
+<a id="command" href="#command" class="field">`command`</a> <span class="type">String</span>
+任意項目。コンテナイメージのデフォルトコマンドをオーバーライドします。
+
+<div class="separator"></div>
+
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Copilot は Service 名などを常に環境変数としてインスタンスに対して渡します。本フィールドではそれら以外に追加で渡したい環境変数をキーバーリューのペアで指定します。
 

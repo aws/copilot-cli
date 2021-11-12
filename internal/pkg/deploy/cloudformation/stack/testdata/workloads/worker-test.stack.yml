@@ -25,8 +25,7 @@ Parameters:
     Type: Number
     Default: 30
 Conditions:
-  HasAddons:
-    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
 Resources:
   LogGroup:
     Metadata:
@@ -35,7 +34,6 @@ Resources:
     Properties:
       LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
       RetentionInDays: !Ref LogRetention
-
   TaskDefinition:
     Metadata:
       'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
@@ -48,38 +46,37 @@ Resources:
         - FARGATE
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
-      TaskRoleArn: !Ref TaskRole
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
-          
           # We pipe certain environment variables directly into the task definition.
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
           Environment:
-          - Name: COPILOT_APPLICATION_NAME
-            Value: !Sub '${AppName}'
-          - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
-            Value: test.my-app.local
-          - Name: COPILOT_ENVIRONMENT_NAME
-            Value: !Sub '${EnvName}'
-          - Name: COPILOT_SERVICE_NAME
-            Value: !Sub '${WorkloadName}'
-          - Name: COPILOT_QUEUE_URI
-            Value: !Ref EventsQueue
-          - Name: COPILOT_TOPIC_QUEUE_URIS
-            Value: !Sub 
-              - '{"dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}"}'
-              - dogsvcgiveshuskiesURL: !Ref dogsvcgiveshuskiesEventsQueue
-          
+            - Name: COPILOT_APPLICATION_NAME
+              Value: !Sub '${AppName}'
+            - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+              Value: test.my-app.local
+            - Name: COPILOT_ENVIRONMENT_NAME
+              Value: !Sub '${EnvName}'
+            - Name: COPILOT_SERVICE_NAME
+              Value: !Sub '${WorkloadName}'
+            - Name: COPILOT_SNS_TOPIC_ARNS
+              Value: '{"givesOtherdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-givesOtherdogs"}'
+            - Name: COPILOT_QUEUE_URI
+              Value: !Ref EventsQueue
+            - Name: COPILOT_TOPIC_QUEUE_URIS
+              Value: !Sub
+                - '{"dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}"}'
+                - dogsvcgiveshuskiesURL: !Ref dogsvcgiveshuskiesEventsQueue
           LogConfiguration:
             LogDriver: awslogs
             Options:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
-        
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
@@ -120,8 +117,7 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
       ManagedPolicyArns:
-        - 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-  
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   TaskRole:
     Metadata:
       'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
@@ -154,22 +150,19 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: 'Allow'
-                Action: [
-                  "ssmmessages:CreateControlChannel",
-                  "ssmmessages:OpenControlChannel",
-                  "ssmmessages:CreateDataChannel",
-                  "ssmmessages:OpenDataChannel"
-                ]
+                Action: ["ssmmessages:CreateControlChannel", "ssmmessages:OpenControlChannel", "ssmmessages:CreateDataChannel", "ssmmessages:OpenDataChannel"]
                 Resource: "*"
               - Effect: 'Allow'
-                Action: [
-                  "logs:CreateLogStream",
-                  "logs:DescribeLogGroups",
-                  "logs:DescribeLogStreams",
-                  "logs:PutLogEvents"
-                ]
+                Action: ["logs:CreateLogStream", "logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:PutLogEvents"]
                 Resource: "*"
-
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource:
+                  - !Ref givesOtherdogsSNSTopic
   DynamicDesiredCountAction:
     Type: Custom::DynamicDesiredCountFunction
     Properties:
@@ -182,7 +175,6 @@ Resources:
       DefaultDesiredCount: !Ref TaskCount
       # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
       UpdateID: RandomGUID
-
   DynamicDesiredCountFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -194,7 +186,6 @@ Resources:
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
       Runtime: nodejs12.x
-
   AutoScalingRole:
     Type: AWS::IAM::Role
     Properties:
@@ -206,7 +197,6 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
-
   AutoScalingTarget:
     Metadata:
       'aws:copilot:description': "An autoscaling target to scale your service's desired count"
@@ -223,7 +213,6 @@ Resources:
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
       RoleARN: !GetAtt AutoScalingRole.Arn
-
   BacklogPerTaskCalculatorLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -234,7 +223,6 @@ Resources:
             - 'lambda'
             - Fn::Sub: "${BacklogPerTaskCalculatorFunction}"
       RetentionInDays: 3
-
   BacklogPerTaskCalculatorFunction:
     Metadata:
       'aws:copilot:description': "A Lambda function to emit BacklogPerTask metrics to CloudWatch"
@@ -259,7 +247,6 @@ Resources:
               - ','
               - - !GetAtt EventsQueue.QueueName
                 - !GetAtt dogsvcgiveshuskiesEventsQueue.QueueName
-
   BacklogPerTaskCalculatorRole:
     Type: AWS::IAM::Role
     Properties:
@@ -300,7 +287,6 @@ Resources:
                   - !GetAtt dogsvcgiveshuskiesEventsQueue.Arn
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
   BacklogPerTaskScheduledRule:
     Metadata:
       'aws:copilot:description': "A trigger to invoke the BacklogPerTaskCalculator Lambda function every minute"
@@ -313,7 +299,6 @@ Resources:
       Targets:
         - Arn: !GetAtt BacklogPerTaskCalculatorFunction.Arn
           Id: "BacklogPerTaskCalculatorFunctionTrigger"
-
   PermissionToInvokeBacklogPerTaskCalculatorLambda:
     Type: AWS::Lambda::Permission
     Properties:
@@ -321,7 +306,6 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn: !GetAtt BacklogPerTaskScheduledRule.Arn
-
   AutoScalingPolicyEventsQueue:
     Metadata:
       'aws:copilot:description': "An autoscaling policy to maintain 900 messages/task for EventsQueue"
@@ -342,7 +326,6 @@ Resources:
               Value: !GetAtt EventsQueue.QueueName
           Unit: Count
         TargetValue: 900
-
   AutoScalingPolicydogsvcgiveshuskiesEventsQueue:
     Metadata:
       'aws:copilot:description': "An autoscaling policy to maintain 900 messages/task for dogsvcgiveshuskiesEventsQueue"
@@ -363,7 +346,6 @@ Resources:
               Value: !GetAtt dogsvcgiveshuskiesEventsQueue.QueueName
           Unit: Count
         TargetValue: 900
-
   CustomResourceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -406,17 +388,15 @@ Resources:
                 Resource: "*"
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
   Service:
     DependsOn:
-    - EnvControllerAction
+      - EnvControllerAction
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     Properties:
       Cluster:
-        Fn::ImportValue:
-          !Sub '${AppName}-${EnvName}-ClusterId'
+        Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
       TaskDefinition: !Ref TaskDefinition
       DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
       DeploymentConfiguration:
@@ -425,6 +405,7 @@ Resources:
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+      PlatformVersion: LATEST
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       CapacityProviderStrategy:
@@ -442,88 +423,7 @@ Resources:
               - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-      
       ServiceRegistries: !Ref 'AWS::NoValue'
-
-  AddonsStack:
-    Metadata:
-      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
-    Type: AWS::CloudFormation::Stack # Needed for #1848
-    DependsOn: EnvControllerAction
-    Condition: HasAddons
-    Properties:
-      Parameters:
-        App: !Ref AppName
-        Env: !Ref EnvName
-        Name: !Ref WorkloadName
-      TemplateURL:
-        !Ref AddonsTemplateURL
-
-  EnvControllerAction:
-    Metadata:
-      'aws:copilot:description': "Update your environment's shared resources"
-    Type: Custom::EnvControllerFunction
-    Properties:
-      ServiceToken: !GetAtt EnvControllerFunction.Arn
-      Workload: !Ref WorkloadName
-      EnvStack: !Sub '${AppName}-${EnvName}'
-      Parameters: []
-  
-  EnvControllerFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        ZipFile: |
-          mockEnvControllerZipFile
-      Handler: "index.handler"
-      Timeout: 900
-      MemorySize: 512
-      Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs12.x
-  
-  EnvControllerRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: "EnvControllerStackUpdate"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-                - cloudformation:DescribeStacks
-                - cloudformation:UpdateStack
-              Resource:  !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
-              Condition:
-                StringEquals:
-                  'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
-                  'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
-        - PolicyName: "EnvControllerRolePass"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-                - iam:PassRole
-              Resource:  !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
-              Condition:
-                StringEquals:
-                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
-                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
-      ManagedPolicyArns:
-        - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
   EventsKMSKey:
     Metadata:
       'aws:copilot:description': 'A KMS key to encrypt messages in your queues'
@@ -583,7 +483,6 @@ Resources:
               - "kms:Encrypt"
               - "kms:Decrypt"
             Resource: '*'
-            
   EventsQueue:
     Metadata:
       'aws:copilot:description': 'An events SQS queue to buffer messages'
@@ -594,7 +493,6 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
         maxReceiveCount: 5
-  
   DeadLetterQueue:
     Metadata:
       'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the events queue'
@@ -602,7 +500,6 @@ Resources:
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey
       MessageRetentionPeriod: 1209600 # 14 days
-      
   DeadLetterPolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -612,39 +509,36 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: 
+              AWS:
                 - !GetAtt TaskRole.Arn
-            Action: 
+            Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
             Resource: !GetAtt DeadLetterQueue.Arn
-
   QueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues: [!Ref 'EventsQueue']
       PolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              AWS: 
+              AWS:
                 - !GetAtt TaskRole.Arn
-            Action: 
+            Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
             Resource: !GetAtt EventsQueue.Arn
           - Effect: Allow
             Principal:
               Service: sns.amazonaws.com
-            Action: 
+            Action:
               - sqs:SendMessage
             Resource: !GetAtt EventsQueue.Arn
             Condition:
               ArnEquals:
                 aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-givesdogs']]
-
-
   dogsvcgivesdogsSNSTopicSubscription:
     Metadata:
       'aws:copilot:description': 'A SNS subscription to topic givesdogs from service dogsvc'
@@ -653,7 +547,6 @@ Resources:
       TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-givesdogs']]
       Protocol: 'sqs'
       Endpoint: !GetAtt EventsQueue.Arn
-  
   dogsvcgiveshuskiesSNSTopicSubscription:
     Metadata:
       'aws:copilot:description': 'A SNS subscription to topic giveshuskies from service dogsvc'
@@ -662,7 +555,6 @@ Resources:
       TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-giveshuskies']]
       Protocol: 'sqs'
       Endpoint: !GetAtt dogsvcgiveshuskiesEventsQueue.Arn
- 
   dogsvcgiveshuskiesEventsQueue:
     Metadata:
       'aws:copilot:description': 'A SQS queue to buffer messages from the topic giveshuskies'
@@ -670,7 +562,6 @@ Resources:
     Properties:
       KmsMasterKeyId: !Ref EventsKMSKey
       VisibilityTimeout: 1
-
   dogsvcgiveshuskiesQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -680,18 +571,116 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: 
+              AWS:
                 - !GetAtt TaskRole.Arn
-            Action: 
+            Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
             Resource: !GetAtt dogsvcgiveshuskiesEventsQueue.Arn
           - Effect: Allow
             Principal:
               Service: sns.amazonaws.com
-            Action: 
+            Action:
               - sqs:SendMessage
             Resource: !GetAtt dogsvcgiveshuskiesEventsQueue.Arn
             Condition:
               ArnEquals:
                 aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-giveshuskies']]
+  givesOtherdogsSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast givesOtherdogs events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-givesOtherdogs'
+      KmsMasterKeyId: 'alias/aws/sns'
+  givesOtherdogsSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: givesOtherdogsSNSTopic
+    Properties:
+      Topics:
+        - !Ref givesOtherdogsSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref givesOtherdogsSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack # Needed for #1848
+    DependsOn: EnvControllerAction
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvName
+        Name: !Ref WorkloadName
+      TemplateURL: !Ref AddonsTemplateURL
+  EnvControllerAction:
+    Metadata:
+      'aws:copilot:description': "Update your environment's shared resources"
+    Type: Custom::EnvControllerFunction
+    Properties:
+      ServiceToken: !GetAtt EnvControllerFunction.Arn
+      Workload: !Ref WorkloadName
+      EnvStack: !Sub '${AppName}-${EnvName}'
+      Parameters: []
+  EnvControllerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          mockEnvControllerZipFile
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'EnvControllerRole.Arn'
+      Runtime: nodejs12.x
+  EnvControllerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "EnvControllerStackUpdate"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:UpdateStack
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
+                Condition:
+                  StringEquals:
+                    'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: "EnvControllerRolePass"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

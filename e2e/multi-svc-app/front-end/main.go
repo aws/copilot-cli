@@ -88,13 +88,13 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer fileObj.Close()
 	// Resize file to 10M
 	if err := fileObj.Truncate(1e7); err != nil {
 		log.Printf("Resize test file %s in EFS volume FAILED\n", fileName)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	fileObj.Close()
 
 	// Shred file to write 10MiB of data to the filesystem.
 	shredCmd := exec.Command("shred", "-n", "1", fileName)

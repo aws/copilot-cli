@@ -73,6 +73,7 @@ type packageSvcOpts struct {
 	sel               wsSelector
 	prompt            prompter
 	identity          identityService
+	newInterpolator   func(app, env string) interpolator
 	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 	newEndpointGetter func(app, env string) (endpointGetter, error)
 	snsTopicGetter    deployedEnvironmentLister
@@ -112,6 +113,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		addonsWriter:     ioutil.Discard,
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		snsTopicGetter:   deployStore,
+		newInterpolator:  newManifestInterpolator,
 	}
 	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
 	if err != nil {
@@ -121,19 +123,16 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		var serializer stackSerializer
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
+			var opts []stack.LoadBalancedWebServiceOption
 			if app.RequiresDNSDelegation() {
 				if err := validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, app, env.Name, appVersionGetter); err != nil {
 					return nil, err
 				}
-				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)
-				if err != nil {
-					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
-				}
-			} else {
-				serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc)
-				if err != nil {
-					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
-				}
+				opts = append(opts, stack.WithHTTPS())
+			}
+			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, opts...)
+			if err != nil {
+				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 			}
 		case *manifest.RequestDrivenWebService:
 			caller, err := opts.identity.Get()
@@ -237,7 +236,7 @@ func (o *packageSvcOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	if o.name != "" {
-		names, err := o.ws.ServiceNames()
+		names, err := o.ws.ListServices()
 		if err != nil {
 			return fmt.Errorf("list services in the workspace: %w", err)
 		}
@@ -350,19 +349,23 @@ type svcCfnTemplates struct {
 
 // getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
 func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
-	raw, err := o.ws.ReadServiceManifest(o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read service manifest: %w", err)
 	}
-	mft, err := manifest.UnmarshalWorkload(raw)
+	interpolated, err := o.newInterpolator(o.appName, env.Name).Interpolate(string(raw))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
+	}
+	mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal workload: %w", err)
 	}
 	envMft, err := mft.ApplyEnv(o.envName)
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
-	if err := mft.Validate(); err != nil {
+	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
 	}
 	imgNeedsBuild, err := manifest.ServiceDockerfileBuildRequired(envMft)
@@ -384,7 +387,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	rc := stack.RuntimeConfig{
 		AdditionalTags:           app.Tags,
 		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                app.AccountID,
+		AccountID:                env.AccountID,
 		Region:                   env.Region,
 	}
 

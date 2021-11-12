@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -51,6 +53,10 @@ const (
 	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
 )
 
+var aliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
+	color.HighlightCode("http.alias"),
+	color.HighlightCode("copilot app init --domain example.com"))
+
 type deployWkldVars struct {
 	appName        string
 	name           string
@@ -69,9 +75,11 @@ type deploySvcOpts struct {
 	deployWkldVars
 
 	store               store
+	deployStore         *deploy.Store
 	ws                  wsSvcDirReader
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator     func(app, env string) interpolator
 	s3                  artifactUploader
 	cmd                 runner
 	addons              templater
@@ -84,6 +92,8 @@ type deploySvcOpts struct {
 	endpointGetter      endpointGetter
 	snsTopicGetter      deployedEnvironmentLister
 	identity            identityService
+	subnetLister        vpcSubnetLister
+	envDescriber        envDescriber
 
 	spinner progress
 	sel     wsSelector
@@ -123,6 +133,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		deployWkldVars: vars,
 
 		store:     store,
+		deployStore: deployStore,
 		ws:        ws,
 		unmarshal: manifest.UnmarshalWorkload,
 		spinner:   termprogress.NewSpinner(log.DiagnosticWriter),
@@ -135,12 +146,17 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 			}
 			return d, nil
 		},
-		cmd:            exec.NewCmd(),
-		sessProvider:   sessions.NewProvider(),
-		snsTopicGetter: deployStore,
+		newInterpolator: newManifestInterpolator,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessions.NewProvider(),
+		snsTopicGetter:  deployStore,
 	}
 	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
+}
+
+func newManifestInterpolator(app, env string) interpolator {
+	return manifest.NewInterpolator(app, env)
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -231,7 +247,7 @@ func (o *deploySvcOpts) RecommendActions() error {
 }
 
 func (o *deploySvcOpts) validateSvcName() error {
-	names, err := o.ws.ServiceNames()
+	names, err := o.ws.ListServices()
 	if err != nil {
 		return fmt.Errorf("list services in the workspace: %w", err)
 	}
@@ -295,6 +311,18 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("assuming environment manager role: %w", err)
 	}
 
+	d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+		DeployStore: o.deployStore,
+	})
+	if err != nil {
+		return fmt.Errorf("create describer for environment %s in application %s: %w", o.envName, o.appName, err)
+	}
+	o.envDescriber = d
+	o.subnetLister = ec2.New(envSession)
+
 	// ECR client against tools account profile AND target environment region.
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
 	registry := ecr.New(defaultSessEnvRegion)
@@ -348,6 +376,23 @@ func (o *deploySvcOpts) configureClients() error {
 	return nil
 }
 
+func (o *deploySvcOpts) publicCIDRBlocks() ([]string, error) {
+	envDescription, err := o.envDescriber.Describe()
+	if err != nil {
+		return nil, fmt.Errorf("describe environment %s: %w", o.envName, err)
+	}
+	vpcID := envDescription.EnvironmentVPC.ID
+	subnets, err := o.subnetLister.ListVPCSubnets(vpcID)
+	if err != nil {
+		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, o.envName, err)
+	}
+	var cidrBlocks []string
+	for _, subnet := range subnets.Public {
+		cidrBlocks = append(cidrBlocks, subnet.CIDRBlock)
+	}
+	return cidrBlocks, nil
+}
+
 func (o *deploySvcOpts) configureContainerImage() error {
 	svc, err := o.manifest()
 	if err != nil {
@@ -386,28 +431,24 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArgumen
 func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-		TaskPlatform() (*string, error)
+		ContainerPlatform() string
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and TaskPlatform()", name)
+		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
 	}
 	var tags []string
 	if imageTag != "" {
 		tags = append(tags, imageTag)
 	}
 	args := mf.BuildArgs(filepath.Dir(copilotDir))
-	platform, err := mf.TaskPlatform()
-	if err != nil {
-		return nil, fmt.Errorf("get platform for service: %w", err)
-	}
 	return &dockerengine.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
-		Platform:   aws.StringValue(platform),
+		Platform:   mf.ContainerPlatform(),
 		Tags:       tags,
 	}, nil
 }
@@ -443,11 +484,15 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 		return o.appliedManifest, nil
 	}
 
-	raw, err := o.ws.ReadServiceManifest(o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest file: %w", o.name, err)
 	}
-	mft, err := o.unmarshal(raw)
+	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
+	}
+	mft, err := o.unmarshal([]byte(interpolated))
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
@@ -455,7 +500,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
-	if err := mft.Validate(); err != nil {
+	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
 	}
 	o.appliedManifest = envMft // cache the results.
@@ -467,12 +512,13 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	if err != nil {
 		return nil, err
 	}
+
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                o.targetApp.AccountID,
+			AccountID:                o.targetEnvironment.AccountID,
 			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
@@ -498,7 +544,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			Digest:   o.imageDigest,
 		},
 		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                o.targetApp.AccountID,
+		AccountID:                o.targetEnvironment.AccountID,
 		Region:                   o.targetEnvironment.Region,
 	}, nil
 }
@@ -534,6 +580,17 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
+		if o.targetApp.Domain == "" && !t.Alias.IsEmpty() {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
+
+		var opts []stack.LoadBalancedWebServiceOption
+
+		// TODO: https://github.com/aws/copilot-cli/issues/2918
+		// 1. Should error out if `nlb.alias` is specified with targetApp.Domain == ""
+		// 2. Should validate `nlb.alias` is specified
+		// 3. ALB block should not be executed if http is disabled
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -542,11 +599,22 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
-			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
-		} else {
-			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+			opts = append(opts, stack.WithHTTPS())
+			opts = append(opts, stack.WithDNSDelegation())
 		}
+		if !t.NLBConfig.IsEmpty() {
+			cidrBlocks, err := o.publicCIDRBlocks()
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, stack.WithNLB(cidrBlocks))
+		}
+		conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
+		if o.targetApp.Domain == "" && t.Alias != nil {
+			log.Errorf(aliasUsedWithoutDomainFriendlyText)
+			return nil, errors.New("alias specified when application is not associated with a domain")
+		}
 		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
 			return apprunner.New(s)
 		})

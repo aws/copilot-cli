@@ -101,6 +101,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			store:            o.store,
 			appCFN:           cloudformation.New(sess),
 			stackWriter:      os.Stdout,
+			newInterpolator:  newManifestInterpolator,
 			paramsWriter:     ioutil.Discard,
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
@@ -127,7 +128,7 @@ func (o *packageJobOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	if o.name != "" {
-		names, err := o.ws.JobNames()
+		names, err := o.ws.ListJobs()
 		if err != nil {
 			return fmt.Errorf("list jobs in the workspace: %w", err)
 		}

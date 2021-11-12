@@ -30,7 +30,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				return map[string][]byte{
 					"templates/workloads/services/backend/cf.yml":                         []byte(baseContent),
 					"templates/workloads/partials/cf/loggroup.yml":                        []byte("loggroup"),
-					"templates/workloads/partials/cf/envvars.yml":                         []byte("envvars"),
+					"templates/workloads/partials/cf/envvars-container.yml":               []byte("envvars-container"),
+					"templates/workloads/partials/cf/envvars-common.yml":                  []byte("envvars-common"),
 					"templates/workloads/partials/cf/secrets.yml":                         []byte("secrets"),
 					"templates/workloads/partials/cf/executionrole.yml":                   []byte("executionrole"),
 					"templates/workloads/partials/cf/taskrole.yml":                        []byte("taskrole"),
@@ -54,10 +55,13 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/accessrole.yml":                      []byte("accessrole"),
 					"templates/workloads/partials/cf/publish.yml":                         []byte("publish"),
 					"templates/workloads/partials/cf/subscribe.yml":                       []byte("subscribe"),
+					"templates/workloads/partials/cf/nlb.yml":                             []byte("nlb"),
+					"templates/workloads/partials/cf/vpc-connector.yml":                   []byte("vpc-connector"),
 				}
 			},
 			wantedContent: `  loggroup
-  envvars
+  envvars-container
+  envvars-common
   secrets
   executionrole
   taskrole
@@ -81,6 +85,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
   accessrole
   publish
   subscribe
+  nlb
+  vpc-connector
 `,
 		},
 	}
@@ -157,25 +163,12 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		input *NetworkOpts
+		input NetworkOpts
 
 		wantedNetworkConfig string
 	}{
-		"should render AWS VPC configuration for public subnets by default": {
-			input: nil,
-			wantedNetworkConfig: `
- AwsvpcConfiguration:
-   AssignPublicIp: ENABLED
-   Subnets:
-     Fn::Split:
-       - ','
-       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-   SecurityGroups:
-     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-`,
-		},
 		"should render AWS VPC configuration for private subnets": {
-			input: &NetworkOpts{
+			input: NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
 			},
@@ -191,7 +184,7 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 `,
 		},
 		"should render AWS VPC configuration for private subnets with security groups": {
-			input: &NetworkOpts{
+			input: NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
 				SecurityGroups: []string{
@@ -233,6 +226,67 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 			err = yaml.Unmarshal(content.Bytes(), &actual)
 			require.NoError(t, err, "unmarshal actual config")
 			require.Equal(t, wanted, actual.Resources.Service.Properties.NetworkConfiguration)
+		})
+	}
+}
+
+func TestRuntimePlatformOpts_Version(t *testing.T) {
+	testCases := map[string]struct {
+		in       RuntimePlatformOpts
+		wantedPV string
+	}{
+		"should return LATEST for on empty platform": {
+			wantedPV: "LATEST",
+		},
+		"should return LATEST for linux containers": {
+			in: RuntimePlatformOpts{
+				OS:   "LINUX",
+				Arch: "X86_64",
+			},
+			wantedPV: "LATEST",
+		},
+		"should return 1.0.0 for windows containers": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2019_FULL",
+				Arch: "X86_64",
+			},
+			wantedPV: "1.0.0",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wantedPV, tc.in.Version())
+		})
+	}
+}
+
+func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
+	testCases := map[string]struct {
+		in     RuntimePlatformOpts
+		wanted bool
+	}{
+		"should return true on empty platform": {
+			wanted: true,
+		},
+		"should return true for linux/x86_64": {
+			in: RuntimePlatformOpts{
+				OS:   "LINUX",
+				Arch: "X86_64",
+			},
+			wanted: true,
+		},
+		"should return false for windows containers": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2019_CORE",
+				Arch: "X86_64",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.IsDefault())
 		})
 	}
 }

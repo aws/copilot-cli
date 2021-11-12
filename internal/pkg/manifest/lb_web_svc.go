@@ -51,10 +51,11 @@ type LoadBalancedWebServiceConfig struct {
 	RoutingRule      `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Network          NetworkConfig             `yaml:"network"`
-	PublishConfig    PublishConfig             `yaml:"publish"`
-	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
+	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig                    `yaml:"network"`
+	PublishConfig    PublishConfig                    `yaml:"publish"`
+	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
+	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -77,6 +78,10 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.LoadBalancedWebServiceConfig.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	return svc
@@ -188,6 +193,29 @@ type RoutingRule struct {
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
 }
 
+func (r *RoutingRule) targetContainer() *string {
+	if r.TargetContainer == nil && r.TargetContainerCamelCase == nil {
+		return nil
+	}
+	if r.TargetContainer != nil {
+		return r.TargetContainer
+	}
+	return r.TargetContainerCamelCase
+}
+
+// NetworkLoadBalancerConfiguration holds options for a network load balancer
+type NetworkLoadBalancerConfiguration struct {
+	Port            *string                 `yaml:"port"`
+	HealthCheck     HealthCheckArgsOrString `yaml:"healthcheck"`
+	TargetContainer *string                 `yaml:"target_container"`
+	TargetPort      *int                    `yaml:"target_port"`
+	SSLPolicy       *string                 `yaml:"ssl_policy"`
+}
+
+func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
+}
+
 // IPNet represents an IP network string. For example: 10.1.0.0/16
 type IPNet string
 
@@ -205,7 +233,7 @@ func (e *Alias) IsEmpty() bool {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *Alias) UnmarshalYAML(value *yaml.Node) error {
 	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
-		return errUnmarshalEntryPoint
+		return errUnmarshalAlias
 	}
 	return nil
 }

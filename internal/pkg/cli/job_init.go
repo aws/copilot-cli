@@ -65,10 +65,11 @@ type initJobOpts struct {
 	prompt       prompter
 	sel          initJobSelector
 	dockerEngine dockerEngine
+	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     *string
+	platform     *manifest.PlatformString
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -111,6 +112,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		prompt:       prompter,
 		sel:          sel,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
+		mftReader:    ws,
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
@@ -158,10 +160,27 @@ func (o *initJobOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initJobOpts) Ask() error {
-	if err := o.askJobType(); err != nil {
+	if err := o.askJobName(); err != nil {
 		return err
 	}
-	if err := o.askJobName(); err != nil {
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err == nil {
+		jobType, err := localMft.WorkloadType()
+		if err != nil {
+			return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
+		}
+		o.wkldType = jobType
+		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+		return nil
+	}
+	var (
+		errNotFound          *workspace.ErrFileNotExists
+		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+	)
+	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
+		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
+	}
+	if err := o.askJobType(); err != nil {
 		return err
 	}
 	dfSelected, err := o.askDockerfile()
@@ -190,19 +209,16 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return err
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image == "" {
+		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		if err != nil {
+			return err
+		}
+		if platform != "" {
+			o.platform = &platform
+		}
 	}
-	o.platform = platform
-	var platformStrPtr *manifest.PlatformString
-	if o.platform != nil {
-		log.Warningf("Your architecture type is currently unsupported. Setting platform to %s in your manifest.\n", dockerengine.DockerBuildPlatform(dockerengine.LinuxOS, dockerengine.Amd64Arch))
-		val := manifest.PlatformString(*o.platform)
-		platformStrPtr = &val
-	}
-
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -211,7 +227,7 @@ func (o *initJobOpts) Execute() error {
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
 			Platform: manifest.PlatformArgsOrString{
-				PlatformString: platformStrPtr,
+				PlatformString: o.platform,
 			},
 		},
 
@@ -251,9 +267,8 @@ func (o *initJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
 	}
-
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "job"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),
 		func(val interface{}) error {
 			return validateSvcName(val, o.wkldType)

@@ -9,10 +9,10 @@
 各ヘルスチェックの実行間の秒単位の間隔です。デフォルト値は１０秒です。
 
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-retries" href="#image-healthcheck-retries" class="field">`retries`</a> <span class="type">Integer</span>  
-コンテナが unhealthy と見なされるまでに、失敗したヘルスチェックを再試行する回数です。1〜10 回を指定できます。デフォルト値は２です。
+コンテナが unhealthy と見なされるまでに、失敗したヘルスチェックを再試行する回数です。デフォルト値は２です。
 
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-timeout" href="#image-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 ヘルスチェックの実行開始から失敗とみなすまでに待機する秒単位の期間です。デフォルト値は５秒です。
 
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-start-period" href="#image-healthcheck-start-period" class="field">`start_period`</a> <span class="type">Duration</span>  
-ヘルスチェックの実行と失敗がリトライ回数としてカウントされ始める前に、コンテナに対して起動処理を済ませる猶予期間を与えるための設定です。秒単位で指定し、デフォルト値は０秒です。
+ヘルスチェックの実行と失敗がリトライ回数としてカウントされ始める前に、コンテナに対して起動処理を済ませる猶予期間の長さです。秒単位で指定し、デフォルトは０秒です。

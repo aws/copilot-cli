@@ -29,8 +29,7 @@ type WorkerService struct {
 	*ecsWkld
 	manifest *manifest.WorkerService
 
-	allowedTopics []string
-	parser        workerSvcReadParser
+	parser workerSvcReadParser
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
@@ -75,25 +74,19 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read backlog-per-task-calculator lambda function source code: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: s.manifest.Sidecars,
-		imageConfig:   &s.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(s.manifest.Name),
+	addonsOutputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
 	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
-	}
-
-	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
+	advancedCount, err := convertAdvancedCount(s.manifest.Count.AdvancedCount)
 	if err != nil {
 		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
 	}
@@ -107,10 +100,6 @@ func (s *WorkerService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
-	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
-	}
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -119,14 +108,19 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	subscribe, err := convertSubscribe(s.manifest.Subscribe, s.allowedTopics, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	subscribe, err := convertSubscribe(s.manifest.Subscribe, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", err
+	}
+	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	if err != nil {
+		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		Variables:                      s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                        s.manifest.WorkerServiceConfig.Secrets,
-		NestedStack:                    outputs,
+		NestedStack:                    addonsOutputs,
+		AddonsExtraParams:              addonsParams,
 		Sidecars:                       sidecars,
 		Autoscaling:                    autoscaling,
 		CapacityProviders:              capacityProviders,
@@ -139,14 +133,16 @@ func (s *WorkerService) Template() (string, error) {
 		DesiredCountLambda:             desiredCountLambda.String(),
 		EnvControllerLambda:            envControllerLambda.String(),
 		BacklogPerTaskCalculatorLambda: backlogPerTaskLambda.String(),
-		Storage:                        storage,
+		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                        convertNetworkConfig(s.manifest.Network),
 		EntryPoint:                     entrypoint,
 		Command:                        command,
-		DependsOn:                      dependencies,
+		DependsOn:                      convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:           aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
 		Subscribe:                      subscribe,
+		Publish:                        publishers,
+		Platform:                       convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)

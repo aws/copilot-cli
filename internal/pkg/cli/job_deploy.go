@@ -42,6 +42,7 @@ type deployJobOpts struct {
 	store              store
 	ws                 wsJobDirReader
 	unmarshal          func(in []byte) (manifest.WorkloadManifest, error)
+	newInterpolator    func(app, env string) interpolator
 	cmd                runner
 	addons             templater
 	appCFN             appResourcesGetter
@@ -80,14 +81,15 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 	return &deployJobOpts{
 		deployWkldVars: vars,
 
-		store:        store,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:       prompter,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessions.NewProvider(),
+		store:           store,
+		ws:              ws,
+		unmarshal:       manifest.UnmarshalWorkload,
+		spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
+		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:          prompter,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessions.NewProvider(),
+		newInterpolator: newManifestInterpolator,
 	}, nil
 }
 
@@ -321,7 +323,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			AddonsTemplateURL:        addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                o.targetApp.AccountID,
+			AccountID:                o.targetEnvironment.AccountID,
 			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
@@ -346,17 +348,21 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		AddonsTemplateURL:        addonsURL,
 		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                o.targetApp.AccountID,
+		AccountID:                o.targetEnvironment.AccountID,
 		Region:                   o.targetEnvironment.Region,
 	}, nil
 }
 
 func (o *deployJobOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadJobManifest(o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
 	}
-	mft, err := o.unmarshal(raw)
+	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
+	}
+	mft, err := o.unmarshal([]byte(interpolated))
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal job %s manifest: %w", o.name, err)
 	}
@@ -364,7 +370,7 @@ func (o *deployJobOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
 	}
-	if err := mft.Validate(); err != nil {
+	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
 	}
 	return envMft, nil
@@ -376,7 +382,7 @@ func (o *deployJobOpts) RecommendActions() error {
 }
 
 func (o *deployJobOpts) validateJobName() error {
-	names, err := o.ws.JobNames()
+	names, err := o.ws.ListJobs()
 	if err != nil {
 		return fmt.Errorf("list jobs in the workspace: %w", err)
 	}

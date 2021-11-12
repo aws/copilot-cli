@@ -162,15 +162,16 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			appName:  vars.appName,
 		},
 
-		store:          ssm,
-		prompt:         prompt,
-		ws:             ws,
-		unmarshal:      manifest.UnmarshalWorkload,
-		sel:            sel,
-		spinner:        spin,
-		cmd:            exec.NewCmd(),
-		sessProvider:   sessProvider,
-		snsTopicGetter: deployStore,
+		store:           ssm,
+		prompt:          prompt,
+		ws:              ws,
+		newInterpolator: newManifestInterpolator,
+		unmarshal:       manifest.UnmarshalWorkload,
+		sel:             sel,
+		spinner:         spin,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessProvider,
+		snsTopicGetter:  deployStore,
 
 		newAppVersionGetter: func(appName string) (versionGetter, error) {
 			return describe.NewAppDescriber(appName)
@@ -182,14 +183,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			imageTag: vars.imageTag,
 			appName:  vars.appName,
 		},
-		store:        ssm,
-		prompt:       prompt,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		sel:          sel,
-		spinner:      spin,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessProvider,
+		store:           ssm,
+		prompt:          prompt,
+		ws:              ws,
+		newInterpolator: newManifestInterpolator,
+		unmarshal:       manifest.UnmarshalWorkload,
+		sel:             sel,
+		spinner:         spin,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessProvider,
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()
@@ -231,6 +233,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					init:         wlInitializer,
 					sel:          sel,
 					prompt:       prompt,
+					mftReader:    ws,
 					dockerEngine: dockerengine.New(cmd),
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
@@ -251,6 +254,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					init:         wlInitializer,
 					sel:          sel,
 					topicSel:     snsSel,
+					mftReader:    ws,
 					prompt:       prompt,
 					dockerEngine: dockerengine.New(cmd),
 				}

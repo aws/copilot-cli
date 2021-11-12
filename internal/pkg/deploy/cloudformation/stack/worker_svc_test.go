@@ -63,16 +63,27 @@ func TestWorkerService_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedErr:      fmt.Errorf("read backlog-per-task-calculator lambda function source code: some error"),
 		},
-		"unexpected addons parsing error": {
+		"unexpected addons template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{err: errors.New("some error")}
+				svc.addons = mockAddons{tplErr: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
+		},
+		"unexpected addons params parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
+				m := mocks.NewMockworkerSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
+				svc.addons = mockAddons{paramsErr: errors.New("some error")}
+			},
+			wantedErr: fmt.Errorf("parse addons parameters for %s: %w", testServiceName, errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
 			setUpManifest: func(svc *WorkerService) {
@@ -90,7 +101,7 @@ func TestWorkerService_Template(t *testing.T) {
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -101,37 +112,6 @@ Outputs:
 				}
 			},
 			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
-		},
-		"failed parsing subscribe template": {
-			setUpManifest: func(svc *WorkerService) {
-				testWorkerSvcManifestWithBadSubscribe := manifest.NewWorkerService(baseProps)
-				testWorkerSvcManifestWithBadSubscribe.Subscribe = manifest.SubscribeConfig{
-					Topics: []manifest.TopicSubscription{
-						{
-							Name:    aws.String("name"),
-							Service: aws.String("un@cept#ble"),
-						},
-					},
-				}
-				svc.manifest = testWorkerSvcManifestWithBadSubscribe
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
-				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				svc.parser = m
-				svc.addons = mockTemplater{
-					tpl: `
-Resources:
-  AdditionalResourcesPolicy:
-    Type: AWS::IAM::ManagedPolicy
-Outputs:
-  AdditionalResourcesPolicyArn:
-    Value: hello`,
-				}
-			},
-			wantedErr: fmt.Errorf(`invalid topic subscription "name": %w`, errSvcNameBadFormat),
 		},
 		"failed parsing Auto Scaling template": {
 			setUpManifest: func(svc *WorkerService) {
@@ -150,7 +130,7 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -173,7 +153,7 @@ Outputs:
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseWorkerService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -232,7 +212,7 @@ Outputs:
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},
 					},
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.DisablePublicIP,
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},
@@ -241,7 +221,7 @@ Outputs:
 					Command:    []string{"here"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   MyTable:

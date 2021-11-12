@@ -1,5 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
+/* jshint node: true */
+/* jshint esversion: 8 */
+
 "use strict";
 
 const aws = require("aws-sdk");
@@ -41,7 +45,7 @@ let report = function (
     const https = require("https");
     const { URL } = require("url");
 
-    var responseBody = JSON.stringify({
+    let responseBody = JSON.stringify({
       Status: responseStatus,
       Reason: reason,
       PhysicalResourceId: physicalResourceId || context.logStreamName,
@@ -78,23 +82,37 @@ let report = function (
   });
 };
 
+const aliasesChanged = function (
+    oldResourceProperties,
+    aliases,
+) {
+  if (!oldResourceProperties) {
+    return true;
+  }
+  let prevAliases = getAllAliases(
+      oldResourceProperties.Aliases
+  );
+  let aliasesToDelete = [...prevAliases,].filter(function (itm) {
+    return !aliases.has(itm);
+  });
+  let aliasesToAdd = [...aliases,].filter(function (itm) {
+    return !prevAliases.has(itm);
+  });
+  return aliasesToAdd.length + aliasesToDelete.length;
+};
+
 /**
  * Requests a public certificate from AWS Certificate Manager, using DNS validation
  * (see https://docs.aws.amazon.com/acm/latest/userguide/dns-validation.html).
- * Specifically, it will do DNS validation in all the root, app, and env hosted zones in parallel.
- * The root hosted zone is created when the user purchases example.com in route53 in their app account.
- * We create the app hosted zone "app.example.com" when running "app init" part of the application stack.
- * The env hosted zone "env.app.example.com" is created when running "env init" part of the env stack.
- * Lastly, the function exits until the certificate is validated.
  *
  * @param {string} requestId the CloudFormation request ID
  * @param {string} appName the application name
  * @param {string} envName the environment name
  * @param {string} certDomain the domain of the certificate
- * @param {string} aliases the custom domain aliases
- * @param {string} envHostedZoneId the environment Route53 Hosted Zone ID
- * @param {string} rootDnsRole the IAM role ARN that can manage domainName
- * @returns {string} Validated certificate ARN
+ * @param {string[]} aliases the custom domain aliases
+ * @param {string[]} sansToUse the subject alternative name to add to the certificate
+ * @param {object} acm the AWS ACM client to use for sending requests
+ * @returns {string} ARN of the requested certificate
  */
 const requestCertificate = async function (
   requestId,
@@ -102,19 +120,11 @@ const requestCertificate = async function (
   envName,
   certDomain,
   aliases,
-  envHostedZoneId,
-  rootDnsRole,
-  region
+  sansToUse,
+  acm
 ) {
   const crypto = require("crypto");
-  const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
-  // For backward compatiblity, and make sure the SANs we use are unique.
-  const uniqueSansToUse = new Set([certDomain, `*.${certDomain}`]);
-  for (const alias of aliases) {
-    uniqueSansToUse.add(alias);
-  }
-  const sansToUse = [...uniqueSansToUse];
-  const reqCertResponse = await acm
+  return acm
     .requestCertificate({
       DomainName: certDomain,
       SubjectAlternativeNames: sansToUse,
@@ -136,18 +146,32 @@ const requestCertificate = async function (
       ],
     })
     .promise();
+};
 
+/**
+ * Wait until the validation options are ready
+ *
+ * @param certificateARN the requested certificate for which we are waiting for the validation options to be ready
+ * @param sansToUse the subject alternative names added to the certificate
+ * @param acm the client to use
+ * @returns the validation options
+ */
+const waitForValidationOptionsToBeReady = async function(
+    certificateARN,
+    sansToUse,
+    acm,
+){
   let options;
   let attempt;
   const expectedValidationOptionsNum = sansToUse.length;
   for (attempt = 0; attempt < maxAttempts; attempt++) {
     const { Certificate } = await acm
-      .describeCertificate({
-        CertificateArn: reqCertResponse.CertificateArn,
-      })
-      .promise();
+        .describeCertificate({
+          CertificateArn: certificateARN,
+        })
+        .promise();
     options = Certificate.DomainValidationOptions || [];
-    var readyRecordsNum = 0;
+    let readyRecordsNum = 0;
     for (const option of options) {
       if (option.ResourceRecord) {
         readyRecordsNum++;
@@ -164,16 +188,40 @@ const requestCertificate = async function (
   }
   if (attempt === maxAttempts) {
     throw new Error(
-      `DescribeCertificate did not contain DomainValidationOptions after ${maxAttempts} tries.`
+        `DescribeCertificate did not contain DomainValidationOptions after ${maxAttempts} tries.`
     );
   }
+  return options;
+};
 
-  await updateHostedZoneRecords(
-    "UPSERT",
+/**
+ * Validate DNS in the root, app, and env hosted zones in parallel, and wait until the certificate is validated.
+ * The root hosted zone is created when the user purchases example.com in route53 in their app account.
+ * We create the app hosted zone "app.example.com" when running "app init" part of the application stack.
+ * The env hosted zone "env.app.example.com" is created when running "env init" part of the env stack.
+ *
+ * @param options
+ * @param envRoute53
+ * @param appRoute53
+ * @param envHostedZoneId
+ * @param certificateARN
+ * @param acm
+ * @returns {Promise<>} promise for whether the wait succeeds
+ */
+const validateCertificate = async function(
     options,
     envRoute53,
     appRoute53,
-    envHostedZoneId
+    envHostedZoneId,
+    certificateARN,
+    acm
+){
+  await updateHostedZoneRecords(
+      "UPSERT",
+      options,
+      envRoute53,
+      appRoute53,
+      envHostedZoneId
   );
 
   await acm
@@ -183,11 +231,9 @@ const requestCertificate = async function (
         delay: 30,
         maxAttempts: 19,
       },
-      CertificateArn: reqCertResponse.CertificateArn,
+      CertificateArn: certificateARN,
     })
     .promise();
-
-  return reqCertResponse.CertificateArn;
 };
 
 const updateHostedZoneRecords = async function (
@@ -293,9 +339,9 @@ const deleteHostedZoneRecords = async function (
   // Make sure DNS validation records are unique. For example: "example.com" and "*.example.com"
   // might have the same DNS validation record.
   const filteredRecordOption = [];
-  var uniqueValidateRecordNames = new Set();
+  let uniqueValidateRecordNames = new Set();
   for (const option of recordOptionsToDelete) {
-    var id = `${option.ResourceRecord.Name} ${option.ResourceRecord.Value}`;
+    let id = `${option.ResourceRecord.Name} ${option.ResourceRecord.Value}`;
     if (uniqueValidateRecordNames.has(id)) {
       continue;
     }
@@ -356,6 +402,7 @@ const validateDomain = async function ({
  * @param {string} certDomain the domain of the certificate
  * @param {string} envHostedZoneId the environment Route53 Hosted Zone ID
  * @param {string} rootDnsRole the IAM role ARN that can manage domainName
+ * @param {string} region the environment region
  */
 const deleteCertificate = async function (
   arn,
@@ -380,7 +427,7 @@ const deleteCertificate = async function (
 
       inUseByResources = Certificate.InUseBy || [];
       options = Certificate.DomainValidationOptions || [];
-      var ok = false;
+      let ok = false;
       for (const option of options) {
         if (!option.ResourceRecord) {
           ok = false;
@@ -478,13 +525,15 @@ const getAllAliases = function (aliases) {
   } catch (error) {
     throw new Error(`Cannot parse ${aliases} into JSON format.`);
   }
-  var aliasList = [];
-  for (var m in obj) {
-    aliasList.push(...obj[m]);
+  let aliasList = [];
+
+  for (const [_, aliases] of Object.entries(obj)) {
+    aliasList.push(...aliases);
   }
+
   return new Set(
     aliasList.filter(function (itm) {
-      return getDomainType(itm) != domainTypes.OtherDomainZone;
+      return getDomainType(itm) !== domainTypes.OtherDomainZone;
     })
   );
 };
@@ -509,7 +558,7 @@ const clients = function (region, rootDnsRole) {
   const envRoute53 = new aws.Route53();
   const appRoute53 = new aws.Route53({
     credentials: new aws.ChainableTemporaryCredentials({
-      params: { RoleArn: rootDnsRole },
+      params: { RoleArn: rootDnsRole, },
       masterCredentials: new aws.EnvironmentCredentials("AWS"),
     }),
   });
@@ -517,18 +566,17 @@ const clients = function (region, rootDnsRole) {
     // Used by the test suite, since waiters aren't mockable yet
     envRoute53.waitFor = appRoute53.waitFor = acm.waitFor = waiter;
   }
-  return [acm, envRoute53, appRoute53];
+  return [acm, envRoute53, appRoute53, ];
 };
 
 /**
  * Main certificate manager handler, invoked by Lambda
  */
 exports.certificateRequestHandler = async function (event, context) {
-  var responseData = {};
-  var physicalResourceId = event.PhysicalResourceId;
-  var certificateArn;
+  let responseData = {};
+  let physicalResourceId = event.PhysicalResourceId;
   const props = event.ResourceProperties;
-  const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
+  const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName, ];
   domainTypes = {
     EnvDomainZone: {
       regex: new RegExp(`^([^\.]+\.)?${env}.${app}.${domain}`),
@@ -545,50 +593,50 @@ exports.certificateRequestHandler = async function (event, context) {
     OtherDomainZone: {},
   };
 
+  let certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
+  let aliases = getAllAliases(props.Aliases);
+  const uniqueSansToUse = new Set([certDomain, `*.${certDomain}`, ]);
+  for (const alias of aliases) {
+    uniqueSansToUse.add(alias);
+  }
+  const sansToUse = [...uniqueSansToUse, ];
+  const [acm, envRoute53, appRoute53] = clients(props.Region, props.RootDNSRole);
+
   try {
-    var certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
-    var aliases = await getAllAliases(props.Aliases);
+    let response = {};
+    let options = {};
     switch (event.RequestType) {
       case "Create":
-        certificateArn = await requestCertificate(
+        response = await requestCertificate(
           event.RequestId,
           props.AppName,
           props.EnvName,
           certDomain,
           aliases,
-          props.EnvHostedZoneId,
-          props.RootDNSRole,
-          props.Region
+          sansToUse,
+          acm
         );
-        responseData.Arn = physicalResourceId = certificateArn;
+        responseData.Arn = physicalResourceId = response.CertificateArn;  // Set physicalResourceId as soon as we can.
+        options = await waitForValidationOptionsToBeReady(response.CertificateArn, sansToUse, acm);
+        await validateCertificate(options, envRoute53, appRoute53, props.EnvHostedZoneId, response.CertificateArn, acm);
         break;
       case "Update":
         // Exit early if cert doesn't change.
-        if (event.OldResourceProperties) {
-          var prevAliases = await getAllAliases(
-            event.OldResourceProperties.Aliases
-          );
-          var aliasesToDelete = [...prevAliases].filter(function (itm) {
-            return !aliases.has(itm);
-          });
-          var aliasesToAdd = [...aliases].filter(function (itm) {
-            return !prevAliases.has(itm);
-          });
-          if (aliasesToAdd.length + aliasesToDelete.length === 0) {
-            break;
-          }
+        if (!aliasesChanged(event.OldResourceProperties, aliases)) {
+          break;
         }
-        certificateArn = await requestCertificate(
+        response = await requestCertificate(
           event.RequestId,
           props.AppName,
           props.EnvName,
           certDomain,
           aliases,
-          props.EnvHostedZoneId,
-          props.RootDNSRole,
-          props.Region
+          sansToUse,
+          acm
         );
-        responseData.Arn = physicalResourceId = certificateArn;
+        responseData.Arn = physicalResourceId = response.CertificateArn;
+        options = await waitForValidationOptionsToBeReady(response.CertificateArn, sansToUse, acm);
+        await validateCertificate(options, envRoute53, appRoute53, props.EnvHostedZoneId, response.CertificateArn, acm);
         break;
       case "Delete":
         // If the resource didn't create correctly, the physical resource ID won't be the

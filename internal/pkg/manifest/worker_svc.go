@@ -31,14 +31,20 @@ type WorkerService struct {
 	parser template.Parser
 }
 
+// Publish returns the list of topics where notifications can be published.
+func (s *WorkerService) Publish() []Topic {
+	return s.WorkerServiceConfig.PublishConfig.Topics
+}
+
 // WorkerServiceConfig holds the configuration that can be overridden per environments.
 type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	Logging          `yaml:"logging,flow"`
+	Logging          Logging                   `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	Subscribe        SubscribeConfig           `yaml:"subscribe"`
+	PublishConfig    PublishConfig             `yaml:"publish"`
 	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 }
@@ -83,13 +89,11 @@ func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-
 	if !q.Advanced.IsEmpty() {
 		// Unmarshaled successfully to q.Advanced, unset q.Enabled, and return.
 		q.Enabled = nil
 		return nil
 	}
-
 	if err := value.Decode(&q.Enabled); err != nil {
 		return errUnmarshalQueueOpts
 	}
@@ -138,6 +142,11 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	svc.WorkerServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.WorkerServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.WorkerServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
+	svc.WorkerServiceConfig.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()

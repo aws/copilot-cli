@@ -39,7 +39,7 @@ type ScheduledJobConfig struct {
 	ImageConfig             ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride           `yaml:",inline"`
 	TaskConfig              `yaml:",inline"`
-	Logging                 `yaml:"logging,flow"`
+	Logging                 Logging                   `yaml:"logging,flow"`
 	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
@@ -77,12 +77,16 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	job.ImageConfig.Image.Location = stringP(props.Image)
 	job.ImageConfig.HealthCheck = props.HealthCheck
+	job.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		job.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		job.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	job.On.Schedule = stringP(props.Schedule)
 	if props.Retries != 0 {
 		job.Retries = aws.Int(props.Retries)
 	}
 	job.Timeout = stringP(props.Timeout)
-	job.Platform = props.Platform
 	job.parser = template.New()
 	return job
 }

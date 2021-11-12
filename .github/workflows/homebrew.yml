@@ -10,31 +10,39 @@ jobs:
       - name: macOS/amd64 binary
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          curl -Lo copilot-darwin-amd64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-darwin-amd64
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          curl -Lo copilot-darwin-amd64 https://github.com/aws/copilot-cli/releases/download/${version}/copilot-darwin-amd64
           cp copilot-darwin-amd64 copilot
           chmod +x copilot
-          tar czf copilot_${GITHUB_REF##*/}_macOS_amd64.tar.gz copilot
+          tar czf copilot_${semvar}_macOS_amd64.tar.gz copilot
       - name: macOS/arm64 binary
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          curl -Lo copilot-darwin-arm64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-darwin-arm64
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          curl -Lo copilot-darwin-arm64 https://github.com/aws/copilot-cli/releases/download/${version}/copilot-darwin-arm64
           cp copilot-darwin-arm64 copilot
           chmod +x copilot
-          tar czf copilot_${GITHUB_REF##*/}_macOS_arm64.tar.gz copilot
+          tar czf copilot_${semvar}_macOS_arm64.tar.gz copilot
       - name: linux/amd64 binary
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          curl -Lo copilot-linux https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-linux
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          curl -Lo copilot-linux https://github.com/aws/copilot-cli/releases/download/${version}/copilot-linux
           cp copilot-linux copilot
           chmod +x copilot
-          tar czf copilot_${GITHUB_REF##*/}_linux_amd64.tar.gz copilot
+          tar czf copilot_${semvar}_linux_amd64.tar.gz copilot
       - name: linux/arm64 binary
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          curl -Lo copilot-linux-arm64 https://github.com/aws/copilot-cli/releases/download/${GITHUB_REF##*/}/copilot-linux-arm64
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          curl -Lo copilot-linux-arm64 https://github.com/aws/copilot-cli/releases/download/${version}/copilot-linux-arm64
           cp copilot-linux-arm64 copilot
           chmod +x copilot
-          tar czf copilot_${GITHUB_REF##*/}_linux_arm64.tar.gz copilot
+          tar czf copilot_${semvar}_linux_arm64.tar.gz copilot
       - name: Save archive files
         uses: actions/upload-artifact@v2
         with:
@@ -74,8 +82,10 @@ jobs:
           path: 'homebrew-tap'
       - name: Update version
         run: |
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
           tmp=$(mktemp)
-          jq --arg version "${GITHUB_REF##*/}" '.version = $version' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
+          jq --arg version "${semvar}" '.version = $version' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
       - name: Update root_url
         run: |
           tmp=$(mktemp)
@@ -84,22 +94,30 @@ jobs:
           jq --arg version "${version}" --arg semvar "${semvar}" '.bottle.root_url = "https://github.com/aws/copilot-cli/releases/download/" + $version + "/copilot_" + $semvar + "_"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
       - name: Update sierra
         run: |
-          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_macOS_amd64.tar.gz | awk '{print $NF}')
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${semvar}_macOS_amd64.tar.gz | awk '{print $NF}')
           tmp=$(mktemp)
           jq --arg sha "$sha" '.bottle.sha256.sierra = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
       - name: Update arm64_big_sur
         run: |
-          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_macOS_arm64.tar.gz | awk '{print $NF}')
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${semvar}_macOS_arm64.tar.gz | awk '{print $NF}')
           tmp=$(mktemp)
           jq --arg sha "$sha" '.bottle.sha256.arm64_big_sur = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
       - name: Update linux
         run: |
-          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_linux_amd64.tar.gz | awk '{print $NF}')
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${semvar}_linux_amd64.tar.gz | awk '{print $NF}')
           tmp=$(mktemp)
           jq --arg sha "$sha" '.bottle.sha256.linux = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
       - name: Update linux_arm
         run: |
-          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${GITHUB_REF##*/}_linux_arm64.tar.gz | awk '{print $NF}')
+          version="${GITHUB_REF##*/}"
+          semvar="${version:1}"
+          sha=$(openssl dgst -sha256 ${{steps.download.outputs.download-path}}/copilot_${semvar}_linux_arm64.tar.gz | awk '{print $NF}')
           tmp=$(mktemp)
           jq --arg sha "$sha" '.bottle.sha256.linux_arm = "'$sha'"' homebrew-tap/bottle-configs/copilot-cli.json > "$tmp" && mv "$tmp" homebrew-tap/bottle-configs/copilot-cli.json
       - name: Create commits

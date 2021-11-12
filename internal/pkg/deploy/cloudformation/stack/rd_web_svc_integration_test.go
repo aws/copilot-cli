@@ -8,6 +8,7 @@ package stack_test
 import (
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,7 +37,7 @@ func TestRDWS_Template(t *testing.T) {
 	envMft, err := mft.ApplyEnv(envName)
 	require.NoError(t, err, "apply test env to manifest")
 
-	err = mft.Validate()
+	err = envMft.Validate()
 	require.NoError(t, err)
 
 	v, ok := envMft.(*manifest.RequestDrivenWebService)
@@ -55,6 +57,12 @@ func TestRDWS_Template(t *testing.T) {
 	require.NoError(t, err, "create rdws serializer")
 	actualTemplate, err := serializer.Template()
 	require.NoError(t, err, "get cloudformation template for rdws")
+	parser := template.New()
+	envController, err := parser.Read(envControllerPath)
+	require.NoError(t, err)
+	envControllerZipFile := envController.String()
+	// Cut out zip file for more readable output
+	actualTemplate = strings.ReplaceAll(actualTemplate, envControllerZipFile, "mockEnvControllerZipFile")
 
 	// Compare the two.
 	wanted := make(map[interface{}]interface{})

@@ -76,29 +76,24 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: s.manifest.Sidecars,
-		imageConfig:   &s.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(s.manifest.Name),
+	addonsOutputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
 	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
-	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
 	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 
-	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
+	advancedCount, err := convertAdvancedCount(s.manifest.Count.AdvancedCount)
 	if err != nil {
 		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
 	}
@@ -112,10 +107,6 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
-	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
-	}
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -127,7 +118,8 @@ func (s *BackendService) Template() (string, error) {
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  s.manifest.BackendServiceConfig.Secrets,
-		NestedStack:              outputs,
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		Autoscaling:              autoscaling,
 		CapacityProviders:        capacityProviders,
@@ -139,14 +131,15 @@ func (s *BackendService) Template() (string, error) {
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
 		DesiredCountLambda:       desiredCountLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
-		Storage:                  storage,
+		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                dependencies,
+		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

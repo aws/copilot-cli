@@ -318,7 +318,6 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 }
 
 func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
-	mockPlatformStr := PlatformString("linux/amd64")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -331,52 +330,6 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
   architecture: amd64`),
 
 			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
-		},
-		"returns error if platform string invalid": {
-			inContent: []byte(`platform: linus/mad64`),
-
-			wantedError: errors.New("validate platform: platform linus/mad64 is invalid; the valid platform is: linux/amd64"),
-		},
-		"returns error if only args.os specified": {
-			inContent: []byte(`platform:
-  osfamily: linux`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
-		},
-		"returns error if only args.arch specified": {
-			inContent: []byte(`platform:
-  architecture: amd64`),
-			wantedError: errors.New("fields 'osfamily' and 'architecture' must either both be specified or both be empty."),
-		},
-		"returns error if args.os invalid": {
-			inContent: []byte(`platform:
-  osfamily: OSFamilia
-  architecture: amd64`),
-			wantedError: errors.New("validate OS: OS OSFamilia is invalid; the valid operating system is: linux"),
-		},
-		"returns error if args.arch invalid": {
-			inContent: []byte(`platform:
-  osfamily: linux
-  architecture: abc123`),
-			wantedError: errors.New("validate arch: architecture abc123 is invalid; the valid architecture is: amd64"),
-		},
-		"platform string": {
-			inContent: []byte(`platform: linux/amd64`),
-
-			wantedStruct: PlatformArgsOrString{
-				PlatformString: &mockPlatformStr,
-			},
-		},
-		"both os/arch specified with valid values": {
-			inContent: []byte(`platform:
-  osfamily: linux
-  architecture: amd64`),
-			wantedStruct: PlatformArgsOrString{
-				PlatformString: nil,
-				PlatformArgs: PlatformArgs{
-					OSFamily: aws.String("linux"),
-					Arch:     aws.String("amd64"),
-				},
-			},
 		},
 		"error if unmarshalable": {
 			inContent: []byte(`platform:
@@ -396,6 +349,132 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.PlatformString, p.Platform.PlatformString)
 				require.Equal(t, tc.wantedStruct.PlatformArgs.OSFamily, p.Platform.PlatformArgs.OSFamily)
 				require.Equal(t, tc.wantedStruct.PlatformArgs.Arch, p.Platform.PlatformArgs.Arch)
+			}
+		})
+	}
+}
+
+func TestPlatformArgsOrString_OS(t *testing.T) {
+	linux := PlatformString("linux/amd64")
+	testCases := map[string]struct {
+		in     *PlatformArgsOrString
+		wanted string
+	}{
+		"should return os when platform is of string format 'os/arch'": {
+			in: &PlatformArgsOrString{
+				PlatformString: &linux,
+			},
+			wanted: "linux",
+		},
+		"should return OS when platform is a map": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2019_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2019_core",
+		},
+		"should return lowercase OS": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("wINdows_sERver_2019_cORe"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2019_core",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.OS())
+		})
+	}
+}
+
+func TestPlatformArgsOrString_Arch(t *testing.T) {
+	testCases := map[string]struct {
+		in     *PlatformArgsOrString
+		wanted string
+	}{
+		"should return arch when platform is of string format 'os/arch'": {
+			in: &PlatformArgsOrString{
+				PlatformString: (*PlatformString)(aws.String("windows/arm")),
+			},
+			wanted: "arm",
+		},
+		"should return arch when platform is a map": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2019_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "x86_64",
+		},
+		"should return lowercase arch": {
+			in: &PlatformArgsOrString{
+				PlatformString: (*PlatformString)(aws.String("windows/aMd64")),
+			},
+			wanted: "amd64",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.Arch())
+		})
+	}
+}
+
+func TestRedirectPlatform(t *testing.T) {
+	testCases := map[string]struct {
+		inOS           string
+		inArch         string
+		inWorkloadType string
+
+		wantedPlatform string
+		wantedError    error
+	}{
+		"returns nil if default platform": {
+			inOS:           "linux",
+			inArch:         "amd64",
+			inWorkloadType: LoadBalancedWebServiceType,
+
+			wantedPlatform: "",
+			wantedError:    nil,
+		},
+		"returns error if App Runner + Windows": {
+			inOS:           "windows",
+			inArch:         "amd64",
+			inWorkloadType: RequestDrivenWebServiceType,
+
+			wantedPlatform: "",
+			wantedError:    errors.New("Windows is not supported for App Runner services"),
+		},
+		"targets amd64 if ARM architecture passed in": {
+			inOS:   "linux",
+			inArch: "arm64",
+
+			wantedPlatform: "linux/amd64",
+			wantedError:    nil,
+		},
+		"returns non-default os as is": {
+			inOS:   "windows",
+			inArch: "amd64",
+
+			wantedPlatform: "windows/amd64",
+			wantedError:    nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			platform, err := RedirectPlatform(tc.inOS, tc.inArch, tc.inWorkloadType)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPlatform, platform)
 			}
 		})
 	}
@@ -703,14 +782,6 @@ network:
 					Placement: &PublicSubnetPlacement,
 				},
 			},
-		},
-		"returns error if placement option is invalid": {
-			data: `
-network:
-  vpc:
-    placement: 'tartarus'
-`,
-			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus' must be one of []string{"public", "private"}`),
 		},
 		"unmarshals successfully for public placement with security groups": {
 			data: `

@@ -1,30 +1,30 @@
 {{- if .Publish}}
 {{- range $topic := .Publish.Topics}}
 {{logicalIDSafe $topic.Name}}SNSTopic:
-    Metadata:
-      'aws:copilot:description': 'A SNS topic to broadcast {{$topic.Name}} events'
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub '${AWS::StackName}-{{logicalIDSafe $topic.Name}}'
-      KmsMasterKeyId: 'alias/aws/sns'
+  Metadata:
+    'aws:copilot:description': 'A SNS topic to broadcast {{$topic.Name}} events'
+  Type: AWS::SNS::Topic
+  Properties:
+    TopicName: !Sub '${AWS::StackName}-{{$topic.Name}}'
+    KmsMasterKeyId: 'alias/aws/sns'
 
 {{logicalIDSafe $topic.Name}}SNSTopicPolicy:
-    Type: AWS::SNS::TopicPolicy
-    DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
-    Properties:
-      Topics:
-        - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
-            Action:
-              - sns:Subscribe
-            Resource: !Ref {{logicalIDSafe $topic.Name}}SNSTopic
-            Condition:
-              StringEquals:
-                "sns:Protocol": "sqs"
+  Type: AWS::SNS::TopicPolicy
+  DependsOn: {{logicalIDSafe $topic.Name}}SNSTopic
+  Properties:
+    Topics:
+      - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+          Action:
+            - sns:Subscribe
+          Resource: !Ref {{logicalIDSafe $topic.Name}}SNSTopic
+          Condition:
+            StringEquals:
+              "sns:Protocol": "sqs"
 {{- end}}
 {{- end}}

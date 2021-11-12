@@ -55,7 +55,7 @@ func (mr *MockrequestDrivenWebSvcReadParserMockRecorder) Parse(path, data interf
 }
 
 // ParseRequestDrivenWebService mocks base method.
-func (m *MockrequestDrivenWebSvcReadParser) ParseRequestDrivenWebService(arg0 template.ParseRequestDrivenWebServiceInput) (*template.Content, error) {
+func (m *MockrequestDrivenWebSvcReadParser) ParseRequestDrivenWebService(arg0 template.WorkloadOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseRequestDrivenWebService", arg0)
 	ret0, _ := ret[0].(*template.Content)

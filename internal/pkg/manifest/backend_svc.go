@@ -25,10 +25,10 @@ type BackendService struct {
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
 type BackendServiceConfig struct {
-	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
+	ImageConfig      ImageWithHealthcheckAndOptionalPort `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	Logging          `yaml:"logging,flow"`
+	Logging          Logging                   `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
 	Network          NetworkConfig             `yaml:"network"`
 	PublishConfig    PublishConfig             `yaml:"publish"`
@@ -54,6 +54,10 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.BackendServiceConfig.Platform = props.Platform
+	if isWindowsPlatform(props.Platform) {
+		svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
+		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
 	svc.parser = template.New()
 	return svc
 }
@@ -128,7 +132,7 @@ func newDefaultBackendService() *BackendService {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{},
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
