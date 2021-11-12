@@ -36,7 +36,7 @@ memory: {{.InstanceConfig.Memory}}
 # # Connect your App Runner service to your environment's VPC.
 # network:
 #   vpc:
-#     placement: 'private'
+#     placement: private
 
 # Optional fields for more advanced use-cases.
 #
