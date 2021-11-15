@@ -9,7 +9,7 @@ type: Load Balanced Web Service
 # Distribute traffic to your service.
 http:
   alias: test.copilot-e2e-tests.ecs.aws.dev
-  protocolVersion: GRPC
+  version: GRPC
   # Requests to this path will be forwarded to your service.
   # To match all requests you can use the "/" path.
   path: '/'
