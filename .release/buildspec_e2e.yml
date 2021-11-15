@@ -99,7 +99,7 @@ batch:
         image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: grpc-svc-app
-          APP_REGION: us-west-2
+          APP_REGION: us-east-2
     - identifier: exec
       env:
         privileged-mode: true
