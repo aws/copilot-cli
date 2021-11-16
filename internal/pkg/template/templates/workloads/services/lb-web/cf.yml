@@ -170,6 +170,9 @@ Resources:
 {{- end}}
       Port: !Ref ContainerPort
       Protocol: HTTP
+{{- if .HTTPVersion}}
+      ProtocolVersion: {{.HTTPVersion}}
+{{- end}}
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.

@@ -138,10 +138,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 						TargetContainer: aws.String("mockName"),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("443"),
+						Port:            aws.String("443"),
 						TargetContainer: aws.String("foo"),
 					},
-
 				},
 			},
 			wantedErrorMsgPrefix: `validate network load balancer target: `,
@@ -871,6 +870,17 @@ func TestRoutingRule_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "allowed_source_ips[1]": `,
 		},
+		"error if protocol version is not valid": {
+			RoutingRule: RoutingRule{
+				ProtocolVersion: aws.String("quic"),
+			},
+			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
+		},
+		"should not error if protocol version is not uppercase": {
+			RoutingRule: RoutingRule{
+				ProtocolVersion: aws.String("gRPC"),
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -905,7 +915,7 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				TargetContainer: aws.String("main"),
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError: fmt.Errorf(`"port" must be specified`),
+			wantedError:          fmt.Errorf(`"port" must be specified`),
 		},
 	}
 
