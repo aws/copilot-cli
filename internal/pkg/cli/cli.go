@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -122,11 +123,19 @@ func logRecommendedActions(actions []string) {
 		return
 	}
 	log.Infoln(fmt.Sprintf("Recommended follow-up %s:", english.PluralWord(len(actions), "action", "actions")))
-	prefix := "  -"
-	if len(actions) == 1 {
-		prefix = "   "
-	}
 	for _, followup := range actions {
-		log.Infof("%s %s\n", prefix, followup)
+		log.Infof("%s\n", indentListItem(followup))
 	}
+}
+
+func indentListItem(multiline string) string {
+	var prefixedLines []string
+	for i, line := range strings.Split(multiline, "\n") {
+		prefix := "    "
+		if i == 0 {
+			prefix = "  - "
+		}
+		prefixedLines = append(prefixedLines, fmt.Sprintf("%s%s", prefix, line))
+	}
+	return strings.Join(prefixedLines, "\n")
 }

@@ -788,9 +788,8 @@ func (o *initStorageOpts) RecommendActions() error {
 const client = new AWS.SecretsManager({
     region: process.env.AWS_DEFAULT_REGION,
 });
-const dbSecret = await client.getSecretValue({SecretId: %s}).promise();
-const {username, host, dbname, password, port} = JSON.parse(dbSecret);
-`, newVar)
+const dbSecret = await client.getSecretValue({SecretId: process.env.%s}).promise();
+const {username, host, dbname, password, port} = JSON.parse(dbSecret.SecretString);`, newVar)
 		}
 	}
 
