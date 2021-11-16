@@ -40,6 +40,8 @@ var (
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 
+	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
+
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
@@ -512,8 +514,7 @@ func (r RoutingRule) Validate() error {
 		}
 	}
 	if r.ProtocolVersion != nil {
-		httpProtocolVersions := []string{"GRPC", "HTTP1", "HTTP2"}
-		if !contains(*r.ProtocolVersion, httpProtocolVersions) {
+		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
 			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
 		}
 	}

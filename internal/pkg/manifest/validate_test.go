@@ -872,9 +872,14 @@ func TestRoutingRule_Validate(t *testing.T) {
 		},
 		"error if protocol version is not valid": {
 			RoutingRule: RoutingRule{
+				ProtocolVersion: aws.String("quic"),
+			},
+			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
+		},
+		"should not error if protocol version is not uppercase": {
+			RoutingRule: RoutingRule{
 				ProtocolVersion: aws.String("gRPC"),
 			},
-			wantedErrorMsgPrefix: `"version" field value 'gRPC' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 	}
 	for name, tc := range testCases {

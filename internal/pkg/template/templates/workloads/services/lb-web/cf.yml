@@ -170,8 +170,8 @@ Resources:
 {{- end}}
       Port: !Ref ContainerPort
       Protocol: HTTP
-{{- if .ProtocolVersion}}
-      ProtocolVersion: {{.ProtocolVersion}}
+{{- if .HTTPVersion}}
+      ProtocolVersion: {{.HTTPVersion}}
 {{- end}}
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds

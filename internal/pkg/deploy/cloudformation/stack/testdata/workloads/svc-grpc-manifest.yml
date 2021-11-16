@@ -13,7 +13,7 @@ image:
 http:
   # Requests to this path will be forwarded to your service.
   # To match all requests you can use the "/" path.
-  version: 'GRPC'
+  version: gRPC
   path: '/'
   alias: example.com
   # You can specify a custom health check path. The default is "/".

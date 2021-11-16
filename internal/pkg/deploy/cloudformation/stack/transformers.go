@@ -677,3 +677,11 @@ func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePla
 		Arch: template.ArchX86,
 	}
 }
+
+func convertHTTPVersion(protocolVersion *string) *string {
+	if protocolVersion == nil {
+		return nil
+	}
+	pv := strings.ToUpper(*protocolVersion)
+	return &pv
+}

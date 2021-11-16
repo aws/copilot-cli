@@ -112,7 +112,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid grpc template by default": {
 			opts: template.WorkloadOpts{
-				ProtocolVersion:          aws.String("GRPC"),
+				HTTPVersion:              aws.String("GRPC"),
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Network: template.NetworkOpts{

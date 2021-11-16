@@ -217,7 +217,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
-		ProtocolVersion:          s.manifest.ProtocolVersion,
+		HTTPVersion:              convertHTTPVersion(s.manifest.ProtocolVersion),
 	})
 	if err != nil {
 		return "", err
