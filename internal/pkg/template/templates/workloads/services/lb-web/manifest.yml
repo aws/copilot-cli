@@ -8,6 +8,9 @@ type: {{.Type}}
 
 # Distribute traffic to your service.
 http:
+  {{- if .ProtocolVersion }}
+  version: {{.ProtocolVersion}}
+  {{- end }}
   # Requests to this path will be forwarded to your service.
   # To match all requests you can use the "/" path.
   path: '{{.Path}}'
