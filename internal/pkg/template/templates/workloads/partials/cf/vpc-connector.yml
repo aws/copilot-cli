@@ -3,13 +3,13 @@ ServiceSecurityGroup:
   Metadata:
     'aws:copilot:description': 'A security group for your addons/ resources to allow ingress from your service'
   Properties:
-    GroupDescription: !Join [ '', [ !Ref AppName, '-', !Ref EnvironmentName, !Ref WorkloadName ] ]
+    GroupDescription: !Join [ '', [ !Ref AppName, '-', !Ref EnvName, !Ref WorkloadName ] ]
     VpcId:
       Fn::ImportValue:
         !Sub '${AppName}-${EnvName}-VpcId'
     Tags:
       - Key: Name
-        Value: !Sub 'copilot-${AppName}-${EnvironmentName}-${WorkloadName}'
+        Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
 
 VpcConnector:
   Type: AWS::AppRunner::VpcConnector

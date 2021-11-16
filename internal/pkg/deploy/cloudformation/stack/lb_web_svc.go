@@ -45,10 +45,12 @@ type LoadBalancedWebService struct {
 	httpsEnabled bool
 
 	// Fields for LoadBalancedWebService that needs a Network Load Balancer.
-	dnsDelegationEnabled bool // This field is true if the application is associated with a domain. When an ALB is enabled,
+
+	// dnsDelegationEnabled is true if the application is associated with a domain. When an ALB is enabled,
 	// `httpsEnabled` has the same value with `dnsDelegationEnabled`, because we enabled https
 	// automatically the app is associated with a domain. When an ALB is disabled, `httpsEnabled`
 	// should always be false; hence they could have different values at this time.
+	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 
 	parser loadBalancedWebSvcReadParser
@@ -185,10 +187,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 
-	nlb, err := s.convertNetworkLoadBalancer()
-	if err != nil {
-		return "", err
-	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                s.manifest.TaskConfig.Variables,
 		Secrets:                  s.manifest.TaskConfig.Secrets,
@@ -219,7 +217,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
-		NLB:                      nlb,
 		ProtocolVersion:          s.manifest.ProtocolVersion,
 	})
 	if err != nil {
