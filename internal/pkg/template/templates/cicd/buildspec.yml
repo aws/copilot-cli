@@ -98,6 +98,7 @@ phases:
             build_context=$(echo $image | jq -r '.build?.context? // ""')
             build_target=$(echo $image | jq -r '.build?.target? // ""')
             dockerfile_args=$(echo $image | jq '.build?.args? // "" | to_entries?')
+            platform=$(echo $manifest | jq '.platform? // "" | to_entries?')
             build_cache_from=$(echo $image | jq -r '.build?.cache_from? // ""')
             df_rel_path=$( echo $base_dockerfile | sed 's/"//g')
             if [ -n "$build_dockerfile" ]; then 
