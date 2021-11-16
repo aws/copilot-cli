@@ -114,6 +114,9 @@ phases:
                 build_args="$build_args--build-arg $arg "
               done
             fi
+            if [ -n "$platform" ]; then
+              build_args="$build_args--platform $platform "
+            fi
             if [ -n "$build_target" ]; then
               build_args="$build_args--target $build_target "
             fi
