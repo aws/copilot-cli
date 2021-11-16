@@ -1434,3 +1434,21 @@ func Test_convertPlatform(t *testing.T) {
 		})
 	}
 }
+
+func Test_convertHTTPVersion(t *testing.T) {
+	testCases := map[string]struct {
+		in     *string
+		wanted *string
+	}{
+		"should return nil if there is no user input": {},
+		"should return as uppercase on any user input": {
+			in:     aws.String("gRPC"),
+			wanted: aws.String("GRPC"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, convertHTTPVersion(tc.in))
+		})
+	}
+}

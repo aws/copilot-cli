@@ -40,6 +40,8 @@ var (
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 
+	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
+
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
@@ -511,7 +513,11 @@ func (r RoutingRule) Validate() error {
 			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
 		}
 	}
-
+	if r.ProtocolVersion != nil {
+		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
+			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
+		}
+	}
 	return nil
 }
 
@@ -549,7 +555,7 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	if c.IsEmpty() {
 		return nil
 	}
-	if aws.StringValue(c.Port) == ""{
+	if aws.StringValue(c.Port) == "" {
 		return &errFieldMustBeSpecified{
 			missingField: "port",
 		}
@@ -1144,7 +1150,6 @@ type validateWindowsOpts struct {
 	efsVolumes  map[string]*Volume
 }
 
-
 type validateTargetContainerOpts struct {
 	mainContainerName string
 	targetContainer   *string
@@ -1305,4 +1310,13 @@ func validateWindows(opts validateWindowsOpts) error {
 		}
 	}
 	return nil
+}
+
+func contains(name string, names []string) bool {
+	for _, n := range names {
+		if name == n {
+			return true
+		}
+	}
+	return false
 }
