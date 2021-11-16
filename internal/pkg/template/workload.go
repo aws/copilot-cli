@@ -385,6 +385,7 @@ type WorkloadOpts struct {
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
+	HTTPVersion              *string
 
 	// Additional options for service templates.
 	WorkloadType        string

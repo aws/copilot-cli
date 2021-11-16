@@ -183,6 +183,7 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
+	ProtocolVersion     *string                 `yaml:"version"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness          *bool                   `yaml:"stickiness"`
 	Alias               Alias                   `yaml:"alias"`
