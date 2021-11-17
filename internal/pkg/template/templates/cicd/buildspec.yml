@@ -87,7 +87,7 @@ phases:
           manifest=$(cat $CODEBUILD_SRC_DIR/copilot/$workload/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
           for env in $pl_envs; do
             tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}-${env}" | rev | cut -c 1-128 | rev)
-            images=$(echo $manifest | jq --arg env "$env" '{base_image: .image, env_image: (.environments?|.[$env]? |.image? // {}) }')
+            images=$(echo $manifest | jq --arg env "$env" '{base_image: .image, env_image: (.environments? | .[$env]? | .image? // {}) }')
             image=$(echo $images | jq 'if (.env_image | length == 0) then .base_image else (.base_image | del(.location)) * .env_image end')
             image_location=$(echo $image | jq '.location')
             if [ ! "$image_location" = null ]; then
