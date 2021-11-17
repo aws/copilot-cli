@@ -142,7 +142,7 @@ var (
 Mutually exclusive with -%s, --%s.`, dockerFileFlagShort, dockerFileFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
 Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
-	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker context.
+	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))

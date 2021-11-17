@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/pflag"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -84,10 +86,10 @@ type runTaskVars struct {
 
 	groupName string
 
-	image          string
-	dockerfilePath string
+	image                 string
+	dockerfilePath        string
 	dockerfileContextPath string
-	imageTag       string
+	imageTag              string
 
 	taskRole      string
 	executionRole string
@@ -115,7 +117,6 @@ type runTaskVars struct {
 type runTaskOpts struct {
 	runTaskVars
 	isDockerfileSet bool
-	isDockerfileContextSet bool
 	nFlag           int
 
 	// Interfaces to interact with dependencies.
@@ -238,7 +239,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			App: o.appName,
 			Env: o.env,
 
-			OS:   o.os,
+			OS: o.os,
 
 			VPCGetter:            vpcGetter,
 			ClusterGetter:        ecs.New(o.sess),
@@ -312,7 +313,7 @@ func (o *runTaskOpts) Validate() error {
 		return errors.New("cannot specify both `--image` and `--dockerfile`")
 	}
 
-	if o.image != "" && o.isDockerfileContextSet {
+	if o.image != "" && o.dockerfileContextPath != "" {
 		return errors.New("cannot specify both `--image` and `--build-context`")
 	}
 
@@ -322,7 +323,7 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if o.isDockerfileContextSet {
+	if o.dockerfileContextPath != "" {
 		if _, err := o.fs.Stat(o.dockerfileContextPath); err != nil {
 			return err
 		}
@@ -763,16 +764,13 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	var dockerContext string
-	if o.dockerfileContextPath == "" {
-		dockerContext = filepath.Dir(o.dockerfilePath)
-	} else {
-		dockerContext = o.dockerfileContextPath
+	ctx := filepath.Dir(o.dockerfilePath)
+	if o.dockerfileContextPath != "" {
+		ctx = o.dockerfileContextPath
 	}
-
 	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
-		Context:    dockerContext,
+		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
 	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
@@ -906,19 +904,19 @@ func BuildTaskRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-Run a task using your local Dockerfile and display log streams after the task is running. 
-You will be prompted to specify an environment for the tasks to run in.
-/code $ copilot task run
-Run a task named "db-migrate" in the "test" environment under the current workspace.
-/code $ copilot task run -n db-migrate --env test
-Run 4 tasks with 2GB memory, an existing image, and a custom task role.
-/code $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role
-Run a task with environment variables.
-/code $ copilot task run --env-vars name=myName,user=myUser
-Run a task using the current workspace with specific subnets and security groups.
-/code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
-Run a task with a command.
-/code $ copilot task run --command "python migrate-script.py"`,
+  Run a task using your local Dockerfile and display log streams after the task is running. 
+  You will be prompted to specify an environment for the tasks to run in.
+  /code $ copilot task run
+  Run a task named "db-migrate" in the "test" environment under the current workspace.
+  /code $ copilot task run -n db-migrate --env test
+  Run 4 tasks with 2GB memory, an existing image, and a custom task role.
+  /code $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role
+  Run a task with environment variables.
+  /code $ copilot task run --env-vars name=myName,user=myUser
+  Run a task using the current workspace with specific subnets and security groups.
+  /code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
+  Run a task with a command.
+  /code $ copilot task run --command "python migrate-script.py"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
 			if err != nil {
@@ -928,26 +926,17 @@ Run a task with a command.
 			if cmd.Flags().Changed(dockerFileFlag) {
 				opts.isDockerfileSet = true
 			}
-			if cmd.Flags().Changed(dockerFileContextFlag) {
-				opts.isDockerfileContextSet = true
-			}
 			return run(opts)
 		}),
 	}
 
-	cmd.Flags().IntVar(&vars.count, countFlag, 1, countFlagDescription)
-	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
-	cmd.Flags().IntVar(&vars.memory, memoryFlag, 512, memoryFlagDescription)
-
+	// add flags to comments.
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
-	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, defaultDockerfilePath, dockerFileFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfileContextPath, dockerFileContextFlag, "", dockerFileContextFlagDescription)
+	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
-
-	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
-	cmd.Flags().StringVar(&vars.executionRole, executionRoleFlag, "", executionRoleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", taskAppFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
@@ -955,9 +944,14 @@ Run a task with a command.
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
+
+	cmd.Flags().IntVar(&vars.count, countFlag, 1, countFlagDescription)
+	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
+	cmd.Flags().IntVar(&vars.memory, memoryFlag, 512, memoryFlagDescription)
+	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
+	cmd.Flags().StringVar(&vars.executionRole, executionRoleFlag, "", executionRoleFlagDescription)
 	cmd.Flags().StringVar(&vars.os, osFlag, "", osFlagDescription)
 	cmd.Flags().StringVar(&vars.arch, archFlag, "", archFlagDescription)
-
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.secrets, secretsFlag, nil, secretsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
@@ -967,5 +961,74 @@ Run a task with a command.
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().StringVar(&vars.generateCommandTarget, generateCommandFlag, "", generateCommandFlagDescription)
 
+	// group flags.
+	nameFlags := pflag.NewFlagSet("Name", pflag.ContinueOnError)
+	nameFlags.AddFlag(cmd.Flags().Lookup(taskGroupNameFlag))
+
+	buildFlags := pflag.NewFlagSet("Build", pflag.ContinueOnError)
+	buildFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+	buildFlags.AddFlag(cmd.Flags().Lookup(dockerFileContextFlag))
+	buildFlags.AddFlag(cmd.Flags().Lookup(imageFlag))
+	buildFlags.AddFlag(cmd.Flags().Lookup(imageTagFlag))
+
+	placementFlags := pflag.NewFlagSet("Placement", pflag.ContinueOnError)
+	placementFlags.AddFlag(cmd.Flags().Lookup(appFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(envFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(clusterFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(subnetsFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(securityGroupsFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(taskDefaultFlag))
+
+	taskFlags := pflag.NewFlagSet("Task", pflag.ContinueOnError)
+	taskFlags.AddFlag(cmd.Flags().Lookup(countFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(cpuFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(memoryFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(taskRoleFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(executionRoleFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(osFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(archFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(envVarsFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(secretsFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(commandFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(entrypointFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(resourceTagsFlag))
+
+	utilityFlags := pflag.NewFlagSet("Utility", pflag.ContinueOnError)
+	utilityFlags.AddFlag(cmd.Flags().Lookup(followFlag))
+	utilityFlags.AddFlag(cmd.Flags().Lookup(generateCommandFlag))
+
+	// prettify help menu.
+	cmd.Annotations = map[string]string{
+		"name":      nameFlags.FlagUsages(),
+		"build":     buildFlags.FlagUsages(),
+		"placement": placementFlags.FlagUsages(),
+		"task":      taskFlags.FlagUsages(),
+		"utility":   utilityFlags.FlagUsages(),
+	}
+	cmd.SetUsageTemplate(`{{h1 "Usage"}}
+{{- if .Runnable}}
+{{.UseLine}}
+{{- end }}
+
+{{h1 "Name Flags"}}
+{{(index .Annotations "name") | trimTrailingWhitespaces}}
+
+{{h1 "Build Flags"}}
+{{(index .Annotations "build") | trimTrailingWhitespaces}}
+
+{{h1 "Placement Flags"}}
+{{(index .Annotations "placement") | trimTrailingWhitespaces}}
+
+{{h1 "Task Configuration Flags"}}
+{{(index .Annotations "task") | trimTrailingWhitespaces}}
+
+{{h1 "Utility Flags"}}
+{{(index .Annotations "utility") | trimTrailingWhitespaces}}
+
+{{if .HasExample }}
+{{- h1 "Examples"}}
+{{- code .Example}}
+{{- end}}
+`)
 	return cmd
 }

@@ -50,8 +50,9 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 		inName string
 
-		inImage          string
-		inDockerfilePath string
+		inImage                 string
+		inDockerfilePath        string
+		inDockerfileContextPath string
 
 		inTaskRole string
 
@@ -72,7 +73,6 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 		appName         string
 		isDockerfileSet bool
-		isDockerfileContextSet bool
 
 		mockStore      func(m *mocks.Mockstore)
 		mockFileSystem func(mockFS afero.Fs)
@@ -157,12 +157,12 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			wantedError: errors.New("platform OSTRICH/MAD666 is invalid; valid platforms are: WINDOWS_SERVER_2019_CORE/X86_64, WINDOWS_SERVER_2019_FULL/X86_64 and LINUX/X86_64"),
 		},
 		"uppercase any lowercase before validating": {
-			basicOpts:   basicOpts{
-				inCount: 1,
-				inCPU: 1024,
+			basicOpts: basicOpts{
+				inCount:  1,
+				inCPU:    1024,
 				inMemory: 2048,
 			},
-			inOS: "windows_server_2019_core",
+			inOS:        "windows_server_2019_core",
 			inArch:      "x86_64",
 			wantedError: nil,
 		},
@@ -210,11 +210,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inArch:      "X86_64",
 			wantedError: errors.New("memory is 2000, but it must be at least 2048 for a Windows-based task"),
 		},
-		"both dockerfileContext and image name specified": {
+		"both build context and image name specified": {
 			basicOpts: defaultOpts,
 
-			inImage:         "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
-			isDockerfileContextSet: true,
+			inImage:                 "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
+			inDockerfileContextPath: "../../other",
 
 			wantedError: errors.New("cannot specify both `--image` and `--build-context`"),
 		},
@@ -395,6 +395,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					subnets:                     tc.inSubnets,
 					securityGroups:              tc.inSecurityGroups,
 					dockerfilePath:              tc.inDockerfilePath,
+					dockerfileContextPath:       tc.inDockerfileContextPath,
 					envVars:                     tc.inEnvVars,
 					secrets:                     tc.inSecrets,
 					command:                     tc.inCommand,
@@ -405,7 +406,6 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					arch:                        tc.inArch,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
-				isDockerfileContextSet: tc.isDockerfileContextSet,
 				nFlag:           2,
 
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
@@ -711,6 +711,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		inSecrets    map[string]string
 		inImage      string
 		inTag        string
+		inDockerCtx  string
 		inFollow     bool
 		inCommand    string
 		inEntryPoint string
@@ -834,6 +835,23 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				mockHasDefaultCluster(m)
 			},
 		},
+		"should use provided docker build context instead of dockerfile path": {
+			inDockerCtx: "../../other",
+			setupMocks: func(m runTaskMocks) {
+				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
+					&dockerengine.BuildArguments{
+						Context: "../../other",
+						Tags:    []string{imageTagLatest},
+					}),
+				)
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+				mockHasDefaultCluster(m)
+			},
+		},
 		"update image to task resource if image is not provided": {
 			inSecrets: map[string]string{
 				"quiet": "shh",
@@ -946,8 +964,10 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				runTaskVars: runTaskVars{
 					groupName: inGroupName,
 
-					image:      tc.inImage,
-					imageTag:   tc.inTag,
+					image:                 tc.inImage,
+					imageTag:              tc.inTag,
+					dockerfileContextPath: tc.inDockerCtx,
+
 					env:        tc.inEnv,
 					follow:     tc.inFollow,
 					secrets:    tc.inSecrets,
