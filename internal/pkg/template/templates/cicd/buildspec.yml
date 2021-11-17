@@ -98,7 +98,6 @@ phases:
             build_context=$(echo $image | jq -r '.build?.context? // ""')
             build_target=$(echo $image | jq -r '.build?.target? // ""')
             dockerfile_args=$(echo $image | jq '.build?.args? // "" | to_entries?')
-            platform=$(echo $manifest | jq '.platform? // "" | to_entries?')
             build_cache_from=$(echo $image | jq -r '.build?.cache_from? // ""')
             df_rel_path=$( echo $base_dockerfile | sed 's/"//g')
             if [ -n "$build_dockerfile" ]; then 
@@ -109,14 +108,12 @@ phases:
             if [ -n "$build_context" ]; then
               df_dir_path=$build_context
             fi
+            platform=$(echo $manifest | jq -r '.platform')
             build_args=
             if [ -n "$dockerfile_args" ]; then
               for arg in $(echo $dockerfile_args | jq -r '.[] | "\(.key)=\(.value)"'); do 
                 build_args="$build_args--build-arg $arg "
               done
-            fi
-            if [ -n "$platform" ]; then
-              build_args="$build_args--platform $platform "
             fi
             if [ -n "$build_target" ]; then
               build_args="$build_args--target $build_target "
@@ -125,6 +122,9 @@ phases:
               for arg in $(echo $build_cache_from | jq -r '.[]'); do
                 build_args="$build_args--cache-from $arg "
               done
+            fi
+            if [ ! "$platform" = null ]; then
+              build_args="$build_args--platform $platform "
             fi
             echo "Name: $workload"
             echo "Relative Dockerfile path: $df_rel_path"
