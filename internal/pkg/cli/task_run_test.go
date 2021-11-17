@@ -72,6 +72,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 		appName         string
 		isDockerfileSet bool
+		isDockerfileContextSet bool
 
 		mockStore      func(m *mocks.Mockstore)
 		mockFileSystem func(mockFS afero.Fs)
@@ -208,6 +209,14 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inOS:        "WINDOWS_SERVER_2019_CORE",
 			inArch:      "X86_64",
 			wantedError: errors.New("memory is 2000, but it must be at least 2048 for a Windows-based task"),
+		},
+		"both dockerfileContext and image name specified": {
+			basicOpts: defaultOpts,
+
+			inImage:         "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
+			isDockerfileContextSet: true,
+
+			wantedError: errors.New("cannot specify both `--image` and `--context`"),
 		},
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,
@@ -396,6 +405,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					arch:                        tc.inArch,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
+				isDockerfileContextSet: tc.isDockerfileContextSet,
 				nFlag:           2,
 
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},

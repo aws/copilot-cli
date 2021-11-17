@@ -86,6 +86,7 @@ type runTaskVars struct {
 
 	image          string
 	dockerfilePath string
+	dockerfileContextPath string
 	imageTag       string
 
 	taskRole      string
@@ -114,6 +115,7 @@ type runTaskVars struct {
 type runTaskOpts struct {
 	runTaskVars
 	isDockerfileSet bool
+	isDockerfileContextSet bool
 	nFlag           int
 
 	// Interfaces to interact with dependencies.
@@ -310,8 +312,18 @@ func (o *runTaskOpts) Validate() error {
 		return errors.New("cannot specify both `--image` and `--dockerfile`")
 	}
 
+	if o.image != "" && o.isDockerfileContextSet {
+		return errors.New("cannot specify both `--image` and `--context`")
+	}
+
 	if o.isDockerfileSet {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
+			return err
+		}
+	}
+
+	if o.isDockerfileContextSet {
+		if _, err := o.fs.Stat(o.dockerfileContextPath); err != nil {
 			return err
 		}
 	}
@@ -751,9 +763,16 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
+	var dockerContext string
+	if o.dockerfileContextPath == "" {
+		dockerContext = filepath.Dir(o.dockerfilePath)
+	} else {
+		dockerContext = o.dockerfileContextPath
+	}
+
 	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
-		Context:    filepath.Dir(o.dockerfilePath),
+		Context:    dockerContext,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
 	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
@@ -909,6 +928,9 @@ Run a task with a command.
 			if cmd.Flags().Changed(dockerFileFlag) {
 				opts.isDockerfileSet = true
 			}
+			if cmd.Flags().Changed(dockerFileContextFlag) {
+				opts.isDockerfileContextSet = true
+			}
 			return run(opts)
 		}),
 	}
@@ -921,6 +943,7 @@ Run a task with a command.
 
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, defaultDockerfilePath, dockerFileFlagDescription)
+	cmd.Flags().StringVar(&vars.dockerfileContextPath, dockerFileContextFlag, "", dockerFileContextFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)

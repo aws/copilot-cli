@@ -29,6 +29,7 @@ const (
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
+	dockerFileContextFlag = "context"
 	imageTagFlag          = "tag"
 	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
@@ -140,6 +141,8 @@ var (
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Mutually exclusive with -%s, --%s.`, dockerFileFlagShort, dockerFileFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
+Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
+	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker context.
 Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
