@@ -319,13 +319,13 @@ func (o *runTaskOpts) Validate() error {
 
 	if o.isDockerfileSet {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
-			return err
+			return fmt.Errorf("invalid `--dockerfile` path: %w", err)
 		}
 	}
 
 	if o.dockerfileContextPath != "" {
 		if _, err := o.fs.Stat(o.dockerfileContextPath); err != nil {
-			return err
+			return fmt.Errorf("invalid `--build-context` path: %w", err)
 		}
 	}
 

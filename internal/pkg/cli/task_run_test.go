@@ -232,7 +232,14 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inDockerfilePath: "world/hello/Dockerfile",
 			isDockerfileSet:  true,
 
-			wantedError: errors.New("open world/hello/Dockerfile: file does not exist"),
+			wantedError: errors.New("invalid `--dockerfile` path: open world/hello/Dockerfile: file does not exist"),
+		},
+		"invalid build context path": {
+			basicOpts: defaultOpts,
+
+			inDockerfileContextPath: "world/hello/Dockerfile",
+
+			wantedError: errors.New("invalid `--build-context` path: open world/hello/Dockerfile: file does not exist"),
 		},
 		"specified app exists": {
 			basicOpts: defaultOpts,
