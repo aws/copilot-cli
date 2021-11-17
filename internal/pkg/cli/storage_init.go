@@ -305,8 +305,6 @@ func (o *initStorageOpts) Ask() error {
 
 func (o *initStorageOpts) askStorageType() error {
 	if o.storageType != "" {
-		// Not all storage options, such as Aurora for RDWS, is available to workloads by default.
-		// We want to fail fast for the user once we know what workload type is the addon for.
 		return o.validateStorageType()
 	}
 	var options []prompt.Option
@@ -330,14 +328,6 @@ func (o *initStorageOpts) validateStorageType() error {
 		ws:           o.ws,
 		workloadName: o.workloadName,
 	}); err != nil {
-		if errors.Is(err, errRDWSNotConnectedToVPC) {
-			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
-You can enable VPC connectivity by updating your manifest with:
-%s
-`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
-  vpc:
-    placement: private`))
-		}
 		return err
 	}
 	return nil
