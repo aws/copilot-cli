@@ -47,11 +47,14 @@ The configuration for the event that triggers your job.
 <span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
 You can specify a rate to periodically trigger your job. Supported rates:
 
-* `"@yearly"`
-* `"@monthly"`
-* `"@weekly"`
-* `"@daily"`
-* `"@hourly"`
+| Rate         | Identical to          | In human-readable text and `UTC`, it runs ... |
+| ------------ | --------------------- | --------------------------------------------- |
+| `"@yearly"`  | `"cron(0 * * * ? *)"` | at midnight on January 1st                    |
+| `"@monthly"` | `"cron(0 0 1 * ? *)"` | at midnight on the first day of the month     |
+| `"@weekly"`  | `"cron(0 0 ? * 1 *)"` | at midnight on Sunday                         |
+| `"@daily"`   | `"cron(0 0 * * ? *)"` | at midnight                                   |
+| `"@hourly"`  | `"cron(0 * * * ? *)"` | at minute 0                                   |
+
 * `"@every {duration}"` (For example, "1m", "5m")
 * `"rate({duration})"` based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions)
 
