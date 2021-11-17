@@ -313,7 +313,7 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.image != "" && o.isDockerfileContextSet {
-		return errors.New("cannot specify both `--image` and `--context`")
+		return errors.New("cannot specify both `--image` and `--build-context`")
 	}
 
 	if o.isDockerfileSet {

@@ -216,7 +216,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inImage:         "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			isDockerfileContextSet: true,
 
-			wantedError: errors.New("cannot specify both `--image` and `--context`"),
+			wantedError: errors.New("cannot specify both `--image` and `--build-context`"),
 		},
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,

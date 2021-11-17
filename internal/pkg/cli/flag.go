@@ -29,7 +29,7 @@ const (
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
-	dockerFileContextFlag = "context"
+	dockerFileContextFlag = "build-context"
 	imageTagFlag          = "tag"
 	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
