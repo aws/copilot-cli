@@ -11,6 +11,16 @@ ServiceSecurityGroup:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
 
+EnvironmentSecurityGroupIngressFromServiceSecurityGroup:
+  Type: AWS::EC2::SecurityGroupIngress
+  Properties:
+    Description: Ingress from the app runner service security group.
+    GroupId: 
+      Fn::ImportValue:
+        !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref ServiceSecurityGroup
+
 VpcConnector:
   Type: AWS::AppRunner::VpcConnector
   DependsOn: EnvControllerAction # Ensure NAT gateways are created before connecting to a VPC.

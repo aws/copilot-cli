@@ -142,7 +142,8 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		AppDNSName:           dnsName,
 		Network:              networkConfig,
 
-		Publish: publishers,
+		Publish:                  publishers,
+		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 	})
 	if err != nil {
 		return "", err
