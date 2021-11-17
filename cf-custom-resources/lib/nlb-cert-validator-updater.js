@@ -3,7 +3,7 @@
 
 const AWS = require('aws-sdk');
 let ENV_HOSTED_ZONE_ID;
-let MY_LOAD_BALANCER_DNS;
+let APP_NAME, ENV_NAME;
 
 /**
  * Upload a CloudFormation response object to S3.
@@ -69,18 +69,23 @@ function report (
 exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
     ENV_HOSTED_ZONE_ID = props.EnvHostedZoneId;
-    MY_LOAD_BALANCER_DNS = props.LoadBalancerDNS;
+
+    let loadBalancerDNS = props.LoadBalancerDNS;
+    let aliases = props.Aliases;
+    let certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
+
+    const physicalResourceID = `/${serviceName}/${customDomain}`; // sorted default nlb alias and custom aliases;
 
     switch (event.RequestType) {
         case "Create":
-            validateAliases(); // check if it is in used
+            await validateAliases(aliases, loadBalancerDNS);
             requestCertificate();
             waitForValidationOptionsToBeReady();
             validateCertAndAddAliases();
             break;
         case "Update":
             // check if certificate should update; if yes, replace; if not, exit
-            validateAliases(); // check if it is in used
+            await validateAliases(aliases);
             requestCertificate();
             waitForValidationOptionsToBeReady();
             validateCertAndAddAliases(); // for each alias
@@ -96,8 +101,12 @@ exports.handler = async function (event, context) {
 
 /**
  * Validate that the aliases are not in use.
+ * @param {Array<String>} aliases for the service.
+ * @param {String} loadBalancerDNS the DNS of the service's load balancer.
+ *
+ * @throws error if at least one of the aliases is not valid.
  */
-async function validateAliases(aliases) {
+async function validateAliases(aliases, loadBalancerDNS) {
     const envRoute53 = new AWS.Route53();
     for (let alias of aliases) {
         const data = await envRoute53.listResourceRecordSets({
@@ -110,10 +119,37 @@ async function validateAliases(aliases) {
         if (!recordSet || recordSet.length === 0) {
             continue; // The alias record does not exist in the hosted zone, hence valid.
         }
-        if (recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${MY_LOAD_BALANCER_DNS}.`) {
+        if (recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${loadBalancerDNS}.`) {
             continue; // The record is an alias record and is in use by myself, hence valid.
         }
-        return false;
+        throw new Error(`alias ${alias} is in use`);
     }
-    return true;
+}
+
+/**
+ * Requests a public certificate from AWS Certificate Manager, using DNS validation.
+ * @param {String} certDomain the certificate domain.
+ * @param {Array<String>} aliases the subject alternative names for the certificate.
+ *
+ * @return {String} The ARN of the requested certificate.
+ */
+async function requestCertificate(certDomain, aliases) {
+    const acm = new AWS.ACM();
+    const data =await acm.requestCertificate({
+        DomainName: certDomain,
+        IdempotencyToken: "1", // TODO: this should be the physical resource id
+        SubjectAlternativeNames: aliases,
+        Tags: [
+            {
+                Key: "copilot-application",
+                Value: APP_NAME,
+            },
+            {
+                Key: "copilot-environment",
+                Value: ENV_NAME,
+            },
+        ],
+        ValidationMethod: "DNS",
+    }).promise();
+    return data["CertificateArn"];
 }
