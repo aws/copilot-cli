@@ -100,7 +100,7 @@ exports.handler = async function (event, context) {
         switch (event.RequestType) {
             case "Create":
                 await validateAliases(aliases, loadBalancerDNS);
-                const certificateARN = await requestCertificate(aliases, physicalResourceID);
+                const certificateARN = await requestCertificate(aliases, physicalResourceID, serviceName);
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
@@ -151,9 +151,10 @@ async function validateAliases(aliases, loadBalancerDNS) {
  *
  * @param {Set<String>} aliases the subject alternative names for the certificate.
  * @param {String} physicalResourceID
+ * @param {String} serviceName
  * @return {String} The ARN of the requested certificate.
  */
-async function requestCertificate(aliases, physicalResourceID) {
+async function requestCertificate(aliases, physicalResourceID, serviceName) {
     const { CertificateArn } =await acm.requestCertificate({
         DomainName: certificateDomain,
         IdempotencyToken: physicalResourceID,
@@ -166,6 +167,10 @@ async function requestCertificate(aliases, physicalResourceID) {
             {
                 Key: "copilot-environment",
                 Value: envName,
+            },
+            {
+                Key: "copilot-service",
+                Value: serviceName,
             },
         ],
         ValidationMethod: "DNS",
