@@ -80,12 +80,12 @@ var scheduleTypes = []string{
 }
 
 var presetSchedules = []prompt.Option{
-	{custom, ""},
-	{hourly, "At minute 0"},
-	{daily, "At midnight UTC"},
-	{weekly, "At midnight on Sunday UTC"},
-	{monthly, "At midnight, first day of month UTC"},
-	{yearly, "At midnight, Jan 1st UTC"},
+	{Value: custom, Hint: ""},
+	{Value: hourly, Hint: "At minute 0"},
+	{Value: daily, Hint: "At midnight UTC"},
+	{Value: weekly, Hint: "At midnight on Sunday UTC"},
+	{Value: monthly, Hint: "At midnight, first day of month UTC"},
+	{Value: yearly, Hint: "At midnight, Jan 1st UTC"},
 }
 
 // Prompter wraps the methods to ask for inputs from the terminal.
