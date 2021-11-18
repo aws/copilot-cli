@@ -108,6 +108,12 @@ phases:
             if [ -n "$build_context" ]; then
               df_dir_path=$build_context
             fi
+            platform_string=$(echo $manifest | jq -r '.platform // ""')
+            platform_os=$(echo $manifest | jq -r '.platform?.osfamily? // ""')
+            platform_arch=$(echo $manifest | jq -r '.platform?.architecture? // ""')
+            if [ "$platform_os" -a "$platform_arch" ]; then
+              platform_string="$platform_os/$platform_arch"
+            fi
             build_args=
             if [ -n "$dockerfile_args" ]; then
               for arg in $(echo $dockerfile_args | jq -r '.[] | "\(.key)=\(.value)"'); do 
@@ -121,6 +127,9 @@ phases:
               for arg in $(echo $build_cache_from | jq -r '.[]'); do
                 build_args="$build_args--cache-from $arg "
               done
+            fi
+            if [ -n "$platform_string" ]; then
+              build_args="$build_args--platform $platform_string "
             fi
             echo "Name: $workload"
             echo "Relative Dockerfile path: $df_rel_path"
