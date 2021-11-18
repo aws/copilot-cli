@@ -239,7 +239,7 @@ async function activate(validationOptions, certificateARN, loadBalancerDNS, load
 }
 
 /**
- * Upsert the validation record for the alias, as well as adding the A record if the alias is not the default certificaite domain.
+ * Upsert the validation record for the alias, as well as adding the A record if the alias is not the default certificate domain.
  *
  * @param {Object} option
  * @param {String} loadBalancerDNS
