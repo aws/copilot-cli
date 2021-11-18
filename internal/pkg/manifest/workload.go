@@ -22,6 +22,7 @@ import (
 
 // AWS VPC subnet placement options.
 const (
+	firelensContainerName = "firelens_log_router"
 	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 	defaultDockerfileName = "Dockerfile"
 )

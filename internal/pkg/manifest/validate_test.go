@@ -2154,6 +2154,17 @@ func TestValidateContainerDeps(t *testing.T) {
 			},
 			wanted: fmt.Errorf("container foo does not exist"),
 		},
+		"should return an error if a firelens container does not exist": {
+			in: validateDependenciesOpts{
+				mainContainerName: "mockMainContainer",
+				imageConfig: Image{
+					DependsOn: DependsOn{
+						"firelens_log_router": "start",
+					},
+				},
+			},
+			wanted: fmt.Errorf("container firelens_log_router does not exist"),
+		},
 		"should return an error if a sidecar container dependency does not exist": {
 			in: validateDependenciesOpts{
 				mainContainerName: "mockMainContainer",
@@ -2205,6 +2216,28 @@ func TestValidateContainerDeps(t *testing.T) {
 				},
 			},
 			wanted: fmt.Errorf("circular container dependency chain includes the following containers: [alpha beta gamma]"),
+		},
+		"success": {
+			in: validateDependenciesOpts{
+				mainContainerName: "alpha",
+				imageConfig: Image{
+					DependsOn: DependsOn{
+						"firelens_log_router": "start",
+						"beta":                "complete",
+					},
+				},
+				logging: Logging{
+					Image: aws.String("foobar"),
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"beta": {
+						Essential: aws.Bool(false),
+						DependsOn: DependsOn{
+							"firelens_log_router": "start",
+						},
+					},
+				},
+			},
 		},
 	}
 	for name, tc := range testCases {
