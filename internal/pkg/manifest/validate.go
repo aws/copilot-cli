@@ -72,6 +72,7 @@ func (l LoadBalancedWebService) Validate() error {
 		sidecarConfig:     l.Sidecars,
 		imageConfig:       l.ImageConfig.Image,
 		mainContainerName: aws.StringValue(l.Name),
+		logging:           l.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -147,6 +148,7 @@ func (b BackendService) Validate() error {
 		sidecarConfig:     b.Sidecars,
 		imageConfig:       b.ImageConfig.Image,
 		mainContainerName: aws.StringValue(b.Name),
+		logging:           b.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -245,6 +247,7 @@ func (w WorkerService) Validate() error {
 		sidecarConfig:     w.Sidecars,
 		imageConfig:       w.ImageConfig.Image,
 		mainContainerName: aws.StringValue(w.Name),
+		logging:           w.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -317,6 +320,7 @@ func (s ScheduledJob) Validate() error {
 		sidecarConfig:     s.Sidecars,
 		imageConfig:       s.ImageConfig.Image,
 		mainContainerName: aws.StringValue(s.Name),
+		logging:           s.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -1170,6 +1174,7 @@ type validateDependenciesOpts struct {
 	mainContainerName string
 	sidecarConfig     map[string]*SidecarConfig
 	imageConfig       Image
+	logging           Logging
 }
 
 type containerDependency struct {
@@ -1217,6 +1222,9 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 		dependsOn:   opts.imageConfig.DependsOn,
 		isEssential: true,
 	}
+	if !opts.logging.IsEmpty() {
+		containerDependencies[firelensContainerName] = containerDependency{}
+	}
 	for name, config := range opts.sidecarConfig {
 		containerDependencies[name] = containerDependency{
 			dependsOn:   config.DependsOn,
@@ -1226,7 +1234,7 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 	if err := validateDepsForEssentialContainers(containerDependencies); err != nil {
 		return err
 	}
-	return validateNoCircularDependencies(opts)
+	return validateNoCircularDependencies(containerDependencies)
 }
 
 func validateDepsForEssentialContainers(deps map[string]containerDependency) error {
@@ -1252,8 +1260,8 @@ func validateEssentialContainerDependency(name, status string) error {
 	return fmt.Errorf("essential container %s can only have status %s", name, english.WordSeries([]string{dependsOnStart, dependsOnHealthy}, "or"))
 }
 
-func validateNoCircularDependencies(opts validateDependenciesOpts) error {
-	dependencies, err := buildDependencyGraph(opts)
+func validateNoCircularDependencies(deps map[string]containerDependency) error {
+	dependencies, err := buildDependencyGraph(deps)
 	if err != nil {
 		return err
 	}
@@ -1269,12 +1277,11 @@ func validateNoCircularDependencies(opts validateDependenciesOpts) error {
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
-func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
+func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph, error) {
 	dependencyGraph := graph.New()
-	// Add any sidecar dependencies.
-	for name, sidecar := range opts.sidecarConfig {
-		for dep := range sidecar.DependsOn {
-			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+	for name, containerDep := range deps {
+		for dep := range containerDep.dependsOn {
+			if _, ok := deps[dep]; !ok {
 				return nil, fmt.Errorf("container %s does not exist", dep)
 			}
 			dependencyGraph.Add(graph.Edge{
@@ -1282,16 +1289,6 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 				To:   dep,
 			})
 		}
-	}
-	// Add any image dependencies.
-	for dep := range opts.imageConfig.DependsOn {
-		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
-			return nil, fmt.Errorf("container %s does not exist", dep)
-		}
-		dependencyGraph.Add(graph.Edge{
-			From: opts.mainContainerName,
-			To:   dep,
-		})
 	}
 	return dependencyGraph, nil
 }

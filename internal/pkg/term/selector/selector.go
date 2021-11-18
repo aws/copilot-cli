@@ -79,19 +79,20 @@ var scheduleTypes = []string{
 	fixedSchedule,
 }
 
-var presetSchedules = []string{
-	custom,
-	hourly,
-	daily,
-	weekly,
-	monthly,
-	yearly,
+var presetSchedules = []prompt.Option{
+	{Value: custom, Hint: ""},
+	{Value: hourly, Hint: "At minute 0"},
+	{Value: daily, Hint: "At midnight UTC"},
+	{Value: weekly, Hint: "At midnight on Sunday UTC"},
+	{Value: monthly, Hint: "At midnight, first day of month UTC"},
+	{Value: yearly, Hint: "At midnight, Jan 1st UTC"},
 }
 
 // Prompter wraps the methods to ask for inputs from the terminal.
 type Prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
+	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
 	MultiSelect(message, help string, options []string, promptOpts ...prompt.PromptConfig) ([]string, error)
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
@@ -951,7 +952,7 @@ func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, e
 }
 
 func (s *WorkspaceSelect) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
-	cronInput, err := s.prompt.SelectOne(
+	cronInput, err := s.prompt.SelectOption(
 		schedulePrompt,
 		scheduleHelp,
 		presetSchedules,
