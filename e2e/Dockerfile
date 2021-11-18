@@ -5,7 +5,6 @@ ARG GOLANG_VERSION=1.17.1
 # Docker needs somewhere to put creds from docker login.
 RUN wget https://github.com/docker/docker-credential-helpers/releases/download/v0.6.0/docker-credential-pass-v0.6.0-amd64.tar.gz && tar -xf docker-credential-pass-v0.6.0-amd64.tar.gz && chmod +x docker-credential-pass &&  mv docker-credential-pass /bin
 ENV DOCKER_HOST=tcp://127.0.0.1:2375
-ENV GOPROXY direct
 ENV GOBIN /go/bin
 
 # Install Go, Git and other dependencies so we can run ginkgo

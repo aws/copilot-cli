@@ -28,16 +28,26 @@ const (
 	testImageTag     = "manual-bf3678c"
 )
 
-type mockTemplater struct {
-	tpl string
-	err error
+type mockAddons struct {
+	tpl    string
+	tplErr error
+
+	params    string
+	paramsErr error
 }
 
-func (m mockTemplater) Template() (string, error) {
-	if m.err != nil {
-		return "", m.err
+func (m mockAddons) Template() (string, error) {
+	if m.tplErr != nil {
+		return "", m.tplErr
 	}
 	return m.tpl, nil
+}
+
+func (m mockAddons) Parameters() (string, error) {
+	if m.paramsErr != nil {
+		return "", m.paramsErr
+	}
+	return m.params, nil
 }
 
 var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
@@ -154,18 +164,29 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedError:    fmt.Errorf("read env controller lambda: some error"),
 		},
-		"unexpected addons parsing error": {
+		"unexpected addons template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{err: errors.New("some error")}
+				addons := mockAddons{tplErr: errors.New("some error")}
 				c.parser = m
 				c.wkld.addons = addons
 			},
-			wantedTemplate: "",
-			wantedError:    fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
+			wantedError: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
+		},
+		"unexpected addons parameter parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				addons := mockAddons{paramsErr: errors.New("some error")}
+				c.parser = m
+				c.wkld.addons = addons
+			},
+			wantedError: fmt.Errorf("parse addons parameters for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
@@ -174,7 +195,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -207,7 +228,7 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
@@ -215,7 +236,7 @@ Outputs:
 					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				c.parser = m
 				c.wkld.addons = addons
 			},
@@ -235,7 +256,8 @@ Outputs:
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					WorkloadType: manifest.LoadBalancedWebServiceType,
+					AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
+					WorkloadType:      manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 						GracePeriod:     aws.Int64(60),
@@ -245,14 +267,14 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -278,6 +300,7 @@ Outputs:
     Value: !Ref MySecret
   Hello:
     Value: hello`,
+					params: "ServiceName: !GetAtt Service.Name",
 				}
 				c.parser = m
 				c.addons = addons
@@ -413,8 +436,9 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		httpsEnabled bool
-		manifest     *manifest.LoadBalancedWebService
+		httpsEnabled         bool
+		dnsDelegationEnabled bool
+		manifest             *manifest.LoadBalancedWebService
 
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error
@@ -444,6 +468,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
+				},
 			}...),
 		},
 		"HTTPS Not Enabled": {
@@ -469,6 +497,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
@@ -498,6 +530,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
+				},
 			}...),
 		},
 		"Stickiness enabled": {
@@ -525,6 +561,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("true"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			}...),
 		},
 		"exec enabled": {
@@ -551,6 +591,43 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+			}...),
+		},
+		"dns delegation enabled": {
+			httpsEnabled:         false,
+			dnsDelegationEnabled: true,
+
+			manifest: testLBWebServiceManifestWithExecEnabled,
+
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
 				},
 			}...),
 		},
@@ -580,8 +657,9 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					},
 					tc: tc.manifest.TaskConfig,
 				},
-				manifest:     tc.manifest,
-				httpsEnabled: tc.httpsEnabled,
+				manifest:             tc.manifest,
+				httpsEnabled:         tc.httpsEnabled,
+				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}
 
 			// WHEN

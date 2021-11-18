@@ -79,12 +79,12 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		require.True(t, ok)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
-		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
+
+		serializer, err := stack.NewLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
 			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
-		})
-
+		}, stack.WithHTTPS())
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids

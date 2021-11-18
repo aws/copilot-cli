@@ -72,3 +72,7 @@ http:
 http:
   alias: ["example.com", "v1.example.com"]
 ```
+
+<span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
+The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.    
+If using gRPC, please note that a domain must be associated with your application.

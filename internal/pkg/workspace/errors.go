@@ -20,14 +20,23 @@ func (e *ErrFileExists) Error() string {
 	return fmt.Sprintf("file %s already exists", e.FileName)
 }
 
-// errWorkspaceNotFound means we couldn't locate a workspace root.
-type errWorkspaceNotFound struct {
+// ErrFileNotExists means we tried to read a non-existing file.
+type ErrFileNotExists struct {
+	FileName string
+}
+
+func (e *ErrFileNotExists) Error() string {
+	return fmt.Sprintf("file %s does not exists", e.FileName)
+}
+
+// ErrWorkspaceNotFound means we couldn't locate a workspace root.
+type ErrWorkspaceNotFound struct {
 	CurrentDirectory      string
 	ManifestDirectoryName string
 	NumberOfLevelsChecked int
 }
 
-func (e *errWorkspaceNotFound) Error() string {
+func (e *ErrWorkspaceNotFound) Error() string {
 	return fmt.Sprintf("couldn't find a directory called %s up to %d levels up from %s",
 		e.ManifestDirectoryName,
 		e.NumberOfLevelsChecked,

@@ -55,6 +55,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/accessrole.yml":                      []byte("accessrole"),
 					"templates/workloads/partials/cf/publish.yml":                         []byte("publish"),
 					"templates/workloads/partials/cf/subscribe.yml":                       []byte("subscribe"),
+					"templates/workloads/partials/cf/nlb.yml":                             []byte("nlb"),
+					"templates/workloads/partials/cf/vpc-connector.yml":                   []byte("vpc-connector"),
 				}
 			},
 			wantedContent: `  loggroup
@@ -83,6 +85,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
   accessrole
   publish
   subscribe
+  nlb
+  vpc-connector
 `,
 		},
 	}
@@ -159,25 +163,12 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		input *NetworkOpts
+		input NetworkOpts
 
 		wantedNetworkConfig string
 	}{
-		"should render AWS VPC configuration for public subnets by default": {
-			input: nil,
-			wantedNetworkConfig: `
- AwsvpcConfiguration:
-   AssignPublicIp: ENABLED
-   Subnets:
-     Fn::Split:
-       - ','
-       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-   SecurityGroups:
-     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-`,
-		},
 		"should render AWS VPC configuration for private subnets": {
-			input: &NetworkOpts{
+			input: NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
 			},
@@ -193,7 +184,7 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 `,
 		},
 		"should render AWS VPC configuration for private subnets with security groups": {
-			input: &NetworkOpts{
+			input: NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
 				SecurityGroups: []string{

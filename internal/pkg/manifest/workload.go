@@ -22,6 +22,7 @@ import (
 
 // AWS VPC subnet placement options.
 const (
+	firelensContainerName = "firelens_log_router"
 	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 	defaultDockerfileName = "Dockerfile"
 )
@@ -83,13 +84,12 @@ var (
 	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
 
-	errUnmarshalExec         = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
-	errUnmarshalEntryPoint   = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
-	errUnmarshalAlias        = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
-	errUnmarshalCommand      = errors.New(`unable to unmarshal "command" into string or slice of strings`)
+	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
+	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
+	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
+	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 
 	errAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
-
 )
 
 // WorkloadManifest represents a workload manifest.
@@ -453,11 +453,14 @@ type Logging struct {
 	EnableMetadata *bool             `yaml:"enableMetadata"`
 	SecretOptions  map[string]string `yaml:"secretOptions"`
 	ConfigFile     *string           `yaml:"configFilePath"`
+	Variables      map[string]string `yaml:"variables"`
+	Secrets        map[string]string `yaml:"secrets"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (lc *Logging) IsEmpty() bool {
-	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil && lc.SecretOptions == nil && lc.ConfigFile == nil
+	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil &&
+		lc.SecretOptions == nil && lc.ConfigFile == nil && lc.Variables == nil && lc.Secrets == nil
 }
 
 // LogImage returns the default Fluent Bit image if not otherwise configured.

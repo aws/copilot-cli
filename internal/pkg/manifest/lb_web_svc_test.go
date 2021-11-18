@@ -21,16 +21,13 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 
 		wanted *LoadBalancedWebService
 	}{
-		"translates to load balanced web service": {
+		"initializes with default settings when only required configuration is provided": {
 			props: LoadBalancedWebServiceProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./Dockerfile",
 				},
 				Path: "/",
-				HealthCheck: ContainerHealthCheck{
-					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-				},
 				Port: 80,
 			},
 
@@ -50,9 +47,6 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 								},
 							},
 							Port: aws.Uint16(80),
-						},
-						HealthCheck: ContainerHealthCheck{
-							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
 					RoutingRule: RoutingRule{
@@ -82,19 +76,20 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
-		"with windows platform": {
+		"overrides default settings when optional configuration is provided": {
 			props: LoadBalancedWebServiceProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				Path: "/",
+				Port: 80,
+
+				HTTPVersion: "gRPC",
 				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-
-				Port: 80,
 			},
 
 			wanted: &LoadBalancedWebService{
@@ -119,7 +114,8 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRule{
-						Path: stringP("/"),
+						Path:            stringP("/"),
+						ProtocolVersion: aws.String("gRPC"),
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: stringP("/"),
 						},
@@ -1314,77 +1310,6 @@ func TestLoadBalancedWebService_Publish(t *testing.T) {
 	}
 }
 
-func Test_Temp(t *testing.T) {
-	wamtedImageConfig := ImageWithPortAndHealthcheck{
-		ImageWithPort: ImageWithPort{
-			Image: Image{
-				Location: aws.String("env-override location"),
-				DockerLabels: map[string]string{
-					"label1": "value1",
-					"label2": "value2",
-				},
-				DependsOn: map[string]string{
-					"depends1": "on1",
-					"depends2": "on2",
-				},
-			},
-			Port: aws.Uint16(5000),
-		},
-		HealthCheck: *NewDefaultContainerHealthCheck(),
-	}
-	t.Run("temporary", func(t *testing.T) {
-		// WHEN
-		in := &LoadBalancedWebService{
-			Workload: Workload{
-				Name: aws.String("phonetool"),
-				Type: aws.String(LoadBalancedWebServiceType),
-			},
-			LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
-								},
-							},
-							DockerLabels: map[string]string{
-								"label1": "value1",
-							},
-							DependsOn: map[string]string{
-								"depends1": "on1",
-							},
-						},
-						Port: aws.Uint16(80),
-					},
-				},
-			},
-			Environments: map[string]*LoadBalancedWebServiceConfig{
-				"prod-iad": {
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
-							Image: Image{
-								Location: aws.String("env-override location"),
-								DockerLabels: map[string]string{
-									"label2": "value2",
-								},
-								DependsOn: map[string]string{
-									"depends2": "on2",
-								},
-							},
-							Port: aws.Uint16(5000),
-						},
-						HealthCheck: *NewDefaultContainerHealthCheck(),
-					},
-				},
-			},
-		}
-		envToApply := "prod-iad"
-		conf, _ := in.ApplyEnv(envToApply)
-		require.Equal(t, wamtedImageConfig, conf.(*LoadBalancedWebService).ImageConfig)
-	})
-}
-
 func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 	testCases := map[string]struct {
 		image   Image
@@ -1455,6 +1380,33 @@ func TestAlias_IsEmpty(t *testing.T) {
 		"non empty alias": {
 			in: Alias{
 				String: aws.String("alias test"),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     NetworkLoadBalancerConfiguration
+		wanted bool
+	}{
+		"empty": {
+			in:     NetworkLoadBalancerConfiguration{},
+			wanted: true,
+		},
+		"non empty": {
+			in: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443"),
 			},
 		},
 	}

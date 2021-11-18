@@ -123,19 +123,16 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		var serializer stackSerializer
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
+			var opts []stack.LoadBalancedWebServiceOption
 			if app.RequiresDNSDelegation() {
 				if err := validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, app, env.Name, appVersionGetter); err != nil {
 					return nil, err
 				}
-				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)
-				if err != nil {
-					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
-				}
-			} else {
-				serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc)
-				if err != nil {
-					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
-				}
+				opts = append(opts, stack.WithHTTPS())
+			}
+			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, opts...)
+			if err != nil {
+				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 			}
 		case *manifest.RequestDrivenWebService:
 			caller, err := opts.identity.Get()
@@ -239,7 +236,7 @@ func (o *packageSvcOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	if o.name != "" {
-		names, err := o.ws.ServiceNames()
+		names, err := o.ws.ListServices()
 		if err != nil {
 			return fmt.Errorf("list services in the workspace: %w", err)
 		}
@@ -352,7 +349,7 @@ type svcCfnTemplates struct {
 
 // getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
 func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
-	raw, err := o.ws.ReadServiceManifest(o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read service manifest: %w", err)
 	}

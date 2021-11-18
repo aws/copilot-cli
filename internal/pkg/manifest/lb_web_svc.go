@@ -23,6 +23,10 @@ const (
 	DefaultHealthCheckGracePeriod = 60
 )
 
+const (
+	GRPCProtocol = "gRPC" // GRPCProtocol is the HTTP protocol version for gRPC.
+)
+
 var (
 	errUnmarshalHealthCheckArgs = errors.New("can't unmarshal healthcheck field into string or compose-style map")
 )
@@ -51,17 +55,20 @@ type LoadBalancedWebServiceConfig struct {
 	RoutingRule      `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Network          NetworkConfig             `yaml:"network"`
-	PublishConfig    PublishConfig             `yaml:"publish"`
-	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
+	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig                    `yaml:"network"`
+	PublishConfig    PublishConfig                    `yaml:"publish"`
+	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
+	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path        string
-	Port        uint16
+	Path string
+	Port uint16
+
+	HTTPVersion string               // Optional http protocol version such as gRPC, HTTP2.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }
@@ -80,6 +87,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	if isWindowsPlatform(props.Platform) {
 		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
+	if props.HTTPVersion != "" {
+		svc.RoutingRule.ProtocolVersion = &props.HTTPVersion
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
@@ -182,6 +192,7 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
+	ProtocolVersion     *string                 `yaml:"version"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness          *bool                   `yaml:"stickiness"`
 	Alias               Alias                   `yaml:"alias"`
@@ -190,6 +201,29 @@ type RoutingRule struct {
 	TargetContainer          *string `yaml:"target_container"`
 	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
+}
+
+func (r *RoutingRule) targetContainer() *string {
+	if r.TargetContainer == nil && r.TargetContainerCamelCase == nil {
+		return nil
+	}
+	if r.TargetContainer != nil {
+		return r.TargetContainer
+	}
+	return r.TargetContainerCamelCase
+}
+
+// NetworkLoadBalancerConfiguration holds options for a network load balancer
+type NetworkLoadBalancerConfiguration struct {
+	Port            *string                 `yaml:"port"`
+	HealthCheck     HealthCheckArgsOrString `yaml:"healthcheck"`
+	TargetContainer *string                 `yaml:"target_container"`
+	TargetPort      *int                    `yaml:"target_port"`
+	SSLPolicy       *string                 `yaml:"ssl_policy"`
+}
+
+func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
+	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
 }
 
 // IPNet represents an IP network string. For example: 10.1.0.0/16

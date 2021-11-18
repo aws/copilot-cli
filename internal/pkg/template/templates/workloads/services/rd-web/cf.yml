@@ -101,7 +101,12 @@ Resources:
               - Name: {{toSnakeCase $var}}
                 Value:
                   Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
-              {{- end}}
+              {{- end }}
+              {{- range $var := .NestedStack.SecretOutputs }}
+              - Name: {{toSnakeCase $var}}_ARN
+                Value:
+                  Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
+              {{- end }}
               {{- end}}
             {{- if .StartCommand }}
             StartCommand: {{.StartCommand}}
@@ -110,7 +115,7 @@ Resources:
         Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory
         InstanceRoleArn: !GetAtt InstanceRole.Arn
-{{- if .EnableHealthCheck }}
+      {{- if .EnableHealthCheck }}
       HealthCheckConfiguration:
         Path: !If [HasHealthCheckPath, !Ref HealthCheckPath, !Ref AWS::NoValue]
         Protocol: HTTP
@@ -118,7 +123,13 @@ Resources:
         Timeout: !If [HasHealthCheckTimeout, !Ref HealthCheckTimeout, !Ref AWS::NoValue]
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
-{{- end }}
+      {{- end }}
+      {{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+      NetworkConfiguration:
+        EgressConfiguration:
+          EgressType: VPC
+          VpcConnectorArn: !Ref VpcConnector
+      {{- end }}
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
@@ -146,16 +157,16 @@ Resources:
         - {{ .AWSSDKLayer }}
 
   CustomDomainAction:
-      Metadata:
-        'aws:copilot:description': 'Associate the domain with the service as well as upserting the domain record and validation records'
-      DependsOn: CustomDomainFunction
-      Type: Custom::CustomDomainFunction
-      Properties:
-        ServiceToken: !GetAtt CustomDomainFunction.Arn
-        ServiceARN: !GetAtt Service.ServiceArn
-        CustomDomain: {{ .Alias }}
-        AppDNSRole: {{ .AppDNSDelegationRole }}
-        AppDNSName: {{ .AppDNSName }}
+    Metadata:
+      'aws:copilot:description': 'Associate the domain with the service as well as upserting the domain record and validation records'
+    DependsOn: CustomDomainFunction
+    Type: Custom::CustomDomainFunction
+    Properties:
+      ServiceToken: !GetAtt CustomDomainFunction.Arn
+      ServiceARN: !GetAtt Service.ServiceArn
+      CustomDomain: {{ .Alias }}
+      AppDNSRole: {{ .AppDNSDelegationRole }}
+      AppDNSName: {{ .AppDNSName }}
 
   CustomResourceRole:
     Type: AWS::IAM::Role
@@ -190,3 +201,11 @@ Resources:
                   - "*"
 {{- end }}
 {{include "publish" . | indent 2}}
+
+{{- if ne .EnvControllerLambda ""}}
+{{include "env-controller" . | indent 2}}
+{{- end}}
+
+{{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+{{include "vpc-connector" . | indent 2 }}
+{{- end }}

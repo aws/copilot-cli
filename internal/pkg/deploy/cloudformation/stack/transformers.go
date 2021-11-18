@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -272,6 +273,8 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
 		SecretOptions:  lc.SecretOptions,
+		Variables:      lc.Variables,
+		Secrets:        lc.Secrets,
 	}
 }
 
@@ -472,14 +475,14 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 }
 
-func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
+func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 	if network.IsEmpty() {
-		return &template.NetworkOpts{
+		return template.NetworkOpts{
 			AssignPublicIP: template.EnablePublicIP,
 			SubnetsType:    template.PublicSubnetsPlacement,
 		}
 	}
-	opts := &template.NetworkOpts{
+	opts := template.NetworkOpts{
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 		SecurityGroups: network.VPC.SecurityGroups,
@@ -489,6 +492,20 @@ func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts 
 	}
 	if *network.VPC.Placement != manifest.PublicSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
+		opts.SubnetsType = template.PrivateSubnetsPlacement
+	}
+	return opts
+}
+
+func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkConfig) template.NetworkOpts {
+	opts := template.NetworkOpts{}
+	if network.IsEmpty() {
+		return opts
+	}
+	if network.VPC.Placement == nil {
+		return opts
+	}
+	if string(*network.VPC.Placement) == string(manifest.PrivateSubnetPlacement) {
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
 	return opts
@@ -659,4 +676,12 @@ func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePla
 		OS:   os,
 		Arch: template.ArchX86,
 	}
+}
+
+func convertHTTPVersion(protocolVersion *string) *string {
+	if protocolVersion == nil {
+		return nil
+	}
+	pv := strings.ToUpper(*protocolVersion)
+	return &pv
 }

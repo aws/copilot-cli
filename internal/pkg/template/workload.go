@@ -83,6 +83,8 @@ var (
 		"accessrole",
 		"publish",
 		"subscribe",
+		"nlb",
+		"vpc-connector",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -186,6 +188,8 @@ type LogConfigOpts struct {
 	EnableMetadata *string
 	SecretOptions  map[string]string
 	ConfigFile     *string
+	Variables      map[string]string
+	Secrets        map[string]string
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
@@ -198,6 +202,21 @@ type HTTPHealthCheckOpts struct {
 	Timeout             *int64
 	DeregistrationDelay *int64
 	GracePeriod         *int64
+}
+
+// NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
+type NetworkLoadBalancerListener struct {
+	Port            string
+	Protocol        string
+	TargetContainer string
+	TargetPort      string
+	SSLPolicy       *string
+}
+
+// NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
+type NetworkLoadBalancer struct {
+	PublicSubnetCIDRs []string
+	Listener          NetworkLoadBalancerListener
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -310,13 +329,6 @@ type NetworkOpts struct {
 	SecurityGroups []string
 }
 
-func defaultNetworkOpts() *NetworkOpts {
-	return &NetworkOpts{
-		AssignPublicIP: EnablePublicIP,
-		SubnetsType:    PublicSubnetsPlacement,
-	}
-}
-
 // RuntimePlatformOpts holds configuration needed for Platform configuration.
 type RuntimePlatformOpts struct {
 	OS   string
@@ -356,13 +368,14 @@ type WorkloadOpts struct {
 	Aliases                  []string
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.
 	Sidecars                 []*SidecarOpts
 	LogConfig                *LogConfigOpts
 	Autoscaling              *AutoscalingOpts
 	CapacityProviders        []*CapacityProviderStrategy
 	DesiredCountOnSpot       *int
 	Storage                  *StorageOpts
-	Network                  *NetworkOpts
+	Network                  NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
 	Platform                 RuntimePlatformOpts
 	EntryPoint               []string
@@ -372,6 +385,7 @@ type WorkloadOpts struct {
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
+	HTTPVersion              *string
 
 	// Additional options for service templates.
 	WorkloadType        string
@@ -379,6 +393,7 @@ type WorkloadOpts struct {
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	DeregistrationDelay *int64
 	AllowedSourceIps    []string
+	NLB                 *NetworkLoadBalancer
 
 	// Lambda functions.
 	RulePriorityLambda             string
@@ -391,21 +406,9 @@ type WorkloadOpts struct {
 	ScheduleExpression string
 	StateMachine       *StateMachineOpts
 
-	// Additional options for worker service templates.
-	Subscribe *SubscribeOpts
-}
-
-// ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
-type ParseRequestDrivenWebServiceInput struct {
-	Variables           map[string]string
-	StartCommand        *string
-	Tags                map[string]string        // Used by App Runner workloads to tag App Runner service resources
-	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	EnableHealthCheck   bool
-	EnvControllerLambda string
-	Publish             *PublishOpts
-	Platform            RuntimePlatformOpts
-
+	// Additional options for request driven web service templates.
+	StartCommand      *string
+	EnableHealthCheck bool
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
 	ScriptBucketName     *string
@@ -413,44 +416,38 @@ type ParseRequestDrivenWebServiceInput struct {
 	AWSSDKLayer          *string
 	AppDNSDelegationRole *string
 	AppDNSName           *string
+
+	// Additional options for worker service templates.
+	Subscribe *SubscribeOpts
+
+	// List of features to enable for testing that are not yet released.
+	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseRequestDrivenWebService parses a request-driven web service's CloudFormation template
 // with the specified data object and returns its content.
-func (t *Template) ParseRequestDrivenWebService(data ParseRequestDrivenWebServiceInput) (*Content, error) {
+func (t *Template) ParseRequestDrivenWebService(data WorkloadOpts) (*Content, error) {
 	return t.parseSvc(rdWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseWorkerService parses a worker service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseSvc(workerSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
 func (t *Template) ParseScheduledJob(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseJob(scheduledJobTplName, data, withSvcParsingFuncs())
 }
 
@@ -501,6 +498,7 @@ func withSvcParsingFuncs() ParseOption {
 			"logicalIDSafe":       StripNonAlphaNumFunc,
 			"wordSeries":          english.WordSeries,
 			"pluralWord":          english.PluralWord,
+			"contains":            contains,
 		})
 	}
 }
@@ -530,12 +528,21 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, []string{"ALBWorkloads,", "Aliases,"}...) // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
-		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+		parameters = append(parameters, "NATWorkloads,")
 	}
 	if o.Storage != nil && o.Storage.requiresEFSCreation() {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+func contains(list []string, s string) bool {
+	for _, item := range list {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }
 
 // ARN determines the arn for a topic using the SNSTopic name and account information

@@ -40,6 +40,8 @@ var (
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 
+	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
+
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
@@ -52,17 +54,25 @@ func (l LoadBalancedWebService) Validate() error {
 	if err = l.Workload.Validate(); err != nil {
 		return err
 	}
-	if err = validateLoadBalancerTarget(validateLoadBalancerTargetOpts{
+	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
-		routingRule:       l.RoutingRule,
+		targetContainer:   l.RoutingRule.targetContainer(),
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate load balancer target: %w", err)
+		return fmt.Errorf("validate HTTP load balancer target: %w", err)
+	}
+	if err = validateTargetContainer(validateTargetContainerOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		targetContainer:   l.NLBConfig.TargetContainer,
+		sidecarConfig:     l.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate network load balancer target: %w", err)
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
 		imageConfig:       l.ImageConfig.Image,
 		mainContainerName: aws.StringValue(l.Name),
+		logging:           l.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -106,10 +116,13 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	if l.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(l.ExecuteCommand.Enable),
-			efsVolumes: l.Storage.Volumes,
+			efsVolumes:  l.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
+	}
+	if err = l.NLBConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "nlb": %w`, err)
 	}
 	return nil
 }
@@ -127,6 +140,7 @@ func (b BackendService) Validate() error {
 		sidecarConfig:     b.Sidecars,
 		imageConfig:       b.ImageConfig.Image,
 		mainContainerName: aws.StringValue(b.Name),
+		logging:           b.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -167,7 +181,7 @@ func (b BackendServiceConfig) Validate() error {
 	if b.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(b.ExecuteCommand.Enable),
-			efsVolumes: b.Storage.Volumes,
+			efsVolumes:  b.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -198,6 +212,9 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	if err = r.PublishConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "publish": %w`, err)
 	}
+	if err = r.Network.Validate(); err != nil {
+		return fmt.Errorf(`validate "network": %w`, err)
+	}
 	return nil
 }
 
@@ -214,6 +231,7 @@ func (w WorkerService) Validate() error {
 		sidecarConfig:     w.Sidecars,
 		imageConfig:       w.ImageConfig.Image,
 		mainContainerName: aws.StringValue(w.Name),
+		logging:           w.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -257,7 +275,7 @@ func (w WorkerServiceConfig) Validate() error {
 	if w.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(w.ExecuteCommand.Enable),
-			efsVolumes: w.Storage.Volumes,
+			efsVolumes:  w.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -278,6 +296,7 @@ func (s ScheduledJob) Validate() error {
 		sidecarConfig:     s.Sidecars,
 		imageConfig:       s.ImageConfig.Image,
 		mainContainerName: aws.StringValue(s.Name),
+		logging:           s.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
@@ -324,7 +343,7 @@ func (s ScheduledJobConfig) Validate() error {
 	if s.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			execEnabled: aws.BoolValue(s.ExecuteCommand.Enable),
-			efsVolumes: s.Storage.Volumes,
+			efsVolumes:  s.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -498,7 +517,11 @@ func (r RoutingRule) Validate() error {
 			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
 		}
 	}
-
+	if r.ProtocolVersion != nil {
+		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
+			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
+		}
+	}
 	return nil
 }
 
@@ -527,6 +550,22 @@ func (Alias) Validate() error {
 func (ip IPNet) Validate() error {
 	if _, _, err := net.ParseCIDR(string(ip)); err != nil {
 		return fmt.Errorf("parse IPNet %s: %w", string(ip), err)
+	}
+	return nil
+}
+
+// Validate returns nil if NetworkLoadBalancerConfiguration is configured correctly.
+func (c NetworkLoadBalancerConfiguration) Validate() error {
+	if c.IsEmpty() {
+		return nil
+	}
+	if aws.StringValue(c.Port) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "port",
+		}
+	}
+	if err := c.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	return nil
 }
@@ -911,6 +950,30 @@ func (n NetworkConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if RequestDrivenWebServiceNetworkConfig is configured correctly.
+func (n RequestDrivenWebServiceNetworkConfig) Validate() error {
+	if n.IsEmpty() {
+		return nil
+	}
+	if err := n.VPC.Validate(); err != nil {
+		return fmt.Errorf(`validate "vpc": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if rdwsVpcConfig is configured correctly.
+func (v rdwsVpcConfig) Validate() error {
+	if v.isEmpty() {
+		return nil
+	}
+	if v.Placement != nil {
+		if err := v.Placement.Validate(); err != nil {
+			return fmt.Errorf(`validate "placement": %w`, err)
+		}
+	}
+	return nil
+}
+
 // Validate returns nil if vpcConfig is configured correctly.
 func (v vpcConfig) Validate() error {
 	if v.isEmpty() {
@@ -922,6 +985,17 @@ func (v vpcConfig) Validate() error {
 		}
 	}
 	return nil
+}
+
+// Validate returns nil if RequestDrivenWebServicePlacement is configured correctly.
+func (p RequestDrivenWebServicePlacement) Validate() error {
+	if err := (Placement)(p).Validate(); err != nil {
+		return err
+	}
+	if string(p) == string(PrivateSubnetPlacement) {
+		return nil
+	}
+	return fmt.Errorf(`placement "%s" is not supported for %s`, string(p), RequestDrivenWebServiceType)
 }
 
 // Validate returns nil if Placement is configured correctly.
@@ -1068,12 +1142,7 @@ type validateDependenciesOpts struct {
 	mainContainerName string
 	sidecarConfig     map[string]*SidecarConfig
 	imageConfig       Image
-}
-
-type validateLoadBalancerTargetOpts struct {
-	mainContainerName string
-	routingRule       RoutingRule
-	sidecarConfig     map[string]*SidecarConfig
+	logging           Logging
 }
 
 type containerDependency struct {
@@ -1083,17 +1152,20 @@ type containerDependency struct {
 
 type validateWindowsOpts struct {
 	execEnabled bool
-	efsVolumes map[string]*Volume
+	efsVolumes  map[string]*Volume
 }
 
-func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
-	if opts.routingRule.TargetContainer == nil && opts.routingRule.TargetContainerCamelCase == nil {
+type validateTargetContainerOpts struct {
+	mainContainerName string
+	targetContainer   *string
+	sidecarConfig     map[string]*SidecarConfig
+}
+
+func validateTargetContainer(opts validateTargetContainerOpts) error {
+	if opts.targetContainer == nil {
 		return nil
 	}
-	targetContainer := aws.StringValue(opts.routingRule.TargetContainerCamelCase)
-	if opts.routingRule.TargetContainer != nil {
-		targetContainer = aws.StringValue(opts.routingRule.TargetContainer)
-	}
+	targetContainer := aws.StringValue(opts.targetContainer)
 	if targetContainer == opts.mainContainerName {
 		return nil
 	}
@@ -1113,6 +1185,9 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 		dependsOn:   opts.imageConfig.DependsOn,
 		isEssential: true,
 	}
+	if !opts.logging.IsEmpty() {
+		containerDependencies[firelensContainerName] = containerDependency{}
+	}
 	for name, config := range opts.sidecarConfig {
 		containerDependencies[name] = containerDependency{
 			dependsOn:   config.DependsOn,
@@ -1122,7 +1197,7 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 	if err := validateDepsForEssentialContainers(containerDependencies); err != nil {
 		return err
 	}
-	return validateNoCircularDependencies(opts)
+	return validateNoCircularDependencies(containerDependencies)
 }
 
 func validateDepsForEssentialContainers(deps map[string]containerDependency) error {
@@ -1148,8 +1223,8 @@ func validateEssentialContainerDependency(name, status string) error {
 	return fmt.Errorf("essential container %s can only have status %s", name, english.WordSeries([]string{dependsOnStart, dependsOnHealthy}, "or"))
 }
 
-func validateNoCircularDependencies(opts validateDependenciesOpts) error {
-	dependencies, err := buildDependencyGraph(opts)
+func validateNoCircularDependencies(deps map[string]containerDependency) error {
+	dependencies, err := buildDependencyGraph(deps)
 	if err != nil {
 		return err
 	}
@@ -1165,12 +1240,11 @@ func validateNoCircularDependencies(opts validateDependenciesOpts) error {
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
-func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
+func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph, error) {
 	dependencyGraph := graph.New()
-	// Add any sidecar dependencies.
-	for name, sidecar := range opts.sidecarConfig {
-		for dep := range sidecar.DependsOn {
-			if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
+	for name, containerDep := range deps {
+		for dep := range containerDep.dependsOn {
+			if _, ok := deps[dep]; !ok {
 				return nil, fmt.Errorf("container %s does not exist", dep)
 			}
 			dependencyGraph.Add(graph.Edge{
@@ -1178,16 +1252,6 @@ func buildDependencyGraph(opts validateDependenciesOpts) (*graph.Graph, error) {
 				To:   dep,
 			})
 		}
-	}
-	// Add any image dependencies.
-	for dep := range opts.imageConfig.DependsOn {
-		if _, ok := opts.sidecarConfig[dep]; !ok && dep != opts.mainContainerName {
-			return nil, fmt.Errorf("container %s does not exist", dep)
-		}
-		dependencyGraph.Add(graph.Edge{
-			From: opts.mainContainerName,
-			To:   dep,
-		})
 	}
 	return dependencyGraph, nil
 }
@@ -1245,3 +1309,11 @@ func validateWindows(opts validateWindowsOpts) error {
 	return nil
 }
 
+func contains(name string, names []string) bool {
+	for _, n := range names {
+		if name == n {
+			return true
+		}
+	}
+	return false
+}
