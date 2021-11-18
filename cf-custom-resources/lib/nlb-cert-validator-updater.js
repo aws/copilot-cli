@@ -79,8 +79,6 @@ function report (
 exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
 
-    // let acm, envRoute53, envHostedZoneID, appName, envName, certificateDomain;
-
     let {LoadBalancerDNS: loadBalancerDNS,
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
         ServiceName: serviceName,
