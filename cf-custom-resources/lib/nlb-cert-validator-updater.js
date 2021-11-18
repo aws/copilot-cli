@@ -79,11 +79,11 @@ function report (
 exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
 
+    // let acm, envRoute53, envHostedZoneID, appName, envName, certificateDomain;
+
     let {LoadBalancerDNS: loadBalancerDNS,
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
         ServiceName: serviceName,
-        EnvName: envName,
-        AppName: appName,
         DomainName: domainName,
     } = props;
     let aliases = new Set(props.Aliases);
@@ -91,6 +91,8 @@ exports.handler = async function (event, context) {
     acm = new AWS.ACM();
     envRoute53 = new AWS.Route53();
     envHostedZoneID = props.EnvHostedZoneId;
+    envName = props.EnvName;
+    appName = props.AppName;
     certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
 
     let aliasesSorted = [...aliases].sort().join(",");
@@ -100,7 +102,7 @@ exports.handler = async function (event, context) {
         switch (event.RequestType) {
             case "Create":
                 await validateAliases(aliases, loadBalancerDNS);
-                const certificateARN = await requestCertificate(aliases);
+                const certificateARN = await requestCertificate(aliases, physicalResourceID);
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
@@ -150,12 +152,13 @@ async function validateAliases(aliases, loadBalancerDNS) {
  * Requests a public certificate from AWS Certificate Manager, using DNS validation.
  *
  * @param {Set<String>} aliases the subject alternative names for the certificate.
+ * @param {String} physicalResourceID
  * @return {String} The ARN of the requested certificate.
  */
-async function requestCertificate(aliases) {
+async function requestCertificate(aliases, physicalResourceID) {
     const { CertificateArn } =await acm.requestCertificate({
         DomainName: certificateDomain,
-        IdempotencyToken: "1", // TODO: this should be the physical resource id
+        IdempotencyToken: physicalResourceID,
         SubjectAlternativeNames: aliases.size === 0? null: [...aliases],
         Tags: [
             {
@@ -235,7 +238,7 @@ async function activate(validationOptions, certificateARN, loadBalancerDNS, load
 /**
  * Upsert the validation record for the alias, as well as adding the A record if the alias is not the default certificaite domain.
  *
- * @param {Array<object>} option
+ * @param {Object} option
  * @param {String} loadBalancerDNS
  * @param {String} loadBalancerHostedZone
  */

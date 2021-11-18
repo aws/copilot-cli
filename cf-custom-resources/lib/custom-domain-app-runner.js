@@ -414,7 +414,6 @@ exports.withSleep = function (s) {
 };
 exports.reset = function () {
     sleep = defaultSleep;
-
 };
 exports.withDeadlineExpired = function (d) {
     exports.deadlineExpired = d;
