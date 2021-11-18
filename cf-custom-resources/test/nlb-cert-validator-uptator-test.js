@@ -192,6 +192,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                                 Key: "copilot-environment",
                                 Value: mockEnvName,
                             },
+                            {
+                                Key: "copilot-service",
+                                Value: mockServiceName,
+                            },
                         ],
                         ValidationMethod: "DNS",
                     }));
@@ -236,22 +240,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                         MaxItems: "1",
                         StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
                     }));
-                    sinon.assert.calledWith(mockRequestCertificate, sinon.match({
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                        IdempotencyToken: "/web/dash-test.mockDomain.com,frontend.mockDomain.com,frontend.v2.mockDomain.com",
-                        SubjectAlternativeNames: ["dash-test.mockDomain.com","frontend.mockDomain.com","frontend.v2.mockDomain.com"],
-                        Tags: [
-                            {
-                                Key: "copilot-application",
-                                Value: mockAppName,
-                            },
-                            {
-                                Key: "copilot-environment",
-                                Value: mockEnvName,
-                            },
-                        ],
-                        ValidationMethod: "DNS",
-                    }));
+                    sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
                         "CertificateArn": "mockCertArn",
                     }));
@@ -289,22 +278,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                         MaxItems: "1",
                         StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
                     }));
-                    sinon.assert.calledWith(mockRequestCertificate, sinon.match({
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                        IdempotencyToken: "/web/dash-test.mockDomain.com,frontend.mockDomain.com,frontend.v2.mockDomain.com",
-                        SubjectAlternativeNames: ["dash-test.mockDomain.com","frontend.mockDomain.com","frontend.v2.mockDomain.com"],
-                        Tags: [
-                            {
-                                Key: "copilot-application",
-                                Value: mockAppName,
-                            },
-                            {
-                                Key: "copilot-environment",
-                                Value: mockEnvName,
-                            },
-                        ],
-                        ValidationMethod: "DNS",
-                    }));
+                    sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
                         "CertificateArn": "mockCertArn",
                     }));
@@ -378,22 +352,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                         MaxItems: "1",
                         StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
                     }));
-                    sinon.assert.calledWith(mockRequestCertificate, sinon.match({
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                        IdempotencyToken: "/web/dash-test.mockDomain.com,frontend.mockDomain.com,frontend.v2.mockDomain.com",
-                        SubjectAlternativeNames: ["dash-test.mockDomain.com","frontend.mockDomain.com","frontend.v2.mockDomain.com"],
-                        Tags: [
-                            {
-                                Key: "copilot-application",
-                                Value: mockAppName,
-                            },
-                            {
-                                Key: "copilot-environment",
-                                Value: mockEnvName,
-                            },
-                        ],
-                        ValidationMethod: "DNS",
-                    }));
+                    sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
                         "CertificateArn": "mockCertArn",
                     }));
@@ -520,22 +479,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                         MaxItems: "1",
                         StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
                     }));
-                    sinon.assert.calledWith(mockRequestCertificate, sinon.match({
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                        IdempotencyToken: "/web/dash-test.mockDomain.com,frontend.mockDomain.com,frontend.v2.mockDomain.com",
-                        SubjectAlternativeNames: ["dash-test.mockDomain.com","frontend.mockDomain.com","frontend.v2.mockDomain.com"],
-                        Tags: [
-                            {
-                                Key: "copilot-application",
-                                Value: mockAppName,
-                            },
-                            {
-                                Key: "copilot-environment",
-                                Value: mockEnvName,
-                            },
-                        ],
-                        ValidationMethod: "DNS",
-                    }));
+                    sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
                         "CertificateArn": "mockCertArn",
                     }));
@@ -615,22 +559,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                         MaxItems: "1",
                         StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
                     }));
-                    sinon.assert.calledWith(mockRequestCertificate, sinon.match({
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                        IdempotencyToken: "/web/dash-test.mockDomain.com,frontend.mockDomain.com,frontend.v2.mockDomain.com",
-                        SubjectAlternativeNames: ["dash-test.mockDomain.com","frontend.mockDomain.com","frontend.v2.mockDomain.com"],
-                        Tags: [
-                            {
-                                Key: "copilot-application",
-                                Value: mockAppName,
-                            },
-                            {
-                                Key: "copilot-environment",
-                                Value: mockEnvName,
-                            },
-                        ],
-                        ValidationMethod: "DNS",
-                    }));
+                    sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
                         "CertificateArn": "mockCertArn",
                     }));
