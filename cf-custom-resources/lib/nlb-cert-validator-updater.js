@@ -77,39 +77,46 @@ function report (
 }
 
 exports.handler = async function (event, context) {
-    acm = new AWS.ACM();
-    envRoute53 = new AWS.Route53();
-
     const props = event.ResourceProperties;
-    envHostedZoneID = props.EnvHostedZoneId;
-    certificateDomain = `${props.ServiceName}-nlb.${props.EnvName}.${props.AppName}.${props.DomainName}`;
 
-    let loadBalancerDNS = props.LoadBalancerDNS;
-    let loadBalancerHostedZoneID = props.LoadBalancerHostedZoneID;
+    let {LoadBalancerDNS: loadBalancerDNS,
+        LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
+        ServiceName: serviceName,
+        EnvName: envName,
+        AppName: appName,
+        DomainName: domainName,
+    } = props;
     let aliases = new Set(props.Aliases);
 
-    const physicalResourceID = `/${serviceName}/${customDomain}`; // sorted default nlb alias and custom aliases;
+    acm = new AWS.ACM();
+    envRoute53 = new AWS.Route53();
+    envHostedZoneID = props.EnvHostedZoneId;
+    certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
 
-    switch (event.RequestType) {
-        case "Create":
-            await validateAliases(aliases, loadBalancerDNS);
-            const certificateARN = await requestCertificate(aliases);
-            const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
-            await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
-            break;
-        case "Update":
-            // check if certificate should update; if yes, replace; if not, exit
-            // await validateAliases(aliases);
-            // requestCertificate();
-            // waitForValidationOptionsToBeReady();
-            // validateCertAndAddAliases(); // for each alias
-            break;
-        case "Delete":
-            // deleteCertificate();
-            // deleteValidationRecordsAndAliases(); // for each alias, also check if the alias points to myself before deleting.
-            break;
-        default:
-            throw new Error(`Unsupported request type ${event.RequestType}`);
+    let aliasesSorted = [...aliases].sort().join(",");
+    const physicalResourceID = `/${serviceName}/${aliasesSorted}`;
+
+    let handler = async function() {
+        switch (event.RequestType) {
+            case "Create":
+                await validateAliases(aliases, loadBalancerDNS);
+                const certificateARN = await requestCertificate(aliases);
+                const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
+                await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
+                break;
+            case "Update":
+            case "Delete":
+            default:
+                throw new Error(`Unsupported request type ${event.RequestType}`);
+        }
+    };
+
+    try {
+        await handler();
+        await report(event, context, "SUCCESS", physicalResourceID);
+    } catch (err) {
+        console.log(`Caught error for service ${serviceName}: ${err.message}`);
+        await report(event, context, "FAILED", physicalResourceID, null, err.message);
     }
 };
 
@@ -270,7 +277,6 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
         HostedZoneId: envHostedZoneID,
     }).promise();
     console.log(`change info for ${option.DomainName}: ${ChangeInfo}`)
-    // TODO: handle "PriorRequestNotComplete" error: https://docs.aws.amazon.com/Route53/latest/APIReference/API_ChangeResourceRecordSets.html#API_ChangeResourceRecordSets_Errors
 
     await envRoute53.waitFor('resourceRecordSetsChanged', {
         // Wait up to 5 minutes
@@ -288,7 +294,6 @@ exports.withSleep = function (s) {
 };
 exports.reset = function () {
     sleep = defaultSleep;
-
 };
 exports.withDeadlineExpired = function (d) {
     exports.deadlineExpired = d;
