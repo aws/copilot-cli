@@ -13,8 +13,9 @@ ServiceSecurityGroup:
 
 EnvironmentSecurityGroupIngressFromServiceSecurityGroup:
   Type: AWS::EC2::SecurityGroupIngress
+  Metadata:
+    'aws:copilot:description': 'Allow ingress from the app runner service to services in your environment'
   Properties:
-    Description: Ingress from the app runner service security group.
     GroupId: 
       Fn::ImportValue:
         !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
