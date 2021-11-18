@@ -7,6 +7,8 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -299,6 +301,7 @@ type wsAppManager interface {
 
 type wsAddonManager interface {
 	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
+	manifestReader
 	wlLister
 }
 
@@ -519,6 +522,10 @@ type credsSelector interface {
 
 type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
+}
+
+type vpcSubnetLister interface {
+	ListVPCSubnets(vpcID string) (*ec2.VPCSubnets, error)
 }
 
 type serviceResumer interface {

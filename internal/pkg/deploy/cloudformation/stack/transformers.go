@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -272,6 +273,8 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
 		SecretOptions:  lc.SecretOptions,
+		Variables:      lc.Variables,
+		Secrets:        lc.Secrets,
 	}
 }
 
@@ -678,4 +681,12 @@ func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePla
 		OS:   os,
 		Arch: arch,
 	}
+}
+
+func convertHTTPVersion(protocolVersion *string) *string {
+	if protocolVersion == nil {
+		return nil
+	}
+	pv := strings.ToUpper(*protocolVersion)
+	return &pv
 }

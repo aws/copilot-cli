@@ -40,6 +40,8 @@ var (
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 
+	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
+
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
@@ -52,12 +54,19 @@ func (l LoadBalancedWebService) Validate() error {
 	if err = l.Workload.Validate(); err != nil {
 		return err
 	}
-	if err = validateLoadBalancerTarget(validateLoadBalancerTargetOpts{
+	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
-		routingRule:       l.RoutingRule,
+		targetContainer:   l.RoutingRule.targetContainer(),
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
-		return fmt.Errorf("validate load balancer target: %w", err)
+		return fmt.Errorf("validate HTTP load balancer target: %w", err)
+	}
+	if err = validateTargetContainer(validateTargetContainerOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		targetContainer:   l.NLBConfig.TargetContainer,
+		sidecarConfig:     l.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate network load balancer target: %w", err)
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     l.Sidecars,
@@ -118,6 +127,9 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
 		}
+	}
+	if err = l.NLBConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "nlb": %w`, err)
 	}
 	return nil
 }
@@ -533,7 +545,11 @@ func (r RoutingRule) Validate() error {
 			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
 		}
 	}
-
+	if r.ProtocolVersion != nil {
+		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
+			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
+		}
+	}
 	return nil
 }
 
@@ -562,6 +578,22 @@ func (Alias) Validate() error {
 func (ip IPNet) Validate() error {
 	if _, _, err := net.ParseCIDR(string(ip)); err != nil {
 		return fmt.Errorf("parse IPNet %s: %w", string(ip), err)
+	}
+	return nil
+}
+
+// Validate returns nil if NetworkLoadBalancerConfiguration is configured correctly.
+func (c NetworkLoadBalancerConfiguration) Validate() error {
+	if c.IsEmpty() {
+		return nil
+	}
+	if aws.StringValue(c.Port) == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "port",
+		}
+	}
+	if err := c.HealthCheck.Validate(); err != nil {
+		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	return nil
 }
@@ -1140,15 +1172,15 @@ type validateDependenciesOpts struct {
 	imageConfig       Image
 }
 
-type validateLoadBalancerTargetOpts struct {
-	mainContainerName string
-	routingRule       RoutingRule
-	sidecarConfig     map[string]*SidecarConfig
-}
-
 type containerDependency struct {
 	dependsOn   DependsOn
 	isEssential bool
+}
+
+type validateTargetContainerOpts struct {
+	mainContainerName string
+	targetContainer   *string
+	sidecarConfig     map[string]*SidecarConfig
 }
 
 type validateWindowsOpts struct {
@@ -1161,14 +1193,11 @@ type validateARMOpts struct {
 	SpotFrom *int
 }
 
-func validateLoadBalancerTarget(opts validateLoadBalancerTargetOpts) error {
-	if opts.routingRule.TargetContainer == nil && opts.routingRule.TargetContainerCamelCase == nil {
+func validateTargetContainer(opts validateTargetContainerOpts) error {
+	if opts.targetContainer == nil {
 		return nil
 	}
-	targetContainer := aws.StringValue(opts.routingRule.TargetContainerCamelCase)
-	if opts.routingRule.TargetContainer != nil {
-		targetContainer = aws.StringValue(opts.routingRule.TargetContainer)
-	}
+	targetContainer := aws.StringValue(opts.targetContainer)
 	if targetContainer == opts.mainContainerName {
 		return nil
 	}
@@ -1325,4 +1354,13 @@ func validateARM(opts validateARMOpts) error {
 		return errors.New(`'Fargate Spot' is not supported when deploying on ARM architecture`)
 	}
 	return nil
+}
+
+func contains(name string, names []string) bool {
+	for _, n := range names {
+		if name == n {
+			return true
+		}
+	}
+	return false
 }

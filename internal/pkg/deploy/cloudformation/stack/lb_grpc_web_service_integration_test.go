@@ -1,5 +1,4 @@
-//go:build integration || localintegration
-// +build integration localintegration
+// +build localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -9,15 +8,15 @@ package stack_test
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -25,13 +24,10 @@ import (
 )
 
 const (
-	svcManifestPath = "svc-manifest.yml"
-
-	dynamicDesiredCountPath = "custom-resources/desired-count-delegation.js"
-	rulePriorityPath        = "custom-resources/alb-rule-priority-generator.js"
+	svcGrpcManifestPath = "svc-grpc-manifest.yml"
 )
 
-func TestLoadBalancedWebService_Template(t *testing.T) {
+func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
 		envName       string
 		svcStackPath  string
@@ -39,30 +35,11 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	}{
 		"default env": {
 			envName:       "test",
-			svcStackPath:  "svc-test.stack.yml",
-			svcParamsPath: "svc-test.params.json",
-		},
-		"staging env": {
-			envName:       "staging",
-			svcStackPath:  "svc-staging.stack.yml",
-			svcParamsPath: "svc-staging.params.json",
-		},
-		"prod env": {
-			envName:       "prod",
-			svcStackPath:  "svc-prod.stack.yml",
-			svcParamsPath: "svc-prod.params.json",
+			svcStackPath:  "svc-grpc-test.stack.yml",
+			svcParamsPath: "svc-grpc-test.params.json",
 		},
 	}
-	val, exist := os.LookupEnv("TAG")
-	require.NoError(t, os.Setenv("TAG", "cicdtest"))
-	defer func() {
-		if !exist {
-			require.NoError(t, os.Unsetenv("TAG"))
-			return
-		}
-		require.NoError(t, os.Setenv("TAG", val))
-	}()
-	path := filepath.Join("testdata", "workloads", svcManifestPath)
+	path := filepath.Join("testdata", "workloads", svcGrpcManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	for name, tc := range testCases {
@@ -86,6 +63,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
 		}, stack.WithHTTPS())
+
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids

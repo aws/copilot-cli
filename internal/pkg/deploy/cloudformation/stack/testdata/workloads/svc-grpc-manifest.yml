@@ -3,16 +3,17 @@
 #  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: fe
+name: gRPC
 # The "architecture" of the service you're running.
 type: Load Balanced Web Service
 image:
   build: ./Dockerfile
   # Port exposed through your container to route traffic to it.
-  port: 4000
+  port: 50051
 http:
   # Requests to this path will be forwarded to your service.
   # To match all requests you can use the "/" path.
+  version: gRPC
   path: '/'
   alias: example.com
   # You can specify a custom health check path. The default is "/".
@@ -35,6 +36,7 @@ storage:
 publish:
   topics:
     - name: givesdogs
+
 # Optional fields for more advanced use-cases.
 #
 variables:                    # Pass environment variables as key value pairs.
@@ -43,41 +45,4 @@ variables:                    # Pass environment variables as key value pairs.
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 # You can override any of the values defined above by environment.
-environments:
-  staging:
-    image:
-      location: 123456789000.dkr.ecr.us-east-1.amazonaws.com/vault/e2e:${TAG}
-    count:
-      spot: 5
-    http:
-      healthcheck:
-        path: /
-        grace_period: 30s
-      deregistration_delay: 30s
-  prod:
-    count:
-      range:
-        min: 3
-        max: 12
-        spot_from: 6
-    logging:
-      retention: 1
-      destination:
-        Name: cloudwatch
-        region: us-west-2
-        log_group_name: /copilot/sidecar-test-hello
-        log_stream_prefix: copilot/
-      variables:
-        TEST: TEST
-      secrets:
-        GITHUB_TOKEN: GITHUB_TOKEN
-    sidecars:
-      nginx:
-        port: 80
-        image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
-        variables:
-          NGINX_PORT: 80
-        healthcheck:
-          command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
-          interval: 10s
-
+# environments:

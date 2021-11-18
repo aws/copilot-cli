@@ -78,7 +78,8 @@ Resources:
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
-          
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
           # We pipe certain environment variables directly into the task definition.
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
@@ -86,34 +87,30 @@ Resources:
           - Name: COPILOT_APPLICATION_NAME
             Value: !Sub '${AppName}'
           - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
-            Value: staging.my-app.local
+            Value: test.my-app.local
           - Name: COPILOT_ENVIRONMENT_NAME
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_SNS_TOPIC_ARNS
-            Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-staging-fe-givesdogs"}'
+            Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-gRPC-givesdogs"}'
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           - Name: LOG_LEVEL
             Value: "info"
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"persistence":"/etc/scratch"}'
-          
+
           LogConfiguration:
             LogDriver: awslogs
             Options:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
-              awslogs-stream-prefix: copilot
-            
+              awslogs-stream-prefix: copilot          
           MountPoints:
             - ContainerPath: '/etc/scratch'
               ReadOnly: true
-              SourceVolume: persistence
-          PortMappings:
-            - ContainerPort: !Ref ContainerPort        
-
+              SourceVolume: persistence        
       
       Volumes:
         - Name: persistence
@@ -214,6 +211,74 @@ Resources:
         Fn::ImportValue:
           !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
   
+  DynamicDesiredCountAction:
+    Type: Custom::DynamicDesiredCountFunction
+    Properties:
+      ServiceToken: !GetAtt DynamicDesiredCountFunction.Arn
+      Cluster:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-ClusterId'
+      App: !Ref AppName
+      Env: !Ref EnvName
+      Svc: !Ref WorkloadName
+      DefaultDesiredCount: !Ref TaskCount
+      # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
+      UpdateID: RandomGUID
+  
+  DynamicDesiredCountFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          mockDynamicDesiredCountZipFile
+      Handler: "index.handler"
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt 'CustomResourceRole.Arn'
+      Runtime: nodejs12.x
+  
+  AutoScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
+  
+  AutoScalingTarget:
+    Metadata:
+      'aws:copilot:description': "An autoscaling target to scale your service's desired count"
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MinCapacity: 2
+      MaxCapacity: 10
+      ResourceId:
+        Fn::Join:
+          - '/'
+          - - 'service'
+            - Fn::ImportValue:
+                !Sub '${AppName}-${EnvName}-ClusterId'
+            - !GetAtt Service.Name
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+      RoleARN: !GetAtt AutoScalingRole.Arn
+
+  AutoScalingPolicyECSServiceAverageCPUUtilization:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageCPUUtilization, ScalingPolicy]]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        TargetValue: 70
 
   EnvControllerAction:
     Metadata:
@@ -292,7 +357,7 @@ Resources:
         Fn::ImportValue:
           !Sub '${AppName}-${EnvName}-ClusterId'
       TaskDefinition: !Ref TaskDefinition
-      DesiredCount: !Ref TaskCount
+      DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
       DeploymentConfiguration:
         DeploymentCircuitBreaker:
           Enable: true
@@ -301,9 +366,7 @@ Resources:
         MaximumPercent: 200
       PlatformVersion: LATEST
       PropagateTags: SERVICE
-      CapacityProviderStrategy:
-        - CapacityProvider: FARGATE_SPOT
-          Weight: 1
+      LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -313,9 +376,8 @@ Resources:
               - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-      
       # This may need to be adjusted if the container takes a while to start up
-      HealthCheckGracePeriodSeconds: 30
+      HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort
@@ -332,9 +394,10 @@ Resources:
       HealthCheckPath: / # Default is '/'.
       Port: !Ref ContainerPort
       Protocol: HTTP
+      ProtocolVersion: GRPC
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 30
+          Value: 60
         - Key: stickiness.enabled
           Value: !Ref Stickiness
       TargetType: ip
@@ -376,6 +439,33 @@ Resources:
             - Effect: Allow
               Action:
                 - elasticloadbalancing:DescribeRules
+              Resource: "*"
+        - PolicyName: "DelegateDesiredCountAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: ECS
+              Effect: Allow
+              Action:
+                - ecs:DescribeServices
+              Resource: "*"
+              Condition: 
+                ArnEquals: 
+                  'ecs:cluster':
+                    Fn::Sub:
+                      - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}
+                      - ClusterName:
+                          Fn::ImportValue:
+                            !Sub '${AppName}-${EnvName}-ClusterId'
+            - Sid: ResourceGroups
+              Effect: Allow
+              Action:
+                - resource-groups:GetResources
+              Resource: "*"
+            - Sid: Tags
+              Effect: Allow
+              Action:
+                - "tag:GetResources"
               Resource: "*"
       ManagedPolicyArns:
         - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
@@ -527,7 +617,7 @@ Resources:
     Properties:
       TopicName: ${AWS::StackName}-givesdogs
       KmsMasterKeyId: 'alias/aws/sns'
-    
+
   givesdogsSNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     DependsOn: givesdogsSNSTopic

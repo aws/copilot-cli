@@ -458,11 +458,14 @@ type Logging struct {
 	EnableMetadata *bool             `yaml:"enableMetadata"`
 	SecretOptions  map[string]string `yaml:"secretOptions"`
 	ConfigFile     *string           `yaml:"configFilePath"`
+	Variables      map[string]string `yaml:"variables"`
+	Secrets        map[string]string `yaml:"secrets"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (lc *Logging) IsEmpty() bool {
-	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil && lc.SecretOptions == nil && lc.ConfigFile == nil
+	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil &&
+		lc.SecretOptions == nil && lc.ConfigFile == nil && lc.Variables == nil && lc.Secrets == nil
 }
 
 // LogImage returns the default Fluent Bit image if not otherwise configured.

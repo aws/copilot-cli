@@ -107,10 +107,7 @@ partition key but a different sort key. You may specify up to 5 alternate sort k
 
 // DynamoDB specific constants and variables.
 const (
-	ddbKeyString = "key"
-)
-
-const (
+	ddbKeyString  = "key"
 	ddbStringType = "String"
 	ddbIntType    = "Number"
 	ddbBinaryType = "Binary"
@@ -141,6 +138,8 @@ var engineTypes = []string{
 	engineTypePostgreSQL,
 }
 
+var errUnavailableAddonParams = errors.New("addon does not require parameters")
+
 type initStorageVars struct {
 	storageType  string
 	storageName  string
@@ -169,6 +168,9 @@ type initStorageOpts struct {
 
 	sel    wsSelector
 	prompt prompter
+
+	// Cached data.
+	workloadType string
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -205,7 +207,7 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	if o.storageType != "" {
-		if err := validateStorageType(o.storageType); err != nil {
+		if err := o.validateStorageType(); err != nil {
 			return err
 		}
 	}
@@ -274,21 +276,6 @@ func (o *initStorageOpts) Ask() error {
 		return err
 	}
 
-	wkld, err := o.store.GetWorkload(o.appName, o.workloadName)
-	if err != nil {
-		return fmt.Errorf("get workload: %w", err)
-	}
-	if wkld.Type == manifest.RequestDrivenWebServiceType && o.storageType == rdsStorageType {
-		log.Warningf(`%s storage is launched in private subnets of your environment's VPC. 
-To reach the database from your %s please enable the HTTP Data API: 
-https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html. 
-
-You will also need to an IAM policy that allows your %s to make Data API calls. 
-You can simply create the policy in the Aurora addon template and create an output. The policy will be automatically attached to your %s:
-https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/#what-does-an-addon-template-look-like
-`, rdsStorageTypeOption, manifest.RequestDrivenWebServiceType, manifest.RequestDrivenWebServiceType, manifest.RequestDrivenWebServiceType)
-	}
-
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.askStorageName(); err != nil {
 		return err
@@ -318,9 +305,8 @@ https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/#what
 
 func (o *initStorageOpts) askStorageType() error {
 	if o.storageType != "" {
-		return nil
+		return o.validateStorageType()
 	}
-
 	var options []prompt.Option
 	for _, st := range storageTypes {
 		options = append(options, storageTypeOptions[st])
@@ -334,6 +320,16 @@ func (o *initStorageOpts) askStorageType() error {
 		return fmt.Errorf("select storage type: %w", err)
 	}
 	o.storageType = optionToStorageType[storageTypeOption]
+	return o.validateStorageType()
+}
+
+func (o *initStorageOpts) validateStorageType() error {
+	if err := validateStorageType(o.storageType, validateStorageTypeOpts{
+		ws:           o.ws,
+		workloadName: o.workloadName,
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -589,60 +585,96 @@ func (o *initStorageOpts) validateWorkloadName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
-	addonCf, err := o.newAddon()
-	if err != nil {
+	if err := o.readWorkloadType(); err != nil {
 		return err
 	}
 
-	addonPath, err := o.ws.WriteAddon(addonCf, o.workloadName, o.storageName)
+	addonBlobs, err := o.addonBlobs()
 	if err != nil {
-		e, ok := err.(*workspace.ErrFileExists)
-		if !ok {
+		return err
+	}
+	for _, addon := range addonBlobs {
+		path, err := o.ws.WriteAddon(addon.blob, o.workloadName, addon.name)
+		if err != nil {
+			e, ok := err.(*workspace.ErrFileExists)
+			if !ok {
+				return err
+			}
+			return fmt.Errorf("addon file already exists: %w", e)
+		}
+		path, err = relPath(path)
+		if err != nil {
 			return err
 		}
-		return fmt.Errorf("addon already exists: %w", e)
+		log.Successf("Wrote CloudFormation %s at %s\n",
+			addon.description,
+			color.HighlightResource(path),
+		)
 	}
-	addonPath, err = relPath(addonPath)
-	if err != nil {
-		return err
-	}
-
-	addonMsgFmt := "Wrote CloudFormation template for %[1]s %[2]s at %[3]s\n"
-	var addonFriendlyText string
-	switch o.storageType {
-	case dynamoDBStorageType:
-		addonFriendlyText = dynamoDBTableFriendlyText
-	case s3StorageType:
-		addonFriendlyText = s3BucketFriendlyText
-	case rdsStorageType:
-		addonFriendlyText = rdsFriendlyText
-	default:
-		return fmt.Errorf(fmtErrInvalidStorageType, o.storageType, prettify(storageTypes))
-	}
-	log.Successf(addonMsgFmt,
-		color.Emphasize(addonFriendlyText),
-		color.HighlightUserInput(o.storageName),
-		color.HighlightResource(addonPath),
-	)
 	log.Infoln()
-
 	return nil
 }
 
-func (o *initStorageOpts) newAddon() (encoding.BinaryMarshaler, error) {
-	switch o.storageType {
-	case dynamoDBStorageType:
-		return o.newDynamoDBAddon()
-	case s3StorageType:
-		return o.newS3Addon()
-	case rdsStorageType:
-		return o.newRDSAddon()
-	default:
-		return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
-	}
+type addonBlob struct {
+	name        string
+	description string
+	blob        encoding.BinaryMarshaler
 }
 
-func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
+func (o *initStorageOpts) addonBlobs() ([]addonBlob, error) {
+	templateBlob, err := o.newAddonTemplate()
+	if err != nil {
+		return nil, err
+	}
+	blobs := []addonBlob{
+		{
+			name:        o.storageName,
+			description: "template",
+			blob:        templateBlob,
+		},
+	}
+	paramsBlob, err := o.newAddonParams()
+	if err != nil {
+		if errors.Is(err, errUnavailableAddonParams) { // The addon does not need any parameters.
+			return blobs, nil
+		}
+		return nil, err
+	}
+	return append(blobs, addonBlob{
+		name:        "addons.parameters",
+		description: "parameters",
+		blob:        paramsBlob,
+	}), nil
+}
+
+func (o *initStorageOpts) newAddonTemplate() (encoding.BinaryMarshaler, error) {
+	var templateBlob encoding.BinaryMarshaler
+	err := fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
+	switch o.storageType {
+	case dynamoDBStorageType:
+		templateBlob, err = o.newDDBTemplate()
+	case s3StorageType:
+		templateBlob, err = o.newS3Template()
+	case rdsStorageType:
+		templateBlob, err = o.newRDSTemplate()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return templateBlob, nil
+}
+
+func (o *initStorageOpts) newAddonParams() (encoding.BinaryMarshaler, error) {
+	if o.storageType != rdsStorageType {
+		return nil, errUnavailableAddonParams
+	}
+	if o.workloadType != manifest.RequestDrivenWebServiceType {
+		return nil, errUnavailableAddonParams
+	}
+	return addon.NewRDSParams(), nil
+}
+
+func (o *initStorageOpts) newDDBTemplate() (*addon.DynamoDBTemplate, error) {
 	props := addon.DynamoDBProps{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
@@ -665,19 +697,19 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 		}
 	}
 
-	return addon.NewDynamoDB(&props), nil
+	return addon.NewDDBTemplate(&props), nil
 }
 
-func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
+func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
 	props := &addon.S3Props{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
 		},
 	}
-	return addon.NewS3(props), nil
+	return addon.NewS3Template(props), nil
 }
 
-func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
+func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 	var engine string
 	switch o.rdsEngine {
 	case engineTypeMySQL:
@@ -693,12 +725,13 @@ func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
 		return nil, err
 	}
 
-	return addon.NewRDS(addon.RDSProps{
+	return addon.NewRDSTemplate(addon.RDSProps{
 		ClusterName:    o.storageName,
 		Engine:         engine,
 		InitialDBName:  o.rdsInitialDBName,
 		ParameterGroup: o.rdsParameterGroup,
 		Envs:           envs,
+		WorkloadType:   o.workloadType,
 	}), nil
 }
 
@@ -714,6 +747,19 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 	return envNames, nil
 }
 
+func (o *initStorageOpts) readWorkloadType() error {
+	mft, err := o.ws.ReadWorkloadManifest(o.workloadName)
+	if err != nil {
+		return fmt.Errorf("read manifest for %s: %w", o.workloadName, err)
+	}
+	t, err := mft.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("read 'type' from manifest for %s: %w", o.workloadName, err)
+	}
+	o.workloadType = t
+	return nil
+}
+
 func (o *initStorageOpts) RecommendActions() error {
 	var (
 		retrieveEnvVarCode string
@@ -726,15 +772,24 @@ func (o *initStorageOpts) RecommendActions() error {
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
-
+		if o.workloadType == manifest.RequestDrivenWebServiceType {
+			newVar = fmt.Sprintf("%s_ARN", newVar)
+			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
+const client = new AWS.SecretsManager({
+    region: process.env.AWS_DEFAULT_REGION,
+});
+const dbSecret = await client.getSecretValue({SecretId: process.env.%s}).promise();
+const {username, host, dbname, password, port} = JSON.parse(dbSecret.SecretString);`, newVar)
+		}
 	}
 
 	actionRetrieveEnvVar := fmt.Sprintf(
 		`Update %s's code to leverage the injected environment variable %s.
-For example, in JavaScript you can write %s.`,
+For example, in JavaScript you can write:
+%s`,
 		o.workloadName,
 		newVar,
-		color.HighlightCode(retrieveEnvVarCode))
+		color.HighlightCodeBlock(retrieveEnvVarCode))
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))

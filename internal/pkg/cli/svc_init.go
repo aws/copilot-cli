@@ -332,9 +332,8 @@ func (o *initSvcOpts) askSvcName() error {
 	if o.name != "" {
 		return nil
 	}
-
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "service"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
 		func(val interface{}) error {
 			return validateSvcName(val, o.wkldType)

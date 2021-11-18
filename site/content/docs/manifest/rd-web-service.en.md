@@ -154,6 +154,11 @@ Key-value pairs that represent environment variables that will be passed to your
 
 <div class="separator"></div>
 
+<a id="variables" href="#variables" class="field">`tags`</a> <span class="type">Map</span>  
+Key-value pairs representing AWS tags that are passed down to your AWS App Runner resources.
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the `LOG_LEVEL` environment variable in our 'test' environment.
 
