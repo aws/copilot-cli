@@ -2,8 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const AWS = require('aws-sdk');
-let ENV_HOSTED_ZONE_ID;
-let APP_NAME, ENV_NAME;
+const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
+const ATTEMPTS_RECORD_SETS_CHANGE = 10;
+const DELAY_RECORD_SETS_CHANGE = 30;
+const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
+const DELAY_CERTIFICATE_VALIDATED = 30;
+
+let acm, envRoute53, envHostedZoneID, appName, envName, certificateDomain;
+let defaultSleep = function (ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+};
+let sleep = defaultSleep;
+let random = Math.random;
 
 /**
  * Upload a CloudFormation response object to S3.
@@ -67,32 +77,36 @@ function report (
 }
 
 exports.handler = async function (event, context) {
+    acm = new AWS.ACM();
+    envRoute53 = new AWS.Route53();
+
     const props = event.ResourceProperties;
-    ENV_HOSTED_ZONE_ID = props.EnvHostedZoneId;
+    envHostedZoneID = props.EnvHostedZoneId;
+    certificateDomain = `${props.ServiceName}-nlb.${props.EnvName}.${props.AppName}.${props.DomainName}`;
 
     let loadBalancerDNS = props.LoadBalancerDNS;
-    let aliases = props.Aliases;
-    let certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
+    let loadBalancerHostedZoneID = props.LoadBalancerHostedZoneID;
+    let aliases = new Set(props.Aliases);
 
     const physicalResourceID = `/${serviceName}/${customDomain}`; // sorted default nlb alias and custom aliases;
 
     switch (event.RequestType) {
         case "Create":
             await validateAliases(aliases, loadBalancerDNS);
-            requestCertificate();
-            waitForValidationOptionsToBeReady();
-            validateCertAndAddAliases();
+            const certificateARN = await requestCertificate(aliases);
+            const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
+            await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
             break;
         case "Update":
             // check if certificate should update; if yes, replace; if not, exit
-            await validateAliases(aliases);
-            requestCertificate();
-            waitForValidationOptionsToBeReady();
-            validateCertAndAddAliases(); // for each alias
+            // await validateAliases(aliases);
+            // requestCertificate();
+            // waitForValidationOptionsToBeReady();
+            // validateCertAndAddAliases(); // for each alias
             break;
         case "Delete":
-            deleteCertificate();
-            deleteValidationRecordsAndAliases(); // for each alias, also check if the alias points to myself before deleting.
+            // deleteCertificate();
+            // deleteValidationRecordsAndAliases(); // for each alias, also check if the alias points to myself before deleting.
             break;
         default:
             throw new Error(`Unsupported request type ${event.RequestType}`);
@@ -101,16 +115,15 @@ exports.handler = async function (event, context) {
 
 /**
  * Validate that the aliases are not in use.
- * @param {Array<String>} aliases for the service.
- * @param {String} loadBalancerDNS the DNS of the service's load balancer.
  *
+ * @param {Set<String>} aliases for the service.
+ * @param {String} loadBalancerDNS the DNS of the service's load balancer.
  * @throws error if at least one of the aliases is not valid.
  */
 async function validateAliases(aliases, loadBalancerDNS) {
-    const envRoute53 = new AWS.Route53();
     for (let alias of aliases) {
         const data = await envRoute53.listResourceRecordSets({
-            HostedZoneId: ENV_HOSTED_ZONE_ID,
+            HostedZoneId: envHostedZoneID,
             MaxItems: "1",
             StartRecordName: alias,
         }).promise();
@@ -128,28 +141,155 @@ async function validateAliases(aliases, loadBalancerDNS) {
 
 /**
  * Requests a public certificate from AWS Certificate Manager, using DNS validation.
- * @param {String} certDomain the certificate domain.
- * @param {Array<String>} aliases the subject alternative names for the certificate.
  *
+ * @param {Set<String>} aliases the subject alternative names for the certificate.
  * @return {String} The ARN of the requested certificate.
  */
-async function requestCertificate(certDomain, aliases) {
-    const acm = new AWS.ACM();
-    const data =await acm.requestCertificate({
-        DomainName: certDomain,
+async function requestCertificate(aliases) {
+    const { CertificateArn } =await acm.requestCertificate({
+        DomainName: certificateDomain,
         IdempotencyToken: "1", // TODO: this should be the physical resource id
-        SubjectAlternativeNames: aliases,
+        SubjectAlternativeNames: aliases.size === 0? null: [...aliases],
         Tags: [
             {
                 Key: "copilot-application",
-                Value: APP_NAME,
+                Value: appName,
             },
             {
                 Key: "copilot-environment",
-                Value: ENV_NAME,
+                Value: envName,
             },
         ],
         ValidationMethod: "DNS",
     }).promise();
-    return data["CertificateArn"];
+    return CertificateArn;
 }
+
+/**
+ * Wait until the validation options are ready
+ *
+ * @param certificateARN
+ * @param {Set<String>} aliases for the service.
+ */
+async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
+    let expectedCount = aliases.size + 1; // Expect one validation option for each alias and the cert domain.
+
+    let attempt; // TODO: This wait loops could be further abstracted.
+    for (attempt = 0; attempt < ATTEMPTS_VALIDATION_OPTIONS_READY; attempt++) {
+        let readyCount = 0;
+        const { Certificate } = await acm.describeCertificate({
+            CertificateArn: certificateARN,
+        }).promise();
+        const options = Certificate.DomainValidationOptions || [];
+        options.forEach(option => {
+            if (option.ResourceRecord && (aliases.has(option.DomainName) || option.DomainName === certificateDomain)) {
+                readyCount++;
+            }
+        })
+        if (readyCount === expectedCount) {
+            return options;
+        }
+
+        // Exponential backoff with jitter based on 200ms base
+        // component of backoff fixed to ensure minimum total wait time on
+        // slow targets.
+        const base = Math.pow(2, attempt);
+        await sleep(random() * base * 50 + base * 150);
+    }
+    throw new Error(`resource validation records are not ready after ${attempt} tries`);
+}
+
+/**
+ * Validate the certificate and insert the alias records
+ *
+ * @param {Array<Object>} validationOptions
+ * @param {String} certificateARN
+ * @param {String} loadBalancerDNS
+ * @param {String} loadBalancerHostedZone
+ */
+async function activate(validationOptions, certificateARN, loadBalancerDNS, loadBalancerHostedZone) {
+    let promises = [];
+    for (let option of validationOptions) {
+        promises.push(activateOption(option, loadBalancerDNS, loadBalancerHostedZone));
+    }
+    await Promise.all(promises);
+    console.log("finished upserting records");
+
+    await acm.waitFor("certificateValidated", {
+        // Wait up to 9 minutes and 30 seconds
+        $waiter: {
+            delay: DELAY_CERTIFICATE_VALIDATED,
+            maxAttempts: ATTEMPTS_CERTIFICATE_VALIDATED,
+        },
+        CertificateArn: certificateARN,
+    }).promise();
+}
+
+/**
+ * Upsert the validation record for the alias, as well as adding the A record if the alias is not the default certificaite domain.
+ *
+ * @param {Array<object>} option
+ * @param {String} loadBalancerDNS
+ * @param {String} loadBalancerHostedZone
+ */
+async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
+    let changes = [{
+        Action: "UPSERT",
+        ResourceRecordSet: {
+            Name: option.ResourceRecord.Name,
+            Type: option.ResourceRecord.Type,
+            TTL: 60,
+            ResourceRecords: [
+                {
+                    Value: option.ResourceRecord.Value,
+                },
+            ],
+        }
+    }];
+
+    if (option.DomainName !== certificateDomain) {
+        changes.push({
+            Action: "UPSERT", // It is validated that if the alias is in use, it is in use by the service itself.
+            ResourceRecordSet: {
+                Name: option.DomainName,
+                Type: "A",
+                AliasTarget: {
+                    DNSName: loadBalancerDNS,
+                    EvaluateTargetHealth: true,
+                    HostedZoneId: loadBalancerHostedZone,
+                }
+            }
+        });
+    }
+
+    let { ChangeInfo } = await envRoute53.changeResourceRecordSets({
+        ChangeBatch: {
+            Comment: "Validate the certificate and create A record for the alias",
+            Changes: changes,
+        },
+        HostedZoneId: envHostedZoneID,
+    }).promise();
+    console.log(`change info for ${option.DomainName}: ${ChangeInfo}`)
+    // TODO: handle "PriorRequestNotComplete" error: https://docs.aws.amazon.com/Route53/latest/APIReference/API_ChangeResourceRecordSets.html#API_ChangeResourceRecordSets_Errors
+
+    await envRoute53.waitFor('resourceRecordSetsChanged', {
+        // Wait up to 5 minutes
+        $waiter: {
+            delay: DELAY_RECORD_SETS_CHANGE,
+            maxAttempts: ATTEMPTS_RECORD_SETS_CHANGE,
+        },
+        Id: ChangeInfo.Id,
+    }).promise();
+}
+
+
+exports.withSleep = function (s) {
+    sleep = s;
+};
+exports.reset = function () {
+    sleep = defaultSleep;
+
+};
+exports.withDeadlineExpired = function (d) {
+    exports.deadlineExpired = d;
+};
