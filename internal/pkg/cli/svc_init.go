@@ -467,7 +467,6 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 	if err != nil {
 		return "", fmt.Errorf("get docker engine platform: %w", err)
 	}
-	detectedPlatform := dockerengine.PlatformString(detectedOs, detectedArch)
 	redirectedPlatform, err := manifest.RedirectPlatform(detectedOs, detectedArch, wkldType)
 	if err != nil {
 		return "", fmt.Errorf("redirect docker engine platform: %w", err)
@@ -475,11 +474,17 @@ func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.Platform
 	if redirectedPlatform == "" {
 		return "", nil
 	}
-	if redirectedPlatform != detectedPlatform && wkldType != manifest.RequestDrivenWebServiceType {
-		log.Warningf("Your architecture type %s is currently unsupported. Setting platform %s instead.\n", color.HighlightCode(detectedArch), redirectedPlatform)
+	// Return an error if a platform cannot be redirected.
+	if wkldType == manifest.RequestDrivenWebServiceType && detectedOs == manifest.OSWindows {
+		return "", manifest.ErrAppRunnerInvalidPlatformWindows
 	}
-	platform := manifest.PlatformString(redirectedPlatform)
-	return platform, nil
+	// Messages are logged only if the platform was redirected.
+	msg := fmt.Sprintf("Architecture type %s has been detected. We will set platform '%s' instead. If you'd rather build and run as architecture type %s, please change the 'platform' field in your workload manifest to '%s'.\n", detectedArch, redirectedPlatform, manifest.ArchARM64, dockerengine.PlatformString(detectedOs, manifest.ArchARM64))
+	if manifest.IsArmArch(detectedArch) && wkldType == manifest.RequestDrivenWebServiceType {
+		msg = fmt.Sprintf("Architecture type %s has been detected. At this time, %s architectures are not supported for App Runner workloads. We will set platform '%s' instead.\n", detectedArch, detectedArch, redirectedPlatform)
+	}
+	log.Warningf(msg)
+	return manifest.PlatformString(redirectedPlatform), nil
 }
 
 func (o *initSvcOpts) askSvcPublishers() (err error) {

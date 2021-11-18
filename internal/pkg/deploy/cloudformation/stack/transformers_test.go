@@ -1426,11 +1426,38 @@ func Test_convertPlatform(t *testing.T) {
 				Arch: template.ArchX86,
 			},
 		},
+		"should return linux and arm when platform is 'linux/arm'": {
+			in: manifest.PlatformArgsOrString{
+				PlatformString: (*manifest.PlatformString)(aws.String("linux/arm")),
+			},
+			out: template.RuntimePlatformOpts{
+				OS:   template.OSLinux,
+				Arch: template.ArchARM64,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.out, convertPlatform(tc.in))
+		})
+	}
+}
+
+func Test_convertHTTPVersion(t *testing.T) {
+	testCases := map[string]struct {
+		in     *string
+		wanted *string
+	}{
+		"should return nil if there is no user input": {},
+		"should return as uppercase on any user input": {
+			in:     aws.String("gRPC"),
+			wanted: aws.String("GRPC"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, convertHTTPVersion(tc.in))
 		})
 	}
 }

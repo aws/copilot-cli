@@ -119,6 +119,26 @@ func (mr *MockPrompterMockRecorder) SelectOne(message, help, options interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectOne", reflect.TypeOf((*MockPrompter)(nil).SelectOne), varargs...)
 }
 
+// SelectOption mocks base method.
+func (m *MockPrompter) SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{message, help, opts}
+	for _, a := range promptCfgs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SelectOption", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SelectOption indicates an expected call of SelectOption.
+func (mr *MockPrompterMockRecorder) SelectOption(message, help, opts interface{}, promptCfgs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{message, help, opts}, promptCfgs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectOption", reflect.TypeOf((*MockPrompter)(nil).SelectOption), varargs...)
+}
+
 // MockAppEnvLister is a mock of AppEnvLister interface.
 type MockAppEnvLister struct {
 	ctrl     *gomock.Controller

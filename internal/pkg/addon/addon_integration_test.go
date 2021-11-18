@@ -1,3 +1,4 @@
+//go:build integration || localintegration
 // +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -24,7 +25,7 @@ func TestAddons(t *testing.T) {
 		outFileName    string
 	}{
 		"aurora": {
-			addonMarshaler: addon.NewRDS(addon.RDSProps{
+			addonMarshaler: addon.NewRDSTemplate(addon.RDSProps{
 				ClusterName:   "aurora",
 				Engine:        "MySQL",
 				InitialDBName: "main",
@@ -33,7 +34,7 @@ func TestAddons(t *testing.T) {
 			outFileName: "aurora.yml",
 		},
 		"ddb": {
-			addonMarshaler: addon.NewDynamoDB(&addon.DynamoDBProps{
+			addonMarshaler: addon.NewDDBTemplate(&addon.DynamoDBProps{
 				StorageProps: &addon.StorageProps{
 					Name: "ddb",
 				},
@@ -65,7 +66,7 @@ func TestAddons(t *testing.T) {
 			outFileName: "ddb.yml",
 		},
 		"s3": {
-			addonMarshaler: addon.NewS3(&addon.S3Props{
+			addonMarshaler: addon.NewS3Template(&addon.S3Props{
 				StorageProps: &addon.StorageProps{
 					Name: "bucket",
 				},

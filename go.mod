@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.41.19
+	github.com/aws/aws-sdk-go v1.42.4
 	github.com/briandowns/spinner v1.15.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
@@ -25,7 +25,7 @@ require (
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/mod v0.5.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	gopkg.in/ini.v1 v1.63.2
+	gopkg.in/ini.v1 v1.64.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 

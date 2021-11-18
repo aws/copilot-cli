@@ -23,6 +23,10 @@ const (
 	DefaultHealthCheckGracePeriod = 60
 )
 
+const (
+	GRPCProtocol = "gRPC" // GRPCProtocol is the HTTP protocol version for gRPC.
+)
+
 var (
 	errUnmarshalHealthCheckArgs = errors.New("can't unmarshal healthcheck field into string or compose-style map")
 )
@@ -61,8 +65,10 @@ type LoadBalancedWebServiceConfig struct {
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path        string
-	Port        uint16
+	Path string
+	Port uint16
+
+	HTTPVersion string               // Optional http protocol version such as gRPC, HTTP2.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 }
@@ -81,6 +87,9 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	if isWindowsPlatform(props.Platform) {
 		svc.LoadBalancedWebServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.LoadBalancedWebServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
+	if props.HTTPVersion != "" {
+		svc.RoutingRule.ProtocolVersion = &props.HTTPVersion
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
@@ -183,6 +192,7 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
 	Path                *string                 `yaml:"path"`
+	ProtocolVersion     *string                 `yaml:"version"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness          *bool                   `yaml:"stickiness"`
 	Alias               Alias                   `yaml:"alias"`

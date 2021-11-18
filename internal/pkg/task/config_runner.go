@@ -37,7 +37,7 @@ type ConfigRunner struct {
 	VPCGetter VPCGetter
 
 	// Platform configuration
-	OS   string
+	OS string
 }
 
 // Run runs tasks given subnets, security groups and the cluster, and returns the tasks.
@@ -71,9 +71,9 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 	platformVersion := "LATEST"
 	enableExec := true
 	if IsValidWindowsOS(r.OS) {
-			platformVersion = "1.0.0"
-			enableExec = false
-		}
+		platformVersion = "1.0.0"
+		enableExec = false
+	}
 
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
 		Cluster:         r.Cluster,

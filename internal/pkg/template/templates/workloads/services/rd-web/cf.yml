@@ -84,6 +84,10 @@ Resources:
                 Value: !Ref EnvName
               - Name: COPILOT_SERVICE_NAME
                 Value: !Ref WorkloadName
+{{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+              - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+                Value: {{.ServiceDiscoveryEndpoint}}
+{{- end}}
               {{- if .Publish }}
               {{- if .Publish.Topics }}
               - Name: COPILOT_SNS_TOPIC_ARNS
@@ -128,7 +132,7 @@ Resources:
       NetworkConfiguration:
         EgressConfiguration:
           EgressType: VPC
-          VpcConnectorArn: !GetAtt VpcConnector.Arn
+          VpcConnectorArn: !Ref VpcConnector
       {{- end }}
       Tags:
         - Key: copilot-application

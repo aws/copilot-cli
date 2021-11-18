@@ -46,7 +46,9 @@ const (
 	OSWindowsServerFull = "WINDOWS_SERVER_2019_FULL"
 	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
 
-	ArchX86 = "X86_64"
+	ArchX86   = "X86_64"
+	ArchARM   = "ARM"
+	ArchARM64 = "ARM64"
 )
 
 // Constants for ARN options.
@@ -385,6 +387,7 @@ type WorkloadOpts struct {
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
+	HTTPVersion              *string
 
 	// Additional options for service templates.
 	WorkloadType        string

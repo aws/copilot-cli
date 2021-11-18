@@ -138,10 +138,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 						TargetContainer: aws.String("mockName"),
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port: aws.String("443"),
+						Port:            aws.String("443"),
 						TargetContainer: aws.String("foo"),
 					},
-
 				},
 			},
 			wantedErrorMsgPrefix: `validate network load balancer target: `,
@@ -177,6 +176,26 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if fail to validate ARM": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: LoadBalancedWebServiceType,
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate ARM: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -317,6 +336,26 @@ func TestBackendService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if fail to validate ARM": {
+			config: BackendService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: BackendServiceType,
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate ARM: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -566,6 +605,26 @@ func TestWorkerService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if fail to validate ARM": {
+			config: WorkerService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: WorkerServiceType,
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate ARM: `,
 		},
 	}
 	for name, tc := range testCases {
@@ -871,6 +930,17 @@ func TestRoutingRule_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "allowed_source_ips[1]": `,
 		},
+		"error if protocol version is not valid": {
+			RoutingRule: RoutingRule{
+				ProtocolVersion: aws.String("quic"),
+			},
+			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
+		},
+		"should not error if protocol version is not uppercase": {
+			RoutingRule: RoutingRule{
+				ProtocolVersion: aws.String("gRPC"),
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -905,7 +975,7 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				TargetContainer: aws.String("main"),
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError: fmt.Errorf(`"port" must be specified`),
+			wantedError:          fmt.Errorf(`"port" must be specified`),
 		},
 	}
 
@@ -1014,7 +1084,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}{
 		"error if platform string is invalid": {
 			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("foobar/amd64"))},
-			wanted: fmt.Errorf("platform 'foobar/amd64' is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
+			wanted: fmt.Errorf("platform 'foobar/amd64' is invalid; valid platforms are: linux/amd64, linux/x86_64, linux/arm, linux/arm64, windows/amd64 and windows/x86_64"),
 		},
 		"error if only half of platform string is specified": {
 			in:     PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux"))},
@@ -1043,7 +1113,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 					Arch:     aws.String("amd64"),
 				},
 			},
-			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
 		},
 		"error if arch is invalid": {
 			in: PlatformArgsOrString{
@@ -1052,7 +1122,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 					Arch:     aws.String("bar"),
 				},
 			},
-			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
 		},
 		"return nil if platform string valid": {
 			in: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/amd64"))},
@@ -1841,25 +1911,24 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("Windows is not supported for App Runner services"),
 		},
-		// TODO: after ARM architectures are added to the valid list, these will return the error "App Runner services can only build on amd64 and x86_64 architectures"
 		"error if invalid arch in PlatformString": {
+			config: AppRunnerInstanceConfig{
+				Platform: PlatformArgsOrString{
+					PlatformArgs: PlatformArgs{
+						OSFamily: aws.String("linux"),
+						Arch:     aws.String("leg64"),
+					},
+				},
+			},
+			wantedError: fmt.Errorf("validate \"platform\": platform pair ('linux', 'leg64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+		},
+		"error if App Runner + ARM": {
 			config: AppRunnerInstanceConfig{
 				Platform: PlatformArgsOrString{
 					PlatformString: (*PlatformString)(aws.String("linux/arm64")),
 				},
 			},
-			wantedError: fmt.Errorf("validate \"platform\": platform 'linux/arm64' is invalid; valid platforms are: linux/amd64, linux/x86_64, windows/amd64 and windows/x86_64"),
-		},
-		"error if invalid arch in PlatformArgs": {
-			config: AppRunnerInstanceConfig{
-				Platform: PlatformArgsOrString{
-					PlatformArgs: PlatformArgs{
-						OSFamily: aws.String("linux"),
-						Arch:     aws.String("arm64"),
-					},
-				},
-			},
-			wantedError: fmt.Errorf("validate \"platform\": platform pair ('linux', 'arm64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wantedError: fmt.Errorf("App Runner services can only build on amd64 and x86_64 architectures"),
 		},
 	}
 	for name, tc := range testCases {
@@ -2144,6 +2213,17 @@ func TestValidateContainerDeps(t *testing.T) {
 			},
 			wanted: fmt.Errorf("container foo does not exist"),
 		},
+		"should return an error if a firelens container does not exist": {
+			in: validateDependenciesOpts{
+				mainContainerName: "mockMainContainer",
+				imageConfig: Image{
+					DependsOn: DependsOn{
+						"firelens_log_router": "start",
+					},
+				},
+			},
+			wanted: fmt.Errorf("container firelens_log_router does not exist"),
+		},
 		"should return an error if a sidecar container dependency does not exist": {
 			in: validateDependenciesOpts{
 				mainContainerName: "mockMainContainer",
@@ -2196,6 +2276,28 @@ func TestValidateContainerDeps(t *testing.T) {
 			},
 			wanted: fmt.Errorf("circular container dependency chain includes the following containers: [alpha beta gamma]"),
 		},
+		"success": {
+			in: validateDependenciesOpts{
+				mainContainerName: "alpha",
+				imageConfig: Image{
+					DependsOn: DependsOn{
+						"firelens_log_router": "start",
+						"beta":                "complete",
+					},
+				},
+				logging: Logging{
+					Image: aws.String("foobar"),
+				},
+				sidecarConfig: map[string]*SidecarConfig{
+					"beta": {
+						Essential: aws.Bool(false),
+						DependsOn: DependsOn{
+							"firelens_log_router": "start",
+						},
+					},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -2246,6 +2348,43 @@ func TestValidateWindows(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := validateWindows(tc.in)
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateARM(t *testing.T) {
+	testCases := map[string]struct {
+		in          validateARMOpts
+		wantedError error
+	}{
+		"should return an error if Spot specified inline": {
+			in: validateARMOpts{
+				Spot: aws.Int(2),
+			},
+			wantedError: fmt.Errorf(`'Fargate Spot' is not supported when deploying on ARM architecture`),
+		},
+		"should return an error if Spot specified with spot_from": {
+			in: validateARMOpts{
+				SpotFrom: aws.Int(2),
+			},
+			wantedError: fmt.Errorf(`'Fargate Spot' is not supported when deploying on ARM architecture`),
+		},
+		"should return nil if Spot not specified": {
+			in: validateARMOpts{
+				Spot: nil,
+			},
+			wantedError: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateARM(tc.in)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

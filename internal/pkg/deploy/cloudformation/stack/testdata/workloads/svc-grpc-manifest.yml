@@ -1,0 +1,48 @@
+# The manifest for the "fe" service.
+# Read the full specification for the "Load Balanced Web Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: gRPC
+# The "architecture" of the service you're running.
+type: Load Balanced Web Service
+image:
+  build: ./Dockerfile
+  # Port exposed through your container to route traffic to it.
+  port: 50051
+http:
+  # Requests to this path will be forwarded to your service.
+  # To match all requests you can use the "/" path.
+  version: gRPC
+  path: '/'
+  alias: example.com
+  # You can specify a custom health check path. The default is "/".
+  # For additional configuration: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#http-healthcheck
+  # healthcheck: '/'
+  # You can enable sticky sessions.
+  # stickiness: true
+# Number of CPU units for the task.
+cpu: 256
+# Amount of memory in MiB used by the task.
+memory: 512
+# Number of tasks that should be running in your service.
+count:
+  range: 2-10
+  cpu_percentage: 70
+storage:
+  volumes:
+    persistence:
+      path: /etc/scratch
+publish:
+  topics:
+    - name: givesdogs
+
+# Optional fields for more advanced use-cases.
+#
+variables:                    # Pass environment variables as key value pairs.
+  LOG_LEVEL: info
+#
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+# You can override any of the values defined above by environment.
+# environments:

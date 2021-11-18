@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -27,6 +28,10 @@ const (
 const (
 	jobWlType = "job"
 	svcWlType = "service"
+)
+
+const (
+	commonGRPCPort = uint16(50051)
 )
 
 var fmtErrUnrecognizedWlType = "unrecognized workload type %s"
@@ -298,16 +303,23 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 }
 
 func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps) (*manifest.LoadBalancedWebService, error) {
+	var httpVersion string
+	if i.Port == commonGRPCPort {
+		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
+			color.HighlightUserInput(strconv.Itoa(int(i.Port))), color.HighlightCode(manifest.GRPCProtocol))
+		httpVersion = manifest.GRPCProtocol
+	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       i.Name,
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
+		Path:        "/",
 		Port:        i.Port,
+		HTTPVersion: httpVersion,
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,
-		Path:        "/",
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {

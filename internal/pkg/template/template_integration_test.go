@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -102,6 +103,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 	}{
 		"renders a valid template by default": {
 			opts: template.WorkloadOpts{
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+			},
+		},
+		"renders a valid grpc template by default": {
+			opts: template.WorkloadOpts{
+				HTTPVersion:              aws.String("GRPC"),
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Network: template.NetworkOpts{
