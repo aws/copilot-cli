@@ -773,10 +773,7 @@ func isWindowsPlatform(platform PlatformArgsOrString) bool {
 
 // IsArmArch returns whether or not the arch is ARM.
 func IsArmArch(arch string) bool {
-	if strings.ToLower(arch) == ArchARM || strings.ToLower(arch) == ArchARM64 {
-		return true
-	}
-	return false
+	return strings.ToLower(arch) == ArchARM || strings.ToLower(arch) == ArchARM64 
 }
 
 func requiresBuild(image Image) (bool, error) {
