@@ -91,7 +91,9 @@ exports.handler = async function (event, context) {
     envHostedZoneID = props.EnvHostedZoneId;
     envName = props.EnvName;
     appName = props.AppName;
+
     serviceName = props.ServiceName;
+    domainName = props.DomainName;
     rootDNSRole = props.RootDNSRole;
     certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
 
@@ -248,7 +250,6 @@ async function activate(validationOptions, certificateARN, loadBalancerDNS, load
         promises.push(activateOption(option, loadBalancerDNS, loadBalancerHostedZone));
     }
     await Promise.all(promises);
-
     await acm.waitFor("certificateValidated", {
         // Wait up to 9 minutes and 30 seconds
         $waiter: {
@@ -296,15 +297,16 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
         });
     }
 
-    let { ChangeInfo } = await envRoute53.changeResourceRecordSets({
+    let r = await domainResources(option.DomainName);
+    let { ChangeInfo } = await r.route53Client.changeResourceRecordSets({
         ChangeBatch: {
             Comment: "Validate the certificate and create A record for the alias",
             Changes: changes,
         },
-        HostedZoneId: envHostedZoneID,
+        HostedZoneId: r.hostedZoneID,
     }).promise();
 
-    await envRoute53.waitFor('resourceRecordSetsChanged', {
+    await r.route53Client.waitFor('resourceRecordSetsChanged', {
         // Wait up to 5 minutes
         $waiter: {
             delay: DELAY_RECORD_SETS_CHANGE_IN_S,
@@ -388,18 +390,16 @@ function lazyLoadAppRoute53Client() {
 }
 
 async function hostedZoneID(domain) {
-    const hostedZones = await appRoute53
+    const { HostedZones } = await appRoute53
         .listHostedZonesByName({
             DNSName: domain,
             MaxItems: "1",
         })
         .promise();
-    if (!hostedZones["HostedZones"] || hostedZones["HostedZones"].length === 0) {
-        throw new Error(
-            `Couldn't find any Hosted Zone with DNS name ${domainName}.`
-        );
+    if (!HostedZones || HostedZones.length === 0) {
+        throw new Error( `Couldn't find any Hosted Zone with DNS name ${domainName}.`);
     }
-    return hostedZones["HostedZones"][0].Id.split("/").pop();;
+    return HostedZones[0].Id.split("/").pop();
 }
 
 async function domainResources (alias) {
