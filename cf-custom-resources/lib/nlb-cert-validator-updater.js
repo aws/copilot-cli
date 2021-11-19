@@ -9,7 +9,8 @@ const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
 const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
 const DELAY_CERTIFICATE_VALIDATED_IN_S = 30;
 
-let acm, envRoute53, envHostedZoneID, appName, envName, serviceName, certificateDomain;
+let acm, appRoute53, envRoute53, rootHostedZoneID, appHostedZoneID, envHostedZoneID;
+let appName, envName, serviceName, certificateDomain, domainTypes, rootDNSRole, domainName;
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -78,21 +79,24 @@ function report (
 }
 
 exports.handler = async function (event, context) {
+    // Destruct resource properties into local variables.
     const props = event.ResourceProperties;
-
     let {LoadBalancerDNS: loadBalancerDNS,
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
         DomainName: domainName,
     } = props;
     const aliases = new Set(props.Aliases);
 
-    acm = new AWS.ACM();
-    envRoute53 = new AWS.Route53();
+    // Initialize global variables.
     envHostedZoneID = props.EnvHostedZoneId;
     envName = props.EnvName;
     appName = props.AppName;
     serviceName = props.ServiceName;
+    rootDNSRole = props.RootDNSRole;
     certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
+
+    // Load resources that are needed by default.
+    loadResources();
 
     // NOTE: If the aliases have changed, then we need to replace the certificate being used, as well as deleting/adding
     // validation records and A records. In general, any change in aliases indicate a "replacement" of the resources
@@ -141,8 +145,9 @@ async function validateAliases(aliases, loadBalancerDNS) {
     let promises = [];
 
     for (let alias of aliases) {
-        const promise = envRoute53.listResourceRecordSets({
-            HostedZoneId: envHostedZoneID,
+        let r = await domainResources(alias);
+        const promise = r.route53Client.listResourceRecordSets({
+            HostedZoneId: r.hostedZoneID,
             MaxItems: "1",
             StartRecordName: alias,
         }).promise().then((data) => {
@@ -318,6 +323,111 @@ exports.deadlineExpired = function () {
         );
     });
 };
+
+/**
+ * Load clients and variables that can be reused between calls.
+ */
+function loadResources() {
+    if (!acm) {
+        acm = new AWS.ACM();
+    }
+
+    if (!envRoute53) {
+        envRoute53 = new AWS.Route53();
+    }
+
+    if (!domainTypes) {
+        domainTypes = {
+            EnvDomainZone: {
+                regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
+                domain: `${envName}.${appName}.${domainName}`,
+            },
+            AppDomainZone: {
+                regex: new RegExp(`^([^\.]+\.)?${appName}.${domainName}`),
+                domain: `${appName}.${domainName}`,
+            },
+            RootDomainZone: {
+                regex: new RegExp(`^([^\.]+\.)?${domainName}`),
+                domain: `${domainName}`,
+            },
+            OtherDomainZone: {},
+        };
+    }
+}
+
+/**
+ * Lazy load application-level clients and variables that can be reused between calls.
+ */
+async function lazyLoadAppResources() {
+    lazyLoadAppRoute53Client();
+    if (!appHostedZoneID) {
+        appHostedZoneID = await hostedZoneID(`${appName}.${domainName}`);
+    }
+}
+
+/**
+ * Lazy load application-level clients and variables that can be reused between calls.
+ */
+async function lazyLoadRootResources() {
+    lazyLoadAppRoute53Client();
+    if (!rootHostedZoneID) {
+        rootHostedZoneID = await hostedZoneID(domainName);
+    }
+}
+
+function lazyLoadAppRoute53Client() {
+    if (appRoute53) {
+        return;
+    }
+    appRoute53 = new AWS.Route53({
+        credentials: new AWS.ChainableTemporaryCredentials({
+            params: { RoleArn: rootDNSRole, },
+            masterCredentials: new AWS.EnvironmentCredentials("AWS"),
+        }),
+    });
+}
+
+async function hostedZoneID(domain) {
+    const hostedZones = await appRoute53
+        .listHostedZonesByName({
+            DNSName: domain,
+            MaxItems: "1",
+        })
+        .promise();
+    if (!hostedZones["HostedZones"] || hostedZones["HostedZones"].length === 0) {
+        throw new Error(
+            `Couldn't find any Hosted Zone with DNS name ${domainName}.`
+        );
+    }
+    return hostedZones["HostedZones"][0].Id.split("/").pop();;
+}
+
+async function domainResources (alias) {
+    if (domainTypes.EnvDomainZone.regex.test(alias)) {
+        return {
+            domain: domainTypes.EnvDomainZone.domain,
+            route53Client: envRoute53,
+            hostedZoneID: envHostedZoneID,
+        };
+    }
+    if (domainTypes.AppDomainZone.regex.test(alias)) {
+        await lazyLoadAppResources();
+        return {
+            domain: domainTypes.AppDomainZone.domain,
+            route53Client: appRoute53,
+            hostedZoneID: appHostedZoneID,
+        };
+    }
+    if (domainTypes.RootDomainZone.regex.test(alias)) {
+        await lazyLoadRootResources();
+        return {
+            domain: domainTypes.RootDomainZone.domain,
+            route53Client: appRoute53,
+            hostedZoneID: rootHostedZoneID,
+        };
+    }
+    throw new Error(`unrecognized domain type for ${alias}`);
+}
 
 exports.withSleep = function (s) {
     sleep = s;
