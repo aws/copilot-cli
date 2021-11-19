@@ -132,13 +132,13 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	opts := &deploySvcOpts{
 		deployWkldVars: vars,
 
-		store:     store,
+		store:       store,
 		deployStore: deployStore,
-		ws:        ws,
-		unmarshal: manifest.UnmarshalWorkload,
-		spinner:   termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:       selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:    prompter,
+		ws:          ws,
+		unmarshal:   manifest.UnmarshalWorkload,
+		spinner:     termprogress.NewSpinner(log.DiagnosticWriter),
+		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:      prompter,
 		newAppVersionGetter: func(appName string) (versionGetter, error) {
 			d, err := describe.NewAppDescriber(appName)
 			if err != nil {

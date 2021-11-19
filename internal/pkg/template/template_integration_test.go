@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -74,7 +75,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 		"renders with Windows platform": {
 			opts: template.WorkloadOpts{
 				Platform: template.RuntimePlatformOpts{
-					OS:	  "windows",
+					OS:   "windows",
 					Arch: "x86_64",
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",

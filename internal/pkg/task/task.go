@@ -62,7 +62,7 @@ const (
 )
 
 var (
-	ValidWindowsOSs = []string{osWindowsServerCore, osWindowsServerFull}
+	ValidWindowsOSs   = []string{osWindowsServerCore, osWindowsServerFull}
 	ValidCFNPlatforms = []string{dockerengine.PlatformString(osWindowsServerCore, archX86), dockerengine.PlatformString(osWindowsServerFull, archX86), dockerengine.PlatformString(osLinux, archX86)}
 	fmtTaskFamilyName = "copilot-%s"
 )
