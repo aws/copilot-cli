@@ -8,7 +8,7 @@ const sinon = require("sinon");
 const nock = require("nock");
 let origLog = console.log;
 
-const {handler, withSleep, withDeadlineExpired, reset} = require("../lib/nlb-cert-validator-updater");
+const {handler, withSleep, withDeadlineExpired, reset, attemptsValidationOptionsReady} = require("../lib/nlb-cert-validator-updater");
 
 
 describe("DNS Certificate Validation And Custom Domains for NLB", () => {
@@ -115,11 +115,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
                 });
         });
 
@@ -145,11 +141,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
                 });
         });
 
@@ -174,31 +166,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
-                    sinon.assert.calledWith(mockRequestCertificate, sinon.match({
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                        IdempotencyToken: "/web/dash-test.mockDomain.com,frontend.mockDomain.com,frontend.v2.mockDomain.com",
-                        SubjectAlternativeNames: ["dash-test.mockDomain.com","frontend.mockDomain.com","frontend.v2.mockDomain.com"],
-                        Tags: [
-                            {
-                                Key: "copilot-application",
-                                Value: mockAppName,
-                            },
-                            {
-                                Key: "copilot-environment",
-                                Value: mockEnvName,
-                            },
-                            {
-                                Key: "copilot-service",
-                                Value: mockServiceName,
-                            },
-                        ],
-                        ValidationMethod: "DNS",
-                    }));
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
+                    sinon.assert.callCount(mockRequestCertificate, 1);
                 });
         })
 
@@ -213,7 +182,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 "Certificate": {
                     "DomainValidationOptions": [{
                         "ResourceRecord": {},
-                        "DomainName": "not the domain want",
+                        "DomainName": "not the domain we want",
                     }],
                 },
             });
@@ -235,15 +204,9 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
-                    sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
-                        "CertificateArn": "mockCertArn",
-                    }));
+                    sinon.assert.callCount(mockDescribeCertificate, attemptsValidationOptionsReady);
                 });
         });
 
@@ -273,19 +236,13 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
-                    sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
-                        "CertificateArn": "mockCertArn",
-                    }));
+                    sinon.assert.callCount(mockDescribeCertificate, 1);
                 });
         });
 
-        test("fail to upsert validation record and alias A-record for an alias into environment hosted zone", () => {
+        test("fail to upsert validation record and alias A-record for an alias into hosted zone", () => {
             const mockListResourceRecordSets = sinon.fake.resolves({
                 "ResourceRecordSets": []
             });
@@ -326,8 +283,9 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 },
             });
             const mockChangeResourceRecordSets = sinon.stub();
-            mockChangeResourceRecordSets.onCall(0).resolves({ChangeInfo: {Id: "mockID",},});
-            mockChangeResourceRecordSets.onCall(1).rejects(new Error("some error"));
+
+            mockChangeResourceRecordSets.withArgs(sinon.match.hasNested("ChangeBatch.Changes[1].ResourceRecordSet.Name", "dash-test.mockDomain.com")).rejects(new Error("some error"));
+            mockChangeResourceRecordSets.resolves({ChangeInfo: {Id: "mockID",},});
 
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
@@ -347,67 +305,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
-                    sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
-                        "CertificateArn": "mockCertArn",
-                    }));
-                    sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
-                        ChangeBatch: {
-                            Changes: [
-                                {
-                                    Action: "UPSERT",
-                                    ResourceRecordSet: {
-                                        Name: "mock-validate-default-cert",
-                                        Type: "mock-validate-default-cert-type",
-                                        TTL: 60,
-                                        ResourceRecords: [
-                                            {
-                                                Value: "mock-validate-default-cert-value",
-                                            },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                        HostedZoneId: mockEnvHostedZoneID,
-                    }));
-                    sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
-                        ChangeBatch: {
-                            Changes: [
-                                {
-                                    Action: "UPSERT",
-                                    ResourceRecordSet: {
-                                        Name: "mock-validate-alias-1",
-                                        Type: "mock-validate-alias-1-type",
-                                        TTL: 60,
-                                        ResourceRecords: [
-                                            {
-                                                Value: "mock-validate-alias-1-value",
-                                            },
-                                        ],
-                                    },
-                                },
-                                {
-                                    Action: "UPSERT",
-                                    ResourceRecordSet: {
-                                        Name: "dash-test.mockDomain.com",
-                                        Type: "A",
-                                        AliasTarget:  {
-                                            DNSName: mockLBDNS,
-                                            EvaluateTargetHealth: true,
-                                            HostedZoneId: mockLBHostedZoneID,
-                                        }
-                                    },
-                                },
-                            ],
-                        },
-                        HostedZoneId: mockEnvHostedZoneID,
-                    }));
+                    sinon.assert.callCount(mockDescribeCertificate, 1);
+                    sinon.assert.callCount(mockChangeResourceRecordSets, 4);
                 });
         });
 
@@ -451,9 +352,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     }],
                 },
             });
-            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockChangeID", }, }); // Resolves "mockValidationRecordID" for other calls.
-            const mockWaitFor = sinon.stub();
-            mockWaitFor.withArgs("resourceRecordSetsChanged", sinon.match.has("Id", "mockChangeID")).rejects(new Error("some error"));
+            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockChangeID", }, });
+            const mockWaitFor = sinon.fake.rejects(new Error("some error"));
 
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
@@ -474,15 +374,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
+
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
-                    sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
-                        "CertificateArn": "mockCertArn",
-                    }));
+                    sinon.assert.callCount(mockDescribeCertificate, 1);
                     sinon.assert.callCount(mockChangeResourceRecordSets, 4);
                     sinon.assert.callCount(mockWaitFor, 4);
                 });

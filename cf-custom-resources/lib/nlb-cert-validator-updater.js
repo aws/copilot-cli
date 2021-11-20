@@ -39,7 +39,7 @@ function report (
         const { URL } = require("url");
 
         let reasonWithLogInfo = `${reason} (Log: ${context.logGroupName}/${context.logStreamName})`;
-        var responseBody = JSON.stringify({
+        let responseBody = JSON.stringify({
             Status: responseStatus,
             Reason: reasonWithLogInfo,
             PhysicalResourceId: physicalResourceId || context.logStreamName,
@@ -308,3 +308,4 @@ exports.reset = function () {
 exports.withDeadlineExpired = function (d) {
     exports.deadlineExpired = d;
 };
+exports.attemptsValidationOptionsReady = ATTEMPTS_VALIDATION_OPTIONS_READY;
