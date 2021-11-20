@@ -10,9 +10,8 @@ let origLog = console.log;
 
 const {handler, withSleep, withDeadlineExpired, reset, attemptsValidationOptionsReady} = require("../lib/nlb-cert-validator-updater");
 
-
 describe("DNS Certificate Validation And Custom Domains for NLB", () => {
-    const mockResponseURL = "https://mock.com/";
+    // Mock requests.
     const mockServiceName = "web";
     const mockEnvName = "mockEnv";
     const mockAppName = "mockApp";
@@ -20,6 +19,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     const mockEnvHostedZoneID = "mockEnvHostedZoneID";
     const mockLBDNS = "mockLBDNS";
     const mockLBHostedZoneID = "mockLBHostedZoneID"
+    const mockResponseURL = "https://mock.com/";
     const mockRequest = {
         ResponseURL: mockResponseURL,
         ResourceProperties: {
@@ -36,6 +36,23 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         LogicalResourceId: "mockID",
     };
 
+    // Mock respond request.
+    function mockFailedRequest(expectedErrMessageRegex) {
+        return nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason.search(expectedErrMessageRegex) !== -1
+                );
+            })
+            .reply(200);
+    }
+
+    // API call mocks.
+    const mockListResourceRecordSets = sinon.stub();
+    const mockRequestCertificate = sinon.stub();
+    const mockDescribeCertificate = sinon.stub();
+    const mockChangeResourceRecordSets = sinon.stub();
     beforeEach(() => {
         // Prevent logging.
         console.log = function () {};
@@ -45,6 +62,48 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         withDeadlineExpired(_ => {
             return new Promise(function (resolve, reject) {});
         });
+
+        // Mock API default behavior.
+        mockListResourceRecordSets.resolves({
+            "ResourceRecordSets": []
+        });
+        mockRequestCertificate.resolves({
+            "CertificateArn": "mockCertArn",
+        });
+        mockDescribeCertificate.resolves({
+            "Certificate": {
+                "DomainValidationOptions": [{
+                    "ResourceRecord": {
+                        Name: "mock-validate-default-cert",
+                        Value: "mock-validate-default-cert-value",
+                        Type: "mock-validate-default-cert-type"
+                    },
+                    "DomainName": `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
+                },{
+                    "ResourceRecord": {
+                        Name: "mock-validate-alias-1",
+                        Value: "mock-validate-alias-1-value",
+                        Type: "mock-validate-alias-1-type"
+                    },
+                    "DomainName": "dash-test.mockDomain.com",
+                },{
+                    "ResourceRecord": {
+                        Name: "mock-validate-alias-2",
+                        Value: "mock-validate-alias-2-value",
+                        Type: "mock-validate-alias-2-type"
+                    },
+                    "DomainName": "frontend.mockDomain.com",
+                },{
+                    "ResourceRecord": {
+                        Name: "mock-validate-alias-3",
+                        Value: "mock-validate-alias-3-value",
+                        Type: "mock-validate-alias-3-type"
+                    },
+                    "DomainName": "frontend.v2.mockDomain.com",
+                }],
+            },
+        });
+        mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockChangeID", }, })
     });
 
     afterEach(() => {
@@ -52,31 +111,22 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         console.log = origLog;
         AWS.restore();
         reset();
+
+        // Reset mocks call count.
+        mockListResourceRecordSets.reset();
+        mockRequestCertificate.reset();
+        mockDescribeCertificate.reset();
+        mockChangeResourceRecordSets.reset();
     });
 
     describe("During CREATE with alias", () => {
         test("unsupported action fails", () => {
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^Unsupported request type UNKNWON \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                }).reply(200);
+            let request = mockFailedRequest(/^Unsupported request type Unknown \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event({
                     ResponseURL: mockResponseURL,
-                    ResourceProperties: {
-                        ServiceName: "web",
-                        Aliases: ["dash-test.mockDomain.com", "frontend.mockDomain.com", "frontend.v2.mockDomain.com"],
-                        EnvName: "mockEnv",
-                        AppName: "mockApp",
-                        DomainName: "mockDomain.com",
-                        LoadBalancerDNS: "mockLBDNS",
-                        LoadBalancerHostedZoneID: "mockHostedZoneID",
-                    },
-                    RequestType: "UNKNWON",
+                    ResourceProperties: {},
+                    RequestType: "Unknown",
                     LogicalResourceId: "mockID",
                 })
                 .expectResolve(() => {
@@ -102,15 +152,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             const mockListResourceRecordSets = sinon.fake.rejects(new Error("some error"));
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
 
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
@@ -128,15 +170,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 }]
             });
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^alias dash-test.mockDomain.com is in use \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^alias dash-test.mockDomain.com is in use \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
@@ -146,22 +180,11 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         });
 
         test("fail to request a certificate", () => {
-            const mockListResourceRecordSets = sinon.fake.resolves({
-                "ResourceRecordSets": []
-            });
             const mockRequestCertificate =sinon.fake.rejects(new Error("some error"));
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
 
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
@@ -172,12 +195,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         })
 
         test("timed out waiting for validation options to be ready", () => {
-            const mockListResourceRecordSets = sinon.fake.resolves({
-                "ResourceRecordSets": []
-            });
-            const mockRequestCertificate =sinon.fake.resolves({
-                "CertificateArn": "mockCertArn",
-            });
             const mockDescribeCertificate = sinon.fake.resolves({
                 "Certificate": {
                     "DomainValidationOptions": [{
@@ -191,15 +208,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
 
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^resource validation records are not ready after 10 tries \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^resource validation records are not ready after 10 tries \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
@@ -211,27 +220,13 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         });
 
         test("error while waiting for validation options to be ready", () => {
-            const mockListResourceRecordSets = sinon.fake.resolves({
-                "ResourceRecordSets": []
-            });
-            const mockRequestCertificate =sinon.fake.resolves({
-                "CertificateArn": "mockCertArn",
-            });
             const mockDescribeCertificate = sinon.fake.rejects(new Error("some error"));
 
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
 
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
@@ -243,47 +238,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         });
 
         test("fail to upsert validation record and alias A-record for an alias into hosted zone", () => {
-            const mockListResourceRecordSets = sinon.fake.resolves({
-                "ResourceRecordSets": []
-            });
-            const mockRequestCertificate =sinon.fake.resolves({
-                "CertificateArn": "mockCertArn",
-            });
-            const mockDescribeCertificate = sinon.fake.resolves({
-                "Certificate": {
-                    "DomainValidationOptions": [{
-                        "ResourceRecord": {
-                            Name: "mock-validate-default-cert",
-                            Value: "mock-validate-default-cert-value",
-                            Type: "mock-validate-default-cert-type"
-                        },
-                        "DomainName": `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-1",
-                            Value: "mock-validate-alias-1-value",
-                            Type: "mock-validate-alias-1-type"
-                        },
-                        "DomainName": "dash-test.mockDomain.com",
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-2",
-                            Value: "mock-validate-alias-2-value",
-                            Type: "mock-validate-alias-2-type"
-                        },
-                        "DomainName": "frontend.mockDomain.com",
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-3",
-                            Value: "mock-validate-alias-3-value",
-                            Type: "mock-validate-alias-3-type"
-                        },
-                        "DomainName": "frontend.v2.mockDomain.com",
-                    }],
-                },
-            });
             const mockChangeResourceRecordSets = sinon.stub();
-
             mockChangeResourceRecordSets.withArgs(sinon.match.hasNested("ChangeBatch.Changes[1].ResourceRecordSet.Name", "dash-test.mockDomain.com")).rejects(new Error("some error"));
             mockChangeResourceRecordSets.resolves({ChangeInfo: {Id: "mockID",},});
 
@@ -292,15 +247,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
             AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
 
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
@@ -313,46 +260,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         });
 
         test("fail to wait for resource record sets change to be finished", () => {
-            const mockListResourceRecordSets = sinon.fake.resolves({
-                "ResourceRecordSets": []
-            });
-            const mockRequestCertificate =sinon.fake.resolves({
-                "CertificateArn": "mockCertArn",
-            });
-            const mockDescribeCertificate = sinon.fake.resolves({
-                "Certificate": {
-                    "DomainValidationOptions": [{
-                        "ResourceRecord": {
-                            Name: "mock-validate-default-cert",
-                            Value: "mock-validate-default-cert-value",
-                            Type: "mock-validate-default-cert-type"
-                        },
-                        "DomainName": `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-1",
-                            Value: "mock-validate-alias-1-value",
-                            Type: "mock-validate-alias-1-type"
-                        },
-                        "DomainName": "dash-test.mockDomain.com",
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-2",
-                            Value: "mock-validate-alias-2-value",
-                            Type: "mock-validate-alias-2-type"
-                        },
-                        "DomainName": "frontend.mockDomain.com",
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-3",
-                            Value: "mock-validate-alias-3-value",
-                            Type: "mock-validate-alias-3-type"
-                        },
-                        "DomainName": "frontend.v2.mockDomain.com",
-                    }],
-                },
-            });
-            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockChangeID", }, });
             const mockWaitFor = sinon.fake.rejects(new Error("some error"));
 
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
@@ -361,20 +268,11 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
             AWS.mock("Route53", "waitFor", mockWaitFor);
 
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.callCount(mockDescribeCertificate, 1);
@@ -384,46 +282,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         });
 
         test("fail to wait for certificate to be validated", () => {
-            const mockListResourceRecordSets = sinon.fake.resolves({
-                "ResourceRecordSets": []
-            });
-            const mockRequestCertificate =sinon.fake.resolves({
-                "CertificateArn": "mockCertArn",
-            });
-            const mockDescribeCertificate = sinon.fake.resolves({
-                "Certificate": {
-                    "DomainValidationOptions": [{
-                        "ResourceRecord": {
-                            Name: "mock-validate-default-cert",
-                            Value: "mock-validate-default-cert-value",
-                            Type: "mock-validate-default-cert-type"
-                        },
-                        "DomainName": `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-1",
-                            Value: "mock-validate-alias-1-value",
-                            Type: "mock-validate-alias-1-type"
-                        },
-                        "DomainName": "dash-test.mockDomain.com",
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-2",
-                            Value: "mock-validate-alias-2-value",
-                            Type: "mock-validate-alias-2-type"
-                        },
-                        "DomainName": "frontend.mockDomain.com",
-                    },{
-                        "ResourceRecord": {
-                            Name: "mock-validate-alias-3",
-                            Value: "mock-validate-alias-3-value",
-                            Type: "mock-validate-alias-3-type"
-                        },
-                        "DomainName": "frontend.v2.mockDomain.com",
-                    }],
-                },
-            });
-            const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockChangeID", }, }); // Resolves "mockValidationRecordID" for other calls.
             const mockWaitForRecordsChange = sinon.stub();
             mockWaitForRecordsChange.withArgs("resourceRecordSetsChanged", sinon.match.has("Id", "mockChangeID")).resolves();
             const mockWaitForCertificateValidation = sinon.stub();
@@ -436,28 +294,14 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
             AWS.mock("ACM", "waitFor", mockWaitForCertificateValidation);
 
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
-                    return (
-                        body.Status === "FAILED" &&
-                        body.Reason.search(expectedErrMessageRegex) !== -1
-                    );
-                })
-                .reply(200);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.calledWith(mockListResourceRecordSets, sinon.match({
-                        HostedZoneId: "mockEnvHostedZoneID",
-                        MaxItems: "1",
-                        StartRecordName: 'dash-test.mockDomain.com' // NOTE: JS set has the same iteration order: insertion order.
-                    }));
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
-                    sinon.assert.calledWith(mockDescribeCertificate, sinon.match({
-                        "CertificateArn": "mockCertArn",
-                    }));
+                    sinon.assert.callCount(mockDescribeCertificate, 1);
                     sinon.assert.callCount(mockChangeResourceRecordSets, 4);
                     sinon.assert.callCount(mockWaitForRecordsChange, 4);
                     sinon.assert.callCount(mockWaitForCertificateValidation, 1);
