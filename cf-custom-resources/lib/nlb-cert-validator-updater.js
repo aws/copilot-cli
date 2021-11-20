@@ -128,22 +128,26 @@ exports.handler = async function (event, context) {
  * @throws error if at least one of the aliases is not valid.
  */
 async function validateAliases(aliases, loadBalancerDNS) {
+    let promises = [];
+
     for (let alias of aliases) {
-        const data = await envRoute53.listResourceRecordSets({
+        const promise = envRoute53.listResourceRecordSets({
             HostedZoneId: envHostedZoneID,
             MaxItems: "1",
             StartRecordName: alias,
-        }).promise();
-
-        let recordSet = data["ResourceRecordSets"];
-        if (!recordSet || recordSet.length === 0) {
-            continue; // The alias record does not exist in the hosted zone, hence valid.
-        }
-        if (recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${loadBalancerDNS}.`) {
-            continue; // The record is an alias record and is in use by myself, hence valid.
-        }
-        throw new Error(`alias ${alias} is in use`);
+        }).promise().then((data) => {
+            let recordSet = data["ResourceRecordSets"];
+            if (!recordSet || recordSet.length === 0) {
+                return;
+            }
+            if (recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${loadBalancerDNS}.`) {
+                return; // The record is an alias record and is in use by myself, hence valid.
+            }
+            throw new Error(`alias ${alias} is in use`);
+        })
+        promises.push(promise);
     }
+    await Promise.all(promises);
 }
 
 /**
