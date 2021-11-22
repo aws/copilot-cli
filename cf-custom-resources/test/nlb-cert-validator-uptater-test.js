@@ -307,5 +307,27 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     sinon.assert.callCount(mockWaitForCertificateValidation, 1);
                 });
         });
+
+        test("lambda time out", () => {
+            withDeadlineExpired(_ => {
+                return new Promise(function (_, reject) {
+                    reject(new Error("lambda time out error"));
+                });
+            });
+            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+            AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
+            AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "waitFor", sinon.fake.resolves());
+            AWS.mock("ACM", "waitFor", sinon.fake.resolves());
+
+            let request = mockFailedRequest(/^lambda time out error \(Log: .*\)$/);
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                });
+        });
+
     })
 });

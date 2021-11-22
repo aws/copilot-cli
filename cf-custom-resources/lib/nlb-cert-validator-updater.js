@@ -123,7 +123,7 @@ exports.handler = async function (event, context) {
     };
 
     try {
-        await handler();
+        await Promise.race([exports.deadlineExpired(), handler(),]);
         await report(event, context, "SUCCESS", physicalResourceID);
     } catch (err) {
         console.log(`Caught error for service ${serviceName}: ${err.message}`);
@@ -311,6 +311,15 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
     }).promise();
 }
 
+exports.deadlineExpired = function () {
+    return new Promise(function (resolve, reject) {
+        setTimeout(
+            reject,
+            14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/,
+            new Error(`Lambda took longer than 14.5 minutes to update custom domain`)
+        );
+    });
+};
 
 exports.withSleep = function (s) {
     sleep = s;
