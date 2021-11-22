@@ -4,11 +4,11 @@
 const AWS = require('aws-sdk');
 const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
-const DELAY_RECORD_SETS_CHANGE = 30;
+const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
 const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
-const DELAY_CERTIFICATE_VALIDATED = 30;
+const DELAY_CERTIFICATE_VALIDATED_IN_S = 30;
 
-let acm, envRoute53, envHostedZoneID, appName, envName, certificateDomain;
+let acm, envRoute53, envHostedZoneID, appName, envName, serviceName, certificateDomain;
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -81,18 +81,22 @@ exports.handler = async function (event, context) {
 
     let {LoadBalancerDNS: loadBalancerDNS,
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
-        ServiceName: serviceName,
         DomainName: domainName,
     } = props;
-    let aliases = new Set(props.Aliases);
+    const aliases = new Set(props.Aliases);
 
     acm = new AWS.ACM();
     envRoute53 = new AWS.Route53();
     envHostedZoneID = props.EnvHostedZoneId;
     envName = props.EnvName;
     appName = props.AppName;
+    serviceName = props.ServiceName;
     certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
 
+    // NOTE: If the aliases have changed, then we need to replace the certificate being used, as well as deleting/adding
+    // validation records and A records. In general, any change in aliases indicate a "replacement" of the resources
+    // managed by the custom resource lambda; on the contrary, the same set of aliases indicate that there is no need to
+    // replace or update the certificate, nor the validation records or A records. Hence, we can use this as the physicalResourceID.
     let aliasesSorted = [...aliases].sort().join(",");
     const physicalResourceID = `/${serviceName}/${aliasesSorted}`;
 
@@ -100,7 +104,7 @@ exports.handler = async function (event, context) {
         switch (event.RequestType) {
             case "Create":
                 await validateAliases(aliases, loadBalancerDNS);
-                const certificateARN = await requestCertificate(aliases, physicalResourceID, serviceName);
+                const certificateARN = await requestCertificate({aliases: aliases, idempotencyToken: physicalResourceID});
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
@@ -140,10 +144,15 @@ async function validateAliases(aliases, loadBalancerDNS) {
             if (!recordSet || recordSet.length === 0) {
                 return;
             }
-            if (recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${loadBalancerDNS}.`) {
+            let aliasTarget = recordSet[0].AliasTarget;
+            if (aliasTarget && aliasTarget.DNSName === `${loadBalancerDNS}.`) {
                 return; // The record is an alias record and is in use by myself, hence valid.
             }
-            throw new Error(`alias ${alias} is in use`);
+
+            if (aliasTarget) {
+                throw new Error(`Alias ${alias} is in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
+            }
+            throw new Error(`Alias ${alias} is in use`);
         })
         promises.push(promise);
     }
@@ -153,15 +162,14 @@ async function validateAliases(aliases, loadBalancerDNS) {
 /**
  * Requests a public certificate from AWS Certificate Manager, using DNS validation.
  *
- * @param {Set<String>} aliases the subject alternative names for the certificate.
- * @param {String} physicalResourceID
- * @param {String} serviceName
+ * @param {Object} requestCertificateInput is the input to requestCertificate, containing the alias and idempotencyToken.
  * @return {String} The ARN of the requested certificate.
  */
-async function requestCertificate(aliases, physicalResourceID, serviceName) {
-    const { CertificateArn } =await acm.requestCertificate({
+async function requestCertificate(requestCertificateInput) {
+    let { aliases, idempotencyToken } = requestCertificateInput
+    const { CertificateArn } = await acm.requestCertificate({
         DomainName: certificateDomain,
-        IdempotencyToken: physicalResourceID,
+        IdempotencyToken: idempotencyToken,
         SubjectAlternativeNames: aliases.size === 0? null: [...aliases],
         Tags: [
             {
@@ -230,12 +238,11 @@ async function activate(validationOptions, certificateARN, loadBalancerDNS, load
         promises.push(activateOption(option, loadBalancerDNS, loadBalancerHostedZone));
     }
     await Promise.all(promises);
-    console.log("finished upserting records");
 
     await acm.waitFor("certificateValidated", {
         // Wait up to 9 minutes and 30 seconds
         $waiter: {
-            delay: DELAY_CERTIFICATE_VALIDATED,
+            delay: DELAY_CERTIFICATE_VALIDATED_IN_S,
             maxAttempts: ATTEMPTS_CERTIFICATE_VALIDATED,
         },
         CertificateArn: certificateARN,
@@ -286,12 +293,11 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
         },
         HostedZoneId: envHostedZoneID,
     }).promise();
-    console.log(`change info for ${option.DomainName}: ${ChangeInfo}`)
 
     await envRoute53.waitFor('resourceRecordSetsChanged', {
         // Wait up to 5 minutes
         $waiter: {
-            delay: DELAY_RECORD_SETS_CHANGE,
+            delay: DELAY_RECORD_SETS_CHANGE_IN_S,
             maxAttempts: ATTEMPTS_RECORD_SETS_CHANGE,
         },
         Id: ChangeInfo.Id,
