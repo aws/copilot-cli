@@ -108,10 +108,9 @@ exports.handler = async function (event, context) {
                 const certificateARN = await requestCertificate({
                     aliases: aliases,
                     idempotencyToken: CRYPTO
-                        .createHash("sha256")
+                        .createHash("md5")
                         .update(physicalResourceID)
-                        .digest("hex")
-                        .substr(0, 32),});
+                        .digest("hex")});
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
@@ -157,9 +156,9 @@ async function validateAliases(aliases, loadBalancerDNS) {
             }
 
             if (aliasTarget) {
-                throw new Error(`Alias ${alias} is in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
+                throw new Error(`Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
             }
-            throw new Error(`Alias ${alias} is in use`);
+            throw new Error(`Alias ${alias} is already in use`);
         })
         promises.push(promise);
     }
@@ -172,8 +171,7 @@ async function validateAliases(aliases, loadBalancerDNS) {
  * @param {Object} requestCertificateInput is the input to requestCertificate, containing the alias and idempotencyToken.
  * @return {String} The ARN of the requested certificate.
  */
-async function requestCertificate(requestCertificateInput) {
-    let { aliases, idempotencyToken } = requestCertificateInput
+async function requestCertificate({ aliases, idempotencyToken }) {
     const { CertificateArn } = await acm.requestCertificate({
         DomainName: certificateDomain,
         IdempotencyToken: idempotencyToken,

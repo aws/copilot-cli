@@ -170,7 +170,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 }]
             });
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-            let request = mockFailedRequest(/^Alias dash-test.mockDomain.com is in use by other-lb-DNS. This could be another load balancer of a different service. \(Log: .*\)$/);
+            let request = mockFailedRequest(/^Alias dash-test.mockDomain.com is already in use by other-lb-DNS. This could be another load balancer of a different service. \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
