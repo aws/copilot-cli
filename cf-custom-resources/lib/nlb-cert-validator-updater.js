@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const AWS = require('aws-sdk');
+const CRYPTO = require("crypto");
 const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
 const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
@@ -104,7 +105,13 @@ exports.handler = async function (event, context) {
         switch (event.RequestType) {
             case "Create":
                 await validateAliases(aliases, loadBalancerDNS);
-                const certificateARN = await requestCertificate({aliases: aliases, idempotencyToken: physicalResourceID});
+                const certificateARN = await requestCertificate({
+                    aliases: aliases,
+                    idempotencyToken: CRYPTO
+                        .createHash("sha256")
+                        .update(physicalResourceID)
+                        .digest("hex")
+                        .substr(0, 32),});
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
