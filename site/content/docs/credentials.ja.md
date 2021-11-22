@@ -28,7 +28,7 @@ region=us-west-2
 
 ```ini
 # ~/.aws/config
-[my-app]
+[profile my-app]
 credential_process = /opt/bin/awscreds-custom --username helen
 region=us-west-2
 
