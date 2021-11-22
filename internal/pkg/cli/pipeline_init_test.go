@@ -150,6 +150,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 	codecommitHTTPSURL := "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man"
 	codecommitSSHURL := "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman"
 	codecommitFedURL := "codecommit::us-west-2://repo-man"
+	codecommitShortURL := "codecommit://repo-man"
 	codecommitBadURL := "git-codecommitus-west-2amazonaws.com"
 	codecommitBadRegion := "codecommit::us-mess-2://repo-man"
 	codecommitRegion := "us-west-2"
@@ -441,7 +442,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitShortURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().Default().Return(nil, errors.New("some error"))
