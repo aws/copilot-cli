@@ -349,7 +349,6 @@ function loadResources() {
             regex: new RegExp(`^([^\.]+\.)?${domainName}`),
             domain: `${domainName}`,
         },
-        OtherDomainZone: {},
     };
 
 }
