@@ -8,7 +8,7 @@ const sinon = require("sinon");
 const nock = require("nock");
 let origLog = console.log;
 
-const {handler, withSleep, withDeadlineExpired, reset, attemptsValidationOptionsReady} = require("../lib/nlb-cert-validator-updater");
+const { attemptsValidationOptionsReady } = require("../lib/nlb-cert-validator-updater");
 
 describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     // Mock requests.
@@ -20,17 +20,19 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     const mockLBDNS = "mockLBDNS";
     const mockLBHostedZoneID = "mockLBHostedZoneID"
     const mockResponseURL = "https://mock.com/";
+    const mockRootDNSRole = "mockRootDNSRole"
     const mockRequest = {
         ResponseURL: mockResponseURL,
         ResourceProperties: {
             ServiceName: mockServiceName,
-            Aliases: ["dash-test.mockDomain.com", "frontend.mockDomain.com", "frontend.v2.mockDomain.com"],
+            Aliases: ["dash-test.mockDomain.com", "a.mockApp.mockDomain.com", "b.mockEnv.mockApp.mockDomain.com"],
             EnvName: mockEnvName,
             AppName: mockAppName,
             DomainName: mockDomainName,
             LoadBalancerDNS: mockLBDNS,
             LoadBalancerHostedZoneID: mockLBHostedZoneID,
             EnvHostedZoneId: mockEnvHostedZoneID,
+            RootDNSRole: mockRootDNSRole,
         },
         RequestType: "Create",
         LogicalResourceId: "mockID",
@@ -49,14 +51,31 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     }
 
     // API call mocks.
+    const mockListHostedZonesByName = sinon.stub();
     const mockListResourceRecordSets = sinon.stub();
     const mockRequestCertificate = sinon.stub();
     const mockDescribeCertificate = sinon.stub();
     const mockChangeResourceRecordSets = sinon.stub();
+    const mockAppHostedZoneID = "mockAppHostedZoneID";
+    const mockRootHostedZoneID = "mockRootHostedZoneID";
+
+    let handler, reset, withDeadlineExpired ;
     beforeEach(() => {
         // Prevent logging.
         console.log = function () {};
-        withSleep(_ => {
+
+        // Reimport handlers so that the lazy loading does not fail the mocks.
+        // A description of the issue can be found here: https://github.com/dwyl/aws-sdk-mock/issues/206.
+        // This workaround follows the comment here: https://github.com/dwyl/aws-sdk-mock/issues/206#issuecomment-640418772.
+        jest.resetModules();
+        AWS.setSDKInstance(require('aws-sdk'));
+        const imported = require("../lib/nlb-cert-validator-updater");
+        handler = imported.handler;
+        reset = imported.reset;
+        withDeadlineExpired = imported.withDeadlineExpired;
+
+        // Mocks wait functions.
+        imported.withSleep(_ => {
             return Promise.resolve();
         });
         withDeadlineExpired(_ => {
@@ -92,18 +111,28 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                         Value: "mock-validate-alias-2-value",
                         Type: "mock-validate-alias-2-type"
                     },
-                    "DomainName": "frontend.mockDomain.com",
+                    "DomainName": "a.mockApp.mockDomain.com",
                 },{
                     "ResourceRecord": {
                         Name: "mock-validate-alias-3",
                         Value: "mock-validate-alias-3-value",
                         Type: "mock-validate-alias-3-type"
                     },
-                    "DomainName": "frontend.v2.mockDomain.com",
+                    "DomainName": "b.mockEnv.mockApp.mockDomain.com",
                 }],
             },
         });
         mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockChangeID", }, })
+        mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockApp.mockDomain.com")).resolves({
+            HostedZones: [{
+                Id: mockAppHostedZoneID
+            }]
+        });
+        mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockDomain.com")).resolves({
+            HostedZones: [{
+                Id: mockRootHostedZoneID,
+            }]
+        });
     });
 
     afterEach(() => {
@@ -113,6 +142,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         reset();
 
         // Reset mocks call count.
+        mockListHostedZonesByName.reset();
         mockListResourceRecordSets.reset();
         mockRequestCertificate.reset();
         mockDescribeCertificate.reset();
@@ -138,7 +168,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             const request = nock(mockResponseURL)
                 .put("/", (body) => {
                     return (
-                        body.PhysicalResourceId === "/web/dash-test.mockDomain.com,frontend.mockDomain.com,frontend.v2.mockDomain.com"
+                        body.PhysicalResourceId === "/web/a.mockApp.mockDomain.com,b.mockEnv.mockApp.mockDomain.com,dash-test.mockDomain.com"
                     );
                 }).reply(200);
             return LambdaTester(handler)
@@ -148,10 +178,62 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 });
         });
 
+        test("error if an alias is not valid", () => {
+            let request = mockFailedRequest(/^unrecognized domain type for Wow-this-domain-is-so-weird-that-it-does-not-work-at-all \(Log: .*\)$/);
+            return LambdaTester(handler)
+                .event({
+                    ResponseURL: mockResponseURL,
+                    ResourceProperties: {
+                        Aliases: ["Wow-this-domain-is-so-weird-that-it-does-not-work-at-all"],
+                    },
+                    RequestType: "Create",
+                })
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                });
+        });
+
+        test("error fetching app-level hosted zone ID", () => {
+            const mockListHostedZonesByName = sinon.stub();
+            mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockApp.mockDomain.com")).rejects(new Error("some error"));
+            mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockDomain.com")).resolves({
+                HostedZones: [{
+                    Id: mockRootHostedZoneID,
+                }]
+            });
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
+                });
+        });
+
+        test("error fetching root-level hosted zone ID", () => {
+            const mockListHostedZonesByName = sinon.stub();
+            mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockApp.mockDomain.com")).resolves({
+                HostedZones: [{
+                    Id: mockAppHostedZoneID,
+                }]
+            });
+            mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockDomain.com")).rejects(new Error("some error"));
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                });
+        });
+
         test("error validating aliases", () => {
             const mockListResourceRecordSets = sinon.fake.rejects(new Error("some error"));
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-
             let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
@@ -169,26 +251,32 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     }
                 }]
             });
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+
             let request = mockFailedRequest(/^Alias dash-test.mockDomain.com is already in use by other-lb-DNS. This could be another load balancer of a different service. \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                 });
         });
 
         test("fail to request a certificate", () => {
             const mockRequestCertificate =sinon.fake.rejects(new Error("some error"));
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
+
 
             let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
                 });
@@ -203,16 +291,18 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     }],
                 },
             });
-
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+
 
             let request = mockFailedRequest(/^resource validation records are not ready after 10 tries \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.callCount(mockDescribeCertificate, attemptsValidationOptionsReady);
@@ -221,7 +311,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
 
         test("error while waiting for validation options to be ready", () => {
             const mockDescribeCertificate = sinon.fake.rejects(new Error("some error"));
-
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
@@ -231,6 +321,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.callCount(mockDescribeCertificate, 1);
@@ -246,12 +337,15 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
             AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+
 
             let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.callCount(mockDescribeCertificate, 1);
@@ -261,18 +355,20 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
 
         test("fail to wait for resource record sets change to be finished", () => {
             const mockWaitFor = sinon.fake.rejects(new Error("some error"));
-
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
             AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
             AWS.mock("Route53", "waitFor", mockWaitFor);
 
+
             let request = mockFailedRequest(/^some error \(Log: .*\)$/);
             return LambdaTester(handler)
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.callCount(mockDescribeCertificate, 1);
@@ -287,6 +383,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             const mockWaitForCertificateValidation = sinon.stub();
             mockWaitForCertificateValidation.withArgs('certificateValidated', sinon.match.has("CertificateArn", "mockCertArn")).rejects(new Error("some error"));
 
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
             AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
@@ -299,6 +396,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
                     sinon.assert.callCount(mockListResourceRecordSets, 3);
                     sinon.assert.callCount(mockRequestCertificate, 1);
                     sinon.assert.callCount(mockDescribeCertificate, 1);

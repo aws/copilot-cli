@@ -83,7 +83,6 @@ exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
     let {LoadBalancerDNS: loadBalancerDNS,
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
-        DomainName: domainName,
     } = props;
     const aliases = new Set(props.Aliases);
 
@@ -91,7 +90,6 @@ exports.handler = async function (event, context) {
     envHostedZoneID = props.EnvHostedZoneId;
     envName = props.EnvName;
     appName = props.AppName;
-
     serviceName = props.ServiceName;
     domainName = props.DomainName;
     rootDNSRole = props.RootDNSRole;
@@ -338,23 +336,22 @@ function loadResources() {
         envRoute53 = new AWS.Route53();
     }
 
-    if (!domainTypes) {
-        domainTypes = {
-            EnvDomainZone: {
-                regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
-                domain: `${envName}.${appName}.${domainName}`,
-            },
-            AppDomainZone: {
-                regex: new RegExp(`^([^\.]+\.)?${appName}.${domainName}`),
-                domain: `${appName}.${domainName}`,
-            },
-            RootDomainZone: {
-                regex: new RegExp(`^([^\.]+\.)?${domainName}`),
-                domain: `${domainName}`,
-            },
-            OtherDomainZone: {},
-        };
-    }
+    domainTypes = {
+        EnvDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
+            domain: `${envName}.${appName}.${domainName}`,
+        },
+        AppDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${appName}.${domainName}`),
+            domain: `${appName}.${domainName}`,
+        },
+        RootDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${domainName}`),
+            domain: `${domainName}`,
+        },
+        OtherDomainZone: {},
+    };
+
 }
 
 /**
@@ -394,8 +391,7 @@ async function hostedZoneID(domain) {
         .listHostedZonesByName({
             DNSName: domain,
             MaxItems: "1",
-        })
-        .promise();
+        }).promise();
     if (!HostedZones || HostedZones.length === 0) {
         throw new Error( `Couldn't find any Hosted Zone with DNS name ${domainName}.`);
     }
