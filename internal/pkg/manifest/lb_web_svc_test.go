@@ -21,16 +21,13 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 
 		wanted *LoadBalancedWebService
 	}{
-		"translates to load balanced web service": {
+		"initializes with default settings when only required configuration is provided": {
 			props: LoadBalancedWebServiceProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./Dockerfile",
 				},
 				Path: "/",
-				HealthCheck: ContainerHealthCheck{
-					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-				},
 				Port: 80,
 			},
 
@@ -50,9 +47,6 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 								},
 							},
 							Port: aws.Uint16(80),
-						},
-						HealthCheck: ContainerHealthCheck{
-							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
 					RoutingRule: RoutingRule{
@@ -82,19 +76,20 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
-		"with windows platform": {
+		"overrides default settings when optional configuration is provided": {
 			props: LoadBalancedWebServiceProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				Path: "/",
+				Port: 80,
+
+				HTTPVersion: "gRPC",
 				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-
-				Port: 80,
 			},
 
 			wanted: &LoadBalancedWebService{
@@ -119,7 +114,8 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						},
 					},
 					RoutingRule: RoutingRule{
-						Path: stringP("/"),
+						Path:            stringP("/"),
+						ProtocolVersion: aws.String("gRPC"),
 						HealthCheck: HealthCheckArgsOrString{
 							HealthCheckPath: stringP("/"),
 						},

@@ -211,6 +211,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebServiceWithAlias(t *testing.
 }
 
 func TestRequestDrivenWebService_Template(t *testing.T) {
+	const mockSD = "app.env.svc.local.com"
 	testCases := map[string]struct {
 		inCustomResourceURLs map[string]string
 		inManifest           func(manifest manifest.RequestDrivenWebService) manifest.RequestDrivenWebService
@@ -265,7 +266,8 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 					Network: template.NetworkOpts{
 						SubnetsType: "PrivateSubnets",
 					},
-					AWSSDKLayer: aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
+					ServiceDiscoveryEndpoint: mockSD,
+					AWSSDKLayer:              aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.wkld.addons = addons
@@ -277,9 +279,10 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					Variables:         c.manifest.Variables,
-					Tags:              c.manifest.Tags,
-					EnableHealthCheck: true,
+					Variables:                c.manifest.Variables,
+					Tags:                     c.manifest.Tags,
+					ServiceDiscoveryEndpoint: mockSD,
+					EnableHealthCheck:        true,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.addons = addons
@@ -312,8 +315,9 @@ Outputs:
     Value: hello`,
 				}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					Variables: c.manifest.Variables,
-					Tags:      c.manifest.Tags,
+					Variables:                c.manifest.Variables,
+					Tags:                     c.manifest.Tags,
+					ServiceDiscoveryEndpoint: mockSD,
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"DDBTableName", "Hello"},
@@ -331,9 +335,10 @@ Outputs:
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					Variables:         c.manifest.Variables,
-					Tags:              c.manifest.Tags,
-					EnableHealthCheck: true,
+					Variables:                c.manifest.Variables,
+					Tags:                     c.manifest.Tags,
+					ServiceDiscoveryEndpoint: mockSD,
+					EnableHealthCheck:        true,
 				}).Return(nil, errors.New("parsing error"))
 				c.parser = mockParser
 				c.addons = addons
@@ -379,8 +384,9 @@ Outputs:
 								RepoURL:  testImageRepoURL,
 								ImageTag: testImageTag,
 							},
-							AccountID: "0123456789012",
-							Region:    "us-west-2",
+							ServiceDiscoveryEndpoint: mockSD,
+							AccountID:                "0123456789012",
+							Region:                   "us-west-2",
 						},
 					},
 					healthCheckConfig: mft.HealthCheckConfiguration,

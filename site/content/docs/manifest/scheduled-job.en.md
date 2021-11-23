@@ -47,11 +47,14 @@ The configuration for the event that triggers your job.
 <span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
 You can specify a rate to periodically trigger your job. Supported rates:
 
-* `"@yearly"`
-* `"@monthly"`
-* `"@weekly"`
-* `"@daily"`
-* `"@hourly"`
+| Rate         | Identical to          | In human-readable text and `UTC`, it runs ... |
+| ------------ | --------------------- | --------------------------------------------- |
+| `"@yearly"`  | `"cron(0 * * * ? *)"` | at midnight on January 1st                    |
+| `"@monthly"` | `"cron(0 0 1 * ? *)"` | at midnight on the first day of the month     |
+| `"@weekly"`  | `"cron(0 0 ? * 1 *)"` | at midnight on Sunday                         |
+| `"@daily"`   | `"cron(0 0 * * ? *)"` | at midnight                                   |
+| `"@hourly"`  | `"cron(0 * * * ? *)"` | at minute 0                                   |
+
 * `"@every {duration}"` (For example, "1m", "5m")
 * `"rate({duration})"` based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions)
 
@@ -99,9 +102,19 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`. For example, `linux/arm64` or `windows/x86_64`. The default is `linux/x86_64`.
 
+Override the generated string to build with a different valid `osfamily` or `architecture`. For example, Windows users might change the string
+```yaml
+platform: windows/x86_64
+```
+which defaults to `WINDOWS_SERVER_2019_CORE`, using a map:
+```yaml
+platform:
+  osfamily: windows_server_2019_full
+  architecture: x86_64
+```
 
 <div class="separator"></div>
 
