@@ -145,9 +145,9 @@ async function validateAliases(aliases, loadBalancerDNS) {
     let promises = [];
 
     for (let alias of aliases) {
-        let r = await domainResources(alias);
-        const promise = r.route53Client.listResourceRecordSets({
-            HostedZoneId: r.hostedZoneID,
+        let {hostedZoneID, route53Client } = await domainResources(alias);
+        const promise = route53Client.listResourceRecordSets({
+            HostedZoneId: hostedZoneID,
             MaxItems: "1",
             StartRecordName: alias,
         }).promise().then((data) => {
@@ -295,16 +295,16 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
         });
     }
 
-    let r = await domainResources(option.DomainName);
-    let { ChangeInfo } = await r.route53Client.changeResourceRecordSets({
+    let {hostedZoneID, route53Client} = await domainResources(option.DomainName);
+    let { ChangeInfo } = await route53Client.changeResourceRecordSets({
         ChangeBatch: {
             Comment: "Validate the certificate and create A record for the alias",
             Changes: changes,
         },
-        HostedZoneId: r.hostedZoneID,
+        HostedZoneId: hostedZoneID,
     }).promise();
 
-    await r.route53Client.waitFor('resourceRecordSetsChanged', {
+    await route53Client.waitFor('resourceRecordSetsChanged', {
         // Wait up to 5 minutes
         $waiter: {
             delay: DELAY_RECORD_SETS_CHANGE_IN_S,
