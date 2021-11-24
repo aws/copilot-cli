@@ -137,11 +137,6 @@ Amount of memory in MiB reserved for each instance of your service. See the [AWS
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
-
-<div class="separator"></div>
-
 <a id="command" href="#command" class="field">`command`</a> <span class="type">String</span>  
 Optional. Override the default command in the image.
 

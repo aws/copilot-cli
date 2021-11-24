@@ -81,7 +81,6 @@ describe("Custom Domain for App Runner Service", () => {
             return LambdaTester(handler)
                 .event({
                     ResponseURL: mockResponseURL,
-                    ResourceProperties: {},
                     LogicalResourceId: "mockID",
                     ResourceProperties: {
                         ServiceARN: mockServiceARN,
