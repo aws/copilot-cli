@@ -85,7 +85,7 @@ const rootHostedZoneIDContext = () => {
     };
 }
 
-let hostecZoneID = {
+let hostedZoneID = {
     app: appHostedZoneIDContext(),
     root: rootHostedZoneIDContext(),
 }
@@ -239,11 +239,13 @@ async function validateAliases(aliases, loadBalancerDNS) {
             if (!recordSet || recordSet.length === 0) {
                 return;
             }
+            if (recordSet[0].Name !== alias) {
+                return;
+            }
             let aliasTarget = recordSet[0].AliasTarget;
             if (aliasTarget && aliasTarget.DNSName === `${loadBalancerDNS}.`) {
                 return; // The record is an alias record and is in use by myself, hence valid.
             }
-
             if (aliasTarget) {
                 throw new Error(`Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
             }
@@ -432,14 +434,14 @@ async function domainResources (alias) {
         return {
             domain: domainTypes.AppDomainZone.domain,
             route53Client: clients.app.route53(),
-            hostedZoneID: await hostecZoneID.app(),
+            hostedZoneID: await hostedZoneID.app(),
         };
     }
     if (domainTypes.RootDomainZone.regex.test(alias)) {
         return {
             domain: domainTypes.RootDomainZone.domain,
             route53Client: clients.root.route53(),
-            hostedZoneID: await hostecZoneID.root(),
+            hostedZoneID: await hostedZoneID.root(),
         };
     }
     throw new Error(`unrecognized domain type for ${alias}`);
