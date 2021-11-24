@@ -81,7 +81,7 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
       ScaleOutCooldown: 60
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
-{{- if (and .Subscribe .Autoscaling.QueueDelay) }}
+{{- if .Autoscaling.QueueDelay }}
 BacklogPerTaskCalculatorLogGroup:
   Type: AWS::Logs::LogGroup
   Properties:
@@ -117,9 +117,11 @@ BacklogPerTaskCalculatorFunction:
           Fn::Join:
             - ','
             - - !GetAtt EventsQueue.QueueName
+            {{- if .Subscribe }}
             {{- range $topic := .Subscribe.Topics }}
             {{- if $topic.Queue }}
               - !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName
+            {{- end }}
             {{- end }}
             {{- end }}
 
@@ -161,9 +163,11 @@ BacklogPerTaskCalculatorRole:
                 - sqs:GetQueueUrl
               Resource:
                 - !GetAtt EventsQueue.Arn
+                {{- if .Subscribe }}
                 {{- range $topic := .Subscribe.Topics}}
                 {{- if $topic.Queue}}
                 - !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
+                {{- end }}
                 {{- end }}
                 {{- end }}
     ManagedPolicyArns:
@@ -213,6 +217,7 @@ AutoScalingPolicyEventsQueue:
         Unit: Count
       TargetValue: {{$acceptableBacklog}}
 
+{{- if .Subscribe }}
 {{- range $topic := .Subscribe.Topics}}
 {{- if $topic.Queue}}
 AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
@@ -235,7 +240,8 @@ AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}Ev
             Value: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.QueueName
         Unit: Count
       TargetValue: {{$acceptableBacklog}}
-{{- end }}{{/* range $topic := .Subscribe.Topics */}}
 {{- end }}{{/* if $topic.Queue */}}
+{{- end }}{{/* range $topic := .Subscribe.Topics */}}
+{{- end }}{{/* if .Subscribe */}}
 
-{{- end }}{{/* if (and .Subscribe .Autoscaling.QueueDelay) */}}
+{{- end }}{{/* if .Autoscaling.QueueDelay */}}

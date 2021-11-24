@@ -304,6 +304,9 @@ func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
 		return fmt.Errorf("retrieve default session: %w", err)
 	}
 	region := aws.StringValue(sess.Config.Region)
+	if o.ccRegion == "" {
+		o.ccRegion = region
+	}
 	if o.ccRegion != region {
 		return fmt.Errorf("repository %s is in %s, but app %s is in %s; they must be in the same region", o.repoName, o.ccRegion, o.appName, region)
 	}
@@ -434,13 +437,17 @@ func (url ccRepoURL) parse() (ccRepoDetails, error) {
 	case strings.HasPrefix(urlString, "codecommit::"):
 		parsedURL := strings.Split(urlString, ":")
 		region = parsedURL[2]
+	case strings.HasPrefix(urlString, "codecommit://"):
+		// Use default profile region.
 	default:
 		return ccRepoDetails{}, fmt.Errorf("unknown CodeCommit URL format: %s", url)
 	}
-	// Double-check that parsed results is a valid region. Source: https://www.regextester.com/109163
-	match, _ := regexp.MatchString(`(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d`, region)
-	if !match {
-		return ccRepoDetails{}, fmt.Errorf("unable to parse the AWS region from %s", url)
+	if region != "" {
+		// Double-check that parsed results is a valid region. Source: https://www.regextester.com/109163
+		match, _ := regexp.MatchString(`(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d`, region)
+		if !match {
+			return ccRepoDetails{}, fmt.Errorf("unable to parse the AWS region from %s", url)
+		}
 	}
 
 	// Parse repo name.

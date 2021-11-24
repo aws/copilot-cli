@@ -3,7 +3,7 @@
 <a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
 The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across availability zones in a region for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.en.md) page. You can also specify extensible ephemeral storage at the task level.
 
-<span class="parent-field">storage.</span><a id="ephemeral" href="#ephemeral" class="field">`ephemeral`</a> <span class="type">Int</span>
+<span class="parent-field">storage.</span><a id="ephemeral" href="#ephemeral" class="field">`ephemeral`</a> <span class="type">Int</span>  
 Specify how much ephemeral task storage to provision in GiB. The default value and minimum is 20 GiB. The maximum size is 200 GiB. Sizes above 20 GiB incur additional charges.
 
 To create a shared filesystem context between an essential container and a sidecar, you can use an empty volume:
@@ -60,13 +60,13 @@ efs:
 <span class="parent-field">volume.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
 Required. The ID of the filesystem you would like to mount.
 
-<span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>
+<span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>  
 Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
-<span class="parent-field">volume.efs.</span><a id="uid" href="#uid" class="field">`uid`</a> <span class="type">Uint32</span>
+<span class="parent-field">volume.efs.</span><a id="uid" href="#uid" class="field">`uid`</a> <span class="type">Uint32</span>  
 Optional. Must be specified with `gid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX UID to use for the dedicated access point created for the managed EFS filesystem.
 
-<span class="parent-field">volume.efs.</span><a id="gid" href="#gid" class="field">`gid`</a> <span class="type">Uint32</span>
+<span class="parent-field">volume.efs.</span><a id="gid" href="#gid" class="field">`gid`</a> <span class="type">Uint32</span>  
 Optional. Must be specified with `uid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX GID to use for the dedicated access point created for the managed EFS filesystem.
 
 <span class="parent-field">volume.efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  

@@ -34,11 +34,11 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 <div class="separator"></div>
 
 <a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String or Map</span>  
-Non-default operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`. For example, `linux/arm64` or `windows/x86_64`. The default is `linux/x86_64`.
 
 Override the generated string to build with a different valid `osfamily` or `architecture`. For example, Windows users might change the string
 ```yaml
-platform: windows/amd64
+platform: windows/x86_64
 ```
 which defaults to `WINDOWS_SERVER_2019_CORE`, using a map:
 ```yaml
@@ -63,6 +63,8 @@ If you want to use Fargate Spot capacity to run your services, you can specify a
 count:
   spot: 5
 ```
+!!! info
+    Fargate Spot is not supported for containers running on ARM architecture.
 
 <div class="separator"></div>
 
