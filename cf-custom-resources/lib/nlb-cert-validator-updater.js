@@ -9,13 +9,86 @@ const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
 const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
 const DELAY_CERTIFICATE_VALIDATED_IN_S = 30;
 
-let acm, appRoute53, envRoute53, rootHostedZoneID, appHostedZoneID, envHostedZoneID;
+let envHostedZoneID;
 let appName, envName, serviceName, certificateDomain, domainTypes, rootDNSRole, domainName;
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
 let sleep = defaultSleep;
 let random = Math.random;
+
+const appRoute53Context = () => {
+    let client;
+    return () => {
+        if (!client) {
+            client = new AWS.Route53({
+                credentials: new AWS.ChainableTemporaryCredentials({
+                    params: { RoleArn: rootDNSRole, },
+                    masterCredentials: new AWS.EnvironmentCredentials("AWS"),
+                }),
+            });
+        }
+        return client;
+    };
+}
+
+const envRoute53Context = () => {
+    let client;
+    return () => {
+        if (!client) {
+            client = new AWS.Route53();
+        }
+        return client;
+    };
+}
+
+const acmContext = () => {
+    let client;
+    return () => {
+        if (!client) {
+            client = new AWS.ACM();
+        }
+        return client;
+    };
+}
+
+const clients = {
+    app: {
+        route53: appRoute53Context(),
+    },
+    root: {
+        route53: appRoute53Context(),
+    },
+    env: {
+        route53:envRoute53Context(),
+    },
+    acm: acmContext(),
+}
+
+const appHostedZoneIDContext = () => {
+    let id;
+    return async () => {
+        if (!id) {
+            id = await hostedZoneIDByName(`${appName}.${domainName}`);
+        }
+        return id
+    };
+}
+
+const rootHostedZoneIDContext = () => {
+    let id;
+    return async () => {
+        if (!id) {
+            id = await hostedZoneIDByName(`${domainName}`);
+        }
+        return id
+    };
+}
+
+let hostecZoneID = {
+    app: appHostedZoneIDContext(),
+    root: rootHostedZoneIDContext(),
+}
 
 /**
  * Upload a CloudFormation response object to S3.
@@ -94,9 +167,20 @@ exports.handler = async function (event, context) {
     domainName = props.DomainName;
     rootDNSRole = props.RootDNSRole;
     certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
-
-    // Load resources that are needed by default.
-    loadResources();
+    domainTypes = {
+        EnvDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
+            domain: `${envName}.${appName}.${domainName}`,
+        },
+        AppDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${appName}.${domainName}`),
+            domain: `${appName}.${domainName}`,
+        },
+        RootDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${domainName}`),
+            domain: `${domainName}`,
+        },
+    };
 
     // NOTE: If the aliases have changed, then we need to replace the certificate being used, as well as deleting/adding
     // validation records and A records. In general, any change in aliases indicate a "replacement" of the resources
@@ -177,7 +261,7 @@ async function validateAliases(aliases, loadBalancerDNS) {
  * @return {String} The ARN of the requested certificate.
  */
 async function requestCertificate({ aliases, idempotencyToken }) {
-    const { CertificateArn } = await acm.requestCertificate({
+    const { CertificateArn } = await clients.acm().requestCertificate({
         DomainName: certificateDomain,
         IdempotencyToken: idempotencyToken,
         SubjectAlternativeNames: aliases.size === 0? null: [...aliases],
@@ -212,7 +296,7 @@ async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
     let attempt; // TODO: This wait loops could be further abstracted.
     for (attempt = 0; attempt < ATTEMPTS_VALIDATION_OPTIONS_READY; attempt++) {
         let readyCount = 0;
-        const { Certificate } = await acm.describeCertificate({
+        const { Certificate } = await clients.acm().describeCertificate({
             CertificateArn: certificateARN,
         }).promise();
         const options = Certificate.DomainValidationOptions || [];
@@ -248,7 +332,7 @@ async function activate(validationOptions, certificateARN, loadBalancerDNS, load
         promises.push(activateOption(option, loadBalancerDNS, loadBalancerHostedZone));
     }
     await Promise.all(promises);
-    await acm.waitFor("certificateValidated", {
+    await clients.acm().waitFor("certificateValidated", {
         // Wait up to 9 minutes and 30 seconds
         $waiter: {
             delay: DELAY_CERTIFICATE_VALIDATED_IN_S,
@@ -324,69 +408,8 @@ exports.deadlineExpired = function () {
     });
 };
 
-/**
- * Load clients and variables that can be reused between calls.
- */
-function loadResources() {
-    if (!acm) {
-        acm = new AWS.ACM();
-    }
-
-    if (!envRoute53) {
-        envRoute53 = new AWS.Route53();
-    }
-
-    domainTypes = {
-        EnvDomainZone: {
-            regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
-            domain: `${envName}.${appName}.${domainName}`,
-        },
-        AppDomainZone: {
-            regex: new RegExp(`^([^\.]+\.)?${appName}.${domainName}`),
-            domain: `${appName}.${domainName}`,
-        },
-        RootDomainZone: {
-            regex: new RegExp(`^([^\.]+\.)?${domainName}`),
-            domain: `${domainName}`,
-        },
-    };
-
-}
-
-/**
- * Lazy load application-level clients and variables that can be reused between calls.
- */
-async function lazyLoadAppResources() {
-    lazyLoadAppRoute53Client();
-    if (!appHostedZoneID) {
-        appHostedZoneID = await hostedZoneID(`${appName}.${domainName}`);
-    }
-}
-
-/**
- * Lazy load application-level clients and variables that can be reused between calls.
- */
-async function lazyLoadRootResources() {
-    lazyLoadAppRoute53Client();
-    if (!rootHostedZoneID) {
-        rootHostedZoneID = await hostedZoneID(domainName);
-    }
-}
-
-function lazyLoadAppRoute53Client() {
-    if (appRoute53) {
-        return;
-    }
-    appRoute53 = new AWS.Route53({
-        credentials: new AWS.ChainableTemporaryCredentials({
-            params: { RoleArn: rootDNSRole, },
-            masterCredentials: new AWS.EnvironmentCredentials("AWS"),
-        }),
-    });
-}
-
-async function hostedZoneID(domain) {
-    const { HostedZones } = await appRoute53
+async function hostedZoneIDByName(domain) {
+    const { HostedZones } = await clients.app.route53()
         .listHostedZonesByName({
             DNSName: domain,
             MaxItems: "1",
@@ -401,24 +424,22 @@ async function domainResources (alias) {
     if (domainTypes.EnvDomainZone.regex.test(alias)) {
         return {
             domain: domainTypes.EnvDomainZone.domain,
-            route53Client: envRoute53,
+            route53Client: clients.env.route53(),
             hostedZoneID: envHostedZoneID,
         };
     }
     if (domainTypes.AppDomainZone.regex.test(alias)) {
-        await lazyLoadAppResources();
         return {
             domain: domainTypes.AppDomainZone.domain,
-            route53Client: appRoute53,
-            hostedZoneID: appHostedZoneID,
+            route53Client: clients.app.route53(),
+            hostedZoneID: await hostecZoneID.app(),
         };
     }
     if (domainTypes.RootDomainZone.regex.test(alias)) {
-        await lazyLoadRootResources();
         return {
             domain: domainTypes.RootDomainZone.domain,
-            route53Client: appRoute53,
-            hostedZoneID: rootHostedZoneID,
+            route53Client: clients.root.route53(),
+            hostedZoneID: await hostecZoneID.root(),
         };
     }
     throw new Error(`unrecognized domain type for ${alias}`);
