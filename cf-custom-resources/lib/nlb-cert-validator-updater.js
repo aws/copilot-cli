@@ -9,12 +9,86 @@ const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
 const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
 const DELAY_CERTIFICATE_VALIDATED_IN_S = 30;
 
-let acm, envRoute53, envHostedZoneID, appName, envName, serviceName, certificateDomain;
+let envHostedZoneID;
+let appName, envName, serviceName, certificateDomain, domainTypes, rootDNSRole, domainName;
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
 let sleep = defaultSleep;
 let random = Math.random;
+
+const appRoute53Context = () => {
+    let client;
+    return () => {
+        if (!client) {
+            client = new AWS.Route53({
+                credentials: new AWS.ChainableTemporaryCredentials({
+                    params: { RoleArn: rootDNSRole, },
+                    masterCredentials: new AWS.EnvironmentCredentials("AWS"),
+                }),
+            });
+        }
+        return client;
+    };
+}
+
+const envRoute53Context = () => {
+    let client;
+    return () => {
+        if (!client) {
+            client = new AWS.Route53();
+        }
+        return client;
+    };
+}
+
+const acmContext = () => {
+    let client;
+    return () => {
+        if (!client) {
+            client = new AWS.ACM();
+        }
+        return client;
+    };
+}
+
+const clients = {
+    app: {
+        route53: appRoute53Context(),
+    },
+    root: {
+        route53: appRoute53Context(),
+    },
+    env: {
+        route53:envRoute53Context(),
+    },
+    acm: acmContext(),
+}
+
+const appHostedZoneIDContext = () => {
+    let id;
+    return async () => {
+        if (!id) {
+            id = await hostedZoneIDByName(`${appName}.${domainName}`);
+        }
+        return id
+    };
+}
+
+const rootHostedZoneIDContext = () => {
+    let id;
+    return async () => {
+        if (!id) {
+            id = await hostedZoneIDByName(`${domainName}`);
+        }
+        return id
+    };
+}
+
+let hostedZoneID = {
+    app: appHostedZoneIDContext(),
+    root: rootHostedZoneIDContext(),
+}
 
 /**
  * Upload a CloudFormation response object to S3.
@@ -78,21 +152,35 @@ function report (
 }
 
 exports.handler = async function (event, context) {
+    // Destruct resource properties into local variables.
     const props = event.ResourceProperties;
-
     let {LoadBalancerDNS: loadBalancerDNS,
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
-        DomainName: domainName,
     } = props;
     const aliases = new Set(props.Aliases);
 
-    acm = new AWS.ACM();
-    envRoute53 = new AWS.Route53();
+    // Initialize global variables.
     envHostedZoneID = props.EnvHostedZoneId;
     envName = props.EnvName;
     appName = props.AppName;
     serviceName = props.ServiceName;
+    domainName = props.DomainName;
+    rootDNSRole = props.RootDNSRole;
     certificateDomain = `${serviceName}-nlb.${envName}.${appName}.${domainName}`;
+    domainTypes = {
+        EnvDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),
+            domain: `${envName}.${appName}.${domainName}`,
+        },
+        AppDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${appName}.${domainName}`),
+            domain: `${appName}.${domainName}`,
+        },
+        RootDomainZone: {
+            regex: new RegExp(`^([^\.]+\.)?${domainName}`),
+            domain: `${domainName}`,
+        },
+    };
 
     // NOTE: If the aliases have changed, then we need to replace the certificate being used, as well as deleting/adding
     // validation records and A records. In general, any change in aliases indicate a "replacement" of the resources
@@ -141,8 +229,9 @@ async function validateAliases(aliases, loadBalancerDNS) {
     let promises = [];
 
     for (let alias of aliases) {
-        const promise = envRoute53.listResourceRecordSets({
-            HostedZoneId: envHostedZoneID,
+        let {hostedZoneID, route53Client } = await domainResources(alias);
+        const promise = route53Client.listResourceRecordSets({
+            HostedZoneId: hostedZoneID,
             MaxItems: "1",
             StartRecordName: alias,
         }).promise().then((data) => {
@@ -150,11 +239,13 @@ async function validateAliases(aliases, loadBalancerDNS) {
             if (!recordSet || recordSet.length === 0) {
                 return;
             }
+            if (recordSet[0].Name !== alias) {
+                return;
+            }
             let aliasTarget = recordSet[0].AliasTarget;
             if (aliasTarget && aliasTarget.DNSName === `${loadBalancerDNS}.`) {
                 return; // The record is an alias record and is in use by myself, hence valid.
             }
-
             if (aliasTarget) {
                 throw new Error(`Alias ${alias} is already in use by ${aliasTarget.DNSName}. This could be another load balancer of a different service.`);
             }
@@ -172,7 +263,7 @@ async function validateAliases(aliases, loadBalancerDNS) {
  * @return {String} The ARN of the requested certificate.
  */
 async function requestCertificate({ aliases, idempotencyToken }) {
-    const { CertificateArn } = await acm.requestCertificate({
+    const { CertificateArn } = await clients.acm().requestCertificate({
         DomainName: certificateDomain,
         IdempotencyToken: idempotencyToken,
         SubjectAlternativeNames: aliases.size === 0? null: [...aliases],
@@ -207,7 +298,7 @@ async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
     let attempt; // TODO: This wait loops could be further abstracted.
     for (attempt = 0; attempt < ATTEMPTS_VALIDATION_OPTIONS_READY; attempt++) {
         let readyCount = 0;
-        const { Certificate } = await acm.describeCertificate({
+        const { Certificate } = await clients.acm().describeCertificate({
             CertificateArn: certificateARN,
         }).promise();
         const options = Certificate.DomainValidationOptions || [];
@@ -243,8 +334,7 @@ async function activate(validationOptions, certificateARN, loadBalancerDNS, load
         promises.push(activateOption(option, loadBalancerDNS, loadBalancerHostedZone));
     }
     await Promise.all(promises);
-
-    await acm.waitFor("certificateValidated", {
+    await clients.acm().waitFor("certificateValidated", {
         // Wait up to 9 minutes and 30 seconds
         $waiter: {
             delay: DELAY_CERTIFICATE_VALIDATED_IN_S,
@@ -291,15 +381,16 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
         });
     }
 
-    let { ChangeInfo } = await envRoute53.changeResourceRecordSets({
+    let {hostedZoneID, route53Client} = await domainResources(option.DomainName);
+    let { ChangeInfo } = await route53Client.changeResourceRecordSets({
         ChangeBatch: {
             Comment: "Validate the certificate and create A record for the alias",
             Changes: changes,
         },
-        HostedZoneId: envHostedZoneID,
+        HostedZoneId: hostedZoneID,
     }).promise();
 
-    await envRoute53.waitFor('resourceRecordSetsChanged', {
+    await route53Client.waitFor('resourceRecordSetsChanged', {
         // Wait up to 5 minutes
         $waiter: {
             delay: DELAY_RECORD_SETS_CHANGE_IN_S,
@@ -318,6 +409,43 @@ exports.deadlineExpired = function () {
         );
     });
 };
+
+async function hostedZoneIDByName(domain) {
+    const { HostedZones } = await clients.app.route53()
+        .listHostedZonesByName({
+            DNSName: domain,
+            MaxItems: "1",
+        }).promise();
+    if (!HostedZones || HostedZones.length === 0) {
+        throw new Error( `Couldn't find any Hosted Zone with DNS name ${domainName}.`);
+    }
+    return HostedZones[0].Id.split("/").pop();
+}
+
+async function domainResources (alias) {
+    if (domainTypes.EnvDomainZone.regex.test(alias)) {
+        return {
+            domain: domainTypes.EnvDomainZone.domain,
+            route53Client: clients.env.route53(),
+            hostedZoneID: envHostedZoneID,
+        };
+    }
+    if (domainTypes.AppDomainZone.regex.test(alias)) {
+        return {
+            domain: domainTypes.AppDomainZone.domain,
+            route53Client: clients.app.route53(),
+            hostedZoneID: await hostedZoneID.app(),
+        };
+    }
+    if (domainTypes.RootDomainZone.regex.test(alias)) {
+        return {
+            domain: domainTypes.RootDomainZone.domain,
+            route53Client: clients.root.route53(),
+            hostedZoneID: await hostedZoneID.root(),
+        };
+    }
+    throw new Error(`unrecognized domain type for ${alias}`);
+}
 
 exports.withSleep = function (s) {
     sleep = s;
