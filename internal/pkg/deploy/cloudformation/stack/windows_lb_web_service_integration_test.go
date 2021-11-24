@@ -57,12 +57,9 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	envController, err := parser.Read(envControllerPath)
 	require.NoError(t, err)
 	envControllerZipFile := envController.String()
-	//dynamicDesiredCount, err := parser.Read(dynamicDesiredCountPath)
-	//require.NoError(t, err)
-	//dynamicDesiredCountZipFile := dynamicDesiredCount.String()
-	//rulePriority, err := parser.Read(rulePriorityPath)
-	//require.NoError(t, err)
-	//rulePriorityZipFile := rulePriority.String()
+	rulePriority, err := parser.Read(rulePriorityPath)
+	require.NoError(t, err)
+	rulePriorityZipFile := rulePriority.String()
 
 	t.Run("CF template should be equal", func(t *testing.T) {
 		actualBytes := []byte(tpl)
@@ -71,8 +68,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 		actualString := string(actualBytes)
 		// Cut out zip file for more readable output
 		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
-		//actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
-		//actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
+		actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
 
 		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
