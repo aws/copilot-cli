@@ -135,6 +135,8 @@ Resources:
                 Value: !Ref EnvName
               - Name: COPILOT_SERVICE_NAME
                 Value: !Ref WorkloadName
+              - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+                Value: 
               - Name: COPILOT_SNS_TOPIC_ARNS
                 Value: '{"customers":"arn:aws:sns:us-west-2:123456789123:my-app-test-frontend-customers"}'
               - Name: LOG_LEVEL
@@ -144,6 +146,10 @@ Resources:
         Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory
         InstanceRoleArn: !GetAtt InstanceRole.Arn
+      NetworkConfiguration:
+        EgressConfiguration:
+          EgressType: VPC
+          VpcConnectorArn: !Ref VpcConnector
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
@@ -166,7 +172,7 @@ Resources:
       TemplateURL:
         !Ref AddonsTemplateURL
 
-
+  
   customersSNSTopic:
     Metadata:
       'aws:copilot:description': 'A SNS topic to broadcast customers events'
@@ -174,6 +180,7 @@ Resources:
     Properties:
       TopicName: !Sub '${AWS::StackName}-customers'
       KmsMasterKeyId: 'alias/aws/sns'
+  
   customersSNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     DependsOn: customersSNSTopic
@@ -192,7 +199,6 @@ Resources:
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"
-
   EnvControllerAction:
     Metadata:
       'aws:copilot:description': "Update your environment's shared resources"
@@ -257,3 +263,47 @@ Resources:
                   'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Metadata:
+      'aws:copilot:description': 'A security group for your addons/ resources to allow ingress from your service'
+    Properties:
+      GroupDescription: !Join [ '', [ !Ref AppName, '-', !Ref EnvName, !Ref WorkloadName ] ]
+      VpcId:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}'
+  
+  EnvironmentSecurityGroupIngressFromServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      'aws:copilot:description': 'Allow ingress from the app runner service to services in your environment'
+    Properties:
+      GroupId: 
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref ServiceSecurityGroup
+  
+  VpcConnector:
+    Type: AWS::AppRunner::VpcConnector
+    DependsOn: EnvControllerAction # Ensure NAT gateways are created before connecting to a VPC.
+    Metadata:
+      'aws:copilot:description': 'A VPC connector to link your service to private subnets in your environment'
+    Properties:
+      Subnets:
+        Fn::Split:
+          - ","
+          - Fn::ImportValue:
+              !Sub '${AppName}-${EnvName}-PrivateSubnets'
+      SecurityGroups:
+      - !Ref ServiceSecurityGroup
+      Tags:
+        - Key: copilot-application
+          Value: !Ref AppName
+        - Key: copilot-environment
+          Value: !Ref EnvName
+        - Key: copilot-service
+          Value: !Ref WorkloadName
