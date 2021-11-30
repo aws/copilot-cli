@@ -7,7 +7,7 @@ package route53
 import (
 	"errors"
 	"fmt"
-	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -42,8 +42,7 @@ func (r *Route53Domains) IsDomainOwned(domainName string) error {
 	if !errors.As(err, &errInvalidInput) {
 		return fmt.Errorf("get domain detail: %w", err)
 	}
-	domainNotFoundRegex := regexp.MustCompile(fmt.Sprintf("Domain %s not found", domainName))
-	if domainNotFoundRegex.FindString(err.Error()) == "" {
+	if !strings.Contains(err.Error(), fmt.Sprintf("Domain %s not found", domainName)) {
 		return fmt.Errorf("get domain detail: %w", err)
 	}
 	return &ErrDomainNotFound{
