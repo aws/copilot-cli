@@ -32,7 +32,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 
 		mock func(m *initAppMocks)
 
-		wantedError string
+		wantedError error
 	}{
 		"skip everything": {
 			mock: func(m *initAppMocks) {},
@@ -44,13 +44,12 @@ func TestInitAppOpts_Validate(t *testing.T) {
 					ApplicationName: "metrics",
 				})
 			},
-			wantedError: "",
 		},
 		"invalid app name": {
 			inAppName: "123chicken",
 			mock:      func(m *initAppMocks) {},
 
-			wantedError: "application name 123chicken is invalid: value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen",
+			wantedError: errors.New("application name 123chicken is invalid: value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen"),
 		},
 		"errors if application with different domain already exists": {
 			inAppName:    "metrics",
@@ -62,7 +61,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				}, nil)
 			},
 
-			wantedError: "application named metrics already exists with a different domain name domain.com",
+			wantedError: errors.New("application named metrics already exists with a different domain name domain.com"),
 		},
 		"skip checking if domain name is not set": {
 			inAppName:    "metrics",
@@ -77,20 +76,20 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			mock: func(m *initAppMocks) {
 				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, errors.New("some error"))
 			},
-			wantedError: "get application metrics: some error",
+			wantedError: errors.New("get application metrics: some error"),
 		},
 		"invalid domain name not containing a dot": {
 			inDomainName: "hello_website",
 			mock:         func(m *initAppMocks) {},
 
-			wantedError: fmt.Errorf("domain name %s is invalid: %w", "hello_website", errDomainInvalid).Error(),
+			wantedError: fmt.Errorf("domain name hello_website is invalid: %w", errDomainInvalid),
 		},
 		"errors checking if the domain is owned by the account": {
 			inDomainName: "badMockDomain.com",
 			mock: func(m *initAppMocks) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("badMockDomain.com").Return(errors.New("some error"))
 			},
-			wantedError: "check if domain is owned by the account: some error",
+			wantedError: errors.New("check if domain is owned by the account: some error"),
 		},
 		"invalid domain name that doesn't have a hosted zone": {
 			inDomainName: "badMockDomain.com",
@@ -98,7 +97,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("badMockDomain.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", route53.ErrDomainNotExist)
 			},
-			wantedError: "get hosted zone ID for domain badMockDomain.com: domain does not exist",
+			wantedError: errors.New("get hosted zone ID for domain badMockDomain.com: domain does not exist"),
 		},
 		"errors if failed to validate that domain has a hosted zone": {
 			inDomainName: "mockDomain.com",
@@ -106,7 +105,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("mockDomain.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("", errors.New("some error"))
 			},
-			wantedError: "get hosted zone ID for domain mockDomain.com: some error",
+			wantedError: errors.New("get hosted zone ID for domain mockDomain.com: some error"),
 		},
 		"valid domain name": {
 			inDomainName: "mockDomain.com",
@@ -115,12 +114,12 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("mockDomain.com").Return(nil)
 			},
 		},
-		"valid domain that is not found in the account": {
+		"invalid domain that is not found in the account": {
 			inDomainName: "badMockDomain.com",
 			mock: func(m *initAppMocks) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("badMockDomain.com").Return(&route53.ErrDomainNotFound{})
-				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", nil)
 			},
+			wantedError: &route53.ErrDomainNotFound{},
 		},
 		"valid domain name containing multiple dots": {
 			inDomainName: "hello.dog.com",
@@ -128,7 +127,6 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("hello.dog.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("hello.dog.com").Return("mockHostedZoneID", nil)
 			},
-			wantedError: "",
 		},
 	}
 
@@ -159,8 +157,8 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			// THEN
-			if tc.wantedError != "" {
-				require.EqualError(t, err, tc.wantedError)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 			}

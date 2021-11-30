@@ -52,8 +52,7 @@ type initAppOpts struct {
 	prog                 progress
 	isSessionFromEnvVars func() (bool, error)
 
-	cachedHostedZoneID        string
-	isDomainNotFoundInAccount bool
+	cachedHostedZoneID string
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -240,8 +239,10 @@ func (o *initAppOpts) isDomainOwned() error {
 	}
 	var errDomainNotFound *route53.ErrDomainNotFound
 	if errors.As(err, &errDomainNotFound) {
-		o.isDomainNotFoundInAccount = true
-		return nil
+		log.Errorln("The account does not seem to own the domain that you entered. Please make sure that the " +
+			"domain is registered with Route53 in your account. To transfer domain registration to Route53, " +
+			"see https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html")
+		return errDomainNotFound
 	}
 	return fmt.Errorf("check if domain is owned by the account: %w", err)
 }
@@ -259,14 +260,9 @@ func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
 
 // RecommendActions returns a list of suggested additional commands users can run after successfully executing this command.
 func (o *initAppOpts) RecommendActions() error {
-	actions := []string{
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to add a new service or job to your application.", color.HighlightCode("copilot init")),
-	}
-	if o.isDomainNotFoundInAccount {
-		actions = append(actions, "The account does not seem to own the domain that you entered. Please make sure "+
-			"that the domain is registered with Route53 in your account. To transfer domain registration to Route53, see https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html")
-	}
-	logRecommendedActions(actions)
+	})
 	return nil
 }
 
