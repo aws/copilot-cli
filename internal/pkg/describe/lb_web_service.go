@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"io"
 	"sort"
 	"strconv"
@@ -92,6 +93,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
+	var platform string
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -125,6 +127,11 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
+		containerPlatform, err := d.svcStackDescriber[env].Platform()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve platform: %w", err)
+		}
+		platform = dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture)
 		webSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
@@ -154,6 +161,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &webSvcDesc{
 		Service:          d.svc,
 		Type:             manifest.LoadBalancedWebServiceType,
+		Platform: platform,
 		App:              d.app,
 		Configurations:   configs,
 		Routes:           routes,
@@ -249,6 +257,7 @@ func (s serviceDiscoveries) humanString(w io.Writer) {
 type webSvcDesc struct {
 	Service          string               `json:"service"`
 	Type             string               `json:"type"`
+	Platform         string				  `json:"platform"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
 	Routes           []*WebServiceRoute   `json:"routes"`
@@ -278,6 +287,7 @@ func (w *webSvcDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Application", w.App)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.Service)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Platform", w.Platform)
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)

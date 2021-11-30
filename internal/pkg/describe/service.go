@@ -93,6 +93,7 @@ type apprunnerSvcDescriber interface {
 type ecsStackDescriber interface {
 	Params() (map[string]string, error)
 	Outputs() (map[string]string, error)
+	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
 	ServiceStackResources() ([]*stack.Resource, error)
@@ -202,6 +203,15 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 	}, nil
 }
 
+// Platform returns the platform of the task definition.
+func (d *ServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
+	}
+	return taskDefinition.Platform(), nil
+}
+
 // EnvVars returns the environment variables of the task definition.
 func (d *ServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
 	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
@@ -279,6 +289,15 @@ func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) 
 
 		ecsClient: ecs.New(serviceDescriber.sess),
 	}, nil
+}
+
+// Platform returns the platform of the task definition.
+func (d *ECSServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
+	}
+	return taskDefinition.Platform(), nil
 }
 
 // EnvVars returns the environment variables of the task definition.
