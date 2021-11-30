@@ -95,9 +95,9 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			inDomainName: "badMockDomain.com",
 			mock: func(m *initAppMocks) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("badMockDomain.com").Return(nil)
-				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", route53.ErrDomainNotExist)
+				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", &route53.ErrDomainHostedZoneNotFound{})
 			},
-			wantedError: errors.New("get hosted zone ID for domain badMockDomain.com: domain does not exist"),
+			wantedError: fmt.Errorf("get hosted zone ID for domain badMockDomain.com: %w", &route53.ErrDomainHostedZoneNotFound{}),
 		},
 		"errors if failed to validate that domain has a hosted zone": {
 			inDomainName: "mockDomain.com",

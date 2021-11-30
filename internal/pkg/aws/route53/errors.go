@@ -4,12 +4,17 @@
 package route53
 
 import (
-	"errors"
 	"fmt"
 )
 
-// ErrNoDefaultCluster occurs when the default cluster is not found.
-var ErrDomainNotExist = errors.New("domain does not exist")
+// ErrDomainHostedZoneNotFound occurs when the domain hosted zone is not found.
+type ErrDomainHostedZoneNotFound struct {
+	domainName string
+}
+
+func (e *ErrDomainHostedZoneNotFound) Error() string {
+	return fmt.Sprintf("hosted zone is not found for domain %s", e.domainName)
+}
 
 // ErrDomainNotFound occurs when the domain is not found in the account.
 type ErrDomainNotFound struct {

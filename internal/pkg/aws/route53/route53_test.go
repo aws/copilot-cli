@@ -16,7 +16,6 @@ import (
 )
 
 func TestRoute53_DomainHostedZoneID(t *testing.T) {
-
 	testCases := map[string]struct {
 		domainName        string
 		mockRoute53Client func(m *mocks.Mockapi)
@@ -126,7 +125,9 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantErr: ErrDomainNotExist,
+			wantErr: &ErrDomainHostedZoneNotFound{
+				domainName: "mockDomain4.com",
+			},
 		},
 		"failed to validate if domain exists": {
 			domainName: "mockDomain.com",

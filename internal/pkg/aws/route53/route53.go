@@ -49,7 +49,9 @@ func (r *Route53) DomainHostedZoneID(domainName string) (string, error) {
 			return strings.TrimPrefix(aws.StringValue(hostedZones[0].Id), "/hostedzone/"), nil
 		}
 		if !aws.BoolValue(resp.IsTruncated) {
-			return "", ErrDomainNotExist
+			return "", &ErrDomainHostedZoneNotFound{
+				domainName: domainName,
+			}
 		}
 		in = &route53.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
 		resp, err = r.client.ListHostedZonesByName(in)
