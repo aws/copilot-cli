@@ -259,9 +259,14 @@ func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
 
 // RecommendActions returns a list of suggested additional commands users can run after successfully executing this command.
 func (o *initAppOpts) RecommendActions() error {
-	logRecommendedActions([]string{
+	actions := []string{
 		fmt.Sprintf("Run %s to add a new service or job to your application.", color.HighlightCode("copilot init")),
-	})
+	}
+	if o.isDomainNotFoundInAccount {
+		actions = append(actions, "The account does not seem to own the domain that you entered. Please make sure "+
+			"that the domain is registered with Route53 in your account. To transfer domain registration to Route53, see https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html")
+	}
+	logRecommendedActions(actions)
 	return nil
 }
 
