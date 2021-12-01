@@ -115,7 +115,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &workerSvcDesc{
 		Service:        d.svc,
 		Type:           manifest.WorkerServiceType,
-		Platform: platform,
+		Platform:       platform,
 		App:            d.app,
 		Configurations: configs,
 		Variables:      envVars,
@@ -130,7 +130,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 type workerSvcDesc struct {
 	Service        string               `json:"service"`
 	Type           string               `json:"type"`
-	Platform	string 	`json:"platform"`
+	Platform       string               `json:"platform"`
 	App            string               `json:"application"`
 	Configurations ecsConfigurations    `json:"configurations"`
 	Variables      containerEnvVars     `json:"variables"`

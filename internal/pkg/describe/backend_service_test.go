@@ -78,7 +78,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
-					)
+				)
 			},
 			wantedError: fmt.Errorf("retrieve platform: some error"),
 		},
@@ -95,7 +95,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
@@ -116,7 +116,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -145,7 +145,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -170,7 +170,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -194,7 +194,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -226,10 +226,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedBackendSvc: &backendSvcDesc{
-				Service: testSvc,
-				Type:    "Backend Service",
+				Service:  testSvc,
+				Type:     "Backend Service",
 				Platform: "LINUX/X86_64",
-				App:     testApp,
+				App:      testApp,
 				Configurations: []*ECSServiceConfig{
 					{
 						ServiceConfig: &ServiceConfig{

@@ -118,7 +118,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
@@ -143,7 +143,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -177,7 +177,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -223,7 +223,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -253,7 +253,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture: "X86_64",
+						Architecture:    "X86_64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -284,10 +284,10 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedWebSvc: &webSvcDesc{
-				Service: testSvc,
-				Type:    "Load Balanced Web Service",
+				Service:  testSvc,
+				Type:     "Load Balanced Web Service",
 				Platform: "LINUX/X86_64",
-				App:     testApp,
+				App:      testApp,
 				Configurations: []*ECSServiceConfig{
 					{
 						ServiceConfig: &ServiceConfig{

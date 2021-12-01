@@ -309,7 +309,7 @@ func TestServiceDescriber_Platform(t *testing.T) {
 		setupMocks func(mocks ecsSvcDescriberMocks)
 
 		wantedPlatform *awsecs.ContainerPlatform
-		wantedError   error
+		wantedError    error
 	}{
 		"returns error if fails to get task definition": {
 			setupMocks: func(m ecsSvcDescriberMocks) {
@@ -331,9 +331,9 @@ func TestServiceDescriber_Platform(t *testing.T) {
 			},
 			wantedPlatform: &awsecs.ContainerPlatform{
 				OperatingSystem: "LINUX",
-				Architecture: "ARM64",
-				},
+				Architecture:    "ARM64",
 			},
+		},
 		"successfully returns default platform when none returned from api call": {
 			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
@@ -341,7 +341,7 @@ func TestServiceDescriber_Platform(t *testing.T) {
 			},
 			wantedPlatform: &awsecs.ContainerPlatform{
 				OperatingSystem: "LINUX",
-				Architecture: "X86_64",
+				Architecture:    "X86_64",
 			},
 		},
 	}
