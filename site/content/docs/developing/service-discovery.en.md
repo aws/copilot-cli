@@ -33,7 +33,7 @@ The important part is that our `front-end` service is making a request to our `a
 endpoint := fmt.Sprintf("http://api.%s/some-request", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
 ```
 
-`COPILOT_SERVICE_DISCOVERY_ENDPOINT` is a special environment variable that the Copilot CLI sets for you when it creates your service. It's of the format _{env name}.{app name}.local_ - so in this case in our _kudos_ app, when deployed in the _test_ environment, the request would be to `http://api.test.kudos.local/some-request`. Since our _api_ service is running on port 80, we're not specifying the port in the URL. However, if it was running on another port, say 8080, we'd need to include the port in the request, as well `http://api.kudos.local:8080/some-request`.
+`COPILOT_SERVICE_DISCOVERY_ENDPOINT` is a special environment variable that the Copilot CLI sets for you when it creates your service. It's of the format _{env name}.{app name}.local_ - so in this case in our _kudos_ app, when deployed in the _test_ environment, the request would be to `http://api.test.kudos.local/some-request`. Since our _api_ service is running on port 80, we're not specifying the port in the URL. However, if it was running on another port, say 8080, we'd need to include the port in the request, as well `http://api.test.kudos.local:8080/some-request`.
 
 When our front-end makes this request, the endpoint `api.test.kudos.local` resolves to a private IP address and is routed privately within your VPC. 
 
