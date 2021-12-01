@@ -256,6 +256,21 @@ func (mr *MockecsStackDescriberMockRecorder) Params() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockecsStackDescriber)(nil).Params))
 }
 
+// Platform mocks base method.
+func (m *MockecsStackDescriber) Platform() (*ecs.ContainerPlatform, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Platform")
+	ret0, _ := ret[0].(*ecs.ContainerPlatform)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Platform indicates an expected call of Platform.
+func (mr *MockecsStackDescriberMockRecorder) Platform() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Platform", reflect.TypeOf((*MockecsStackDescriber)(nil).Platform))
+}
+
 // Secrets mocks base method.
 func (m *MockecsStackDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 	m.ctrl.T.Helper()
