@@ -114,9 +114,15 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
+		fmt.Println("got here one time")
 		containerPlatform, err := d.svcStackDescriber[env].Platform()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
+		}
+		fmt.Println(containerPlatform.OperatingSystem, containerPlatform.Architecture)
+		fmt.Println(containerPlatform)
+		if containerPlatform == nil {
+			return nil, fmt.Errorf("what happened why is this nil")
 		}
 		platform = dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture)
 		backendSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
@@ -149,7 +155,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &backendSvcDesc{
 		Service:          d.svc,
 		Type:             manifest.BackendServiceType,
-		Platform: 		  platform,
+		Platform:         platform,
 		App:              d.app,
 		Configurations:   configs,
 		ServiceDiscovery: services,

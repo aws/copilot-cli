@@ -161,7 +161,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &webSvcDesc{
 		Service:          d.svc,
 		Type:             manifest.LoadBalancedWebServiceType,
-		Platform: platform,
+		Platform:         platform,
 		App:              d.app,
 		Configurations:   configs,
 		Routes:           routes,
@@ -257,7 +257,7 @@ func (s serviceDiscoveries) humanString(w io.Writer) {
 type webSvcDesc struct {
 	Service          string               `json:"service"`
 	Type             string               `json:"type"`
-	Platform         string				  `json:"platform"`
+	Platform         string               `json:"platform"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
 	Routes           []*WebServiceRoute   `json:"routes"`

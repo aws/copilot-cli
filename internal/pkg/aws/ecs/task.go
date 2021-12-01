@@ -172,20 +172,17 @@ type TaskDefinition ecs.TaskDefinition
 // ContainerPlatform holds basic info of a container's platform.
 type ContainerPlatform struct {
 	OperatingSystem string
-	Architecture string
+	Architecture    string
 }
 
 // Platform returns the platform of the task definition.
 func (t *TaskDefinition) Platform() *ContainerPlatform {
-	os := "LINUX"
-	arch := "X86_64"
-	if t.RuntimePlatform != nil {
-		os = aws.StringValue(t.RuntimePlatform.OperatingSystemFamily)
-		arch = aws.StringValue(t.RuntimePlatform.CpuArchitecture)
+	if t.RuntimePlatform == nil {
+		return nil
 	}
 	return &ContainerPlatform{
-		OperatingSystem: os,
-		Architecture:    arch,
+		OperatingSystem: aws.StringValue(t.RuntimePlatform.OperatingSystemFamily),
+		Architecture:    aws.StringValue(t.RuntimePlatform.CpuArchitecture),
 	}
 }
 

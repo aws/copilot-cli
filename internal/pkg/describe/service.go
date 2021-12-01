@@ -203,13 +203,22 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 	}, nil
 }
 
-// Platform returns the platform of the task definition.
+// Platform returns the platform of the task definition. If it is nil, fill in default values.
 func (d *ServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
 	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
 		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
 	}
-	return taskDefinition.Platform(), nil
+	platform := taskDefinition.Platform()
+	if platform == nil {
+		fmt.Println("is nil so reassigning")
+		return &awsecs.ContainerPlatform{
+			OperatingSystem: "LINUX",
+			Architecture:    "X86_64",
+		}, nil
+	}
+	fmt.Println("is not nil so returning")
+	return platform, nil
 }
 
 // EnvVars returns the environment variables of the task definition.
