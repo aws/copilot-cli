@@ -366,10 +366,7 @@ func (o *initEnvOpts) askEnvName() error {
 		return fmt.Errorf("get environment name: %w", err)
 	}
 	o.name = envName
-	if err := o.validateDuplicateEnv(); err != nil {
-		return err
-	}
-	return nil
+	return o.validateDuplicateEnv()
 }
 
 func (o *initEnvOpts) askEnvSession() error {
