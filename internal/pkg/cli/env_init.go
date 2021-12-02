@@ -549,7 +549,7 @@ func (o *initEnvOpts) validateDuplicateEnv() error {
 	_, err := o.store.GetEnvironment(o.appName, o.name)
 	if err == nil {
 		log.Errorf(`It seems like you are trying to init an environment that already exists.
-To re-create the environment, please run:
+To recreate the environment, please run:
 1. %s
 2. And then %s.
 `,
