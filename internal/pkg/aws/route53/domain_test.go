@@ -15,7 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/route53/mocks"
 )
 
-func TestRoute53_IsDomainOwned(t *testing.T) {
+func TestRoute53_IsDomainRegisteredInRoute53(t *testing.T) {
 
 	testCases := map[string]struct {
 		domainName        string
@@ -23,7 +23,7 @@ func TestRoute53_IsDomainOwned(t *testing.T) {
 
 		wantErr error
 	}{
-		"domain owned by account": {
+		"domain registered by account in Route53": {
 			domainName: "mockDomain.com",
 			mockRoute53Client: func(m *mocks.MockdomainAPI) {
 				m.EXPECT().GetDomainDetail(&route53domains.GetDomainDetailInput{
@@ -32,7 +32,7 @@ func TestRoute53_IsDomainOwned(t *testing.T) {
 			},
 			wantErr: nil,
 		},
-		"domain not owned": {
+		"domain not found in Route53": {
 			domainName: "mockDomain.com",
 			mockRoute53Client: func(m *mocks.MockdomainAPI) {
 				m.EXPECT().GetDomainDetail(&route53domains.GetDomainDetailInput{
@@ -40,6 +40,15 @@ func TestRoute53_IsDomainOwned(t *testing.T) {
 				}).Return(nil, &route53domains.InvalidInput{
 					Message_: aws.String("InvalidInput: Domain mockDomain.com not found in account xxx"),
 				})
+			},
+			wantErr: errors.New("domain mockDomain.com is not found in the account"),
+		},
+		"domain cannot have been registered in Route53 because the TLD is not supported": {
+			domainName: "mockDomain.com",
+			mockRoute53Client: func(m *mocks.MockdomainAPI) {
+				m.EXPECT().GetDomainDetail(&route53domains.GetDomainDetailInput{
+					DomainName: aws.String("mockDomain.com"),
+				}).Return(nil, &route53domains.UnsupportedTLD{})
 			},
 			wantErr: errors.New("domain mockDomain.com is not found in the account"),
 		},
@@ -75,7 +84,7 @@ func TestRoute53_IsDomainOwned(t *testing.T) {
 			client := Route53Domains{
 				client: mockRoute53Client,
 			}
-			gotErr := client.IsDomainOwned(tc.domainName)
+			gotErr := client.IsDomainRegisteredInRoute53(tc.domainName)
 
 			if tc.wantErr != nil {
 				require.NotNil(t, gotErr)

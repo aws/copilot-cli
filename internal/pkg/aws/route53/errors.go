@@ -16,11 +16,11 @@ func (e *ErrDomainHostedZoneNotFound) Error() string {
 	return fmt.Sprintf("hosted zone is not found for domain %s", e.domainName)
 }
 
-// ErrDomainNotFound occurs when the domain is not found in the account.
-type ErrDomainNotFound struct {
+// ErrDomainNotFoundInRoute53 occurs when the domain is not found in the account.
+type ErrDomainNotFoundInRoute53 struct {
 	domainName string
 }
 
-func (e *ErrDomainNotFound) Error() string {
+func (e *ErrDomainNotFoundInRoute53) Error() string {
 	return fmt.Sprintf("domain %s is not found in the account", e.domainName)
 }

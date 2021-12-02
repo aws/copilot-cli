@@ -4273,9 +4273,9 @@ func (m *MockdomainInfoGetter) EXPECT() *MockdomainInfoGetterMockRecorder {
 }
 
 // IsDomainOwned mocks base method.
-func (m *MockdomainInfoGetter) IsDomainOwned(domainName string) error {
+func (m *MockdomainInfoGetter) IsDomainRegisteredInRoute53(domainName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDomainOwned", domainName)
+	ret := m.ctrl.Call(m, "IsDomainRegisteredInRoute53", domainName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -4283,7 +4283,7 @@ func (m *MockdomainInfoGetter) IsDomainOwned(domainName string) error {
 // IsDomainOwned indicates an expected call of IsDomainOwned.
 func (mr *MockdomainInfoGetterMockRecorder) IsDomainOwned(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDomainOwned", reflect.TypeOf((*MockdomainInfoGetter)(nil).IsDomainOwned), domainName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDomainRegisteredInRoute53", reflect.TypeOf((*MockdomainInfoGetter)(nil).IsDomainRegisteredInRoute53), domainName)
 }
 
 // MockdockerfileParser is a mock of dockerfileParser interface.

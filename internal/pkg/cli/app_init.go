@@ -233,11 +233,11 @@ func (o *initAppOpts) validateAppName(name string) error {
 }
 
 func (o *initAppOpts) isDomainOwned() error {
-	err := o.domainInfoGetter.IsDomainOwned(o.domainName)
+	err := o.domainInfoGetter.IsDomainRegisteredInRoute53(o.domainName)
 	if err == nil {
 		return nil
 	}
-	var errDomainNotFound *route53.ErrDomainNotFound
+	var errDomainNotFound *route53.ErrDomainNotFoundInRoute53
 	if errors.As(err, &errDomainNotFound) {
 		log.Warningf(`The account does not seem to own the domain that you entered.
 Please make sure that %s is registered with Route53 in your account, or that your hosted zone has the appropriate NS records.
