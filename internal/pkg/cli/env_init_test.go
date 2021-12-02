@@ -300,14 +300,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).
 						Return("test", nil),
-					m.store.EXPECT().ListEnvironments(mockApp).Return([]*config.Environment{
-						{
-							Name: "tset",
-						},
-						{
-							Name: "test",
-						},
-					}, nil),
+					m.store.EXPECT().GetEnvironment(mockApp, mockEnv).Return(nil, nil),
 				)
 			},
 			wantedError: errors.New("environment test already exists"),
