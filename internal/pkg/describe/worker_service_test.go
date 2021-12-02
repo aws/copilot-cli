@@ -358,6 +358,7 @@ func TestWorkerSvcDesc_String(t *testing.T) {
   Application       my-app
   Name              my-svc
   Type              Worker Service
+  Platform          LINUX/X86_64
 
 Configurations
 
@@ -388,7 +389,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"tasks\":\"3\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"platform\":\"LINUX/X86_64\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"tasks\":\"3\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -463,6 +464,7 @@ Resources
 			workerSvc := &workerSvcDesc{
 				Service:        "my-svc",
 				Type:           "Worker Service",
+				Platform: "LINUX/X86_64",
 				Configurations: config,
 				App:            "my-app",
 				Variables:      envVars,
