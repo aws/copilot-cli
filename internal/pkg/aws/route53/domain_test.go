@@ -15,7 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/route53/mocks"
 )
 
-func TestRoute53_IsDomainRegisteredInRoute53(t *testing.T) {
+func TestRoute53_IsRegisteredDomain(t *testing.T) {
 
 	testCases := map[string]struct {
 		domainName        string
@@ -84,7 +84,7 @@ func TestRoute53_IsDomainRegisteredInRoute53(t *testing.T) {
 			client := Route53Domains{
 				client: mockRoute53Client,
 			}
-			gotErr := client.IsDomainRegisteredInRoute53(tc.domainName)
+			gotErr := client.IsRegisteredDomain(tc.domainName)
 
 			if tc.wantErr != nil {
 				require.NotNil(t, gotErr)

@@ -30,8 +30,8 @@ func NewRoute53Domains(s *session.Session) *Route53Domains {
 	}
 }
 
-// IsDomainRegisteredInRoute53 checks if the domain is owned by the account.
-func (r *Route53Domains) IsDomainRegisteredInRoute53(domainName string) error {
+// IsRegisteredDomain checks if the domain is owned by the account.
+func (r *Route53Domains) IsRegisteredDomain(domainName string) error {
 	_, err := r.client.GetDomainDetail(&route53domains.GetDomainDetailInput{
 		DomainName: aws.String(domainName),
 	})
@@ -41,13 +41,13 @@ func (r *Route53Domains) IsDomainRegisteredInRoute53(domainName string) error {
 	var errUnsupportedTLD *route53domains.UnsupportedTLD
 	if errors.As(err, &errUnsupportedTLD) {
 		// The TLD isn't supported by Route53, hence it can't have been registered witH Route53.
-		return &ErrDomainNotFoundInRoute53{
+		return &ErrDomainNotFound{
 			domainName: domainName,
 		}
 	}
 	var errInvalidInput *route53domains.InvalidInput
 	if errors.As(err, &errInvalidInput) && strings.Contains(err.Error(), fmt.Sprintf("Domain %s not found", domainName)) {
-		return &ErrDomainNotFoundInRoute53{
+		return &ErrDomainNotFound{
 			domainName: domainName,
 		}
 	}

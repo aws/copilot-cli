@@ -406,7 +406,7 @@ type domainHostedZoneGetter interface {
 }
 
 type domainInfoGetter interface {
-	IsDomainRegisteredInRoute53(domainName string) error
+	IsRegisteredDomain(domainName string) error
 }
 
 type dockerfileParser interface {
