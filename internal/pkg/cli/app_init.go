@@ -239,12 +239,14 @@ func (o *initAppOpts) isDomainOwned() error {
 	}
 	var errDomainNotFound *route53.ErrDomainNotFound
 	if errors.As(err, &errDomainNotFound) {
-		log.Errorf(`The account does not seem to own the domain that you entered.
-Please make sure that %s is registered with Route53 in your account.
+		log.Warningf(`The account does not seem to own the domain that you entered.
+Please make sure that %s is registered with Route53 in your account, or that your hosted zone has the appropriate NS records.
 To transfer domain registration in Route53, see:
 https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html
-`, color.HighlightUserInput(o.domainName))
-		return errDomainNotFound
+To update the NS records in your hosted zone, see:
+https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/SOA-NSrecords.html#NSrecords
+`, o.domainName)
+		return nil
 	}
 	return fmt.Errorf("check if domain is owned by the account: %w", err)
 }

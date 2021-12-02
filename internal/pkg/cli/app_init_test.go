@@ -114,13 +114,6 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("mockDomain.com").Return(nil)
 			},
 		},
-		"invalid domain that is not found in the account": {
-			inDomainName: "badMockDomain.com",
-			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("badMockDomain.com").Return(&route53.ErrDomainNotFound{})
-			},
-			wantedError: &route53.ErrDomainNotFound{},
-		},
 		"valid domain name containing multiple dots": {
 			inDomainName: "hello.dog.com",
 			mock: func(m *initAppMocks) {
