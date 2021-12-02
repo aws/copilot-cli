@@ -12,7 +12,7 @@ publish:
 In the example above, this manifest declares an SNS topic named `orderEvents` that other worker services deployed to the Copilot environment can subscribe to. An environment variable named `COPILOT_SNS_TOPIC_ARNS` is injected into your workload as a JSON string.
 
 In JavaScript, you could write:
-```yaml
+```js
 const {orderEvents} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)
 ```
 For more details, see the [pub/sub](../developing/publish-subscribe.en.md) page.
