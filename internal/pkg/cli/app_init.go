@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/route53"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -18,7 +20,6 @@ import (
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -44,6 +45,7 @@ type initAppOpts struct {
 	identity             identityService
 	store                applicationStore
 	route53              domainHostedZoneGetter
+	domainInfoGetter     domainInfoGetter
 	ws                   wsAppManager
 	cfn                  appDeployer
 	prompt               prompter
@@ -68,14 +70,15 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	}
 
 	return &initAppOpts{
-		initAppVars: vars,
-		identity:    identity.New(sess),
-		store:       store,
-		route53:     route53.New(sess),
-		ws:          ws,
-		cfn:         cloudformation.New(sess),
-		prompt:      prompt.New(),
-		prog:        termprogress.NewSpinner(log.DiagnosticWriter),
+		initAppVars:      vars,
+		identity:         identity.New(sess),
+		store:            store,
+		route53:          route53.New(sess),
+		domainInfoGetter: route53.NewRoute53Domains(sess),
+		ws:               ws,
+		cfn:              cloudformation.New(sess),
+		prompt:           prompt.New(),
+		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
@@ -92,6 +95,9 @@ func (o *initAppOpts) Validate() error {
 	if o.domainName != "" {
 		if err := validateDomainName(o.domainName); err != nil {
 			return fmt.Errorf("domain name %s is invalid: %w", o.domainName, err)
+		}
+		if err := o.isDomainOwned(); err != nil {
+			return err
 		}
 		id, err := o.domainHostedZoneID(o.domainName)
 		if err != nil {
@@ -224,6 +230,25 @@ func (o *initAppOpts) validateAppName(name string) error {
 		return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
 	}
 	return nil
+}
+
+func (o *initAppOpts) isDomainOwned() error {
+	err := o.domainInfoGetter.IsDomainOwned(o.domainName)
+	if err == nil {
+		return nil
+	}
+	var errDomainNotFound *route53.ErrDomainNotFound
+	if errors.As(err, &errDomainNotFound) {
+		log.Warningf(`The account does not seem to own the domain that you entered.
+Please make sure that %s is registered with Route53 in your account, or that your hosted zone has the appropriate NS records.
+To transfer domain registration in Route53, see:
+https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html
+To update the NS records in your hosted zone, see:
+https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/SOA-NSrecords.html#NSrecords
+`, o.domainName)
+		return nil
+	}
+	return fmt.Errorf("check if domain is owned by the account: %w", err)
 }
 
 func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {

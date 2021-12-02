@@ -6,10 +6,16 @@ The `publish` section allows services to publish messages to one or more SNS top
 ```yaml
 publish:
   topics:
-    - name: order-events
+    - name: orderEvents
 ```
 
-In the example above, this manifest declares an SNS topic named `order-events` that other worker services which are deployed to the Copilot environment can subscribe to.
+In the example above, this manifest declares an SNS topic named `orderEvents` that other worker services deployed to the Copilot environment can subscribe to. An environment variable named `COPILOT_SNS_TOPIC_ARNS` is injected into your workload as a JSON string.
+
+In JavaScript, you could write:
+```js
+const {orderEvents} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)
+```
+For more details, see the [pub/sub](../developing/publish-subscribe.en.md) page.
 
 <span class="parent-field">publish.</span><a id="publish-topics" href="#publish-topics" class="field">`topics`</a> <span class="type">Array of topics</span>  
 List of [`topic`](#publish-topics-topic) objects.
