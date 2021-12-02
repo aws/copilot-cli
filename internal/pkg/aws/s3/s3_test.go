@@ -478,3 +478,27 @@ func TestS3_ParseURL(t *testing.T) {
 		})
 	}
 }
+
+func TestS3_FormatARN(t *testing.T) {
+	testCases := map[string]struct {
+		inPartition string
+		inLocation  string
+
+		wantedARN string
+	}{
+		"success": {
+			inPartition: "aws",
+			inLocation:  "stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env",
+
+			wantedARN: "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotARN := FormatARN(tc.inPartition, tc.inLocation)
+
+			require.Equal(t, gotARN, tc.wantedARN)
+		})
+	}
+}

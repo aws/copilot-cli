@@ -235,6 +235,10 @@ type manifestReader interface {
 	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }
 
+type envFileReader interface {
+	ReadSvcFile(svc, fname string) ([]byte, error)
+}
+
 type copilotDirGetter interface {
 	CopilotDirPath() (string, error)
 }
@@ -255,6 +259,7 @@ type serviceLister interface {
 type wsSvcReader interface {
 	serviceLister
 	manifestReader
+	envFileReader
 }
 
 type wsSvcDirReader interface {
@@ -269,6 +274,7 @@ type jobLister interface {
 type wsJobReader interface {
 	manifestReader
 	jobLister
+	envFileReader
 }
 
 type wlLister interface {

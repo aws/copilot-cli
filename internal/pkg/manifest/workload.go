@@ -509,6 +509,7 @@ type TaskConfig struct {
 	Count          Count                `yaml:"count"`
 	ExecuteCommand ExecuteCommand       `yaml:"exec"`
 	Variables      map[string]string    `yaml:"variables"`
+	EnvFile        string               `yaml:"env_file"`
 	Secrets        map[string]string    `yaml:"secrets"`
 	Storage        Storage              `yaml:"storage"`
 }
@@ -774,7 +775,7 @@ func isWindowsPlatform(platform PlatformArgsOrString) bool {
 
 // IsArmArch returns whether or not the arch is ARM.
 func IsArmArch(arch string) bool {
-	return strings.ToLower(arch) == ArchARM || strings.ToLower(arch) == ArchARM64 
+	return strings.ToLower(arch) == ArchARM || strings.ToLower(arch) == ArchARM64
 }
 
 func requiresBuild(image Image) (bool, error) {

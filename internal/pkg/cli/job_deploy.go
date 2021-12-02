@@ -4,11 +4,13 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -57,9 +59,14 @@ type deployJobOpts struct {
 	sel     wsSelector
 	prompt  prompter
 
+	// cached variables
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
 	targetJob         *config.Workload
+	appEnvResources   *stack.AppRegionalResources
+	appliedManifest   interface{}
+	addonsURL         string
+	EnvFileARN        string
 	imageDigest       string
 	buildRequired     bool
 }
@@ -130,63 +137,104 @@ func (o *deployJobOpts) Execute() error {
 		return err
 	}
 	o.targetEnvironment = env
-
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return err
 	}
 	o.targetApp = app
-
 	job, err := o.store.GetJob(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get job configuration: %w", err)
 	}
 	o.targetJob = job
-
 	if err := o.configureClients(); err != nil {
 		return err
 	}
-
 	if err := o.envUpgradeCmd.Execute(); err != nil {
 		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.targetEnvironment.Name, err)
 	}
-
 	if err := o.configureContainerImage(); err != nil {
 		return err
 	}
+	if err := o.pushToS3Bucket(); err != nil {
+		return err
+	}
+	return o.deployJob()
+}
 
-	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
+func (o *deployJobOpts) pushToS3Bucket() error {
+	mft, err := o.manifest()
 	if err != nil {
 		return err
 	}
-
-	return o.deployJob(addonsURL)
+	if err := o.pushEnvFilesToS3Bucket(envFile(o.name, mft)); err != nil {
+		return err
+	}
+	return o.pushAddonsTemplateToS3Bucket()
 }
 
-// pushAddonsTemplateToS3Bucket generates the addons template for the job and pushes it to S3.
-// If the job doesn't have any addons, it returns the empty string and no errors.
-// If the job has addons, it returns the URL of the S3 object storing the addons template.
-func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() (string, error) {
+func (o *deployJobOpts) pushEnvFilesToS3Bucket(fileName string) error {
+	if fileName == "" {
+		return nil
+	}
+	content, err := o.ws.ReadSvcFile(o.name, fileName)
+	if err != nil {
+		return fmt.Errorf("read env file %s: %w", fileName, err)
+	}
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return err
+	}
+	reader := bytes.NewReader(content)
+	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fileName, reader)
+	if err != nil {
+		return fmt.Errorf("put env file %s artifact to bucket %s: %w", fileName, o.appEnvResources.S3Bucket, err)
+	}
+	bucket, key, err := s3.ParseURL(url)
+	if err != nil {
+		return fmt.Errorf("parse s3 url: %w", err)
+	}
+	// The app and environment are always within the same partition.
+	region := o.targetEnvironment.Region
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return fmt.Errorf("find the partition for region %s", region)
+	}
+	o.EnvFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
+	return nil
+}
+
+func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() error {
 	template, err := o.addons.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
 		if errors.As(err, &notFoundErr) {
 			// addons doesn't exist for job, the url is empty.
-			return "", nil
+			return nil
 		}
-		return "", fmt.Errorf("retrieve addons template: %w", err)
+		return fmt.Errorf("retrieve addons template: %w", err)
+	}
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return err
+	}
+	reader := strings.NewReader(template)
+	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
+	if err != nil {
+		return fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
+	}
+	o.addonsURL = url
+	return nil
+}
+
+func (o *deployJobOpts) retrieveAppResourcesForEnvRegion() error {
+	if o.appEnvResources != nil {
+		return nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
 	if err != nil {
-		return "", fmt.Errorf("get app resources: %w", err)
+		return fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
 	}
-
-	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
-	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
-	}
-	return url, nil
+	o.appEnvResources = resources
+	return nil
 }
 
 func (o *deployJobOpts) configureClients() error {
@@ -279,8 +327,8 @@ func (o *deployJobOpts) dfBuildArgs(job interface{}) (*dockerengine.BuildArgumen
 	return buildArgs(o.name, o.imageTag, copilotDir, job)
 }
 
-func (o *deployJobOpts) deployJob(addonsURL string) error {
-	conf, err := o.stackConfiguration(addonsURL)
+func (o *deployJobOpts) deployJob() error {
+	conf, err := o.stackConfiguration()
 	if err != nil {
 		return err
 	}
@@ -291,12 +339,12 @@ func (o *deployJobOpts) deployJob(addonsURL string) error {
 	return nil
 }
 
-func (o *deployJobOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
+func (o *deployJobOpts) stackConfiguration() (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
 		return nil, err
 	}
-	rc, err := o.runtimeConfig(addonsURL)
+	rc, err := o.runtimeConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -313,25 +361,24 @@ func (o *deployJobOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	return conf, nil
 }
 
-func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+func (o *deployJobOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
 	endpoint, err := o.endpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, err
 	}
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
-			AddonsTemplateURL:        addonsURL,
+			AddonsTemplateURL:        o.addonsURL,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                o.targetEnvironment.AccountID,
 			Region:                   o.targetEnvironment.Region,
 		}, nil
 	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return nil, err
 	}
-	repoURL, ok := resources.RepositoryURLs[o.name]
+	repoURL, ok := o.appEnvResources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
 			wlName:       o.name,
@@ -345,7 +392,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			ImageTag: o.imageTag,
 			Digest:   o.imageDigest,
 		},
-		AddonsTemplateURL:        addonsURL,
+		AddonsTemplateURL:        o.addonsURL,
 		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                o.targetEnvironment.AccountID,
@@ -354,6 +401,9 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 }
 
 func (o *deployJobOpts) manifest() (interface{}, error) {
+	if o.appliedManifest != nil {
+		return o.appliedManifest, nil
+	}
 	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
@@ -373,6 +423,7 @@ func (o *deployJobOpts) manifest() (interface{}, error) {
 	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
 	}
+	o.appliedManifest = envMft // cache the results.
 	return envMft, nil
 }
 

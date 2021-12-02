@@ -9,22 +9,20 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/describe"
-
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -45,6 +43,16 @@ type deploySvcMocks struct {
 	mockDeployStore        *mocks.MockdeployedEnvironmentLister
 	mockEnvDescriber       *mocks.MockenvDescriber
 	mockSubnetLister       *mocks.MockvpcSubnetLister
+	mockS3Svc              *mocks.MockartifactUploader
+	mockAddons             *mocks.Mocktemplater
+}
+
+type mockWorkloadMft struct {
+	fileName string
+}
+
+func (m *mockWorkloadMft) EnvFiles() string {
+	return m.fileName
 }
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
@@ -436,48 +444,68 @@ image:
 	}
 }
 
-func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
+func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
+	const (
+		mockSvcName         = "mockSvc"
+		mockEnvFile         = "foo.env"
+		mockS3Bucket        = "mockBucket"
+		mockAddonsS3URL     = "https://mockS3DomainName/mockPath"
+		mockBadEnvFileS3URL = "badURL"
+		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
+		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
+	)
 	mockError := errors.New("some error")
 	tests := map[string]struct {
-		inputSvc      string
+		inEnvFile     string
 		inEnvironment *config.Environment
 		inApp         *config.Application
 
-		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
-		mockS3Svc              func(m *mocks.MockartifactUploader)
-		mockAddons             func(m *mocks.Mocktemplater)
+		mock func(m *deploySvcMocks)
 
-		wantPath string
-		wantErr  error
+		wantAddonsURL  string
+		wantEnvFileARN string
+		wantErr        error
 	}{
-		"should push addons template to S3 bucket": {
-			inputSvc: "mockSvc",
-			inEnvironment: &config.Environment{
-				Name:   "mockEnv",
-				Region: "us-west-2",
+		"error if fail to read env file": {
+			inEnvFile: mockEnvFile,
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadSvcFile(mockSvcName, mockEnvFile).Return(nil, mockError)
 			},
-			inApp: &config.Application{
-				Name: "mockApp",
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name: "mockApp",
-				}, "us-west-2").Return(&stack.AppRegionalResources{
-					S3Bucket: "mockBucket",
-				}, nil)
-			},
-			mockAddons: func(m *mocks.Mocktemplater) {
-				m.EXPECT().Template().Return("some data", nil)
-			},
-			mockS3Svc: func(m *mocks.MockartifactUploader) {
-				m.EXPECT().PutArtifact("mockBucket", "mockSvc.addons.stack.yml", gomock.Any()).Return("https://mockS3DomainName/mockPath", nil)
-			},
-
-			wantErr:  nil,
-			wantPath: "https://mockS3DomainName/mockPath",
+			wantErr: fmt.Errorf("read env file foo.env: some error"),
 		},
-		"should return error if fail to get app resources": {
-			inputSvc: "mockSvc",
+		"error if fail to put env file to s3 bucket": {
+			inEnvFile: mockEnvFile,
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadSvcFile(mockSvcName, mockEnvFile).Return([]byte{}, nil)
+				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+					Return("", mockError)
+			},
+			wantErr: fmt.Errorf("put env file foo.env artifact to bucket mockBucket: some error"),
+		},
+		"error if fail to parse s3 url": {
+			inEnvFile: mockEnvFile,
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadSvcFile(mockSvcName, mockEnvFile).Return([]byte{}, nil)
+				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+					Return(mockBadEnvFileS3URL, nil)
+
+			},
+			wantErr: fmt.Errorf("parse s3 url: cannot parse S3 URL badURL into bucket name and key"),
+		},
+		"error if fail to find the partition": {
+			inEnvFile: mockEnvFile,
+			inEnvironment: &config.Environment{
+				Region: "sun-south-0",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadSvcFile(mockSvcName, mockEnvFile).Return([]byte{}, nil)
+				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+					Return(mockEnvFileS3URL, nil)
+			},
+			wantErr: fmt.Errorf("find the partition for region sun-south-0"),
+		},
+		"should push addons template to S3 bucket": {
+			inEnvFile: mockEnvFile,
 			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
@@ -485,20 +513,19 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			inApp: &config.Application{
 				Name: "mockApp",
 			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name: "mockApp",
-				}, "us-west-2").Return(nil, mockError)
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadSvcFile(mockSvcName, mockEnvFile).Return([]byte{}, nil)
+				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+					Return(mockEnvFileS3URL, nil)
+				m.mockAddons.EXPECT().Template().Return("some data", nil)
+				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, "mockSvc.addons.stack.yml", gomock.Any()).
+					Return(mockAddonsS3URL, nil)
 			},
-			mockAddons: func(m *mocks.Mocktemplater) {
-				m.EXPECT().Template().Return("some data", nil)
-			},
-			mockS3Svc: func(m *mocks.MockartifactUploader) {},
 
-			wantErr: fmt.Errorf("get application mockApp resources from region us-west-2: some error"),
+			wantAddonsURL:  mockAddonsS3URL,
+			wantEnvFileARN: mockEnvFileS3ARN,
 		},
 		"should return error if fail to upload to S3 bucket": {
-			inputSvc: "mockSvc",
 			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
@@ -506,48 +533,24 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			inApp: &config.Application{
 				Name: "mockApp",
 			},
-
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name: "mockApp",
-				}, "us-west-2").Return(&stack.AppRegionalResources{
-					S3Bucket: "mockBucket",
-				}, nil)
-			},
-			mockAddons: func(m *mocks.Mocktemplater) {
-				m.EXPECT().Template().Return("some data", nil)
-			},
-			mockS3Svc: func(m *mocks.MockartifactUploader) {
-				m.EXPECT().PutArtifact("mockBucket", "mockSvc.addons.stack.yml", gomock.Any()).Return("", mockError)
+			mock: func(m *deploySvcMocks) {
+				m.mockAddons.EXPECT().Template().Return("some data", nil)
+				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, "mockSvc.addons.stack.yml", gomock.Any()).
+					Return("", mockError)
 			},
 
 			wantErr: fmt.Errorf("put addons artifact to bucket mockBucket: some error"),
 		},
-		"should return empty url if the service doesn't have any addons": {
-			inputSvc: "mockSvc",
-			mockAddons: func(m *mocks.Mocktemplater) {
-				m.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
+		"should return empty url if the service doesn't have any addons and env files": {
+			mock: func(m *deploySvcMocks) {
+				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
 					WlName: "mockSvc",
 				})
 			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
-			},
-			mockS3Svc: func(m *mocks.MockartifactUploader) {
-				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-			wantPath: "",
 		},
 		"should fail if addons cannot be retrieved from workspace": {
-			inputSvc: "mockSvc",
-			mockAddons: func(m *mocks.Mocktemplater) {
-				m.EXPECT().Template().Return("", mockError)
-			},
-			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
-			},
-			mockS3Svc: func(m *mocks.MockartifactUploader) {
-				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mock: func(m *deploySvcMocks) {
+				m.mockAddons.EXPECT().Template().Return("", mockError)
 			},
 			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
 		},
@@ -558,32 +561,35 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockAppSvc := mocks.NewMockstore(ctrl)
-			mockAppResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
-			mockS3Svc := mocks.NewMockartifactUploader(ctrl)
-			mockAddons := mocks.NewMocktemplater(ctrl)
-			tc.mockAppResourcesGetter(mockAppResourcesGetter)
-			tc.mockS3Svc(mockS3Svc)
-			tc.mockAddons(mockAddons)
+			m := &deploySvcMocks{
+				mockWs:     mocks.NewMockwsSvcDirReader(ctrl),
+				mockS3Svc:  mocks.NewMockartifactUploader(ctrl),
+				mockAddons: mocks.NewMocktemplater(ctrl),
+			}
+			tc.mock(m)
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
-					name: tc.inputSvc,
+					name: mockSvcName,
 				},
-				store:             mockAppSvc,
-				appCFN:            mockAppResourcesGetter,
-				addons:            mockAddons,
-				s3:                mockS3Svc,
+				addons:            m.mockAddons,
+				s3:                m.mockS3Svc,
+				ws:                m.mockWs,
+				appliedManifest:   &mockWorkloadMft{tc.inEnvFile},
 				targetEnvironment: tc.inEnvironment,
 				targetApp:         tc.inApp,
+				appEnvResources: &stack.AppRegionalResources{
+					S3Bucket: mockS3Bucket,
+				},
 			}
 
-			gotPath, gotErr := opts.pushAddonsTemplateToS3Bucket()
+			gotErr := opts.pushToS3Bucket()
 
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 			} else {
-				require.Equal(t, tc.wantPath, gotPath)
+				require.Equal(t, tc.wantAddonsURL, opts.addonsURL)
+				require.Equal(t, tc.wantEnvFileARN, opts.EnvFileARN)
 			}
 		})
 	}
@@ -972,9 +978,11 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				spinner:       m.mockSpinner,
 				envDescriber:  m.mockEnvDescriber,
 				subnetLister:  m.mockSubnetLister,
+
+				addonsURL: mockAddonsURL,
 			}
 
-			gotErr := opts.deploySvc(mockAddonsURL)
+			gotErr := opts.deploySvc()
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
@@ -1287,9 +1295,10 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						return nil, nil
 					},
 				},
+				addonsURL: mockAddonsURL,
 			}
 
-			_, gotErr := opts.stackConfiguration(mockAddonsURL)
+			_, gotErr := opts.stackConfiguration()
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
@@ -1404,9 +1413,10 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 						},
 					}, nil
 				},
+				addonsURL: mockAddonsURL,
 			}
 
-			_, gotErr := opts.stackConfiguration(mockAddonsURL)
+			_, gotErr := opts.stackConfiguration()
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())

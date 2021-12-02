@@ -162,6 +162,11 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
+// EnvFiles returns the env file name in a ws service directory.
+func (s *LoadBalancedWebService) EnvFiles() string {
+	return s.TaskConfig.EnvFile
+}
+
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
 func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, error) {

@@ -179,6 +179,12 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	return
 }
 
+// FormatARN formats an S3 object ARN.
+// For example: arn:aws:s3:::stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3
+func FormatARN(partition, location string) string {
+	return fmt.Sprintf("arn:%s:s3:::%s", partition, location)
+}
+
 // Check whether the bucket exists before proceeding with empty the bucket
 func (s *S3) isBucketExists(bucket string) (bool, error) {
 	input := &s3.HeadBucketInput{

@@ -15,7 +15,8 @@
     "DNSDelegated": "true",
     "TargetContainer": "fe",
     "TargetPort": "4000",
-    "Stickiness": "false"
+    "Stickiness": "false",
+    "EnvFileARN": ""
   },
   "Tags": { 
     "copilot-application": "my-app",

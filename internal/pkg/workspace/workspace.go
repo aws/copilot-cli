@@ -286,6 +286,11 @@ func (ws *Workspace) ReadAddon(svc, fname string) ([]byte, error) {
 	return ws.read(svc, addonsDirName, fname)
 }
 
+// ReadSvcFile returns the contents of a file under the service's directory.
+func (ws *Workspace) ReadSvcFile(svc, fname string) ([]byte, error) {
+	return ws.read(svc, fname)
+}
+
 // WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
 // If successful returns the full path of the file, otherwise an empty string and an error.
 func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {

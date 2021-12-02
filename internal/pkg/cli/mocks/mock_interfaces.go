@@ -2189,6 +2189,44 @@ func (mr *MockmanifestReaderMockRecorder) ReadWorkloadManifest(name interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockmanifestReader)(nil).ReadWorkloadManifest), name)
 }
 
+// MockenvFileReader is a mock of envFileReader interface.
+type MockenvFileReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvFileReaderMockRecorder
+}
+
+// MockenvFileReaderMockRecorder is the mock recorder for MockenvFileReader.
+type MockenvFileReaderMockRecorder struct {
+	mock *MockenvFileReader
+}
+
+// NewMockenvFileReader creates a new mock instance.
+func NewMockenvFileReader(ctrl *gomock.Controller) *MockenvFileReader {
+	mock := &MockenvFileReader{ctrl: ctrl}
+	mock.recorder = &MockenvFileReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvFileReader) EXPECT() *MockenvFileReaderMockRecorder {
+	return m.recorder
+}
+
+// ReadSvcFile mocks base method.
+func (m *MockenvFileReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadSvcFile indicates an expected call of ReadSvcFile.
+func (mr *MockenvFileReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockenvFileReader)(nil).ReadSvcFile), svc, fname)
+}
+
 // MockcopilotDirGetter is a mock of copilotDirGetter interface.
 type MockcopilotDirGetter struct {
 	ctrl     *gomock.Controller
@@ -2394,6 +2432,21 @@ func (mr *MockwsSvcReaderMockRecorder) ListServices() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockwsSvcReader)(nil).ListServices))
 }
 
+// ReadSvcFile mocks base method.
+func (m *MockwsSvcReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadSvcFile indicates an expected call of ReadSvcFile.
+func (mr *MockwsSvcReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsSvcReader)(nil).ReadSvcFile), svc, fname)
+}
+
 // ReadWorkloadManifest mocks base method.
 func (m *MockwsSvcReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
@@ -2460,6 +2513,21 @@ func (m *MockwsSvcDirReader) ListServices() ([]string, error) {
 func (mr *MockwsSvcDirReaderMockRecorder) ListServices() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockwsSvcDirReader)(nil).ListServices))
+}
+
+// ReadSvcFile mocks base method.
+func (m *MockwsSvcDirReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadSvcFile indicates an expected call of ReadSvcFile.
+func (mr *MockwsSvcDirReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadSvcFile), svc, fname)
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2551,6 +2619,21 @@ func (m *MockwsJobReader) ListJobs() ([]string, error) {
 func (mr *MockwsJobReaderMockRecorder) ListJobs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockwsJobReader)(nil).ListJobs))
+}
+
+// ReadSvcFile mocks base method.
+func (m *MockwsJobReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadSvcFile indicates an expected call of ReadSvcFile.
+func (mr *MockwsJobReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsJobReader)(nil).ReadSvcFile), svc, fname)
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2657,6 +2740,21 @@ func (m *MockwsJobDirReader) ListJobs() ([]string, error) {
 func (mr *MockwsJobDirReaderMockRecorder) ListJobs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockwsJobDirReader)(nil).ListJobs))
+}
+
+// ReadSvcFile mocks base method.
+func (m *MockwsJobDirReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadSvcFile indicates an expected call of ReadSvcFile.
+func (mr *MockwsJobDirReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsJobDirReader)(nil).ReadSvcFile), svc, fname)
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2770,6 +2868,21 @@ func (m *MockwsWlDirReader) ListWorkloads() ([]string, error) {
 func (mr *MockwsWlDirReaderMockRecorder) ListWorkloads() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwsWlDirReader)(nil).ListWorkloads))
+}
+
+// ReadSvcFile mocks base method.
+func (m *MockwsWlDirReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadSvcFile indicates an expected call of ReadSvcFile.
+func (mr *MockwsWlDirReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsWlDirReader)(nil).ReadSvcFile), svc, fname)
 }
 
 // ReadWorkloadManifest mocks base method.

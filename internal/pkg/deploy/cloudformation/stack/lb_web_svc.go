@@ -283,6 +283,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(s.rc.EnvFileARN),
+		},
 	}...), nil
 }
 

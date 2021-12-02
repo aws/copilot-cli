@@ -476,6 +476,10 @@ func TestScheduledJob_Parameters(t *testing.T) {
 			ParameterValue: aws.String(""),
 		},
 		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(""),
+		},
+		{
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
 			ParameterValue: aws.String("cron(0 0 * * ? *)"),
 		},

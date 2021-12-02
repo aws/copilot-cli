@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -94,6 +96,7 @@ type deploySvcOpts struct {
 	identity            identityService
 	subnetLister        vpcSubnetLister
 	envDescriber        envDescriber
+	envFileReader       envFileReader
 
 	spinner progress
 	sel     wsSelector
@@ -106,6 +109,8 @@ type deploySvcOpts struct {
 	appliedManifest   interface{}
 	imageDigest       string
 	buildRequired     bool
+	addonsURL         string
+	EnvFileARN        string
 	appEnvResources   *stack.AppRegionalResources
 	rdSvcAlias        string
 	svcUpdater        serviceUpdater
@@ -220,12 +225,11 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
-	if err != nil {
+	if err := o.pushToS3Bucket(); err != nil {
 		return err
 	}
 
-	if err := o.deploySvc(addonsURL); err != nil {
+	if err := o.deploySvc(); err != nil {
 		return err
 	}
 	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
@@ -428,55 +432,67 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArgumen
 	return buildArgs(o.name, o.imageTag, copilotDir, svc)
 }
 
-func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
-	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-		ContainerPlatform() string
+func (o *deploySvcOpts) pushToS3Bucket() error {
+	mft, err := o.manifest()
+	if err != nil {
+		return err
 	}
-	mf, ok := unmarshaledManifest.(dfArgs)
-	if !ok {
-		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
+	if err := o.pushEnvFilesToS3Bucket(envFile(o.name, mft)); err != nil {
+		return err
 	}
-	var tags []string
-	if imageTag != "" {
-		tags = append(tags, imageTag)
-	}
-	args := mf.BuildArgs(filepath.Dir(copilotDir))
-	return &dockerengine.BuildArguments{
-		Dockerfile: *args.Dockerfile,
-		Context:    *args.Context,
-		Args:       args.Args,
-		CacheFrom:  args.CacheFrom,
-		Target:     aws.StringValue(args.Target),
-		Platform:   mf.ContainerPlatform(),
-		Tags:       tags,
-	}, nil
+	return o.pushAddonsTemplateToS3Bucket()
 }
 
-// pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.
-// If the service doesn't have any addons, it returns the empty string and no errors.
-// If the service has addons, it returns the URL of the S3 object storing the addons template.
-func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
+func (o *deploySvcOpts) pushEnvFilesToS3Bucket(fileName string) error {
+	if fileName == "" {
+		return nil
+	}
+	content, err := o.ws.ReadSvcFile(o.name, fileName)
+	if err != nil {
+		return fmt.Errorf("read env file %s: %w", fileName, err)
+	}
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return err
+	}
+	reader := bytes.NewReader(content)
+	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fileName, reader)
+	if err != nil {
+		return fmt.Errorf("put env file %s artifact to bucket %s: %w", fileName, o.appEnvResources.S3Bucket, err)
+	}
+	bucket, key, err := s3.ParseURL(url)
+	if err != nil {
+		return fmt.Errorf("parse s3 url: %w", err)
+	}
+	// The app and environment are always within the same partition.
+	region := o.targetEnvironment.Region
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return fmt.Errorf("find the partition for region %s", region)
+	}
+	o.EnvFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
+	return nil
+}
+
+func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() error {
 	template, err := o.addons.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
 		if errors.As(err, &notFoundErr) {
 			// addons doesn't exist for service, the url is empty.
-			return "", nil
+			return nil
 		}
-		return "", fmt.Errorf("retrieve addons template: %w", err)
+		return fmt.Errorf("retrieve addons template: %w", err)
 	}
-
 	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
-		return "", err
+		return err
 	}
-
 	reader := strings.NewReader(template)
 	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
+		return fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}
-	return url, nil
+	o.addonsURL = url
+	return nil
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
@@ -507,7 +523,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	return envMft, nil
 }
 
-func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+func (o *deploySvcOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
 	endpoint, err := o.endpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, err
@@ -515,7 +531,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
-			AddonsTemplateURL:        addonsURL,
+			AddonsTemplateURL:        o.addonsURL,
+			EnvFileARN:               o.EnvFileARN,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                o.targetEnvironment.AccountID,
@@ -536,7 +553,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		}
 	}
 	return &stack.RuntimeConfig{
-		AddonsTemplateURL: addonsURL,
+		AddonsTemplateURL: o.addonsURL,
+		EnvFileARN:        o.EnvFileARN,
 		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
 		Image: &stack.ECRImage{
 			RepoURL:  repoURL,
@@ -565,12 +583,12 @@ func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.
 	return urls, nil
 }
 
-func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
+func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
 		return nil, err
 	}
-	rc, err := o.runtimeConfig(addonsURL)
+	rc, err := o.runtimeConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -690,8 +708,8 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	return conf, nil
 }
 
-func (o *deploySvcOpts) deploySvc(addonsURL string) error {
-	conf, err := o.stackConfiguration(addonsURL)
+func (o *deploySvcOpts) deploySvc() error {
+	conf, err := o.stackConfiguration()
 	if err != nil {
 		return err
 	}
@@ -725,6 +743,43 @@ func (o *deploySvcOpts) forceDeploy() error {
 	}
 	o.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
 	return nil
+}
+
+func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
+	type dfArgs interface {
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+		ContainerPlatform() string
+	}
+	mf, ok := unmarshaledManifest.(dfArgs)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
+	}
+	var tags []string
+	if imageTag != "" {
+		tags = append(tags, imageTag)
+	}
+	args := mf.BuildArgs(filepath.Dir(copilotDir))
+	return &dockerengine.BuildArguments{
+		Dockerfile: *args.Dockerfile,
+		Context:    *args.Context,
+		Args:       args.Args,
+		CacheFrom:  args.CacheFrom,
+		Target:     aws.StringValue(args.Target),
+		Platform:   mf.ContainerPlatform(),
+		Tags:       tags,
+	}, nil
+}
+
+func envFile(name string, unmarshaledManifest interface{}) string {
+	type envFiles interface {
+		EnvFiles() string
+	}
+	mf, ok := unmarshaledManifest.(envFiles)
+	if ok {
+		return mf.EnvFiles()
+	}
+	// If the manifest type doesn't support envFiles, ignore and move forward.
+	return ""
 }
 
 func validateLBSvcAliasAndAppVersion(svcName string, aliases manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
