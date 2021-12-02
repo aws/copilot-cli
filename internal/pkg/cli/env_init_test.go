@@ -61,11 +61,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName: "test-pdx",
 			inAppName: "phonetool",
 			setupMocks: func(m initEnvMocks) {
-				m.store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "vne321",
-					},
-				}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 		},
 		"invalid environment name": {
@@ -75,20 +71,13 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
 		},
 		"should error if environment already exists": {
-			inEnvName: "test",
+			inEnvName: "test-pdx",
 			inAppName: "phonetool",
 
 			setupMocks: func(m initEnvMocks) {
-				m.store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "tset",
-					},
-					{
-						Name: "test",
-					},
-				}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, nil)
 			},
-			wantedErrMsg: "environment test already exists",
+			wantedErrMsg: "environment test-pdx already exists",
 		},
 		"cannot specify both vpc resources importing flags and configuring flags": {
 			inEnvName:     "test-pdx",
@@ -102,11 +91,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inVPCID: "mockID",
 
 			setupMocks: func(m initEnvMocks) {
-				m.store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "such-randomness",
-					},
-				}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 
 			wantedErrMsg: "cannot specify both import vpc flags and configure vpc flags",
@@ -117,11 +102,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inDefault: true,
 			inVPCID:   "mockID",
 			setupMocks: func(m initEnvMocks) {
-				m.store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "such-randomness",
-					},
-				}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", defaultConfigFlag),
 		},
@@ -131,11 +112,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inProfileName: "default",
 			inAccessKeyID: "AKIAIOSFODNN7EXAMPLE",
 			setupMocks: func(m initEnvMocks) {
-				m.store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "such-randomness",
-					},
-				}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: "cannot specify both --profile and --aws-access-key-id",
 		},
@@ -145,11 +122,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inProfileName:     "default",
 			inSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
 			setupMocks: func(m initEnvMocks) {
-				m.store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "such-randomness",
-					},
-				}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: "cannot specify both --profile and --aws-secret-access-key",
 		},
@@ -159,11 +132,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inProfileName:  "default",
 			inSessionToken: "verylongtoken",
 			setupMocks: func(m initEnvMocks) {
-				m.store.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "such-randomness",
-					},
-				}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: "cannot specify both --profile and --aws-session-token",
 		},

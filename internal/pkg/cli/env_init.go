@@ -549,19 +549,21 @@ func (o *initEnvOpts) askAdjustResources() error {
 }
 
 func (o *initEnvOpts) validateDuplicateEnv() error {
-	envs, err := o.store.ListEnvironments(o.appName)
-	if err != nil {
-		return fmt.Errorf("validate if environment exists: %w", err)
+	_, err := o.store.GetEnvironment(o.appName, o.name)
+	if err == nil {
+		log.Errorf(`It seems like you are trying to init an environment that already exists.
+To re-create the environment, please run:
+1. %s
+2. And then %s.
+`,
+			color.HighlightCode(fmt.Sprintf("copilot env delete --name %s", o.name)),
+			color.HighlightCode(fmt.Sprintf("copilot env init --name %s", o.name)))
+		return fmt.Errorf("environment %s already exists", color.HighlightUserInput(o.name))
 	}
 
-	for _, env := range envs {
-		if env.Name == o.name {
-			log.Errorf(`It seems like you are trying to init an environment that already exists.
-To re-create the environment, please run %s before running %s.
-`, color.HighlightCode(fmt.Sprintf("copilot env delete --name %s", o.name)), color.HighlightCode(fmt.Sprintf("copilot env init --name %s", o.name)))
-			return fmt.Errorf("environment %s already exists", color.HighlightUserInput(o.name))
-
-		}
+	var errNoSuchEnvironment *config.ErrNoSuchEnvironment
+	if !errors.As(err, &errNoSuchEnvironment) {
+		return fmt.Errorf("validate if environment exists: %w", err)
 	}
 	return nil
 }
