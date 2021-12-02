@@ -1,3 +1,4 @@
+//go:build localintegration
 // +build localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.

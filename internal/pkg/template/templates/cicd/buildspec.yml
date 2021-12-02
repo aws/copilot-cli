@@ -51,14 +51,23 @@ phases:
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
       # We truncate the tag (from the front) to 128 characters, the limit for Docker tags
       # (https://docs.docker.com/engine/reference/commandline/tag/)
+      # Check if the `svc package` commanded exited with a non-zero status. If so, echo error msg and exit.
       - >
         for env in $pl_envs; do
           tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}-${env}" | rev | cut -c 1-128 | rev)
           for svc in $svcs; do
           ./copilot-linux svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
+          if [ $? -ne 0 ]; then
+            echo "Cloudformation stack and config files were not generated. Please check build logs to see if there was a manifest validation error." 1>&2;
+            exit 1;
+          fi
           done;
           for job in $jobs; do
           ./copilot-linux job package -n $job -e $env --output-dir './infrastructure' --tag $tag;
+          if [ $? -ne 0 ]; then
+            echo "Cloudformation stack and config files were not generated. Please check build logs to see if there was a manifest validation error." 1>&2;
+            exit 1;
+          fi
           done;
         done;
       - ls -lah ./infrastructure

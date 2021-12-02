@@ -72,6 +72,15 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
+		"renders with Windows platform": {
+			opts: template.WorkloadOpts{
+				Platform: template.RuntimePlatformOpts{
+					OS:   "windows",
+					Arch: "x86_64",
+				},
+				ServiceDiscoveryEndpoint: "test.app.local",
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -269,6 +278,16 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 DiscoveryServiceArn:
   Fn::GetAtt: [DiscoveryService, Arn]
 `,
+			},
+		},
+		"renders a valid template with Windows platform": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Platform: template.RuntimePlatformOpts{
+					OS:   "windows",
+					Arch: "x86_64",
+				},
+				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
 	}
