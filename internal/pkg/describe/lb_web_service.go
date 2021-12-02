@@ -109,12 +109,22 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Environment: env,
 			URL:         webServiceURI,
 		})
+		containerPlatform, err := d.svcStackDescriber[env].Platform()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve platform: %w", err)
+		}
+		platform = dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture)
+		webSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve environment variables: %w", err)
+		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
 				Port:        d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 				CPU:         d.svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      d.svcParams[cfnstack.WorkloadTaskMemoryParamKey],
+				Platform:    platform,
 			},
 			Tasks: d.svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
@@ -127,15 +137,6 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
-		containerPlatform, err := d.svcStackDescriber[env].Platform()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve platform: %w", err)
-		}
-		platform = dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture)
-		webSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve environment variables: %w", err)
-		}
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
 		webSvcSecrets, err := d.svcStackDescriber[env].Secrets()
 		if err != nil {
@@ -161,7 +162,6 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &webSvcDesc{
 		Service:          d.svc,
 		Type:             manifest.LoadBalancedWebServiceType,
-		Platform:         platform,
 		App:              d.app,
 		Configurations:   configs,
 		Routes:           routes,
@@ -257,7 +257,6 @@ func (s serviceDiscoveries) humanString(w io.Writer) {
 type webSvcDesc struct {
 	Service          string               `json:"service"`
 	Type             string               `json:"type"`
-	Platform         string               `json:"platform"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
 	Routes           []*WebServiceRoute   `json:"routes"`
@@ -287,7 +286,6 @@ func (w *webSvcDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Application", w.App)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.Service)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Platform", w.Platform)
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)

@@ -452,25 +452,25 @@ func TestEnvDescription_HumanString(t *testing.T) {
 
 	wantedContent := `About
 
-  Name              testEnv
-  Production        false
-  Region            us-west-2
-  Account ID        123456789012
+  Name        testEnv
+  Production  false
+  Region      us-west-2
+  Account ID  123456789012
 
 Services
 
-  Name              Type
-  ----              ----
-  testSvc1          load-balanced
-  testSvc2          load-balanced
-  testSvc3          load-balanced
+  Name      Type
+  ----      ----
+  testSvc1  load-balanced
+  testSvc2  load-balanced
+  testSvc3  load-balanced
 
 Tags
 
-  Key               Value
-  ---               -----
-  key1              value1
-  key2              value2
+  Key     Value
+  ---     -----
+  key1    value1
+  key2    value2
 
 Resources
 

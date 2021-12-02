@@ -150,22 +150,22 @@ func TestPipelineStatusDescriber_String(t *testing.T) {
 			testPipelineStatus: &PipelineStatus{*mockPipelineState},
 			expectedHumanString: `Pipeline Status
 
-Stage               Transition          Status
------               ----------          ------
-Source                -                   -
-Build               ENABLED             InProgress
-├── action1                             Failed
-├── action2                             InProgress
-└── action3                             Succeeded
-DeployTo-test       DISABLED            Succeeded
-└── action1                             Succeeded
-DeployTo-prod         -                 Failed
-├── action1                             Succeeded
-└── TestCommands                        Failed
+Stage             Transition  Status
+-----             ----------  ------
+Source              -           -
+Build             ENABLED     InProgress
+├── action1                   Failed
+├── action2                   InProgress
+└── action3                   Succeeded
+DeployTo-test     DISABLED    Succeeded
+└── action1                   Succeeded
+DeployTo-prod       -         Failed
+├── action1                   Succeeded
+└── TestCommands              Failed
 
 Last Deployment
 
-  Updated At        4 months ago
+  Updated At  4 months ago
 `,
 			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"transition\":\"\"},{\"stageName\":\"Build\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"},{\"name\":\"action2\",\"status\":\"InProgress\"},{\"name\":\"action3\",\"status\":\"Succeeded\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"}],\"transition\":\"DISABLED\"},{\"stageName\":\"DeployTo-prod\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"},{\"name\":\"TestCommands\",\"status\":\"Failed\"}],\"transition\":\"\"}],\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
 		},

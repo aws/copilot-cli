@@ -119,15 +119,16 @@ type ServiceConfig struct {
 	Port        string `json:"port"`
 	CPU         string `json:"cpu"`
 	Memory      string `json:"memory"`
+	Platform    string `json:"platform"`
 }
 
 type configurations []*ServiceConfig
 
 func (c configurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "CPU (vCPU)", "Memory (MiB)", "Port"}
+	headers := []string{"Environment", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
 	var rows [][]string
 	for _, config := range c {
-		rows = append(rows, []string{config.Environment, cpuToString(config.CPU), config.Memory, config.Port})
+		rows = append(rows, []string{config.Environment, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
 	}
 
 	printTable(w, headers, rows)
@@ -142,10 +143,10 @@ type ECSServiceConfig struct {
 type ecsConfigurations []*ECSServiceConfig
 
 func (c ecsConfigurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port"}
+	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
 	var rows [][]string
 	for _, config := range c {
-		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port})
+		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
 	}
 
 	printTable(w, headers, rows)

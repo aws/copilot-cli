@@ -150,7 +150,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
-						Architecture:    "X86_64",
+						Architecture:    "ARM64",
 					}, nil),
 					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
@@ -206,16 +206,16 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedWorkerSvc: &workerSvcDesc{
-				Service:  testSvc,
-				Type:     "Worker Service",
-				Platform: "LINUX/X86_64",
-				App:      testApp,
+				Service: testSvc,
+				Type:    "Worker Service",
+				App:     testApp,
 				Configurations: []*ECSServiceConfig{
 					{
 						ServiceConfig: &ServiceConfig{
 							CPU:         "256",
 							Environment: "test",
 							Memory:      "512",
+							Platform:    "LINUX/X86_64",
 							Port:        "-",
 						},
 						Tasks: "1",
@@ -225,6 +225,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 							CPU:         "512",
 							Environment: "prod",
 							Memory:      "1024",
+							Platform:    "LINUX/ARM64",
 							Port:        "-",
 						},
 						Tasks: "2",
@@ -234,6 +235,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 							CPU:         "512",
 							Environment: "mockEnv",
 							Memory:      "1024",
+							Platform:    "LINUX/X86_64",
 							Port:        "-",
 						},
 						Tasks: "2",
@@ -355,31 +357,30 @@ func TestWorkerSvcDesc_String(t *testing.T) {
 		"correct output": {
 			wantedHumanString: `About
 
-  Application       my-app
-  Name              my-svc
-  Type              Worker Service
-  Platform          LINUX/X86_64
+  Application  my-app
+  Name         my-svc
+  Type         Worker Service
 
 Configurations
 
-  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
-  -----------       -----               ----------          ------------        ----
-  test              1                   0.25                512                 -
-  prod              3                   0.5                 1024                  "
+  Environment  Tasks     CPU (vCPU)  Memory (MiB)  Platform      Port
+  -----------  -----     ----------  ------------  --------      ----
+  test         1         0.25        512           LINUX/X86_64  -
+  prod         3         0.5         1024          LINUX/ARM64     "
 
 Variables
 
-  Name                      Container           Environment         Value
-  ----                      ---------           -----------         -----
-  COPILOT_ENVIRONMENT_NAME  container           prod                prod
-    "                         "                 test                test
+  Name                      Container  Environment  Value
+  ----                      ---------  -----------  -----
+  COPILOT_ENVIRONMENT_NAME  container  prod         prod
+    "                         "        test         test
 
 Secrets
 
-  Name                   Container           Environment         Value From
-  ----                   ---------           -----------         ----------
-  A_SECRET               container           prod                parameter/SECRET
-  GITHUB_WEBHOOK_SECRET    "                 test                parameter/GH_WEBHOOK_SECRET
+  Name                   Container  Environment  Value From
+  ----                   ---------  -----------  ----------
+  A_SECRET               container  prod         parameter/SECRET
+  GITHUB_WEBHOOK_SECRET    "        test         parameter/GH_WEBHOOK_SECRET
 
 Resources
 
@@ -389,7 +390,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"platform\":\"LINUX/X86_64\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"tasks\":\"3\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Worker Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"-\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"-\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"A_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SECRET\"},{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -401,6 +402,7 @@ Resources
 						CPU:         "256",
 						Environment: "test",
 						Memory:      "512",
+						Platform:    "LINUX/X86_64",
 						Port:        "-",
 					},
 					Tasks: "1",
@@ -410,6 +412,7 @@ Resources
 						CPU:         "512",
 						Environment: "prod",
 						Memory:      "1024",
+						Platform:    "LINUX/ARM64",
 						Port:        "-",
 					},
 					Tasks: "3",
@@ -464,7 +467,6 @@ Resources
 			workerSvc := &workerSvcDesc{
 				Service:        "my-svc",
 				Type:           "Worker Service",
-				Platform: "LINUX/X86_64",
 				Configurations: config,
 				App:            "my-app",
 				Variables:      envVars,

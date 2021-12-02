@@ -86,6 +86,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Port:        service.Port,
 			CPU:         service.CPU,
 			Memory:      service.Memory,
+			Platform:    "LINUX/X86_64",
 		})
 
 		for _, v := range service.EnvironmentVariables {

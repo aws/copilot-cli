@@ -105,15 +105,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Endpoint: endpoint,
 			}, env)
 		}
-		configs = append(configs, &ECSServiceConfig{
-			ServiceConfig: &ServiceConfig{
-				Environment: env,
-				Port:        port,
-				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
-				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
-			},
-			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
-		})
 		containerPlatform, err := d.svcStackDescriber[env].Platform()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
@@ -123,6 +114,16 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
+		configs = append(configs, &ECSServiceConfig{
+			ServiceConfig: &ServiceConfig{
+				Environment: env,
+				Port:        port,
+				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
+				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
+				Platform:    platform,
+			},
+			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
+		})
 		envVars = append(envVars, flattenContainerEnvVars(env, backendSvcEnvVars)...)
 		webSvcSecrets, err := d.svcStackDescriber[env].Secrets()
 		if err != nil {
@@ -149,7 +150,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	return &backendSvcDesc{
 		Service:          d.svc,
 		Type:             manifest.BackendServiceType,
-		Platform:         platform,
 		App:              d.app,
 		Configurations:   configs,
 		ServiceDiscovery: services,
@@ -165,7 +165,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 type backendSvcDesc struct {
 	Service          string               `json:"service"`
 	Type             string               `json:"type"`
-	Platform         string               `json:"platform"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
 	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
@@ -194,7 +193,6 @@ func (w *backendSvcDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Application", w.App)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.Service)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Platform", w.Platform)
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
