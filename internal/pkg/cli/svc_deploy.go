@@ -96,7 +96,6 @@ type deploySvcOpts struct {
 	identity            identityService
 	subnetLister        vpcSubnetLister
 	envDescriber        envDescriber
-	envFileReader       envFileReader
 
 	spinner progress
 	sel     wsSelector
