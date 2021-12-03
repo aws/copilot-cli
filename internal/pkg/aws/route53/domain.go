@@ -40,7 +40,7 @@ func (r *Route53Domains) IsRegisteredDomain(domainName string) error {
 	}
 	var errUnsupportedTLD *route53domains.UnsupportedTLD
 	if errors.As(err, &errUnsupportedTLD) {
-		// The TLD isn't supported by Route53, hence it can't have been registered witH Route53.
+		// The TLD isn't supported by Route53, hence it can't have been registered with Route53.
 		return &ErrDomainNotFound{
 			domainName: domainName,
 		}
