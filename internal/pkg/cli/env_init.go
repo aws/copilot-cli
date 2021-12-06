@@ -200,6 +200,9 @@ func (o *initEnvOpts) Validate() error {
 		if err := validateEnvironmentName(o.name); err != nil {
 			return err
 		}
+		if err := o.validateDuplicateEnv(); err != nil {
+			return err
+		}
 	}
 
 	if err := o.validateCustomizedResources(); err != nil {
@@ -363,7 +366,7 @@ func (o *initEnvOpts) askEnvName() error {
 		return fmt.Errorf("get environment name: %w", err)
 	}
 	o.name = envName
-	return nil
+	return o.validateDuplicateEnv()
 }
 
 func (o *initEnvOpts) askEnvSession() error {
@@ -538,6 +541,26 @@ func (o *initEnvOpts) askAdjustResources() error {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
 		}
 		o.adjustVPC.PrivateSubnetCIDRs = strings.Split(privateCIDR, ",")
+	}
+	return nil
+}
+
+func (o *initEnvOpts) validateDuplicateEnv() error {
+	_, err := o.store.GetEnvironment(o.appName, o.name)
+	if err == nil {
+		log.Errorf(`It seems like you are trying to init an environment that already exists.
+To recreate the environment, please run:
+1. %s
+2. And then %s.
+`,
+			color.HighlightCode(fmt.Sprintf("copilot env delete --name %s", o.name)),
+			color.HighlightCode(fmt.Sprintf("copilot env init --name %s", o.name)))
+		return fmt.Errorf("environment %s already exists", color.HighlightUserInput(o.name))
+	}
+
+	var errNoSuchEnvironment *config.ErrNoSuchEnvironment
+	if !errors.As(err, &errNoSuchEnvironment) {
+		return fmt.Errorf("validate if environment exists: %w", err)
 	}
 	return nil
 }

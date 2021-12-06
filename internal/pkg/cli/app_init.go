@@ -233,7 +233,7 @@ func (o *initAppOpts) validateAppName(name string) error {
 }
 
 func (o *initAppOpts) isDomainOwned() error {
-	err := o.domainInfoGetter.IsDomainOwned(o.domainName)
+	err := o.domainInfoGetter.IsRegisteredDomain(o.domainName)
 	if err == nil {
 		return nil
 	}

@@ -1,5 +1,17 @@
+queue_rules:
+  - name: default
+    conditions:
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=integ-test
+      - status-success=staticcheck
+      - status-success=license
+      - status-success=Semantic Pull Request
+
 pull_request_rules:
-  - name: Merge on CI success and review approval
+  - name: Merge for developers
     conditions:
       - base~=(mainline|rename-commands)
       - "#approved-reviews-by>=2"
@@ -19,14 +31,15 @@ pull_request_rules:
       - -closed
       - author!=dependabot[bot]
     actions:
-      merge:
+      queue:
+        name: default
         method: squash
-        strict: smart
-        strict_method: merge
-        commit_message: title+body
-  - name: Automatically approve and merge Dependabot PRs
+        commit_message_template: '{{ title }} (#{{ number }})\n\n{{ body }}\n'
+  - name: Merge for bots
     conditions:
       - base=mainline
+      - "#approved-reviews-by>=1"
+      - "#changes-requested-reviews-by=0"
       - status-success=build (compile-linux)
       - status-success=build (compile-windows)
       - status-success=build (compile-darwin)
@@ -43,7 +56,7 @@ pull_request_rules:
     actions:
       review:
        type: APPROVE
-      merge:
+      queue:
+        name: default
         method: squash
-        strict: smart+fasttrack
-        strict_method: merge
+        commit_message_template: '{{ title }} (#{{ number }})\n\n{{ body }}\n'
