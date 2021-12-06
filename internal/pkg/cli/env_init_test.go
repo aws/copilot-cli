@@ -34,6 +34,7 @@ type initEnvMocks struct {
 	selCreds     *mocks.MockcredsSelector
 	ec2Client    *mocks.Mockec2Client
 	selApp       *mocks.MockappSelector
+	store        *mocks.Mockstore
 }
 
 func TestInitEnvOpts_Validate(t *testing.T) {
@@ -52,17 +53,31 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		inSecretAccessKey string
 		inSessionToken    string
 
+		setupMocks func(m initEnvMocks)
+
 		wantedErrMsg string
 	}{
 		"valid environment creation": {
 			inEnvName: "test-pdx",
 			inAppName: "phonetool",
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 		},
 		"invalid environment name": {
 			inEnvName: "123env",
 			inAppName: "phonetool",
 
 			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
+		},
+		"should error if environment already exists": {
+			inEnvName: "test-pdx",
+			inAppName: "phonetool",
+
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, nil)
+			},
+			wantedErrMsg: "environment test-pdx already exists",
 		},
 		"cannot specify both vpc resources importing flags and configuring flags": {
 			inEnvName:     "test-pdx",
@@ -75,6 +90,10 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			},
 			inVPCID: "mockID",
 
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
+
 			wantedErrMsg: "cannot specify both import vpc flags and configure vpc flags",
 		},
 		"cannot import or configure resources if use default flag is set": {
@@ -82,7 +101,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inDefault: true,
 			inVPCID:   "mockID",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", defaultConfigFlag),
 		},
 		"should err if both profile and access key id are set": {
@@ -90,7 +111,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:     "test",
 			inProfileName: "default",
 			inAccessKeyID: "AKIAIOSFODNN7EXAMPLE",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: "cannot specify both --profile and --aws-access-key-id",
 		},
 		"should err if both profile and secret access key are set": {
@@ -98,7 +121,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:         "test",
 			inProfileName:     "default",
 			inSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: "cannot specify both --profile and --aws-secret-access-key",
 		},
 		"should err if both profile and session token are set": {
@@ -106,7 +131,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:      "test",
 			inProfileName:  "default",
 			inSessionToken: "verylongtoken",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: "cannot specify both --profile and --aws-session-token",
 		},
 		"should err if fewer than two private subnets are set:": {
@@ -136,6 +163,15 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := initEnvMocks{
+				store: mocks.NewMockstore(ctrl),
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(m)
+			}
+
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
@@ -158,6 +194,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 						SessionToken:    tc.inSessionToken,
 					},
 				},
+				store: m.store,
 			}
 
 			// WHEN
@@ -255,6 +292,18 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				)
 			},
 			wantedError: fmt.Errorf("get environment name: some error"),
+		},
+		"should error if environment already exists": {
+			inAppName: mockApp,
+			setupMocks: func(m initEnvMocks) {
+				gomock.InOrder(
+					m.prompt.EXPECT().
+						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).
+						Return("test", nil),
+					m.store.EXPECT().GetEnvironment(mockApp, mockEnv).Return(nil, nil),
+				)
+			},
+			wantedError: errors.New("environment test already exists"),
 		},
 		"should create a session from a named profile if flag is provided": {
 			inAppName: mockApp,
@@ -646,6 +695,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				selCreds:     mocks.NewMockcredsSelector(ctrl),
 				ec2Client:    mocks.NewMockec2Client(ctrl),
 				selApp:       mocks.NewMockappSelector(ctrl),
+				store:        mocks.NewMockstore(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -667,6 +717,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				ec2Client:    mocks.ec2Client,
 				prompt:       mocks.prompt,
 				selApp:       mocks.selApp,
+				store:        mocks.store,
 			}
 
 			// WHEN
