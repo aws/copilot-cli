@@ -34,7 +34,7 @@ pull_request_rules:
       queue:
         name: default
         method: squash
-        commit_message: title+body
+        commit_message_template: '{{ title }} (#{{ number }})\n\n{{ body }}\n'
   - name: Merge for bots
     conditions:
       - base=mainline
@@ -59,4 +59,4 @@ pull_request_rules:
       queue:
         name: default
         method: squash
-        commit_message: title+body
+        commit_message_template: '{{ title }} (#{{ number }})\n\n{{ body }}\n'
