@@ -40,7 +40,7 @@ Service でインターネット側からのリクエストを捌きたいです
 ### Backend Service
 
 VPC 外部からアクセスさせる必要はないが、Application 内の他の Service からはアクセスできる必要があるという場合は、 __Backend Service__ を
-作りましょう。Copilot は AWS Fargate で実行される ECS サービスを作成しますが、インターネットに向けて解放されたエンドポイントを作成することはありません。
+作りましょう。Copilot は AWS Fargate で実行される ECS サービスを作成しますが、インターネットに向けて開放されたエンドポイントを作成することはありません。
 
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
 
