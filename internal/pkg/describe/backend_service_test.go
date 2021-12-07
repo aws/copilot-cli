@@ -353,17 +353,17 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &BackendServiceDescriber{
-				ecsServiceDescriber: &ecsServiceDescriber{
+				baseServiceDescription: &baseServiceDescription{
 					app:             testApp,
 					svc:             testSvc,
 					enableResources: tc.shouldOutputResources,
 					store:           mockStore,
-					svcStackDescriber: map[string]ecsStackDescriber{
-						"test":    mockSvcDescriber,
-						"prod":    mockSvcDescriber,
-						"mockEnv": mockSvcDescriber,
-					},
-					initDescribers: func(string) error { return nil },
+					initDescribers:  func(string) error { return nil },
+				},
+				svcStackDescriber: map[string]ecsStackDescriber{
+					"test":    mockSvcDescriber,
+					"prod":    mockSvcDescriber,
+					"mockEnv": mockSvcDescriber,
 				},
 				envDescriber: map[string]envDescriber{
 					"test":    mockEnvDescriber,

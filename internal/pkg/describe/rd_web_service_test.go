@@ -23,10 +23,10 @@ const humanStringWithResources = `About
 
 Configurations
 
-  Environment  CPU (vCPU)  Memory (MiB)  Platform      Port
-  -----------  ----------  ------------  --------      ----
-  test         1           2048          LINUX/X86_64  80
-  prod         2           3072            "             "
+  Environment  CPU (vCPU)  Memory (MiB)  Port
+  -----------  ----------  ------------  ----
+  test         1           2048          80
+  prod         2           3072            "
 
 Routes
 
@@ -53,7 +53,7 @@ Resources
 
 type apprunnerSvcDescriberMocks struct {
 	storeSvc        *mocks.MockDeployedEnvServicesLister
-	ecsSvcDescriber *mocks.MockapprunnerSvcDescriber
+	ecsSvcDescriber *mocks.MockapprunnerStackDescriber
 }
 
 func TestRDWebServiceDescriber_Describe(t *testing.T) {
@@ -149,19 +149,17 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 				Service: testSvc,
 				Type:    "Request-Driven Web Service",
 				App:     testApp,
-				Configurations: []*ServiceConfig{
+				AppRunnerConfigurations: []*ServiceConfig{
 					{
 						CPU:         "1024",
 						Environment: "test",
 						Memory:      "2048",
-						Platform:    "LINUX/X86_64",
 						Port:        "80",
 					},
 					{
 						CPU:         "2048",
 						Environment: "prod",
 						Memory:      "3072",
-						Platform:    "LINUX/X86_64",
 						Port:        "80",
 					},
 				},
@@ -212,7 +210,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMockapprunnerSvcDescriber(ctrl)
+			mockSvcDescriber := mocks.NewMockapprunnerStackDescriber(ctrl)
 			mocks := apprunnerSvcDescriberMocks{
 				storeSvc:        mockStore,
 				ecsSvcDescriber: mockSvcDescriber,
@@ -221,15 +219,17 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &RDWebServiceDescriber{
-				app:             testApp,
-				svc:             testSvc,
-				enableResources: tc.shouldOutputResources,
-				store:           mockStore,
-				envSvcDescribers: map[string]apprunnerSvcDescriber{
+				baseServiceDescription: &baseServiceDescription{
+					app:             testApp,
+					svc:             testSvc,
+					enableResources: tc.shouldOutputResources,
+					store:           mockStore,
+					initDescribers:  func(string) error { return nil },
+				},
+				envSvcDescribers: map[string]apprunnerStackDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,
 				},
-				initServiceDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
@@ -249,24 +249,22 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 func TestRDWebServiceDesc_String(t *testing.T) {
 	t.Run("correct output including resources", func(t *testing.T) {
 		wantedHumanString := humanStringWithResources
-		wantedJSONString := "{\"service\":\"testsvc\",\"type\":\"Request-Driven Web Service\",\"application\":\"testapp\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"1024\",\"memory\":\"2048\",\"platform\":\"LINUX/X86_64\"},{\"environment\":\"prod\",\"port\":\"80\",\"cpu\":\"2048\",\"memory\":\"3072\",\"platform\":\"LINUX/X86_64\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com\"},{\"environment\":\"prod\",\"url\":\"https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc\"}],\"test\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc\"}]}}\n"
+		wantedJSONString := "{\"service\":\"testsvc\",\"type\":\"Request-Driven Web Service\",\"application\":\"testapp\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"1024\",\"memory\":\"2048\"},{\"environment\":\"prod\",\"port\":\"80\",\"cpu\":\"2048\",\"memory\":\"3072\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com\"},{\"environment\":\"prod\",\"url\":\"https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc\"}],\"test\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc\"}]}}\n"
 		svcDesc := &rdWebSvcDesc{
 			Service: "testsvc",
 			Type:    "Request-Driven Web Service",
 			App:     "testapp",
-			Configurations: []*ServiceConfig{
+			AppRunnerConfigurations: []*ServiceConfig{
 				{
 					CPU:         "1024",
 					Environment: "test",
 					Memory:      "2048",
-					Platform:    "LINUX/X86_64",
 					Port:        "80",
 				},
 				{
 					CPU:         "2048",
 					Environment: "prod",
 					Memory:      "3072",
-					Platform:    "LINUX/X86_64",
 					Port:        "80",
 				},
 			},

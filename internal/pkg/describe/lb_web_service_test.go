@@ -405,18 +405,17 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &LBWebServiceDescriber{
-				ecsServiceDescriber: &ecsServiceDescriber{
+				baseServiceDescription: &baseServiceDescription{
 					app:             testApp,
 					svc:             testSvc,
 					enableResources: tc.shouldOutputResources,
 					store:           mockStore,
-					svcStackDescriber: map[string]ecsStackDescriber{
-						"test": mockSvcStackDescriber,
-						"prod": mockSvcStackDescriber,
-					},
-					initDescribers: func(string) error { return nil },
+					initDescribers:  func(string) error { return nil },
 				},
-
+				svcStackDescriber: map[string]ecsStackDescriber{
+					"test": mockSvcStackDescriber,
+					"prod": mockSvcStackDescriber,
+				},
 				envDescriber: map[string]envDescriber{
 					"test": mockEnvDescriber,
 					"prod": mockEnvDescriber,

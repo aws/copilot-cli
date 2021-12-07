@@ -24,7 +24,7 @@ import (
 )
 
 type serviceStatusDescriberMocks struct {
-	appRunnerSvcDescriber *mocks.MockapprunnerSvcDescriber
+	appRunnerSvcDescriber *mocks.MockapprunnerStackDescriber
 	ecsServiceGetter      *mocks.MockecsServiceGetter
 	alarmStatusGetter     *mocks.MockalarmStatusGetter
 	serviceDescriber      *mocks.MockserviceDescriber
@@ -583,7 +583,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSvcDesc := mocks.NewMockapprunnerSvcDescriber(ctrl)
+			mockSvcDesc := mocks.NewMockapprunnerStackDescriber(ctrl)
 			mockLogsSvc := mocks.NewMocklogGetter(ctrl)
 			mocks := serviceStatusDescriberMocks{
 				appRunnerSvcDescriber: mockSvcDesc,

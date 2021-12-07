@@ -18,17 +18,17 @@ import (
 // RDWebServiceDescriber retrieves information about a request-driven web service.
 type RDWebServiceDescriber struct {
 	*baseServiceDescription
-	envSvcDescribers     map[string]apprunnerStackDescriber
+	envSvcDescribers map[string]apprunnerStackDescriber
 }
 
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
 func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, error) {
 	describer := &RDWebServiceDescriber{
 		baseServiceDescription: &baseServiceDescription{
-			app:               opt.App,
-			svc:               opt.Svc,
-			enableResources:   opt.EnableResources,
-			store:             opt.DeployStore,
+			app:             opt.App,
+			svc:             opt.Svc,
+			enableResources: opt.EnableResources,
+			store:           opt.DeployStore,
 		},
 		envSvcDescribers: make(map[string]apprunnerStackDescriber),
 	}
@@ -67,12 +67,10 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		service, err := d.envSvcDescribers[env].Service()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service configuration: %w", err)
 		}
-
 		webServiceURI := formatAppRunnerUrl(service.ServiceURL)
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
@@ -83,7 +81,6 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Port:        service.Port,
 			CPU:         service.CPU,
 			Memory:      service.Memory,
-			Platform:    "LINUX/X86_64",
 		})
 
 		for _, v := range service.EnvironmentVariables {
@@ -104,13 +101,13 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	return &rdWebSvcDesc{
-		Service:        d.svc,
-		Type:           manifest.RequestDrivenWebServiceType,
-		App:            d.app,
+		Service:                 d.svc,
+		Type:                    manifest.RequestDrivenWebServiceType,
+		App:                     d.app,
 		AppRunnerConfigurations: configs,
-		Routes:         routes,
-		Variables:      envVars,
-		Resources:      resources,
+		Routes:                  routes,
+		Variables:               envVars,
+		Resources:               resources,
 
 		environments: environments,
 	}, nil
@@ -118,13 +115,13 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 // rdWebSvcDesc contains serialized parameters for a web service.
 type rdWebSvcDesc struct {
-	Service        string               `json:"service"`
-	Type           string               `json:"type"`
-	App            string               `json:"application"`
-	AppRunnerConfigurations appRunnerConfigurations       `json:"configurations"`
-	Routes         []*WebServiceRoute   `json:"routes"`
-	Variables      envVars              `json:"variables"`
-	Resources      deployedSvcResources `json:"resources,omitempty"`
+	Service                 string                  `json:"service"`
+	Type                    string                  `json:"type"`
+	App                     string                  `json:"application"`
+	AppRunnerConfigurations appRunnerConfigurations `json:"configurations"`
+	Routes                  []*WebServiceRoute      `json:"routes"`
+	Variables               envVars                 `json:"variables"`
+	Resources               deployedSvcResources    `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }

@@ -26,10 +26,10 @@ type WorkerServiceDescriber struct {
 func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, error) {
 	describer := &WorkerServiceDescriber{
 		baseServiceDescription: &baseServiceDescription{
-			app:               opt.App,
-			svc:               opt.Svc,
-			enableResources:   opt.EnableResources,
-			store:             opt.DeployStore,
+			app:             opt.App,
+			svc:             opt.Svc,
+			enableResources: opt.EnableResources,
+			store:           opt.DeployStore,
 		},
 		svcStackDescriber: make(map[string]ecsStackDescriber),
 	}

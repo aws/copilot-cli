@@ -127,15 +127,14 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &LBWebServiceDescriber{
-				ecsServiceDescriber: &ecsServiceDescriber{
-					app: testApp,
-					svc: testSvc,
-					svcStackDescriber: map[string]ecsStackDescriber{
-						"test": mockSvcDescriber,
-					},
+				baseServiceDescription: &baseServiceDescription{
+					app:            testApp,
+					svc:            testSvc,
 					initDescribers: func(string) error { return nil },
 				},
-
+				svcStackDescriber: map[string]ecsStackDescriber{
+					"test": mockSvcDescriber,
+				},
 				envDescriber: map[string]envDescriber{
 					"test": mockEnvDescriber,
 				},
@@ -166,11 +165,11 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		}, nil)
 
 		d := &BackendServiceDescriber{
-			ecsServiceDescriber: &ecsServiceDescriber{
-				svcStackDescriber: map[string]ecsStackDescriber{
-					"test": m,
-				},
+			baseServiceDescription: &baseServiceDescription{
 				initDescribers: func(string) error { return nil },
+			},
+			svcStackDescriber: map[string]ecsStackDescriber{
+				"test": m,
 			},
 		}
 
@@ -193,12 +192,12 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		mockEnvStack.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
 
 		d := &BackendServiceDescriber{
-			ecsServiceDescriber: &ecsServiceDescriber{
-				svc: "hello",
-				svcStackDescriber: map[string]ecsStackDescriber{
-					"test": mockSvcStack,
-				},
+			baseServiceDescription: &baseServiceDescription{
+				svc:            "hello",
 				initDescribers: func(string) error { return nil },
+			},
+			svcStackDescriber: map[string]ecsStackDescriber{
+				"test": mockSvcStack,
 			},
 			envDescriber: map[string]envDescriber{
 				"test": mockEnvStack,
@@ -253,7 +252,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSvcDescriber := mocks.NewMockapprunnerSvcDescriber(ctrl)
+			mockSvcDescriber := mocks.NewMockapprunnerStackDescriber(ctrl)
 			mocks := apprunnerSvcDescriberMocks{
 				ecsSvcDescriber: mockSvcDescriber,
 			}
@@ -261,12 +260,14 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &RDWebServiceDescriber{
-				app: testApp,
-				svc: testSvc,
-				envSvcDescribers: map[string]apprunnerSvcDescriber{
+				baseServiceDescription: &baseServiceDescription{
+					app:            testApp,
+					svc:            testSvc,
+					initDescribers: func(string) error { return nil },
+				},
+				envSvcDescribers: map[string]apprunnerStackDescriber{
 					"test": mockSvcDescriber,
 				},
-				initServiceDescriber: func(string) error { return nil },
 			}
 
 			// WHEN

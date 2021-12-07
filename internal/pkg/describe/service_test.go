@@ -94,12 +94,12 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ECSServiceDescriber{
-				ServiceDescriber: &ServiceDescriber{
-					app:     testApp,
-					service: testSvc,
-					env:     testEnv,
+				BaseServiceDescriber: &BaseServiceDescriber{
+					app:       testApp,
+					service:   testSvc,
+					env:       testEnv,
+					ecsClient: mockecsClient,
 				},
-				ecsClient: mockecsClient,
 			}
 
 			// WHEN
@@ -188,12 +188,12 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ECSServiceDescriber{
-				ServiceDescriber: &ServiceDescriber{
-					app:     testApp,
-					service: testSvc,
-					env:     testEnv,
+				BaseServiceDescriber: &BaseServiceDescriber{
+					app:       testApp,
+					service:   testSvc,
+					env:       testEnv,
+					ecsClient: mockecsClient,
 				},
-				ecsClient: mockecsClient,
 			}
 
 			// WHEN
@@ -278,7 +278,7 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			d := &ServiceDescriber{
+			d := &BaseServiceDescriber{
 				app:     testApp,
 				service: testSvc,
 				env:     testEnv,
@@ -360,12 +360,12 @@ func TestServiceDescriber_Platform(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ECSServiceDescriber{
-				ServiceDescriber: &ServiceDescriber{
-					app:     testApp,
-					service: testSvc,
-					env:     testEnv,
+				BaseServiceDescriber: &BaseServiceDescriber{
+					app:       testApp,
+					service:   testSvc,
+					env:       testEnv,
+					ecsClient: mockecsClient,
 				},
-				ecsClient: mockecsClient,
 			}
 
 			// WHEN

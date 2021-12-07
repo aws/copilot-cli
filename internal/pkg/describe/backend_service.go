@@ -27,20 +27,20 @@ const (
 type BackendServiceDescriber struct {
 	*baseServiceDescription
 	svcStackDescriber map[string]ecsStackDescriber
-	envDescriber map[string]envDescriber
+	envDescriber      map[string]envDescriber
 }
 
 // NewBackendServiceDescriber instantiates a backend service describer.
 func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber, error) {
 	describer := &BackendServiceDescriber{
 		baseServiceDescription: &baseServiceDescription{
-			app:               opt.App,
-			svc:               opt.Svc,
-			enableResources:   opt.EnableResources,
-			store:             opt.DeployStore,
+			app:             opt.App,
+			svc:             opt.Svc,
+			enableResources: opt.EnableResources,
+			store:           opt.DeployStore,
 		},
 		svcStackDescriber: make(map[string]ecsStackDescriber),
-		envDescriber: make(map[string]envDescriber),
+		envDescriber:      make(map[string]envDescriber),
 	}
 	describer.initDescribers = func(env string) error {
 		if _, ok := describer.svcStackDescriber[env]; ok {
