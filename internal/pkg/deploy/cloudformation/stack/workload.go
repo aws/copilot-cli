@@ -64,7 +64,7 @@ const (
 type RuntimeConfig struct {
 	Image             *ECRImage         // Optional. Image location in an ECR repository.
 	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
-	EnvFileARN        string            // Optional. S3 object URLs for the env files.
+	EnvFileARN        string            // Optional. S3 object ARN for the env file.
 	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the workload stack.
 
 	// The target environment metadata.

@@ -66,7 +66,7 @@ type deployJobOpts struct {
 	appEnvResources   *stack.AppRegionalResources
 	appliedManifest   interface{}
 	addonsURL         string
-	EnvFileARN        string
+	envFileARN        string
 	imageDigest       string
 	buildRequired     bool
 }
@@ -156,13 +156,13 @@ func (o *deployJobOpts) Execute() error {
 	if err := o.configureContainerImage(); err != nil {
 		return err
 	}
-	if err := o.pushToS3Bucket(); err != nil {
+	if err := o.pushArtifactsToS3(); err != nil {
 		return err
 	}
 	return o.deployJob()
 }
 
-func (o *deployJobOpts) pushToS3Bucket() error {
+func (o *deployJobOpts) pushArtifactsToS3() error {
 	mft, err := o.manifest()
 	if err != nil {
 		return err
@@ -199,7 +199,7 @@ func (o *deployJobOpts) pushEnvFilesToS3Bucket(fileName string) error {
 	if !ok {
 		return fmt.Errorf("find the partition for region %s", region)
 	}
-	o.EnvFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
+	o.envFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
 	return nil
 }
 

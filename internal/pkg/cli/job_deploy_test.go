@@ -513,13 +513,13 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 				},
 			}
 
-			gotErr := opts.pushToS3Bucket()
+			gotErr := opts.pushArtifactsToS3()
 
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.wantAddonsURL, opts.addonsURL)
-				require.Equal(t, tc.wantEnvFileARN, opts.EnvFileARN)
+				require.Equal(t, tc.wantEnvFileARN, opts.envFileARN)
 			}
 		})
 	}

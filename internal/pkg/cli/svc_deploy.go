@@ -109,7 +109,7 @@ type deploySvcOpts struct {
 	imageDigest       string
 	buildRequired     bool
 	addonsURL         string
-	EnvFileARN        string
+	envFileARN        string
 	appEnvResources   *stack.AppRegionalResources
 	rdSvcAlias        string
 	svcUpdater        serviceUpdater
@@ -224,7 +224,7 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	if err := o.pushToS3Bucket(); err != nil {
+	if err := o.pushArtifactsToS3(); err != nil {
 		return err
 	}
 
@@ -431,7 +431,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArgumen
 	return buildArgs(o.name, o.imageTag, copilotDir, svc)
 }
 
-func (o *deploySvcOpts) pushToS3Bucket() error {
+func (o *deploySvcOpts) pushArtifactsToS3() error {
 	mft, err := o.manifest()
 	if err != nil {
 		return err
@@ -468,7 +468,7 @@ func (o *deploySvcOpts) pushEnvFilesToS3Bucket(fileName string) error {
 	if !ok {
 		return fmt.Errorf("find the partition for region %s", region)
 	}
-	o.EnvFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
+	o.envFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
 	return nil
 }
 
@@ -531,7 +531,7 @@ func (o *deploySvcOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        o.addonsURL,
-			EnvFileARN:               o.EnvFileARN,
+			EnvFileARN:               o.envFileARN,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                o.targetEnvironment.AccountID,
@@ -553,7 +553,7 @@ func (o *deploySvcOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
 	}
 	return &stack.RuntimeConfig{
 		AddonsTemplateURL: o.addonsURL,
-		EnvFileARN:        o.EnvFileARN,
+		EnvFileARN:        o.envFileARN,
 		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
 		Image: &stack.ECRImage{
 			RepoURL:  repoURL,
@@ -771,11 +771,11 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 
 func envFile(name string, unmarshaledManifest interface{}) string {
 	type envFiles interface {
-		EnvFiles() string
+		EnvFile() string
 	}
 	mf, ok := unmarshaledManifest.(envFiles)
 	if ok {
-		return mf.EnvFiles()
+		return mf.EnvFile()
 	}
 	// If the manifest type doesn't support envFiles, ignore and move forward.
 	return ""
