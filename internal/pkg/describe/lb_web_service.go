@@ -94,7 +94,6 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
-	var platform string
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -114,7 +113,6 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
 		}
-		platform = dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture)
 		webSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
@@ -125,7 +123,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Port:        d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 				CPU:         d.svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      d.svcParams[cfnstack.WorkloadTaskMemoryParamKey],
-				Platform:    platform,
+				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
 			},
 			Tasks: d.svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})

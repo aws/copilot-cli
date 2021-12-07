@@ -60,7 +60,6 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	var configs []*ECSServiceConfig
-	var platform string
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -76,14 +75,13 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
 		}
-		platform = dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture)
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
 				Port:        blankContainerPort,
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
-				Platform:    platform,
+				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})

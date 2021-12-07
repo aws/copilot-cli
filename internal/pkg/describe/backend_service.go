@@ -79,7 +79,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var configs []*ECSServiceConfig
 	var services []*ServiceDiscovery
-	var platform string
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -108,7 +107,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
 		}
-		platform = dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture)
 		backendSvcEnvVars, err := d.svcStackDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
@@ -119,7 +117,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Port:        port,
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
-				Platform:    platform,
+				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
