@@ -21,22 +21,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     const mockLBHostedZoneID = "mockLBHostedZoneID"
     const mockResponseURL = "https://mock.com/";
     const mockRootDNSRole = "mockRootDNSRole"
-    const mockRequest = {
-        ResponseURL: mockResponseURL,
-        ResourceProperties: {
-            ServiceName: mockServiceName,
-            Aliases: ["dash-test.mockDomain.com", "a.mockApp.mockDomain.com", "b.mockEnv.mockApp.mockDomain.com"],
-            EnvName: mockEnvName,
-            AppName: mockAppName,
-            DomainName: mockDomainName,
-            LoadBalancerDNS: mockLBDNS,
-            LoadBalancerHostedZoneID: mockLBHostedZoneID,
-            EnvHostedZoneId: mockEnvHostedZoneID,
-            RootDNSRole: mockRootDNSRole,
-        },
-        RequestType: "Create",
-        LogicalResourceId: "mockID",
-    };
 
     // Mock respond request.
     function mockFailedRequest(expectedErrMessageRegex) {
@@ -49,15 +33,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             })
             .reply(200);
     }
-
-    // API call mocks.
-    const mockListHostedZonesByName = sinon.stub();
-    const mockListResourceRecordSets = sinon.stub();
-    const mockRequestCertificate = sinon.stub();
-    const mockDescribeCertificate = sinon.stub();
-    const mockChangeResourceRecordSets = sinon.stub();
-    const mockAppHostedZoneID = "mockAppHostedZoneID";
-    const mockRootHostedZoneID = "mockRootHostedZoneID";
 
     let handler, reset, withDeadlineExpired ;
     beforeEach(() => {
@@ -81,58 +56,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         withDeadlineExpired(_ => {
             return new Promise(function (resolve, reject) {});
         });
-
-        // Mock API default behavior.
-        mockListResourceRecordSets.resolves({
-            "ResourceRecordSets": []
-        });
-        mockRequestCertificate.resolves({
-            "CertificateArn": "mockCertArn",
-        });
-        mockDescribeCertificate.resolves({
-            "Certificate": {
-                "DomainValidationOptions": [{
-                    "ResourceRecord": {
-                        Name: "mock-validate-default-cert",
-                        Value: "mock-validate-default-cert-value",
-                        Type: "mock-validate-default-cert-type"
-                    },
-                    "DomainName": `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                },{
-                    "ResourceRecord": {
-                        Name: "mock-validate-alias-1",
-                        Value: "mock-validate-alias-1-value",
-                        Type: "mock-validate-alias-1-type"
-                    },
-                    "DomainName": "dash-test.mockDomain.com",
-                },{
-                    "ResourceRecord": {
-                        Name: "mock-validate-alias-2",
-                        Value: "mock-validate-alias-2-value",
-                        Type: "mock-validate-alias-2-type"
-                    },
-                    "DomainName": "a.mockApp.mockDomain.com",
-                },{
-                    "ResourceRecord": {
-                        Name: "mock-validate-alias-3",
-                        Value: "mock-validate-alias-3-value",
-                        Type: "mock-validate-alias-3-type"
-                    },
-                    "DomainName": "b.mockEnv.mockApp.mockDomain.com",
-                }],
-            },
-        });
-        mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockChangeID", }, })
-        mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockApp.mockDomain.com")).resolves({
-            HostedZones: [{
-                Id: mockAppHostedZoneID
-            }]
-        });
-        mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockDomain.com")).resolves({
-            HostedZones: [{
-                Id: mockRootHostedZoneID,
-            }]
-        });
     });
 
     afterEach(() => {
@@ -140,16 +63,98 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         console.log = origLog;
         AWS.restore();
         reset();
-
-        // Reset mocks call count.
-        mockListHostedZonesByName.reset();
-        mockListResourceRecordSets.reset();
-        mockRequestCertificate.reset();
-        mockDescribeCertificate.reset();
-        mockChangeResourceRecordSets.reset();
     });
 
     describe("During CREATE with alias", () => {
+        const mockRequest = {
+            ResponseURL: mockResponseURL,
+            ResourceProperties: {
+                ServiceName: mockServiceName,
+                Aliases: ["dash-test.mockDomain.com", "a.mockApp.mockDomain.com", "b.mockEnv.mockApp.mockDomain.com"],
+                EnvName: mockEnvName,
+                AppName: mockAppName,
+                DomainName: mockDomainName,
+                LoadBalancerDNS: mockLBDNS,
+                LoadBalancerHostedZoneID: mockLBHostedZoneID,
+                EnvHostedZoneId: mockEnvHostedZoneID,
+                RootDNSRole: mockRootDNSRole,
+            },
+            RequestType: "Create",
+            LogicalResourceId: "mockID",
+        };
+
+        // API call mocks.
+        const mockListHostedZonesByName = sinon.stub();
+        const mockListResourceRecordSets = sinon.stub();
+        const mockRequestCertificate = sinon.stub();
+        const mockDescribeCertificate = sinon.stub();
+        const mockChangeResourceRecordSets = sinon.stub();
+        const mockAppHostedZoneID = "mockAppHostedZoneID";
+        const mockRootHostedZoneID = "mockRootHostedZoneID";
+
+        beforeEach(() => {
+            // Mock API default behavior.
+            mockListResourceRecordSets.resolves({
+                "ResourceRecordSets": []
+            });
+            mockRequestCertificate.resolves({
+                "CertificateArn": "mockCertArn",
+            });
+            mockDescribeCertificate.resolves({
+                "Certificate": {
+                    "DomainValidationOptions": [{
+                        "ResourceRecord": {
+                            Name: "mock-validate-default-cert",
+                            Value: "mock-validate-default-cert-value",
+                            Type: "mock-validate-default-cert-type"
+                        },
+                        "DomainName": `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
+                    },{
+                        "ResourceRecord": {
+                            Name: "mock-validate-alias-1",
+                            Value: "mock-validate-alias-1-value",
+                            Type: "mock-validate-alias-1-type"
+                        },
+                        "DomainName": "dash-test.mockDomain.com",
+                    },{
+                        "ResourceRecord": {
+                            Name: "mock-validate-alias-2",
+                            Value: "mock-validate-alias-2-value",
+                            Type: "mock-validate-alias-2-type"
+                        },
+                        "DomainName": "a.mockApp.mockDomain.com",
+                    },{
+                        "ResourceRecord": {
+                            Name: "mock-validate-alias-3",
+                            Value: "mock-validate-alias-3-value",
+                            Type: "mock-validate-alias-3-type"
+                        },
+                        "DomainName": "b.mockEnv.mockApp.mockDomain.com",
+                    }],
+                },
+            });
+            mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockChangeID", }, })
+            mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockApp.mockDomain.com")).resolves({
+                HostedZones: [{
+                    Id: mockAppHostedZoneID
+                }]
+            });
+            mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockDomain.com")).resolves({
+                HostedZones: [{
+                    Id: mockRootHostedZoneID,
+                }]
+            });
+        })
+
+        afterEach(() => {
+            // Reset mocks call count.
+            mockListHostedZonesByName.reset();
+            mockListResourceRecordSets.reset();
+            mockRequestCertificate.reset();
+            mockDescribeCertificate.reset();
+            mockChangeResourceRecordSets.reset();
+        });
+
         test("unsupported action fails", () => {
             let request = mockFailedRequest(/^Unsupported request type Unknown \(Log: .*\)$/);
             return LambdaTester(handler)
