@@ -117,6 +117,14 @@ func (t *TaskClient) allTasksStopped() (bool, error) {
 		}
 	}
 	t.tasks = runningTasks
+
+	if stopped {
+		// Show all stopped tasks exit codes when all tasks are stopped
+		for _, tresp := range tasksResp {
+			// not sure why, but I 'm assuming there's a single container
+			log.Infoln(fmt.Sprintf("Task %s exitCode: %d", *tresp.TaskArn, *tresp.Containers[0].ExitCode))
+		}
+	}
 	return stopped, nil
 }
 
