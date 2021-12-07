@@ -116,7 +116,7 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 
 // URI returns the WebServiceURI to identify this service uniquely given an environment name.
 func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
-	err := d.initServiceDescriber(envName)
+	err := d.initDescribers(envName)
 	if err != nil {
 		return "", err
 	}

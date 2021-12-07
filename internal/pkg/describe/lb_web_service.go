@@ -36,7 +36,8 @@ type envDescriber interface {
 
 // LBWebServiceDescriber retrieves information about a load balanced web service.
 type LBWebServiceDescriber struct {
-	*ecsServiceDescriber
+	*baseServiceDescription
+	svcStackDescriber map[string]ecsStackDescriber
 	envDescriber map[string]envDescriber
 
 	// cache only last svc paramerters
@@ -46,20 +47,20 @@ type LBWebServiceDescriber struct {
 // NewLBWebServiceDescriber instantiates a load balanced service describer.
 func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, error) {
 	describer := &LBWebServiceDescriber{
-		ecsServiceDescriber: &ecsServiceDescriber{
+		baseServiceDescription: &baseServiceDescription{
 			app:               opt.App,
 			svc:               opt.Svc,
 			enableResources:   opt.EnableResources,
 			store:             opt.DeployStore,
-			svcStackDescriber: make(map[string]ecsStackDescriber),
 		},
+		svcStackDescriber: make(map[string]ecsStackDescriber),
 		envDescriber: make(map[string]envDescriber),
 	}
 	describer.initDescribers = func(env string) error {
 		if _, ok := describer.svcStackDescriber[env]; ok {
 			return nil
 		}
-		svcDescr, err := NewServiceDescriber(NewServiceConfig{
+		svcDescr, err := NewECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
 			Env:         env,
 			Svc:         opt.Svc,

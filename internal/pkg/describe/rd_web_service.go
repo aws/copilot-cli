@@ -17,25 +17,22 @@ import (
 
 // RDWebServiceDescriber retrieves information about a request-driven web service.
 type RDWebServiceDescriber struct {
-	app             string
-	svc             string
-	enableResources bool
-
-	store                DeployedEnvServicesLister
-	envSvcDescribers     map[string]apprunnerSvcDescriber
-	initServiceDescriber func(string) error
+	*baseServiceDescription
+	envSvcDescribers     map[string]apprunnerStackDescriber
 }
 
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
 func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, error) {
 	describer := &RDWebServiceDescriber{
-		app:              opt.App,
-		svc:              opt.Svc,
-		enableResources:  opt.EnableResources,
-		store:            opt.DeployStore,
-		envSvcDescribers: make(map[string]apprunnerSvcDescriber),
+		baseServiceDescription: &baseServiceDescription{
+			app:               opt.App,
+			svc:               opt.Svc,
+			enableResources:   opt.EnableResources,
+			store:             opt.DeployStore,
+		},
+		envSvcDescribers: make(map[string]apprunnerStackDescriber),
 	}
-	describer.initServiceDescriber = func(env string) error {
+	describer.initDescribers = func(env string) error {
 		if _, ok := describer.envSvcDescribers[env]; ok {
 			return nil
 		}
@@ -66,7 +63,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars envVars
 	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
-		err := d.initServiceDescriber(env)
+		err := d.initDescribers(env)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +107,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Service:        d.svc,
 		Type:           manifest.RequestDrivenWebServiceType,
 		App:            d.app,
-		Configurations: configs,
+		AppRunnerConfigurations: configs,
 		Routes:         routes,
 		Variables:      envVars,
 		Resources:      resources,
@@ -124,7 +121,7 @@ type rdWebSvcDesc struct {
 	Service        string               `json:"service"`
 	Type           string               `json:"type"`
 	App            string               `json:"application"`
-	Configurations configurations       `json:"configurations"`
+	AppRunnerConfigurations appRunnerConfigurations       `json:"configurations"`
 	Routes         []*WebServiceRoute   `json:"routes"`
 	Variables      envVars              `json:"variables"`
 	Resources      deployedSvcResources `json:"resources,omitempty"`
@@ -152,7 +149,7 @@ func (w *rdWebSvcDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
-	w.Configurations.humanString(writer)
+	w.AppRunnerConfigurations.humanString(writer)
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	headers := []string{"Environment", "URL"}

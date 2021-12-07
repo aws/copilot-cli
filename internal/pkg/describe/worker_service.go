@@ -18,19 +18,20 @@ import (
 
 // WorkerServiceDescriber retrieves information about a worker service.
 type WorkerServiceDescriber struct {
-	*ecsServiceDescriber
+	*baseServiceDescription
+	svcStackDescriber map[string]ecsStackDescriber
 }
 
 // NewWorkerServiceDescriber instantiates a worker service describer.
 func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, error) {
 	describer := &WorkerServiceDescriber{
-		ecsServiceDescriber: &ecsServiceDescriber{
+		baseServiceDescription: &baseServiceDescription{
 			app:               opt.App,
 			svc:               opt.Svc,
 			enableResources:   opt.EnableResources,
 			store:             opt.DeployStore,
-			svcStackDescriber: make(map[string]ecsStackDescriber),
 		},
+		svcStackDescriber: make(map[string]ecsStackDescriber),
 	}
 	describer.initDescribers = func(env string) error {
 		if _, ok := describer.svcStackDescriber[env]; ok {
