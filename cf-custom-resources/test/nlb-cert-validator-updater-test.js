@@ -477,7 +477,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "mockARNToDelete" })).resolves({
                 Certificate: {
                     DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                    SubjectAlternativeNames: ["usedByOtherService.mockEnv.mockApp.mockDomain.com", "usedByOtherCert.mockApp.mockDomain.com", "unused.mockDomain.com", "usedByNewCert.mockApp.mockDomain.com"],
+                    SubjectAlternativeNames: ["usedByOtherService.mockEnv.mockApp.mockDomain.com", "usedByOtherCert.mockApp.mockDomain.com", "unused.mockDomain.com", "usedByNewCert.mockApp.mockDomain.com", `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`],
                     DomainValidationOptions: [{
                         DomainName: "unused.mockDomain.com"
                     },{
@@ -494,7 +494,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "mockARNInUse" })).resolves({
                 Certificate: {
                     DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
-                    SubjectAlternativeNames: ["usedByNewCert.mockApp.mockDomain.com", "other.mockDomain.com"],
+                    SubjectAlternativeNames: ["usedByNewCert.mockApp.mockDomain.com", "other.mockDomain.com", `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`],
                     DomainValidationOptions: [{
                         DomainName: "usedByNewCert.mockApp.mockDomain.com"
                     },{
@@ -507,7 +507,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "mockARNInUse2" })).resolves({
                 Certificate: {
                     DomainName: `some.domain.name.that.is.not.default.hence.not.created.by.copilot`,
-                    SubjectAlternativeNames: ["usedByOtherCert.mockApp.mockDomain.com", "other.mockDomain.com"],
+                    SubjectAlternativeNames: ["usedByOtherCert.mockApp.mockDomain.com", "other.mockDomain.com", `some.domain.name.that.is.not.default.hence.not.created.by.copilot`],
                     DomainValidationOptions: [{
                         DomainName: "usedByOtherCert.mockApp.mockDomain.com"
                     },{
