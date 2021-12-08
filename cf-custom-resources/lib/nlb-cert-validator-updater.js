@@ -459,7 +459,7 @@ async function serviceCertificates() {
  * @param {Set<String>} aliases is the subject alternative names of the certificate(s) pending deletion.
  * @returns {Set<Object>} The options that will be unused by the service.
  */
-async function optionsUnusedByService(aliases) {
+async function unusedOptionsByService(aliases) {
     // NOTE: `Set` uses object reference to identify elements. That is, two options with the same value will not be
     // identify as the same option. Therefore, we use map with object string as keys to identify object with actual
     // values instead of object reference.
