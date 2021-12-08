@@ -27,12 +27,10 @@ const (
 	DNSDelegationFileName               = "dns-delegation"
 	CustomDomainFileName                = "custom-domain"
 	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
-	AWSSDKLayerFileName                 = "aws-sdk-layer"
 
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
 	scriptDirName                  = "scripts"
-	layerDirName                   = "layers"
 )
 
 // Groups of files that belong to the same stack.
@@ -44,9 +42,6 @@ var (
 	}
 	rdWkldCustomResourceFiles = []string{
 		AppRunnerCustomDomainLambdaFileName,
-	}
-	rdWkldCustomResourceLayers = []string{
-		AWSSDKLayerFileName,
 	}
 )
 
