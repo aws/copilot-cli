@@ -468,7 +468,7 @@ async function optionsUnusedByService(aliases) {
 
     let certificates = await serviceCertificates();
     for (const {DomainName: domainName, SubjectAlternativeNames: sans, DomainValidationOptions: validationOptions} of certificates) {
-        if (domainName === certificateDomain && setEqual(aliases.add(certificateDomain), new Set(sans))) {
+        if (domainName === certificateDomain && setEqual(new Set(aliases).add(certificateDomain), new Set(sans))) {
             // This is a certificate pending deletion. It is:
             // 1. Copilot-tagged, 2. use the default certificate domain name, and 3. uses the SANs that need to be deleted.
             for (let option of validationOptions) {
