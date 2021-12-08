@@ -17,6 +17,8 @@ let defaultSleep = function (ms) {
 let sleep = defaultSleep;
 let random = Math.random;
 
+let cachedServiceCertificates;
+
 const appRoute53Context = () => {
     let client;
     return () => {
@@ -52,6 +54,16 @@ const acmContext = () => {
     };
 }
 
+const resourceGroupsTaggingAPIContext = () => {
+    let client;
+    return () => {
+        if (!client) {
+            client = new AWS.ResourceGroupsTaggingAPI();
+        }
+        return client;
+    };
+}
+
 const clients = {
     app: {
         route53: appRoute53Context(),
@@ -63,6 +75,7 @@ const clients = {
         route53:envRoute53Context(),
     },
     acm: acmContext(),
+    resourceGroupsTaggingAPI: resourceGroupsTaggingAPIContext(),
 }
 
 const appHostedZoneIDContext = () => {
@@ -158,6 +171,7 @@ exports.handler = async function (event, context) {
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
     } = props;
     const aliases = new Set(props.Aliases);
+    cachedServiceCertificates = null; // Avoid using cached certificates from the last invocation.
 
     // Initialize global variables.
     envHostedZoneID = props.EnvHostedZoneId;
@@ -204,6 +218,8 @@ exports.handler = async function (event, context) {
                 break;
             case "Update":
             case "Delete":
+                await unusedValidationOptions(aliases, loadBalancerDNS);
+                break;
             default:
                 throw new Error(`Unsupported request type ${event.RequestType}`);
         }
@@ -234,12 +250,8 @@ async function validateAliases(aliases, loadBalancerDNS) {
             HostedZoneId: hostedZoneID,
             MaxItems: "1",
             StartRecordName: alias,
-        }).promise().then((data) => {
-            let recordSet = data["ResourceRecordSets"];
-            if (!recordSet || recordSet.length === 0) {
-                return;
-            }
-            if (recordSet[0].Name !== alias) {
+        }).promise().then(({ ResourceRecordSets: recordSet }) => {
+            if (!targetRecordExists(alias, recordSet)) {
                 return;
             }
             let aliasTarget = recordSet[0].AliasTarget;
@@ -279,7 +291,7 @@ async function requestCertificate({ aliases, idempotencyToken }) {
             {
                 Key: "copilot-service",
                 Value: serviceName,
-            },
+            }
         ],
         ValidationMethod: "DNS",
     }).promise();
@@ -400,6 +412,135 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
     }).promise();
 }
 
+/**
+ * Retrieve all certificates used for the service and cache the results.
+ * @returns {Array<Object>} An array of descriptions for the certificates used by the service.
+ */
+async function serviceCertificates() {
+    if (cachedServiceCertificates) {
+        return cachedServiceCertificates;
+    }
+    let { ResourceTagMappingList } = await clients.resourceGroupsTaggingAPI().getResources({
+        TagFilters: [
+            {
+                Key: "copilot-application",
+                Values: [appName],
+            },
+            {
+                Key: "copilot-environment",
+                Values: [envName],
+            },
+            {
+                Key: "copilot-service",
+                Values: [serviceName],
+            }
+        ],
+        ResourceTypeFilters: ["acm:certificate"]
+    }).promise();
+
+    cachedServiceCertificates = [];
+    let promises = [];
+    for (let {ResourceARN: arn} of ResourceTagMappingList) {
+        let promise = clients.acm().describeCertificate({
+            CertificateArn: arn
+        }).promise().then(( { Certificate} ) => {
+            cachedServiceCertificates.push(Certificate);
+        });
+        promises.push(promise);
+    }
+    await Promise.all(promises);
+    return cachedServiceCertificates;
+}
+
+/**
+ * Retrieve validation options that will be unused by the service after deleting the certificate.
+ * An option is deemed pending unused if it validates only the certificate(s) pending deletion.
+ *
+ * @param {Set<String>} aliases is the subject alternative names of the certificate(s) pending deletion.
+ * @returns {Set<Object>} The options that will be unused by the service.
+ */
+async function optionsUnusedByService(aliases) {
+    // NOTE: `Set` uses object reference to identify elements. That is, two options with the same value will not be
+    // identify as the same option. Therefore, we use map with object string as keys to identify object with actual
+    // values instead of object reference.
+    let optionsInUse = new Map();
+    let optionsPendingUnusedByService = new Map();
+
+    let certificates = await serviceCertificates();
+    for (const {DomainName: domainName, SubjectAlternativeNames: sans, DomainValidationOptions: validationOptions} of certificates) {
+        if (domainName === certificateDomain && setEqual(aliases.add(certificateDomain), new Set(sans))) {
+            // This is a certificate pending deletion. It is:
+            // 1. Copilot-tagged, 2. use the default certificate domain name, and 3. uses the SANs that need to be deleted.
+            for (let option of validationOptions) {
+                optionsPendingUnusedByService.set(JSON.stringify(option), option);
+            }
+            continue;
+        }
+        // Otherwise, this is a certificate that we do not want to touch; validation options of this certificate are deemed in use.
+        for (let option of validationOptions) {
+            optionsInUse.set(JSON.stringify(option), option);
+        }
+    }
+    for (const optionInUseKey of optionsInUse.keys()) {
+        optionsPendingUnusedByService.delete(optionInUseKey);
+    }
+    let options = new Set();
+    for (const optionPendingUnused of optionsPendingUnusedByService.values()) {
+        options.add(optionPendingUnused);
+    }
+    return options;
+}
+
+/**
+ * Retrieve validation options that will be unused by any service.
+ *
+ * @param {Set<String>} aliases
+ * @param {String} loadBalancerDNS
+ * @returns {Promise<Set<any>>}
+ */
+async function unusedValidationOptions(aliases, loadBalancerDNS) {
+    let optionsPendingUnused = await optionsUnusedByService(aliases);
+    let promises = [];
+    for (let option of optionsPendingUnused) {
+        let domainName = option["DomainName"];
+        let hostedZoneID, route53Client;
+        try {
+            ({hostedZoneID, route53Client} = await domainResources(domainName));
+        } catch (err) {
+            if (!err instanceof UnrecognizedDomainTypeError) {
+                throw err;
+            }
+            // This option has unrecognized pattern, we can't check if it is in use, so we skip deleting it.
+            optionsPendingUnused.delete(option);
+            continue;
+        }
+        const promise = route53Client.listResourceRecordSets({
+            HostedZoneId: hostedZoneID,
+            MaxItems: "1",
+            StartRecordName: domainName,
+        }).promise().then(({ ResourceRecordSets: recordSet }) => {
+            if (!targetRecordExists(domainName, recordSet)) {
+                return; // If there is no record using this domain, it is not in use.
+            }
+            let aliasTarget = recordSet[0].AliasTarget;
+            if (aliasTarget && aliasTarget.DNSName !== `${loadBalancerDNS}.`) {
+                return; // If it is an A record in use by myself, it is pending unused.
+            }
+            optionsPendingUnused.delete(option); // Otherwise, it is in use by other services.
+        });
+        promises.push(promise);
+    }
+    await Promise.all(promises);
+    return optionsPendingUnused;
+}
+
+function targetRecordExists(targetDomainName, recordSet) {
+    if (!recordSet || recordSet.length === 0) {
+        return false;
+    }
+    return recordSet[0].Name === targetDomainName;
+}
+
 exports.deadlineExpired = function () {
     return new Promise(function (resolve, reject) {
         setTimeout(
@@ -444,8 +585,32 @@ async function domainResources (alias) {
             hostedZoneID: await hostedZoneID.root(),
         };
     }
-    throw new Error(`unrecognized domain type for ${alias}`);
+    throw new UnrecognizedDomainTypeError(`unrecognized domain type for ${alias}`);
 }
+
+/**
+ * Returns true of setA is equal to setB.
+ * @param setA
+ * @param setB
+ * @returns {boolean}
+ */
+function setEqual(setA, setB) {
+    if (setA.size !== setB.size) {
+        return false;
+    }
+
+    for (let elem of setA) {
+        if (!setB.has(elem)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function UnrecognizedDomainTypeError(message = "") {
+    this.message = message;
+}
+UnrecognizedDomainTypeError.prototype = Error.prototype;
 
 exports.withSleep = function (s) {
     sleep = s;
