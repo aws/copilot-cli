@@ -5,6 +5,7 @@ package describe
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"io"
 	"net/url"
 	"sort"
@@ -12,8 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -82,7 +81,7 @@ type apprunnerClient interface {
 	DescribeService(svcArn string) (*apprunner.Service, error)
 }
 
-type ecsStackDescriber interface {
+type ecsDescriber interface {
 	Params() (map[string]string, error)
 	Outputs() (map[string]string, error)
 	Platform() (*awsecs.ContainerPlatform, error)
@@ -152,35 +151,25 @@ func (c appRunnerConfigurations) humanString(w io.Writer) {
 	printTable(w, headers, rows)
 }
 
-// baseServiceDescription holds the base fields for services.
-type baseServiceDescription struct {
-	app             string
-	svc             string
-	enableResources bool
-
-	store          DeployedEnvServicesLister
-	initDescribers func(string) error
-}
-
-// BaseServiceDescriber provides base functionality for retrieving info about a service.
-type BaseServiceDescriber struct {
+// serviceStackDescriber provides base functionality for retrieving info about a service.
+type serviceStackDescriber struct {
 	app     string
 	service string
 	env     string
 
-	cfn       stackDescriber
-	ecsClient ecsClient
-	sess      *session.Session
+	cfn  stackDescriber
+	sess *session.Session
 }
 
 // ECSServiceDescriber retrieves information about a non-App Runner service.
 type ECSServiceDescriber struct {
-	*BaseServiceDescriber
+	*serviceStackDescriber
+	ecsClient ecsClient
 }
 
 // AppRunnerServiceDescriber retrieves information about an App Runner service.
 type AppRunnerServiceDescriber struct {
-	*BaseServiceDescriber
+	*serviceStackDescriber
 	apprunnerClient apprunnerClient
 }
 
@@ -195,7 +184,8 @@ type NewServiceConfig struct {
 	DeployStore     DeployedEnvServicesLister
 }
 
-func NewBaseServiceDescriber(opt NewServiceConfig) (*BaseServiceDescriber, error) {
+// NewServiceStackDescriber instantiates the core elements of a new service.
+func NewServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
 	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
@@ -204,44 +194,43 @@ func NewBaseServiceDescriber(opt NewServiceConfig) (*BaseServiceDescriber, error
 	if err != nil {
 		return nil, err
 	}
-	return &BaseServiceDescriber{
+	return &serviceStackDescriber{
 		app:     opt.App,
 		service: opt.Svc,
 		env:     opt.Env,
 
-		cfn:       stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
-		ecsClient: ecs.New(sess),
-		sess:      sess,
+		cfn:  stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
+		sess: sess,
 	}, nil
 }
 
 // NewECSServiceDescriber instantiates a new non-App Runner service.
 func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) {
-	serviceDescriber, err := NewBaseServiceDescriber(opt)
+	serviceDescriber, err := NewServiceStackDescriber(opt)
 	if err != nil {
 		return nil, err
 	}
-
 	return &ECSServiceDescriber{
-		BaseServiceDescriber: serviceDescriber,
+		serviceStackDescriber: serviceDescriber,
+		ecsClient: ecs.New(serviceDescriber.sess),
 	}, nil
 }
 
 // NewAppRunnerServiceDescriber instantiates a new App Runner service.
 func NewAppRunnerServiceDescriber(opt NewServiceConfig) (*AppRunnerServiceDescriber, error) {
-	serviceDescriber, err := NewBaseServiceDescriber(opt)
+	serviceDescriber, err := NewServiceStackDescriber(opt)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AppRunnerServiceDescriber{
-		BaseServiceDescriber: serviceDescriber,
-		apprunnerClient:      apprunner.New(serviceDescriber.sess),
+		serviceStackDescriber: serviceDescriber,
+		apprunnerClient:       apprunner.New(serviceDescriber.sess),
 	}, nil
 }
 
 // Params returns the parameters of the service stack.
-func (d *BaseServiceDescriber) Params() (map[string]string, error) {
+func (d *serviceStackDescriber) Params() (map[string]string, error) {
 	descr, err := d.cfn.Describe()
 	if err != nil {
 		return nil, err
@@ -250,7 +239,7 @@ func (d *BaseServiceDescriber) Params() (map[string]string, error) {
 }
 
 // Params returns the outputs of the service stack.
-func (d *BaseServiceDescriber) Outputs() (map[string]string, error) {
+func (d *serviceStackDescriber) Outputs() (map[string]string, error) {
 	descr, err := d.cfn.Describe()
 	if err != nil {
 		return nil, err
@@ -259,7 +248,7 @@ func (d *BaseServiceDescriber) Outputs() (map[string]string, error) {
 }
 
 // EnvVars returns the environment variables of the task definition.
-func (d *BaseServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
+func (d *ECSServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
 	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
 		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
@@ -268,7 +257,7 @@ func (d *BaseServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
 }
 
 // Secrets returns the secrets of the task definition.
-func (d *BaseServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
+func (d *ECSServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
 	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
 		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
@@ -277,7 +266,7 @@ func (d *BaseServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
-func (d *BaseServiceDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+func (d *serviceStackDescriber) ServiceStackResources() ([]*stack.Resource, error) {
 	svcResources, err := d.cfn.Resources()
 	if err != nil {
 		return nil, err

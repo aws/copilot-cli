@@ -219,13 +219,12 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &RDWebServiceDescriber{
-				baseServiceDescription: &baseServiceDescription{
-					app:             testApp,
-					svc:             testSvc,
-					enableResources: tc.shouldOutputResources,
-					store:           mockStore,
-					initDescribers:  func(string) error { return nil },
-				},
+				app:             testApp,
+				svc:             testSvc,
+				enableResources: tc.shouldOutputResources,
+				store:           mockStore,
+				initClients:     func(string) error { return nil },
+
 				envSvcDescribers: map[string]apprunnerStackDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,

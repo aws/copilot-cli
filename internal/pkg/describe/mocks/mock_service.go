@@ -90,31 +90,31 @@ func (mr *MockapprunnerClientMockRecorder) DescribeService(svcArn interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerClient)(nil).DescribeService), svcArn)
 }
 
-// MockecsStackDescriber is a mock of ecsStackDescriber interface.
-type MockecsStackDescriber struct {
+// MockecsDescriber is a mock of ecsDescriber interface.
+type MockecsDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockecsStackDescriberMockRecorder
+	recorder *MockecsDescriberMockRecorder
 }
 
-// MockecsStackDescriberMockRecorder is the mock recorder for MockecsStackDescriber.
-type MockecsStackDescriberMockRecorder struct {
-	mock *MockecsStackDescriber
+// MockecsDescriberMockRecorder is the mock recorder for MockecsDescriber.
+type MockecsDescriberMockRecorder struct {
+	mock *MockecsDescriber
 }
 
-// NewMockecsStackDescriber creates a new mock instance.
-func NewMockecsStackDescriber(ctrl *gomock.Controller) *MockecsStackDescriber {
-	mock := &MockecsStackDescriber{ctrl: ctrl}
-	mock.recorder = &MockecsStackDescriberMockRecorder{mock}
+// NewMockecsDescriber creates a new mock instance.
+func NewMockecsDescriber(ctrl *gomock.Controller) *MockecsDescriber {
+	mock := &MockecsDescriber{ctrl: ctrl}
+	mock.recorder = &MockecsDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockecsStackDescriber) EXPECT() *MockecsStackDescriberMockRecorder {
+func (m *MockecsDescriber) EXPECT() *MockecsDescriberMockRecorder {
 	return m.recorder
 }
 
 // EnvVars mocks base method.
-func (m *MockecsStackDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
+func (m *MockecsDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnvVars")
 	ret0, _ := ret[0].([]*ecs.ContainerEnvVar)
@@ -123,13 +123,13 @@ func (m *MockecsStackDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 }
 
 // EnvVars indicates an expected call of EnvVars.
-func (mr *MockecsStackDescriberMockRecorder) EnvVars() *gomock.Call {
+func (mr *MockecsDescriberMockRecorder) EnvVars() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockecsStackDescriber)(nil).EnvVars))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockecsDescriber)(nil).EnvVars))
 }
 
 // Outputs mocks base method.
-func (m *MockecsStackDescriber) Outputs() (map[string]string, error) {
+func (m *MockecsDescriber) Outputs() (map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Outputs")
 	ret0, _ := ret[0].(map[string]string)
@@ -138,13 +138,13 @@ func (m *MockecsStackDescriber) Outputs() (map[string]string, error) {
 }
 
 // Outputs indicates an expected call of Outputs.
-func (mr *MockecsStackDescriberMockRecorder) Outputs() *gomock.Call {
+func (mr *MockecsDescriberMockRecorder) Outputs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockecsStackDescriber)(nil).Outputs))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockecsDescriber)(nil).Outputs))
 }
 
 // Params mocks base method.
-func (m *MockecsStackDescriber) Params() (map[string]string, error) {
+func (m *MockecsDescriber) Params() (map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Params")
 	ret0, _ := ret[0].(map[string]string)
@@ -153,13 +153,13 @@ func (m *MockecsStackDescriber) Params() (map[string]string, error) {
 }
 
 // Params indicates an expected call of Params.
-func (mr *MockecsStackDescriberMockRecorder) Params() *gomock.Call {
+func (mr *MockecsDescriberMockRecorder) Params() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockecsStackDescriber)(nil).Params))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockecsDescriber)(nil).Params))
 }
 
 // Platform mocks base method.
-func (m *MockecsStackDescriber) Platform() (*ecs.ContainerPlatform, error) {
+func (m *MockecsDescriber) Platform() (*ecs.ContainerPlatform, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Platform")
 	ret0, _ := ret[0].(*ecs.ContainerPlatform)
@@ -168,13 +168,13 @@ func (m *MockecsStackDescriber) Platform() (*ecs.ContainerPlatform, error) {
 }
 
 // Platform indicates an expected call of Platform.
-func (mr *MockecsStackDescriberMockRecorder) Platform() *gomock.Call {
+func (mr *MockecsDescriberMockRecorder) Platform() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Platform", reflect.TypeOf((*MockecsStackDescriber)(nil).Platform))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Platform", reflect.TypeOf((*MockecsDescriber)(nil).Platform))
 }
 
 // Secrets mocks base method.
-func (m *MockecsStackDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
+func (m *MockecsDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Secrets")
 	ret0, _ := ret[0].([]*ecs.ContainerSecret)
@@ -183,13 +183,13 @@ func (m *MockecsStackDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 }
 
 // Secrets indicates an expected call of Secrets.
-func (mr *MockecsStackDescriberMockRecorder) Secrets() *gomock.Call {
+func (mr *MockecsDescriberMockRecorder) Secrets() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockecsStackDescriber)(nil).Secrets))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockecsDescriber)(nil).Secrets))
 }
 
 // ServiceStackResources mocks base method.
-func (m *MockecsStackDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+func (m *MockecsDescriber) ServiceStackResources() ([]*stack.Resource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ServiceStackResources")
 	ret0, _ := ret[0].([]*stack.Resource)
@@ -198,9 +198,9 @@ func (m *MockecsStackDescriber) ServiceStackResources() ([]*stack.Resource, erro
 }
 
 // ServiceStackResources indicates an expected call of ServiceStackResources.
-func (mr *MockecsStackDescriberMockRecorder) ServiceStackResources() *gomock.Call {
+func (mr *MockecsDescriberMockRecorder) ServiceStackResources() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceStackResources", reflect.TypeOf((*MockecsStackDescriber)(nil).ServiceStackResources))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceStackResources", reflect.TypeOf((*MockecsDescriber)(nil).ServiceStackResources))
 }
 
 // MockapprunnerStackDescriber is a mock of apprunnerStackDescriber interface.

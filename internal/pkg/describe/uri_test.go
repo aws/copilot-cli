@@ -55,7 +55,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get stack parameters for service jobs: some error"),
@@ -68,7 +68,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey: testSvcPath,
 					}, nil),
 				)
@@ -83,7 +83,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey: "*",
 					}, nil),
 				)
@@ -101,7 +101,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey: testSvcPath,
 					}, nil),
 				)
@@ -117,22 +117,21 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSvcDescriber := mocks.NewMockecsStackDescriber(ctrl)
+			mockSvcDescriber := mocks.NewMockecsDescriber(ctrl)
 			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
 			mocks := lbWebSvcDescriberMocks{
-				ecsStackDescriber: mockSvcDescriber,
-				envDescriber:      mockEnvDescriber,
+				ecsDescriber: mockSvcDescriber,
+				envDescriber: mockEnvDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
 			d := &LBWebServiceDescriber{
-				baseServiceDescription: &baseServiceDescription{
-					app:            testApp,
-					svc:            testSvc,
-					initDescribers: func(string) error { return nil },
-				},
-				svcStackDescriber: map[string]ecsStackDescriber{
+				app:         testApp,
+				svc:         testSvc,
+				initClients: func(string) error { return nil },
+
+				ecsServiceDescribers: map[string]ecsDescriber{
 					"test": mockSvcDescriber,
 				},
 				envDescriber: map[string]envDescriber{
@@ -159,16 +158,15 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		m := mocks.NewMockecsStackDescriber(ctrl)
+		m := mocks.NewMockecsDescriber(ctrl)
 		m.EXPECT().Params().Return(map[string]string{
 			stack.LBWebServiceContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
 		}, nil)
 
 		d := &BackendServiceDescriber{
-			baseServiceDescription: &baseServiceDescription{
-				initDescribers: func(string) error { return nil },
-			},
-			svcStackDescriber: map[string]ecsStackDescriber{
+			initClients: func(string) error { return nil },
+
+			ecsServiceDescribers: map[string]ecsDescriber{
 				"test": m,
 			},
 		}
@@ -184,7 +182,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		mockSvcStack := mocks.NewMockecsStackDescriber(ctrl)
+		mockSvcStack := mocks.NewMockecsDescriber(ctrl)
 		mockSvcStack.EXPECT().Params().Return(map[string]string{
 			stack.LBWebServiceContainerPortParamKey: "8080",
 		}, nil)
@@ -192,14 +190,13 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		mockEnvStack.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
 
 		d := &BackendServiceDescriber{
-			baseServiceDescription: &baseServiceDescription{
-				svc:            "hello",
-				initDescribers: func(string) error { return nil },
-			},
-			svcStackDescriber: map[string]ecsStackDescriber{
+			svc:         "hello",
+			initClients: func(string) error { return nil },
+
+			ecsServiceDescribers: map[string]ecsDescriber{
 				"test": mockSvcStack,
 			},
-			envDescriber: map[string]envDescriber{
+			envStackDescriber: map[string]envDescriber{
 				"test": mockEnvStack,
 			},
 		}
@@ -260,11 +257,10 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &RDWebServiceDescriber{
-				baseServiceDescription: &baseServiceDescription{
-					app:            testApp,
-					svc:            testSvc,
-					initDescribers: func(string) error { return nil },
-				},
+				app:         testApp,
+				svc:         testSvc,
+				initClients: func(string) error { return nil },
+
 				envSvcDescribers: map[string]apprunnerStackDescriber{
 					"test": mockSvcDescriber,
 				},

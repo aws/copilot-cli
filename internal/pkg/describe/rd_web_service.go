@@ -17,22 +17,26 @@ import (
 
 // RDWebServiceDescriber retrieves information about a request-driven web service.
 type RDWebServiceDescriber struct {
-	*baseServiceDescription
+	app             string
+	svc             string
+	enableResources bool
+
+	store            DeployedEnvServicesLister
+	initClients      func(string) error
 	envSvcDescribers map[string]apprunnerStackDescriber
 }
 
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
 func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, error) {
 	describer := &RDWebServiceDescriber{
-		baseServiceDescription: &baseServiceDescription{
-			app:             opt.App,
-			svc:             opt.Svc,
-			enableResources: opt.EnableResources,
-			store:           opt.DeployStore,
-		},
+		app:             opt.App,
+		svc:             opt.Svc,
+		enableResources: opt.EnableResources,
+		store:           opt.DeployStore,
+
 		envSvcDescribers: make(map[string]apprunnerStackDescriber),
 	}
-	describer.initDescribers = func(env string) error {
+	describer.initClients = func(env string) error {
 		if _, ok := describer.envSvcDescribers[env]; ok {
 			return nil
 		}
@@ -63,7 +67,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars envVars
 	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
-		err := d.initDescribers(env)
+		err := d.initClients(env)
 		if err != nil {
 			return nil, err
 		}

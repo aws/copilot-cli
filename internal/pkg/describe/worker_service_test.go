@@ -46,7 +46,7 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
@@ -55,13 +55,13 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "1",
 						cfnstack.WorkloadTaskCPUParamKey:           "256",
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
+					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve platform: some error"),
@@ -70,17 +70,17 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "1",
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 						cfnstack.WorkloadTaskCPUParamKey:           "256",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
@@ -90,24 +90,24 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "1",
 						cfnstack.WorkloadTaskCPUParamKey:           "256",
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     "prod",
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Secrets().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().Secrets().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve secrets: some error"),
@@ -118,86 +118,86 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "1",
 						cfnstack.WorkloadTaskCPUParamKey:           "256",
 						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     testEnv,
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "GITHUB_WEBHOOK_SECRET",
 							Container: "container",
 							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "2",
 						cfnstack.WorkloadTaskCPUParamKey:           "512",
 						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "ARM64",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     prodEnv,
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "A_SECRET",
 							Container: "container",
 							ValueFrom: "SECRET",
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.LBWebServiceContainerPortParamKey: "-",
 						cfnstack.WorkloadTaskCountParamKey:         "2",
 						cfnstack.WorkloadTaskCPUParamKey:           "512",
 						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
 					}, nil),
-					m.ecsStackDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     mockEnv,
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().Secrets().Return(
+					m.ecsDescriber.EXPECT().Secrets().Return(
 						nil, nil),
-					m.ecsStackDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroupIngress",
 							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-0758ed6b233743530",
 						},
 					}, nil),
-					m.ecsStackDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-2337435300758ed6b",
@@ -312,23 +312,21 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMockecsStackDescriber(ctrl)
+			mockSvcDescriber := mocks.NewMockecsDescriber(ctrl)
 			mocks := lbWebSvcDescriberMocks{
-				storeSvc:          mockStore,
-				ecsStackDescriber: mockSvcDescriber,
+				storeSvc:     mockStore,
+				ecsDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
 			d := &WorkerServiceDescriber{
-				baseServiceDescription: &baseServiceDescription{
-					app:             testApp,
-					svc:             testSvc,
-					enableResources: tc.shouldOutputResources,
-					store:           mockStore,
-					initDescribers:  func(string) error { return nil },
-				},
-				svcStackDescriber: map[string]ecsStackDescriber{
+				app:             testApp,
+				svc:             testSvc,
+				enableResources: tc.shouldOutputResources,
+				store:           mockStore,
+				initClients:     func(string) error { return nil },
+				svcStackDescriber: map[string]ecsDescriber{
 					"test":    mockSvcDescriber,
 					"prod":    mockSvcDescriber,
 					"mockEnv": mockSvcDescriber,
