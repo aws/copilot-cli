@@ -443,7 +443,7 @@ async function serviceCertificates() {
     for (let {ResourceARN: arn} of ResourceTagMappingList) {
         let promise = clients.acm().describeCertificate({
             CertificateArn: arn
-        }).promise().then(( { Certificate} ) => {
+        }).promise().then(( { Certificate } ) => {
             cachedServiceCertificates.push(Certificate);
         });
         promises.push(promise);
@@ -499,7 +499,7 @@ async function unusedOptionsByService(aliases) {
  * @returns {Promise<Set<any>>}
  */
 async function unusedValidationOptions(aliases, loadBalancerDNS) {
-    let optionsPendingUnused = await optionsUnusedByService(aliases);
+    let optionsPendingUnused = await unusedOptionsByService(aliases);
     let promises = [];
     for (let option of optionsPendingUnused) {
         let domainName = option["DomainName"];
