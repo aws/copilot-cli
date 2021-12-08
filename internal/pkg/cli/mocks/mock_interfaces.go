@@ -3013,6 +3013,21 @@ func (mr *MockartifactUploaderMockRecorder) PutArtifact(bucket, fileName, data i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactUploader)(nil).PutArtifact), bucket, fileName, data)
 }
 
+// Upload mocks base method.
+func (m *MockartifactUploader) Upload(bucket, key string, data io.Reader) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Upload indicates an expected call of Upload.
+func (mr *MockartifactUploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockartifactUploader)(nil).Upload), bucket, key, data)
+}
+
 // MockzipAndUploader is a mock of zipAndUploader interface.
 type MockzipAndUploader struct {
 	ctrl     *gomock.Controller
@@ -3077,21 +3092,6 @@ func NewMockUploader(ctrl *gomock.Controller) *MockUploader {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockUploader) EXPECT() *MockUploaderMockRecorder {
 	return m.recorder
-}
-
-// Upload mocks base method.
-func (m *MockUploader) Upload(bucket, key string, file s3.NamedBinary) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upload", bucket, key, file)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Upload indicates an expected call of Upload.
-func (mr *MockUploaderMockRecorder) Upload(bucket, key, file interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockUploader)(nil).Upload), bucket, key, file)
 }
 
 // ZipAndUpload mocks base method.
@@ -3165,21 +3165,6 @@ func (m *MockcustomResourcesUploader) UploadRequestDrivenWebServiceCustomResourc
 func (mr *MockcustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceCustomResources(upload interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadRequestDrivenWebServiceCustomResources), upload)
-}
-
-// UploadRequestDrivenWebServiceLayers mocks base method.
-func (m *MockcustomResourcesUploader) UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadRequestDrivenWebServiceLayers", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadRequestDrivenWebServiceLayers indicates an expected call of UploadRequestDrivenWebServiceLayers.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceLayers(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceLayers", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadRequestDrivenWebServiceLayers), upload)
 }
 
 // MockbucketEmptier is a mock of bucketEmptier interface.

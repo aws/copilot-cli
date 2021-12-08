@@ -129,29 +129,6 @@ func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.Compre
 	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
 }
 
-// UploadRequestDrivenWebServiceLayers uploads already-zipped layers for a request driven web service.
-func (t *Template) UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error) {
-	urls := make(map[string]string)
-	for _, layerName := range rdWkldCustomResourceLayers {
-		content, err := t.Read(path.Join(customResourceRootPath, fmt.Sprintf("%s.zip", layerName)))
-		if err != nil {
-			return nil, err
-		}
-		name := path.Join(layerDirName, layerName)
-		url, err := upload(fmt.Sprintf("%s/%x", name, sha256.Sum256(content.Bytes())), Uploadable{
-			name:    layerName,
-			content: content.Bytes(),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("upload %s: %w", name, err)
-		}
-
-		urls[layerName] = url
-	}
-
-	return urls, nil
-}
-
 func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, name := range fileNames {

@@ -185,9 +185,9 @@ func TestS3_Upload(t *testing.T) {
 				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
 					b, err := ioutil.ReadAll(in.Body)
 					require.NoError(t, err)
-					require.Equal(t, string(b), "bar")
-					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
-					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
+					require.Equal(t, "bar", string(b))
+					require.Equal(t, "mockBucket", aws.StringValue(in.Bucket))
+					require.Equal(t, "mockFileName", aws.StringValue(in.Key))
 				}).Return(&s3manager.UploadOutput{
 					Location: "mockURL",
 				}, nil)
@@ -209,7 +209,7 @@ func TestS3_Upload(t *testing.T) {
 				s3Manager: mockS3ManagerClient,
 			}
 
-			gotURL, gotErr := service.Upload("mockBucket", "mockFileName", namedBinary{})
+			gotURL, gotErr := service.Upload("mockBucket", "mockFileName", bytes.NewBuffer([]byte("bar")))
 
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())

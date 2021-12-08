@@ -46,9 +46,6 @@ type NamedBinary interface {
 // CompressAndUploadFunc is invoked to zip multiple template contents and upload them to an S3 bucket under the specified key.
 type CompressAndUploadFunc func(key string, objects ...NamedBinary) (url string, err error)
 
-// UploadFunc is invoked to upload an item to an S3 bucket under the specified key.
-type UploadFunc func(key string, file NamedBinary) (string, error)
-
 // S3 wraps an Amazon Simple Storage Service client.
 type S3 struct {
 	s3Manager s3ManagerAPI
@@ -101,10 +98,8 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 }
 
 // Upload uploads a file to an S3 bucket under the specified key.
-func (s *S3) Upload(bucket, key string, file NamedBinary) (string, error) {
-	buf := new(bytes.Buffer)
-	buf.Write(file.Content())
-	return s.upload(bucket, key, buf)
+func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
+	return s.upload(bucket, key, data)
 }
 
 // EmptyBucket deletes all objects within the bucket.

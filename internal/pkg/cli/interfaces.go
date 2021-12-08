@@ -307,6 +307,7 @@ type wsAddonManager interface {
 
 type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
+	Upload(bucket, key string, data io.Reader) (string, error)
 }
 
 type zipAndUploader interface {
@@ -315,13 +316,11 @@ type zipAndUploader interface {
 
 type Uploader interface {
 	zipAndUploader
-	Upload(bucket, key string, file s3.NamedBinary) (string, error)
 }
 
 type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-	UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {

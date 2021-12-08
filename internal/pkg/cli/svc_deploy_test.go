@@ -455,6 +455,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
 		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
 	)
+	mockEnvFilePath := fmt.Sprintf("%s/%s", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", mockEnvFile)
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		inEnvFile     string
@@ -470,7 +471,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 		"error if fail to put env file to s3 bucket": {
 			inEnvFile: mockEnvFile,
 			mock: func(m *deploySvcMocks) {
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return("", mockError)
 			},
 			wantErr: fmt.Errorf("put env file foo.env artifact to bucket mockBucket: some error"),
@@ -478,7 +479,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 		"error if fail to parse s3 url": {
 			inEnvFile: mockEnvFile,
 			mock: func(m *deploySvcMocks) {
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockBadEnvFileS3URL, nil)
 
 			},
@@ -490,7 +491,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 				Region: "sun-south-0",
 			},
 			mock: func(m *deploySvcMocks) {
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 			},
 			wantErr: fmt.Errorf("find the partition for region sun-south-0"),
@@ -505,7 +506,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 				Name: "mockApp",
 			},
 			mock: func(m *deploySvcMocks) {
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
 				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, "mockSvc.addons.stack.yml", gomock.Any()).
