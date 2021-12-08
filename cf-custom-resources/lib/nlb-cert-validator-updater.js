@@ -219,6 +219,8 @@ exports.handler = async function (event, context) {
             case "Update":
             case "Delete":
                 let unusedOptions = await unusedValidationOptions(aliases, loadBalancerDNS);
+                // await deleteCertificate(aliases);
+                // await deactivate(unusedOptions, loadBalancerDNS, loadBalancerHostedZoneID);
                 throw new Error(`The number of options to be deleted is: ${unusedOptions.size}`);
             default:
                 throw new Error(`Unsupported request type ${event.RequestType}`);
