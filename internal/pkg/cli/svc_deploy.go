@@ -46,6 +46,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -79,6 +80,7 @@ type deploySvcOpts struct {
 	store               store
 	deployStore         *deploy.Store
 	ws                  wsSvcDirReader
+	fs                  *afero.Afero
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
 	newInterpolator     func(app, env string) interpolator
@@ -111,6 +113,7 @@ type deploySvcOpts struct {
 	addonsURL         string
 	envFileARN        string
 	appEnvResources   *stack.AppRegionalResources
+	workspacePath     string
 	rdSvcAlias        string
 	svcUpdater        serviceUpdater
 
@@ -139,6 +142,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		store:       store,
 		deployStore: deployStore,
 		ws:          ws,
+		fs:          &afero.Afero{Fs: afero.NewOsFs()},
 		unmarshal:   manifest.UnmarshalWorkload,
 		spinner:     termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
@@ -424,11 +428,10 @@ func (o *deploySvcOpts) configureContainerImage() error {
 }
 
 func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArguments, error) {
-	copilotDir, err := o.ws.CopilotDirPath()
-	if err != nil {
-		return nil, fmt.Errorf("get copilot directory: %w", err)
+	if err := o.retrieveWorkspacePath(); err != nil {
+		return nil, err
 	}
-	return buildArgs(o.name, o.imageTag, copilotDir, svc)
+	return buildArgs(o.name, o.imageTag, o.workspacePath, svc)
 }
 
 func (o *deploySvcOpts) pushArtifactsToS3() error {
@@ -436,27 +439,30 @@ func (o *deploySvcOpts) pushArtifactsToS3() error {
 	if err != nil {
 		return err
 	}
-	if err := o.pushEnvFilesToS3Bucket(envFile(o.name, mft)); err != nil {
+	if err := o.pushEnvFilesToS3Bucket(envFile(mft)); err != nil {
 		return err
 	}
 	return o.pushAddonsTemplateToS3Bucket()
 }
 
-func (o *deploySvcOpts) pushEnvFilesToS3Bucket(fileName string) error {
-	if fileName == "" {
+func (o *deploySvcOpts) pushEnvFilesToS3Bucket(path string) error {
+	if path == "" {
 		return nil
 	}
-	content, err := o.ws.ReadSvcFile(o.name, fileName)
+	if err := o.retrieveWorkspacePath(); err != nil {
+		return err
+	}
+	content, err := o.fs.ReadFile(filepath.Join(o.workspacePath, path))
 	if err != nil {
-		return fmt.Errorf("read env file %s: %w", fileName, err)
+		return fmt.Errorf("read env file %s: %w", path, err)
 	}
 	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
 		return err
 	}
 	reader := bytes.NewReader(content)
-	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fileName, reader)
+	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, path, reader)
 	if err != nil {
-		return fmt.Errorf("put env file %s artifact to bucket %s: %w", fileName, o.appEnvResources.S3Bucket, err)
+		return fmt.Errorf("put env file %s artifact to bucket %s: %w", path, o.appEnvResources.S3Bucket, err)
 	}
 	bucket, key, err := s3.ParseURL(url)
 	if err != nil {
@@ -744,7 +750,7 @@ func (o *deploySvcOpts) forceDeploy() error {
 	return nil
 }
 
-func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
+func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 		ContainerPlatform() string
@@ -757,7 +763,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	if imageTag != "" {
 		tags = append(tags, imageTag)
 	}
-	args := mf.BuildArgs(filepath.Dir(copilotDir))
+	args := mf.BuildArgs(workspacePath)
 	return &dockerengine.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
@@ -769,11 +775,11 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	}, nil
 }
 
-func envFile(name string, unmarshaledManifest interface{}) string {
-	type envFiles interface {
+func envFile(unmarshaledManifest interface{}) string {
+	type envFile interface {
 		EnvFile() string
 	}
-	mf, ok := unmarshaledManifest.(envFiles)
+	mf, ok := unmarshaledManifest.(envFile)
 	if ok {
 		return mf.EnvFile()
 	}
@@ -921,6 +927,18 @@ func newUploadCustomResourcesOpts(opts *deploySvcOpts) *uploadCustomResourcesOpt
 			return s3Client, nil
 		},
 	}
+}
+
+func (o *deploySvcOpts) retrieveWorkspacePath() error {
+	if o.workspacePath != "" {
+		return nil
+	}
+	workspacePath, err := o.ws.Path()
+	if err != nil {
+		return fmt.Errorf("get workspace path: %w", err)
+	}
+	o.workspacePath = workspacePath
+	return nil
 }
 
 func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {

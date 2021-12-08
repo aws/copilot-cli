@@ -235,12 +235,8 @@ type manifestReader interface {
 	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }
 
-type envFileReader interface {
-	ReadSvcFile(svc, fname string) ([]byte, error)
-}
-
-type copilotDirGetter interface {
-	CopilotDirPath() (string, error)
+type workspacePathGetter interface {
+	Path() (string, error)
 }
 
 type wsPipelineManifestReader interface {
@@ -259,12 +255,11 @@ type serviceLister interface {
 type wsSvcReader interface {
 	serviceLister
 	manifestReader
-	envFileReader
 }
 
 type wsSvcDirReader interface {
 	wsSvcReader
-	copilotDirGetter
+	workspacePathGetter
 }
 
 type jobLister interface {
@@ -274,7 +269,6 @@ type jobLister interface {
 type wsJobReader interface {
 	manifestReader
 	jobLister
-	envFileReader
 }
 
 type wlLister interface {
@@ -283,13 +277,13 @@ type wlLister interface {
 
 type wsJobDirReader interface {
 	wsJobReader
-	copilotDirGetter
+	workspacePathGetter
 }
 
 type wsWlDirReader interface {
 	wsJobReader
 	wsSvcReader
-	copilotDirGetter
+	workspacePathGetter
 	wlLister
 	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)

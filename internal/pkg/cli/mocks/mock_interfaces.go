@@ -2189,80 +2189,42 @@ func (mr *MockmanifestReaderMockRecorder) ReadWorkloadManifest(name interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockmanifestReader)(nil).ReadWorkloadManifest), name)
 }
 
-// MockenvFileReader is a mock of envFileReader interface.
-type MockenvFileReader struct {
+// MockworkspacePathGetter is a mock of workspacePathGetter interface.
+type MockworkspacePathGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockenvFileReaderMockRecorder
+	recorder *MockworkspacePathGetterMockRecorder
 }
 
-// MockenvFileReaderMockRecorder is the mock recorder for MockenvFileReader.
-type MockenvFileReaderMockRecorder struct {
-	mock *MockenvFileReader
+// MockworkspacePathGetterMockRecorder is the mock recorder for MockworkspacePathGetter.
+type MockworkspacePathGetterMockRecorder struct {
+	mock *MockworkspacePathGetter
 }
 
-// NewMockenvFileReader creates a new mock instance.
-func NewMockenvFileReader(ctrl *gomock.Controller) *MockenvFileReader {
-	mock := &MockenvFileReader{ctrl: ctrl}
-	mock.recorder = &MockenvFileReaderMockRecorder{mock}
+// NewMockworkspacePathGetter creates a new mock instance.
+func NewMockworkspacePathGetter(ctrl *gomock.Controller) *MockworkspacePathGetter {
+	mock := &MockworkspacePathGetter{ctrl: ctrl}
+	mock.recorder = &MockworkspacePathGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockenvFileReader) EXPECT() *MockenvFileReaderMockRecorder {
+func (m *MockworkspacePathGetter) EXPECT() *MockworkspacePathGetterMockRecorder {
 	return m.recorder
 }
 
-// ReadSvcFile mocks base method.
-func (m *MockenvFileReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+// Path mocks base method.
+func (m *MockworkspacePathGetter) Path() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadSvcFile indicates an expected call of ReadSvcFile.
-func (mr *MockenvFileReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockenvFileReader)(nil).ReadSvcFile), svc, fname)
-}
-
-// MockcopilotDirGetter is a mock of copilotDirGetter interface.
-type MockcopilotDirGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockcopilotDirGetterMockRecorder
-}
-
-// MockcopilotDirGetterMockRecorder is the mock recorder for MockcopilotDirGetter.
-type MockcopilotDirGetterMockRecorder struct {
-	mock *MockcopilotDirGetter
-}
-
-// NewMockcopilotDirGetter creates a new mock instance.
-func NewMockcopilotDirGetter(ctrl *gomock.Controller) *MockcopilotDirGetter {
-	mock := &MockcopilotDirGetter{ctrl: ctrl}
-	mock.recorder = &MockcopilotDirGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcopilotDirGetter) EXPECT() *MockcopilotDirGetterMockRecorder {
-	return m.recorder
-}
-
-// CopilotDirPath mocks base method.
-func (m *MockcopilotDirGetter) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret := m.ctrl.Call(m, "Path")
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockcopilotDirGetterMockRecorder) CopilotDirPath() *gomock.Call {
+// Path indicates an expected call of Path.
+func (mr *MockworkspacePathGetterMockRecorder) Path() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockcopilotDirGetter)(nil).CopilotDirPath))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockworkspacePathGetter)(nil).Path))
 }
 
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface.
@@ -2432,21 +2394,6 @@ func (mr *MockwsSvcReaderMockRecorder) ListServices() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockwsSvcReader)(nil).ListServices))
 }
 
-// ReadSvcFile mocks base method.
-func (m *MockwsSvcReader) ReadSvcFile(svc, fname string) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadSvcFile indicates an expected call of ReadSvcFile.
-func (mr *MockwsSvcReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsSvcReader)(nil).ReadSvcFile), svc, fname)
-}
-
 // ReadWorkloadManifest mocks base method.
 func (m *MockwsSvcReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
@@ -2485,21 +2432,6 @@ func (m *MockwsSvcDirReader) EXPECT() *MockwsSvcDirReaderMockRecorder {
 	return m.recorder
 }
 
-// CopilotDirPath mocks base method.
-func (m *MockwsSvcDirReader) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
-}
-
 // ListServices mocks base method.
 func (m *MockwsSvcDirReader) ListServices() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -2515,19 +2447,19 @@ func (mr *MockwsSvcDirReaderMockRecorder) ListServices() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockwsSvcDirReader)(nil).ListServices))
 }
 
-// ReadSvcFile mocks base method.
-func (m *MockwsSvcDirReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+// Path mocks base method.
+func (m *MockwsSvcDirReader) Path() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadSvcFile indicates an expected call of ReadSvcFile.
-func (mr *MockwsSvcDirReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+// Path indicates an expected call of Path.
+func (mr *MockwsSvcDirReaderMockRecorder) Path() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadSvcFile), svc, fname)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockwsSvcDirReader)(nil).Path))
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2621,21 +2553,6 @@ func (mr *MockwsJobReaderMockRecorder) ListJobs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockwsJobReader)(nil).ListJobs))
 }
 
-// ReadSvcFile mocks base method.
-func (m *MockwsJobReader) ReadSvcFile(svc, fname string) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadSvcFile indicates an expected call of ReadSvcFile.
-func (mr *MockwsJobReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsJobReader)(nil).ReadSvcFile), svc, fname)
-}
-
 // ReadWorkloadManifest mocks base method.
 func (m *MockwsJobReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
 	m.ctrl.T.Helper()
@@ -2712,21 +2629,6 @@ func (m *MockwsJobDirReader) EXPECT() *MockwsJobDirReaderMockRecorder {
 	return m.recorder
 }
 
-// CopilotDirPath mocks base method.
-func (m *MockwsJobDirReader) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockwsJobDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsJobDirReader)(nil).CopilotDirPath))
-}
-
 // ListJobs mocks base method.
 func (m *MockwsJobDirReader) ListJobs() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -2742,19 +2644,19 @@ func (mr *MockwsJobDirReaderMockRecorder) ListJobs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockwsJobDirReader)(nil).ListJobs))
 }
 
-// ReadSvcFile mocks base method.
-func (m *MockwsJobDirReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+// Path mocks base method.
+func (m *MockwsJobDirReader) Path() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadSvcFile indicates an expected call of ReadSvcFile.
-func (mr *MockwsJobDirReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+// Path indicates an expected call of Path.
+func (mr *MockwsJobDirReaderMockRecorder) Path() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsJobDirReader)(nil).ReadSvcFile), svc, fname)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockwsJobDirReader)(nil).Path))
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2793,21 +2695,6 @@ func NewMockwsWlDirReader(ctrl *gomock.Controller) *MockwsWlDirReader {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockwsWlDirReader) EXPECT() *MockwsWlDirReaderMockRecorder {
 	return m.recorder
-}
-
-// CopilotDirPath mocks base method.
-func (m *MockwsWlDirReader) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockwsWlDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsWlDirReader)(nil).CopilotDirPath))
 }
 
 // ListDockerfiles mocks base method.
@@ -2870,19 +2757,19 @@ func (mr *MockwsWlDirReaderMockRecorder) ListWorkloads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwsWlDirReader)(nil).ListWorkloads))
 }
 
-// ReadSvcFile mocks base method.
-func (m *MockwsWlDirReader) ReadSvcFile(svc, fname string) ([]byte, error) {
+// Path mocks base method.
+func (m *MockwsWlDirReader) Path() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadSvcFile", svc, fname)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadSvcFile indicates an expected call of ReadSvcFile.
-func (mr *MockwsWlDirReaderMockRecorder) ReadSvcFile(svc, fname interface{}) *gomock.Call {
+// Path indicates an expected call of Path.
+func (mr *MockwsWlDirReaderMockRecorder) Path() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSvcFile", reflect.TypeOf((*MockwsWlDirReader)(nil).ReadSvcFile), svc, fname)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockwsWlDirReader)(nil).Path))
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -4385,7 +4272,7 @@ func (m *MockdomainInfoGetter) EXPECT() *MockdomainInfoGetterMockRecorder {
 	return m.recorder
 }
 
-// IsDomainOwned mocks base method.
+// IsRegisteredDomain mocks base method.
 func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRegisteredDomain", domainName)
@@ -4393,8 +4280,8 @@ func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
 	return ret0
 }
 
-// IsDomainOwned indicates an expected call of IsDomainOwned.
-func (mr *MockdomainInfoGetterMockRecorder) IsDomainOwned(domainName interface{}) *gomock.Call {
+// IsRegisteredDomain indicates an expected call of IsRegisteredDomain.
+func (mr *MockdomainInfoGetterMockRecorder) IsRegisteredDomain(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRegisteredDomain", reflect.TypeOf((*MockdomainInfoGetter)(nil).IsRegisteredDomain), domainName)
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -35,6 +36,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -43,6 +45,7 @@ type deployJobOpts struct {
 
 	store              store
 	ws                 wsJobDirReader
+	fs                 *afero.Afero
 	unmarshal          func(in []byte) (manifest.WorkloadManifest, error)
 	newInterpolator    func(app, env string) interpolator
 	cmd                runner
@@ -65,6 +68,7 @@ type deployJobOpts struct {
 	targetJob         *config.Workload
 	appEnvResources   *stack.AppRegionalResources
 	appliedManifest   interface{}
+	workspacePath     string
 	addonsURL         string
 	envFileARN        string
 	imageDigest       string
@@ -90,6 +94,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 
 		store:           store,
 		ws:              ws,
+		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		unmarshal:       manifest.UnmarshalWorkload,
 		spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
@@ -167,27 +172,30 @@ func (o *deployJobOpts) pushArtifactsToS3() error {
 	if err != nil {
 		return err
 	}
-	if err := o.pushEnvFilesToS3Bucket(envFile(o.name, mft)); err != nil {
+	if err := o.pushEnvFilesToS3Bucket(envFile(mft)); err != nil {
 		return err
 	}
 	return o.pushAddonsTemplateToS3Bucket()
 }
 
-func (o *deployJobOpts) pushEnvFilesToS3Bucket(fileName string) error {
-	if fileName == "" {
+func (o *deployJobOpts) pushEnvFilesToS3Bucket(path string) error {
+	if path == "" {
 		return nil
 	}
-	content, err := o.ws.ReadSvcFile(o.name, fileName)
+	if err := o.retrieveWorkspacePath(); err != nil {
+		return err
+	}
+	content, err := o.fs.ReadFile(filepath.Join(o.workspacePath, path))
 	if err != nil {
-		return fmt.Errorf("read env file %s: %w", fileName, err)
+		return fmt.Errorf("read env file %s: %w", path, err)
 	}
 	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
 		return err
 	}
 	reader := bytes.NewReader(content)
-	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fileName, reader)
+	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, path, reader)
 	if err != nil {
-		return fmt.Errorf("put env file %s artifact to bucket %s: %w", fileName, o.appEnvResources.S3Bucket, err)
+		return fmt.Errorf("put env file %s artifact to bucket %s: %w", path, o.appEnvResources.S3Bucket, err)
 	}
 	bucket, key, err := s3.ParseURL(url)
 	if err != nil {
@@ -222,6 +230,18 @@ func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() error {
 		return fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}
 	o.addonsURL = url
+	return nil
+}
+
+func (o *deployJobOpts) retrieveWorkspacePath() error {
+	if o.workspacePath != "" {
+		return nil
+	}
+	workspacePath, err := o.ws.Path()
+	if err != nil {
+		return fmt.Errorf("get workspace path: %w", err)
+	}
+	o.workspacePath = workspacePath
 	return nil
 }
 
@@ -320,11 +340,10 @@ func (o *deployJobOpts) configureContainerImage() error {
 }
 
 func (o *deployJobOpts) dfBuildArgs(job interface{}) (*dockerengine.BuildArguments, error) {
-	copilotDir, err := o.ws.CopilotDirPath()
-	if err != nil {
-		return nil, fmt.Errorf("get copilot directory: %w", err)
+	if err := o.retrieveWorkspacePath(); err != nil {
+		return nil, err
 	}
-	return buildArgs(o.name, o.imageTag, copilotDir, job)
+	return buildArgs(o.name, o.imageTag, o.workspacePath, job)
 }
 
 func (o *deployJobOpts) deployJob() error {

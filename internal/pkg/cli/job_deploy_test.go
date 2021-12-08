@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -261,10 +262,10 @@ on:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadWorkloadManifest(gomock.Any()).Return(mockManifest, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("", mockError),
+					m.mockWs.EXPECT().Path().Return("", mockError),
 				)
 			},
-			wantErr: fmt.Errorf("get copilot directory: %w", mockError),
+			wantErr: fmt.Errorf("get workspace path: %w", mockError),
 		},
 		"success without building and pushing": {
 			inputJob: "mailer",
@@ -272,7 +273,6 @@ on:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftNoBuild, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoBuild)).Return(string(mockMftNoBuild), nil),
-					m.mockWs.EXPECT().CopilotDirPath().Times(0),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Times(0),
 				)
 			},
@@ -283,7 +283,7 @@ on:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockManifest, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockWs.EXPECT().Path().Return("/ws/root/copilot", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Return("", mockError),
 				)
 			},
@@ -295,7 +295,7 @@ on:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockManifest, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockWs.EXPECT().Path().Return("/ws/root", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path"),
@@ -310,7 +310,7 @@ on:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftBuildString, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockMftBuildString)).Return(string(mockMftBuildString), nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockWs.EXPECT().Path().Return("/ws/root", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
@@ -325,7 +325,7 @@ on:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftNoContext, nil),
 					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoContext)).Return(string(mockMftNoContext), nil),
-					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockWs.EXPECT().Path().Return("/ws/root", nil),
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
@@ -396,17 +396,9 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 		wantEnvFileARN string
 		wantErr        error
 	}{
-		"error if fail to read env file": {
-			inEnvFile: mockEnvFile,
-			mock: func(m *deployJobMocks) {
-				m.mockWs.EXPECT().ReadSvcFile(mockJobName, mockEnvFile).Return(nil, mockError)
-			},
-			wantErr: fmt.Errorf("read env file foo.env: some error"),
-		},
 		"error if fail to put env file to s3 bucket": {
 			inEnvFile: mockEnvFile,
 			mock: func(m *deployJobMocks) {
-				m.mockWs.EXPECT().ReadSvcFile(mockJobName, mockEnvFile).Return([]byte{}, nil)
 				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
 					Return("", mockError)
 			},
@@ -415,7 +407,6 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 		"error if fail to parse s3 url": {
 			inEnvFile: mockEnvFile,
 			mock: func(m *deployJobMocks) {
-				m.mockWs.EXPECT().ReadSvcFile(mockJobName, mockEnvFile).Return([]byte{}, nil)
 				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
 					Return(mockBadEnvFileS3URL, nil)
 
@@ -428,7 +419,6 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 				Region: "sun-south-0",
 			},
 			mock: func(m *deployJobMocks) {
-				m.mockWs.EXPECT().ReadSvcFile(mockJobName, mockEnvFile).Return([]byte{}, nil)
 				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 			},
@@ -444,7 +434,6 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 				Name: "mockApp",
 			},
 			mock: func(m *deployJobMocks) {
-				m.mockWs.EXPECT().ReadSvcFile(mockJobName, mockEnvFile).Return([]byte{}, nil)
 				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, mockEnvFile, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
@@ -487,6 +476,8 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		fs := afero.NewMemMapFs()
+		afero.WriteFile(fs, mockEnvFile, []byte{}, 0644)
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -505,7 +496,9 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 				addons:            m.mockAddons,
 				s3:                m.mockS3Svc,
 				ws:                m.mockWs,
+				fs:                &afero.Afero{Fs: fs},
 				appliedManifest:   &mockWorkloadMft{tc.inEnvFile},
+				workspacePath:     ".",
 				targetEnvironment: tc.inEnvironment,
 				targetApp:         tc.inApp,
 				appEnvResources: &stack.AppRegionalResources{

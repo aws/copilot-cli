@@ -87,14 +87,14 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"errors checking if the domain is owned by the account": {
 			inDomainName: "badMockDomain.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("badMockDomain.com").Return(errors.New("some error"))
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("badMockDomain.com").Return(errors.New("some error"))
 			},
 			wantedError: errors.New("check if domain is owned by the account: some error"),
 		},
 		"invalid domain name that doesn't have a hosted zone": {
 			inDomainName: "badMockDomain.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("badMockDomain.com").Return(nil)
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("badMockDomain.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", &route53.ErrDomainHostedZoneNotFound{})
 			},
 			wantedError: fmt.Errorf("get hosted zone ID for domain badMockDomain.com: %w", &route53.ErrDomainHostedZoneNotFound{}),
@@ -102,7 +102,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"errors if failed to validate that domain has a hosted zone": {
 			inDomainName: "mockDomain.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("mockDomain.com").Return(nil)
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("mockDomain.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("", errors.New("some error"))
 			},
 			wantedError: errors.New("get hosted zone ID for domain mockDomain.com: some error"),
@@ -111,13 +111,13 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			inDomainName: "mockDomain.com",
 			mock: func(m *initAppMocks) {
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("mockHostedZoneID", nil)
-				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("mockDomain.com").Return(nil)
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("mockDomain.com").Return(nil)
 			},
 		},
 		"valid domain name containing multiple dots": {
 			inDomainName: "hello.dog.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsDomainOwned("hello.dog.com").Return(nil)
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("hello.dog.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("hello.dog.com").Return("mockHostedZoneID", nil)
 			},
 		},
