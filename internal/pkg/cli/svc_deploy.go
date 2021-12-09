@@ -5,7 +5,6 @@ package cli
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -72,7 +71,7 @@ type deployWkldVars struct {
 
 type uploadCustomResourcesOpts struct {
 	uploader      customResourcesUploader
-	newS3Uploader func() (Uploader, error)
+	newS3Uploader func() (uploader, error)
 }
 
 type deploySvcOpts struct {
@@ -85,7 +84,7 @@ type deploySvcOpts struct {
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
 	newInterpolator     func(app, env string) interpolator
-	s3                  artifactUploader
+	s3                  uploader
 	cmd                 runner
 	addons              templater
 	appCFN              appResourcesGetter
@@ -461,7 +460,7 @@ func (o *deploySvcOpts) pushEnvFilesToS3Bucket(path string) error {
 		return err
 	}
 	reader := bytes.NewReader(content)
-	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, fmt.Sprintf("%x/%s", sha256.Sum256(content), path), reader)
+	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, s3.MkdirSHA256(path, content), reader)
 	if err != nil {
 		return fmt.Errorf("put env file %s artifact to bucket %s: %w", path, o.appEnvResources.S3Bucket, err)
 	}
@@ -493,7 +492,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() error {
 		return err
 	}
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
 		return fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}
@@ -918,7 +917,7 @@ To upgrade the application, please run %s first (see https://aws.github.io/copil
 func newUploadCustomResourcesOpts(opts *deploySvcOpts) *uploadCustomResourcesOpts {
 	return &uploadCustomResourcesOpts{
 		uploader: template.New(),
-		newS3Uploader: func() (Uploader, error) {
+		newS3Uploader: func() (uploader, error) {
 			envRegion := opts.targetEnvironment.Region
 			sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
 			if err != nil {

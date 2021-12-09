@@ -60,7 +60,7 @@ type envUpgradeOpts struct {
 	// These functions are overridden in tests to provide mocks.
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
-	newS3               func(region string) (zipAndUploader, error)
+	newS3               func(region string) (uploader, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
@@ -105,7 +105,7 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 			}
 			return cloudformation.New(sess), nil
 		},
-		newS3: func(region string) (zipAndUploader, error) {
+		newS3: func(region string) (uploader, error) {
 			sess, err := sessions.NewProvider().DefaultWithRegion(region)
 			if err != nil {
 				return nil, fmt.Errorf("create session with region %s: %v", region, err)

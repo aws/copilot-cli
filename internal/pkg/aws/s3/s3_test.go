@@ -10,9 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strconv"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 
@@ -23,76 +21,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
-
-func TestS3_PutArtifact(t *testing.T) {
-	buf := &bytes.Buffer{}
-	fmt.Fprint(buf, "some data")
-	timeNow := strconv.FormatInt(time.Now().Unix(), 10)
-	testCases := map[string]struct {
-		inBucket            string
-		inFileName          string
-		inData              *bytes.Buffer
-		mockS3ManagerClient func(m *mocks.Mocks3ManagerAPI)
-
-		wantErr  error
-		wantPath string
-	}{
-		"should put artifact to s3 bucket and return the path": {
-			inBucket:   "mockBucket",
-			inData:     buf,
-			inFileName: "my-app.addons.stack.yml",
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
-				m.EXPECT().Upload(&s3manager.UploadInput{
-					Body:   buf,
-					Bucket: aws.String("mockBucket"),
-					Key:    aws.String(fmt.Sprintf("manual/%s/my-app.addons.stack.yml", timeNow)),
-				}).Return(&s3manager.UploadOutput{
-					Location: fmt.Sprintf("https://mockBucket/manual/%s/my-app.addons.stack.yml", timeNow),
-				}, nil)
-			},
-
-			wantPath: fmt.Sprintf("https://mockBucket/manual/%s/my-app.addons.stack.yml", timeNow),
-		},
-		"should return error if fail to upload": {
-			inBucket:   "mockBucket",
-			inData:     buf,
-			inFileName: "my-app.addons.stack.yml",
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
-				m.EXPECT().Upload(&s3manager.UploadInput{
-					Body:   buf,
-					Bucket: aws.String("mockBucket"),
-					Key:    aws.String(fmt.Sprintf("manual/%s/my-app.addons.stack.yml", timeNow)),
-				}).Return(nil, errors.New("some error"))
-			},
-
-			wantErr: fmt.Errorf(fmt.Sprintf("put manual/%s/my-app.addons.stack.yml to bucket mockBucket: some error", timeNow)),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockS3ManagerClient := mocks.NewMocks3ManagerAPI(ctrl)
-			tc.mockS3ManagerClient(mockS3ManagerClient)
-
-			service := S3{
-				s3Manager: mockS3ManagerClient,
-			}
-
-			gotPath, gotErr := service.PutArtifact(tc.inBucket, tc.inFileName, tc.inData)
-
-			if gotErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
-			} else {
-				require.Equal(t, tc.wantPath, gotPath)
-			}
-		})
-
-	}
-}
 
 func TestS3_ZipAndUpload(t *testing.T) {
 	testCases := map[string]struct {

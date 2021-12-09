@@ -305,17 +305,9 @@ type wsAddonManager interface {
 	wlLister
 }
 
-type artifactUploader interface {
-	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
+type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
-}
-
-type zipAndUploader interface {
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
-}
-
-type Uploader interface {
-	zipAndUploader
 }
 
 type customResourcesUploader interface {

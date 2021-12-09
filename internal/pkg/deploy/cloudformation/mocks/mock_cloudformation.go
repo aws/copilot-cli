@@ -518,19 +518,19 @@ func (m *Mocks3Client) EXPECT() *Mocks3ClientMockRecorder {
 	return m.recorder
 }
 
-// PutArtifact mocks base method.
-func (m *Mocks3Client) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
+// Upload mocks base method.
+func (m *Mocks3Client) Upload(bucket, fileName string, data io.Reader) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PutArtifact", bucket, fileName, data)
+	ret := m.ctrl.Call(m, "Upload", bucket, fileName, data)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// PutArtifact indicates an expected call of PutArtifact.
-func (mr *Mocks3ClientMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
+// Upload indicates an expected call of Upload.
+func (mr *Mocks3ClientMockRecorder) Upload(bucket, fileName, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*Mocks3Client)(nil).PutArtifact), bucket, fileName, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mocks3Client)(nil).Upload), bucket, fileName, data)
 }
 
 // MockstackSetClient is a mock of stackSetClient interface.

@@ -6,7 +6,6 @@ package template
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -159,7 +158,7 @@ func (t *Template) uploadFileToCompress(upload s3.CompressAndUploadFunc, file fi
 	// Suffix with a SHA256 checksum of the fileToCompress so that
 	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
 	// same content then the URL generated will be identical.
-	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), nameBinaries...)
+	url, err := upload(s3.MkdirSHA256(file.name, contents), nameBinaries...)
 	if err != nil {
 		return "", fmt.Errorf("upload %s: %w", file.name, err)
 	}

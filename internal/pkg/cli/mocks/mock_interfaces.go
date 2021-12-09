@@ -2975,46 +2975,31 @@ func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
 }
 
-// MockartifactUploader is a mock of artifactUploader interface.
-type MockartifactUploader struct {
+// Mockuploader is a mock of uploader interface.
+type Mockuploader struct {
 	ctrl     *gomock.Controller
-	recorder *MockartifactUploaderMockRecorder
+	recorder *MockuploaderMockRecorder
 }
 
-// MockartifactUploaderMockRecorder is the mock recorder for MockartifactUploader.
-type MockartifactUploaderMockRecorder struct {
-	mock *MockartifactUploader
+// MockuploaderMockRecorder is the mock recorder for Mockuploader.
+type MockuploaderMockRecorder struct {
+	mock *Mockuploader
 }
 
-// NewMockartifactUploader creates a new mock instance.
-func NewMockartifactUploader(ctrl *gomock.Controller) *MockartifactUploader {
-	mock := &MockartifactUploader{ctrl: ctrl}
-	mock.recorder = &MockartifactUploaderMockRecorder{mock}
+// NewMockuploader creates a new mock instance.
+func NewMockuploader(ctrl *gomock.Controller) *Mockuploader {
+	mock := &Mockuploader{ctrl: ctrl}
+	mock.recorder = &MockuploaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockartifactUploader) EXPECT() *MockartifactUploaderMockRecorder {
+func (m *Mockuploader) EXPECT() *MockuploaderMockRecorder {
 	return m.recorder
 }
 
-// PutArtifact mocks base method.
-func (m *MockartifactUploader) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PutArtifact", bucket, fileName, data)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PutArtifact indicates an expected call of PutArtifact.
-func (mr *MockartifactUploaderMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactUploader)(nil).PutArtifact), bucket, fileName, data)
-}
-
 // Upload mocks base method.
-func (m *MockartifactUploader) Upload(bucket, key string, data io.Reader) (string, error) {
+func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
 	ret0, _ := ret[0].(string)
@@ -3023,36 +3008,13 @@ func (m *MockartifactUploader) Upload(bucket, key string, data io.Reader) (strin
 }
 
 // Upload indicates an expected call of Upload.
-func (mr *MockartifactUploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
+func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockartifactUploader)(nil).Upload), bucket, key, data)
-}
-
-// MockzipAndUploader is a mock of zipAndUploader interface.
-type MockzipAndUploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockzipAndUploaderMockRecorder
-}
-
-// MockzipAndUploaderMockRecorder is the mock recorder for MockzipAndUploader.
-type MockzipAndUploaderMockRecorder struct {
-	mock *MockzipAndUploader
-}
-
-// NewMockzipAndUploader creates a new mock instance.
-func NewMockzipAndUploader(ctrl *gomock.Controller) *MockzipAndUploader {
-	mock := &MockzipAndUploader{ctrl: ctrl}
-	mock.recorder = &MockzipAndUploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockzipAndUploader) EXPECT() *MockzipAndUploaderMockRecorder {
-	return m.recorder
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), bucket, key, data)
 }
 
 // ZipAndUpload mocks base method.
-func (m *MockzipAndUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
+func (m *Mockuploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{bucket, key}
 	for _, a := range files {
@@ -3065,53 +3027,10 @@ func (m *MockzipAndUploader) ZipAndUpload(bucket, key string, files ...s3.NamedB
 }
 
 // ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockzipAndUploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
+func (mr *MockuploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{bucket, key}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockzipAndUploader)(nil).ZipAndUpload), varargs...)
-}
-
-// MockUploader is a mock of Uploader interface.
-type MockUploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockUploaderMockRecorder
-}
-
-// MockUploaderMockRecorder is the mock recorder for MockUploader.
-type MockUploaderMockRecorder struct {
-	mock *MockUploader
-}
-
-// NewMockUploader creates a new mock instance.
-func NewMockUploader(ctrl *gomock.Controller) *MockUploader {
-	mock := &MockUploader{ctrl: ctrl}
-	mock.recorder = &MockUploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUploader) EXPECT() *MockUploaderMockRecorder {
-	return m.recorder
-}
-
-// ZipAndUpload mocks base method.
-func (m *MockUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{bucket, key}
-	for _, a := range files {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ZipAndUpload", varargs...)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockUploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{bucket, key}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockUploader)(nil).ZipAndUpload), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*Mockuploader)(nil).ZipAndUpload), varargs...)
 }
 
 // MockcustomResourcesUploader is a mock of customResourcesUploader interface.

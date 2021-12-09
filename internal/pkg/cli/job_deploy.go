@@ -5,7 +5,6 @@ package cli
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -55,7 +54,7 @@ type deployJobOpts struct {
 	jobCFN             cloudformation.CloudFormation
 	imageBuilderPusher imageBuilderPusher
 	sessProvider       sessionProvider
-	s3                 artifactUploader
+	s3                 uploader
 	envUpgradeCmd      actionCommand
 	endpointGetter     endpointGetter
 
@@ -194,7 +193,7 @@ func (o *deployJobOpts) pushEnvFilesToS3Bucket(path string) error {
 		return err
 	}
 	reader := bytes.NewReader(content)
-	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, fmt.Sprintf("%x/%s", sha256.Sum256(content), path), reader)
+	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, s3.MkdirSHA256(path, content), reader)
 	if err != nil {
 		return fmt.Errorf("put env file %s artifact to bucket %s: %w", path, o.appEnvResources.S3Bucket, err)
 	}
@@ -226,7 +225,7 @@ func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() error {
 		return err
 	}
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
 		return fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}

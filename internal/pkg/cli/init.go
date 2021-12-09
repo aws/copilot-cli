@@ -144,7 +144,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity:    id,
 		appCFN:      cloudformation.New(defaultSess),
 		uploader:    template.New(),
-		newS3: func(region string) (zipAndUploader, error) {
+		newS3: func(region string) (uploader, error) {
 			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, err

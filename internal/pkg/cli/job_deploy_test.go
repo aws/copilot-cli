@@ -25,7 +25,7 @@ type deployJobMocks struct {
 	mockWs                 *mocks.MockwsJobDirReader
 	mockimageBuilderPusher *mocks.MockimageBuilderPusher
 	mockInterpolator       *mocks.Mockinterpolator
-	mockS3Svc              *mocks.MockartifactUploader
+	mockS3Svc              *mocks.Mockuploader
 	mockAddons             *mocks.Mocktemplater
 }
 
@@ -384,7 +384,7 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
 		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
 	)
-	mockEnvFilePath := fmt.Sprintf("%s/%s", "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", mockEnvFile)
+	mockEnvFilePath := fmt.Sprintf("%s/%s/%s", "manual", "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", mockEnvFile)
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		inEnvFile     string
@@ -438,7 +438,7 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, "mockJob.addons.stack.yml", gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, "mockJob.addons.stack.yml", gomock.Any()).
 					Return(mockAddonsS3URL, nil)
 			},
 
@@ -455,7 +455,7 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 			},
 			mock: func(m *deployJobMocks) {
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, "mockJob.addons.stack.yml", gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, "mockJob.addons.stack.yml", gomock.Any()).
 					Return("", mockError)
 			},
 
@@ -485,7 +485,7 @@ func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
 
 			m := &deployJobMocks{
 				mockWs:     mocks.NewMockwsJobDirReader(ctrl),
-				mockS3Svc:  mocks.NewMockartifactUploader(ctrl),
+				mockS3Svc:  mocks.NewMockuploader(ctrl),
 				mockAddons: mocks.NewMocktemplater(ctrl),
 			}
 			tc.mock(m)

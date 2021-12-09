@@ -44,7 +44,7 @@ type deploySvcMocks struct {
 	mockDeployStore        *mocks.MockdeployedEnvironmentLister
 	mockEnvDescriber       *mocks.MockenvDescriber
 	mockSubnetLister       *mocks.MockvpcSubnetLister
-	mockS3Svc              *mocks.MockartifactUploader
+	mockS3Svc              *mocks.Mockuploader
 	mockAddons             *mocks.Mocktemplater
 }
 
@@ -455,7 +455,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
 		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
 	)
-	mockEnvFilePath := fmt.Sprintf("%s/%s", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", mockEnvFile)
+	mockEnvFilePath := fmt.Sprintf("%s/%s/%s", "manual", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", mockEnvFile)
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		inEnvFile     string
@@ -509,7 +509,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, "mockSvc.addons.stack.yml", gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, "mockSvc.addons.stack.yml", gomock.Any()).
 					Return(mockAddonsS3URL, nil)
 			},
 
@@ -526,7 +526,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
-				m.mockS3Svc.EXPECT().PutArtifact(mockS3Bucket, "mockSvc.addons.stack.yml", gomock.Any()).
+				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, "mockSvc.addons.stack.yml", gomock.Any()).
 					Return("", mockError)
 			},
 
@@ -556,7 +556,7 @@ func TestSvcDeployOpts_pushToS3Bucket(t *testing.T) {
 
 			m := &deploySvcMocks{
 				mockWs:     mocks.NewMockwsSvcDirReader(ctrl),
-				mockS3Svc:  mocks.NewMockartifactUploader(ctrl),
+				mockS3Svc:  mocks.NewMockuploader(ctrl),
 				mockAddons: mocks.NewMocktemplater(ctrl),
 			}
 			tc.mock(m)
@@ -1286,7 +1286,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				},
 				uploadOpts: &uploadCustomResourcesOpts{
 					uploader: m.mockUploader,
-					newS3Uploader: func() (Uploader, error) {
+					newS3Uploader: func() (uploader, error) {
 						return nil, nil
 					},
 				},
