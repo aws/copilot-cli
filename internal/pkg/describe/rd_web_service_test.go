@@ -53,7 +53,7 @@ Resources
 
 type apprunnerSvcDescriberMocks struct {
 	storeSvc        *mocks.MockDeployedEnvServicesLister
-	ecsSvcDescriber *mocks.MockapprunnerStackDescriber
+	ecsSvcDescriber *mocks.MockapprunnerDescriber
 }
 
 func TestRDWebServiceDescriber_Describe(t *testing.T) {
@@ -210,7 +210,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMockapprunnerStackDescriber(ctrl)
+			mockSvcDescriber := mocks.NewMockapprunnerDescriber(ctrl)
 			mocks := apprunnerSvcDescriberMocks{
 				storeSvc:        mockStore,
 				ecsSvcDescriber: mockSvcDescriber,

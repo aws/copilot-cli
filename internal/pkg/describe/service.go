@@ -83,12 +83,13 @@ type apprunnerClient interface {
 
 type workloadStackDescriber interface {
 	Params() (map[string]string, error)
+	Outputs() (map[string]string, error)
 	ServiceStackResources() ([]*stack.Resource, error)
 }
 
 type ecsDescriber interface {
 	workloadStackDescriber
-	Outputs() (map[string]string, error)
+
 	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
@@ -96,6 +97,7 @@ type ecsDescriber interface {
 
 type apprunnerDescriber interface {
 	workloadStackDescriber
+
 	Service() (*apprunner.Service, error)
 	ServiceARN() (string, error)
 	ServiceURL() (string, error)
