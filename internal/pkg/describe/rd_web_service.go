@@ -23,7 +23,7 @@ type RDWebServiceDescriber struct {
 
 	store            DeployedEnvServicesLister
 	initClients      func(string) error
-	envSvcDescribers map[string]apprunnerStackDescriber
+	envSvcDescribers map[string]apprunnerDescriber
 }
 
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
@@ -34,7 +34,7 @@ func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, err
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
 
-		envSvcDescribers: make(map[string]apprunnerStackDescriber),
+		envSvcDescribers: make(map[string]apprunnerDescriber),
 	}
 	describer.initClients = func(env string) error {
 		if _, ok := describer.envSvcDescribers[env]; ok {

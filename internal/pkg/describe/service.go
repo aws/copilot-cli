@@ -81,18 +81,21 @@ type apprunnerClient interface {
 	DescribeService(svcArn string) (*apprunner.Service, error)
 }
 
-type ecsDescriber interface {
+type workloadStackDescriber interface {
 	Params() (map[string]string, error)
+	ServiceStackResources() ([]*stack.Resource, error)
+}
+
+type ecsDescriber interface {
+	workloadStackDescriber
 	Outputs() (map[string]string, error)
 	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
-	ServiceStackResources() ([]*stack.Resource, error)
 }
 
-type apprunnerStackDescriber interface {
-	Params() (map[string]string, error)
-	ServiceStackResources() ([]*stack.Resource, error)
+type apprunnerDescriber interface {
+	workloadStackDescriber
 	Service() (*apprunner.Service, error)
 	ServiceARN() (string, error)
 	ServiceURL() (string, error)
@@ -184,8 +187,8 @@ type NewServiceConfig struct {
 	DeployStore     DeployedEnvServicesLister
 }
 
-// NewServiceStackDescriber instantiates the core elements of a new service.
-func NewServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
+// newServiceStackDescriber instantiates the core elements of a new service.
+func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
 	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
@@ -206,7 +209,7 @@ func NewServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, err
 
 // NewECSServiceDescriber instantiates a new non-App Runner service.
 func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) {
-	serviceDescriber, err := NewServiceStackDescriber(opt)
+	serviceDescriber, err := newServiceStackDescriber(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +221,7 @@ func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) 
 
 // NewAppRunnerServiceDescriber instantiates a new App Runner service.
 func NewAppRunnerServiceDescriber(opt NewServiceConfig) (*AppRunnerServiceDescriber, error) {
-	serviceDescriber, err := NewServiceStackDescriber(opt)
+	serviceDescriber, err := newServiceStackDescriber(opt)
 	if err != nil {
 		return nil, err
 	}

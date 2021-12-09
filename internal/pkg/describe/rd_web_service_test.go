@@ -225,7 +225,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 				store:           mockStore,
 				initClients:     func(string) error { return nil },
 
-				envSvcDescribers: map[string]apprunnerStackDescriber{
+				envSvcDescribers: map[string]apprunnerDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,
 				},
