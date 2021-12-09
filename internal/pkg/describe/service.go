@@ -209,26 +209,26 @@ func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, err
 
 // NewECSServiceDescriber instantiates a new non-App Runner service.
 func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) {
-	serviceDescriber, err := newServiceStackDescriber(opt)
+	stackDescriber, err := newServiceStackDescriber(opt)
 	if err != nil {
 		return nil, err
 	}
 	return &ECSServiceDescriber{
-		serviceStackDescriber: serviceDescriber,
-		ecsClient: ecs.New(serviceDescriber.sess),
+		serviceStackDescriber: stackDescriber,
+		ecsClient: ecs.New(stackDescriber.sess),
 	}, nil
 }
 
 // NewAppRunnerServiceDescriber instantiates a new App Runner service.
 func NewAppRunnerServiceDescriber(opt NewServiceConfig) (*AppRunnerServiceDescriber, error) {
-	serviceDescriber, err := newServiceStackDescriber(opt)
+	stackDescriber, err := newServiceStackDescriber(opt)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AppRunnerServiceDescriber{
-		serviceStackDescriber: serviceDescriber,
-		apprunnerClient:       apprunner.New(serviceDescriber.sess),
+		serviceStackDescriber: stackDescriber,
+		apprunnerClient:       apprunner.New(stackDescriber.sess),
 	}, nil
 }
 
