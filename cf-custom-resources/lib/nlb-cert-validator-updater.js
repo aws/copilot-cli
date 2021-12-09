@@ -293,7 +293,7 @@ async function requestCertificate({ aliases, idempotencyToken }) {
                 Value: serviceName,
             }
         ],
-        ValidationMethod: "DNS",
+        ValidationMethod: "DNS"
     }).promise();
     return CertificateArn;
 }
