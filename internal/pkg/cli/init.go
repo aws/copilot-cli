@@ -230,6 +230,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					initJobVars: jobVars,
 
 					fs:           fs,
+					store:        ssm,
 					init:         wlInitializer,
 					sel:          sel,
 					prompt:       prompt,
@@ -253,6 +254,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					fs:           fs,
 					init:         wlInitializer,
 					sel:          sel,
+					store:        ssm,
 					topicSel:     snsSel,
 					mftReader:    ws,
 					prompt:       prompt,

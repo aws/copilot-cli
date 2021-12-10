@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
@@ -32,6 +33,7 @@ type initSvcMocks struct {
 	mockDockerfile   *mocks.MockdockerfileParser
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
+	mockStore        *mocks.Mockstore
 }
 
 func TestSvcInitOpts_Validate(t *testing.T) {
@@ -45,6 +47,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		inSubscribeTags  []string
 		inNoSubscribe    bool
 
+		setupMocks     func(mocks initSvcMocks)
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
 	}{
@@ -84,7 +87,10 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inSvcName:       "service",
 			inSubscribeTags: []string{"name:svc"},
 			inNoSubscribe:   true,
-			wantedErr:       errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService("phonetool", "service").Return(nil, &config.ErrNoSuchService{})
+			},
+			wantedErr: errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",
@@ -92,6 +98,9 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "./hello/Dockerfile",
 			inAppName:        "phonetool",
 
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService("phonetool", "frontend").Return(nil, &config.ErrNoSuchService{})
+			},
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
@@ -102,6 +111,16 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockstore := mocks.NewMockstore(ctrl)
+			mocks := initSvcMocks{
+				mockStore: mockstore,
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(mocks)
+			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
 					initWkldVars: initWkldVars{
@@ -115,7 +134,8 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 					},
 					port: tc.inSvcPort,
 				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				store: mockstore,
+				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
@@ -136,6 +156,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 
 func TestSvcInitOpts_Ask(t *testing.T) {
 	const (
+		mockAppName          = "phonetool"
 		wantedSvcType        = manifest.LoadBalancedWebServiceType
 		wantedSvcName        = "frontend"
 		wantedDockerfilePath = "frontend/Dockerfile"
@@ -165,6 +186,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			setupMocks: func(m initSvcMocks) {
 				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
 			wantedErr: nil,
@@ -180,6 +202,32 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("get service name: some error"),
+		},
+		"returns an error if service already exists": {
+			inSvcType:        wantedSvcType,
+			inSvcName:        "",
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedSvcName, nil)
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(&config.Workload{}, nil)
+			},
+			wantedErr: fmt.Errorf("service frontend already exists"),
+		},
+		"returns an error if fail to validate service existence": {
+			inSvcType:        wantedSvcType,
+			inSvcName:        "",
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this service?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedSvcName, nil)
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, mockError)
+			},
+			wantedErr: fmt.Errorf("validate if service exists: mock error"),
 		},
 		"skip asking questions if local manifest file exists": {
 			inSvcType: "Worker Service",
@@ -495,6 +543,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockTopicSel := mocks.NewMocktopicSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mocks := initSvcMocks{
 				mockPrompt:       mockPrompt,
 				mockDockerfile:   mockDockerfile,
@@ -502,6 +551,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				mocktopicSel:     mockTopicSel,
 				mockDockerEngine: mockDockerEngine,
 				mockMftReader:    mockManifestReader,
+				mockStore:        mockStore,
 			}
 			tc.setupMocks(mocks)
 
@@ -514,10 +564,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 						dockerfilePath: tc.inDockerfilePath,
 						noSubscribe:    tc.inNoSubscribe,
 						subscriptions:  tc.inSubscribeTags,
+						appName:        mockAppName,
 					},
 					port: tc.inSvcPort,
 				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				store: mockStore,
+				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				dockerfile: func(s string) dockerfileParser {
 					return mockDockerfile
 				},

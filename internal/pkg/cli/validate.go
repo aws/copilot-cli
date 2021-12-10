@@ -212,7 +212,7 @@ func validateJobType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(jobType, manifest.JobTypes, job)
+	return validateWorkloadType(jobType, manifest.JobTypes, "job")
 }
 
 func validateJobName(val interface{}) error {
