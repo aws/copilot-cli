@@ -52,7 +52,7 @@ type LoadBalancedWebService struct {
 type LoadBalancedWebServiceConfig struct {
 	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      `yaml:"http,flow"`
+	RoutingRule      RoutingRuleConfigOrBool `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
@@ -104,9 +104,11 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			ImageConfig: ImageWithPortAndHealthcheck{},
-			RoutingRule: RoutingRule{
-				HealthCheck: HealthCheckArgsOrString{
-					HealthCheckPath: aws.String(DefaultHealthCheckPath),
+			RoutingRule: RoutingRuleConfigOrBool{
+				RoutingRuleConfiguration: RoutingRuleConfiguration{
+					HealthCheck: HealthCheckArgsOrString{
+						HealthCheckPath: aws.String(DefaultHealthCheckPath),
+					},
 				},
 			},
 			TaskConfig: TaskConfig{
@@ -199,8 +201,42 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 	return &s, nil
 }
 
-// RoutingRule holds the path to route requests to the service.
-type RoutingRule struct {
+// RoutingRuleConfigOrBool holds advanced configuration for routing rule or a boolean switch.
+type RoutingRuleConfigOrBool struct {
+	RoutingRuleConfiguration
+	Enabled *bool
+}
+
+func (r *RoutingRuleConfigOrBool) isEmpty() bool {
+	return r.RoutingRuleConfiguration.isEmpty() && r.Enabled == nil
+}
+
+// UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
+// bool or a struct alternately.
+func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.RoutingRuleConfiguration); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !r.RoutingRuleConfiguration.isEmpty() {
+		// Unmarshalled successfully to r.Advanced, unset r.Enabled, and return.
+		r.Enabled = nil
+		return nil
+	}
+
+	if err := value.Decode(&r.Enabled); err != nil {
+		return errors.New(`cannot marshal "http" field into bool or map`)
+	}
+	return nil
+}
+
+// RoutingRuleConfiguration holds the path to route requests to the service.
+type RoutingRuleConfiguration struct {
 	Path                *string                 `yaml:"path"`
 	ProtocolVersion     *string                 `yaml:"version"`
 	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
@@ -213,7 +249,7 @@ type RoutingRule struct {
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
 }
 
-func (r *RoutingRule) targetContainer() *string {
+func (r *RoutingRuleConfiguration) targetContainer() *string {
 	if r.TargetContainer == nil && r.TargetContainerCamelCase == nil {
 		return nil
 	}
@@ -221,6 +257,11 @@ func (r *RoutingRule) targetContainer() *string {
 		return r.TargetContainer
 	}
 	return r.TargetContainerCamelCase
+}
+
+func (r *RoutingRuleConfiguration) isEmpty() bool {
+	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() && r.TargetContainer == nil &&
+		r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil
 }
 
 // NetworkLoadBalancerConfiguration holds options for a network load balancer

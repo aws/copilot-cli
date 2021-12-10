@@ -119,7 +119,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	testLBWebServiceManifest.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 		Retries: aws.Int(5),
 	}
-	testLBWebServiceManifest.Alias = manifest.Alias{String: aws.String("mockAlias")}
+	testLBWebServiceManifest.RoutingRule.Alias = manifest.Alias{String: aws.String("mockAlias")}
 	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
@@ -378,14 +378,14 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
+	testLBWebServiceManifestWithSidecar.RoutingRule.TargetContainer = aws.String("xray")
 	testLBWebServiceManifestWithSidecar.Sidecars = map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("5000"),
 		},
 	}
 	testLBWebServiceManifestWithStickiness := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
+	testLBWebServiceManifestWithStickiness.RoutingRule.Stickiness = aws.Bool(true)
 	testLBWebServiceManifestWithExecEnabled := manifest.NewLoadBalancedWebService(baseProps)
 	testLBWebServiceManifestWithExecEnabled.ExecuteCommand = manifest.ExecuteCommand{
 		Enable: aws.Bool(false),

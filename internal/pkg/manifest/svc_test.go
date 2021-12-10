@@ -95,19 +95,21 @@ environments:
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
-						RoutingRule: RoutingRule{
-							Alias: Alias{
-								StringSlice: []string{
-									"foobar.com",
-									"v1.foobar.com",
+						RoutingRule: RoutingRuleConfigOrBool{
+							RoutingRuleConfiguration: RoutingRuleConfiguration{
+								Alias: Alias{
+									StringSlice: []string{
+										"foobar.com",
+										"v1.foobar.com",
+									},
 								},
+								Path:            aws.String("svc"),
+								TargetContainer: aws.String("frontend"),
+								HealthCheck: HealthCheckArgsOrString{
+									HealthCheckPath: aws.String("/"),
+								},
+								AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 							},
-							Path:            aws.String("svc"),
-							TargetContainer: aws.String("frontend"),
-							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
-							},
-							AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 						},
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(512),

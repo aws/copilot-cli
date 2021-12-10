@@ -1170,8 +1170,10 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 									Port: aws.Uint16(80),
 								},
 							},
-							RoutingRule: manifest.RoutingRule{
-								Alias: tc.inAliases,
+							RoutingRule: manifest.RoutingRuleConfigOrBool{
+								RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+									Alias: tc.inAliases,
+								},
 							},
 							NLBConfig: tc.inNLB,
 						},

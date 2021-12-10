@@ -125,7 +125,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		case *manifest.LoadBalancedWebService:
 			var opts []stack.LoadBalancedWebServiceOption
 			if app.RequiresDNSDelegation() {
-				if err := validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, app, env.Name, appVersionGetter); err != nil {
+				if err := validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.RoutingRule.Alias, app, env.Name, appVersionGetter); err != nil {
 					return nil, err
 				}
 				opts = append(opts, stack.WithHTTPS())

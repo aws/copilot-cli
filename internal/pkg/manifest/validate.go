@@ -532,8 +532,8 @@ func (CommandOverride) Validate() error {
 	return nil
 }
 
-// Validate returns nil if RoutingRule is configured correctly.
-func (r RoutingRule) Validate() error {
+// Validate returns nil if RoutingRuleConfiguration is configured correctly.
+func (r RoutingRuleConfiguration) Validate() error {
 	var err error
 	if err = r.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)

@@ -636,7 +636,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
 				return nil, err
 			}
-			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
+			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.RoutingRule.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
 			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.NLBConfig.Aliases, o.targetApp, o.envName, appVersionGetter); err != nil {
