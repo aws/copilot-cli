@@ -8,14 +8,14 @@ type: {{.Type}}
 
 # Distribute traffic to your service.
 http:
-  {{- if .ProtocolVersion }}
-  version: {{.ProtocolVersion}}
+  {{- if .RoutingRule.ProtocolVersion }}
+  version: {{.RoutingRule.ProtocolVersion}}
   {{- end }}
   # Requests to this path will be forwarded to your service.
   # To match all requests you can use the "/" path.
-  path: '{{.Path}}'
+  path: '{{.RoutingRule.Path}}'
   # You can specify a custom health check path. The default is "/".
-  # healthcheck: '{{.HealthCheck.HealthCheckPath}}'
+  # healthcheck: '{{.RoutingRule.HealthCheck.HealthCheckPath}}'
 
 # Configuration for your containers and service.
 image:

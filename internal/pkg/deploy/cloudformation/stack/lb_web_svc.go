@@ -176,7 +176,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 
 	var aliases []string
 	if s.httpsEnabled {
-		if aliases, err = convertAlias(s.manifest.Alias); err != nil {
+		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
 			return "", err
 		}
 	}
@@ -187,7 +187,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 
 	var allowedSourceIPs []string
-	for _, ipNet := range s.manifest.AllowedSourceIps {
+	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 
@@ -210,7 +210,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ExecuteCommand:               convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:                 manifest.LoadBalancedWebServiceType,
 		HealthCheck:                  convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
-		HTTPHealthCheck:              convertHTTPHealthCheck(&s.manifest.HealthCheck),
+		HTTPHealthCheck:              convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:          deregistrationDelay,
 		AllowedSourceIps:             allowedSourceIPs,
 		RulePriorityLambda:           rulePriorityLambda.String(),
@@ -226,7 +226,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ServiceDiscoveryEndpoint:     s.rc.ServiceDiscoveryEndpoint,
 		Publish:                      publishers,
 		Platform:                     convertPlatform(s.manifest.Platform),
-		HTTPVersion:                  convertHTTPVersion(s.manifest.ProtocolVersion),
+		HTTPVersion:                  convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
 		NLB:                          nlbConfig.settings,
 		AppDNSName:                   nlbConfig.appDNSName,
 		AppDNSDelegationRole:         nlbConfig.appDNSDelegationRole,
@@ -247,11 +247,11 @@ func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *stri
 	// Route load balancer traffic to main container by default.
 	targetContainer = aws.String(containerName)
 	targetPort = aws.String(containerPort)
-	if s.manifest.TargetContainer != nil {
-		targetContainer = s.manifest.TargetContainer
+	if s.manifest.RoutingRule.TargetContainer != nil {
+		targetContainer = s.manifest.RoutingRule.TargetContainer
 	}
-	if s.manifest.TargetContainerCamelCase != nil {
-		targetContainer = s.manifest.TargetContainerCamelCase
+	if s.manifest.RoutingRule.TargetContainerCamelCase != nil {
+		targetContainer = s.manifest.RoutingRule.TargetContainerCamelCase
 	}
 	if aws.StringValue(targetContainer) != containerName {
 		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
@@ -277,7 +277,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-			ParameterValue: s.manifest.Path,
+			ParameterValue: s.manifest.RoutingRule.Path,
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
@@ -297,7 +297,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
+			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
