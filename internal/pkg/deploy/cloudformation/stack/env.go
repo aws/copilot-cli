@@ -47,8 +47,8 @@ const (
 
 	// Default parameter values
 	DefaultVPCCIDR            = "10.0.0.0/16"
-	DefaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
-	DefaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
+	DefaultPublicSubnetCIDRs  = "10.0.1.0/24,10.0.2.0/24,10.0.3.0/24"
+	DefaultPrivateSubnetCIDRs = "10.0.10.0/24,10.0.11.0/24,10.0.12.0/24"
 )
 
 var (
