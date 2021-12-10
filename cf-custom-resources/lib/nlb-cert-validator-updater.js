@@ -428,7 +428,18 @@ async function unusedValidationOptions(aliases, loadBalancerDNS) {
     let promises = [];
     for (const option of optionsPendingDeletion) {
         const domainName = option["DomainName"];
-        const {route53Client} = await domainResources(domainName);
+        // NOTE: The client is initialized outside of the `inUseByOtherServices` function because AWS-SDK mocks cannot
+        // mock its API calls if it is initialized in a callback.
+        let route53Client;
+        try {
+            ({route53Client} = await domainResources(domainName));
+        } catch (err) {
+            // NOTE: The UnrecognizedDomainTypeError is swallowed here because it is preferably handled inside
+            // `inUseByOtherServices`.
+            if (!err instanceof UnrecognizedDomainTypeError) {
+                throw err;
+            }
+        }
         const promise = inUseByOtherServices(loadBalancerDNS, domainName, route53Client).then((isUsed) => {
             if (isUsed) {
                 optionsPendingDeletion.delete(option);
@@ -519,6 +530,9 @@ async function inUseByOtherServices(loadBalancerDNS, domainName, route53Client) 
         ({hostedZoneID} = await domainResources(domainName));
     } catch (err) {
         if (err instanceof UnrecognizedDomainTypeError) {
+            console.log(`Found ${domainName} in subject alternative names. 
+It does not match any of these patterns: ".<env>.<app>.<domain>"， ".<app>.<domain>" or ".<domain>". 
+This is unexpected. We don't error out as it may not cause any issue.`);
             return true; // This option has unrecognized pattern, we can't check if it is in use, so we assume it is in use.
         }
         throw err;
