@@ -16,8 +16,6 @@ let defaultSleep = function (ms) {
 let sleep = defaultSleep;
 let random = Math.random;
 
-let cachedServiceCertificates;
-
 const appRoute53Context = () => {
     let client;
     return () => {
@@ -170,7 +168,6 @@ exports.handler = async function (event, context) {
         LoadBalancerHostedZoneID: loadBalancerHostedZoneID,
     } = props;
     const aliases = new Set(props.Aliases);
-    cachedServiceCertificates = null; // Avoid using cached certificates from the last invocation.
 
     // Initialize global variables.
     envHostedZoneID = props.EnvHostedZoneId;
@@ -421,7 +418,7 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
  * @returns {Promise<Set<Object>>}
  */
 async function unusedValidationOptions(aliases, loadBalancerDNS) {
-    // Look for validation options that will no longer needed by this service.
+    // Look for validation options that will be no longer needed by this service.
     const certificates = await serviceCertificates();
     const { certPendingDeletion, certInUse } = categorizeCertificates(aliases, certificates);
     let optionsPendingDeletion = await unusedOptionsByService(certPendingDeletion, certInUse);
@@ -448,9 +445,6 @@ async function unusedValidationOptions(aliases, loadBalancerDNS) {
  * @returns {Array<Object>} An array of descriptions for the certificates used by the service.
  */
 async function serviceCertificates() {
-    if (cachedServiceCertificates) {
-        return cachedServiceCertificates;
-    }
     let { ResourceTagMappingList } = await clients.resourceGroupsTaggingAPI().getResources({
         TagFilters: [
             {
@@ -469,18 +463,18 @@ async function serviceCertificates() {
         ResourceTypeFilters: ["acm:certificate"]
     }).promise();
 
-    cachedServiceCertificates = [];
+    let certificates = [];
     let promises = [];
     for (const {ResourceARN: arn} of ResourceTagMappingList) {
         let promise = clients.acm().describeCertificate({
             CertificateArn: arn
         }).promise().then(( { Certificate } ) => {
-            cachedServiceCertificates.push(Certificate);
+            certificates.push(Certificate);
         });
         promises.push(promise);
     }
     await Promise.all(promises);
-    return cachedServiceCertificates;
+    return certificates;
 }
 
 /**
