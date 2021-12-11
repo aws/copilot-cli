@@ -479,15 +479,35 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
                     SubjectAlternativeNames: ["usedByOtherService.mockEnv.mockApp.mockDomain.com", "usedByOtherCert.mockApp.mockDomain.com", "unused.mockDomain.com", "usedByNewCert.mockApp.mockDomain.com", `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`],
                     DomainValidationOptions: [{
-                        DomainName: "unused.mockDomain.com"
+                        DomainName: "unused.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.unused.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.unused.mockDomain.com.v"
+                        },
                     },{
-                        DomainName: "usedByNewCert.mockApp.mockDomain.com"
+                        DomainName: "usedByNewCert.mockApp.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.usedByNewCert.mockApp.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.usedByNewCert.mockApp.mockDomain.com.v"
+                        },
                     },{
-                        DomainName: "usedByOtherService.mockEnv.mockApp.mockDomain.com"
+                        DomainName: "usedByOtherService.mockEnv.mockApp.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.usedByOtherService.mockEnv.mockApp.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.usedByOtherService.mockEnv.mockApp.mockDomain.com.v"
+                        }
                     },{
-                        DomainName: "usedByOtherCert.mockApp.mockDomain.com"
+                        DomainName: "usedByOtherCert.mockApp.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.usedByOtherCert.mockApp.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.usedByOtherCert.mockApp.mockDomain.com.v"
+                        }
                     },{
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`
+                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
                     }],
                 }
             });
@@ -496,11 +516,26 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
                     SubjectAlternativeNames: ["usedByNewCert.mockApp.mockDomain.com", "other.mockDomain.com", `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`],
                     DomainValidationOptions: [{
-                        DomainName: "usedByNewCert.mockApp.mockDomain.com"
+                        DomainName: "usedByNewCert.mockApp.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.usedByNewCert.mockApp.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.usedByNewCert.mockApp.mockDomain.com.v"
+                        },
                     },{
-                        DomainName: "other.mockDomain.com"
+                        DomainName: "other.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.other.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.other.mockDomain.com.v"
+                        },
                     },{
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`
+                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
+                        ResourceRecord: {
+                            Name: "validate.canonical.default.cert.domain",
+                            Type: "CNAME",
+                            Value: "validate.canonical.default.cert.domain.v"
+                        }
                     }],
                 }
             });
@@ -509,11 +544,26 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     DomainName: `some.domain.name.that.is.not.default.hence.not.created.by.copilot`,
                     SubjectAlternativeNames: ["usedByOtherCert.mockApp.mockDomain.com", "other.mockDomain.com", `some.domain.name.that.is.not.default.hence.not.created.by.copilot`],
                     DomainValidationOptions: [{
-                        DomainName: "usedByOtherCert.mockApp.mockDomain.com"
+                        DomainName: "usedByOtherCert.mockApp.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.usedByOtherCert.mockApp.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.usedByOtherCert.mockApp.mockDomain.com.v"
+                        }
                     },{
-                        DomainName: "other.mockDomain.com"
+                        DomainName: "other.mockDomain.com",
+                        ResourceRecord: {
+                            Name: "validate.other.mockDomain.com",
+                            Type: "CNAME",
+                            Value: "validate.other.mockDomain.com.v"
+                        },
                     },{
-                        DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`
+                        DomainName: "some.domain.name.that.is.not.default.hence.not.created.by.copilot",
+                        ResourceRecord: {
+                            Name: "validate.some.domain.name.that.is.not.default.hence.not.created.by.copilot",
+                            Type: "CNAME",
+                            Value: "validate.some.domain.name.that.is.not.default.hence.not.created.by.copilot.v"
+                        },
                     }],
                 }
             });

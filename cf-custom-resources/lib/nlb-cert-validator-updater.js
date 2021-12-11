@@ -499,12 +499,16 @@ async function unusedOptionsByService(certsPendingDeletion, certsInUse) {
     let optionsPendingDeletion = new Map();
     for (const { DomainValidationOptions: validationOptions } of certsPendingDeletion) {
         for (const option of validationOptions) {
-            optionsPendingDeletion.set(JSON.stringify(option), option);
+            if (option["ResourceRecord"]) {
+                optionsPendingDeletion.set(JSON.stringify(option["ResourceRecord"]), option);
+            }
         }
     }
     for (const { DomainValidationOptions: validationOptions } of certsInUse) {
         for (const option of validationOptions) {
-            optionsPendingDeletion.delete(JSON.stringify(option));
+            if (option["ResourceRecord"]) {
+                optionsPendingDeletion.delete(JSON.stringify(option["ResourceRecord"]));
+            }
         }
     }
     let options = new Set();
