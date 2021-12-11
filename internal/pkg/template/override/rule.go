@@ -190,6 +190,7 @@ func (m *mapUpsertNode) upsertValue(content *yaml.Node) {
 	for i := 0; i < len(content.Content); i += 2 {
 		if m.key == content.Content[i].Value {
 			content.Content[i+1] = m.valueToInsert
+			return
 		}
 	}
 	// Otherwise, we create the label node then append the value node.

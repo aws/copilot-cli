@@ -78,6 +78,16 @@ func ulimitsRule() Rule {
 	})
 }
 
+func logGroupRule() Rule {
+	return newTaskDefPropertyRule(Rule{
+		Path: "ContainerDefinitions[0].LogConfiguration.Options.awslogs-group",
+		Value: yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: "/copilot/${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}",
+		},
+	})
+}
+
 func exposeExtraPortRule() Rule {
 	return newTaskDefPropertyRule(Rule{
 		Path: "ContainerDefinitions[0].PortMappings[-].ContainerPort",
@@ -145,6 +155,13 @@ func Test_CloudFormationTemplate(t *testing.T) {
 			},
 			wantedTplFileName: "ulimits.yml",
 		},
+		"success with different log group name": {
+			inTplFileName: "backend_svc.yml",
+			inRules: []Rule{
+				logGroupRule(),
+			},
+			wantedTplFileName: "loggroup.yml",
+		},
 		"success with extra port": {
 			inTplFileName: "backend_svc.yml",
 			inRules: []Rule{
@@ -176,7 +193,8 @@ func Test_CloudFormationTemplate(t *testing.T) {
 				linuxParametersCapabilitiesInitProcessEnabledRule(),
 				requiresCompatibilitiesRule(),
 			},
-			wantedTplFileName: "multiple_overrides.yml"},
+			wantedTplFileName: "multiple_overrides.yml",
+		},
 	}
 
 	for name, tc := range testCases {
