@@ -33,19 +33,9 @@ func TestWorkerService_Template(t *testing.T) {
 		wantedTemplate   string
 		wantedErr        error
 	}{
-		"unavailable desired count lambda template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
-				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
-				svc.parser = m
-			},
-			wantedTemplate: "",
-			wantedErr:      fmt.Errorf("read desired count lambda function source code: some error"),
-		},
 		"unavailable env controller lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
 				svc.parser = m
 			},
@@ -55,7 +45,6 @@ func TestWorkerService_Template(t *testing.T) {
 		"unavailable backlog-per-task-caculator lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(nil, errors.New("some error"))
 				svc.parser = m
@@ -66,7 +55,6 @@ func TestWorkerService_Template(t *testing.T) {
 		"unexpected addons template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -77,7 +65,6 @@ func TestWorkerService_Template(t *testing.T) {
 		"unexpected addons params parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -97,7 +84,6 @@ func TestWorkerService_Template(t *testing.T) {
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -126,7 +112,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -148,7 +133,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseWorkerService(gomock.Any()).Return(nil, errors.New("some error"))
@@ -192,7 +176,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseWorkerService(template.WorkloadOpts{
@@ -204,7 +187,6 @@ Outputs:
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
-					DesiredCountLambda:             "something",
 					EnvControllerLambda:            "something",
 					BacklogPerTaskCalculatorLambda: "something",
 					ExecuteCommand:                 &template.ExecuteCommandOpts{},

@@ -59,34 +59,34 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/vpc-connector.yml":                   []byte("vpc-connector"),
 				}
 			},
-			wantedContent: `  loggroup
-  envvars-container
-  envvars-common
-  secrets
-  executionrole
-  taskrole
-  workload-container
-  fargate-taskdef-base-properties
-  service-base-properties
-  servicediscovery
+			wantedContent: `  accessrole
   addons
-  sidecars
-  logconfig
   autoscaling
-  eventrule
-  state-machine
-  state-machine-definition
   efs-access-point
   env-controller
-  mount-points
-  volumes
+  envvars-common
+  envvars-container
+  eventrule
+  executionrole
+  fargate-taskdef-base-properties
   image-overrides
   instancerole
-  accessrole
-  publish
-  subscribe
+  logconfig
+  loggroup
+  mount-points
   nlb
+  publish
+  secrets
+  service-base-properties
+  servicediscovery
+  sidecars
+  state-machine
+  state-machine-definition
+  subscribe
+  taskrole
+  volumes
   vpc-connector
+  workload-container
 `,
 		},
 	}

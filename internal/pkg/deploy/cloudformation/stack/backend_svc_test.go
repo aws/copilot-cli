@@ -46,19 +46,9 @@ func TestBackendService_Template(t *testing.T) {
 		wantedTemplate   string
 		wantedErr        error
 	}{
-		"unavailable desired count lambda template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
-				svc.parser = m
-			},
-			wantedTemplate: "",
-			wantedErr:      fmt.Errorf("read desired count lambda: some error"),
-		},
 		"unavailable env controller lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
 				svc.parser = m
 			},
@@ -68,7 +58,6 @@ func TestBackendService_Template(t *testing.T) {
 		"unexpected addons parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockAddons{tplErr: errors.New("some error")}
@@ -78,7 +67,6 @@ func TestBackendService_Template(t *testing.T) {
 		"unexpected addons parameter parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockAddons{paramsErr: errors.New("some error")}
@@ -97,7 +85,6 @@ func TestBackendService_Template(t *testing.T) {
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockAddons{
@@ -125,7 +112,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockAddons{
@@ -146,7 +132,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
@@ -190,7 +175,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.WorkloadOpts{
 					WorkloadType: manifest.BackendServiceType,
@@ -201,7 +185,6 @@ Outputs:
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
-					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
 					ExecuteCommand:      &template.ExecuteCommandOpts{},
 					NestedStack: &template.WorkloadNestedStackOpts{

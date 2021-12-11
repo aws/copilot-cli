@@ -59,34 +59,34 @@ const (
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
-		"loggroup",
-		"envvars-container",
-		"envvars-common",
-		"secrets",
-		"executionrole",
-		"taskrole",
-		"workload-container",
-		"fargate-taskdef-base-properties",
-		"service-base-properties",
-		"servicediscovery",
+		"accessrole",
 		"addons",
-		"sidecars",
-		"logconfig",
 		"autoscaling",
-		"eventrule",
-		"state-machine",
-		"state-machine-definition.json",
 		"efs-access-point",
 		"env-controller",
-		"mount-points",
-		"volumes",
+		"envvars-common",
+		"envvars-container",
+		"eventrule",
+		"executionrole",
+		"fargate-taskdef-base-properties",
 		"image-overrides",
 		"instancerole",
-		"accessrole",
-		"publish",
-		"subscribe",
+		"logconfig",
+		"loggroup",
+		"mount-points",
 		"nlb",
+		"publish",
+		"secrets",
+		"service-base-properties",
+		"servicediscovery",
+		"sidecars",
+		"state-machine",
+		"state-machine-definition.json",
+		"subscribe",
+		"taskrole",
+		"volumes",
 		"vpc-connector",
+		"workload-container",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -399,7 +399,6 @@ type WorkloadOpts struct {
 
 	// Lambda functions.
 	RulePriorityLambda             string
-	DesiredCountLambda             string
 	EnvControllerLambda            string
 	CredentialsParameter           string
 	BacklogPerTaskCalculatorLambda string

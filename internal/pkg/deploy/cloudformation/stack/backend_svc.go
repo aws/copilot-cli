@@ -68,10 +68,6 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 
 // Template returns the CloudFormation template for the backend service.
 func (s *BackendService) Template() (string, error) {
-	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
-	if err != nil {
-		return "", fmt.Errorf("read desired count lambda: %w", err)
-	}
 	envControllerLambda, err := s.parser.Read(envControllerPath)
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
@@ -129,7 +125,6 @@ func (s *BackendService) Template() (string, error) {
 		HealthCheck:              convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
-		DesiredCountLambda:       desiredCountLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
 		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),

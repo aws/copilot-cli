@@ -264,29 +264,6 @@ Resources:
       Name: !Ref WorkloadName
       NamespaceId:
         Fn::ImportValue: !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
-  DynamicDesiredCountAction:
-    Type: Custom::DynamicDesiredCountFunction
-    Properties:
-      ServiceToken: !GetAtt DynamicDesiredCountFunction.Arn
-      Cluster:
-        Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
-      App: !Ref AppName
-      Env: !Ref EnvName
-      Svc: !Ref WorkloadName
-      DefaultDesiredCount: !Ref TaskCount
-      # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
-      UpdateID: RandomGUID
-  DynamicDesiredCountFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        ZipFile: |
-          mockDynamicDesiredCountZipFile
-      Handler: "index.handler"
-      Timeout: 600
-      MemorySize: 512
-      Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs12.x
   AutoScalingRole:
     Type: AWS::IAM::Role
     Properties:
@@ -479,32 +456,6 @@ Resources:
               - Effect: Allow
                 Action:
                   - elasticloadbalancing:DescribeRules
-                Resource: "*"
-        - PolicyName: "DelegateDesiredCountAccess"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Sid: ECS
-                Effect: Allow
-                Action:
-                  - ecs:DescribeServices
-                Resource: "*"
-                Condition:
-                  ArnEquals:
-                    'ecs:cluster':
-                      Fn::Sub:
-                        - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}
-                        - ClusterName:
-                            Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
-              - Sid: ResourceGroups
-                Effect: Allow
-                Action:
-                  - resource-groups:GetResources
-                Resource: "*"
-              - Sid: Tags
-                Effect: Allow
-                Action:
-                  - "tag:GetResources"
                 Resource: "*"
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

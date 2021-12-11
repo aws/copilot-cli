@@ -143,21 +143,10 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedError:    fmt.Errorf("read rule priority lambda: some error"),
 		},
-		"unavailable desired count lambda template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
-				c.parser = m
-			},
-			wantedTemplate: "",
-			wantedError:    fmt.Errorf("read desired count lambda: some error"),
-		},
 		"unavailable env controller lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
@@ -168,7 +157,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{tplErr: errors.New("some error")}
 				c.parser = m
@@ -180,7 +168,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{paramsErr: errors.New("some error")}
 				c.parser = m
@@ -192,7 +179,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockAddons{
@@ -215,7 +201,6 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
 					WorkloadType: manifest.LoadBalancedWebServiceType,
@@ -226,7 +211,6 @@ Outputs:
 					DeregistrationDelay: aws.Int64(60),
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
-					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
 					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
@@ -247,7 +231,6 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
 					NestedStack: &template.WorkloadNestedStackOpts{
@@ -265,7 +248,6 @@ Outputs:
 					DeregistrationDelay: aws.Int64(60),
 					HealthCheck:         &overridenContainerHealthCheck,
 					RulePriorityLambda:  "lambda",
-					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
 					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,

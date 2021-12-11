@@ -52,50 +52,6 @@ Resources:
 {{include "servicediscovery" . | indent 2}}
 {{- if .Autoscaling }}
 {{include "autoscaling" . | indent 2}}
-  CustomResourceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: "DelegateDesiredCountAccess"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Sid: ECS
-              Effect: Allow
-              Action:
-                - ecs:DescribeServices
-              Resource: "*"
-              Condition: 
-                ArnEquals: 
-                  'ecs:cluster':
-                    Fn::Sub:
-                      - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}
-                      - ClusterName:
-                          Fn::ImportValue:
-                            !Sub '${AppName}-${EnvName}-ClusterId'
-            - Sid: ResourceGroups
-              Effect: Allow
-              Action:
-                - resource-groups:GetResources
-              Resource: "*"
-            - Sid: Tags
-              Effect: Allow
-              Action:
-                - "tag:GetResources"
-              Resource: "*"
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end }}
   Service:
     DependsOn:

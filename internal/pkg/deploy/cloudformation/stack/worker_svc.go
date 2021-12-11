@@ -62,10 +62,6 @@ func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeCo
 
 // Template returns the CloudFormation template for the worker service.
 func (s *WorkerService) Template() (string, error) {
-	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
-	if err != nil {
-		return "", fmt.Errorf("read desired count lambda function source code: %w", err)
-	}
 	envControllerLambda, err := s.parser.Read(envControllerPath)
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda function source code: %w", err)
@@ -130,7 +126,6 @@ func (s *WorkerService) Template() (string, error) {
 		HealthCheck:                    convertContainerHealthCheck(s.manifest.WorkerServiceConfig.ImageConfig.HealthCheck),
 		LogConfig:                      convertLogging(s.manifest.Logging),
 		DockerLabels:                   s.manifest.ImageConfig.Image.DockerLabels,
-		DesiredCountLambda:             desiredCountLambda.String(),
 		EnvControllerLambda:            envControllerLambda.String(),
 		BacklogPerTaskCalculatorLambda: backlogPerTaskLambda.String(),
 		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
