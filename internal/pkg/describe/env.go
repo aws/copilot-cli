@@ -262,7 +262,6 @@ func (e *EnvDescription) HumanString() string {
 		sort.Strings(keys)
 		for _, key := range keys {
 			fmt.Fprintf(writer, "  %s\t%s\n", key, e.Tags[key])
-			writer.Flush()
 		}
 	}
 	writer.Flush()
