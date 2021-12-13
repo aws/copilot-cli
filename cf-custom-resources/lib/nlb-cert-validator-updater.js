@@ -549,7 +549,7 @@ This is unexpected. We don't error out as it may not cause any issue.`);
     if (!targetRecordExists(domainName, recordSet)) {
         return false; // If there is no record using this domain, it is not in use.
     }
-    const inUseByMySelf = recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName !== `${loadBalancerDNS}.`
+    const inUseByMySelf = recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${loadBalancerDNS}.`
     return !inUseByMySelf
 }
 
@@ -582,9 +582,8 @@ function targetRecordExists(targetDomainName, recordSet) {
     if (!recordSet || recordSet.length === 0) {
         return false;
     }
-    return recordSet[0].Name === targetDomainName;
+    return recordSet[0].Name === `${targetDomainName}.`;
 }
-
 
 async function hostedZoneIDByName(domain) {
     const { HostedZones } = await clients.app.route53()
@@ -639,7 +638,15 @@ function setEqual(setA, setB) {
 function UnrecognizedDomainTypeError(message = "") {
     this.message = message;
 }
-UnrecognizedDomainTypeError.prototype = Error.prototype;
+UnrecognizedDomainTypeError.prototype = Object.create(Error.prototype, {
+    constructor: {
+        value: Error,
+        enumerable: false,
+        writable: true,
+        configurable: true
+    }
+});
+
 
 exports.deadlineExpired = function () {
     return new Promise(function (resolve, reject) {

@@ -569,7 +569,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             });
             mockListResourceRecordSets.withArgs(sinon.match({ HostedZoneId: "mockRootHostedZoneID", StartRecordName: "unused.mockDomain.com"})).resolves({
                 ResourceRecordSets: [{
-                    Name: "unused.mockDomain.com",
+                    Name: "unused.mockDomain.com.",
                     AliasTarget: {
                         DNSName: `${mockLBDNS}.`,
                     }
@@ -577,7 +577,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             });
             mockListResourceRecordSets.withArgs(sinon.match({ HostedZoneId: mockEnvHostedZoneID, StartRecordName: "usedByOtherService.mockEnv.mockApp.mockDomain.com"})).resolves({
                 ResourceRecordSets: [{
-                    Name: "usedByOtherService.mockEnv.mockApp.mockDomain.com",
+                    Name: "usedByOtherService.mockEnv.mockApp.mockDomain.com.",
                     AliasTarget: {
                         DNSName: "other.service.dns.name.",
                     }
