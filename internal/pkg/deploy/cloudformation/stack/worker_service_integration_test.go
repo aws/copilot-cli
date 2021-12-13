@@ -62,10 +62,6 @@ func TestWorkerService_Template(t *testing.T) {
 	require.NoError(t, err)
 	envControllerZipFile := envController.String()
 
-	dynamicDesiredCount, err := parser.Read(dynamicDesiredCountPath)
-	require.NoError(t, err)
-	dynamicDesiredCountZipFile := dynamicDesiredCount.String()
-
 	backlogPerTaskLambda, err := parser.Read(backlogPerTaskLambdaPath)
 	require.NoError(t, err)
 
@@ -76,7 +72,6 @@ func TestWorkerService_Template(t *testing.T) {
 		actualString := string(actualBytes)
 		// Cut out zip file for more readable output
 		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
-		actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
 		actualString = strings.ReplaceAll(actualString, backlogPerTaskLambda.String(), "mockBacklogPerTaskLambda")
 		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})

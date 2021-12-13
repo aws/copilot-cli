@@ -119,6 +119,7 @@ func (s *WorkerService) Template() (string, error) {
 		AddonsExtraParams:              addonsParams,
 		Sidecars:                       sidecars,
 		Autoscaling:                    autoscaling,
+		UpdateRequired:                 s.rc.UpdateRequired,
 		CapacityProviders:              capacityProviders,
 		DesiredCountOnSpot:             desiredCountOnSpot,
 		ExecuteCommand:                 convertExecuteCommand(&s.manifest.ExecuteCommand),

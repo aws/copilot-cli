@@ -69,6 +69,8 @@ type RuntimeConfig struct {
 	ServiceDiscoveryEndpoint string // Endpoint for the service discovery namespace in the environment.
 	AccountID                string
 	Region                   string
+
+	UpdateRequired bool
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
@@ -117,7 +119,7 @@ type wkld struct {
 
 // StackName returns the name of the stack.
 func (w *wkld) StackName() string {
-	return NameForService(w.app, w.env, w.name)
+	return NameForWorkload(w.app, w.env, w.name)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

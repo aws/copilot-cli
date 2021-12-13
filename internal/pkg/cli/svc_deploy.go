@@ -84,7 +84,8 @@ type deploySvcOpts struct {
 	cmd                 runner
 	addons              templater
 	appCFN              appResourcesGetter
-	svcCFN              serviceDeployer
+	deployer            serviceDeployer
+	stackExistChecker   stackExistChecker
 	newSvcUpdater       func(func(*session.Session) serviceUpdater)
 	sessProvider        sessionProvider
 	envUpgradeCmd       actionCommand
@@ -338,7 +339,8 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 
 	// CF client against env account profile AND target environment region.
-	o.svcCFN = cloudformation.New(envSession)
+	o.deployer = cloudformation.New(envSession)
+	o.stackExistChecker = awscloudformation.New(envSession)
 
 	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         o.appName,
@@ -512,6 +514,11 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	if err != nil {
 		return nil, err
 	}
+	stackName := stack.NameForWorkload(o.appName, o.envName, o.name)
+	stackExists, err := o.stackExistChecker.Exists(stackName)
+	if err != nil {
+		return nil, fmt.Errorf("check if stack %s exists: %w", stackName, err)
+	}
 
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
@@ -520,6 +527,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                o.targetEnvironment.AccountID,
 			Region:                   o.targetEnvironment.Region,
+			UpdateRequired:           stackExists,
 		}, nil
 	}
 
@@ -546,6 +554,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                o.targetEnvironment.AccountID,
 		Region:                   o.targetEnvironment.Region,
+		UpdateRequired:           stackExists,
 	}, nil
 }
 
@@ -696,7 +705,7 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 		return err
 	}
 
-	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+	if err := o.deployer.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyCS) {
 			if o.forceNewUpdate {

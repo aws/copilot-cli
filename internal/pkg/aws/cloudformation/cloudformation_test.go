@@ -830,7 +830,9 @@ func TestCloudFormation_Exists(t *testing.T) {
 		m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{
 			StackName: aws.String("phonetool-test"),
 		}).Return(&cloudformation.DescribeStacksOutput{
-			Stacks: []*cloudformation.Stack{{}},
+			Stacks: []*cloudformation.Stack{{
+				StackStatus: aws.String(cloudformation.StackStatusCreateComplete),
+			}},
 		}, nil)
 		c := CloudFormation{
 			client: m,

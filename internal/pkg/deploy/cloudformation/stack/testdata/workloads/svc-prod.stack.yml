@@ -41,18 +41,13 @@ Parameters:
     Type: String
     Default: false
 Conditions:
-  HTTPLoadBalancer:
-    !Not
-      - !Condition HTTPSLoadBalancer
-  HTTPSLoadBalancer:
-    !Equals [!Ref HTTPSEnabled, true]
-  HasAssociatedDomain:
-    !Equals [!Ref DNSDelegated, true]
-  HasAddons: # If a bucket URL is specified, that means the template exists.
-    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  IsDefaultRootPath: # If we're using path based routing and use the root path, we have some special logic
-    !Equals [!Ref RulePath, "/"]
-Resources:
+  HTTPLoadBalancer: !Not
+    - !Condition HTTPSLoadBalancer
+  HTTPSLoadBalancer: !Equals [!Ref HTTPSEnabled, true]
+  HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]
+  HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
+Resources: # If a bucket URL is specified, that means the template exists.
   LogGroup:
     Metadata:
       'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
@@ -376,7 +371,7 @@ Resources:
       Cluster:
         Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
       TaskDefinition: !Ref TaskDefinition
-      DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
+      DesiredCount: !Ref TaskCount
       DeploymentConfiguration:
         DeploymentCircuitBreaker:
           Enable: true

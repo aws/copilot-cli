@@ -364,6 +364,9 @@ func (p RuntimePlatformOpts) isEmpty() bool {
 
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
+	// Stack status variables.
+	UpdateRequired bool
+
 	// Additional options that are common between **all** workload templates.
 	Variables                map[string]string
 	Secrets                  map[string]string

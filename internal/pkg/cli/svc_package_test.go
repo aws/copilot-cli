@@ -313,6 +313,11 @@ count: 1`
 					mockendpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(fmt.Sprintf("%s.%s.local", env, app), nil)
 					return mockendpointGetter, nil
 				}
+				opts.newStackExistChecker = func(app, env string) (stackExistChecker, error) {
+					mockStackExistChecker := mocks.NewMockstackExistChecker(ctrl)
+					mockStackExistChecker.EXPECT().Exists("ecs-kudos-test-api").Return(true, nil)
+					return mockStackExistChecker, nil
+				}
 			},
 
 			wantedStack:  "mystack",
@@ -387,6 +392,11 @@ count: 1`
 					mockendpointGetter := mocks.NewMockendpointGetter(ctrl)
 					mockendpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(fmt.Sprintf("%s.%s.local", env, app), nil)
 					return mockendpointGetter, nil
+				}
+				opts.newStackExistChecker = func(app, env string) (stackExistChecker, error) {
+					mockStackExistChecker := mocks.NewMockstackExistChecker(ctrl)
+					mockStackExistChecker.EXPECT().Exists("ecs-kudos-test-api").Return(true, nil)
+					return mockStackExistChecker, nil
 				}
 			},
 

@@ -164,8 +164,7 @@ func (c *Count) Desired() (*int, error) {
 	if c.AdvancedCount.IsEmpty() {
 		return c.Value, nil
 	}
-
-	if c.AdvancedCount.IgnoreRange() {
+	if c.AdvancedCount.Spot != nil {
 		return c.AdvancedCount.Spot, nil
 	}
 	min, _, err := c.AdvancedCount.Range.Parse()
@@ -196,11 +195,6 @@ type AdvancedCount struct {
 func (a *AdvancedCount) IsEmpty() bool {
 	return a.Range.IsEmpty() && a.CPU == nil && a.Memory == nil &&
 		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil && a.QueueScaling.IsEmpty()
-}
-
-// IgnoreRange returns whether desiredCount is specified on spot capacity
-func (a *AdvancedCount) IgnoreRange() bool {
-	return a.Spot != nil
 }
 
 func (a *AdvancedCount) hasAutoscaling() bool {

@@ -11,22 +11,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-
-	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -60,23 +58,24 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient      templater
-	initAddonsClient  func(*packageSvcOpts) error // Overridden in tests.
-	ws                wsSvcReader
-	store             store
-	appCFN            appResourcesGetter
-	stackWriter       io.Writer
-	paramsWriter      io.Writer
-	addonsWriter      io.Writer
-	fs                afero.Fs
-	runner            runner
-	sel               wsSelector
-	prompt            prompter
-	identity          identityService
-	newInterpolator   func(app, env string) interpolator
-	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
-	newEndpointGetter func(app, env string) (endpointGetter, error)
-	snsTopicGetter    deployedEnvironmentLister
+	addonsClient         templater
+	initAddonsClient     func(*packageSvcOpts) error // Overridden in tests.
+	ws                   wsSvcReader
+	store                store
+	appCFN               appResourcesGetter
+	stackWriter          io.Writer
+	paramsWriter         io.Writer
+	addonsWriter         io.Writer
+	fs                   afero.Fs
+	runner               runner
+	sel                  wsSelector
+	prompt               prompter
+	identity             identityService
+	newStackExistChecker func(app, env string) (stackExistChecker, error)
+	newInterpolator      func(app, env string) interpolator
+	stackSerializer      func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	newEndpointGetter    func(app, env string) (endpointGetter, error)
+	snsTopicGetter       deployedEnvironmentLister
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -118,6 +117,21 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
+	}
+	opts.newStackExistChecker = func(app, env string) (stackExistChecker, error) {
+		store, err := config.NewStore()
+		if err != nil {
+			return nil, fmt.Errorf("new config store: %w", err)
+		}
+		targetEnv, err := store.GetEnvironment(app, env)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s: %w", env, err)
+		}
+		envSession, err := sessions.NewProvider().FromRole(targetEnv.ManagerRoleARN, targetEnv.Region)
+		if err != nil {
+			return nil, fmt.Errorf("assuming environment manager role: %w", err)
+		}
+		return awscloudformation.New(envSession), nil
 	}
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
@@ -384,11 +398,21 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
+	stackExistChecker, err := o.newStackExistChecker(o.appName, o.envName)
+	if err != nil {
+		return nil, err
+	}
+	stackName := stack.NameForWorkload(o.appName, o.envName, o.name)
+	stackExists, err := stackExistChecker.Exists(stackName)
+	if err != nil {
+		return nil, fmt.Errorf("check if stack %s exists: %w", stackName, err)
+	}
 	rc := stack.RuntimeConfig{
 		AdditionalTags:           app.Tags,
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                env.AccountID,
 		Region:                   env.Region,
+		UpdateRequired:           stackExists,
 	}
 
 	if imgNeedsBuild {

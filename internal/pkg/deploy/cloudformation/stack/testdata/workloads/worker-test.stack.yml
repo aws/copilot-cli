@@ -51,9 +51,6 @@ Resources:
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
-          # We pipe certain environment variables directly into the task definition.
-          # This lets customers have access to, for example, their LB endpoint - which they'd
-          # have no way of otherwise determining.
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'
@@ -330,17 +327,17 @@ Resources:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     Properties:
+      PlatformVersion: LATEST
       Cluster:
         Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
       TaskDefinition: !Ref TaskDefinition
-      DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
+      DesiredCount: !Ref TaskCount
       DeploymentConfiguration:
         DeploymentCircuitBreaker:
           Enable: true
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
-      PlatformVersion: LATEST
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       CapacityProviderStrategy:

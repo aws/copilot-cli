@@ -200,6 +200,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,
 		AllowedSourceIps:         allowedSourceIPs,
+		UpdateRequired:           s.rc.UpdateRequired,
 		RulePriorityLambda:       rulePriorityLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
 		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),

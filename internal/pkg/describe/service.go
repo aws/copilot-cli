@@ -196,7 +196,7 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 		service: opt.Svc,
 		env:     opt.Env,
 
-		cfn:       stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
+		cfn:       stack.NewStackDescriber(cfnstack.NameForWorkload(opt.App, opt.Env, opt.Svc), sess),
 		ecsClient: ecs.New(sess),
 		sess:      sess,
 	}, nil

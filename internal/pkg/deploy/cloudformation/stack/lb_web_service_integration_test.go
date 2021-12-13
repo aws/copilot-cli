@@ -27,8 +27,7 @@ import (
 const (
 	svcManifestPath = "svc-manifest.yml"
 
-	dynamicDesiredCountPath = "custom-resources/desired-count-delegation.js"
-	rulePriorityPath        = "custom-resources/alb-rule-priority-generator.js"
+	rulePriorityPath = "custom-resources/alb-rule-priority-generator.js"
 )
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
@@ -94,9 +93,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		envController, err := parser.Read(envControllerPath)
 		require.NoError(t, err)
 		envControllerZipFile := envController.String()
-		dynamicDesiredCount, err := parser.Read(dynamicDesiredCountPath)
-		require.NoError(t, err)
-		dynamicDesiredCountZipFile := dynamicDesiredCount.String()
 		rulePriority, err := parser.Read(rulePriorityPath)
 		require.NoError(t, err)
 		rulePriorityZipFile := rulePriority.String()
@@ -108,7 +104,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			actualString := string(actualBytes)
 			// Cut out zip file for more readable output
 			actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
-			actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
 			actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
 
 			actualBytes = []byte(actualString)

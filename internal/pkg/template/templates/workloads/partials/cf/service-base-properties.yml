@@ -3,11 +3,7 @@ Cluster:
   Fn::ImportValue:
     !Sub '${AppName}-${EnvName}-ClusterId'
 TaskDefinition: !Ref TaskDefinition
-{{- if .DesiredCountOnSpot}}
-DesiredCount: !Ref TaskCount
-{{- else if .Autoscaling}}
-DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
-{{- else }}
+{{- if not (and .Autoscaling .UpdateRequired) }}
 DesiredCount: !Ref TaskCount
 {{- end}}
 DeploymentConfiguration:
