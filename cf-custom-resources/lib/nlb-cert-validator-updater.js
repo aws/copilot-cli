@@ -207,7 +207,7 @@ exports.handler = async function (event, context) {
                 if (oldAliasesSorted === aliasesSorted) {
                     break;
                 }
-                // fallthrough
+                // Fallthrough to "Create". When the aliases are different, the same actions are taken for both "Update" and "Create".
             case "Create":
                 await validateAliases(aliases, loadBalancerDNS);
                 const certificateARN = await requestCertificate({
