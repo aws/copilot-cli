@@ -202,6 +202,10 @@ type RoutingRuleConfigOrBool struct {
 	Enabled *bool
 }
 
+func (r *RoutingRuleConfigOrBool) Disabled() bool {
+	return r.Enabled != nil && aws.BoolValue(r.Enabled) == false
+}
+
 func (r *RoutingRuleConfigOrBool) isEmpty() bool {
 	return r.RoutingRuleConfiguration.isEmpty() && r.Enabled == nil
 }

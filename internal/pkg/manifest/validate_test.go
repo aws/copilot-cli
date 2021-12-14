@@ -203,6 +203,20 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
 		},
+		"error if neither of http or nlb is enabled": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+				},
+			},
+			wantedError: errors.New(`must have one of "http" or "nlb" enabled`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
