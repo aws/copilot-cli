@@ -269,7 +269,7 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 
 	if o.env != "" {
 		var err error
-		env, err = o.targetEnv()
+		env, err = o.targetEnv(o.appName, o.env)
 		if err != nil {
 			return err
 		}
@@ -604,14 +604,14 @@ func (o *runTaskOpts) generateCommand() error {
 
 func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
 	var cmd cliStringer
-	sess, err := o.provider.Default()
-	if err != nil {
-		return nil, fmt.Errorf("get default session: %s", err)
-	}
 	if arn.IsARN(o.generateCommandTarget) {
 		clusterName, serviceName, err := o.parseARN()
 		if err != nil {
 			return nil, err
+		}
+		sess, err := o.provider.Default()
+		if err != nil {
+			return nil, fmt.Errorf("get default session: %s", err)
 		}
 		return o.runTaskCommandFromECSService(sess, clusterName, serviceName)
 	}
@@ -619,12 +619,24 @@ func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
 	switch len(parts) {
 	case 2:
 		clusterName, serviceName := parts[0], parts[1]
+		sess, err := o.provider.Default()
+		if err != nil {
+			return nil, fmt.Errorf("get default session: %s", err)
+		}
 		cmd, err = o.runTaskCommandFromECSService(sess, clusterName, serviceName)
 		if err != nil {
 			return nil, err
 		}
 	case 3:
 		appName, envName, workloadName := parts[0], parts[1], parts[2]
+		env, err := o.targetEnv(appName, envName)
+		if err != nil {
+			return nil, err
+		}
+		sess, err := o.provider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, fmt.Errorf("get environment session: %s", err)
+		}
 		cmd, err = o.runTaskCommandFromWorkload(sess, appName, envName, workloadName)
 		if err != nil {
 			return nil, err
@@ -837,7 +849,7 @@ func (o *runTaskOpts) validateAppName() error {
 
 func (o *runTaskOpts) validateEnvName() error {
 	if o.appName != "" {
-		if _, err := o.targetEnv(); err != nil {
+		if _, err := o.targetEnv(o.appName, o.env); err != nil {
 			return err
 		}
 	} else {
@@ -889,8 +901,8 @@ func (o *runTaskOpts) askEnvName() error {
 	return nil
 }
 
-func (o *runTaskOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.appName, o.env)
+func (o *runTaskOpts) targetEnv(appName, envName string) (*config.Environment, error) {
+	env, err := o.store.GetEnvironment(appName, envName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s config: %w", o.env, err)
 	}
