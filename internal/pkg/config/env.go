@@ -53,6 +53,7 @@ type ImportVPC struct {
 // AdjustVPC holds the fields to adjust default VPC resources.
 type AdjustVPC struct {
 	CIDR               string   `json:"cidr"` // CIDR range for the VPC.
+	AZs                []string `json:"availabilityZoneNames"`
 	PublicSubnetCIDRs  []string `json:"publicSubnetCIDRs"`
 	PrivateSubnetCIDRs []string `json:"privateSubnetCIDRs"`
 }
