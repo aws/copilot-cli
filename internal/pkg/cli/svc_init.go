@@ -337,7 +337,8 @@ func (o *initSvcOpts) validateDuplicateSvc() error {
 	if err == nil {
 		log.Errorf(`It seems like you are trying to init a service that already exists.
 To recreate the service, please run:
-1. %s. Note that the manifest will remain for reusing purpose.
+1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
+If you'd prefer a new default manifest, please manually delete the existing one.
 2. And then %s
 `,
 			color.HighlightCode(fmt.Sprintf("copilot svc delete --name %s", o.name)),
