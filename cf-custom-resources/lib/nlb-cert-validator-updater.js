@@ -201,6 +201,13 @@ exports.handler = async function (event, context) {
 
     let handler = async function() {
         switch (event.RequestType) {
+            case "Update":
+                let oldAliases = new Set(event.OldResourceProperties.Aliases);
+                let oldAliasesSorted = [...oldAliases].sort().join(",");
+                if (oldAliasesSorted === aliasesSorted) {
+                    break;
+                }
+                // fallthrough
             case "Create":
                 await validateAliases(aliases, loadBalancerDNS);
                 const certificateARN = await requestCertificate({
@@ -212,7 +219,6 @@ exports.handler = async function (event, context) {
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
-            case "Update":
             case "Delete":
                 let unusedOptions = await unusedValidationOptions(aliases, loadBalancerDNS);
                 await deleteCertificate(aliases);
