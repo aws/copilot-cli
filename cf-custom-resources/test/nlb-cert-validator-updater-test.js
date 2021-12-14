@@ -254,7 +254,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     "AliasTarget": {
                         "DNSName": "other-lb-DNS",
                     },
-                    Name: "dash-test.mockDomain.com",
+                    Name: "dash-test.mockDomain.com.",
                 }]
             });
             AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
