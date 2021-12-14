@@ -28,10 +28,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	job = "job"
-)
-
 var (
 	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + " this job?"
 	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
@@ -131,6 +127,9 @@ func (o *initJobOpts) Validate() error {
 	}
 	if o.name != "" {
 		if err := validateJobName(o.name); err != nil {
+			return err
+		}
+		if err := o.validateDuplicateJob(); err != nil {
 			return err
 		}
 	}
@@ -254,6 +253,27 @@ func (o *initJobOpts) RecommendActions() error {
 	return nil
 }
 
+func (o *initJobOpts) validateDuplicateJob() error {
+	_, err := o.store.GetJob(o.appName, o.name)
+	if err == nil {
+		log.Errorf(`It seems like you are trying to init a job that already exists.
+To recreate the job, please run:
+1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
+If you'd prefer a new default manifest, please manually delete the existing one.
+2. And then %s
+`,
+			color.HighlightCode(fmt.Sprintf("copilot job delete --name %s", o.name)),
+			color.HighlightCode(fmt.Sprintf("copilot job init --name %s", o.name)))
+		return fmt.Errorf("job %s already exists", color.HighlightUserInput(o.name))
+	}
+
+	var errNoSuchJob *config.ErrNoSuchJob
+	if !errors.As(err, &errNoSuchJob) {
+		return fmt.Errorf("validate if job exists: %w", err)
+	}
+	return nil
+}
+
 func (o *initJobOpts) askJobType() error {
 	if o.wkldType != "" {
 		return nil
@@ -269,9 +289,9 @@ func (o *initJobOpts) askJobName() error {
 	}
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "job"),
-		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),
+		fmt.Sprintf(fmtWkldInitNameHelpPrompt, "job", o.appName),
 		func(val interface{}) error {
-			return validateSvcName(val, o.wkldType)
+			return validateJobName(val)
 		},
 		prompt.WithFinalMessage("Job name:"),
 	)
@@ -279,7 +299,7 @@ func (o *initJobOpts) askJobName() error {
 		return fmt.Errorf("get job name: %w", err)
 	}
 	o.name = name
-	return nil
+	return o.validateDuplicateJob()
 }
 
 func (o *initJobOpts) askImage() error {

@@ -109,6 +109,7 @@ type initSvcOpts struct {
 	fs           afero.Fs
 	init         svcInitializer
 	prompt       prompter
+	store        store
 	dockerEngine dockerEngine
 	sel          dockerfileSelector
 	topicSel     topicSelector
@@ -158,8 +159,8 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	opts := &initSvcOpts{
-		initSvcVars: vars,
-
+		initSvcVars:  vars,
+		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
@@ -190,6 +191,9 @@ func (o *initSvcOpts) Validate() error {
 	}
 	if o.name != "" {
 		if err := validateSvcName(o.name, o.wkldType); err != nil {
+			return err
+		}
+		if err := o.validateDuplicateSvc(); err != nil {
 			return err
 		}
 	}
@@ -328,6 +332,27 @@ func (o *initSvcOpts) askSvcType() error {
 	return nil
 }
 
+func (o *initSvcOpts) validateDuplicateSvc() error {
+	_, err := o.store.GetService(o.appName, o.name)
+	if err == nil {
+		log.Errorf(`It seems like you are trying to init a service that already exists.
+To recreate the service, please run:
+1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
+If you'd prefer a new default manifest, please manually delete the existing one.
+2. And then %s
+`,
+			color.HighlightCode(fmt.Sprintf("copilot svc delete --name %s", o.name)),
+			color.HighlightCode(fmt.Sprintf("copilot svc init --name %s", o.name)))
+		return fmt.Errorf("service %s already exists", color.HighlightUserInput(o.name))
+	}
+
+	var errNoSuchSvc *config.ErrNoSuchService
+	if !errors.As(err, &errNoSuchSvc) {
+		return fmt.Errorf("validate if service exists: %w", err)
+	}
+	return nil
+}
+
 func (o *initSvcOpts) askSvcName() error {
 	if o.name != "" {
 		return nil
@@ -343,7 +368,7 @@ func (o *initSvcOpts) askSvcName() error {
 		return fmt.Errorf("get service name: %w", err)
 	}
 	o.name = name
-	return nil
+	return o.validateDuplicateSvc()
 }
 
 func (o *initSvcOpts) askImage() error {
