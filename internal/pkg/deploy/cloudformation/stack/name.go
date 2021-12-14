@@ -20,10 +20,10 @@ func (t TaskStackName) TaskName() string {
 }
 
 // NameForWorkload returns the stack name for a workload.
-func NameForWorkload(app, env, svc string) string {
+func NameForWorkload(app, env, name string) string {
 	// stack name limit constrained by CFN https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-using-console-create-stack-parameters.html
 	const maxLen = 128
-	stackName := fmt.Sprintf("%s-%s-%s", app, env, svc)
+	stackName := fmt.Sprintf("%s-%s-%s", app, env, name)
 
 	if len(stackName) > maxLen {
 		return stackName[:maxLen]

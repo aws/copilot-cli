@@ -640,9 +640,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(false, mockError)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(false, mockError)
 			},
-			wantErr: fmt.Errorf("check if stack mockApp-mockEnv-mockSvc exists: some error"),
+			wantErr: fmt.Errorf("check if a complete stack mockApp-mockEnv-mockSvc exists: some error"),
 		},
 		"fail to describe environment": {
 			inBuildRequire: false,
@@ -660,7 +660,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockEnvDescriber.EXPECT().Describe().Return(nil, errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("describe environment mockEnv: some error"),
@@ -681,7 +681,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
 					EnvironmentVPC: describe.EnvironmentVPC{
 						ID: "mockVPCID",
@@ -707,7 +707,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 					Name: mockAppName,
 				}, "us-west-2").Return(nil, mockError)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 			},
 			wantErr: fmt.Errorf("get application %s resources from region us-west-2: %w", mockAppName, mockError),
 		},
@@ -724,7 +724,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 			},
 			wantErr: errors.New("alias specified when application is not associated with a domain"),
 		},
@@ -748,7 +748,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 					RepositoryURLs: map[string]string{},
 				}, nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 			},
 			wantErr: fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
@@ -767,7 +767,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("", mockError)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 			},
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
@@ -786,7 +786,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v0.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 			},
 			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
@@ -805,7 +805,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 			},
 			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
@@ -822,7 +822,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("deploy service: some error"),
@@ -840,7 +840,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 			},
 			wantErr: fmt.Errorf("deploy service: change set with name mockChangeSet for stack mockStack has no changes"),
@@ -859,7 +859,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
@@ -882,7 +882,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
@@ -915,7 +915,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 			},
@@ -934,7 +934,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(nil)
@@ -1066,7 +1066,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 			},
 
 			wantErr: errors.New("alias specified when application is not associated with a domain"),
@@ -1085,7 +1085,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{}, errors.New("some error"))
 			},
 
@@ -1106,7 +1106,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
@@ -1133,7 +1133,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
@@ -1156,7 +1156,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
@@ -1179,7 +1179,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
@@ -1202,7 +1202,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
@@ -1225,7 +1225,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
@@ -1255,7 +1255,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
@@ -1389,7 +1389,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockDeployStore.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
 			},
 			wantErr: fmt.Errorf("get SNS topics for app mockApp and environment mockEnv: %w", mockError),
@@ -1407,7 +1407,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockEnv.mockApp.local", nil)
-				m.mockStackExistChecker.EXPECT().Exists(mockStackName).Return(true, nil)
+				m.mockStackExistChecker.EXPECT().Exists(mockStackName, gomock.Any()).Return(true, nil)
 				m.mockDeployStore.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
 					*topic,
 				}, nil)

@@ -403,9 +403,9 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 		return nil, err
 	}
 	stackName := stack.NameForWorkload(o.appName, o.envName, o.name)
-	stackExists, err := stackExistChecker.Exists(stackName)
+	stackExists, err := stackExistChecker.Exists(stackName, awscloudformation.CompleteStackStatuses...)
 	if err != nil {
-		return nil, fmt.Errorf("check if stack %s exists: %w", stackName, err)
+		return nil, fmt.Errorf("check if a complete stack %s exists: %w", stackName, err)
 	}
 	rc := stack.RuntimeConfig{
 		AdditionalTags:           app.Tags,

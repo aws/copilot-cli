@@ -594,7 +594,7 @@ type roleManager interface {
 }
 
 type stackExistChecker interface {
-	Exists(string) (bool, error)
+	Exists(name string, wantedStatuses ...string) (bool, error)
 }
 
 type runningTaskSelector interface {

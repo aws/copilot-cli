@@ -315,7 +315,7 @@ count: 1`
 				}
 				opts.newStackExistChecker = func(app, env string) (stackExistChecker, error) {
 					mockStackExistChecker := mocks.NewMockstackExistChecker(ctrl)
-					mockStackExistChecker.EXPECT().Exists("ecs-kudos-test-api").Return(true, nil)
+					mockStackExistChecker.EXPECT().Exists("ecs-kudos-test-api", gomock.Any()).Return(true, nil)
 					return mockStackExistChecker, nil
 				}
 			},
@@ -395,7 +395,7 @@ count: 1`
 				}
 				opts.newStackExistChecker = func(app, env string) (stackExistChecker, error) {
 					mockStackExistChecker := mocks.NewMockstackExistChecker(ctrl)
-					mockStackExistChecker.EXPECT().Exists("ecs-kudos-test-api").Return(true, nil)
+					mockStackExistChecker.EXPECT().Exists("ecs-kudos-test-api", gomock.Any()).Return(true, nil)
 					return mockStackExistChecker, nil
 				}
 			},

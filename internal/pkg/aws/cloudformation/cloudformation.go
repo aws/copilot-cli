@@ -187,11 +187,9 @@ func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
 	return &descr, nil
 }
 
-// Exists returns true if an intact CloudFormation stack exists, false otherwise.
-// An intact stack can only be in one of the following status: UPDATE_ROLLBACK_COMPLETE,
-// CREATE_COMPLETE, or UPDATE_COMPLETE.
+// Exists returns true if the CloudFormation stack exists, false otherwise.
 // If an error occurs for another reason than ErrStackNotFound, then returns the error.
-func (c *CloudFormation) Exists(name string) (bool, error) {
+func (c *CloudFormation) Exists(name string, wantedStatuses ...string) (bool, error) {
 	resp, err := c.Describe(name)
 	if err != nil {
 		var notFound *ErrStackNotFound
@@ -200,9 +198,16 @@ func (c *CloudFormation) Exists(name string) (bool, error) {
 		}
 		return false, err
 	}
+	if len(wantedStatuses) == 0 {
+		return true, nil
+	}
 	status := aws.StringValue(resp.StackStatus)
-	return status == cloudformation.StackStatusUpdateRollbackComplete || status == cloudformation.StackStatusCreateComplete ||
-		status == cloudformation.StackStatusUpdateComplete, nil
+	for _, wantedStatus := range wantedStatuses {
+		if status == wantedStatus {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // MetadataOpts sets up optional parameters for Metadata function.

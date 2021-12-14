@@ -4272,7 +4272,7 @@ func (m *MockdomainInfoGetter) EXPECT() *MockdomainInfoGetterMockRecorder {
 	return m.recorder
 }
 
-// IsDomainOwned mocks base method.
+// IsRegisteredDomain mocks base method.
 func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRegisteredDomain", domainName)
@@ -4280,8 +4280,8 @@ func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
 	return ret0
 }
 
-// IsDomainOwned indicates an expected call of IsDomainOwned.
-func (mr *MockdomainInfoGetterMockRecorder) IsDomainOwned(domainName interface{}) *gomock.Call {
+// IsRegisteredDomain indicates an expected call of IsRegisteredDomain.
+func (mr *MockdomainInfoGetterMockRecorder) IsRegisteredDomain(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRegisteredDomain", reflect.TypeOf((*MockdomainInfoGetter)(nil).IsRegisteredDomain), domainName)
 }
@@ -6257,18 +6257,23 @@ func (m *MockstackExistChecker) EXPECT() *MockstackExistCheckerMockRecorder {
 }
 
 // Exists mocks base method.
-func (m *MockstackExistChecker) Exists(arg0 string) (bool, error) {
+func (m *MockstackExistChecker) Exists(name string, wantedStatuses ...string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Exists", arg0)
+	varargs := []interface{}{name}
+	for _, a := range wantedStatuses {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Exists", varargs...)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Exists indicates an expected call of Exists.
-func (mr *MockstackExistCheckerMockRecorder) Exists(arg0 interface{}) *gomock.Call {
+func (mr *MockstackExistCheckerMockRecorder) Exists(name interface{}, wantedStatuses ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockstackExistChecker)(nil).Exists), arg0)
+	varargs := append([]interface{}{name}, wantedStatuses...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockstackExistChecker)(nil).Exists), varargs...)
 }
 
 // MockrunningTaskSelector is a mock of runningTaskSelector interface.

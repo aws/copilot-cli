@@ -70,7 +70,7 @@ type RuntimeConfig struct {
 	AccountID                string
 	Region                   string
 
-	UpdateRequired bool
+	UpdateRequired bool // True if the stack already exists and will be updated.
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to

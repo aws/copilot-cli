@@ -515,9 +515,9 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		return nil, err
 	}
 	stackName := stack.NameForWorkload(o.appName, o.envName, o.name)
-	stackExists, err := o.stackExistChecker.Exists(stackName)
+	stackExists, err := o.stackExistChecker.Exists(stackName, awscloudformation.CompleteStackStatuses...)
 	if err != nil {
-		return nil, fmt.Errorf("check if stack %s exists: %w", stackName, err)
+		return nil, fmt.Errorf("check if a complete stack %s exists: %w", stackName, err)
 	}
 
 	if !o.buildRequired {

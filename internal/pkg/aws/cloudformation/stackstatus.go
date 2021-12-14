@@ -32,6 +32,13 @@ var (
 		cloudformation.ResourceStatusImportRollbackInProgress,
 		cloudformation.ResourceStatusImportRollbackFailed,
 	}
+
+	// CompleteStackStatuses represents the stack was created, and can only get updated or deleted.
+	CompleteStackStatuses = []string{
+		cloudformation.StackStatusUpdateRollbackComplete,
+		cloudformation.StackStatusCreateComplete,
+		cloudformation.StackStatusUpdateComplete,
+	}
 )
 
 // StackStatus represents the status of a stack.
