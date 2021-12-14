@@ -507,6 +507,13 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                             Value: "validate.usedByOtherCert.mockApp.mockDomain.com.v"
                         }
                     },{
+                        DomainName: "random.unrecognized.domain",
+                        ResourceRecord: {
+                            Name: "validate.random.unrecognized.domain",
+                            Type: "CNAME",
+                            Value: "validate.random.unrecognized.domain.v"
+                        }
+                    },{
                         DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
                     }],
                 }
