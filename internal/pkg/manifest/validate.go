@@ -85,6 +85,9 @@ func (l LoadBalancedWebService) Validate() error {
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l LoadBalancedWebServiceConfig) Validate() error {
 	var err error
+	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
+		return errors.New(`must have one of "http" or "nlb" enabled`)
+	}
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
 	}

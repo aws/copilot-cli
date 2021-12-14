@@ -1493,6 +1493,45 @@ func TestAlias_IsEmpty(t *testing.T) {
 	}
 }
 
+func TestRoutingRuleConfigOrBool_Disabled(t *testing.T) {
+	testCases := map[string]struct {
+		in     RoutingRuleConfigOrBool
+		wanted bool
+	}{
+		"disabled": {
+			in: RoutingRuleConfigOrBool{
+				Enabled: aws.Bool(false),
+			},
+			wanted: true,
+		},
+		"enabled implicitly": {
+			in: RoutingRuleConfigOrBool{},
+		},
+		"enabled explicitly": {
+			in: RoutingRuleConfigOrBool{
+				Enabled: aws.Bool(true),
+			},
+		},
+		"enabled explicitly by advanced configuration": {
+			in: RoutingRuleConfigOrBool{
+				RoutingRuleConfiguration: RoutingRuleConfiguration{
+					Path: aws.String("mockPath"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.Disabled()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
 func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     NetworkLoadBalancerConfiguration
