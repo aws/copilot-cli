@@ -91,15 +91,15 @@ func (e *ErrNoSuchJob) Error() string {
 		e.Name, e.App)
 }
 
-// ErrNoSuchWorkload means a workload couldn't be found in a specific application.
-type ErrNoSuchWorkload struct {
+// errNoSuchWorkload means a workload couldn't be found in a specific application.
+type errNoSuchWorkload struct {
 	App  string
 	Name string
 }
 
 // Is returns whether the provided error equals this error
-func (e *ErrNoSuchWorkload) Is(target error) bool {
-	t, ok := target.(*ErrNoSuchWorkload)
+func (e *errNoSuchWorkload) Is(target error) bool {
+	t, ok := target.(*errNoSuchWorkload)
 	if !ok {
 		return false
 	}
@@ -107,6 +107,6 @@ func (e *ErrNoSuchWorkload) Is(target error) bool {
 		e.Name == t.Name
 }
 
-func (e *ErrNoSuchWorkload) Error() string {
+func (e *errNoSuchWorkload) Error() string {
 	return fmt.Sprintf("couldn't find %s in the application %s", e.Name, e.App)
 }
