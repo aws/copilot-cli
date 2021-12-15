@@ -34,6 +34,21 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
+// DescribeAvailabilityZones mocks base method.
+func (m *Mockapi) DescribeAvailabilityZones(input *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeAvailabilityZones", input)
+	ret0, _ := ret[0].(*ec2.DescribeAvailabilityZonesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeAvailabilityZones indicates an expected call of DescribeAvailabilityZones.
+func (mr *MockapiMockRecorder) DescribeAvailabilityZones(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAvailabilityZones", reflect.TypeOf((*Mockapi)(nil).DescribeAvailabilityZones), input)
+}
+
 // DescribeNetworkInterfaces mocks base method.
 func (m *Mockapi) DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error) {
 	m.ctrl.T.Helper()

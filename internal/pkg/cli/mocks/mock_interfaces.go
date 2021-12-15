@@ -4272,7 +4272,7 @@ func (m *MockdomainInfoGetter) EXPECT() *MockdomainInfoGetterMockRecorder {
 	return m.recorder
 }
 
-// IsDomainOwned mocks base method.
+// IsRegisteredDomain mocks base method.
 func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRegisteredDomain", domainName)
@@ -4280,8 +4280,8 @@ func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
 	return ret0
 }
 
-// IsDomainOwned indicates an expected call of IsDomainOwned.
-func (mr *MockdomainInfoGetterMockRecorder) IsDomainOwned(domainName interface{}) *gomock.Call {
+// IsRegisteredDomain indicates an expected call of IsRegisteredDomain.
+func (mr *MockdomainInfoGetterMockRecorder) IsRegisteredDomain(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRegisteredDomain", reflect.TypeOf((*MockdomainInfoGetter)(nil).IsRegisteredDomain), domainName)
 }
