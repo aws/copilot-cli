@@ -5,6 +5,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -77,7 +78,14 @@ func (s *Store) createWorkload(wkld *Workload) error {
 func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 	param, err := s.getWorkloadParam(appName, svcName)
 	if err != nil {
-		return nil, fmt.Errorf("get service: %w", err)
+		var errNoSuchWkld *errNoSuchWorkload
+		if errors.As(err, &errNoSuchWkld) {
+			return nil, &ErrNoSuchService{
+				App:  appName,
+				Name: svcName,
+			}
+		}
+		return nil, err
 	}
 
 	var svc Workload
@@ -99,7 +107,14 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	param, err := s.getWorkloadParam(appName, jobName)
 	if err != nil {
-		return nil, fmt.Errorf("get job: %w", err)
+		var errNoSuchWkld *errNoSuchWorkload
+		if errors.As(err, &errNoSuchWkld) {
+			return nil, &ErrNoSuchJob{
+				App:  appName,
+				Name: jobName,
+			}
+		}
+		return nil, err
 	}
 
 	var job Workload
@@ -120,7 +135,7 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 func (s *Store) GetWorkload(appName, name string) (*Workload, error) {
 	param, err := s.getWorkloadParam(appName, name)
 	if err != nil {
-		return nil, fmt.Errorf("get workload: %w", err)
+		return nil, err
 	}
 	var wl Workload
 	err = json.Unmarshal(param, &wl)
@@ -139,7 +154,7 @@ func (s *Store) getWorkloadParam(appName, name string) ([]byte, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
-				return nil, &ErrNoSuchWorkload{
+				return nil, &errNoSuchWorkload{
 					App:  appName,
 					Name: name,
 				}

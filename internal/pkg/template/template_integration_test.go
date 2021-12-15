@@ -74,6 +74,10 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 		},
 		"renders with Windows platform": {
 			opts: template.WorkloadOpts{
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				Platform: template.RuntimePlatformOpts{
 					OS:   "windows",
 					Arch: "x86_64",
@@ -266,7 +270,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
-		"renders a valida template with additional addons parameters": {
+		"renders a valid template with additional addons parameters": {
 			opts: template.WorkloadOpts{
 				ServiceDiscoveryEndpoint: "test.app.local",
 				HTTPHealthCheck:          defaultHttpHealthCheck,
@@ -283,6 +287,10 @@ DiscoveryServiceArn:
 		"renders a valid template with Windows platform": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				Platform: template.RuntimePlatformOpts{
 					OS:   "windows",
 					Arch: "x86_64",

@@ -1084,7 +1084,11 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		"should generate a command given an app/env/svc target": {
 			inGenerateCommandTarget: "good-app/good-env/good-service",
 			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-service").Return(nil, &config.ErrNoSuchJob{})
 				m.store.EXPECT().GetService("good-app", "good-service").Return(&config.Workload{}, nil)
 			},
@@ -1098,7 +1102,11 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		"fail to generate a command given an app/env/svc target": {
 			inGenerateCommandTarget: "good-app/good-env/good-service",
 			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-service").Return(nil, &config.ErrNoSuchJob{})
 				m.store.EXPECT().GetService("good-app", "good-service").Return(&config.Workload{}, nil)
 			},
@@ -1112,7 +1120,11 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		"should generate a command given an app/env/job target": {
 			inGenerateCommandTarget: "good-app/good-env/good-job",
 			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
 			},
 			mockRunTaskRequester: mockRunTaskRequester{
@@ -1125,7 +1137,11 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		"fail to generate a command given an app/env/job target": {
 			inGenerateCommandTarget: "good-app/good-env/good-job",
 			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
 			},
 			mockRunTaskRequester: mockRunTaskRequester{
@@ -1138,7 +1154,11 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		"fail to determine if the workload is a job given an app/env/workload target": {
 			inGenerateCommandTarget: "good-app/good-env/bad-workload",
 			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "bad-workload").Return(nil, errors.New("some error"))
 			},
 			wantedError: fmt.Errorf("determine whether workload bad-workload is a job: some error"),
@@ -1146,7 +1166,11 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		"fail to determine if the workload is a service given an app/env/workload target": {
 			inGenerateCommandTarget: "good-app/good-env/bad-workload",
 			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "bad-workload").Return(nil, &config.ErrNoSuchJob{})
 				m.store.EXPECT().GetService("good-app", "bad-workload").Return(nil, errors.New("some error"))
 			},
@@ -1155,7 +1179,11 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		"workload is neither a job nor a service": {
 			inGenerateCommandTarget: "good-app/good-env/bad-workload",
 			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "bad-workload").Return(nil, &config.ErrNoSuchJob{})
 				m.store.EXPECT().GetService("good-app", "bad-workload").Return(nil, &config.ErrNoSuchService{})
 			},
@@ -1163,10 +1191,8 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		},
 		"invalid input": {
 			inGenerateCommandTarget: "invalid/illegal/not-good/input/is/bad",
-			setUpMocks: func(m *taskRunMocks) {
-				m.provider.EXPECT().Default()
-			},
-			wantedError: errors.New("invalid input to --generate-cmd: must be of format <cluster>/<service> or <app>/<env>/<workload>"),
+			setUpMocks:              func(m *taskRunMocks) {},
+			wantedError:             errors.New("invalid input to --generate-cmd: must be of format <cluster>/<service> or <app>/<env>/<workload>"),
 		},
 	}
 	for name, tc := range testCases {

@@ -4249,6 +4249,43 @@ func (mr *MockdomainHostedZoneGetterMockRecorder) DomainHostedZoneID(domainName 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).DomainHostedZoneID), domainName)
 }
 
+// MockdomainInfoGetter is a mock of domainInfoGetter interface.
+type MockdomainInfoGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockdomainInfoGetterMockRecorder
+}
+
+// MockdomainInfoGetterMockRecorder is the mock recorder for MockdomainInfoGetter.
+type MockdomainInfoGetterMockRecorder struct {
+	mock *MockdomainInfoGetter
+}
+
+// NewMockdomainInfoGetter creates a new mock instance.
+func NewMockdomainInfoGetter(ctrl *gomock.Controller) *MockdomainInfoGetter {
+	mock := &MockdomainInfoGetter{ctrl: ctrl}
+	mock.recorder = &MockdomainInfoGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdomainInfoGetter) EXPECT() *MockdomainInfoGetterMockRecorder {
+	return m.recorder
+}
+
+// IsDomainOwned mocks base method.
+func (m *MockdomainInfoGetter) IsRegisteredDomain(domainName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsRegisteredDomain", domainName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IsDomainOwned indicates an expected call of IsDomainOwned.
+func (mr *MockdomainInfoGetterMockRecorder) IsDomainOwned(domainName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRegisteredDomain", reflect.TypeOf((*MockdomainInfoGetter)(nil).IsRegisteredDomain), domainName)
+}
+
 // MockdockerfileParser is a mock of dockerfileParser interface.
 type MockdockerfileParser struct {
 	ctrl     *gomock.Controller

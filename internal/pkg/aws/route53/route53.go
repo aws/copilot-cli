@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
-	// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
-	// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
+	// See https://docs.aws.amazon.com/general/latest/gr/r53.html
+	// For Route53 API endpoint, "Route 53 in AWS Regions other than the Beijing and Ningxia Regions: specify us-east-1 as the Region."
 	route53Region = "us-east-1"
 )
 
@@ -50,7 +49,9 @@ func (r *Route53) DomainHostedZoneID(domainName string) (string, error) {
 			return strings.TrimPrefix(aws.StringValue(hostedZones[0].Id), "/hostedzone/"), nil
 		}
 		if !aws.BoolValue(resp.IsTruncated) {
-			return "", ErrDomainNotExist
+			return "", &ErrDomainHostedZoneNotFound{
+				domainName: domainName,
+			}
 		}
 		in = &route53.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
 		resp, err = r.client.ListHostedZonesByName(in)

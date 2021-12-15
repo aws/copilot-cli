@@ -405,6 +405,10 @@ type domainHostedZoneGetter interface {
 	DomainHostedZoneID(domainName string) (string, error)
 }
 
+type domainInfoGetter interface {
+	IsRegisteredDomain(domainName string) error
+}
+
 type dockerfileParser interface {
 	GetExposedPorts() ([]dockerfile.Port, error)
 	GetHealthCheck() (*dockerfile.HealthCheck, error)

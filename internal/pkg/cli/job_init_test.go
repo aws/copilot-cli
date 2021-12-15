@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
@@ -28,6 +29,7 @@ type initJobMocks struct {
 	mockSel          *mocks.MockinitJobSelector
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
+	mockStore        *mocks.Mockstore
 }
 
 func TestJobInitOpts_Validate(t *testing.T) {
@@ -179,6 +181,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 
 func TestJobInitOpts_Ask(t *testing.T) {
 	const (
+		mockAppName          = "phonetool"
 		wantedJobType        = manifest.ScheduledJobType
 		wantedJobName        = "cuteness-aggregator"
 		wantedDockerfilePath = "cuteness-aggregator/Dockerfile"
@@ -211,6 +214,30 @@ func TestJobInitOpts_Ask(t *testing.T) {
 
 			wantedErr: fmt.Errorf("get job name: some error"),
 		},
+		"returns an error if job already exists": {
+			inJobType:        wantedJobType,
+			inJobName:        "",
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this job?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedJobName, nil)
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(&config.Workload{}, nil)
+			},
+			wantedErr: fmt.Errorf("job cuteness-aggregator already exists"),
+		},
+		"returns an error if fail to validate service existence": {
+			inJobType:        wantedJobType,
+			inJobName:        "",
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockPrompt.EXPECT().Get(gomock.Eq("What do you want to name this job?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedJobName, nil)
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, mockError)
+			},
+			wantedErr: fmt.Errorf("validate if job exists: mock error"),
+		},
 		"prompt for job name": {
 			inJobType:        wantedJobType,
 			inJobName:        "",
@@ -224,6 +251,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedJobName, nil)
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 			},
 
@@ -437,11 +465,13 @@ type: Scheduled Job`), nil)
 			mockSel := mocks.NewMockinitJobSelector(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mocks := initJobMocks{
 				mockPrompt:       mockPrompt,
 				mockSel:          mockSel,
 				mockDockerEngine: mockDockerEngine,
 				mockMftReader:    mockManifestReader,
+				mockStore:        mockStore,
 			}
 			tc.setupMocks(mocks)
 			opts := &initJobOpts{
@@ -451,10 +481,12 @@ type: Scheduled Job`), nil)
 						name:           tc.inJobName,
 						image:          tc.inImage,
 						dockerfilePath: tc.inDockerfilePath,
+						appName:        mockAppName,
 					},
 					schedule: tc.inJobSchedule,
 				},
 				sel:          mockSel,
+				store:        mockStore,
 				dockerEngine: mockDockerEngine,
 				mftReader:    mockManifestReader,
 				prompt:       mockPrompt,

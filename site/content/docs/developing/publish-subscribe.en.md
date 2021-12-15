@@ -11,7 +11,7 @@ The combination of these two services effectively decouples the sending and rece
 ## Sending Messages from a Publisher
 
 To allow an existing service to publish messages to SNS, simply set the `publish` field in its manifest.
-You'll need a name for the topic which describes its function.
+We suggest using a name for the topic that describes its function.
 
 ```yaml
 # manifest.yml for api service
@@ -25,7 +25,14 @@ publish:
 
 This will create an [SNS topic](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) and set a resource policy on the topic to allow SQS queues in your AWS account to create subscriptions.
 
-Copilot also injects the ARNs of any SNS topics into your container under the environment variable `COPILOT_SNS_TOPIC_ARNS`. 
+Copilot also injects the ARNs of any SNS topics into your container under the environment variable `COPILOT_SNS_TOPIC_ARNS`.
+The JSON string is of the format:
+```json
+{
+  "firstTopicName": "arn:aws:sns:us-east-1:123456789012:firstTopic",
+  "secondTopicName": "arn:aws:sns:us-east-1:123456789012:secondTopic",
+}
+```
 
 ### Javascript Example
 Once the publishing service has been deployed, you can send messages to SNS via the AWS SDK for SNS. 
