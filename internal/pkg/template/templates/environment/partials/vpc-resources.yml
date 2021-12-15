@@ -41,7 +41,9 @@ InternetGatewayAttachment:
   Properties:
     InternetGatewayId: !Ref InternetGateway
     VpcId: !Ref VPC
-{{range $ind, $cidr := .PublicSubnetCIDRs}}
+
+{{- $azs := .AZs }}
+{{- range $ind, $cidr := .PublicSubnetCIDRs}}
 PublicSubnet{{inc $ind}}:
   Metadata:
     'aws:copilot:description': 'Public subnet {{inc $ind}} for resources that can access the internet'
@@ -49,12 +51,17 @@ PublicSubnet{{inc $ind}}:
   Properties:
     CidrBlock: {{$cidr}}
     VpcId: !Ref VPC
+    {{- if $azs }}
+    AvailabilityZone: {{index $azs $ind}}
+    {{- else }}
     AvailabilityZone: !Select [ {{$ind}}, !GetAZs '' ]
+    {{- end }}
     MapPublicIpOnLaunch: true
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub{{$ind}}'
-{{end}}{{range $ind, $cidr := .PrivateSubnetCIDRs}}
+{{- end }}
+{{- range $ind, $cidr := .PrivateSubnetCIDRs }}
 PrivateSubnet{{inc $ind}}:
   Metadata:
     'aws:copilot:description': 'Private subnet {{inc $ind}} for resources with no internet access'
@@ -62,14 +69,20 @@ PrivateSubnet{{inc $ind}}:
   Properties:
     CidrBlock: {{$cidr}}
     VpcId: !Ref VPC
+    {{- if $azs }}
+    AvailabilityZone: {{index $azs $ind}}
+    {{- else }}
     AvailabilityZone: !Select [ {{$ind}}, !GetAZs '' ]
+    {{- end }}
     MapPublicIpOnLaunch: false
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv{{$ind}}'
-{{end}}{{range $ind, $cidr := .PublicSubnetCIDRs}}
+{{- end }}
+{{- range $ind, $cidr := .PublicSubnetCIDRs}}
 PublicSubnet{{inc $ind}}RouteTableAssociation:
   Type: AWS::EC2::SubnetRouteTableAssociation
   Properties:
     RouteTableId: !Ref PublicRouteTable
-    SubnetId: !Ref PublicSubnet{{inc $ind}}{{end}}
+    SubnetId: !Ref PublicSubnet{{inc $ind}}
+{{- end}}
