@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
@@ -74,41 +75,44 @@ type uploadCustomResourcesOpts struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store               store
-	deployStore         *deploy.Store
-	ws                  wsSvcDirReader
-	imageBuilderPusher  imageBuilderPusher
-	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator     func(app, env string) interpolator
-	s3                  artifactUploader
-	cmd                 runner
-	addons              templater
-	appCFN              appResourcesGetter
-	svcCFN              serviceDeployer
-	newSvcUpdater       func(func(*session.Session) serviceUpdater)
-	sessProvider        sessionProvider
-	envUpgradeCmd       actionCommand
-	newAppVersionGetter func(string) (versionGetter, error)
-	endpointGetter      endpointGetter
-	snsTopicGetter      deployedEnvironmentLister
-	identity            identityService
-	subnetLister        vpcSubnetLister
-	envDescriber        envDescriber
+	store                  store
+	deployStore            *deploy.Store
+	ws                     wsSvcDirReader
+	imageBuilderPusher     imageBuilderPusher
+	unmarshal              func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator        func(app, env string) interpolator
+	s3                     artifactUploader
+	cmd                    runner
+	addons                 templater
+	appCFN                 appResourcesGetter
+	svcCFN                 serviceDeployer
+	newSvcUpdater          func(func(*session.Session) serviceUpdater)
+	newSvcLastUpdateGetter func(func(*session.Session) serviceLastUpdateGetter)
+	sessProvider           sessionProvider
+	envUpgradeCmd          actionCommand
+	newAppVersionGetter    func(string) (versionGetter, error)
+	endpointGetter         endpointGetter
+	snsTopicGetter         deployedEnvironmentLister
+	identity               identityService
+	subnetLister           vpcSubnetLister
+	envDescriber           envDescriber
 
 	spinner progress
 	sel     wsSelector
 	prompt  prompter
 
 	// cached variables
-	targetApp         *config.Application
-	targetEnvironment *config.Environment
-	targetSvc         *config.Workload
-	appliedManifest   interface{}
-	imageDigest       string
-	buildRequired     bool
-	appEnvResources   *stack.AppRegionalResources
-	rdSvcAlias        string
-	svcUpdater        serviceUpdater
+	targetApp           *config.Application
+	targetEnvironment   *config.Environment
+	targetSvc           *config.Workload
+	appliedManifest     interface{}
+	imageDigest         string
+	buildRequired       bool
+	appEnvResources     *stack.AppRegionalResources
+	rdSvcAlias          string
+	svcUpdater          serviceUpdater
+	svcLastUpdateGetter serviceLastUpdateGetter
+	cmdRunAt            *time.Time
 
 	subscriptions []manifest.TopicSubscription
 
@@ -335,6 +339,9 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.newSvcUpdater = func(f func(*session.Session) serviceUpdater) {
 		o.svcUpdater = f(envSession)
+	}
+	o.newSvcLastUpdateGetter = func(f func(*session.Session) serviceLastUpdateGetter) {
+		o.svcLastUpdateGetter = f(envSession)
 	}
 
 	// CF client against env account profile AND target environment region.
@@ -577,6 +584,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	o.newSvcUpdater(func(s *session.Session) serviceUpdater {
 		return ecs.New(s)
 	})
+	o.newSvcLastUpdateGetter(func(s *session.Session) serviceLastUpdateGetter {
+		return ecs.New(s)
+	})
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -616,6 +626,9 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
 		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+			return apprunner.New(s)
+		})
+		o.newSvcLastUpdateGetter(func(s *session.Session) serviceLastUpdateGetter {
 			return apprunner.New(s)
 		})
 		var caller identity.Caller
@@ -696,21 +709,33 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 		return err
 	}
 
+	if o.cmdRunAt == nil {
+		o.cmdRunAt = aws.Time(time.Now())
+	}
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
-		if errors.As(err, &errEmptyCS) {
-			if o.forceNewUpdate {
-				return o.forceDeploy()
-			}
-			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
+		if !errors.As(err, &errEmptyCS) {
+			return fmt.Errorf("deploy service: %w", err)
 		}
-		return fmt.Errorf("deploy service: %w", err)
+		if !o.forceNewUpdate {
+			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
+			return fmt.Errorf("deploy service: %w", err)
+		}
+	}
+	// Force update the service if --force is set and the service is not updated by the CFN.
+	if o.forceNewUpdate {
+		lastUpdatedAt, err := o.svcLastUpdateGetter.LastUpdatedAt(o.appName, o.envName, o.name)
+		if err != nil {
+			return fmt.Errorf("get the last updated time for %s: %w", o.name, err)
+		}
+		if o.cmdRunAt.After(aws.TimeValue(lastUpdatedAt)) {
+			return o.forceDeploy()
+		}
 	}
 	return nil
 }
 
 func (o *deploySvcOpts) forceDeploy() error {
-	// Force update the service if --force is set and change set is empty.
 	o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
 	if err := o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
 		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),

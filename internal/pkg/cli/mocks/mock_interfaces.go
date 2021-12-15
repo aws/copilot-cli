@@ -8,6 +8,7 @@ import (
 	encoding "encoding"
 	io "io"
 	reflect "reflect"
+	time "time"
 
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -5820,6 +5821,44 @@ func (m *MockserviceDescriber) DescribeService(app, env, svc string) (*ecs0.Serv
 func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
+}
+
+// MockserviceLastUpdateGetter is a mock of serviceLastUpdateGetter interface.
+type MockserviceLastUpdateGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockserviceLastUpdateGetterMockRecorder
+}
+
+// MockserviceLastUpdateGetterMockRecorder is the mock recorder for MockserviceLastUpdateGetter.
+type MockserviceLastUpdateGetterMockRecorder struct {
+	mock *MockserviceLastUpdateGetter
+}
+
+// NewMockserviceLastUpdateGetter creates a new mock instance.
+func NewMockserviceLastUpdateGetter(ctrl *gomock.Controller) *MockserviceLastUpdateGetter {
+	mock := &MockserviceLastUpdateGetter{ctrl: ctrl}
+	mock.recorder = &MockserviceLastUpdateGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockserviceLastUpdateGetter) EXPECT() *MockserviceLastUpdateGetterMockRecorder {
+	return m.recorder
+}
+
+// LastUpdatedAt mocks base method.
+func (m *MockserviceLastUpdateGetter) LastUpdatedAt(app, env, svc string) (*time.Time, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LastUpdatedAt", app, env, svc)
+	ret0, _ := ret[0].(*time.Time)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LastUpdatedAt indicates an expected call of LastUpdatedAt.
+func (mr *MockserviceLastUpdateGetterMockRecorder) LastUpdatedAt(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUpdatedAt", reflect.TypeOf((*MockserviceLastUpdateGetter)(nil).LastUpdatedAt), app, env, svc)
 }
 
 // MockserviceUpdater is a mock of serviceUpdater interface.

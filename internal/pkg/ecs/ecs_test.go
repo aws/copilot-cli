@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awsecs "github.com/aws/aws-sdk-go/service/ecs"
@@ -316,6 +317,99 @@ func TestClient_DescribeService(t *testing.T) {
 
 			// WHEN
 			get, err := client.DescribeService(mockApp, mockEnv, mockSvc)
+
+			// THEN
+			if test.wantedError != nil {
+				require.EqualError(t, err, test.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, get, test.wanted)
+			}
+		})
+	}
+}
+
+func TestClient_LastUpdatedAt(t *testing.T) {
+	const (
+		mockApp     = "mockApp"
+		mockEnv     = "mockEnv"
+		mockSvc     = "mockSvc"
+		mockSvcARN  = "arn:aws:ecs:us-west-2:1234567890:service/mockCluster/mockService"
+		mockCluster = "mockCluster"
+		mockService = "mockService"
+	)
+	mockError := errors.New("some error")
+	mockTime := time.Unix(1494505756, 0)
+	mockBeforeTime := time.Unix(1494505750, 0)
+	getRgInput := map[string]string{
+		deploy.AppTagKey:     mockApp,
+		deploy.EnvTagKey:     mockEnv,
+		deploy.ServiceTagKey: mockSvc,
+	}
+
+	tests := map[string]struct {
+		setupMocks func(mocks clientMocks)
+
+		wantedError error
+		wanted      *time.Time
+	}{
+		"error if fail to describe ECS service": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: mockSvcARN},
+						}, nil),
+					m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(nil, mockError),
+				)
+			},
+			wantedError: fmt.Errorf("get ECS service mockService: some error"),
+		},
+		"succeed": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: mockSvcARN},
+						}, nil),
+					m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{
+						Deployments: []*awsecs.Deployment{
+							{
+								UpdatedAt: &mockTime,
+							},
+							{
+								UpdatedAt: &mockBeforeTime,
+							},
+						},
+					}, nil),
+				)
+			},
+			wanted: &mockTime,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockECSClient := mocks.NewMockecsClient(ctrl)
+			mocks := clientMocks{
+				resourceGetter: mockRgGetter,
+				ecsClient:      mockECSClient,
+			}
+
+			test.setupMocks(mocks)
+
+			client := Client{
+				rgGetter:  mockRgGetter,
+				ecsClient: mockECSClient,
+			}
+
+			// WHEN
+			get, err := client.LastUpdatedAt(mockApp, mockEnv, mockSvc)
 
 			// THEN
 			if test.wantedError != nil {

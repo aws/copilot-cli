@@ -6,6 +6,7 @@ package cli
 import (
 	"encoding"
 	"io"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
@@ -550,6 +551,10 @@ type roleDeleter interface {
 
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
+}
+
+type serviceLastUpdateGetter interface {
+	LastUpdatedAt(app, env, svc string) (*time.Time, error)
 }
 
 type serviceUpdater interface {

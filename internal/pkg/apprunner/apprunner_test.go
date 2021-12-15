@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/apprunner/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/golang/mock/gomock"
@@ -124,6 +126,84 @@ func TestClient_ForceUpdateService(t *testing.T) {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 			} else {
 				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestClient_LastUpdatedAt(t *testing.T) {
+	mockError := errors.New("some error")
+	const (
+		mockApp    = "mockApp"
+		mockSvc    = "mockSvc"
+		mockEnv    = "mockEnv"
+		mockSvcARN = "mockSvcARN"
+	)
+	mockTime := time.Unix(1494505756, 0)
+	getRgInput := map[string]string{
+		deploy.AppTagKey:     mockApp,
+		deploy.EnvTagKey:     mockEnv,
+		deploy.ServiceTagKey: mockSvc,
+	}
+	tests := map[string]struct {
+		mock func(m *clientMocks)
+
+		wantErr error
+		want    *time.Time
+	}{
+		"error if fail to describe service": {
+			mock: func(m *clientMocks) {
+				m.rgMock.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{
+							ARN: mockSvcARN,
+						},
+					}, nil)
+				m.appRunnerMock.EXPECT().DescribeService(mockSvcARN).Return(nil, mockError)
+			},
+			wantErr: fmt.Errorf("describe service: some error"),
+		},
+		"succeed": {
+			mock: func(m *clientMocks) {
+				m.rgMock.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{
+							ARN: mockSvcARN,
+						},
+					}, nil)
+				m.appRunnerMock.EXPECT().DescribeService(mockSvcARN).Return(&apprunner.Service{
+					DateUpdated: mockTime,
+				}, nil)
+			},
+			want: &mockTime,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRg := mocks.NewMockresourceGetter(ctrl)
+			mockAppRunner := mocks.NewMockappRunnerClient(ctrl)
+			m := &clientMocks{
+				rgMock:        mockRg,
+				appRunnerMock: mockAppRunner,
+			}
+			tc.mock(m)
+
+			c := Client{
+				appRunnerClient: mockAppRunner,
+				rgGetter:        mockRg,
+			}
+
+			got, gotErr := c.LastUpdatedAt(mockApp, mockEnv, mockSvc)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.want, got)
 			}
 		})
 	}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
@@ -34,6 +35,7 @@ type resourceGetter interface {
 
 type ecsClient interface {
 	DefaultCluster() (string, error)
+	Service(clusterName, serviceName string) (*ecs.Service, error)
 	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
 	RunningTasks(cluster string) ([]*ecs.Task, error)
 	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
@@ -107,6 +109,19 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 		Tasks:        tasks,
 		StoppedTasks: stoppedTasks,
 	}, nil
+}
+
+// LastUpdatedAt returns the last updated time of the ECS service.
+func (c Client) LastUpdatedAt(app, env, svc string) (*time.Time, error) {
+	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+	detail, err := c.ecsClient.Service(clusterName, serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("get ECS service %s: %w", serviceName, err)
+	}
+	return detail.Deployments[0].UpdatedAt, nil
 }
 
 // ListActiveAppEnvTasksOpts contains the parameters for ListActiveAppEnvTasks.
