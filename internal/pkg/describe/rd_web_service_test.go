@@ -17,30 +17,30 @@ import (
 
 const humanStringWithResources = `About
 
-  Application       testapp
-  Name              testsvc
-  Type              Request-Driven Web Service
+  Application  testapp
+  Name         testsvc
+  Type         Request-Driven Web Service
 
 Configurations
 
-  Environment       CPU (vCPU)          Memory (MiB)        Port
-  -----------       ----------          ------------        ----
-  test              1                   2048                80
-  prod              2                   3072                  "
+  Environment  CPU (vCPU)  Memory (MiB)  Port
+  -----------  ----------  ------------  ----
+  test         1           2048          80
+  prod         2           3072            "
 
 Routes
 
-  Environment       URL
-  -----------       ---
-  test              https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
-  prod              https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
+  Environment  URL
+  -----------  ---
+  test         https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
+  prod         https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
 
 Variables
 
-  Name                      Environment         Value
-  ----                      -----------         -----
-  COPILOT_ENVIRONMENT_NAME  prod                prod
-    "                       test                test
+  Name                      Environment  Value
+  ----                      -----------  -----
+  COPILOT_ENVIRONMENT_NAME  prod         prod
+    "                       test         test
 
 Resources
 
@@ -53,7 +53,7 @@ Resources
 
 type apprunnerSvcDescriberMocks struct {
 	storeSvc        *mocks.MockDeployedEnvServicesLister
-	ecsSvcDescriber *mocks.MockapprunnerSvcDescriber
+	ecsSvcDescriber *mocks.MockapprunnerDescriber
 }
 
 func TestRDWebServiceDescriber_Describe(t *testing.T) {
@@ -149,7 +149,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 				Service: testSvc,
 				Type:    "Request-Driven Web Service",
 				App:     testApp,
-				Configurations: []*ServiceConfig{
+				AppRunnerConfigurations: []*ServiceConfig{
 					{
 						CPU:         "1024",
 						Environment: "test",
@@ -210,7 +210,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMockapprunnerSvcDescriber(ctrl)
+			mockSvcDescriber := mocks.NewMockapprunnerDescriber(ctrl)
 			mocks := apprunnerSvcDescriberMocks{
 				storeSvc:        mockStore,
 				ecsSvcDescriber: mockSvcDescriber,
@@ -223,11 +223,12 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 				svc:             testSvc,
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
-				envSvcDescribers: map[string]apprunnerSvcDescriber{
+				initClients:     func(string) error { return nil },
+
+				envSvcDescribers: map[string]apprunnerDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,
 				},
-				initServiceDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
@@ -252,7 +253,7 @@ func TestRDWebServiceDesc_String(t *testing.T) {
 			Service: "testsvc",
 			Type:    "Request-Driven Web Service",
 			App:     "testapp",
-			Configurations: []*ServiceConfig{
+			AppRunnerConfigurations: []*ServiceConfig{
 				{
 					CPU:         "1024",
 					Environment: "test",

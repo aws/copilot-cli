@@ -46,7 +46,7 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 
 // URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
 func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
-	err := d.initDescribers(envName)
+	err := d.initClients(envName)
 	if err != nil {
 		return "", err
 	}
@@ -59,7 +59,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
 	}
-	svcParams, err := d.svcStackDescriber[envName].Params()
+	svcParams, err := d.ecsServiceDescribers[envName].Params()
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
@@ -91,10 +91,10 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 // URI returns the service discovery namespace and is used to make
 // BackendServiceDescriber have the same signature as WebServiceDescriber.
 func (d *BackendServiceDescriber) URI(envName string) (string, error) {
-	if err := d.initDescribers(envName); err != nil {
+	if err := d.initClients(envName); err != nil {
 		return "", err
 	}
-	svcStackParams, err := d.svcStackDescriber[envName].Params()
+	svcStackParams, err := d.ecsServiceDescribers[envName].Params()
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
@@ -102,7 +102,7 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if port == stack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
 	}
-	endpoint, err := d.envDescriber[envName].ServiceDiscoveryEndpoint()
+	endpoint, err := d.envStackDescriber[envName].ServiceDiscoveryEndpoint()
 	if err != nil {
 		return "nil", fmt.Errorf("retrieve service discovery endpoint for environment %s: %w", envName, err)
 	}
@@ -116,7 +116,7 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 
 // URI returns the WebServiceURI to identify this service uniquely given an environment name.
 func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
-	err := d.initServiceDescriber(envName)
+	err := d.initClients(envName)
 	if err != nil {
 		return "", err
 	}
