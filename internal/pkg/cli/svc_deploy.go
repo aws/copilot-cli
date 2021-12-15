@@ -150,11 +150,9 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
-		now: func() time.Time {
-			return time.Now()
-		},
-		sessProvider:   sessions.NewProvider(),
-		snsTopicGetter: deployStore,
+		now:             time.Now,
+		sessProvider:    sessions.NewProvider(),
+		snsTopicGetter:  deployStore,
 	}
 	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
