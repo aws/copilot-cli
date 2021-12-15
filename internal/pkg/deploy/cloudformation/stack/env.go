@@ -95,6 +95,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomDomainLambda:     customDomain,
 		ScriptBucketName:       bucket,
 		ImportVPC:              e.in.ImportVPCConfig,
+		ContainerInsight:       e.in.ContainerInsight,
 		VPCConfig:              vpcConf,
 		Version:                e.in.Version,
 		LatestVersion:          deploy.LatestEnvTemplateVersion,

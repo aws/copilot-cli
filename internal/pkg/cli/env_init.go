@@ -122,11 +122,12 @@ func (v tempCredsVars) isSet() bool {
 }
 
 type initEnvVars struct {
-	appName       string
-	name          string // Name for the environment.
-	profile       string // The named profile to use for credential retrieval. Mutually exclusive with tempCreds.
-	isProduction  bool   // True means retain resources even after deletion.
-	defaultConfig bool   // True means using default environment configuration.
+	appName          string
+	name             string // Name for the environment.
+	profile          string // The named profile to use for credential retrieval. Mutually exclusive with tempCreds.
+	isProduction     bool   // True means retain resources even after deletion.
+	containerInsight bool   // True means retain resources even after deletion.
+	defaultConfig    bool   // True means using default environment configuration.
 
 	importVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
 	adjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
@@ -300,6 +301,7 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
+	env.ContainerInsight = o.containerInsight
 	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
 
 	// 6. Store the environment in SSM.
@@ -657,6 +659,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map
 			AccountPrincipalARN: caller.RootUserARN,
 		},
 		Prod:                o.isProduction,
+		ContainerInsight:    o.containerInsight,
 		AdditionalTags:      app.Tags,
 		CustomResourcesURLs: customResourcesURLs,
 		AdjustVPCConfig:     o.adjustVPCConfig(),
@@ -799,6 +802,7 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.region, regionFlag, "", envRegionTokenFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription)
+	cmd.Flags().BoolVar(&vars.containerInsight, containerInsightEnvFlag, true, containerInsightEnvFlagDescription)
 
 	cmd.Flags().StringVar(&vars.importVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
@@ -821,6 +825,7 @@ func buildEnvInitCmd() *cobra.Command {
 	flags.AddFlag(cmd.Flags().Lookup(regionFlag))
 	flags.AddFlag(cmd.Flags().Lookup(defaultConfigFlag))
 	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
+	flags.AddFlag(cmd.Flags().Lookup(containerInsightEnvFlag))
 
 	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(vpcIDFlag))

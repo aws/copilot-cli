@@ -134,9 +134,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
-			appName:      vars.appName,
-			name:         defaultEnvironmentName,
-			isProduction: false,
+			appName:          vars.appName,
+			name:             defaultEnvironmentName,
+			isProduction:     false,
+			containerInsight: true,
 		},
 		store:       ssm,
 		appDeployer: deployer,

@@ -43,6 +43,8 @@ type EnvOpts struct {
 	VPCConfig *config.AdjustVPC
 
 	LatestVersion string
+
+	ContainerInsight bool
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

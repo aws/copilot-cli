@@ -71,6 +71,13 @@ Resources:
       Configuration:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
+      ClusterSettings:
+        - Name: containerInsights
+{{- if .ContainerInsight}}
+          Value: enabled
+{{- else}}
+          Value: disabled
+{{- end}}
   PublicLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTP and HTTPS traffic'
