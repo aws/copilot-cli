@@ -201,6 +201,13 @@ exports.handler = async function (event, context) {
 
     let handler = async function() {
         switch (event.RequestType) {
+            case "Update":
+                let oldAliases = new Set(event.OldResourceProperties.Aliases);
+                let oldAliasesSorted = [...oldAliases].sort().join(",");
+                if (oldAliasesSorted === aliasesSorted) {
+                    break;
+                }
+                // Fallthrough to "Create". When the aliases are different, the same actions are taken for both "Update" and "Create".
             case "Create":
                 await validateAliases(aliases, loadBalancerDNS);
                 const certificateARN = await requestCertificate({
@@ -212,12 +219,11 @@ exports.handler = async function (event, context) {
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
-            case "Update":
             case "Delete":
                 let unusedOptions = await unusedValidationOptions(aliases, loadBalancerDNS);
-                // await deleteCertificate(aliases);
-                // await deactivate(unusedOptions, loadBalancerDNS, loadBalancerHostedZoneID);
-                throw new Error(`The number of options to be deleted is: ${unusedOptions.size}`);
+                await deleteCertificate(aliases);
+                await deactivate(unusedOptions, loadBalancerDNS, loadBalancerHostedZoneID);
+                break;
             default:
                 throw new Error(`Unsupported request type ${event.RequestType}`);
         }
@@ -452,6 +458,92 @@ async function unusedValidationOptions(aliases, loadBalancerDNS) {
 }
 
 /**
+ * Delete the copilot-tagged certificate that has the default canonical domain name and uses the aliases for its subject
+ * alternative names.
+ * @param {Set<String>} aliases
+ * @returns {Promise<void>}
+ */
+async function deleteCertificate(aliases) {
+    const certificates = await serviceCertificates();
+    const { certPendingDeletion } = categorizeCertificates(aliases, certificates);
+    let promises = [];
+    for (const {CertificateArn: arn} of certPendingDeletion) {
+        let promise = clients.acm().deleteCertificate({
+            CertificateArn: arn
+        }).promise();
+        promises.push(promise);
+    }
+    await Promise.all(promises);
+}
+
+async function deactivate(unusedOptions, loadBalancerDNS, loadBalancerHostedZoneID) {
+    let promises = [];
+    for (let option of unusedOptions) {
+        promises.push(deactivateOption(option, loadBalancerDNS, loadBalancerHostedZoneID));
+    }
+    await Promise.all(promises);
+}
+
+async function deactivateOption(option, loadBalancerDNS, loadBalancerHostedZoneID) {
+    let changes = [{
+        Action: "DELETE",
+        ResourceRecordSet: {
+            Name: option.ResourceRecord.Name,
+            Type: option.ResourceRecord.Type,
+            TTL: 60,
+            ResourceRecords: [
+                {
+                    Value: option.ResourceRecord.Value,
+                }
+            ],
+        }
+    }];
+
+    if (option.Domain !== certificateDomain) {
+        changes.push({
+            Action: "DELETE", // It is validated that if the alias is in use, it is in use by the service itself.
+            ResourceRecordSet: {
+                Name: option.DomainName,
+                Type: "A",
+                AliasTarget: {
+                    DNSName: loadBalancerDNS,
+                    EvaluateTargetHealth: true,
+                    HostedZoneId: loadBalancerHostedZoneID,
+                }
+            }
+        });
+    }
+
+    let {hostedZoneID, route53Client} = await domainResources(option.DomainName);
+    let changeResourceRecordSetsInput = {
+        ChangeBatch: {
+            Comment: `Delete the validation record and A record for ${option.DomainName}`,
+            Changes: changes,
+        },
+        HostedZoneId: hostedZoneID,
+    }
+    let changeInfo;
+    try {
+        ({ ChangeInfo: changeInfo } = await route53Client.changeResourceRecordSets(changeResourceRecordSetsInput).promise());
+    } catch (e) {
+        let recordSetNotFoundErrMessageRegex = /Tried to delete resource record set \[name='.*', type='A'] but it was not found/;
+        if (e.message.search(recordSetNotFoundErrMessageRegex) !== -1) {
+            return; // If we attempt to `DELETE` a record that doesn't exist, the job is already done, skip waiting.
+        }
+        throw new Error(`delete record ${option.ResourceRecord.Name}: ` + e.message);
+    }
+
+    await route53Client.waitFor('resourceRecordSetsChanged', {
+        // Wait up to 5 minutes
+        $waiter: {
+            delay: DELAY_RECORD_SETS_CHANGE_IN_S,
+            maxAttempts: ATTEMPTS_RECORD_SETS_CHANGE,
+        },
+        Id: changeInfo.Id,
+    }).promise();
+}
+
+/**
  * Retrieve all certificates used for the service and cache the results.
  * @returns {Array<Object>} An array of descriptions for the certificates used by the service.
  */
@@ -549,7 +641,7 @@ This is unexpected. We don't error out as it may not cause any issue.`);
     if (!targetRecordExists(domainName, recordSet)) {
         return false; // If there is no record using this domain, it is not in use.
     }
-    const inUseByMySelf = recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName !== `${loadBalancerDNS}.`
+    const inUseByMySelf = recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${loadBalancerDNS}.`
     return !inUseByMySelf
 }
 
@@ -582,9 +674,8 @@ function targetRecordExists(targetDomainName, recordSet) {
     if (!recordSet || recordSet.length === 0) {
         return false;
     }
-    return recordSet[0].Name === targetDomainName;
+    return recordSet[0].Name === `${targetDomainName}.`;
 }
-
 
 async function hostedZoneIDByName(domain) {
     const { HostedZones } = await clients.app.route53()
@@ -639,7 +730,15 @@ function setEqual(setA, setB) {
 function UnrecognizedDomainTypeError(message = "") {
     this.message = message;
 }
-UnrecognizedDomainTypeError.prototype = Error.prototype;
+UnrecognizedDomainTypeError.prototype = Object.create(Error.prototype, {
+    constructor: {
+        value: Error,
+        enumerable: false,
+        writable: true,
+        configurable: true
+    }
+});
+
 
 exports.deadlineExpired = function () {
     return new Promise(function (resolve, reject) {
