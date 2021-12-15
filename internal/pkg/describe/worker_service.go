@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"text/tabwriter"
 
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -17,21 +18,26 @@ import (
 
 // WorkerServiceDescriber retrieves information about a worker service.
 type WorkerServiceDescriber struct {
-	*ecsServiceDescriber
+	app             string
+	svc             string
+	enableResources bool
+
+	store             DeployedEnvServicesLister
+	initClients       func(string) error
+	svcStackDescriber map[string]ecsDescriber
 }
 
 // NewWorkerServiceDescriber instantiates a worker service describer.
 func NewWorkerServiceDescriber(opt NewServiceConfig) (*WorkerServiceDescriber, error) {
 	describer := &WorkerServiceDescriber{
-		ecsServiceDescriber: &ecsServiceDescriber{
-			app:               opt.App,
-			svc:               opt.Svc,
-			enableResources:   opt.EnableResources,
-			store:             opt.DeployStore,
-			svcStackDescriber: make(map[string]ecsStackDescriber),
-		},
+		app:             opt.App,
+		svc:             opt.Svc,
+		enableResources: opt.EnableResources,
+		store:           opt.DeployStore,
+
+		svcStackDescriber: make(map[string]ecsDescriber),
 	}
-	describer.initDescribers = func(env string) error {
+	describer.initClients = func(env string) error {
 		if _, ok := describer.svcStackDescriber[env]; ok {
 			return nil
 		}
@@ -61,7 +67,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
-		err := d.initDescribers(env)
+		err := d.initClients(env)
 		if err != nil {
 			return nil, err
 		}
@@ -69,12 +75,17 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get stack parameters for environment %s: %w", env, err)
 		}
+		containerPlatform, err := d.svcStackDescriber[env].Platform()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve platform: %w", err)
+		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
 				Port:        blankContainerPort,
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
+				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
 			},
 			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
@@ -93,7 +104,7 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {
 		for _, env := range environments {
-			err := d.initDescribers(env)
+			err := d.initClients(env)
 			if err != nil {
 				return nil, err
 			}

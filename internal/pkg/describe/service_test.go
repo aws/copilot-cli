@@ -87,6 +87,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockecsClient := mocks.NewMockecsClient(ctrl)
+			mockCFN := mocks.NewMockstackDescriber(ctrl)
 			mocks := ecsSvcDescriberMocks{
 				mockECSClient: mockecsClient,
 			}
@@ -94,10 +95,11 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ECSServiceDescriber{
-				ServiceDescriber: &ServiceDescriber{
+				serviceStackDescriber: &serviceStackDescriber{
 					app:     testApp,
 					service: testSvc,
 					env:     testEnv,
+					cfn: mockCFN,
 				},
 				ecsClient: mockecsClient,
 			}
@@ -188,7 +190,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &ECSServiceDescriber{
-				ServiceDescriber: &ServiceDescriber{
+				serviceStackDescriber: &serviceStackDescriber{
 					app:     testApp,
 					service: testSvc,
 					env:     testEnv,
@@ -278,7 +280,7 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			d := &ServiceDescriber{
+			d := &serviceStackDescriber{
 				app:     testApp,
 				service: testSvc,
 				env:     testEnv,
@@ -294,6 +296,89 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.ElementsMatch(t, tc.wantedResources, actual)
+			}
+		})
+	}
+}
+
+func TestServiceDescriber_Platform(t *testing.T) {
+	const (
+		testApp = "phonetool"
+		testSvc = "svc"
+		testEnv = "test"
+	)
+	testCases := map[string]struct {
+		setupMocks func(mocks ecsSvcDescriberMocks)
+
+		wantedPlatform *awsecs.ContainerPlatform
+		wantedError    error
+	}{
+		"returns error if fails to get task definition": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				gomock.InOrder(
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("describe task definition for service svc: some error"),
+		},
+		"successfully returns platform that's returned from api call": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				gomock.InOrder(
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
+						RuntimePlatform: &ecsapi.RuntimePlatform{
+							CpuArchitecture:       aws.String("ARM64"),
+							OperatingSystemFamily: aws.String("LINUX"),
+						},
+					}, nil))
+			},
+			wantedPlatform: &awsecs.ContainerPlatform{
+				OperatingSystem: "LINUX",
+				Architecture:    "ARM64",
+			},
+		},
+		"successfully returns default platform when none returned from api call": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				gomock.InOrder(
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{}, nil))
+			},
+			wantedPlatform: &awsecs.ContainerPlatform{
+				OperatingSystem: "LINUX",
+				Architecture:    "X86_64",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockecsClient := mocks.NewMockecsClient(ctrl)
+			mocks := ecsSvcDescriberMocks{
+				mockECSClient: mockecsClient,
+			}
+
+			tc.setupMocks(mocks)
+
+			d := &ECSServiceDescriber{
+				serviceStackDescriber: &serviceStackDescriber{
+					app:     testApp,
+					service: testSvc,
+					env:     testEnv,
+				},
+				ecsClient: mockecsClient,
+			}
+
+			// WHEN
+			actual, err := d.Platform()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPlatform, actual)
 			}
 		})
 	}

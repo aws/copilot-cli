@@ -596,9 +596,9 @@ func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
 
 Last deployment
 
-  Updated At        2 months ago
-  Service ID        frontend/8a2b343f658144d885e47d10adb4845e
-  Source            hello
+  Updated At  2 months ago
+  Service ID  frontend/8a2b343f658144d885e47d10adb4845e
+  Source      hello
 
 System Logs
 
