@@ -149,7 +149,7 @@ func TestClient_LastUpdatedAt(t *testing.T) {
 		mock func(m *clientMocks)
 
 		wantErr error
-		want    *time.Time
+		want    time.Time
 	}{
 		"error if fail to describe service": {
 			mock: func(m *clientMocks) {
@@ -175,7 +175,7 @@ func TestClient_LastUpdatedAt(t *testing.T) {
 					DateUpdated: mockTime,
 				}, nil)
 			},
-			want: &mockTime,
+			want: mockTime,
 		},
 	}
 

@@ -351,7 +351,7 @@ func TestClient_LastUpdatedAt(t *testing.T) {
 		setupMocks func(mocks clientMocks)
 
 		wantedError error
-		wanted      *time.Time
+		wanted      time.Time
 	}{
 		"error if fail to describe ECS service": {
 			setupMocks: func(m clientMocks) {
@@ -384,7 +384,7 @@ func TestClient_LastUpdatedAt(t *testing.T) {
 					}, nil),
 				)
 			},
-			wanted: &mockTime,
+			wanted: mockTime,
 		},
 	}
 
