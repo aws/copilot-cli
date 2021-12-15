@@ -75,44 +75,42 @@ type uploadCustomResourcesOpts struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store                  store
-	deployStore            *deploy.Store
-	ws                     wsSvcDirReader
-	imageBuilderPusher     imageBuilderPusher
-	unmarshal              func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator        func(app, env string) interpolator
-	s3                     artifactUploader
-	cmd                    runner
-	addons                 templater
-	appCFN                 appResourcesGetter
-	svcCFN                 serviceDeployer
-	newSvcUpdater          func(func(*session.Session) serviceUpdater)
-	newSvcLastUpdateGetter func(func(*session.Session) serviceLastUpdateGetter)
-	sessProvider           sessionProvider
-	envUpgradeCmd          actionCommand
-	newAppVersionGetter    func(string) (versionGetter, error)
-	endpointGetter         endpointGetter
-	snsTopicGetter         deployedEnvironmentLister
-	identity               identityService
-	subnetLister           vpcSubnetLister
-	envDescriber           envDescriber
+	store               store
+	deployStore         *deploy.Store
+	ws                  wsSvcDirReader
+	imageBuilderPusher  imageBuilderPusher
+	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator     func(app, env string) interpolator
+	s3                  artifactUploader
+	cmd                 runner
+	addons              templater
+	appCFN              appResourcesGetter
+	svcCFN              serviceDeployer
+	newSvcUpdater       func(func(*session.Session) svcForceUpdater)
+	sessProvider        sessionProvider
+	envUpgradeCmd       actionCommand
+	newAppVersionGetter func(string) (versionGetter, error)
+	endpointGetter      endpointGetter
+	snsTopicGetter      deployedEnvironmentLister
+	identity            identityService
+	subnetLister        vpcSubnetLister
+	envDescriber        envDescriber
 
 	spinner progress
 	sel     wsSelector
 	prompt  prompter
 
 	// cached variables
-	targetApp           *config.Application
-	targetEnvironment   *config.Environment
-	targetSvc           *config.Workload
-	appliedManifest     interface{}
-	imageDigest         string
-	buildRequired       bool
-	appEnvResources     *stack.AppRegionalResources
-	rdSvcAlias          string
-	svcUpdater          serviceUpdater
-	svcLastUpdateGetter serviceLastUpdateGetter
-	cmdRunAt            *time.Time
+	targetApp         *config.Application
+	targetEnvironment *config.Environment
+	targetSvc         *config.Workload
+	appliedManifest   interface{}
+	imageDigest       string
+	buildRequired     bool
+	appEnvResources   *stack.AppRegionalResources
+	rdSvcAlias        string
+	svcUpdater        svcForceUpdater
+	now               func() time.Time
 
 	subscriptions []manifest.TopicSubscription
 
@@ -152,8 +150,11 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
-		sessProvider:    sessions.NewProvider(),
-		snsTopicGetter:  deployStore,
+		now: func() time.Time {
+			return time.Now()
+		},
+		sessProvider:   sessions.NewProvider(),
+		snsTopicGetter: deployStore,
 	}
 	opts.uploadOpts = newUploadCustomResourcesOpts(opts)
 	return opts, err
@@ -337,11 +338,8 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
-	o.newSvcUpdater = func(f func(*session.Session) serviceUpdater) {
+	o.newSvcUpdater = func(f func(*session.Session) svcForceUpdater) {
 		o.svcUpdater = f(envSession)
-	}
-	o.newSvcLastUpdateGetter = func(f func(*session.Session) serviceLastUpdateGetter) {
-		o.svcLastUpdateGetter = f(envSession)
 	}
 
 	// CF client against env account profile AND target environment region.
@@ -581,10 +579,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	if err != nil {
 		return nil, err
 	}
-	o.newSvcUpdater(func(s *session.Session) serviceUpdater {
-		return ecs.New(s)
-	})
-	o.newSvcLastUpdateGetter(func(s *session.Session) serviceLastUpdateGetter {
+	o.newSvcUpdater(func(s *session.Session) svcForceUpdater {
 		return ecs.New(s)
 	})
 	var conf cloudformation.StackConfiguration
@@ -625,10 +620,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
-		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
-			return apprunner.New(s)
-		})
-		o.newSvcLastUpdateGetter(func(s *session.Session) serviceLastUpdateGetter {
+		o.newSvcUpdater(func(s *session.Session) svcForceUpdater {
 			return apprunner.New(s)
 		})
 		var caller identity.Caller
@@ -709,9 +701,7 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 		return err
 	}
 
-	if o.cmdRunAt == nil {
-		o.cmdRunAt = aws.Time(time.Now())
-	}
+	cmdRunAt := o.now()
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
@@ -724,11 +714,11 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	}
 	// Force update the service if --force is set and the service is not updated by the CFN.
 	if o.forceNewUpdate {
-		lastUpdatedAt, err := o.svcLastUpdateGetter.LastUpdatedAt(o.appName, o.envName, o.name)
+		lastUpdatedAt, err := o.svcUpdater.LastUpdatedAt(o.appName, o.envName, o.name)
 		if err != nil {
-			return fmt.Errorf("get the last updated time for %s: %w", o.name, err)
+			return fmt.Errorf("get the last updated deployment time for %s: %w", o.name, err)
 		}
-		if o.cmdRunAt.After(aws.TimeValue(lastUpdatedAt)) {
+		if cmdRunAt.After(lastUpdatedAt) {
 			return o.forceDeploy()
 		}
 	}

@@ -58,16 +58,16 @@ func (c Client) ForceUpdateService(app, env, svc string) error {
 }
 
 // LastUpdatedAt returns the last updated time of the app runner service.
-func (c Client) LastUpdatedAt(app, env, svc string) (*time.Time, error) {
+func (c Client) LastUpdatedAt(app, env, svc string) (time.Time, error) {
 	svcARN, err := c.serviceARN(app, env, svc)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 	desc, err := c.appRunnerClient.DescribeService(svcARN)
 	if err != nil {
-		return nil, fmt.Errorf("describe service: %w", err)
+		return time.Time{}, fmt.Errorf("describe service: %w", err)
 	}
-	return &desc.DateUpdated, nil
+	return desc.DateUpdated, nil
 }
 
 func (c Client) serviceARN(app, env, svc string) (string, error) {

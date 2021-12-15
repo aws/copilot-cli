@@ -112,16 +112,16 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 }
 
 // LastUpdatedAt returns the last updated time of the ECS service.
-func (c Client) LastUpdatedAt(app, env, svc string) (*time.Time, error) {
+func (c Client) LastUpdatedAt(app, env, svc string) (time.Time, error) {
 	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 	detail, err := c.ecsClient.Service(clusterName, serviceName)
 	if err != nil {
-		return nil, fmt.Errorf("get ECS service %s: %w", serviceName, err)
+		return time.Time{}, fmt.Errorf("get ECS service %s: %w", serviceName, err)
 	}
-	return detail.Deployments[0].UpdatedAt, nil
+	return aws.TimeValue(detail.Deployments[0].UpdatedAt), nil
 }
 
 // ListActiveAppEnvTasksOpts contains the parameters for ListActiveAppEnvTasks.

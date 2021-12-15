@@ -34,19 +34,18 @@ import (
 )
 
 type deploySvcMocks struct {
-	mockWs                      *mocks.MockwsSvcDirReader
-	mockimageBuilderPusher      *mocks.MockimageBuilderPusher
-	mockAppResourcesGetter      *mocks.MockappResourcesGetter
-	mockAppVersionGetter        *mocks.MockversionGetter
-	mockEndpointGetter          *mocks.MockendpointGetter
-	mockServiceDeployer         *mocks.MockserviceDeployer
-	mockSpinner                 *mocks.Mockprogress
-	mockServiceUpdater          *mocks.MockserviceUpdater
-	mockInterpolator            *mocks.Mockinterpolator
-	mockDeployStore             *mocks.MockdeployedEnvironmentLister
-	mockEnvDescriber            *mocks.MockenvDescriber
-	mockSubnetLister            *mocks.MockvpcSubnetLister
-	mockSvcLastUpdateTimeGetter *mocks.MockserviceLastUpdateGetter
+	mockWs                 *mocks.MockwsSvcDirReader
+	mockimageBuilderPusher *mocks.MockimageBuilderPusher
+	mockAppResourcesGetter *mocks.MockappResourcesGetter
+	mockAppVersionGetter   *mocks.MockversionGetter
+	mockEndpointGetter     *mocks.MockendpointGetter
+	mockServiceDeployer    *mocks.MockserviceDeployer
+	mockSpinner            *mocks.Mockprogress
+	mockServiceUpdater     *mocks.MocksvcForceUpdater
+	mockInterpolator       *mocks.Mockinterpolator
+	mockDeployStore        *mocks.MockdeployedEnvironmentLister
+	mockEnvDescriber       *mocks.MockenvDescriber
+	mockSubnetLister       *mocks.MockvpcSubnetLister
 }
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
@@ -834,10 +833,10 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
-				m.mockSvcLastUpdateTimeGetter.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
-					Return(nil, mockError)
+				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
+					Return(time.Time{}, mockError)
 			},
-			wantErr: fmt.Errorf("get the last updated time for mockSvc: some error"),
+			wantErr: fmt.Errorf("get the last updated deployment time for mockSvc: some error"),
 		},
 		"skip force updating when cmd run time is after the last update time": {
 			inForceDeploy: true,
@@ -855,8 +854,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
-				m.mockSvcLastUpdateTimeGetter.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
-					Return(&mockAfterTime, nil)
+				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
+					Return(mockAfterTime, nil)
 			},
 		},
 		"error if fail to force an update": {
@@ -875,8 +874,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
-				m.mockSvcLastUpdateTimeGetter.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
-					Return(&mockBeforeTime, nil)
+				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
+					Return(mockBeforeTime, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(mockError)
 				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError))
@@ -899,8 +898,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
-				m.mockSvcLastUpdateTimeGetter.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
-					Return(&mockBeforeTime, nil)
+				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
+					Return(mockBeforeTime, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).
 					Return(&ecs.ErrWaitServiceStableTimeout{})
@@ -951,8 +950,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
-				m.mockSvcLastUpdateTimeGetter.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
-					Return(&mockBeforeTime, nil)
+				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
+					Return(mockBeforeTime, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(nil)
 				m.mockSpinner.EXPECT().Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, mockSvcName, mockEnvName))
@@ -966,17 +965,16 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deploySvcMocks{
-				mockWs:                      mocks.NewMockwsSvcDirReader(ctrl),
-				mockAppResourcesGetter:      mocks.NewMockappResourcesGetter(ctrl),
-				mockAppVersionGetter:        mocks.NewMockversionGetter(ctrl),
-				mockEndpointGetter:          mocks.NewMockendpointGetter(ctrl),
-				mockServiceDeployer:         mocks.NewMockserviceDeployer(ctrl),
-				mockServiceUpdater:          mocks.NewMockserviceUpdater(ctrl),
-				mockSpinner:                 mocks.NewMockprogress(ctrl),
-				mockInterpolator:            mocks.NewMockinterpolator(ctrl),
-				mockEnvDescriber:            mocks.NewMockenvDescriber(ctrl),
-				mockSubnetLister:            mocks.NewMockvpcSubnetLister(ctrl),
-				mockSvcLastUpdateTimeGetter: mocks.NewMockserviceLastUpdateGetter(ctrl),
+				mockWs:                 mocks.NewMockwsSvcDirReader(ctrl),
+				mockAppResourcesGetter: mocks.NewMockappResourcesGetter(ctrl),
+				mockAppVersionGetter:   mocks.NewMockversionGetter(ctrl),
+				mockEndpointGetter:     mocks.NewMockendpointGetter(ctrl),
+				mockServiceDeployer:    mocks.NewMockserviceDeployer(ctrl),
+				mockServiceUpdater:     mocks.NewMocksvcForceUpdater(ctrl),
+				mockSpinner:            mocks.NewMockprogress(ctrl),
+				mockInterpolator:       mocks.NewMockinterpolator(ctrl),
+				mockEnvDescriber:       mocks.NewMockenvDescriber(ctrl),
+				mockSubnetLister:       mocks.NewMockvpcSubnetLister(ctrl),
 			}
 			tc.mock(m)
 
@@ -1020,15 +1018,15 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 						},
 					}, nil
 				},
-				svcCFN:                 m.mockServiceDeployer,
-				svcUpdater:             m.mockServiceUpdater,
-				newSvcUpdater:          func(f func(*session.Session) serviceUpdater) {},
-				svcLastUpdateGetter:    m.mockSvcLastUpdateTimeGetter,
-				newSvcLastUpdateGetter: func(f func(*session.Session) serviceLastUpdateGetter) {},
-				spinner:                m.mockSpinner,
-				envDescriber:           m.mockEnvDescriber,
-				subnetLister:           m.mockSubnetLister,
-				cmdRunAt:               aws.Time(mockNowTime),
+				svcCFN:        m.mockServiceDeployer,
+				svcUpdater:    m.mockServiceUpdater,
+				newSvcUpdater: func(f func(*session.Session) svcForceUpdater) {},
+				spinner:       m.mockSpinner,
+				envDescriber:  m.mockEnvDescriber,
+				subnetLister:  m.mockSubnetLister,
+				now: func() time.Time {
+					return mockNowTime
+				},
 			}
 
 			gotErr := opts.deploySvc(mockAddonsURL)
@@ -1315,7 +1313,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				newInterpolator: func(app, env string) interpolator {
 					return m.mockInterpolator
 				},
-				newSvcUpdater:     func(f func(*session.Session) serviceUpdater) {},
+				newSvcUpdater:     func(f func(*session.Session) svcForceUpdater) {},
 				endpointGetter:    m.mockEndpointGetter,
 				identity:          m.mockIdentity,
 				targetApp:         tc.inApp,
@@ -1338,7 +1336,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						},
 					}, nil
 				},
-				newSvcLastUpdateGetter: func(f func(*session.Session) serviceLastUpdateGetter) {},
 				uploadOpts: &uploadCustomResourcesOpts{
 					uploader: m.mockUploader,
 					newS3Uploader: func() (Uploader, error) {
@@ -1440,7 +1437,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				},
 				ws:                m.mockWs,
 				buildRequired:     tc.inBuildRequire,
-				newSvcUpdater:     func(f func(*session.Session) serviceUpdater) {},
+				newSvcUpdater:     func(f func(*session.Session) svcForceUpdater) {},
 				endpointGetter:    m.mockEndpointGetter,
 				snsTopicGetter:    m.mockDeployStore,
 				targetApp:         tc.inApp,
@@ -1448,7 +1445,6 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				newInterpolator: func(app, env string) interpolator {
 					return m.mockInterpolator
 				},
-				newSvcLastUpdateGetter: func(f func(*session.Session) serviceLastUpdateGetter) {},
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return &manifest.WorkerService{
 						Workload: manifest.Workload{

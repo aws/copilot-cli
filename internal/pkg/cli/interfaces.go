@@ -553,12 +553,9 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type serviceLastUpdateGetter interface {
-	LastUpdatedAt(app, env, svc string) (*time.Time, error)
-}
-
-type serviceUpdater interface {
+type svcForceUpdater interface {
 	ForceUpdateService(app, env, svc string) error
+	LastUpdatedAt(app, env, svc string) (time.Time, error)
 }
 
 type serviceDeployer interface {
