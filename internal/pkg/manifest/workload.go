@@ -17,6 +17,7 @@ import (
 	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws"
+        "gopkg.in/yaml.v3"
 )
 
 // AWS VPC subnet placement options.
