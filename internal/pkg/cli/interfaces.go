@@ -6,6 +6,7 @@ package cli
 import (
 	"encoding"
 	"io"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
@@ -543,8 +544,9 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type serviceUpdater interface {
+type svcForceUpdater interface {
 	ForceUpdateService(app, env, svc string) error
+	LastUpdatedAt(app, env, svc string) (time.Time, error)
 }
 
 type serviceDeployer interface {

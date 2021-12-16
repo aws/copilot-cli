@@ -158,6 +158,93 @@ func TestEC2_ListVPC(t *testing.T) {
 	}
 }
 
+func TestEC2_ListAZs(t *testing.T) {
+	testCases := map[string]struct {
+		mockClient func(m *mocks.Mockapi)
+
+		wantedErr string
+		wantedAZs []AZ
+	}{
+		"return wrapped error on unexpected call error": {
+			mockClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeAvailabilityZones(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedErr: "describe availability zones: some error",
+		},
+		"returns AZs that are available and opted-in": {
+			mockClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{
+					Filters: []*ec2.Filter{
+						{
+							Name:   aws.String("zone-type"),
+							Values: aws.StringSlice([]string{"availability-zone"}),
+						},
+						{
+							Name:   aws.String("state"),
+							Values: aws.StringSlice([]string{"available"}),
+						},
+					},
+				}).Return(&ec2.DescribeAvailabilityZonesOutput{
+					AvailabilityZones: []*ec2.AvailabilityZone{
+						{
+							GroupName:          aws.String("us-west-2"),
+							NetworkBorderGroup: aws.String("us-west-2"),
+							OptInStatus:        aws.String("opt-in-not-required"),
+							RegionName:         aws.String("us-west-2"),
+							State:              aws.String("available"),
+							ZoneId:             aws.String("usw2-az1"),
+							ZoneName:           aws.String("us-west-2a"),
+							ZoneType:           aws.String("availability-zone"),
+						},
+						{
+							GroupName:          aws.String("us-west-2"),
+							NetworkBorderGroup: aws.String("us-west-2"),
+							OptInStatus:        aws.String("opt-in-not-required"),
+							RegionName:         aws.String("us-west-2"),
+							State:              aws.String("available"),
+							ZoneId:             aws.String("usw2-az2"),
+							ZoneName:           aws.String("us-west-2b"),
+							ZoneType:           aws.String("availability-zone"),
+						},
+					},
+				}, nil)
+			},
+			wantedAZs: []AZ{
+				{
+					ID:   "usw2-az1",
+					Name: "us-west-2a",
+				},
+				{
+					ID:   "usw2-az2",
+					Name: "us-west-2b",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := mocks.NewMockapi(ctrl)
+			tc.mockClient(m)
+			ec2 := EC2{client: m}
+
+			// WHEN
+			azs, err := ec2.ListAZs()
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.wantedAZs, azs)
+			}
+		})
+	}
+}
+
 func TestEC2_ListVPCSubnets(t *testing.T) {
 	const (
 		mockVPCID     = "mockVPC"

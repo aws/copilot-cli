@@ -6,6 +6,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -169,6 +170,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,
 		spinner:         spin,
+		now:             time.Now,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
 		snsTopicGetter:  deployStore,
@@ -230,6 +232,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					initJobVars: jobVars,
 
 					fs:           fs,
+					store:        ssm,
 					init:         wlInitializer,
 					sel:          sel,
 					prompt:       prompt,
@@ -253,6 +256,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					fs:           fs,
 					init:         wlInitializer,
 					sel:          sel,
+					store:        ssm,
 					topicSel:     snsSel,
 					mftReader:    ws,
 					prompt:       prompt,

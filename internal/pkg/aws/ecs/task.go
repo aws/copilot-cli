@@ -169,6 +169,23 @@ type TaskStatus struct {
 // TaskDefinition wraps up ECS TaskDefinition struct.
 type TaskDefinition ecs.TaskDefinition
 
+// ContainerPlatform holds basic info of a container's platform.
+type ContainerPlatform struct {
+	OperatingSystem string
+	Architecture    string
+}
+
+// Platform returns the platform of the task definition.
+func (t *TaskDefinition) Platform() *ContainerPlatform {
+	if t.RuntimePlatform == nil {
+		return nil
+	}
+	return &ContainerPlatform{
+		OperatingSystem: aws.StringValue(t.RuntimePlatform.OperatingSystemFamily),
+		Architecture:    aws.StringValue(t.RuntimePlatform.CpuArchitecture),
+	}
+}
+
 // ContainerEnvVar holds basic info of an environment variable.
 type ContainerEnvVar struct {
 	Name      string

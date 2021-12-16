@@ -551,7 +551,7 @@ func (o *initEnvOpts) validateDuplicateEnv() error {
 		log.Errorf(`It seems like you are trying to init an environment that already exists.
 To recreate the environment, please run:
 1. %s
-2. And then %s.
+2. And then %s
 `,
 			color.HighlightCode(fmt.Sprintf("copilot env delete --name %s", o.name)),
 			color.HighlightCode(fmt.Sprintf("copilot env init --name %s", o.name)))

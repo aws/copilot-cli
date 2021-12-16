@@ -36,6 +36,7 @@ type api interface {
 	DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error)
 	DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error)
 	DescribeRouteTables(input *ec2.DescribeRouteTablesInput) (*ec2.DescribeRouteTablesOutput, error)
+	DescribeAvailabilityZones(input *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -75,6 +76,9 @@ type Subnet struct {
 	Resource
 	CIDRBlock string
 }
+
+// AZ represents an availability zone.
+type AZ Resource
 
 // String formats the elements of a VPC into a display-ready string.
 // For example: VPCResource{"ID": "vpc-0576efeea396efee2", "Name": "video-store-test"}
@@ -181,6 +185,33 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 		})
 	}
 	return vpcs, nil
+}
+
+// ListAZs returns the list of opted-in and available availability zones.
+func (c *EC2) ListAZs() ([]AZ, error) {
+	resp, err := c.client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("zone-type"),
+				Values: aws.StringSlice([]string{"availability-zone"}),
+			},
+			{
+				Name:   aws.String("state"),
+				Values: aws.StringSlice([]string{"available"}),
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe availability zones: %w", err)
+	}
+	var out []AZ
+	for _, az := range resp.AvailabilityZones {
+		out = append(out, AZ{
+			ID:   aws.StringValue(az.ZoneId),
+			Name: aws.StringValue(az.ZoneName),
+		})
+	}
+	return out, nil
 }
 
 // HasDNSSupport returns if DNS resolution is enabled for the VPC.

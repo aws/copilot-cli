@@ -6,6 +6,7 @@ package apprunner
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsapprunner "github.com/aws/aws-sdk-go/service/apprunner"
@@ -21,6 +22,7 @@ const (
 type appRunnerClient interface {
 	DescribeOperation(operationId, svcARN string) (*awsapprunner.OperationSummary, error)
 	StartDeployment(svcARN string) (string, error)
+	DescribeService(svcARN string) (*apprunner.Service, error)
 	WaitForOperation(operationId, svcARN string) error
 }
 
@@ -53,6 +55,19 @@ func (c Client) ForceUpdateService(app, env, svc string) error {
 		return err
 	}
 	return c.appRunnerClient.WaitForOperation(id, svcARN)
+}
+
+// LastUpdatedAt returns the last updated time of the app runner service.
+func (c Client) LastUpdatedAt(app, env, svc string) (time.Time, error) {
+	svcARN, err := c.serviceARN(app, env, svc)
+	if err != nil {
+		return time.Time{}, err
+	}
+	desc, err := c.appRunnerClient.DescribeService(svcARN)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("describe service: %w", err)
+	}
+	return desc.DateUpdated, nil
 }
 
 func (c Client) serviceARN(app, env, svc string) (string, error) {
