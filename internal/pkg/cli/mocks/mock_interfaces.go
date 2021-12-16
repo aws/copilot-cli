@@ -8,6 +8,7 @@ import (
 	encoding "encoding"
 	io "io"
 	reflect "reflect"
+	time "time"
 
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -5822,31 +5823,31 @@ func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
 }
 
-// MockserviceUpdater is a mock of serviceUpdater interface.
-type MockserviceUpdater struct {
+// MocksvcForceUpdater is a mock of svcForceUpdater interface.
+type MocksvcForceUpdater struct {
 	ctrl     *gomock.Controller
-	recorder *MockserviceUpdaterMockRecorder
+	recorder *MocksvcForceUpdaterMockRecorder
 }
 
-// MockserviceUpdaterMockRecorder is the mock recorder for MockserviceUpdater.
-type MockserviceUpdaterMockRecorder struct {
-	mock *MockserviceUpdater
+// MocksvcForceUpdaterMockRecorder is the mock recorder for MocksvcForceUpdater.
+type MocksvcForceUpdaterMockRecorder struct {
+	mock *MocksvcForceUpdater
 }
 
-// NewMockserviceUpdater creates a new mock instance.
-func NewMockserviceUpdater(ctrl *gomock.Controller) *MockserviceUpdater {
-	mock := &MockserviceUpdater{ctrl: ctrl}
-	mock.recorder = &MockserviceUpdaterMockRecorder{mock}
+// NewMocksvcForceUpdater creates a new mock instance.
+func NewMocksvcForceUpdater(ctrl *gomock.Controller) *MocksvcForceUpdater {
+	mock := &MocksvcForceUpdater{ctrl: ctrl}
+	mock.recorder = &MocksvcForceUpdaterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockserviceUpdater) EXPECT() *MockserviceUpdaterMockRecorder {
+func (m *MocksvcForceUpdater) EXPECT() *MocksvcForceUpdaterMockRecorder {
 	return m.recorder
 }
 
 // ForceUpdateService mocks base method.
-func (m *MockserviceUpdater) ForceUpdateService(app, env, svc string) error {
+func (m *MocksvcForceUpdater) ForceUpdateService(app, env, svc string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ForceUpdateService", app, env, svc)
 	ret0, _ := ret[0].(error)
@@ -5854,9 +5855,24 @@ func (m *MockserviceUpdater) ForceUpdateService(app, env, svc string) error {
 }
 
 // ForceUpdateService indicates an expected call of ForceUpdateService.
-func (mr *MockserviceUpdaterMockRecorder) ForceUpdateService(app, env, svc interface{}) *gomock.Call {
+func (mr *MocksvcForceUpdaterMockRecorder) ForceUpdateService(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceUpdateService", reflect.TypeOf((*MockserviceUpdater)(nil).ForceUpdateService), app, env, svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceUpdateService", reflect.TypeOf((*MocksvcForceUpdater)(nil).ForceUpdateService), app, env, svc)
+}
+
+// LastUpdatedAt mocks base method.
+func (m *MocksvcForceUpdater) LastUpdatedAt(app, env, svc string) (time.Time, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LastUpdatedAt", app, env, svc)
+	ret0, _ := ret[0].(time.Time)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LastUpdatedAt indicates an expected call of LastUpdatedAt.
+func (mr *MocksvcForceUpdaterMockRecorder) LastUpdatedAt(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUpdatedAt", reflect.TypeOf((*MocksvcForceUpdater)(nil).LastUpdatedAt), app, env, svc)
 }
 
 // MockserviceDeployer is a mock of serviceDeployer interface.

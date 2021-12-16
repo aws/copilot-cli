@@ -133,6 +133,21 @@ func (mr *MockecsClientMockRecorder) RunningTasksInFamily(cluster, family interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasksInFamily", reflect.TypeOf((*MockecsClient)(nil).RunningTasksInFamily), cluster, family)
 }
 
+// Service mocks base method.
+func (m *MockecsClient) Service(clusterName, serviceName string) (*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", clusterName, serviceName)
+	ret0, _ := ret[0].(*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
+}
+
 // ServiceRunningTasks mocks base method.
 func (m *MockecsClient) ServiceRunningTasks(clusterName, serviceName string) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
