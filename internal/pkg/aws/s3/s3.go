@@ -86,7 +86,7 @@ func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
 	return s.upload(bucket, key, data)
 }
 
-// MkdirTimestamp prefixes the key with the current timestamp "<timestamp>/key".
+// MkdirTimestamp prefixes the key with the current timestamp "manual/<timestamp>/key".
 func MkdirTimestamp(key string) string {
 	id := time.Now().Unix()
 	return path.Join(artifactDirName, strconv.FormatInt(id, 10), key)
