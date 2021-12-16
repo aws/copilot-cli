@@ -776,6 +776,32 @@ func validateCIDR(val interface{}) error {
 	return nil
 }
 
+func validatePublicSubnetsCIDR(numAZs int) func(v interface{}) error {
+	return func(v interface{}) error {
+		s, ok := v.(string)
+		if !ok {
+			return errValueNotAString
+		}
+		if numCIDRs := len(strings.Split(s, ",")); numCIDRs != numAZs {
+			return fmt.Errorf("number of public subnet CIDRs (%d) does not match number of AZs (%d)", numCIDRs, numAZs)
+		}
+		return validateCIDRSlice(v)
+	}
+}
+
+func validatePrivateSubnetsCIDR(numAZs int) func(v interface{}) error {
+	return func(v interface{}) error {
+		s, ok := v.(string)
+		if !ok {
+			return errValueNotAString
+		}
+		if numCIDRs := len(strings.Split(s, ",")); numCIDRs != numAZs {
+			return fmt.Errorf("number of private subnet CIDRs (%d) does not match number of AZs (%d)", numCIDRs, numAZs)
+		}
+		return validateCIDRSlice(v)
+	}
+}
+
 func validateCIDRSlice(val interface{}) error {
 	s, ok := val.(string)
 	if !ok {

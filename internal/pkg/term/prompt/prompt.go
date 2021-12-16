@@ -304,6 +304,15 @@ func WithConfirmFinalMessage() PromptConfig {
 	}
 }
 
+// WithDefaultSelections selects the options to be checked by default for a multiselect prompt.
+func WithDefaultSelections(options []string) PromptConfig {
+	return func(p *prompt) {
+		if confirm, ok := p.prompter.(*survey.MultiSelect); ok {
+			confirm.Default = options
+		}
+	}
+}
+
 // WithTrueDefault sets the default for a confirm prompt to true.
 func WithTrueDefault() PromptConfig {
 	return func(p *prompt) {
@@ -333,6 +342,11 @@ func icons() survey.AskOpt {
 // RequireNonEmpty returns an error if v is a zero-value.
 func RequireNonEmpty(v interface{}) error {
 	return survey.Required(v)
+}
+
+// RequireMinItems enforces at least min elements to be selected from MultiSelect.
+func RequireMinItems(min int) ValidatorFunc {
+	return (ValidatorFunc)(survey.MinItems(min))
 }
 
 func validators(validatorFunc ValidatorFunc) survey.AskOpt {

@@ -9,6 +9,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -39,13 +41,16 @@ type initEnvMocks struct {
 
 func TestInitEnvOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inEnvName     string
-		inAppName     string
-		inDefault     bool
-		inVPCID       string
-		inPublicIDs   []string
-		inPrivateIDs  []string
+		inEnvName string
+		inAppName string
+		inDefault bool
+
+		inVPCID      string
+		inPublicIDs  []string
+		inPrivateIDs []string
+
 		inVPCCIDR     net.IPNet
+		inAZs         []string
 		inPublicCIDRs []string
 
 		inProfileName     string
@@ -143,6 +148,11 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 			wantedErrMsg: "at least two private subnets must be imported",
 		},
+		"should err if fewer than two availability zones are provided": {
+			inAZs: []string{"us-east-1a"},
+
+			wantedErrMsg: "at least two availability zones must be provided to enable Load Balancing",
+		},
 		"invalid VPC resource import (no VPC, 1 public, 2 private)": {
 			inPublicIDs:  []string{"mockID"},
 			inPrivateIDs: []string{"mockID", "anotherMockID"},
@@ -178,6 +188,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 					name:          tc.inEnvName,
 					defaultConfig: tc.inDefault,
 					adjustVPC: adjustVPCVars{
+						AZs:               tc.inAZs,
 						PublicSubnetCIDRs: tc.inPublicCIDRs,
 						CIDR:              tc.inVPCCIDR,
 					},
@@ -616,16 +627,58 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get VPC CIDR: some error"),
 		},
+		"should return err when failed to retrieve list of AZs to adjust": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("list availability zones for region %s: some error", mockRegion),
+		},
+		"should return err if the number of available AZs does not meet the minimum": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+				}, nil)
+			},
+			wantedError: fmt.Errorf("requires at least 2 availability zones (us-east-1a) in region %s", mockRegion),
+		},
 		"fail to get public subnet CIDRs": {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(envInitAdjustEnvResourcesSelectOption, nil)
-				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+					{
+						Name: "us-east-1b",
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect(envInitAdjustAZPrompt, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]string{"us-east-1a", "us-east-1b"}, nil)
 				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
 					Return("", mockErr)
 			},
@@ -637,13 +690,23 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(envInitAdjustEnvResourcesSelectOption, nil)
-				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(mockVPCCIDR, nil)
-				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+					{
+						Name: "us-east-1b",
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect(envInitAdjustAZPrompt, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]string{"us-east-1a", "us-east-1b"}, nil)
+				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(mockSubnetCIDRs, nil)
-				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("get private subnet CIDRs: some error"),
@@ -658,6 +721,16 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(envInitAdjustEnvResourcesSelectOption, nil)
 				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+					{
+						Name: "us-east-1b",
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect(envInitAdjustAZPrompt, gomock.Any(), []string{"us-east-1a", "us-east-1b"}, gomock.Any(), gomock.Any()).
+					Return([]string{"us-east-1a", "us-east-1b"}, nil)
 				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
 					Return(mockSubnetCIDRs, nil)
 				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
@@ -673,8 +746,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					IP:   net.IP{10, 1, 232, 0},
 					Mask: net.IPMask{255, 255, 255, 0},
 				},
-				PrivateSubnetCIDRs: []string{"mockPrivateCIDR"},
-				PublicSubnetCIDRs:  []string{"mockPublicCIDR"},
+				AZs:                []string{"us-east-1a", "us-east-1b"},
+				PrivateSubnetCIDRs: []string{"mockPrivateCIDR1", "mockPrivateCIDR2"},
+				PublicSubnetCIDRs:  []string{"mockPublicCIDR1", "mockPublicCIDR2"},
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
