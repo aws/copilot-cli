@@ -226,11 +226,10 @@ func (p Prompt) GetSecret(message, help string, promptOpts ...PromptConfig) (str
 }
 
 // MultiSelect prompts the user with a list of options to choose from with the arrow keys and enter key.
-func (p Prompt) MultiSelect(message, help string, options []string, promptCfgs ...PromptConfig) ([]string, error) {
-	var result []string
+func (p Prompt) MultiSelect(message, help string, options []string, validator ValidatorFunc, promptCfgs ...PromptConfig) ([]string, error) {
 	if len(options) <= 0 {
 		// returns nil slice if error
-		return result, ErrEmptyOptions
+		return nil, ErrEmptyOptions
 	}
 	multiselect := &survey.MultiSelect{
 		Message: message,
@@ -248,7 +247,13 @@ func (p Prompt) MultiSelect(message, help string, options []string, promptCfgs .
 		cfg(prompt)
 	}
 
-	err := p(prompt, &result, stdio(), icons())
+	var result []string
+	var err error
+	if validator == nil {
+		err = p(prompt, &result, stdio(), icons())
+	} else {
+		err = p(prompt, &result, stdio(), validators(validator), icons())
+	}
 	return result, err
 }
 

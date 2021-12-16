@@ -526,6 +526,7 @@ type credsSelector interface {
 
 type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
+	ListAZs() ([]ec2.AZ, error)
 }
 
 type vpcSubnetLister interface {

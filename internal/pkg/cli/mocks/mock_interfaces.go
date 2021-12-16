@@ -5596,6 +5596,21 @@ func (mr *Mockec2ClientMockRecorder) HasDNSSupport(vpcID interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).HasDNSSupport), vpcID)
 }
 
+// ListAZs mocks base method.
+func (m *Mockec2Client) ListAZs() ([]ec2.AZ, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAZs")
+	ret0, _ := ret[0].([]ec2.AZ)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAZs indicates an expected call of ListAZs.
+func (mr *Mockec2ClientMockRecorder) ListAZs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAZs", reflect.TypeOf((*Mockec2Client)(nil).ListAZs))
+}
+
 // MockvpcSubnetLister is a mock of vpcSubnetLister interface.
 type MockvpcSubnetLister struct {
 	ctrl     *gomock.Controller
