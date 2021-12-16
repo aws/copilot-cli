@@ -6,6 +6,7 @@ package cli
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -92,6 +93,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
 					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					prompt:          o.prompt,
+					now:             time.Now,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessions.NewProvider(),
 					newAppVersionGetter: func(appName string) (versionGetter, error) {

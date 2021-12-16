@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
@@ -85,7 +86,7 @@ type deploySvcOpts struct {
 	addons              templater
 	appCFN              appResourcesGetter
 	svcCFN              serviceDeployer
-	newSvcUpdater       func(func(*session.Session) serviceUpdater)
+	newSvcUpdater       func(func(*session.Session) svcForceUpdater)
 	sessProvider        sessionProvider
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
@@ -108,7 +109,8 @@ type deploySvcOpts struct {
 	buildRequired     bool
 	appEnvResources   *stack.AppRegionalResources
 	rdSvcAlias        string
-	svcUpdater        serviceUpdater
+	svcUpdater        svcForceUpdater
+	now               func() time.Time
 
 	subscriptions []manifest.TopicSubscription
 
@@ -148,6 +150,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
+		now:             time.Now,
 		sessProvider:    sessions.NewProvider(),
 		snsTopicGetter:  deployStore,
 	}
@@ -333,7 +336,7 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
-	o.newSvcUpdater = func(f func(*session.Session) serviceUpdater) {
+	o.newSvcUpdater = func(f func(*session.Session) svcForceUpdater) {
 		o.svcUpdater = f(envSession)
 	}
 
@@ -574,7 +577,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	if err != nil {
 		return nil, err
 	}
-	o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+	o.newSvcUpdater(func(s *session.Session) svcForceUpdater {
 		return ecs.New(s)
 	})
 	var conf cloudformation.StackConfiguration
@@ -615,7 +618,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
-		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+		o.newSvcUpdater(func(s *session.Session) svcForceUpdater {
 			return apprunner.New(s)
 		})
 		var caller identity.Caller
@@ -696,21 +699,31 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 		return err
 	}
 
+	cmdRunAt := o.now()
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
-		if errors.As(err, &errEmptyCS) {
-			if o.forceNewUpdate {
-				return o.forceDeploy()
-			}
-			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
+		if !errors.As(err, &errEmptyCS) {
+			return fmt.Errorf("deploy service: %w", err)
 		}
-		return fmt.Errorf("deploy service: %w", err)
+		if !o.forceNewUpdate {
+			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
+			return fmt.Errorf("deploy service: %w", err)
+		}
+	}
+	// Force update the service if --force is set and the service is not updated by the CFN.
+	if o.forceNewUpdate {
+		lastUpdatedAt, err := o.svcUpdater.LastUpdatedAt(o.appName, o.envName, o.name)
+		if err != nil {
+			return fmt.Errorf("get the last updated deployment time for %s: %w", o.name, err)
+		}
+		if cmdRunAt.After(lastUpdatedAt) {
+			return o.forceDeploy()
+		}
 	}
 	return nil
 }
 
 func (o *deploySvcOpts) forceDeploy() error {
-	// Force update the service if --force is set and change set is empty.
 	o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
 	if err := o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
 		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
