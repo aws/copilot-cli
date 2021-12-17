@@ -66,7 +66,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 					Return([]deploy.Topic{*mockTopic}, nil)
 				m.prompt.
 					EXPECT().
-					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}, gomock.Any()).
+					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}, nil, gomock.Any()).
 					Return(nil, errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("select SNS topics: some error"),
@@ -86,7 +86,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 					Return([]deploy.Topic{*mockTopic}, nil)
 				m.prompt.
 					EXPECT().
-					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}, gomock.Any()).
+					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}, nil, gomock.Any()).
 					Return([]string{"orders (mockWkld)"}, nil)
 			},
 			wantTopics: []deploy.Topic{*mockTopic},

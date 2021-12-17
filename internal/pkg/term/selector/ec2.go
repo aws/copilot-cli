@@ -105,6 +105,7 @@ func (s *EC2Select) selectSubnets(msg, help string, subnets []ec2.Subnet, opts .
 	selectedSubnets, err := s.prompt.MultiSelect(
 		msg, help,
 		options,
+		nil,
 		opts...)
 	if err != nil {
 		return nil, err

@@ -89,9 +89,10 @@ const (
 	publicSubnetsFlag  = "import-public-subnets"
 	privateSubnetsFlag = "import-private-subnets"
 
-	vpcCIDRFlag            = "override-vpc-cidr"
-	publicSubnetCIDRsFlag  = "override-public-cidrs"
-	privateSubnetCIDRsFlag = "override-private-cidrs"
+	overrideVPCCIDRFlag            = "override-vpc-cidr"
+	overrideAZsFlag                = "override-az-names"
+	overridePublicSubnetCIDRsFlag  = "override-public-cidrs"
+	overridePrivateSubnetCIDRsFlag = "override-private-cidrs"
 
 	defaultConfigFlag = "default-config"
 
@@ -269,9 +270,14 @@ Cannot be specified with any other flags.`
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
 	privateSubnetsFlagDescription = "Optional. Use existing private subnet IDs."
 
-	vpcCIDRFlagDescription            = "Optional. Global CIDR to use for VPC (default 10.0.0.0/16)."
-	publicSubnetCIDRsFlagDescription  = "Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24)."
-	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
+	overrideVPCCIDRFlagDescription = `Optional. Global CIDR to use for VPC.
+(default 10.0.0.0/16)`
+	overrideAZsFlagDescription = `Optional. Availability Zone names.
+(default 2 random AZs)`
+	overridePublicSubnetCIDRsFlagDescription = `Optional. CIDR to use for public subnets. 
+(default 10.0.0.0/24,10.0.1.0/24)`
+	overridePrivateSubnetCIDRsFlagDescription = `Optional. CIDR to use for private subnets.
+(default 10.0.2.0/24,10.0.3.0/24)`
 
 	defaultConfigFlagDescription = "Optional. Skip prompting and use default environment configuration."
 

@@ -491,31 +491,71 @@ func TestValidateCIDR(t *testing.T) {
 	}
 }
 
-func TestValidateCIDRSlice(t *testing.T) {
+func Test_validatePublicSubnetsCIDR(t *testing.T) {
 	testCases := map[string]struct {
-		inputCIDRSlice string
-		wantError      error
+		in     string
+		numAZs int
+
+		wantedErr string
 	}{
-		"good case": {
-			inputCIDRSlice: "10.10.10.10/24,10.10.10.10/24",
-			wantError:      nil,
+		"returns nil if CIDRs are valid and match number of available AZs": {
+			in:     "10.10.10.10/24,10.10.10.10/24",
+			numAZs: 2,
 		},
-		"bad case": {
-			inputCIDRSlice: "mockBadInput",
-			wantError:      errValueNotIPNetSlice,
+		"returns err if number of CIDRs is not equal to number of available AZs": {
+			in:        "10.10.10.10/24,10.10.10.10/24",
+			numAZs:    3,
+			wantedErr: "number of public subnet CIDRs (2) does not match number of AZs (3)",
 		},
-		"bad IPNet case": {
-			inputCIDRSlice: "10.10.10.10,10.10.10.10",
-			wantError:      errValueNotIPNetSlice,
+		"returns err if input is not valid CIDR fmt": {
+			in:        "10.10.10.10,10.10.10.10",
+			numAZs:    2,
+			wantedErr: errValueNotIPNetSlice.Error(),
 		},
 	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateCIDRSlice(tc.inputCIDRSlice)
-			if tc.wantError != nil {
-				require.EqualError(t, got, tc.wantError.Error())
+			actual := validatePublicSubnetsCIDR(tc.numAZs)(tc.in)
+			if tc.wantedErr == "" {
+				require.NoError(t, actual)
 			} else {
-				require.Nil(t, got)
+				require.EqualError(t, actual, tc.wantedErr)
+			}
+		})
+	}
+}
+
+func Test_validatePrivateSubnetsCIDR(t *testing.T) {
+	testCases := map[string]struct {
+		in     string
+		numAZs int
+
+		wantedErr string
+	}{
+		"returns nil if CIDRs are valid and match number of available AZs": {
+			in:     "10.10.10.10/24,10.10.10.10/24",
+			numAZs: 2,
+		},
+		"returns err if number of CIDRs is not equal to number of available AZs": {
+			in:        "10.10.10.10/24,10.10.10.10/24",
+			numAZs:    3,
+			wantedErr: "number of private subnet CIDRs (2) does not match number of AZs (3)",
+		},
+		"returns err if input is not valid CIDR fmt": {
+			in:        "10.10.10.10,10.10.10.10",
+			numAZs:    2,
+			wantedErr: errValueNotIPNetSlice.Error(),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual := validatePrivateSubnetsCIDR(tc.numAZs)(tc.in)
+			if tc.wantedErr == "" {
+				require.NoError(t, actual)
+			} else {
+				require.EqualError(t, actual, tc.wantedErr)
 			}
 		})
 	}

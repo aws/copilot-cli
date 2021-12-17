@@ -226,11 +226,10 @@ func (p Prompt) GetSecret(message, help string, promptOpts ...PromptConfig) (str
 }
 
 // MultiSelect prompts the user with a list of options to choose from with the arrow keys and enter key.
-func (p Prompt) MultiSelect(message, help string, options []string, promptCfgs ...PromptConfig) ([]string, error) {
-	var result []string
+func (p Prompt) MultiSelect(message, help string, options []string, validator ValidatorFunc, promptCfgs ...PromptConfig) ([]string, error) {
 	if len(options) <= 0 {
 		// returns nil slice if error
-		return result, ErrEmptyOptions
+		return nil, ErrEmptyOptions
 	}
 	multiselect := &survey.MultiSelect{
 		Message: message,
@@ -248,7 +247,13 @@ func (p Prompt) MultiSelect(message, help string, options []string, promptCfgs .
 		cfg(prompt)
 	}
 
-	err := p(prompt, &result, stdio(), icons())
+	var result []string
+	var err error
+	if validator == nil {
+		err = p(prompt, &result, stdio(), icons())
+	} else {
+		err = p(prompt, &result, stdio(), validators(validator), icons())
+	}
 	return result, err
 }
 
@@ -299,6 +304,15 @@ func WithConfirmFinalMessage() PromptConfig {
 	}
 }
 
+// WithDefaultSelections selects the options to be checked by default for a multiselect prompt.
+func WithDefaultSelections(options []string) PromptConfig {
+	return func(p *prompt) {
+		if confirm, ok := p.prompter.(*survey.MultiSelect); ok {
+			confirm.Default = options
+		}
+	}
+}
+
 // WithTrueDefault sets the default for a confirm prompt to true.
 func WithTrueDefault() PromptConfig {
 	return func(p *prompt) {
@@ -328,6 +342,11 @@ func icons() survey.AskOpt {
 // RequireNonEmpty returns an error if v is a zero-value.
 func RequireNonEmpty(v interface{}) error {
 	return survey.Required(v)
+}
+
+// RequireMinItems enforces at least min elements to be selected from MultiSelect.
+func RequireMinItems(min int) ValidatorFunc {
+	return (ValidatorFunc)(survey.MinItems(min))
 }
 
 func validators(validatorFunc ValidatorFunc) survey.AskOpt {

@@ -49,6 +49,8 @@ const (
 
 	envInitVPCCIDRPrompt         = "What VPC CIDR would you like to use?"
 	envInitVPCCIDRPromptHelp     = "CIDR used for your VPC. For example: 10.1.0.0/16"
+	envInitAdjustAZPrompt        = "Which availability zones would you like to use?"
+	envInitAdjustAZPromptHelp    = "Availability zone names that span your resources. For example: us-east-1a,us-east1b,us-east-1c"
 	envInitPublicCIDRPrompt      = "What CIDR would you like to use for your public subnets?"
 	envInitPublicCIDRPromptHelp  = "CIDRs used for your public subnets. For example: 10.1.0.0/24,10.1.1.0/24"
 	envInitPrivateCIDRPrompt     = "What CIDR would you like to use for your private subnets?"
@@ -72,7 +74,7 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 var (
 	envInitAppNamePrompt                  = fmt.Sprintf("In which %s would you like to create the environment?", color.Emphasize("application"))
 	envInitDefaultConfigSelectOption      = "Yes, use default."
-	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges)."
+	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges, AZs)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
 	envInitCustomizedEnvTypes             = []string{envInitDefaultConfigSelectOption, envInitAdjustEnvResourcesSelectOption, envInitImportEnvResourcesSelectOption}
 )
@@ -92,6 +94,7 @@ func (v importVPCVars) isSet() bool {
 
 type adjustVPCVars struct {
 	CIDR               net.IPNet
+	AZs                []string
 	PublicSubnetCIDRs  []string
 	PrivateSubnetCIDRs []string
 }
@@ -100,7 +103,12 @@ func (v adjustVPCVars) isSet() bool {
 	if v.CIDR.String() != emptyIPNet.String() {
 		return true
 	}
-	return len(v.PublicSubnetCIDRs) != 0 || len(v.PrivateSubnetCIDRs) != 0
+	for _, arr := range [][]string{v.AZs, v.PublicSubnetCIDRs, v.PrivateSubnetCIDRs} {
+		if len(arr) != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 type tempCredsVars struct {
@@ -340,6 +348,11 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 			return fmt.Errorf("at least two private subnets must be imported")
 		}
 	}
+	if o.adjustVPC.isSet() {
+		if len(o.adjustVPC.AZs) == 1 {
+			return errors.New("at least two availability zones must be provided to enable Load Balancing")
+		}
+	}
 	return nil
 }
 
@@ -526,8 +539,15 @@ func (o *initEnvOpts) askAdjustResources() error {
 		}
 		o.adjustVPC.CIDR = *vpcCIDR
 	}
+	azs, err := o.askAZs()
+	if err != nil {
+		return err
+	}
+	o.adjustVPC.AZs = azs
 	if o.adjustVPC.PublicSubnetCIDRs == nil {
-		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, validateCIDRSlice,
+		publicCIDR, err := o.prompt.Get(
+			envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp,
+			validatePublicSubnetsCIDR(len(o.adjustVPC.AZs)),
 			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs), prompt.WithFinalMessage("Public subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get public subnet CIDRs: %w", err)
@@ -535,7 +555,9 @@ func (o *initEnvOpts) askAdjustResources() error {
 		o.adjustVPC.PublicSubnetCIDRs = strings.Split(publicCIDR, ",")
 	}
 	if o.adjustVPC.PrivateSubnetCIDRs == nil {
-		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, validateCIDRSlice,
+		privateCIDR, err := o.prompt.Get(
+			envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp,
+			validatePrivateSubnetsCIDR(len(o.adjustVPC.AZs)),
 			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs), prompt.WithFinalMessage("Private subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
@@ -543,6 +565,40 @@ func (o *initEnvOpts) askAdjustResources() error {
 		o.adjustVPC.PrivateSubnetCIDRs = strings.Split(privateCIDR, ",")
 	}
 	return nil
+}
+
+func (o *initEnvOpts) askAZs() ([]string, error) {
+	if o.adjustVPC.AZs != nil {
+		return o.adjustVPC.AZs, nil
+	}
+	if o.ec2Client == nil {
+		o.ec2Client = ec2.New(o.sess)
+	}
+	azs, err := o.ec2Client.ListAZs()
+	if err != nil {
+		return nil, fmt.Errorf("list availability zones for region %s: %v", aws.StringValue(o.sess.Config.Region), err)
+	}
+
+	var options []string
+	for _, az := range azs {
+		options = append(options, az.Name)
+	}
+	const minAZs = 2
+	if len(options) < minAZs {
+		return nil, fmt.Errorf("requires at least %d availability zones (%s) in region %s", minAZs, strings.Join(options, ", "), aws.StringValue(o.sess.Config.Region))
+	}
+	defaultOptions := make([]string, minAZs)
+	for i := 0; i < minAZs; i += 1 {
+		defaultOptions[i] = azs[i].Name
+	}
+	selected, err := o.prompt.MultiSelect(
+		envInitAdjustAZPrompt, envInitAdjustAZPromptHelp, options,
+		prompt.RequireMinItems(minAZs),
+		prompt.WithDefaultSelections(defaultOptions), prompt.WithFinalMessage("AZs:"))
+	if err != nil {
+		return nil, fmt.Errorf("select availability zones: %v", err)
+	}
+	return selected, nil
 }
 
 func (o *initEnvOpts) validateDuplicateEnv() error {
@@ -582,6 +638,7 @@ func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
 	}
 	return &config.AdjustVPC{
 		CIDR:               o.adjustVPC.CIDR.String(),
+		AZs:                o.adjustVPC.AZs,
 		PrivateSubnetCIDRs: o.adjustVPC.PrivateSubnetCIDRs,
 		PublicSubnetCIDRs:  o.adjustVPC.PublicSubnetCIDRs,
 	}
@@ -720,8 +777,9 @@ func buildEnvInitCmd() *cobra.Command {
   /code --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
   /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
 
-  Creates an environment with overridden CIDRs.
+  Creates an environment with overridden CIDRs and AZs.
   /code $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
+  /code --override-az-names us-west-2b,us-west-2c \
   /code --override-public-cidrs 10.1.0.0/24,10.1.1.0/24 \
   /code --override-private-cidrs 10.1.2.0/24,10.1.3.0/24`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
@@ -746,10 +804,11 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
 
-	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
+	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, overrideVPCCIDRFlag, net.IPNet{}, overrideVPCCIDRFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.AZs, overrideAZsFlag, nil, overrideAZsFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
-	cmd.Flags().StringSliceVar(&vars.adjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.adjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.PublicSubnetCIDRs, overridePublicSubnetCIDRsFlag, nil, overridePublicSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.PrivateSubnetCIDRs, overridePrivateSubnetCIDRsFlag, nil, overridePrivateSubnetCIDRsFlagDescription)
 	cmd.Flags().BoolVar(&vars.defaultConfig, defaultConfigFlag, false, defaultConfigFlagDescription)
 
 	flags := pflag.NewFlagSet("Common", pflag.ContinueOnError)
@@ -769,9 +828,10 @@ func buildEnvInitCmd() *cobra.Command {
 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 
 	resourcesConfigFlag := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(vpcCIDRFlag))
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(publicSubnetCIDRsFlag))
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(privateSubnetCIDRsFlag))
+	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))
+	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overrideAZsFlag))
+	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overridePublicSubnetCIDRsFlag))
+	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overridePrivateSubnetCIDRsFlag))
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
