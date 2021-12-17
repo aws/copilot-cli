@@ -150,8 +150,8 @@ About
   Type              Load Balanced Web App
 
 Configurations
-  Environment       Tasks               CPU (vCPU)          Memory (MiB)          Platform          Port
-  test              1                   0.25                512                   LINUX/X86_64      80
+  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Platform          Port
+  test              1                   0.25                512                 LINUX/X86_64      80
 
 Routes
   Environment       URL                                                              Path
