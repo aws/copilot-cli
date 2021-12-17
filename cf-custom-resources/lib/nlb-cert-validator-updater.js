@@ -7,6 +7,7 @@ const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
 const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
 const ATTEMPTS_CERTIFICATE_VALIDATED = 19;
+const ATTEMPTS_CERTIFICATE_NOT_IN_USE = 12;
 const DELAY_CERTIFICATE_VALIDATED_IN_S = 30;
 
 let envHostedZoneID, appName, envName, serviceName, certificateDomain, domainTypes, rootDNSRole, domainName;
@@ -221,12 +222,8 @@ exports.handler = async function (event, context) {
                     break;
                 }
                 let unusedOptions = await unusedValidationOptions(physicalResourceID, loadBalancerDNS);
-                await clients.acm().deleteCertificate({ CertificateArn: physicalResourceID }).promise().catch(err => {
-                    if (err.name !== "ResourceNotFoundException") {
-                        throw err;
-                    }
-                });
                 await deactivate(unusedOptions, loadBalancerDNS, loadBalancerHostedZoneID);
+                await deleteCertificate(physicalResourceID);
                 break;
             default:
                 throw new Error(`Unsupported request type ${event.RequestType}`);
@@ -241,6 +238,38 @@ exports.handler = async function (event, context) {
         await report(event, context, "FAILED", physicalResourceID, null, err.message);
     }
 };
+
+/**
+ * Delete the certificate.
+ *
+ * @param certARN The ARN of the certificate to delete.
+ * @returns {Promise<void>}
+ */
+async function deleteCertificate(certARN) {
+    // NOTE: wait for certificate to be not in-used.
+    let attempt;
+    for (attempt = 0; attempt < ATTEMPTS_CERTIFICATE_NOT_IN_USE; attempt++) {
+        const { Certificate } = await clients.acm().describeCertificate({
+            CertificateArn: certARN,
+        }).promise();
+        if (!Certificate.InUseBy || Certificate.InUseBy.length <= 0) {
+            break;
+        }
+        await sleep(30000);
+    }
+
+    if (attempt >= ATTEMPTS_CERTIFICATE_NOT_IN_USE) {
+        throw new Error(
+            `Certificate still in use after checking for ${ATTEMPTS_CERTIFICATE_NOT_IN_USE} attempts.`
+        );
+    }
+
+    await clients.acm().deleteCertificate({ CertificateArn: certARN }).promise().catch(err => {
+        if (err.name !== "ResourceNotFoundException") {
+            throw err;
+        }
+    });
+}
 
 /**
  * Validate that the aliases are not in use.
@@ -488,7 +517,7 @@ async function deactivateOption(option, loadBalancerDNS, loadBalancerHostedZoneI
         }
     }];
 
-    if (option.Domain !== certificateDomain) {
+    if (option.DomainName !== certificateDomain) {
         changes.push({
             Action: "DELETE", // It is validated that if the alias is in use, it is in use by the service itself.
             ResourceRecordSet: {
