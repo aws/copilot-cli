@@ -213,6 +213,7 @@ type NetworkLoadBalancerListener struct {
 	TargetContainer string
 	TargetPort      string
 	SSLPolicy       *string
+	Aliases         []string
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.

@@ -129,7 +129,7 @@ NLBCertManagerAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: ["sc-alias-3.ntest.napp.peanutsninja.com", sc-alias-2-sc.ntest.napp.peanutsninja.com]
+    Aliases: {{ .NLB.Listener.Aliases }}
 
 NLBCertManagerFunction:
   Type: AWS::Lambda::Function
