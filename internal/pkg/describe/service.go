@@ -106,26 +106,6 @@ type NewServiceConfig struct {
 	DeployStore     DeployedEnvServicesLister
 }
 
-// newServiceStackDescriber instantiates the core elements of a new service.
-func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
-	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
-	if err != nil {
-		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
-	}
-	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
-	if err != nil {
-		return nil, err
-	}
-	return &serviceStackDescriber{
-		app:     opt.App,
-		service: opt.Svc,
-		env:     opt.Env,
-
-		cfn:  stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
-		sess: sess,
-	}, nil
-}
-
 // NewECSServiceDescriber instantiates a new non-App Runner service.
 func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) {
 	stackDescriber, err := newServiceStackDescriber(opt)
@@ -274,6 +254,26 @@ func formatAppRunnerUrl(serviceURL string) string {
 	}
 
 	return svcUrl.String()
+}
+
+// newServiceStackDescriber instantiates the core elements of a new service.
+func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
+	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
+	}
+	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
+	if err != nil {
+		return nil, err
+	}
+	return &serviceStackDescriber{
+		app:     opt.App,
+		service: opt.Svc,
+		env:     opt.Env,
+
+		cfn:  stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
+		sess: sess,
+	}, nil
 }
 
 // envVar contains serialized environment variables for a service.
