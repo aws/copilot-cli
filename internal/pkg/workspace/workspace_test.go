@@ -27,36 +27,35 @@ func (m mockBinaryMarshaler) MarshalBinary() (data []byte, err error) {
 	return m.content, nil
 }
 
-func TestWorkspace_CopilotDirPath(t *testing.T) {
-	// turn "test/copilot" into a platform-dependent path
-	var manifestDir = filepath.FromSlash("test/copilot")
+func TestWorkspace_Path(t *testing.T) {
+	const workspaceDir = "test"
 
 	testCases := map[string]struct {
-		expectedManifestDir string
-		presetManifestDir   string
-		workingDir          string
-		expectedError       error
-		mockFileSystem      func(fs afero.Fs)
+		expectedPath      string
+		presetManifestDir string
+		workingDir        string
+		expectedError     error
+		mockFileSystem    func(fs afero.Fs)
 	}{
 		"same directory level": {
-			expectedManifestDir: manifestDir,
-			workingDir:          filepath.FromSlash("test/"),
+			expectedPath: workspaceDir,
+			workingDir:   filepath.FromSlash("test/"),
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 			},
 		},
 
 		"same directory": {
-			expectedManifestDir: manifestDir,
-			workingDir:          filepath.FromSlash("test/copilot"),
+			expectedPath: workspaceDir,
+			workingDir:   filepath.FromSlash("test/copilot"),
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 			},
 		},
 
 		"several levels deep": {
-			expectedManifestDir: manifestDir,
-			workingDir:          filepath.FromSlash("test/1/2/3/4"),
+			expectedPath: workspaceDir,
+			workingDir:   filepath.FromSlash("test/1/2/3/4"),
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 				fs.MkdirAll("test/1/2/3/4", 0755)
@@ -81,10 +80,10 @@ func TestWorkspace_CopilotDirPath(t *testing.T) {
 		},
 
 		"uses precomputed manifest path": {
-			expectedManifestDir: manifestDir,
-			workingDir:          filepath.FromSlash("/"),
-			mockFileSystem:      func(fs afero.Fs) {},
-			presetManifestDir:   filepath.FromSlash("test/copilot"),
+			expectedPath:      workspaceDir,
+			workingDir:        filepath.FromSlash("/"),
+			mockFileSystem:    func(fs afero.Fs) {},
+			presetManifestDir: filepath.FromSlash("test/copilot"),
 		},
 	}
 	for name, tc := range testCases {
@@ -99,10 +98,10 @@ func TestWorkspace_CopilotDirPath(t *testing.T) {
 				fsUtils:    &afero.Afero{Fs: fs},
 				copilotDir: tc.presetManifestDir,
 			}
-			manifestDirPath, err := ws.CopilotDirPath()
+			workspacePath, err := ws.Path()
 			if tc.expectedError == nil {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedManifestDir, manifestDirPath)
+				require.Equal(t, tc.expectedPath, workspacePath)
 			} else {
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 			}

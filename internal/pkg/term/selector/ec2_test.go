@@ -151,7 +151,7 @@ func TestEc2Select_Subnets(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", gomock.Any(), gomock.Any()).
+				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", gomock.Any(), nil, gomock.Any()).
 					Return(nil, mockErr)
 			},
 			wantErr: fmt.Errorf("some error"),
@@ -180,7 +180,7 @@ func TestEc2Select_Subnets(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", []string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}, gomock.Any()).
+				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", []string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}, nil, gomock.Any()).
 					Return([]string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}, nil)
 			},
 			wantSubnets: []string{"mockSubnetID2", "mockSubnetID3"},

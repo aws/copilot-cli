@@ -89,6 +89,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         const mockRequestCertificate = sinon.stub();
         const mockDescribeCertificate = sinon.stub();
         const mockChangeResourceRecordSets = sinon.stub();
+        const mockWaitForRecordsChange = sinon.stub();
+        const mockWaitForCertificateValidation = sinon.stub();
         const mockAppHostedZoneID = "mockAppHostedZoneID";
         const mockRootHostedZoneID = "mockRootHostedZoneID";
 
@@ -144,6 +146,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     Id: mockRootHostedZoneID,
                 }]
             });
+            mockWaitForRecordsChange.resolves();
+            mockWaitForCertificateValidation.resolves();
         })
 
         afterEach(() => {
@@ -164,20 +168,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     RequestType: "Unknown",
                     LogicalResourceId: "mockID",
                 })
-                .expectResolve(() => {
-                    expect(request.isDone()).toBe(true);
-                });
-        });
-
-        test("correctly set physical resource ID", () => {
-            const request = nock(mockResponseURL)
-                .put("/", (body) => {
-                    return (
-                        body.PhysicalResourceId === "/web/a.mockApp.mockDomain.com,b.mockEnv.mockApp.mockDomain.com,dash-test.mockDomain.com"
-                    );
-                }).reply(200);
-            return LambdaTester(handler)
-                .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
                 });
@@ -433,6 +423,38 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 });
         });
 
+        test("successful operation", () => {
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+            AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
+            AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+            AWS.mock("ACM", "waitFor", mockWaitForCertificateValidation);
+
+            // let request = mockFailedRequest(/^some error \(Log: .*\)$/);
+            let request =  nock(mockResponseURL)
+                .put("/", (body) => {
+                    return (
+                        body.Status === "SUCCESS" && body.PhysicalResourceId === "mockCertArn"
+                    );
+                })
+                .reply(200);
+
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockListHostedZonesByName, 2);
+                    sinon.assert.callCount(mockListResourceRecordSets, 3);
+                    sinon.assert.callCount(mockRequestCertificate, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 1);
+                    sinon.assert.callCount(mockChangeResourceRecordSets, 4);
+                    sinon.assert.callCount(mockWaitForRecordsChange, 4);
+                    sinon.assert.callCount(mockWaitForCertificateValidation, 1);
+                });
+        });
+
     })
 
     describe("During DELETE", () => {
@@ -451,6 +473,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             },
             RequestType: "Delete",
             LogicalResourceId: "mockID",
+            PhysicalResourceId: "arn:mockARNToDelete",
         };
 
         // API call mocks.
@@ -478,7 +501,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             });
             mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "mockARNToDelete" })).resolves({
                 Certificate: {
-                    CertificateArn: "mockARNToDelete",
+                    CertificateArn: "arn:mockARNToDelete",
                     DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
                     SubjectAlternativeNames: ["usedByOtherService.mockEnv.mockApp.mockDomain.com", "usedByOtherCert.mockApp.mockDomain.com", "unused.mockDomain.com", "usedByNewCert.mockApp.mockDomain.com", `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`],
                     DomainValidationOptions: [{
@@ -595,7 +618,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     }
                 }],
             });
-            mockDeleteCertificate.withArgs({ CertificateArn: "mockARNToDelete"}).resolves();
+            mockDeleteCertificate.withArgs({ CertificateArn: "arn:mockARNToDelete"}).resolves();
             mockChangeResourceRecordSets.withArgs(sinon.match.hasNested("ChangeBatch.Changes[1].ResourceRecordSet.Name", "unused.mockDomain.com")).resolves({
                 ChangeInfo: {Id: "mockID",},
             });
@@ -681,8 +704,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.callCount(mockGetResources, 2); // Use ResourceGroupsTaggingAPI to retrieve service certificates twice.
-                    sinon.assert.callCount(mockDescribeCertificate, 6); // There are 3 service certificates, each is described twice.
+                    sinon.assert.callCount(mockGetResources, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 3);
                     sinon.assert.callCount(mockDeleteCertificate, 1);
                 });
         });
@@ -701,8 +724,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.callCount(mockGetResources, 2); // Use ResourceGroupsTaggingAPI to retrieve service certificates twice.
-                    sinon.assert.callCount(mockDescribeCertificate, 6); // There are 3 service certificates, each is described twice.
+                    sinon.assert.callCount(mockGetResources, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 3);
                     sinon.assert.callCount(mockDeleteCertificate, 1);
                     sinon.assert.callCount(mockChangeResourceRecordSets, 1); // Only one validation option is to be deleted.
                 });
@@ -723,8 +746,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .event(mockRequest)
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
-                    sinon.assert.callCount(mockGetResources, 2); // Use ResourceGroupsTaggingAPI to retrieve service certificates twice.
-                    sinon.assert.callCount(mockDescribeCertificate, 6); // There are 3 service certificates, each is described twice.
+                    sinon.assert.callCount(mockGetResources, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 3);
                     sinon.assert.callCount(mockDeleteCertificate, 1);
                     sinon.assert.callCount(mockChangeResourceRecordSets, 1); // Only one validation option is to be deleted.
                     sinon.assert.callCount(mockWaitFor, 1);

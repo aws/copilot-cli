@@ -153,7 +153,7 @@ func (ws *Workspace) ListWorkloads() ([]string, error) {
 
 // listWorkloads returns the name of all workloads (either services or jobs) in the workspace.
 func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
-	copilotPath, err := ws.CopilotDirPath()
+	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func (ws *Workspace) DeleteWorkspaceFile() error {
 
 // ReadAddonsDir returns a list of file names under a service's "addons/" directory.
 func (ws *Workspace) ReadAddonsDir(svcName string) ([]string, error) {
-	copilotPath, err := ws.CopilotDirPath()
+	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +327,7 @@ func (ws *Workspace) writeSummary(appName string) error {
 }
 
 func (ws *Workspace) pipelineManifestPath() (string, error) {
-	copilotPath, err := ws.CopilotDirPath()
+	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err
 	}
@@ -336,7 +336,7 @@ func (ws *Workspace) pipelineManifestPath() (string, error) {
 }
 
 func (ws *Workspace) summaryPath() (string, error) {
-	copilotPath, err := ws.CopilotDirPath()
+	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err
 	}
@@ -346,15 +346,23 @@ func (ws *Workspace) summaryPath() (string, error) {
 
 func (ws *Workspace) createCopilotDir() error {
 	// First check to see if a manifest directory already exists
-	existingWorkspace, _ := ws.CopilotDirPath()
+	existingWorkspace, _ := ws.copilotDirPath()
 	if existingWorkspace != "" {
 		return nil
 	}
 	return ws.fsUtils.Mkdir(CopilotDirName, 0755)
 }
 
-// CopilotDirPath returns the absolute path to the workspace's copilot dir.
-func (ws *Workspace) CopilotDirPath() (string, error) {
+// Path returns the absolute path to the workspace.
+func (ws *Workspace) Path() (string, error) {
+	copilotDirPath, err := ws.copilotDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(copilotDirPath), nil
+}
+
+func (ws *Workspace) copilotDirPath() (string, error) {
 	if ws.copilotDir != "" {
 		return ws.copilotDir, nil
 	}
@@ -387,7 +395,7 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 
 // write flushes the data to a file under the copilot directory joined by path elements.
 func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
-	copilotPath, err := ws.CopilotDirPath()
+	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err
 	}
@@ -412,7 +420,7 @@ func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
 
 // read returns the contents of the file under the copilot directory joined by path elements.
 func (ws *Workspace) read(elem ...string) ([]byte, error) {
-	copilotPath, err := ws.CopilotDirPath()
+	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return nil, err
 	}

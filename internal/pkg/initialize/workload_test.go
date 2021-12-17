@@ -46,7 +46,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/resizer/copilot", nil)
+				m.EXPECT().Path().Return("/resizer/copilot", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/copilot/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -124,7 +124,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
+				m.EXPECT().Path().Return("/resizer", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.MockStore) {},
@@ -138,7 +138,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 
 			inSchedule: "@hourly",
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
+				m.EXPECT().Path().Return("/copilot", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/copilot/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -155,7 +155,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
+				m.EXPECT().Path().Return("/resizer", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -182,7 +182,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
+				m.EXPECT().Path().Return("/resizer", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -462,7 +462,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
+				m.EXPECT().Path().Return("/frontend", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -500,7 +500,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
+				m.EXPECT().Path().Return("/frontend", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().GetApplication("app").Return(nil, errors.New("some error"))
@@ -515,7 +515,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
+				m.EXPECT().Path().Return("/frontend", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -535,7 +535,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
+				m.EXPECT().Path().Return("/frontend", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -561,7 +561,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
+				m.EXPECT().Path().Return("/frontend", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -629,7 +629,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/backend", nil)
+				m.EXPECT().Path().Return("/backend", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -678,7 +678,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/backend", nil)
+				m.EXPECT().Path().Return("/backend", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -730,7 +730,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/worker", nil)
+				m.EXPECT().Path().Return("/worker", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
 					Do(func(m *manifest.WorkerService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.WorkerServiceType)

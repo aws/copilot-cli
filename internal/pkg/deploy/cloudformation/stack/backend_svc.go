@@ -166,6 +166,10 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String(containerPort),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(s.rc.EnvFileARN),
+		},
 	}...), nil
 }
 

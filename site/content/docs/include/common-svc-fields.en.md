@@ -241,7 +241,7 @@ The logging section contains log configuration. You can also configure parameter
 Optional. The number of days to retain the log events. See [this page](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays) for all accepted values. If omitted, the default is 30.
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">String</span>  
-Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
+Optional. The Fluent Bit image to use. Defaults to `public.ecr.aws/aws-observability/aws-for-fluent-bit:latest`.
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 Optional. The configuration options to send to the FireLens log driver.

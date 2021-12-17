@@ -95,9 +95,9 @@ func (mr *MockprompterMockRecorder) GetSecret(message, help interface{}, promptO
 }
 
 // MultiSelect mocks base method.
-func (m *Mockprompter) MultiSelect(message, help string, options []string, promptOpts ...prompt.PromptConfig) ([]string, error) {
+func (m *Mockprompter) MultiSelect(message, help string, options []string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) ([]string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{message, help, options}
+	varargs := []interface{}{message, help, options, validator}
 	for _, a := range promptOpts {
 		varargs = append(varargs, a)
 	}
@@ -108,9 +108,9 @@ func (m *Mockprompter) MultiSelect(message, help string, options []string, promp
 }
 
 // MultiSelect indicates an expected call of MultiSelect.
-func (mr *MockprompterMockRecorder) MultiSelect(message, help, options interface{}, promptOpts ...interface{}) *gomock.Call {
+func (mr *MockprompterMockRecorder) MultiSelect(message, help, options, validator interface{}, promptOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{message, help, options}, promptOpts...)
+	varargs := append([]interface{}{message, help, options, validator}, promptOpts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MultiSelect", reflect.TypeOf((*Mockprompter)(nil).MultiSelect), varargs...)
 }
 

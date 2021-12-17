@@ -6,6 +6,7 @@ package cli
 import (
 	"encoding"
 	"io"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
@@ -235,8 +236,8 @@ type manifestReader interface {
 	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }
 
-type copilotDirGetter interface {
-	CopilotDirPath() (string, error)
+type workspacePathGetter interface {
+	Path() (string, error)
 }
 
 type wsPipelineManifestReader interface {
@@ -259,7 +260,7 @@ type wsSvcReader interface {
 
 type wsSvcDirReader interface {
 	wsSvcReader
-	copilotDirGetter
+	workspacePathGetter
 }
 
 type jobLister interface {
@@ -277,13 +278,13 @@ type wlLister interface {
 
 type wsJobDirReader interface {
 	wsJobReader
-	copilotDirGetter
+	workspacePathGetter
 }
 
 type wsWlDirReader interface {
 	wsJobReader
 	wsSvcReader
-	copilotDirGetter
+	workspacePathGetter
 	wlLister
 	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
@@ -305,23 +306,14 @@ type wsAddonManager interface {
 	wlLister
 }
 
-type artifactUploader interface {
-	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
-}
-
-type zipAndUploader interface {
+type uploader interface {
+	Upload(bucket, key string, data io.Reader) (string, error)
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
-}
-
-type Uploader interface {
-	zipAndUploader
-	Upload(bucket, key string, file s3.NamedBinary) (string, error)
 }
 
 type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-	UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {
@@ -526,6 +518,7 @@ type credsSelector interface {
 
 type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
+	ListAZs() ([]ec2.AZ, error)
 }
 
 type vpcSubnetLister interface {
@@ -552,8 +545,9 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type serviceUpdater interface {
+type svcForceUpdater interface {
 	ForceUpdateService(app, env, svc string) error
+	LastUpdatedAt(app, env, svc string) (time.Time, error)
 }
 
 type serviceDeployer interface {

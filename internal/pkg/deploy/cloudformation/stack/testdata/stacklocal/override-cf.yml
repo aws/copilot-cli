@@ -26,6 +26,12 @@
               Value: !Sub '${WorkloadName}'
             - Name: COPILOT_LB_DNS
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          EnvironmentFiles:
+            - !If
+              - HasEnvFile
+              - Type: s3
+                Value: !Ref EnvFileARN
+              - !Ref AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs
             Options:

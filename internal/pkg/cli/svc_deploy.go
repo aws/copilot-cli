@@ -4,15 +4,18 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -44,6 +47,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +72,7 @@ type deployWkldVars struct {
 
 type uploadCustomResourcesOpts struct {
 	uploader      customResourcesUploader
-	newS3Uploader func() (Uploader, error)
+	newS3Uploader func() (uploader, error)
 }
 
 type deploySvcOpts struct {
@@ -77,15 +81,16 @@ type deploySvcOpts struct {
 	store               store
 	deployStore         *deploy.Store
 	ws                  wsSvcDirReader
+	fs                  *afero.Afero
 	imageBuilderPusher  imageBuilderPusher
 	unmarshal           func([]byte) (manifest.WorkloadManifest, error)
 	newInterpolator     func(app, env string) interpolator
-	s3                  artifactUploader
+	s3                  uploader
 	cmd                 runner
 	addons              templater
 	appCFN              appResourcesGetter
 	svcCFN              serviceDeployer
-	newSvcUpdater       func(func(*session.Session) serviceUpdater)
+	newSvcUpdater       func(func(*session.Session) svcForceUpdater)
 	sessProvider        sessionProvider
 	envUpgradeCmd       actionCommand
 	newAppVersionGetter func(string) (versionGetter, error)
@@ -106,9 +111,13 @@ type deploySvcOpts struct {
 	appliedManifest   interface{}
 	imageDigest       string
 	buildRequired     bool
+	addonsURL         string
+	envFileARN        string
 	appEnvResources   *stack.AppRegionalResources
+	workspacePath     string
 	rdSvcAlias        string
-	svcUpdater        serviceUpdater
+	svcUpdater        svcForceUpdater
+	now               func() time.Time
 
 	subscriptions []manifest.TopicSubscription
 
@@ -135,6 +144,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		store:       store,
 		deployStore: deployStore,
 		ws:          ws,
+		fs:          &afero.Afero{Fs: afero.NewOsFs()},
 		unmarshal:   manifest.UnmarshalWorkload,
 		spinner:     termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
@@ -148,6 +158,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		},
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
+		now:             time.Now,
 		sessProvider:    sessions.NewProvider(),
 		snsTopicGetter:  deployStore,
 	}
@@ -220,12 +231,11 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
-	if err != nil {
+	if err := o.pushArtifactsToS3(); err != nil {
 		return err
 	}
 
-	if err := o.deploySvc(addonsURL); err != nil {
+	if err := o.deploySvc(); err != nil {
 		return err
 	}
 	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
@@ -333,7 +343,7 @@ func (o *deploySvcOpts) configureClients() error {
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
-	o.newSvcUpdater = func(f func(*session.Session) serviceUpdater) {
+	o.newSvcUpdater = func(f func(*session.Session) svcForceUpdater) {
 		o.svcUpdater = f(envSession)
 	}
 
@@ -421,62 +431,76 @@ func (o *deploySvcOpts) configureContainerImage() error {
 }
 
 func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*dockerengine.BuildArguments, error) {
-	copilotDir, err := o.ws.CopilotDirPath()
+	if err := o.retrieveWorkspacePath(); err != nil {
+		return nil, err
+	}
+	return buildArgs(o.name, o.imageTag, o.workspacePath, svc)
+}
+
+func (o *deploySvcOpts) pushArtifactsToS3() error {
+	mft, err := o.manifest()
 	if err != nil {
-		return nil, fmt.Errorf("get copilot directory: %w", err)
+		return err
 	}
-	return buildArgs(o.name, o.imageTag, copilotDir, svc)
+	if err := o.pushEnvFilesToS3Bucket(envFile(mft)); err != nil {
+		return err
+	}
+	return o.pushAddonsTemplateToS3Bucket()
 }
 
-func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
-	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-		ContainerPlatform() string
+func (o *deploySvcOpts) pushEnvFilesToS3Bucket(path string) error {
+	if path == "" {
+		return nil
 	}
-	mf, ok := unmarshaledManifest.(dfArgs)
+	if err := o.retrieveWorkspacePath(); err != nil {
+		return err
+	}
+	content, err := o.fs.ReadFile(filepath.Join(o.workspacePath, path))
+	if err != nil {
+		return fmt.Errorf("read env file %s: %w", path, err)
+	}
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return err
+	}
+	reader := bytes.NewReader(content)
+	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, s3.MkdirSHA256(path, content), reader)
+	if err != nil {
+		return fmt.Errorf("put env file %s artifact to bucket %s: %w", path, o.appEnvResources.S3Bucket, err)
+	}
+	bucket, key, err := s3.ParseURL(url)
+	if err != nil {
+		return fmt.Errorf("parse s3 url: %w", err)
+	}
+	// The app and environment are always within the same partition.
+	region := o.targetEnvironment.Region
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
 	if !ok {
-		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
+		return fmt.Errorf("find the partition for region %s", region)
 	}
-	var tags []string
-	if imageTag != "" {
-		tags = append(tags, imageTag)
-	}
-	args := mf.BuildArgs(filepath.Dir(copilotDir))
-	return &dockerengine.BuildArguments{
-		Dockerfile: *args.Dockerfile,
-		Context:    *args.Context,
-		Args:       args.Args,
-		CacheFrom:  args.CacheFrom,
-		Target:     aws.StringValue(args.Target),
-		Platform:   mf.ContainerPlatform(),
-		Tags:       tags,
-	}, nil
+	o.envFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
+	return nil
 }
 
-// pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.
-// If the service doesn't have any addons, it returns the empty string and no errors.
-// If the service has addons, it returns the URL of the S3 object storing the addons template.
-func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
+func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() error {
 	template, err := o.addons.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
 		if errors.As(err, &notFoundErr) {
 			// addons doesn't exist for service, the url is empty.
-			return "", nil
+			return nil
 		}
-		return "", fmt.Errorf("retrieve addons template: %w", err)
+		return fmt.Errorf("retrieve addons template: %w", err)
 	}
-
 	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
-		return "", err
+		return err
 	}
-
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
+		return fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
 	}
-	return url, nil
+	o.addonsURL = url
+	return nil
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
@@ -507,7 +531,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	return envMft, nil
 }
 
-func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+func (o *deploySvcOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
 	endpoint, err := o.endpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, err
@@ -515,7 +539,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
-			AddonsTemplateURL:        addonsURL,
+			AddonsTemplateURL:        o.addonsURL,
+			EnvFileARN:               o.envFileARN,
 			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                o.targetEnvironment.AccountID,
@@ -536,7 +561,8 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		}
 	}
 	return &stack.RuntimeConfig{
-		AddonsTemplateURL: addonsURL,
+		AddonsTemplateURL: o.addonsURL,
+		EnvFileARN:        o.envFileARN,
 		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
 		Image: &stack.ECRImage{
 			RepoURL:  repoURL,
@@ -565,16 +591,16 @@ func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.
 	return urls, nil
 }
 
-func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
+func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
 		return nil, err
 	}
-	rc, err := o.runtimeConfig(addonsURL)
+	rc, err := o.runtimeConfig()
 	if err != nil {
 		return nil, err
 	}
-	o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+	o.newSvcUpdater(func(s *session.Session) svcForceUpdater {
 		return ecs.New(s)
 	})
 	var conf cloudformation.StackConfiguration
@@ -615,7 +641,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
-		o.newSvcUpdater(func(s *session.Session) serviceUpdater {
+		o.newSvcUpdater(func(s *session.Session) svcForceUpdater {
 			return apprunner.New(s)
 		})
 		var caller identity.Caller
@@ -690,27 +716,37 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	return conf, nil
 }
 
-func (o *deploySvcOpts) deploySvc(addonsURL string) error {
-	conf, err := o.stackConfiguration(addonsURL)
+func (o *deploySvcOpts) deploySvc() error {
+	conf, err := o.stackConfiguration()
 	if err != nil {
 		return err
 	}
 
+	cmdRunAt := o.now()
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
-		if errors.As(err, &errEmptyCS) {
-			if o.forceNewUpdate {
-				return o.forceDeploy()
-			}
-			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
+		if !errors.As(err, &errEmptyCS) {
+			return fmt.Errorf("deploy service: %w", err)
 		}
-		return fmt.Errorf("deploy service: %w", err)
+		if !o.forceNewUpdate {
+			log.Warningf("Set --%s to force an update for the service.\n", forceFlag)
+			return fmt.Errorf("deploy service: %w", err)
+		}
+	}
+	// Force update the service if --force is set and the service is not updated by the CFN.
+	if o.forceNewUpdate {
+		lastUpdatedAt, err := o.svcUpdater.LastUpdatedAt(o.appName, o.envName, o.name)
+		if err != nil {
+			return fmt.Errorf("get the last updated deployment time for %s: %w", o.name, err)
+		}
+		if cmdRunAt.After(lastUpdatedAt) {
+			return o.forceDeploy()
+		}
 	}
 	return nil
 }
 
 func (o *deploySvcOpts) forceDeploy() error {
-	// Force update the service if --force is set and change set is empty.
 	o.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
 	if err := o.svcUpdater.ForceUpdateService(o.appName, o.envName, o.name); err != nil {
 		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(o.name),
@@ -725,6 +761,43 @@ func (o *deploySvcOpts) forceDeploy() error {
 	}
 	o.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(o.name), color.HighlightUserInput(o.envName)))
 	return nil
+}
+
+func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
+	type dfArgs interface {
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+		ContainerPlatform() string
+	}
+	mf, ok := unmarshaledManifest.(dfArgs)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required methods BuildArgs() and ContainerPlatform()", name)
+	}
+	var tags []string
+	if imageTag != "" {
+		tags = append(tags, imageTag)
+	}
+	args := mf.BuildArgs(workspacePath)
+	return &dockerengine.BuildArguments{
+		Dockerfile: *args.Dockerfile,
+		Context:    *args.Context,
+		Args:       args.Args,
+		CacheFrom:  args.CacheFrom,
+		Target:     aws.StringValue(args.Target),
+		Platform:   mf.ContainerPlatform(),
+		Tags:       tags,
+	}, nil
+}
+
+func envFile(unmarshaledManifest interface{}) string {
+	type envFile interface {
+		EnvFile() string
+	}
+	mf, ok := unmarshaledManifest.(envFile)
+	if ok {
+		return mf.EnvFile()
+	}
+	// If the manifest type doesn't support envFiles, ignore and move forward.
+	return ""
 }
 
 func validateLBSvcAliasAndAppVersion(svcName string, aliases manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
@@ -857,7 +930,7 @@ To upgrade the application, please run %s first (see https://aws.github.io/copil
 func newUploadCustomResourcesOpts(opts *deploySvcOpts) *uploadCustomResourcesOpts {
 	return &uploadCustomResourcesOpts{
 		uploader: template.New(),
-		newS3Uploader: func() (Uploader, error) {
+		newS3Uploader: func() (uploader, error) {
 			envRegion := opts.targetEnvironment.Region
 			sess, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
 			if err != nil {
@@ -867,6 +940,18 @@ func newUploadCustomResourcesOpts(opts *deploySvcOpts) *uploadCustomResourcesOpt
 			return s3Client, nil
 		},
 	}
+}
+
+func (o *deploySvcOpts) retrieveWorkspacePath() error {
+	if o.workspacePath != "" {
+		return nil
+	}
+	workspacePath, err := o.ws.Path()
+	if err != nil {
+		return fmt.Errorf("get workspace path: %w", err)
+	}
+	o.workspacePath = workspacePath
+	return nil
 }
 
 func (o *deploySvcOpts) retrieveAppResourcesForEnvRegion() error {

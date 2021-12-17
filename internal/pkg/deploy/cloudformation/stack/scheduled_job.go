@@ -204,6 +204,10 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
 			ParameterValue: aws.String(schedule),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(j.rc.EnvFileARN),
+		},
 	}...), nil
 }
 
