@@ -193,7 +193,7 @@ exports.handler = async function (event, context) {
     };
 
     let aliasesSorted = [...aliases].sort().join(",");
-    let physicalResourceID = event.PhysicalResourceId; // Keep old physical resource ID unchanged by default.
+    let physicalResourceID = event.PhysicalResourceId; // The certificate ARN. By default, keep old physical resource ID unchanged.
     let handler = async function() {
         switch (event.RequestType) {
             case "Update":
