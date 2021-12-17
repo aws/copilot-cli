@@ -431,6 +431,10 @@ async function unusedValidationOptions(ownedCertARN, loadBalancerDNS) {
     // Look for validation options that will be no longer needed by this service.
     const certificates = await serviceCertificates();
     const { certOwned: certPendingDeletion, otherCerts: certInUse } = categorizeCertificates(certificates, ownedCertARN);
+    if (!certPendingDeletion) {
+        // Cannot find the certificate that is pending deletion; perhaps it is deleted already. Exit peacefully.
+        return new Set();
+    }
     let optionsPendingDeletion = await unusedOptionsByService(certPendingDeletion, certInUse);
 
     // For each of the options pending deletion, validate if it is in use by other services. If it is, Copilot
