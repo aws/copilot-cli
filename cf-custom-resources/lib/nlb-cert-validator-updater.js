@@ -216,7 +216,7 @@ exports.handler = async function (event, context) {
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
             case "Delete":
-                if (!physicalResourceID.startsWith("arn:")) {
+                if (!physicalResourceID || !physicalResourceID.startsWith("arn:")) {
                     // This means no certificate has been created, nor any records. Exit without doing anything.
                     break;
                 }
