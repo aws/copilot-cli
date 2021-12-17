@@ -403,6 +403,7 @@ type WorkloadOpts struct {
 	EnvControllerLambda            string
 	CredentialsParameter           string
 	BacklogPerTaskCalculatorLambda string
+	NLBCertManagerFunctionLambda   string
 
 	// Additional options for job templates.
 	ScheduleExpression string
