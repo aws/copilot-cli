@@ -156,11 +156,14 @@ func (s *WorkerService) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *WorkerService) Parameters() ([]*cloudformation.Parameter, error) {
-	svcParams, err := s.ecsWkld.Parameters()
+	wkldParams, err := s.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
-	return svcParams, nil
+	return append(wkldParams, &cloudformation.Parameter{
+		ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+		ParameterValue: aws.String(s.rc.EnvFileARN),
+	}), nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized

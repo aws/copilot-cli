@@ -162,7 +162,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			}
 			urls, err := uploadCustomResources(&uploadCustomResourcesOpts{
 				uploader: template.New(),
-				newS3Uploader: func() (Uploader, error) {
+				newS3Uploader: func() (uploader, error) {
 					envRegion := env.Region
 					sess, err := p.DefaultWithRegion(env.Region)
 					if err != nil {

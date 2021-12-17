@@ -53,7 +53,7 @@ type WorkloadAdder interface {
 
 // Workspace contains the methods needed to manipulate a Copilot workspace.
 type Workspace interface {
-	CopilotDirPath() (string, error)
+	Path() (string, error)
 	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, serviceName string) (string, error)
 }
@@ -377,11 +377,10 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 
 // relativeDockerfilePath returns the path from the workspace root to the Dockerfile.
 func relativeDockerfilePath(ws Workspace, path string) (string, error) {
-	copilotDirPath, err := ws.CopilotDirPath()
+	wsRoot, err := ws.Path()
 	if err != nil {
-		return "", fmt.Errorf("get copilot directory: %w", err)
+		return "", fmt.Errorf("get workspace path: %w", err)
 	}
-	wsRoot := filepath.Dir(copilotDirPath)
 	absDfPath, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("get absolute path: %v", err)

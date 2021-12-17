@@ -146,7 +146,7 @@ type initEnvOpts struct {
 	selCreds     credsSelector
 	selApp       appSelector
 	appCFN       appResourcesGetter
-	newS3        func(string) (zipAndUploader, error)
+	newS3        func(string) (uploader, error)
 	uploader     customResourcesUploader
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
@@ -184,7 +184,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		selApp:   selector.NewSelect(prompt.New(), store),
 		uploader: template.New(),
 		appCFN:   deploycfn.New(defaultSession),
-		newS3: func(region string) (zipAndUploader, error) {
+		newS3: func(region string) (uploader, error) {
 			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, err
