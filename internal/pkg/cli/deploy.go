@@ -6,6 +6,7 @@ package cli
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -21,6 +22,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -73,6 +75,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 
 					store:           o.store,
 					ws:              o.ws,
+					fs:              &afero.Afero{Fs: afero.NewOsFs()},
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
@@ -87,11 +90,13 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 
 					store:           o.store,
 					ws:              o.ws,
+					fs:              &afero.Afero{Fs: afero.NewOsFs()},
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
 					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					prompt:          o.prompt,
+					now:             time.Now,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessions.NewProvider(),
 					newAppVersionGetter: func(appName string) (versionGetter, error) {

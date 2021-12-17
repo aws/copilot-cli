@@ -85,7 +85,7 @@ type codePipelineClient interface {
 }
 
 type s3Client interface {
-	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
+	Upload(bucket, fileName string, data io.Reader) (string, error)
 }
 
 type stackSetClient interface {

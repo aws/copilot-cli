@@ -25,9 +25,15 @@ Parameters:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ""
+  EnvFileARN:
+    Description: 'URL of the environment file.'
+    Type: String
+    Default: ""
 Conditions: 
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasEnvFile:
+    !Not [!Equals [!Ref EnvFileARN, ""]]
 Resources: 
   LogGroup:
     Metadata:
@@ -136,7 +142,12 @@ Resources:
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"managedEFSVolume":"/etc/mount1"}'
-          
+          EnvironmentFiles:
+          - !If
+            - HasEnvFile
+            - Type: s3
+              Value: !Ref EnvFileARN
+            - !Ref AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -233,6 +244,28 @@ Resources:
                   - 'kms:Decrypt'
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+        - !If
+          - HasEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref EnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+          - !Ref AWS::NoValue
       ManagedPolicyArns:
         - 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   

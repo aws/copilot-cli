@@ -192,13 +192,8 @@ exports.handler = async function (event, context) {
         },
     };
 
-    // NOTE: If the aliases have changed, then we need to replace the certificate being used, as well as deleting/adding
-    // validation records and A records. In general, any change in aliases indicate a "replacement" of the resources
-    // managed by the custom resource lambda; on the contrary, the same set of aliases indicate that there is no need to
-    // replace or update the certificate, nor the validation records or A records. Hence, we can use this as the physicalResourceID.
     let aliasesSorted = [...aliases].sort().join(",");
-    const physicalResourceID = `/${serviceName}/${aliasesSorted}`;
-
+    let physicalResourceID = event.PhysicalResourceId; // The certificate ARN. By default, keep old physical resource ID unchanged.
     let handler = async function() {
         switch (event.RequestType) {
             case "Update":
@@ -214,14 +209,23 @@ exports.handler = async function (event, context) {
                     aliases: aliases,
                     idempotencyToken: CRYPTO
                         .createHash("md5")
-                        .update(physicalResourceID)
+                        .update(`/${serviceName}/${aliasesSorted}`)
                         .digest("hex")});
+                physicalResourceID = certificateARN; // Update the physical resource ID if a new certificate is created.
                 const options = await waitForValidationOptionsToBeReady(certificateARN, aliases);
                 await activate(options, certificateARN, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
             case "Delete":
-                let unusedOptions = await unusedValidationOptions(aliases, loadBalancerDNS);
-                await deleteCertificate(aliases);
+                if (!physicalResourceID || !physicalResourceID.startsWith("arn:")) {
+                    // This means no certificate has been created, nor any records. Exit without doing anything.
+                    break;
+                }
+                let unusedOptions = await unusedValidationOptions(physicalResourceID, loadBalancerDNS);
+                await clients.acm().deleteCertificate({ CertificateArn: physicalResourceID }).promise().catch(err => {
+                    if (err.name !== "ResourceNotFoundException") {
+                        throw err;
+                    }
+                });
                 await deactivate(unusedOptions, loadBalancerDNS, loadBalancerHostedZoneID);
                 break;
             default:
@@ -259,7 +263,7 @@ async function validateAliases(aliases, loadBalancerDNS) {
                 return;
             }
             let aliasTarget = recordSet[0].AliasTarget;
-            if (aliasTarget && aliasTarget.DNSName === `${loadBalancerDNS}.`) {
+            if (aliasTarget && aliasTarget.DNSName.toLowerCase() === `${loadBalancerDNS.toLowerCase()}.`) {
                 return; // The record is an alias record and is in use by myself, hence valid.
             }
             if (aliasTarget) {
@@ -319,7 +323,7 @@ async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
         }).promise();
         const options = Certificate.DomainValidationOptions || [];
         options.forEach(option => {
-            if (option.ResourceRecord && (aliases.has(option.DomainName) || option.DomainName === certificateDomain)) {
+            if (option.ResourceRecord && (aliases.has(option.DomainName) || option.DomainName.toLowerCase() === certificateDomain.toLowerCase())) {
                 readyCount++;
             }
         })
@@ -419,14 +423,14 @@ async function activateOption(option, loadBalancerDNS, loadBalancerHostedZone) {
 /**
  * Retrieve validation options that will be unused by any service.
  *
- * @param {Set<String>} aliases
- * @param {String} loadBalancerDNS
+ * @param {String} ownedCertARN The ARN of the certificate that this custom resource manages.
+ * @param {String} loadBalancerDNS The DNS of the load balancer used by this service.
  * @returns {Promise<Set<Object>>}
  */
-async function unusedValidationOptions(aliases, loadBalancerDNS) {
+async function unusedValidationOptions(ownedCertARN, loadBalancerDNS) {
     // Look for validation options that will be no longer needed by this service.
     const certificates = await serviceCertificates();
-    const { certPendingDeletion, certInUse } = categorizeCertificates(aliases, certificates);
+    const { certOwned: certPendingDeletion, otherCerts: certInUse } = categorizeCertificates(certificates, ownedCertARN);
     let optionsPendingDeletion = await unusedOptionsByService(certPendingDeletion, certInUse);
 
     // For each of the options pending deletion, validate if it is in use by other services. If it is, Copilot
@@ -455,25 +459,6 @@ async function unusedValidationOptions(aliases, loadBalancerDNS) {
     }
     await Promise.all(promises);
     return optionsPendingDeletion;
-}
-
-/**
- * Delete the copilot-tagged certificate that has the default canonical domain name and uses the aliases for its subject
- * alternative names.
- * @param {Set<String>} aliases
- * @returns {Promise<void>}
- */
-async function deleteCertificate(aliases) {
-    const certificates = await serviceCertificates();
-    const { certPendingDeletion } = categorizeCertificates(aliases, certificates);
-    let promises = [];
-    for (const {CertificateArn: arn} of certPendingDeletion) {
-        let promise = clients.acm().deleteCertificate({
-            CertificateArn: arn
-        }).promise();
-        promises.push(promise);
-    }
-    await Promise.all(promises);
 }
 
 async function deactivate(unusedOptions, loadBalancerDNS, loadBalancerHostedZoneID) {
@@ -583,17 +568,15 @@ async function serviceCertificates() {
 /**
  * Retrieve the validation options that are pending deletion. An option is pending deletion if it is only used to
  * validate a certificate that is pending deletion.
- * @param {Array<Object>} certsPendingDeletion
+ * @param {Object} certPendingDeletion The certificate that is pending deletion.
  * @param {Array<Object>} certsInUse
  * @returns {Promise<Set<Object>>} options that are pending deletion.
  */
-async function unusedOptionsByService(certsPendingDeletion, certsInUse) {
+async function unusedOptionsByService(certPendingDeletion, certsInUse) {
     let optionsPendingDeletion = new Map();
-    for (const { DomainValidationOptions: validationOptions } of certsPendingDeletion) {
-        for (const option of validationOptions) {
-            if (option["ResourceRecord"]) {
-                optionsPendingDeletion.set(JSON.stringify(option["ResourceRecord"]), option);
-            }
+    for (const option of certPendingDeletion["DomainValidationOptions"]) {
+        if (option["ResourceRecord"]) {
+            optionsPendingDeletion.set(JSON.stringify(option["ResourceRecord"]), option);
         }
     }
     for (const { DomainValidationOptions: validationOptions } of certsInUse) {
@@ -641,27 +624,27 @@ This is unexpected. We don't error out as it may not cause any issue.`);
     if (!targetRecordExists(domainName, recordSet)) {
         return false; // If there is no record using this domain, it is not in use.
     }
-    const inUseByMySelf = recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName === `${loadBalancerDNS}.`
+    const inUseByMySelf = recordSet[0].AliasTarget && recordSet[0].AliasTarget.DNSName.toLowerCase() === `${loadBalancerDNS.toLowerCase()}.`
     return !inUseByMySelf
 }
 
 /**
- * Categorize a list of certificates into certificates that are pending deletion, and certificates that are still in use.
- * @param aliases
- * @param certificates
- * @returns Array{Object},Array{Object}
+ * Categorize a list of certificates into the certificate that corresponds to this particular custom resource, and other certificates.
+ * @param {Array<Object>} certificates
+ * @param {String} ownedCertARN The ARN of the certificate that this custom resource manages.
+ * @returns {Object},Array{Object}
  */
-function categorizeCertificates(aliases, certificates) {
-    let certPendingDeletion = [];
-    let certInUse = [];
+function categorizeCertificates(certificates, ownedCertARN) {
+    let certOwned;
+    let otherCerts = [];
     for (const cert of certificates) {
-        if (cert["DomainName"] === certificateDomain && setEqual(new Set(aliases).add(certificateDomain), new Set(cert["SubjectAlternativeNames"]))) {
-            certPendingDeletion.push(cert);
+        if (cert["CertificateArn"].toLowerCase() === ownedCertARN.toLowerCase()) {
+            certOwned = cert;
         } else {
-            certInUse.push(cert);
+            otherCerts.push(cert);
         }
     }
-    return { certPendingDeletion, certInUse };
+    return { certOwned, otherCerts };
 }
 
 /**

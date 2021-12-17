@@ -1194,7 +1194,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			mockIAM := mocks.NewMockroleManager(ctrl)
 			mockCFN := mocks.NewMockstackExistChecker(ctrl)
 			mockResourcesUploader := mocks.NewMockcustomResourcesUploader(ctrl)
-			mockUploader := mocks.NewMockzipAndUploader(ctrl)
+			mockUploader := mocks.NewMockuploader(ctrl)
 			if tc.expectStore != nil {
 				tc.expectStore(mockStore)
 			}
@@ -1240,7 +1240,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				sess:        sess,
 				appCFN:      mockAppCFN,
 				uploader:    mockResourcesUploader,
-				newS3: func(region string) (zipAndUploader, error) {
+				newS3: func(region string) (uploader, error) {
 					return mockUploader, nil
 				},
 			}

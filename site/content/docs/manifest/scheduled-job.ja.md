@@ -190,7 +190,7 @@ EFS の高度な認可の設定を指定します。
 logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
-任意項目。使用する Fluent Bit のイメージ。デフォルト値は `amazon/aws-for-fluent-bit:latest`。
+任意項目。使用する Fluent Bit のイメージ。デフォルト値は `public.ecr.aws/aws-observability/aws-for-fluent-bit:latest`。
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 任意項目。Firelens ログドライバーにログを送信するときの設定。

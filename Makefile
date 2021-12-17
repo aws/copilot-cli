@@ -155,7 +155,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ec2/mocks/mock_ec2.go -source=./internal/pkg/aws/ec2/ec2.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/identity/mocks/mock_identity.go -source=./internal/pkg/aws/identity/identity.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/route53/mocks/mock_route53.go -source=./internal/pkg/aws/route53/route53.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/route53/mocks/mock_route53_domain.go -source=./internal/pkg/aws/route53/domain.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/route53/mocks/mock_domain.go -source=./internal/pkg/aws/route53/domain.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/iam/mocks/mock_iam.go -source=./internal/pkg/aws/iam/iam.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/secretsmanager/mocks/mock_secretsmanager.go -source=./internal/pkg/aws/secretsmanager/secretsmanager.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/codepipeline/mocks/mock_codepipeline.go -source=./internal/pkg/aws/codepipeline/codepipeline.go

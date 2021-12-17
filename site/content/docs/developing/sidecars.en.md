@@ -80,7 +80,7 @@ Sidecar patterns are predefined Copilot sidecar configurations. For now, the onl
 ``` yaml
 # In the manifest.
 logging:
-  # The Fluent Bit image. (Optional, we'll use "amazon/aws-for-fluent-bit:latest" by default)
+  # The Fluent Bit image. (Optional, we'll use "public.ecr.aws/aws-observability/aws-for-fluent-bit:latest" by default)
   image: <image URL>
   # The configuration options to send to the FireLens log driver. (Optional)
   destination:

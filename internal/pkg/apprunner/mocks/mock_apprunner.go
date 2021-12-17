@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	apprunner "github.com/aws/aws-sdk-go/service/apprunner"
+	apprunner0 "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -48,6 +49,21 @@ func (m *MockappRunnerClient) DescribeOperation(operationId, svcARN string) (*ap
 func (mr *MockappRunnerClientMockRecorder) DescribeOperation(operationId, svcARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeOperation", reflect.TypeOf((*MockappRunnerClient)(nil).DescribeOperation), operationId, svcARN)
+}
+
+// DescribeService mocks base method.
+func (m *MockappRunnerClient) DescribeService(svcARN string) (*apprunner0.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeService", svcARN)
+	ret0, _ := ret[0].(*apprunner0.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeService indicates an expected call of DescribeService.
+func (mr *MockappRunnerClientMockRecorder) DescribeService(svcARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockappRunnerClient)(nil).DescribeService), svcARN)
 }
 
 // StartDeployment mocks base method.

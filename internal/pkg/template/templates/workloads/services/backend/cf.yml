@@ -23,12 +23,18 @@ Parameters:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ""
+  EnvFileARN:
+    Description: 'URL of the environment file.'
+    Type: String
+    Default: ""
   LogRetention:
     Type: Number
     Default: 30
 Conditions:
   HasAddons:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasEnvFile:
+    !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort:
     !Not [!Equals [!Ref ContainerPort, -1]]
 Resources:

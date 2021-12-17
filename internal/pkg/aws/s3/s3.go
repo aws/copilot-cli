@@ -7,6 +7,7 @@ package s3
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"path"
@@ -46,9 +47,6 @@ type NamedBinary interface {
 // CompressAndUploadFunc is invoked to zip multiple template contents and upload them to an S3 bucket under the specified key.
 type CompressAndUploadFunc func(key string, objects ...NamedBinary) (url string, err error)
 
-// UploadFunc is invoked to upload an item to an S3 bucket under the specified key.
-type UploadFunc func(key string, file NamedBinary) (string, error)
-
 // S3 wraps an Amazon Simple Storage Service client.
 type S3 struct {
 	s3Manager s3ManagerAPI
@@ -61,23 +59,6 @@ func New(s *session.Session) *S3 {
 		s3Manager: s3manager.NewUploader(s),
 		s3Client:  s3.New(s),
 	}
-}
-
-// PutArtifact uploads data to a S3 bucket under a random path that ends with
-// the file name and returns its url.
-func (s *S3) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
-	id := time.Now().Unix()
-	key := path.Join(artifactDirName, strconv.FormatInt(id, 10), fileName)
-	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
-		Body:   data,
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return "", fmt.Errorf("put %s to bucket %s: %w", key, bucket, err)
-	}
-
-	return resp.Location, nil
 }
 
 // ZipAndUpload zips all files and uploads the zipped file to an S3 bucket under the specified key.
@@ -101,10 +82,19 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 }
 
 // Upload uploads a file to an S3 bucket under the specified key.
-func (s *S3) Upload(bucket, key string, file NamedBinary) (string, error) {
-	buf := new(bytes.Buffer)
-	buf.Write(file.Content())
-	return s.upload(bucket, key, buf)
+func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
+	return s.upload(bucket, key, data)
+}
+
+// MkdirTimestamp prefixes the key with the current timestamp "manual/<timestamp>/key".
+func MkdirTimestamp(key string) string {
+	id := time.Now().Unix()
+	return path.Join(artifactDirName, strconv.FormatInt(id, 10), key)
+}
+
+// MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
+func MkdirSHA256(key string, content []byte) string {
+	return path.Join(artifactDirName, fmt.Sprintf("%x", sha256.Sum256(content)), key)
 }
 
 // EmptyBucket deletes all objects within the bucket.
@@ -177,6 +167,12 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	}
 	bucket, key = strings.Split(parsedURL[0], ".")[0], parsedURL[1]
 	return
+}
+
+// FormatARN formats an S3 object ARN.
+// For example: arn:aws:s3:::stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3
+func FormatARN(partition, location string) string {
+	return fmt.Sprintf("arn:%s:s3:::%s", partition, location)
 }
 
 // Check whether the bucket exists before proceeding with empty the bucket

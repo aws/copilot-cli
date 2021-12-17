@@ -246,7 +246,7 @@ logging セクションには、ログ設定を含みます。このセクショ
 任意項目。 ログイベントを保持する日数。設定可能な値については、[こちら](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)を確認してください。省略した場合、デフォルトの 30 が設定されます。
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">String</span>
-任意項目。使用する Fluent Bit のイメージ。デフォルト値は `amazon/aws-for-fluent-bit:latest`。
+任意項目。使用する Fluent Bit のイメージ。デフォルト値は `public.ecr.aws/aws-observability/aws-for-fluent-bit:latest`。
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 任意項目。FireLens ログドライバーにログを送信するときの設定。

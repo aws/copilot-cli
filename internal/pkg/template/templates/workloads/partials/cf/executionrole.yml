@@ -37,5 +37,30 @@ ExecutionRole:
                 - 'kms:Decrypt'
               Resource:
                 - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+      # Optional IAM permission required by ECS task def env file
+      # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam
+      # Example EnvFileARN: arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env
+      - !If
+        - HasEnvFile
+        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicy]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:GetObject'
+                Resource:
+                  - !Ref EnvFileARN
+              - Effect: 'Allow'
+                Action:
+                  - 's3:GetBucketLocation'
+                Resource:
+                  - !Join
+                    - ''
+                    - - 'arn:'
+                      - !Ref AWS::Partition
+                      - ':s3:::'
+                      - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+        - !Ref AWS::NoValue
     ManagedPolicyArns:
       - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'

@@ -6,6 +6,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -144,7 +145,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity:    id,
 		appCFN:      cloudformation.New(defaultSess),
 		uploader:    template.New(),
-		newS3: func(region string) (zipAndUploader, error) {
+		newS3: func(region string) (uploader, error) {
 			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, err
@@ -165,10 +166,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:           ssm,
 		prompt:          prompt,
 		ws:              ws,
+		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		newInterpolator: newManifestInterpolator,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,
 		spinner:         spin,
+		now:             time.Now,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
 		snsTopicGetter:  deployStore,
@@ -186,6 +189,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:           ssm,
 		prompt:          prompt,
 		ws:              ws,
+		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		newInterpolator: newManifestInterpolator,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,

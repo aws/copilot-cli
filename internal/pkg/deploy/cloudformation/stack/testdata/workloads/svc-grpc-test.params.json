@@ -15,7 +15,8 @@
     "DNSDelegated": "true",
     "TargetContainer": "gRPC",
     "TargetPort": "50051",
-    "Stickiness": "false"
+    "Stickiness": "false",
+    "EnvFileARN": ""
   },
   "Tags": { 
     "copilot-application": "my-app",

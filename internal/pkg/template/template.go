@@ -6,7 +6,6 @@ package template
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -27,12 +26,10 @@ const (
 	DNSDelegationFileName               = "dns-delegation"
 	CustomDomainFileName                = "custom-domain"
 	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
-	AWSSDKLayerFileName                 = "aws-sdk-layer"
 
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
 	scriptDirName                  = "scripts"
-	layerDirName                   = "layers"
 )
 
 // Groups of files that belong to the same stack.
@@ -44,9 +41,6 @@ var (
 	}
 	rdWkldCustomResourceFiles = []string{
 		AppRunnerCustomDomainLambdaFileName,
-	}
-	rdWkldCustomResourceLayers = []string{
-		AWSSDKLayerFileName,
 	}
 )
 
@@ -129,29 +123,6 @@ func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.Compre
 	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
 }
 
-// UploadRequestDrivenWebServiceLayers uploads already-zipped layers for a request driven web service.
-func (t *Template) UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error) {
-	urls := make(map[string]string)
-	for _, layerName := range rdWkldCustomResourceLayers {
-		content, err := t.Read(path.Join(customResourceRootPath, fmt.Sprintf("%s.zip", layerName)))
-		if err != nil {
-			return nil, err
-		}
-		name := path.Join(layerDirName, layerName)
-		url, err := upload(fmt.Sprintf("%s/%x", name, sha256.Sum256(content.Bytes())), Uploadable{
-			name:    layerName,
-			content: content.Bytes(),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("upload %s: %w", name, err)
-		}
-
-		urls[layerName] = url
-	}
-
-	return urls, nil
-}
-
 func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, name := range fileNames {
@@ -187,7 +158,7 @@ func (t *Template) uploadFileToCompress(upload s3.CompressAndUploadFunc, file fi
 	// Suffix with a SHA256 checksum of the fileToCompress so that
 	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
 	// same content then the URL generated will be identical.
-	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), nameBinaries...)
+	url, err := upload(s3.MkdirSHA256(file.name, contents), nameBinaries...)
 	if err != nil {
 		return "", fmt.Errorf("upload %s: %w", file.name, err)
 	}
