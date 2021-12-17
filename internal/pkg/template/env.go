@@ -44,7 +44,7 @@ type EnvOpts struct {
 
 	LatestVersion string
 
-	ContainerInsight bool
+	Prod bool // Whether or not this environment is a production environment.
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

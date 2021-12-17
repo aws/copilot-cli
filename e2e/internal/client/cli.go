@@ -42,14 +42,13 @@ type InitRequest struct {
 
 // EnvInitRequest contains the parameters for calling copilot env init.
 type EnvInitRequest struct {
-	AppName          string
-	EnvName          string
-	Profile          string
-	Prod             bool
-	CustomizedEnv    bool
-	VPCImport        EnvInitRequestVPCImport
-	VPCConfig        EnvInitRequestVPCConfig
-	ContainerInsight bool
+	AppName       string
+	EnvName       string
+	Profile       string
+	Prod          bool
+	CustomizedEnv bool
+	VPCImport     EnvInitRequestVPCImport
+	VPCConfig     EnvInitRequestVPCConfig
 }
 
 // EnvInitRequestVPCImport contains the parameters for configuring VPC import when
@@ -560,9 +559,6 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	}
 	if !opts.CustomizedEnv {
 		commands = append(commands, "--default-config")
-	}
-	if opts.ContainerInsight {
-		commands = append(commands, "--container-insights")
 	}
 	if (opts.VPCImport != EnvInitRequestVPCImport{}) {
 		commands = append(commands, "--import-vpc-id", opts.VPCImport.ID, "--import-public-subnets",
