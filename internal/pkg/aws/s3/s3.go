@@ -92,7 +92,7 @@ func MkdirTimestamp(key string) string {
 	return path.Join(artifactDirName, strconv.FormatInt(id, 10), key)
 }
 
-// MkdirSHA prefixes the key with the SHA256 hash of the contents of r "<hash>/key".
+// MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
 func MkdirSHA256(key string, content []byte) string {
 	return path.Join(artifactDirName, fmt.Sprintf("%x", sha256.Sum256(content)), key)
 }
