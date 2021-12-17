@@ -120,7 +120,7 @@ Resources:
           PortMappings:
             - ContainerPort: !Ref ContainerPort
         - Name: firelens_log_router
-          Image: amazon/aws-for-fluent-bit:latest
+          Image: public.ecr.aws/aws-observability/aws-for-fluent-bit:latest
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'
