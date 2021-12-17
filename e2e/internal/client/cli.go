@@ -540,7 +540,6 @@ copilot env init
 	--profile $pr
 	--prod (optional)
 	--default-config (optional)
-	--container-insights (optional)
 	--import-private-subnets (optional)
 	--import-public-subnets (optional)
 	--import-vpc-id (optional)
