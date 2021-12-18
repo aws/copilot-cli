@@ -316,7 +316,9 @@ func buildPipelineUpdateCmd() *cobra.Command {
 		Long:  `Deploys a pipeline for the services in your workspace, using the environments associated with the application.`,
 		Example: `
   Deploys a pipeline for the services and jobs in your workspace.
-  /code $ copilot pipeline update or $ copilot pipeline deploy`,
+  /code $ copilot pipeline update
+  or 
+  /code $ copilot pipeline deploy`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newUpdatePipelineOpts(vars)
 			if err != nil {

@@ -32,8 +32,9 @@ var RootUsage = fmt.Sprintf("{{h1 \"Commands\"}}{{ $cmds := .Commands }}{{$group
 `
 
 // Usage is the text template for a single command.
-const Usage = `{{h1 "Usage"}}{{if .Runnable}}
-  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+const Usage = `{{h1 "Usage"}}{{if .Runnable}}{{if .HasAlias .CalledAs}}
+  {{.Parent.CommandPath}} {{.CalledAs}} [flags]{{else}}
+  {{.UseLine}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]
 
 {{h1 "Available Commands"}}{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
