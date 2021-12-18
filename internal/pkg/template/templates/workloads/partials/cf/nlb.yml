@@ -172,6 +172,7 @@ NLBCertManagerRole:
                   - EnvHostedZone: Fn::ImportValue
                         !Sub "${AppName}-${EnvName}-HostedZone"
             - Sid: EnvHostedZoneRead
+              Effect: Allow
               Action:
                 - route53:ListResourceRecordSets
                 - route53:GetChange
@@ -188,7 +189,7 @@ NLBCertManagerRole:
             - Sid: TaggedResourcesRead
               Effect: Allow
               Action: tag:GetResources
-              Resource: *
+              Resource: "*"
             - Sid: CertificateCreateAndRead
               Effect: Allow
               Action:
