@@ -114,7 +114,7 @@ NLBDNSAlias:
 {{- if eq .NLB.Listener.Protocol "TLS" }}
 NLBCertManagerAction:
   Metadata:
-    'aws:copilot:description': "Request and validate the certificate for your Network Load Balancer, as well as adding A-records for the aliases."
+    'aws:copilot:description': "Request and validate the certificate for the NLB and add records for aliases"
   Type: Custom::NLBCertManagerFunction
   Condition: HasAssociatedDomain
   Properties:
@@ -129,7 +129,7 @@ NLBCertManagerAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{ .NLB.Listener.Aliases }}
+    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
 
 NLBCertManagerFunction:
   Type: AWS::Lambda::Function
