@@ -213,6 +213,7 @@ type NetworkLoadBalancerListener struct {
 	TargetContainer string
 	TargetPort      string
 	SSLPolicy       *string
+	Aliases         []string
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
@@ -403,6 +404,7 @@ type WorkloadOpts struct {
 	EnvControllerLambda            string
 	CredentialsParameter           string
 	BacklogPerTaskCalculatorLambda string
+	NLBCertManagerFunctionLambda   string
 
 	// Additional options for job templates.
 	ScheduleExpression string

@@ -483,6 +483,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         const mockListResourceRecordSets = sinon.stub();
         const mockDeleteCertificate = sinon.stub();
         const mockChangeResourceRecordSets = sinon.stub();
+        const mockWaitForRecordsChange = sinon.stub();
         const mockAppHostedZoneID = "mockAppHostedZoneID";
         const mockRootHostedZoneID = "mockRootHostedZoneID";
         beforeEach(() => {
@@ -497,9 +498,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 }]
             });
             mockGetResources.resolves({
-                ResourceTagMappingList: [{ ResourceARN: "mockARNToDelete" }, { ResourceARN: "mockARNInUse" }, { ResourceARN: "mockARNInUse2" }],
+                ResourceTagMappingList: [{ ResourceARN: "arn:mockARNToDelete" }, { ResourceARN: "arn:mockARNInUse" }, { ResourceARN: "arn:mockARNInUse2" }],
             });
-            mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "mockARNToDelete" })).resolves({
+
+            mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "arn:mockARNToDelete" })).onFirstCall().resolves({
                 Certificate: {
                     CertificateArn: "arn:mockARNToDelete",
                     DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
@@ -544,7 +546,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     }],
                 }
             });
-            mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "mockARNInUse" })).resolves({
+            mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "arn:mockARNInUse" })).resolves({
                 Certificate: {
                     CertificateArn: "mockARNInUse",
                     DomainName: `${mockServiceName}-nlb.${mockEnvName}.${mockAppName}.${mockDomainName}`,
@@ -573,7 +575,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     }],
                 }
             });
-            mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "mockARNInUse2" })).resolves({
+            mockDescribeCertificate.withArgs(sinon.match({ CertificateArn: "arn:mockARNInUse2" })).resolves({
                 Certificate: {
                     CertificateArn: "mockARNInUse2",
                     DomainName: `some.domain.name.that.is.not.default.hence.not.created.by.copilot`,
@@ -622,6 +624,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
             mockChangeResourceRecordSets.withArgs(sinon.match.hasNested("ChangeBatch.Changes[1].ResourceRecordSet.Name", "unused.mockDomain.com")).resolves({
                 ChangeInfo: {Id: "mockID",},
             });
+            mockWaitForRecordsChange.withArgs("resourceRecordSetsChanged", sinon.match.has("Id", "mockID")).resolves();
         });
 
         afterEach(() => {
@@ -692,24 +695,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 });
         });
 
-        test("error deleting certificates", () => {
-            const mockDeleteCertificate = sinon.stub().rejects(new Error("some error"));
-            AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-            AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
-            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
-            return LambdaTester(handler)
-                .event(mockRequest)
-                .expectResolve(() => {
-                    expect(request.isDone()).toBe(true);
-                    sinon.assert.callCount(mockGetResources, 1);
-                    sinon.assert.callCount(mockDescribeCertificate, 3);
-                    sinon.assert.callCount(mockDeleteCertificate, 1);
-                });
-        });
-
         test("error removing validation record and alias A-record for an alias into hosted zone", () => {
             const mockChangeResourceRecordSets = sinon.stub();
             mockChangeResourceRecordSets.withArgs(sinon.match.hasNested("ChangeBatch.Changes[1].ResourceRecordSet.Name", "unused.mockDomain.com")).rejects(new Error("some error"));
@@ -726,7 +711,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     expect(request.isDone()).toBe(true);
                     sinon.assert.callCount(mockGetResources, 1);
                     sinon.assert.callCount(mockDescribeCertificate, 3);
-                    sinon.assert.callCount(mockDeleteCertificate, 1);
                     sinon.assert.callCount(mockChangeResourceRecordSets, 1); // Only one validation option is to be deleted.
                 });
         });
@@ -748,9 +732,120 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                     expect(request.isDone()).toBe(true);
                     sinon.assert.callCount(mockGetResources, 1);
                     sinon.assert.callCount(mockDescribeCertificate, 3);
-                    sinon.assert.callCount(mockDeleteCertificate, 1);
                     sinon.assert.callCount(mockChangeResourceRecordSets, 1); // Only one validation option is to be deleted.
                     sinon.assert.callCount(mockWaitFor, 1);
+                });
+        });
+
+        test("error waiting for certificate to be unused", () => {
+            mockDescribeCertificate.resolves({
+                Certificate: {
+                    InUseBy: ["inuse"],
+                }
+            });
+            AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
+            AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+
+            let request = mockFailedRequest(/^Certificate still in use after checking for 12 attempts. \(Log: .*\)$/);
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockGetResources, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 15); // 3 call to list unused options, 12 calls to wait for the certificate to be unused.
+                });
+        });
+
+        test("error deleting certificate", () => {
+            const mockDeleteCertificate = sinon.stub().rejects(new Error("some error"));
+            mockDescribeCertificate.resolves({
+                Certificate: {
+                    InUseBy: [],
+                }
+            });
+            AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
+            AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+            AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
+            let request = mockFailedRequest(/^some error \(Log: .*\)$/);
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockGetResources, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 4); // 3 call to list unused options, 1 calls to find out that the certificate is unused.
+                    sinon.assert.callCount(mockDeleteCertificate, 1);
+                });
+        });
+
+
+        test("do not error out if certificate is not found while waiting for it to be unused", () => {
+            let resourceNotFoundErr = new Error("some error");
+            resourceNotFoundErr.name = "ResourceNotFoundException";
+            mockDescribeCertificate.rejects(resourceNotFoundErr);
+            AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
+            AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+
+            let request = nock(mockResponseURL)
+                .put("/", (body) => {
+                    return (
+                        body.Status === "SUCCESS"
+                    );
+                })
+                .reply(200);
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockGetResources, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 4); // 3 call to list unused options, 1 calls to find out that the certificate is already not found.
+                });
+        });
+
+        test("do not error out if certificate is not found while deleting", () => {
+            mockDescribeCertificate.resolves({
+                Certificate: {
+                    InUseBy: [],
+                }
+            });
+            let resourceNotFoundErr = new Error("some error");
+            resourceNotFoundErr.name = "ResourceNotFoundException";
+            const mockDeleteCertificate = sinon.stub().rejects(resourceNotFoundErr);
+            AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
+            AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+            AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
+            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+
+            let request = nock(mockResponseURL)
+                .put("/", (body) => {
+                    return (
+                        body.Status === "SUCCESS"
+                    );
+                })
+                .reply(200);
+            return LambdaTester(handler)
+                .event(mockRequest)
+                .expectResolve(() => {
+                    expect(request.isDone()).toBe(true);
+                    sinon.assert.callCount(mockGetResources, 1);
+                    sinon.assert.callCount(mockDescribeCertificate, 4); // 3 call to list unused options, 1 calls to find out that the certificate is unused.
                 });
         });
     })
