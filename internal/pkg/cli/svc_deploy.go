@@ -626,7 +626,17 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 				return nil, err
 			}
 			opts = append(opts, stack.WithHTTPS())
-			opts = append(opts, stack.WithDNSDelegation())
+
+			var caller identity.Caller
+			caller, err = o.identity.Get()
+			if err != nil {
+				return nil, fmt.Errorf("get identity: %w", err)
+			}
+			opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
+				Name:                o.targetEnvironment.App,
+				DNSName:             o.targetApp.Domain,
+				AccountPrincipalARN: caller.RootUserARN,
+			}))
 		}
 		if !t.NLBConfig.IsEmpty() {
 			cidrBlocks, err := o.publicCIDRBlocks()

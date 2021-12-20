@@ -47,6 +47,7 @@ type deploySvcMocks struct {
 	mockSubnetLister       *mocks.MockvpcSubnetLister
 	mockS3Svc              *mocks.Mockuploader
 	mockAddons             *mocks.Mocktemplater
+	mockIdentity           *mocks.MockidentityService
 }
 
 type mockWorkloadMft struct {
@@ -797,6 +798,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("deploy service: some error"),
@@ -814,6 +818,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 			},
 			wantErr: fmt.Errorf("deploy service: change set with name mockChangeSet for stack mockStack has no changes"),
@@ -832,6 +839,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
@@ -853,6 +863,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
@@ -877,6 +890,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockBeforeTime, nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(mockError)
 				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError))
@@ -897,6 +913,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
@@ -931,8 +950,10 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-
 			},
 		},
 		"success with force update": {
@@ -949,6 +970,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
@@ -976,6 +1000,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				mockInterpolator:       mocks.NewMockinterpolator(ctrl),
 				mockEnvDescriber:       mocks.NewMockenvDescriber(ctrl),
 				mockSubnetLister:       mocks.NewMockvpcSubnetLister(ctrl),
+				mockIdentity:           mocks.NewMockidentityService(ctrl),
 			}
 			tc.mock(m)
 
@@ -993,6 +1018,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 					return m.mockAppVersionGetter, nil
 				},
 				endpointGetter:    m.mockEndpointGetter,
+				identity:          m.mockIdentity,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
 				newInterpolator: func(app, env string) interpolator {

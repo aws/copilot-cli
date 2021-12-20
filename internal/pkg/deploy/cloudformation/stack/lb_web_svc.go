@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -53,6 +54,7 @@ type LoadBalancedWebService struct {
 	// should always be false; hence they could have different values at this time.
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
+	appInfo                deploy.AppInformation
 
 	parser loadBalancedWebSvcReadParser
 }
@@ -77,9 +79,10 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 }
 
 // WithDNSDelegation enables DNS delegation for a LoadBalancedWebService.
-func WithDNSDelegation() func(s *LoadBalancedWebService) {
+func WithDNSDelegation(app deploy.AppInformation) func(s *LoadBalancedWebService) {
 	return func(s *LoadBalancedWebService) {
 		s.dnsDelegationEnabled = true
+		s.appInfo = app
 	}
 }
 
@@ -192,8 +195,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var dnsDelegationRole, dnsName *string
 	var nlbCertManagerLambdaString string
 	if s.dnsDelegationEnabled {
+		dnsDelegationRole, dnsName = convertAppInformation(s.appInfo)
 		if nlb != nil {
 			nlbCertManagerLambda, err := s.parser.Read(nlbCertManagerPath)
 			if err != nil {
@@ -235,6 +240,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Platform:                     convertPlatform(s.manifest.Platform),
 		HTTPVersion:                  convertHTTPVersion(s.manifest.ProtocolVersion),
 		NLB:                          nlb,
+		AppDNSName:                   dnsName,
+		AppDNSDelegationRole:         dnsDelegationRole,
 	})
 	if err != nil {
 		return "", err
