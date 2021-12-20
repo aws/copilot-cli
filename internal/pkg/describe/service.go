@@ -29,48 +29,18 @@ const (
 
 const apprunnerServiceType = "AWS::AppRunner::Service"
 
-// envVar contains serialized environment variables for a service.
-type envVar struct {
-	Environment string `json:"environment"`
-	Name        string `json:"name"`
-	Value       string `json:"value"`
+// ConfigStoreSvc wraps methods of config store.
+type ConfigStoreSvc interface {
+	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
+	ListEnvironments(appName string) ([]*config.Environment, error)
+	ListServices(appName string) ([]*config.Workload, error)
+	GetWorkload(appName string, name string) (*config.Workload, error)
 }
 
-type envVars []*envVar
-
-func (e envVars) humanString(w io.Writer) {
-	headers := []string{"Name", "Environment", "Value"}
-	var rows [][]string
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
-
-	for _, v := range e {
-		rows = append(rows, []string{v.Name, v.Environment, v.Value})
-	}
-
-	printTable(w, headers, rows)
-}
-
-type containerEnvVar struct {
-	*envVar
-
-	Container string `json:"container"`
-}
-
-type containerEnvVars []*containerEnvVar
-
-func (e containerEnvVars) humanString(w io.Writer) {
-	headers := []string{"Name", "Container", "Environment", "Value"}
-	var rows [][]string
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Container < e[j].Container })
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
-
-	for _, v := range e {
-		rows = append(rows, []string{v.Name, v.Container, v.Environment, v.Value})
-	}
-
-	printTable(w, headers, rows)
+// DeployedEnvServicesLister wraps methods of deploy store.
+type DeployedEnvServicesLister interface {
+	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
+	ListDeployedServices(appName string, envName string) ([]string, error)
 }
 
 type ecsClient interface {
@@ -101,59 +71,6 @@ type apprunnerDescriber interface {
 	Service() (*apprunner.Service, error)
 	ServiceARN() (string, error)
 	ServiceURL() (string, error)
-}
-
-// ConfigStoreSvc wraps methods of config store.
-type ConfigStoreSvc interface {
-	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
-	ListEnvironments(appName string) ([]*config.Environment, error)
-	ListServices(appName string) ([]*config.Workload, error)
-	GetWorkload(appName string, name string) (*config.Workload, error)
-}
-
-// DeployedEnvServicesLister wraps methods of deploy store.
-type DeployedEnvServicesLister interface {
-	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
-	ListDeployedServices(appName string, envName string) ([]string, error)
-}
-
-// ServiceConfig contains serialized configuration parameters for a service.
-type ServiceConfig struct {
-	Environment string `json:"environment"`
-	Port        string `json:"port"`
-	CPU         string `json:"cpu"`
-	Memory      string `json:"memory"`
-	Platform    string `json:"platform,omitempty"`
-}
-
-type ECSServiceConfig struct {
-	*ServiceConfig
-
-	Tasks string `json:"tasks"`
-}
-
-type ecsConfigurations []*ECSServiceConfig
-
-func (c ecsConfigurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
-	var rows [][]string
-	for _, config := range c {
-		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
-	}
-
-	printTable(w, headers, rows)
-}
-
-type appRunnerConfigurations []*ServiceConfig
-
-func (c appRunnerConfigurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "CPU (vCPU)", "Memory (MiB)", "Port"}
-	var rows [][]string
-	for _, config := range c {
-		rows = append(rows, []string{config.Environment, cpuToString(config.CPU), config.Memory, config.Port})
-	}
-
-	printTable(w, headers, rows)
 }
 
 // serviceStackDescriber provides base functionality for retrieving info about a service.
@@ -189,26 +106,6 @@ type NewServiceConfig struct {
 	DeployStore     DeployedEnvServicesLister
 }
 
-// newServiceStackDescriber instantiates the core elements of a new service.
-func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
-	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
-	if err != nil {
-		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
-	}
-	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
-	if err != nil {
-		return nil, err
-	}
-	return &serviceStackDescriber{
-		app:     opt.App,
-		service: opt.Svc,
-		env:     opt.Env,
-
-		cfn:  stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
-		sess: sess,
-	}, nil
-}
-
 // NewECSServiceDescriber instantiates a new non-App Runner service.
 func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) {
 	stackDescriber, err := newServiceStackDescriber(opt)
@@ -217,7 +114,7 @@ func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) 
 	}
 	return &ECSServiceDescriber{
 		serviceStackDescriber: stackDescriber,
-		ecsClient: ecs.New(stackDescriber.sess),
+		ecsClient:             ecs.New(stackDescriber.sess),
 	}, nil
 }
 
@@ -357,4 +254,107 @@ func formatAppRunnerUrl(serviceURL string) string {
 	}
 
 	return svcUrl.String()
+}
+
+// newServiceStackDescriber instantiates the core elements of a new service.
+func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
+	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
+	}
+	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
+	if err != nil {
+		return nil, err
+	}
+	return &serviceStackDescriber{
+		app:     opt.App,
+		service: opt.Svc,
+		env:     opt.Env,
+
+		cfn:  stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
+		sess: sess,
+	}, nil
+}
+
+// ServiceConfig contains serialized configuration parameters for a service.
+type ServiceConfig struct {
+	Environment string `json:"environment"`
+	Port        string `json:"port"`
+	CPU         string `json:"cpu"`
+	Memory      string `json:"memory"`
+	Platform    string `json:"platform,omitempty"`
+}
+
+type ECSServiceConfig struct {
+	*ServiceConfig
+
+	Tasks string `json:"tasks"`
+}
+
+type appRunnerConfigurations []*ServiceConfig
+
+type ecsConfigurations []*ECSServiceConfig
+
+func (c ecsConfigurations) humanString(w io.Writer) {
+	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
+	var rows [][]string
+	for _, config := range c {
+		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
+	}
+
+	printTable(w, headers, rows)
+}
+
+func (c appRunnerConfigurations) humanString(w io.Writer) {
+	headers := []string{"Environment", "CPU (vCPU)", "Memory (MiB)", "Port"}
+	var rows [][]string
+	for _, config := range c {
+		rows = append(rows, []string{config.Environment, cpuToString(config.CPU), config.Memory, config.Port})
+	}
+
+	printTable(w, headers, rows)
+}
+
+// envVar contains serialized environment variables for a service.
+type envVar struct {
+	Environment string `json:"environment"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
+}
+
+type envVars []*envVar
+
+func (e envVars) humanString(w io.Writer) {
+	headers := []string{"Name", "Environment", "Value"}
+	var rows [][]string
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
+
+	for _, v := range e {
+		rows = append(rows, []string{v.Name, v.Environment, v.Value})
+	}
+
+	printTable(w, headers, rows)
+}
+
+type containerEnvVar struct {
+	*envVar
+
+	Container string `json:"container"`
+}
+
+type containerEnvVars []*containerEnvVar
+
+func (e containerEnvVars) humanString(w io.Writer) {
+	headers := []string{"Name", "Container", "Environment", "Value"}
+	var rows [][]string
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Container < e[j].Container })
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
+
+	for _, v := range e {
+		rows = append(rows, []string{v.Name, v.Container, v.Environment, v.Value})
+	}
+
+	printTable(w, headers, rows)
 }
