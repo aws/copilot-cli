@@ -295,6 +295,10 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (*template.Network
 		targetPort = strconv.Itoa(aws.IntValue(nlbConfig.TargetPort))
 	}
 
+	aliases, err := convertAlias(nlbConfig.Aliases)
+	if err != nil {
+		return nil, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
+	}
 	return &template.NetworkLoadBalancer{
 		PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
 		Listener: template.NetworkLoadBalancerListener{
@@ -303,7 +307,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (*template.Network
 			TargetContainer: targetContainer,
 			TargetPort:      targetPort,
 			SSLPolicy:       nlbConfig.SSLPolicy,
-			Aliases:         nil,
+			Aliases:         aliases,
 		},
 		MainContainerPort: strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10),
 	}, nil

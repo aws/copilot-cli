@@ -220,10 +220,11 @@ type NetworkLoadBalancerConfiguration struct {
 	TargetContainer *string                 `yaml:"target_container"`
 	TargetPort      *int                    `yaml:"target_port"`
 	SSLPolicy       *string                 `yaml:"ssl_policy"`
+	Aliases         Alias                   `yaml:"alias"`
 }
 
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
-	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
+	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil && c.Aliases.IsEmpty()
 }
 
 // IPNet represents an IP network string. For example: 10.1.0.0/16
