@@ -817,14 +817,14 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         });
 
         test("do not error out if certificate is not found while deleting", () => {
-            let resourceNotFoundErr = new Error("some error");
-            resourceNotFoundErr.name = "ResourceNotFoundException";
-            const mockDeleteCertificate = sinon.stub().rejects(resourceNotFoundErr);
             mockDescribeCertificate.resolves({
                 Certificate: {
                     InUseBy: [],
                 }
             });
+            let resourceNotFoundErr = new Error("some error");
+            resourceNotFoundErr.name = "ResourceNotFoundException";
+            const mockDeleteCertificate = sinon.stub().rejects(resourceNotFoundErr);
             AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
             AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
             AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
@@ -845,7 +845,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
                 .expectResolve(() => {
                     expect(request.isDone()).toBe(true);
                     sinon.assert.callCount(mockGetResources, 1);
-                    sinon.assert.callCount(mockDescribeCertificate, 4); // 3 call to list unused options, 1 calls to find out that the certificate is already not found.
+                    sinon.assert.callCount(mockDescribeCertificate, 4); // 3 call to list unused options, 1 calls to find out that the certificate is unused.
                 });
         });
     })
