@@ -190,12 +190,21 @@ NLBCertManagerRole:
               Effect: Allow
               Action: tag:GetResources
               Resource: "*"
-            - Sid: CertificateCreateAndRead
+            - Sid: ServiceCertificateCreate
+              Effect: Allow
+              Action:
+                - acm:RequestCertificate
+                - acm:AddTagsToCertificate
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                  'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+            - Sid: CertificateRead
               Effect: Allow
               Action:
                 - acm:DescribeCertificate
-                - acm:RequestCertificate
-                - acm:AddTagsToCertificate
               Resource: "*"
     ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
