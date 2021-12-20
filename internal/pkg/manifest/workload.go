@@ -509,6 +509,7 @@ type TaskConfig struct {
 	Count          Count                `yaml:"count"`
 	ExecuteCommand ExecuteCommand       `yaml:"exec"`
 	Variables      map[string]string    `yaml:"variables"`
+	EnvFile        string               `yaml:"env_file"`
 	Secrets        map[string]string    `yaml:"secrets"`
 	Storage        Storage              `yaml:"storage"`
 }

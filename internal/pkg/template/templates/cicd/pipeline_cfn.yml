@@ -147,6 +147,8 @@ Resources:
         EnvironmentVariables:
           - Name: AWS_ACCOUNT_ID
             Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/buildspec.yml

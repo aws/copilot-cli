@@ -176,6 +176,11 @@ func (s *WorkerService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
+// EnvFile returns the location of the env file against the ws root directory.
+func (s *WorkerService) EnvFile() string {
+	return s.TaskConfig.EnvFile
+}
+
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
 // receives messages from.
 func (s *WorkerService) Subscriptions() []TopicSubscription {

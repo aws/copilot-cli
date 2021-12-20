@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -27,6 +28,8 @@ const (
 	// Min and Max values for task ephemeral storage in GiB.
 	ephemeralMinValueGiB = 20
 	ephemeralMaxValueGiB = 200
+
+	validEnvFileExt = ".env"
 )
 
 var (
@@ -616,6 +619,11 @@ func (t TaskConfig) Validate() error {
 	}
 	if err = t.Storage.Validate(); err != nil {
 		return fmt.Errorf(`validate "storage": %w`, err)
+	}
+	if t.EnvFile != "" {
+		if filepath.Ext(t.EnvFile) != validEnvFileExt {
+			return fmt.Errorf("environment file %s must have a %s file extension", t.EnvFile, validEnvFileExt)
+		}
 	}
 	return nil
 }
