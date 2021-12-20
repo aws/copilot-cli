@@ -129,7 +129,7 @@ NLBCertManagerAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{ .NLB.Listener.Aliases }}
+    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
 
 NLBCertManagerFunction:
   Type: AWS::Lambda::Function
