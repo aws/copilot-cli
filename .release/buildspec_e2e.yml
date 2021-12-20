@@ -140,7 +140,7 @@ phases:
       - 'goenv global 1.17.1'
   pre_build:
     commands:
-       - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_TOKEN}
+       - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin
   build:
     commands:
        - cd $CODEBUILD_SRC_DIR
