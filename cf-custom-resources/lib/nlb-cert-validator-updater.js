@@ -249,10 +249,20 @@ async function deleteCertificate(certARN) {
     // NOTE: wait for certificate to be not in-used.
     let attempt;
     for (attempt = 0; attempt < ATTEMPTS_CERTIFICATE_NOT_IN_USE; attempt++) {
-        const { Certificate } = await clients.acm().describeCertificate({
-            CertificateArn: certARN,
-        }).promise();
-        if (!Certificate.InUseBy || Certificate.InUseBy.length <= 0) {
+        let certificate;
+        try {
+            ({ Certificate:certificate } = await clients.acm().describeCertificate({
+                CertificateArn: certARN,
+            }).promise());
+        } catch (err) {
+            console.log(err);
+            if (err.name === "ResourceNotFoundException") {
+                return;
+            }
+            throw err;
+        }
+
+        if (!certificate.InUseBy || certificate.InUseBy.length <= 0) {
             break;
         }
         await sleep(30000);
