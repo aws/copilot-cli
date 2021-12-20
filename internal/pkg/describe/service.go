@@ -276,6 +276,45 @@ func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, err
 	}, nil
 }
 
+// ServiceConfig contains serialized configuration parameters for a service.
+type ServiceConfig struct {
+	Environment string `json:"environment"`
+	Port        string `json:"port"`
+	CPU         string `json:"cpu"`
+	Memory      string `json:"memory"`
+	Platform    string `json:"platform,omitempty"`
+}
+
+type ECSServiceConfig struct {
+	*ServiceConfig
+
+	Tasks string `json:"tasks"`
+}
+
+type appRunnerConfigurations []*ServiceConfig
+
+type ecsConfigurations []*ECSServiceConfig
+
+func (c ecsConfigurations) humanString(w io.Writer) {
+	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
+	var rows [][]string
+	for _, config := range c {
+		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
+	}
+
+	printTable(w, headers, rows)
+}
+
+func (c appRunnerConfigurations) humanString(w io.Writer) {
+	headers := []string{"Environment", "CPU (vCPU)", "Memory (MiB)", "Port"}
+	var rows [][]string
+	for _, config := range c {
+		rows = append(rows, []string{config.Environment, cpuToString(config.CPU), config.Memory, config.Port})
+	}
+
+	printTable(w, headers, rows)
+}
+
 // envVar contains serialized environment variables for a service.
 type envVar struct {
 	Environment string `json:"environment"`
@@ -315,45 +354,6 @@ func (e containerEnvVars) humanString(w io.Writer) {
 
 	for _, v := range e {
 		rows = append(rows, []string{v.Name, v.Container, v.Environment, v.Value})
-	}
-
-	printTable(w, headers, rows)
-}
-
-// ServiceConfig contains serialized configuration parameters for a service.
-type ServiceConfig struct {
-	Environment string `json:"environment"`
-	Port        string `json:"port"`
-	CPU         string `json:"cpu"`
-	Memory      string `json:"memory"`
-	Platform    string `json:"platform,omitempty"`
-}
-
-type ECSServiceConfig struct {
-	*ServiceConfig
-
-	Tasks string `json:"tasks"`
-}
-
-type ecsConfigurations []*ECSServiceConfig
-
-func (c ecsConfigurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Platform", "Port"}
-	var rows [][]string
-	for _, config := range c {
-		rows = append(rows, []string{config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Platform, config.Port})
-	}
-
-	printTable(w, headers, rows)
-}
-
-type appRunnerConfigurations []*ServiceConfig
-
-func (c appRunnerConfigurations) humanString(w io.Writer) {
-	headers := []string{"Environment", "CPU (vCPU)", "Memory (MiB)", "Port"}
-	var rows [][]string
-	for _, config := range c {
-		rows = append(rows, []string{config.Environment, cpuToString(config.CPU), config.Memory, config.Port})
 	}
 
 	printTable(w, headers, rows)
