@@ -240,8 +240,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -306,8 +306,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -381,8 +381,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -452,8 +452,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -508,8 +508,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},

@@ -9,7 +9,8 @@
     "TaskMemory": "512",
     "TaskCount": "1",
     "LogRetention": "30",
-    "Schedule": "cron(0 12 ? * MON *)"
+    "Schedule": "cron(0 12 ? * MON *)",
+    "EnvFileARN": ""
   },
   "Tags": { 
     "copilot-application": "my-app",

@@ -99,7 +99,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 					app:     testApp,
 					service: testSvc,
 					env:     testEnv,
-					cfn: mockCFN,
+					cfn:     mockCFN,
 				},
 				ecsClient: mockecsClient,
 			}

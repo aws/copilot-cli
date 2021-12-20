@@ -2190,42 +2190,42 @@ func (mr *MockmanifestReaderMockRecorder) ReadWorkloadManifest(name interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockmanifestReader)(nil).ReadWorkloadManifest), name)
 }
 
-// MockcopilotDirGetter is a mock of copilotDirGetter interface.
-type MockcopilotDirGetter struct {
+// MockworkspacePathGetter is a mock of workspacePathGetter interface.
+type MockworkspacePathGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockcopilotDirGetterMockRecorder
+	recorder *MockworkspacePathGetterMockRecorder
 }
 
-// MockcopilotDirGetterMockRecorder is the mock recorder for MockcopilotDirGetter.
-type MockcopilotDirGetterMockRecorder struct {
-	mock *MockcopilotDirGetter
+// MockworkspacePathGetterMockRecorder is the mock recorder for MockworkspacePathGetter.
+type MockworkspacePathGetterMockRecorder struct {
+	mock *MockworkspacePathGetter
 }
 
-// NewMockcopilotDirGetter creates a new mock instance.
-func NewMockcopilotDirGetter(ctrl *gomock.Controller) *MockcopilotDirGetter {
-	mock := &MockcopilotDirGetter{ctrl: ctrl}
-	mock.recorder = &MockcopilotDirGetterMockRecorder{mock}
+// NewMockworkspacePathGetter creates a new mock instance.
+func NewMockworkspacePathGetter(ctrl *gomock.Controller) *MockworkspacePathGetter {
+	mock := &MockworkspacePathGetter{ctrl: ctrl}
+	mock.recorder = &MockworkspacePathGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcopilotDirGetter) EXPECT() *MockcopilotDirGetterMockRecorder {
+func (m *MockworkspacePathGetter) EXPECT() *MockworkspacePathGetterMockRecorder {
 	return m.recorder
 }
 
-// CopilotDirPath mocks base method.
-func (m *MockcopilotDirGetter) CopilotDirPath() (string, error) {
+// Path mocks base method.
+func (m *MockworkspacePathGetter) Path() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret := m.ctrl.Call(m, "Path")
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockcopilotDirGetterMockRecorder) CopilotDirPath() *gomock.Call {
+// Path indicates an expected call of Path.
+func (mr *MockworkspacePathGetterMockRecorder) Path() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockcopilotDirGetter)(nil).CopilotDirPath))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockworkspacePathGetter)(nil).Path))
 }
 
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface.
@@ -2433,21 +2433,6 @@ func (m *MockwsSvcDirReader) EXPECT() *MockwsSvcDirReaderMockRecorder {
 	return m.recorder
 }
 
-// CopilotDirPath mocks base method.
-func (m *MockwsSvcDirReader) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
-}
-
 // ListServices mocks base method.
 func (m *MockwsSvcDirReader) ListServices() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -2461,6 +2446,21 @@ func (m *MockwsSvcDirReader) ListServices() ([]string, error) {
 func (mr *MockwsSvcDirReaderMockRecorder) ListServices() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockwsSvcDirReader)(nil).ListServices))
+}
+
+// Path mocks base method.
+func (m *MockwsSvcDirReader) Path() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Path indicates an expected call of Path.
+func (mr *MockwsSvcDirReaderMockRecorder) Path() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockwsSvcDirReader)(nil).Path))
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2630,21 +2630,6 @@ func (m *MockwsJobDirReader) EXPECT() *MockwsJobDirReaderMockRecorder {
 	return m.recorder
 }
 
-// CopilotDirPath mocks base method.
-func (m *MockwsJobDirReader) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockwsJobDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsJobDirReader)(nil).CopilotDirPath))
-}
-
 // ListJobs mocks base method.
 func (m *MockwsJobDirReader) ListJobs() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -2658,6 +2643,21 @@ func (m *MockwsJobDirReader) ListJobs() ([]string, error) {
 func (mr *MockwsJobDirReaderMockRecorder) ListJobs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockwsJobDirReader)(nil).ListJobs))
+}
+
+// Path mocks base method.
+func (m *MockwsJobDirReader) Path() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Path indicates an expected call of Path.
+func (mr *MockwsJobDirReaderMockRecorder) Path() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockwsJobDirReader)(nil).Path))
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2696,21 +2696,6 @@ func NewMockwsWlDirReader(ctrl *gomock.Controller) *MockwsWlDirReader {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockwsWlDirReader) EXPECT() *MockwsWlDirReaderMockRecorder {
 	return m.recorder
-}
-
-// CopilotDirPath mocks base method.
-func (m *MockwsWlDirReader) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockwsWlDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsWlDirReader)(nil).CopilotDirPath))
 }
 
 // ListDockerfiles mocks base method.
@@ -2771,6 +2756,21 @@ func (m *MockwsWlDirReader) ListWorkloads() ([]string, error) {
 func (mr *MockwsWlDirReaderMockRecorder) ListWorkloads() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwsWlDirReader)(nil).ListWorkloads))
+}
+
+// Path mocks base method.
+func (m *MockwsWlDirReader) Path() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Path indicates an expected call of Path.
+func (mr *MockwsWlDirReaderMockRecorder) Path() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockwsWlDirReader)(nil).Path))
 }
 
 // ReadWorkloadManifest mocks base method.
@@ -2976,127 +2976,46 @@ func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
 }
 
-// MockartifactUploader is a mock of artifactUploader interface.
-type MockartifactUploader struct {
+// Mockuploader is a mock of uploader interface.
+type Mockuploader struct {
 	ctrl     *gomock.Controller
-	recorder *MockartifactUploaderMockRecorder
+	recorder *MockuploaderMockRecorder
 }
 
-// MockartifactUploaderMockRecorder is the mock recorder for MockartifactUploader.
-type MockartifactUploaderMockRecorder struct {
-	mock *MockartifactUploader
+// MockuploaderMockRecorder is the mock recorder for Mockuploader.
+type MockuploaderMockRecorder struct {
+	mock *Mockuploader
 }
 
-// NewMockartifactUploader creates a new mock instance.
-func NewMockartifactUploader(ctrl *gomock.Controller) *MockartifactUploader {
-	mock := &MockartifactUploader{ctrl: ctrl}
-	mock.recorder = &MockartifactUploaderMockRecorder{mock}
+// NewMockuploader creates a new mock instance.
+func NewMockuploader(ctrl *gomock.Controller) *Mockuploader {
+	mock := &Mockuploader{ctrl: ctrl}
+	mock.recorder = &MockuploaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockartifactUploader) EXPECT() *MockartifactUploaderMockRecorder {
-	return m.recorder
-}
-
-// PutArtifact mocks base method.
-func (m *MockartifactUploader) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PutArtifact", bucket, fileName, data)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PutArtifact indicates an expected call of PutArtifact.
-func (mr *MockartifactUploaderMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactUploader)(nil).PutArtifact), bucket, fileName, data)
-}
-
-// MockzipAndUploader is a mock of zipAndUploader interface.
-type MockzipAndUploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockzipAndUploaderMockRecorder
-}
-
-// MockzipAndUploaderMockRecorder is the mock recorder for MockzipAndUploader.
-type MockzipAndUploaderMockRecorder struct {
-	mock *MockzipAndUploader
-}
-
-// NewMockzipAndUploader creates a new mock instance.
-func NewMockzipAndUploader(ctrl *gomock.Controller) *MockzipAndUploader {
-	mock := &MockzipAndUploader{ctrl: ctrl}
-	mock.recorder = &MockzipAndUploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockzipAndUploader) EXPECT() *MockzipAndUploaderMockRecorder {
-	return m.recorder
-}
-
-// ZipAndUpload mocks base method.
-func (m *MockzipAndUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{bucket, key}
-	for _, a := range files {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ZipAndUpload", varargs...)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockzipAndUploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{bucket, key}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockzipAndUploader)(nil).ZipAndUpload), varargs...)
-}
-
-// MockUploader is a mock of Uploader interface.
-type MockUploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockUploaderMockRecorder
-}
-
-// MockUploaderMockRecorder is the mock recorder for MockUploader.
-type MockUploaderMockRecorder struct {
-	mock *MockUploader
-}
-
-// NewMockUploader creates a new mock instance.
-func NewMockUploader(ctrl *gomock.Controller) *MockUploader {
-	mock := &MockUploader{ctrl: ctrl}
-	mock.recorder = &MockUploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUploader) EXPECT() *MockUploaderMockRecorder {
+func (m *Mockuploader) EXPECT() *MockuploaderMockRecorder {
 	return m.recorder
 }
 
 // Upload mocks base method.
-func (m *MockUploader) Upload(bucket, key string, file s3.NamedBinary) (string, error) {
+func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upload", bucket, key, file)
+	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Upload indicates an expected call of Upload.
-func (mr *MockUploaderMockRecorder) Upload(bucket, key, file interface{}) *gomock.Call {
+func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockUploader)(nil).Upload), bucket, key, file)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), bucket, key, data)
 }
 
 // ZipAndUpload mocks base method.
-func (m *MockUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
+func (m *Mockuploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{bucket, key}
 	for _, a := range files {
@@ -3109,10 +3028,10 @@ func (m *MockUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary)
 }
 
 // ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockUploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
+func (mr *MockuploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{bucket, key}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockUploader)(nil).ZipAndUpload), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*Mockuploader)(nil).ZipAndUpload), varargs...)
 }
 
 // MockcustomResourcesUploader is a mock of customResourcesUploader interface.
@@ -3166,21 +3085,6 @@ func (m *MockcustomResourcesUploader) UploadRequestDrivenWebServiceCustomResourc
 func (mr *MockcustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceCustomResources(upload interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadRequestDrivenWebServiceCustomResources), upload)
-}
-
-// UploadRequestDrivenWebServiceLayers mocks base method.
-func (m *MockcustomResourcesUploader) UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadRequestDrivenWebServiceLayers", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadRequestDrivenWebServiceLayers indicates an expected call of UploadRequestDrivenWebServiceLayers.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceLayers(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceLayers", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadRequestDrivenWebServiceLayers), upload)
 }
 
 // MockbucketEmptier is a mock of bucketEmptier interface.
@@ -5595,6 +5499,21 @@ func (m *Mockec2Client) HasDNSSupport(vpcID string) (bool, error) {
 func (mr *Mockec2ClientMockRecorder) HasDNSSupport(vpcID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).HasDNSSupport), vpcID)
+}
+
+// ListAZs mocks base method.
+func (m *Mockec2Client) ListAZs() ([]ec2.AZ, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAZs")
+	ret0, _ := ret[0].([]ec2.AZ)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAZs indicates an expected call of ListAZs.
+func (mr *Mockec2ClientMockRecorder) ListAZs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAZs", reflect.TypeOf((*Mockec2Client)(nil).ListAZs))
 }
 
 // MockvpcSubnetLister is a mock of vpcSubnetLister interface.

@@ -4,6 +4,12 @@
   Environment:
 {{include "envvars-common" . | indent 2}}
 {{include "envvars-container" . | indent 2}}
+  EnvironmentFiles:
+    - !If
+      - HasEnvFile
+      - Type: s3
+        Value: !Ref EnvFileARN
+      - !Ref AWS::NoValue
 {{include "logconfig" . | indent 2}}
 {{include "image-overrides" . | indent 2}}
 {{- if .Storage -}}
