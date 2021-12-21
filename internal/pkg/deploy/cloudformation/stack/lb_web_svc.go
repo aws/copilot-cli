@@ -191,21 +191,9 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 
-	nlb, err := s.convertNetworkLoadBalancer()
+	nlbConfig, err := s.convertNetworkLoadBalancer()
 	if err != nil {
 		return "", err
-	}
-	var dnsDelegationRole, dnsName *string
-	var nlbCertManagerLambdaString string
-	if s.dnsDelegationEnabled {
-		dnsDelegationRole, dnsName = convertAppInformation(s.appInfo)
-		if nlb != nil {
-			nlbCertManagerLambda, err := s.parser.Read(nlbCertManagerPath)
-			if err != nil {
-				return "", fmt.Errorf("read network load balancer certificate manager lambda: %w", err)
-			}
-			nlbCertManagerLambdaString = nlbCertManagerLambda.String()
-		}
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                    s.manifest.TaskConfig.Variables,
@@ -228,7 +216,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		RulePriorityLambda:           rulePriorityLambda.String(),
 		DesiredCountLambda:           desiredCountLambda.String(),
 		EnvControllerLambda:          envControllerLambda.String(),
-		NLBCertManagerFunctionLambda: nlbCertManagerLambdaString,
+		NLBCertManagerFunctionLambda: nlbConfig.certManagerLambda,
 		Storage:                      convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                      convertNetworkConfig(s.manifest.Network),
 		EntryPoint:                   entrypoint,
@@ -239,9 +227,9 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Publish:                      publishers,
 		Platform:                     convertPlatform(s.manifest.Platform),
 		HTTPVersion:                  convertHTTPVersion(s.manifest.ProtocolVersion),
-		NLB:                          nlb,
-		AppDNSName:                   dnsName,
-		AppDNSDelegationRole:         dnsDelegationRole,
+		NLB:                          nlbConfig.settings,
+		AppDNSName:                   nlbConfig.appDNSName,
+		AppDNSDelegationRole:         nlbConfig.appDNSDelegationRole,
 	})
 	if err != nil {
 		return "", err

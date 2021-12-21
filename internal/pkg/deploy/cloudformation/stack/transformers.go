@@ -258,16 +258,25 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	return opts
 }
 
-func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (*template.NetworkLoadBalancer, error) {
+type networkLoadBalancerConfig struct {
+	settings *template.NetworkLoadBalancer
+
+	// If a domain is associated these values are not empty.
+	appDNSDelegationRole *string
+	appDNSName           *string
+	certManagerLambda    string
+}
+
+func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
 	nlbConfig := s.manifest.NLBConfig
 	if nlbConfig.IsEmpty() {
-		return nil, nil
+		return networkLoadBalancerConfig{}, nil
 	}
 
 	// Parse listener port and protocol.
 	port, protocol, err := parsePortMapping(nlbConfig.Port)
 	if err != nil {
-		return nil, err
+		return networkLoadBalancerConfig{}, err
 	}
 	if protocol == nil {
 		protocol = aws.String(defaultNLBProtocol)
@@ -286,7 +295,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (*template.Network
 		sideCarPort := s.manifest.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
 		port, _, err := parsePortMapping(sideCarPort)
 		if err != nil {
-			return nil, err
+			return networkLoadBalancerConfig{}, err
 		}
 		targetPort = aws.StringValue(port)
 	}
@@ -297,20 +306,36 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (*template.Network
 
 	aliases, err := convertAlias(nlbConfig.Aliases)
 	if err != nil {
-		return nil, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
+		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
-	return &template.NetworkLoadBalancer{
-		PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
-		Listener: template.NetworkLoadBalancerListener{
-			Port:            aws.StringValue(port),
-			Protocol:        strings.ToUpper(aws.StringValue(protocol)),
-			TargetContainer: targetContainer,
-			TargetPort:      targetPort,
-			SSLPolicy:       nlbConfig.SSLPolicy,
-			Aliases:         aliases,
+
+	config := networkLoadBalancerConfig{
+		settings: &template.NetworkLoadBalancer{
+			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
+			Listener: template.NetworkLoadBalancerListener{
+				Port:            aws.StringValue(port),
+				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
+				TargetContainer: targetContainer,
+				TargetPort:      targetPort,
+				SSLPolicy:       nlbConfig.SSLPolicy,
+				Aliases:         aliases,
+			},
+			MainContainerPort: strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10),
 		},
-		MainContainerPort: strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10),
-	}, nil
+	}
+
+	if s.dnsDelegationEnabled {
+		dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
+		config.appDNSName = dnsName
+		config.appDNSDelegationRole = dnsDelegationRole
+
+		nlbCertManagerLambda, err := s.parser.Read(nlbCertManagerPath)
+		if err != nil {
+			return networkLoadBalancerConfig{}, fmt.Errorf("read network load balancer certificate manager lambda: %w", err)
+		}
+		config.certManagerLambda = nlbCertManagerLambda.String()
+	}
+	return config, nil
 }
 
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {
