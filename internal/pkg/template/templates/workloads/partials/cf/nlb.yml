@@ -165,7 +165,11 @@ NLBCertManagerRole:
             - Sid: EnvHostedZoneUpdateAndWait
               Effect: Allow
               Action: route53:ChangeResourceRecordSets
-              Resource: "*"
+              Resource:
+                !Sub
+                  - arn:${AWS::Partition}:route53:::hostedzone/${EnvHostedZone}
+                  - EnvHostedZone: Fn::ImportValue
+                      !Sub "${AppName}-${EnvName}-HostedZone"
             - Sid: EnvHostedZoneRead
               Effect: Allow
               Action:
