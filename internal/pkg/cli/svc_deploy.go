@@ -614,7 +614,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 		var opts []stack.LoadBalancedWebServiceOption
 
 		// TODO: https://github.com/aws/copilot-cli/issues/2918
-		// 3. ALB block should not be executed if http is disabled
+		// 1. ALB block should not be executed if http is disabled
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
