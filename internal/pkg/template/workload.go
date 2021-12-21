@@ -220,6 +220,7 @@ type NetworkLoadBalancerListener struct {
 type NetworkLoadBalancer struct {
 	PublicSubnetCIDRs []string
 	Listener          NetworkLoadBalancerListener
+	MainContainerPort string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider

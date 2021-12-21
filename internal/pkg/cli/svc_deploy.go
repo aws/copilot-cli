@@ -606,7 +606,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		if o.targetApp.Domain == "" && !t.Alias.IsEmpty() {
+		if o.targetApp.Domain == "" && t.HasAliases() {
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
@@ -614,9 +614,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 		var opts []stack.LoadBalancedWebServiceOption
 
 		// TODO: https://github.com/aws/copilot-cli/issues/2918
-		// 1. Should error out if `nlb.alias` is specified with targetApp.Domain == ""
-		// 2. Should validate `nlb.alias` is specified
-		// 3. ALB block should not be executed if http is disabled
+		// 1. ALB block should not be executed if http is disabled
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -625,8 +623,21 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
+			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.NLBConfig.Aliases, o.targetApp, o.envName, appVersionGetter); err != nil {
+				return nil, err
+			}
 			opts = append(opts, stack.WithHTTPS())
-			opts = append(opts, stack.WithDNSDelegation())
+
+			var caller identity.Caller
+			caller, err = o.identity.Get()
+			if err != nil {
+				return nil, fmt.Errorf("get identity: %w", err)
+			}
+			opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
+				Name:                o.targetEnvironment.App,
+				DNSName:             o.targetApp.Domain,
+				AccountPrincipalARN: caller.RootUserARN,
+			}))
 		}
 		if !t.NLBConfig.IsEmpty() {
 			cidrBlocks, err := o.publicCIDRBlocks()
