@@ -162,6 +162,11 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
+// HasAliases returns true if the Load-Balanced Web Service uses aliases, either for ALB or NLB.
+func (s *LoadBalancedWebService) HasAliases() bool {
+	return !s.RoutingRule.Alias.IsEmpty() || !s.NLBConfig.Aliases.IsEmpty()
+}
+
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
 func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, error) {

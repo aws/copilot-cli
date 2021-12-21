@@ -606,7 +606,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		if o.targetApp.Domain == "" && (!t.Alias.IsEmpty() || !t.NLBConfig.Aliases.IsEmpty()) {
+		if o.targetApp.Domain == "" && t.HasAliases() {
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}

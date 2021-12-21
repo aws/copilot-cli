@@ -1368,6 +1368,68 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 	}
 }
 
+func TestLoadBalancedWebService_HasAliases(t *testing.T) {
+	testCases := map[string]struct {
+		config LoadBalancedWebServiceConfig
+		want   bool
+	}{
+		"use http aliases": {
+			config: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRule{
+					Alias: Alias{
+						String: aws.String("mockAlias"),
+					},
+				},
+			},
+			want: true,
+		},
+		"use nlb aliases": {
+			config: LoadBalancedWebServiceConfig{
+				NLBConfig: NetworkLoadBalancerConfiguration{
+					Aliases: Alias{
+						StringSlice: []string{"mockAlias", "mockAnotherAlias"},
+					},
+				},
+			},
+			want: true,
+		},
+		"both http and nlb use aliases": {
+			config: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRule{
+					Alias: Alias{
+						StringSlice: []string{"mockAlias", "mockAnotherAlias"},
+					},
+				},
+				NLBConfig: NetworkLoadBalancerConfiguration{
+					Aliases: Alias{
+						String: aws.String("mockAlias"),
+					},
+				},
+			},
+			want: true,
+		},
+		"not using aliases": {
+			config: LoadBalancedWebServiceConfig{},
+			want:   false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			manifest := &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: tc.config,
+			}
+
+			// WHEN
+			got := manifest.HasAliases()
+
+			// THEN
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestAlias_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     Alias
