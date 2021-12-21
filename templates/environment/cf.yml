@@ -454,7 +454,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs10.x
+      Runtime: nodejs14.x
 
   DNSDelegationFunction:
     Type: AWS::Lambda::Function
@@ -467,7 +467,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs10.x
+      Runtime: nodejs14.x
 
   EnvironmentHostedZone:
     Type: "AWS::Route53::HostedZone"
