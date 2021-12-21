@@ -320,7 +320,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 				SSLPolicy:       nlbConfig.SSLPolicy,
 				Aliases:         aliases,
 			},
-			MainContainerPort: strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10),
+			MainContainerPort: s.containerPort(),
 		},
 	}
 

@@ -259,6 +259,10 @@ func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *stri
 	return
 }
 
+func (s *LoadBalancedWebService) containerPort() string {
+	return strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)
+}
+
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, error) {
 	wkldParams, err := s.ecsWkld.Parameters()
@@ -269,7 +273,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	return append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)),
+			ParameterValue: aws.String(s.containerPort()),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
