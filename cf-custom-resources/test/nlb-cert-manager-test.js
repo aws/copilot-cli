@@ -8,7 +8,7 @@ const sinon = require("sinon");
 const nock = require("nock");
 let origLog = console.log;
 
-const { attemptsValidationOptionsReady } = require("../lib/nlb-cert-validator-updater");
+const { attemptsValidationOptionsReady } = require("../lib/nlb-cert-manager");
 
 describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     // Mock requests.
@@ -44,7 +44,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         // This workaround follows the comment here: https://github.com/dwyl/aws-sdk-mock/issues/206#issuecomment-640418772.
         jest.resetModules();
         AWS.setSDKInstance(require('aws-sdk'));
-        const imported = require("../lib/nlb-cert-validator-updater");
+        const imported = require("../lib/nlb-cert-manager");
         handler = imported.handler;
         reset = imported.reset;
         withDeadlineExpired = imported.withDeadlineExpired;

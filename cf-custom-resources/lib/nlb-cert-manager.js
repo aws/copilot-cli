@@ -652,7 +652,7 @@ async function inUseByOtherServices(loadBalancerDNS, domainName, route53Client) 
         ({hostedZoneID} = await domainResources(domainName));
     } catch (err) {
         if (err instanceof UnrecognizedDomainTypeError) {
-            console.log("Found ${domainName} in subject alternative names. " +
+            console.log(`Found ${domainName} in subject alternative names. ` +
 "It does not match any of these patterns: '.<env>.<app>.<domain>'， '.<app>.<domain>' or '.<domain>'. " +
 "This is unexpected. We don't error out as it may not cause any issue.");
             return true; // This option has unrecognized pattern, we can't check if it is in use, so we assume it is in use.
