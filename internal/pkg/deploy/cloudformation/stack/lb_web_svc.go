@@ -20,6 +20,7 @@ const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 	envControllerPath                 = "custom-resources/env-controller.js"
+	nlbCertManagerPath                = "custom-resources/nlb-cert-validator-updater.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -128,6 +129,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	envControllerLambda, err := s.parser.Read(envControllerPath)
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
+	}
+	nlbLambda, err := s.parser.Read(nlbCertManagerPath)
+	if err != nil {
+		return "", fmt.Errorf("read network load balancer certificate manager lambda: %w", err)
 	}
 	addonsParams, err := s.addonsParameters()
 	if err != nil {

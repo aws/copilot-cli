@@ -22,8 +22,7 @@ NLBListener:
     Protocol: {{ .NLB.Listener.Protocol }}
 {{- if eq .NLB.Listener.Protocol "TLS" }}
     Certificates:
-      - CertificateArn:
-          !GetAtt EnvControllerAction.HTTPSCert
+      - CertificateArn: !Ref NLBCertManagerAction
     SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
 {{- end}}
 
@@ -78,7 +77,7 @@ NLBSecurityGroup:
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
         FromPort: {{ $.NLB.Listener.Port }}
-        IpProtocol: {{ $.NLB.Listener.Protocol }}
+        IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
         ToPort: {{ $.NLB.Listener.Port }}
 {{end}}
     Tags:
@@ -118,7 +117,7 @@ NLBCertManagerAction:
   Type: Custom::NLBCertManagerFunction
   Condition: HasAssociatedDomain
   Properties:
-    ServiceToken: !Ref NLBCertManagerFunction
+    ServiceToken: !GetAtt NLBCertManagerFunction.Arn
     LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
     LoadBalancerHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
     EnvHostedZoneId:
@@ -159,18 +158,14 @@ NLBCertManagerRole:
             - sts:AssumeRole
     Path: /
     Policies:
-      - PolicyName: "NLBCertManagerPolicyWrite"
+      - PolicyName: "NLBCertManagerPolicy"
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
             - Sid: EnvHostedZoneUpdateAndWait
               Effect: Allow
               Action: route53:ChangeResourceRecordSets
-              Resource:
-                !Sub
-                  - arn:${AWS::Partition}:route53:::hostedzone/${EnvHostedZone}
-                  - EnvHostedZone: Fn::ImportValue
-                        !Sub "${AppName}-${EnvName}-HostedZone"
+              Resource: "*"
             - Sid: EnvHostedZoneRead
               Effect: Allow
               Action:
@@ -203,8 +198,7 @@ NLBCertManagerRole:
                   'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
             - Sid: CertificateRead
               Effect: Allow
-              Action:
-                - acm:DescribeCertificate
+              Action: acm:DescribeCertificate
               Resource: "*"
     ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
