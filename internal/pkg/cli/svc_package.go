@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -123,17 +124,71 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		var serializer stackSerializer
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
-			var opts []stack.LoadBalancedWebServiceOption
 			if err := validateLBWSRuntime(app, env.Name, t, appVersionGetter); err != nil {
 				return nil, err
 			}
-			if app.RequiresDNSDelegation() {
-				// if err := validateLBSvcAlias(aws.StringValue(t.Name), t.RoutingRule.Alias, app, env.Name, appVersionGetter); err != nil {
-				// 	return nil, err
-				// }
-				opts = append(opts, stack.WithHTTPS())
+			var options []stack.LoadBalancedWebServiceOption
+			if !t.NLBConfig.IsEmpty() {
+				envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+					App:         app.Name,
+					Env:         env.Name,
+					ConfigStore: store,
+					DeployStore: deployStore,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("create describer for environment %s in application %s: %w", env.Name, app.Name, err)
+				}
+				envSession, err := p.FromRole(env.ManagerRoleARN, env.Region)
+				if err != nil {
+					return nil, fmt.Errorf("assuming environment manager role: %w", err)
+				}
+				subnetLister := ec2.New(envSession)
+				cidrBlocks, err := publicCIDRBlocks(envDescriber, subnetLister, env.Name)
+				if err != nil {
+					return nil, err
+				}
+				options = append(options, stack.WithNLB(cidrBlocks))
+				if app.RequiresDNSDelegation() {
+					resources, err := opts.appCFN.GetAppResourcesByRegion(app, env.Region)
+					if err != nil {
+						return nil, err
+					}
+					urls, err := uploadNLBWSCustomResources(&uploadCustomResourcesOpts{
+						uploader: template.New(),
+						newS3Uploader: func() (uploader, error) {
+							envRegion := env.Region
+							sess, err := p.DefaultWithRegion(env.Region)
+							if err != nil {
+								return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
+							}
+							s3Client := s3.New(sess)
+							return s3Client, nil
+						},
+					}, resources)
+					if err != nil {
+						return nil, err
+					}
+					options = append(options, stack.WithNLBCustomResources(urls))
+				}
 			}
-			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, opts...)
+
+			if app.RequiresDNSDelegation() {
+				var caller identity.Caller
+				caller, err = opts.identity.Get()
+				if err != nil {
+					return nil, fmt.Errorf("get identity: %w", err)
+				}
+				options = append(options, stack.WithDNSDelegation(deploy.AppInformation{
+					Name:                env.App,
+					DNSName:             app.Domain,
+					AccountPrincipalARN: caller.RootUserARN,
+				}))
+
+				if !t.RoutingRule.Disabled() {
+					options = append(options, stack.WithHTTPS())
+				}
+			}
+			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, options...)
 			if err != nil {
 				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 			}

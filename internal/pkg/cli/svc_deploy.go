@@ -386,15 +386,15 @@ func (o *deploySvcOpts) configureClients() error {
 	return nil
 }
 
-func (o *deploySvcOpts) publicCIDRBlocks() ([]string, error) {
-	envDescription, err := o.envDescriber.Describe()
+func publicCIDRBlocks(envDescriber envDescriber, subnetLister vpcSubnetLister, envName string) ([]string, error) {
+	envDescription, err := envDescriber.Describe()
 	if err != nil {
-		return nil, fmt.Errorf("describe environment %s: %w", o.envName, err)
+		return nil, fmt.Errorf("describe environment %s: %w", envName, err)
 	}
 	vpcID := envDescription.EnvironmentVPC.ID
-	subnets, err := o.subnetLister.ListVPCSubnets(vpcID)
+	subnets, err := subnetLister.ListVPCSubnets(vpcID)
 	if err != nil {
-		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, o.envName, err)
+		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, envName, err)
 	}
 	var cidrBlocks []string
 	for _, subnet := range subnets.Public {
@@ -632,7 +632,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 
 		var opts []stack.LoadBalancedWebServiceOption
 		if !t.NLBConfig.IsEmpty() {
-			cidrBlocks, err := o.publicCIDRBlocks()
+			cidrBlocks, err := publicCIDRBlocks(o.envDescriber, o.subnetLister, o.envName)
 			if err != nil {
 				return nil, err
 			}
