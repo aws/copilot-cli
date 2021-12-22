@@ -217,6 +217,52 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedError: errors.New(`must have one of "http" or "nlb" enabled`),
 		},
+		"error if scaling based on nlb requests": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Requests: aws.Int(3),
+							},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wantedError: errors.New(`scaling based on "nlb" requests is not supported yet`),
+		},
+		"error if scaling based on nlb response time": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								ResponseTime: durationp(10 * time.Second),
+							},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wantedError: errors.New(`scaling based on "nlb" requests is not supported yet`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

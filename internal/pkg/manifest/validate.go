@@ -88,6 +88,9 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
 		return errors.New(`must have one of "http" or "nlb" enabled`)
 	}
+	if l.RoutingRule.Disabled() && (l.Count.AdvancedCount.Requests != nil || l.Count.AdvancedCount.ResponseTime != nil) {
+		return errors.New(`scaling based on "nlb" requests is not supported yet`)
+	}
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
 	}
