@@ -403,6 +403,23 @@ func (o *deploySvcOpts) publicCIDRBlocks() ([]string, error) {
 	return cidrBlocks, nil
 }
 
+func publicCIDRBlocks(envDescriber envDescriber, subnetLister vpcSubnetLister, envName string) ([]string, error) {
+	envDescription, err := envDescriber.Describe()
+	if err != nil {
+		return nil, fmt.Errorf("describe environment %s: %w", envName, err)
+	}
+	vpcID := envDescription.EnvironmentVPC.ID
+	subnets, err := subnetLister.ListVPCSubnets(vpcID)
+	if err != nil {
+		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, envName, err)
+	}
+	var cidrBlocks []string
+	for _, subnet := range subnets.Public {
+		cidrBlocks = append(cidrBlocks, subnet.CIDRBlock)
+	}
+	return cidrBlocks, nil
+}
+
 func (o *deploySvcOpts) configureContainerImage() error {
 	svc, err := o.manifest()
 	if err != nil {
