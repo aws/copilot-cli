@@ -390,6 +390,7 @@ type WorkloadOpts struct {
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
+	HTTPDisabled             bool
 
 	// Additional options for service templates.
 	WorkloadType        string

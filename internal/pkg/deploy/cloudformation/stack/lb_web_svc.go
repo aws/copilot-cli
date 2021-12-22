@@ -230,6 +230,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NLB:                          nlbConfig.settings,
 		AppDNSName:                   nlbConfig.appDNSName,
 		AppDNSDelegationRole:         nlbConfig.appDNSDelegationRole,
+		HTTPDisabled:                 s.manifest.RoutingRule.Disabled(),
 	})
 	if err != nil {
 		return "", err
