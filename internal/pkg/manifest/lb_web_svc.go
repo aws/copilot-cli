@@ -203,11 +203,7 @@ type RoutingRuleConfigOrBool struct {
 }
 
 func (r *RoutingRuleConfigOrBool) Disabled() bool {
-	return r.Enabled != nil && aws.BoolValue(r.Enabled) == false
-}
-
-func (r *RoutingRuleConfigOrBool) isEmpty() bool {
-	return r.RoutingRuleConfiguration.isEmpty() && r.Enabled == nil
+	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a

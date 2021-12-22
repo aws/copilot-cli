@@ -623,7 +623,8 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		appVersionGetter, err := o.newAppVersionGetter(o.appName)
+		var appVersionGetter versionGetter
+		appVersionGetter, err = o.newAppVersionGetter(o.appName)
 		if err != nil {
 			return nil, fmt.Errorf("new app describer for application %s: %w", o.appName, err)
 		}
