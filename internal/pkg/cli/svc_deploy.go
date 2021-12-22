@@ -606,28 +606,24 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		if o.targetApp.Domain == "" && t.HasAliases() {
-			log.Errorf(aliasUsedWithoutDomainFriendlyText)
-			return nil, errors.New("alias specified when application is not associated with a domain")
+		appVersionGetter, err := o.newAppVersionGetter(o.appName)
+		if err != nil {
+			return nil, fmt.Errorf("new app describer for application %s: %w", o.appName, err)
+		}
+		if err := validateLBWSRuntime(o.targetApp, o.envName, t, appVersionGetter); err != nil {
+			return nil, err
 		}
 
 		var opts []stack.LoadBalancedWebServiceOption
+		if !t.NLBConfig.IsEmpty() {
+			cidrBlocks, err := o.publicCIDRBlocks()
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, stack.WithNLB(cidrBlocks))
+		}
 
-		// TODO: https://github.com/aws/copilot-cli/issues/2918
-		// 1. ALB block should not be executed if http is disabled
 		if o.targetApp.RequiresDNSDelegation() {
-			var appVersionGetter versionGetter
-			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
-				return nil, err
-			}
-			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.RoutingRule.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
-				return nil, err
-			}
-			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.NLBConfig.Aliases, o.targetApp, o.envName, appVersionGetter); err != nil {
-				return nil, err
-			}
-			opts = append(opts, stack.WithHTTPS())
-
 			var caller identity.Caller
 			caller, err = o.identity.Get()
 			if err != nil {
@@ -638,13 +634,10 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 				DNSName:             o.targetApp.Domain,
 				AccountPrincipalARN: caller.RootUserARN,
 			}))
-		}
-		if !t.NLBConfig.IsEmpty() {
-			cidrBlocks, err := o.publicCIDRBlocks()
-			if err != nil {
-				return nil, err
+
+			if !t.RoutingRule.Disabled() {
+				opts = append(opts, stack.WithHTTPS())
 			}
-			opts = append(opts, stack.WithNLB(cidrBlocks))
 		}
 		conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
@@ -811,17 +804,13 @@ func envFile(unmarshaledManifest interface{}) string {
 	return ""
 }
 
-func validateLBSvcAliasAndAppVersion(svcName string, aliases manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
+func validateLBSvcAlias(aliases manifest.Alias, app *config.Application, envName string) error {
 	if aliases.IsEmpty() {
 		return nil
 	}
 	aliasList, err := aliases.ToStringSlice()
 	if err != nil {
 		return fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
-	}
-	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
-		logAppVersionOutdatedError(svcName)
-		return err
 	}
 	for _, alias := range aliasList {
 		// Alias should be within either env, app, or root hosted zone.
@@ -928,6 +917,28 @@ func validateAppVersion(appName string, appVersionGetter versionGetter) error {
 	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 	if diff < 0 {
 		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
+	}
+	return nil
+}
+
+func validateLBWSRuntime(app *config.Application, envName string, t *manifest.LoadBalancedWebService, appVersionGetter versionGetter) error {
+	if app.Domain == "" && t.HasAliases() {
+		log.Errorf(aliasUsedWithoutDomainFriendlyText)
+		return errors.New("alias specified when application is not associated with a domain")
+	}
+
+	if app.RequiresDNSDelegation() {
+		if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
+			logAppVersionOutdatedError(aws.StringValue(t.Name))
+			return err
+		}
+	}
+
+	if err := validateLBSvcAlias(t.RoutingRule.Alias, app, envName); err != nil {
+		return err
+	}
+	if err := validateLBSvcAlias(t.NLBConfig.Aliases, app, envName); err != nil {
+		return err
 	}
 	return nil
 }

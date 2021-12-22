@@ -124,10 +124,13 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			var opts []stack.LoadBalancedWebServiceOption
+			if err := validateLBWSRuntime(app, env.Name, t, appVersionGetter); err != nil {
+				return nil, err
+			}
 			if app.RequiresDNSDelegation() {
-				if err := validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.RoutingRule.Alias, app, env.Name, appVersionGetter); err != nil {
-					return nil, err
-				}
+				// if err := validateLBSvcAlias(aws.StringValue(t.Name), t.RoutingRule.Alias, app, env.Name, appVersionGetter); err != nil {
+				// 	return nil, err
+				// }
 				opts = append(opts, stack.WithHTTPS())
 			}
 			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, opts...)
