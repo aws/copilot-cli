@@ -271,18 +271,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		return nil, err
 	}
 	targetContainer, targetPort := s.httpLoadBalancerTarget()
-	return append(wkldParams, []*cloudformation.Parameter{
+	wkldParams = append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
 			ParameterValue: aws.String(s.containerPort()),
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-			ParameterValue: s.manifest.RoutingRule.Path,
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
@@ -297,14 +289,30 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: targetPort,
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
-		},
-		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
-	}...), nil
+	}...)
+
+	httpParams := []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+			ParameterValue: s.manifest.RoutingRule.Path,
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
+		},
+	}
+
+	if !s.manifest.RoutingRule.Disabled() {
+		wkldParams = append(wkldParams, httpParams...)
+	}
+	return wkldParams, nil
 }
 
 func (s *LoadBalancedWebService) dnsDelegated() bool {

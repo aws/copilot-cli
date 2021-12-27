@@ -13,17 +13,12 @@ Parameters:
     Type: String
   ContainerPort:
     Type: Number
-  RulePath:
-    Type: String
   TaskCPU:
     Type: String
   TaskMemory:
     Type: String
   TaskCount:
     Type: Number
-  HTTPSEnabled:
-    Type: String
-    AllowedValues: [true, false]
   DNSDelegated:
     Type: String
     AllowedValues: [true, false]
@@ -41,23 +36,32 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
+{{- if not .HTTPDisabled}}
+  HTTPSEnabled:
+    Type: String
+    AllowedValues: [true, false]
+  RulePath:
+    Type: String
   Stickiness:
     Type: String
     Default: false
+{{- end}}
 Conditions:
+{{- if not .HTTPDisabled}}
   HTTPLoadBalancer:
     !Not
       - !Condition HTTPSLoadBalancer
   HTTPSLoadBalancer:
     !Equals [!Ref HTTPSEnabled, true]
+  IsDefaultRootPath:
+    !Equals [!Ref RulePath, "/"]
+{{- end}}
   HasAssociatedDomain:
     !Equals [!Ref DNSDelegated, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
-  IsDefaultRootPath:
-    !Equals [!Ref RulePath, "/"]
 Resources:
 {{include "loggroup" . | indent 2}}
 
