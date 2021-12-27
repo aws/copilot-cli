@@ -106,7 +106,7 @@ environments:
 								Path:            aws.String("svc"),
 								TargetContainer: aws.String("frontend"),
 								HealthCheck: HealthCheckArgsOrString{
-									HealthCheckPath: aws.String("/"),
+									HealthCheckPath: nil,
 								},
 								AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 							},

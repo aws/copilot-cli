@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 const (
@@ -133,6 +134,36 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	}
 }
 
+// newDefaultEmptyLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set, without any load balancer configured.
+func newDefaultEmptyLoadBalancedWebService() *LoadBalancedWebService {
+	return &LoadBalancedWebService{
+		Workload: Workload{
+			Type: aws.String(LoadBalancedWebServiceType),
+		},
+		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count: Count{
+					Value: aws.Int(1),
+					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
+						workloadType: LoadBalancedWebServiceType,
+					},
+				},
+				ExecuteCommand: ExecuteCommand{
+					Enable: aws.Bool(false),
+				},
+			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: &PublicSubnetPlacement,
+				},
+			},
+		},
+	}
+}
+
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
@@ -224,7 +255,7 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	if !r.RoutingRuleConfiguration.isEmpty() {
-		// Unmarshalled successfully to r.Advanced, unset r.Enabled, and return.
+		// Unmarshalled successfully to r.RoutingRuleConfiguration, unset r.Enabled, and return.
 		r.Enabled = nil
 		return nil
 	}
@@ -260,8 +291,8 @@ func (r *RoutingRuleConfiguration) targetContainer() *string {
 }
 
 func (r *RoutingRuleConfiguration) isEmpty() bool {
-	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() && r.TargetContainer == nil &&
-		r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil
+	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
+		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil
 }
 
 // NetworkLoadBalancerConfiguration holds options for a network load balancer
