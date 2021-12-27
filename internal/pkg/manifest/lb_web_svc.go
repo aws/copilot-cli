@@ -164,7 +164,7 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 
 // EnvFile returns the location of the env file against the ws root directory.
 func (s *LoadBalancedWebService) EnvFile() string {
-	return s.TaskConfig.EnvFile
+	return aws.StringValue(s.TaskConfig.EnvFile)
 }
 
 // HasAliases returns true if the Load-Balanced Web Service uses aliases, either for ALB or NLB.

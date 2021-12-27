@@ -102,7 +102,7 @@ func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 
 // EnvFile returns the location of the env file against the ws root directory.
 func (s *BackendService) EnvFile() string {
-	return s.TaskConfig.EnvFile
+	return aws.StringValue(s.TaskConfig.EnvFile)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

@@ -29,7 +29,7 @@ const (
 	ephemeralMinValueGiB = 20
 	ephemeralMaxValueGiB = 200
 
-	validEnvFileExt = ".env"
+	envFileExt = ".env"
 )
 
 var (
@@ -623,9 +623,10 @@ func (t TaskConfig) Validate() error {
 	if err = t.Storage.Validate(); err != nil {
 		return fmt.Errorf(`validate "storage": %w`, err)
 	}
-	if t.EnvFile != "" {
-		if filepath.Ext(t.EnvFile) != validEnvFileExt {
-			return fmt.Errorf("environment file %s must have a %s file extension", t.EnvFile, validEnvFileExt)
+	if t.EnvFile != nil {
+		envFile := aws.StringValue(t.EnvFile)
+		if filepath.Ext(envFile) != envFileExt {
+			return fmt.Errorf("environment file %s must have a %s file extension", envFile, envFileExt)
 		}
 	}
 	return nil

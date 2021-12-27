@@ -1066,7 +1066,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 		},
 		"error if invalid env file": {
 			TaskConfig: TaskConfig{
-				EnvFile: "foo",
+				EnvFile: aws.String("foo"),
 			},
 			wantedError: fmt.Errorf("environment file foo must have a .env file extension"),
 		},
