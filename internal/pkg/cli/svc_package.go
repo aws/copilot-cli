@@ -130,13 +130,13 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			var options []stack.LoadBalancedWebServiceOption
 			if !t.NLBConfig.IsEmpty() {
 				envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-					App:         vars.appName,
-					Env:         vars.envName,
+					App:         app.Name,
+					Env:         env.Name,
 					ConfigStore: store,
 					DeployStore: deployStore,
 				})
 				if err != nil {
-					return nil, fmt.Errorf("create describer for environment %s in application %s: %w", vars.envName, vars.appName, err)
+					return nil, fmt.Errorf("create describer for environment %s in application %s: %w", env.Name, app.Name, err)
 				}
 				envSession, err := p.FromRole(env.ManagerRoleARN, env.Region)
 				if err != nil {
