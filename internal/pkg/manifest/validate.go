@@ -602,6 +602,9 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	if err := c.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
+	if err := c.Aliases.Validate(); err != nil {
+		return fmt.Errorf(`validate "alias": %w`, err)
+	}
 	return nil
 }
 

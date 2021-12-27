@@ -167,6 +167,11 @@ func (s *LoadBalancedWebService) EnvFile() string {
 	return s.TaskConfig.EnvFile
 }
 
+// HasAliases returns true if the Load-Balanced Web Service uses aliases, either for ALB or NLB.
+func (s *LoadBalancedWebService) HasAliases() bool {
+	return !s.RoutingRule.Alias.IsEmpty() || !s.NLBConfig.Aliases.IsEmpty()
+}
+
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
 func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, error) {
@@ -225,10 +230,11 @@ type NetworkLoadBalancerConfiguration struct {
 	TargetContainer *string                 `yaml:"target_container"`
 	TargetPort      *int                    `yaml:"target_port"`
 	SSLPolicy       *string                 `yaml:"ssl_policy"`
+	Aliases         Alias                   `yaml:"alias"`
 }
 
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
-	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil
+	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil && c.Aliases.IsEmpty()
 }
 
 // IPNet represents an IP network string. For example: 10.1.0.0/16
