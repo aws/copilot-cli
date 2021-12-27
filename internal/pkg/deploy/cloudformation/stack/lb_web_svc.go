@@ -21,7 +21,7 @@ const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 	envControllerPath                 = "custom-resources/env-controller.js"
-	nlbCertManagerPath                = "custom-resources/nlb-cert-validator-updater.js"
+	nlbCertManagerPath                = "custom-resources/nlb-cert-manager.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
