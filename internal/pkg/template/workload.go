@@ -206,14 +206,24 @@ type HTTPHealthCheckOpts struct {
 	GracePeriod         *int64
 }
 
+// NetworkLoadBalancerHealthCheckOpts holds configuration that's needed for NLB Health Check.
+type NetworkLoadBalancerHealthCheckOpts struct {
+	HealthyThreshold   *int64
+	UnhealthyThreshold *int64
+	Interval           *int64
+	Timeout            *int64
+}
+
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
 type NetworkLoadBalancerListener struct {
-	Port            string
-	Protocol        string
-	TargetContainer string
-	TargetPort      string
-	SSLPolicy       *string
-	Aliases         []string
+	Port                string
+	Protocol            string
+	TargetContainer     string
+	TargetPort          string
+	SSLPolicy           *string
+	DeregistrationDelay *int64
+	Aliases             []string
+	HealthCheck         NetworkLoadBalancerHealthCheckOpts
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.

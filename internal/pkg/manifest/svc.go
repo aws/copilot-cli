@@ -278,6 +278,20 @@ func IsTypeAService(t string) bool {
 	return false
 }
 
+// NLBHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
+// These options are specifiable under the "healthcheck" field.
+// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
+type NLBHealthCheckArgs struct {
+	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
+	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
+	Timeout            *time.Duration `yaml:"timeout"`
+	Interval           *time.Duration `yaml:"interval"`
+}
+
+func (h *NLBHealthCheckArgs) isEmpty() bool {
+	return h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
+}
+
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
 // These options are specifiable under the "healthcheck" field.
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.

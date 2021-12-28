@@ -31,6 +31,18 @@ NLBTargetGroup:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
+    {{- if .NLB.Listener.HealthCheck.HealthyThreshold }}
+    HealthyThresholdCount: {{.NLB.Listener.HealthCheck.HealthyThreshold}}
+    {{- end }}
+    {{- if .NLB.Listener.HealthCheck.UnhealthyThreshold }}
+    UnhealthyThresholdCount: {{.NLB.Listener.HealthCheck.UnhealthyThreshold}}
+    {{- end }}
+    {{- if .NLB.Listener.HealthCheck.Interval }}
+    HealthCheckIntervalSeconds: {{.NLB.Listener.HealthCheck.Interval}}
+    {{- end }}
+    {{- if .NLB.Listener.HealthCheck.Timeout }}
+    HealthCheckTimeoutSeconds: {{.NLB.Listener.HealthCheck.Timeout}}
+    {{- end }}
     Port: !Ref ContainerPort
 {{- if eq .NLB.Listener.Protocol "TLS"}}
     Protocol: TCP
@@ -39,16 +51,12 @@ NLBTargetGroup:
 {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
-        Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+        Value: 60  # ECS Default is 300; Copilot default is 60.
 {{- if ne .NLB.Listener.Protocol "TLS"}}
 {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
         Value: !Ref Stickiness
 {{- end}}
-      - Key: deregistration_delay.connection_termination.enabled
-        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
-      - Key: proxy_protocol_v2.enabled
-        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
     TargetType: ip
     VpcId:
       Fn::ImportValue:

@@ -309,6 +309,18 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
+	healthCheckOpts := template.NetworkLoadBalancerHealthCheckOpts{
+		HealthyThreshold:   nlbConfig.HealthCheck.HealthyThreshold,
+		UnhealthyThreshold: nlbConfig.HealthCheck.UnhealthyThreshold,
+	}
+
+	if nlbConfig.HealthCheck.Interval != nil {
+		healthCheckOpts.Interval = aws.Int64(int64(nlbConfig.HealthCheck.Interval.Seconds()))
+	}
+	if nlbConfig.HealthCheck.Timeout != nil {
+		healthCheckOpts.Timeout = aws.Int64(int64(nlbConfig.HealthCheck.Timeout.Seconds()))
+	}
+
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
@@ -319,6 +331,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 				TargetPort:      targetPort,
 				SSLPolicy:       nlbConfig.SSLPolicy,
 				Aliases:         aliases,
+				HealthCheck:     healthCheckOpts,
 			},
 			MainContainerPort: s.containerPort(),
 		},

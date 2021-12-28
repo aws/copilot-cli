@@ -611,6 +611,10 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	return nil
 }
 
+func (h NLBHealthCheckArgs) Validate() error {
+	return nil
+}
+
 // Validate returns nil if TaskConfig is configured correctly.
 func (t TaskConfig) Validate() error {
 	var err error
