@@ -31,18 +31,6 @@ NLBTargetGroup:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
-    {{- if .HTTPHealthCheck.HealthyThreshold }}
-    HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
-    {{- end }}
-    {{- if .HTTPHealthCheck.UnhealthyThreshold }}
-    UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}}
-    {{- end }}
-    {{- if .HTTPHealthCheck.Interval }}
-    HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}}
-    {{- end }}
-    {{- if .HTTPHealthCheck.Timeout }}
-    HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
-    {{- end }}
     Port: !Ref ContainerPort
 {{- if eq .NLB.Listener.Protocol "TLS"}}
     Protocol: TCP
