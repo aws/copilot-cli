@@ -26,7 +26,7 @@ const (
 	jsonFlag     = "json"
 	allFlag      = "all"
 	forceFlag    = "force"
-
+	helpFlag     = "help"
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -123,6 +123,7 @@ const (
 	envFlagShort      = "e"
 	typeFlagShort     = "t"
 	workloadFlagShort = "w"
+	helpFlagShort     = "h"
 
 	dockerFileFlagShort        = "d"
 	commandFlagShort           = "c"
@@ -183,18 +184,19 @@ Supported providers are: %s`, strings.Join(manifest.PipelineProviders, ", "))
 )
 
 const (
-	appFlagDescription      = "Name of the application."
-	envFlagDescription      = "Name of the environment."
-	svcFlagDescription      = "Name of the service."
-	jobFlagDescription      = "Name of the job."
-	workloadFlagDescription = "Name of the service or job."
-	nameFlagDescription     = "Name of the service, job, or task group."
-	pipelineFlagDescription = "Name of the pipeline."
-	profileFlagDescription  = "Name of the profile."
-	yesFlagDescription      = "Skips confirmation prompt."
-	execYesFlagDescription  = "Optional. Whether to update the Session Manager Plugin."
-	jsonFlagDescription     = "Optional. Outputs in JSON format."
-	forceFlagDescription    = "Optional. Force a new service deployment using the existing image."
+	appFlagDescription                      = "Name of the application."
+	envFlagDescription                      = "Name of the environment."
+	svcFlagDescription                      = "Name of the service."
+	jobFlagDescription                      = "Name of the job."
+	workloadFlagDescription                 = "Name of the service or job."
+	nameFlagDescription                     = "Name of the service, job, or task group."
+	pipelineFlagDescription                 = "Name of the pipeline."
+	profileFlagDescription                  = "Name of the profile."
+	yesFlagDescription                      = "Skips confirmation prompt."
+	pipelineDeployUpdateHelpFlagDescription = "help for deploy/update"
+	execYesFlagDescription                  = "Optional. Whether to update the Session Manager Plugin."
+	jsonFlagDescription                     = "Optional. Outputs in JSON format."
+	forceFlagDescription                    = "Optional. Force a new service deployment using the existing image."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.

@@ -340,7 +340,7 @@ func buildPipelineUpdateCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	// Override cobra's default 'help' command (go/pkg/mod/github.com/spf13/cobra@v1.2.1/command.go).
-	cmd.Flags().BoolP("help", "h", false, "help for deploy/update")
+	cmd.Flags().BoolP(helpFlag, helpFlagShort, false, pipelineDeployUpdateHelpFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }
