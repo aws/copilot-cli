@@ -387,7 +387,7 @@ stages:
 			},
 			expectedError: nil,
 		},
-		"returns an error if fails to prompt for pipeline update": {
+		"returns an error if fails to prompt for pipeline deploy/update": {
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
@@ -413,7 +413,7 @@ stages:
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(false, errors.New("some error")),
 				)
 			},
-			expectedError: fmt.Errorf("prompt for pipeline update: some error"),
+			expectedError: fmt.Errorf("prompt for pipeline deploy/update: some error"),
 		},
 		"returns an error if fail to add pipeline resources to app": {
 			inApp:     &app,

@@ -235,7 +235,7 @@ func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
 
 	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, o.pipelineName), "")
 	if err != nil {
-		return false, fmt.Errorf("prompt for pipeline update: %w", err)
+		return false, fmt.Errorf("prompt for pipeline deploy/update: %w", err)
 	}
 	return shouldUpdate, nil
 }
@@ -316,9 +316,9 @@ func buildPipelineUpdateCmd() *cobra.Command {
 		Long:  `Deploys a pipeline for the services in your workspace, using the environments associated with the application.`,
 		Example: `
   Deploys a pipeline for the services and jobs in your workspace.
-  /code $ copilot pipeline update
+  /code $ copilot pipeline deploy
   or 
-  /code $ copilot pipeline deploy`,
+  /code $ copilot pipeline update`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newUpdatePipelineOpts(vars)
 			if err != nil {
@@ -339,6 +339,8 @@ func buildPipelineUpdateCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	// Override cobra's default 'help' command (go/pkg/mod/github.com/spf13/cobra@v1.2.1/command.go).
+	cmd.Flags().BoolP("help", "h", false, "help for deploy/update")
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }

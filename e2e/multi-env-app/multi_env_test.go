@@ -253,7 +253,7 @@ var _ = Describe("Multiple Env App", func() {
 			Skip("not implemented yet")
 		})
 
-		It("pipeline update should create a pipeline", func() {
+		It("pipeline deploy/update should create a pipeline", func() {
 			Skip("not implemented yet")
 		})
 	})

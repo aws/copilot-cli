@@ -1,4 +1,4 @@
-# pipeline deploy
+# pipeline deploy (same as pipeline update)
 ```bash
 $ copilot pipeline deploy [flags]
 ```
@@ -8,8 +8,8 @@ $ copilot pipeline deploy [flags]
 
 ## What are the flags?
 ```bash
--h, --help   help for deploy
---yes    Skips confirmation prompt.
+-h, --help   help for deploy/update
+    --yes    Skips confirmation prompt.
 ```
 
 ## Examples
