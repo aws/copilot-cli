@@ -217,7 +217,7 @@ func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) 
 	}
 	return &ECSServiceDescriber{
 		serviceStackDescriber: stackDescriber,
-		ecsClient: ecs.New(stackDescriber.sess),
+		ecsClient:             ecs.New(stackDescriber.sess),
 	}, nil
 }
 

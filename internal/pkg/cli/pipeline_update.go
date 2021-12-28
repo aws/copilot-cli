@@ -310,10 +310,10 @@ func (o *updatePipelineOpts) RecommendedActions() []string {
 func buildPipelineUpdateCmd() *cobra.Command {
 	vars := updatePipelineVars{}
 	cmd := &cobra.Command{
-		Use:   "update",
+		Use:     "update",
 		Aliases: []string{"deploy"},
-		Short: "Deploys a pipeline for the services in your workspace.",
-		Long:  `Deploys a pipeline for the services in your workspace, using the environments associated with the application.`,
+		Short:   "Deploys a pipeline for the services in your workspace.",
+		Long:    `Deploys a pipeline for the services in your workspace, using the environments associated with the application.`,
 		Example: `
   Deploys a pipeline for the services and jobs in your workspace.
   /code $ copilot pipeline deploy
