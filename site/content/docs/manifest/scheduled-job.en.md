@@ -20,6 +20,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
 
     variables:
       LOG_LEVEL: info
+    env_file: log.env
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
 

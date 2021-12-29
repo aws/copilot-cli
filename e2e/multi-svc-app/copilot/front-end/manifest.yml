@@ -13,7 +13,7 @@ image:
     dockerfile: front-end/Dockerfile
     context: front-end
     args:
-      MAGIC_WORDS_ARG: "open sesame"
+      MAGIC_VERB_ARG: "open"
   # Port exposed through your container to route traffic to it.
   port: 80
 
@@ -45,3 +45,5 @@ variables:
   TEST_JSON_ENV_VAR: "{}" # https://github.com/aws/copilot-cli/issues/1292
   TEST_BOOL_ENV_VAR: on # https://github.com/aws/copilot-cli/issues/1120
   TEST_JOB_CHECK_VAR: "no"
+
+env_file: magic.env
