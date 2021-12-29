@@ -1025,7 +1025,8 @@ func TestTaskConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		TaskConfig TaskConfig
 
-		wantedErrorPrefix string
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"error if fail to validate platform": {
 			TaskConfig: TaskConfig{
@@ -1033,7 +1034,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 					PlatformString: (*PlatformString)(aws.String("")),
 				},
 			},
-			wantedErrorPrefix: `validate "platform": `,
+			wantedErrorMsgPrefix: `validate "platform": `,
 		},
 		"error if fail to validate count": {
 			TaskConfig: TaskConfig{
@@ -1044,7 +1045,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "count": `,
+			wantedErrorMsgPrefix: `validate "count": `,
 		},
 		"error if fail to validate storage": {
 			TaskConfig: TaskConfig{
@@ -1061,18 +1062,29 @@ func TestTaskConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorPrefix: `validate "storage": `,
+			wantedErrorMsgPrefix: `validate "storage": `,
+		},
+		"error if invalid env file": {
+			TaskConfig: TaskConfig{
+				EnvFile: aws.String("foo"),
+			},
+			wantedError: fmt.Errorf("environment file foo must have a .env file extension"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.TaskConfig.Validate()
 
-			if tc.wantedErrorPrefix != "" {
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
-			} else {
-				require.NoError(t, gotErr)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
 			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
 		})
 	}
 }
