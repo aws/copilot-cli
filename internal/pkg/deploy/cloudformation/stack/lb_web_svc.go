@@ -22,6 +22,7 @@ const (
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 	envControllerPath                 = "custom-resources/env-controller.js"
 	nlbCertValidatorPath              = "custom-resources/nlb-cert-validator.js"
+	nlbCertCustomDomainPath           = "custom-resources/nlb-custom-domain.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -216,7 +217,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		RulePriorityLambda:             rulePriorityLambda.String(),
 		DesiredCountLambda:             desiredCountLambda.String(),
 		EnvControllerLambda:            envControllerLambda.String(),
-		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,
 		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                        convertNetworkConfig(s.manifest.Network),
 		EntryPoint:                     entrypoint,
@@ -230,6 +230,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NLB:                            nlbConfig.settings,
 		AppDNSName:                     nlbConfig.appDNSName,
 		AppDNSDelegationRole:           nlbConfig.appDNSDelegationRole,
+		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,
+		NLBCustomDomainFunctionLambda:  nlbConfig.customDomainLambda,
 	})
 	if err != nil {
 		return "", err

@@ -406,6 +406,7 @@ type WorkloadOpts struct {
 	CredentialsParameter           string
 	BacklogPerTaskCalculatorLambda string
 	NLBCertValidatorFunctionLambda string
+	NLBCustomDomainFunctionLambda  string
 
 	// Additional options for job templates.
 	ScheduleExpression string

@@ -265,6 +265,7 @@ type networkLoadBalancerConfig struct {
 	appDNSDelegationRole *string
 	appDNSName           *string
 	certValidatorLambda  string
+	customDomainLambda   string
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
@@ -334,6 +335,12 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 			return networkLoadBalancerConfig{}, fmt.Errorf("read network load balancer certificate validator lambda: %w", err)
 		}
 		config.certValidatorLambda = validatorLambda.String()
+
+		customDomainLambda, err := s.parser.Read(nlbCertCustomDomainPath)
+		if err != nil {
+			return networkLoadBalancerConfig{}, fmt.Errorf("read network load balancer custom domain lambda: %w", err)
+		}
+		config.customDomainLambda = customDomainLambda.String()
 	}
 	return config, nil
 }

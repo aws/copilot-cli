@@ -109,6 +109,79 @@ NLBDNSAlias:
         AliasTarget:
           HostedZoneId: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
           DNSName: !GetAtt PublicNetworkLoadBalancer.DNSName
+{{- else}}
+NLBCustomDomainAction:
+  Metadata:
+    'aws:copilot:description': "Add A-records for your Network Load Balancer aliases"
+  Type: Custom::NLBCustomDomainFunction
+  Condition: HasAssociatedDomain
+  Properties:
+    ServiceToken: !GetAtt NLBCustomDomainFunction.Arn
+    LoadBalancerHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
+    LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+    EnvHostedZoneId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-HostedZone"
+    EnvName: !Ref EnvName
+    AppName: !Ref AppName
+    ServiceName: !Ref WorkloadName
+    RootDNSRole: {{ .AppDNSDelegationRole }}
+    DomainName:  {{ .AppDNSName }}
+    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
+
+NLBCustomDomainFunction:
+  Type: AWS::Lambda::Function
+  Condition: HasAssociatedDomain
+  Properties:
+    Code:
+      ZipFile: |
+        {{ .NLBCustomDomainFunctionLambda }}
+    Handler: "index.handler"
+    Timeout: 900
+    MemorySize: 512
+    Role: !GetAtt 'NLBCustomDomainRole.Arn'
+    Runtime: nodejs12.x
+
+NLBCustomDomainRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        -
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    Policies:
+      - PolicyName: "NLBCustomDomainPolicy"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: AllowAssumeRole
+              Effect: Allow
+              Action: sts:AssumeRole
+              Resource: "*"
+            - Sid: EnvHostedZoneUpdateAndWait
+              Effect: Allow
+              Action: route53:ChangeResourceRecordSets
+              Resource:
+                !Sub
+                - arn:${AWS::Partition}:route53:::hostedzone/${EnvHostedZone}
+                - EnvHostedZone:
+                    Fn::ImportValue:
+                      !Sub "${AppName}-${EnvName}-HostedZone"
+            - Sid: EnvHostedZoneRead
+              Effect: Allow
+              Action:
+                - route53:ListResourceRecordSets
+                - route53:GetChange
+              Resource: "*"
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end}}
 {{- if eq .NLB.Listener.Protocol "TLS" }}
 NLBCertValidatorAction:
