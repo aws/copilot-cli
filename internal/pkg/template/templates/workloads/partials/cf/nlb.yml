@@ -86,7 +86,7 @@ NLBSecurityGroup:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- if not .Aliases}}
+{{- if not .NLB.Listener.Aliases}}
 NLBDNSAlias:
   Metadata:
     'aws:copilot:description': 'The default alias record for the network load balancer'
@@ -162,14 +162,19 @@ NLBCertManagerRole:
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
+            - Sid: AllowAssumeRole
+              Effect: Allow
+              Action: sts:AssumeRole
+              Resource: "*"
             - Sid: EnvHostedZoneUpdateAndWait
               Effect: Allow
               Action: route53:ChangeResourceRecordSets
               Resource:
                 !Sub
                   - arn:${AWS::Partition}:route53:::hostedzone/${EnvHostedZone}
-                  - EnvHostedZone: Fn::ImportValue
-                      !Sub "${AppName}-${EnvName}-HostedZone"
+                  - EnvHostedZone:
+                      Fn::ImportValue:
+                        !Sub "${AppName}-${EnvName}-HostedZone"
             - Sid: EnvHostedZoneRead
               Effect: Allow
               Action:
