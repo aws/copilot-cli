@@ -21,7 +21,7 @@ const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 	envControllerPath                 = "custom-resources/env-controller.js"
-	nlbCertManagerPath                = "custom-resources/nlb-cert-validator-updater.js"
+	nlbCertValidatorPath              = "custom-resources/nlb-cert-validator.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -196,40 +196,40 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		Variables:                    s.manifest.TaskConfig.Variables,
-		Secrets:                      s.manifest.TaskConfig.Secrets,
-		Aliases:                      aliases,
-		NestedStack:                  addonsOutputs,
-		AddonsExtraParams:            addonsParams,
-		Sidecars:                     sidecars,
-		LogConfig:                    convertLogging(s.manifest.Logging),
-		DockerLabels:                 s.manifest.ImageConfig.Image.DockerLabels,
-		Autoscaling:                  autoscaling,
-		CapacityProviders:            capacityProviders,
-		DesiredCountOnSpot:           desiredCountOnSpot,
-		ExecuteCommand:               convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:                 manifest.LoadBalancedWebServiceType,
-		HealthCheck:                  convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
-		HTTPHealthCheck:              convertHTTPHealthCheck(&s.manifest.HealthCheck),
-		DeregistrationDelay:          deregistrationDelay,
-		AllowedSourceIps:             allowedSourceIPs,
-		RulePriorityLambda:           rulePriorityLambda.String(),
-		DesiredCountLambda:           desiredCountLambda.String(),
-		EnvControllerLambda:          envControllerLambda.String(),
-		NLBCertManagerFunctionLambda: nlbConfig.certManagerLambda,
-		Storage:                      convertStorageOpts(s.manifest.Name, s.manifest.Storage),
-		Network:                      convertNetworkConfig(s.manifest.Network),
-		EntryPoint:                   entrypoint,
-		Command:                      command,
-		DependsOn:                    convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
-		CredentialsParameter:         aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
-		ServiceDiscoveryEndpoint:     s.rc.ServiceDiscoveryEndpoint,
-		Publish:                      publishers,
-		Platform:                     convertPlatform(s.manifest.Platform),
-		HTTPVersion:                  convertHTTPVersion(s.manifest.ProtocolVersion),
-		NLB:                          nlbConfig.settings,
-		AppDNSName:                   nlbConfig.appDNSName,
-		AppDNSDelegationRole:         nlbConfig.appDNSDelegationRole,
+		Variables:                      s.manifest.TaskConfig.Variables,
+		Secrets:                        s.manifest.TaskConfig.Secrets,
+		Aliases:                        aliases,
+		NestedStack:                    addonsOutputs,
+		AddonsExtraParams:              addonsParams,
+		Sidecars:                       sidecars,
+		LogConfig:                      convertLogging(s.manifest.Logging),
+		DockerLabels:                   s.manifest.ImageConfig.Image.DockerLabels,
+		Autoscaling:                    autoscaling,
+		CapacityProviders:              capacityProviders,
+		DesiredCountOnSpot:             desiredCountOnSpot,
+		ExecuteCommand:                 convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:                   manifest.LoadBalancedWebServiceType,
+		HealthCheck:                    convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
+		HTTPHealthCheck:                convertHTTPHealthCheck(&s.manifest.HealthCheck),
+		DeregistrationDelay:            deregistrationDelay,
+		AllowedSourceIps:               allowedSourceIPs,
+		RulePriorityLambda:             rulePriorityLambda.String(),
+		DesiredCountLambda:             desiredCountLambda.String(),
+		EnvControllerLambda:            envControllerLambda.String(),
+		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,
+		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
+		Network:                        convertNetworkConfig(s.manifest.Network),
+		EntryPoint:                     entrypoint,
+		Command:                        command,
+		DependsOn:                      convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
+		CredentialsParameter:           aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
+		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
+		Publish:                        publishers,
+		Platform:                       convertPlatform(s.manifest.Platform),
+		HTTPVersion:                    convertHTTPVersion(s.manifest.ProtocolVersion),
+		NLB:                            nlbConfig.settings,
+		AppDNSName:                     nlbConfig.appDNSName,
+		AppDNSDelegationRole:           nlbConfig.appDNSDelegationRole,
 	})
 	if err != nil {
 		return "", err
