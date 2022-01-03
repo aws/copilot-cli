@@ -56,7 +56,7 @@ Here's a quick guide showing you how to add environment variables to your app by
 
 ![Editing the manifest to add env vars](https://raw.githubusercontent.com/kohidave/ecs-cliv2-demos/master/env-vars-edit.svg?sanitize=true)
 
-Additionally, if you want to specify environment variables in bulk, you can add them in your [env file](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations) and pass its location to your [manifest](../manifest/overview.en.md) in the `env_file` section.
+Additionally, if you want to add environment variables in bulk, you can list them in an [env file](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations). And then specify its path (from the root of the workspace) in the `env_file` field of your[manifest](../manifest/overview.en.md).
 
 ```yaml
 # in copilot/{service name}/manifest.yml
@@ -67,10 +67,8 @@ And in `log.env` we could have
 ```
 #This is a comment and will be ignored
 LOG_LEVEL=debug
+LOG_INFO=all
 ```
-
-!!! Attention
-    You can only specify one env file in each of your workspace.
 
 ## How do I know the name of my DynamoDB table, S3 bucket, RDS database, etc?
 

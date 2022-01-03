@@ -6,4 +6,4 @@ Key-value pairs that represent environment variables that will be passed to your
 <div class="separator"></div>
 
 <a id="env_file" href="#env_file" class="field">`env_file`</a> <span class="type">String</span>  
-The location of a file in your workspace containing the environment variables to pass to the main container. For more information about the environment variable file, see [Considerations for specifying environment variable files](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations).
+The path to a file from the root of your workspace containing the environment variables to pass to the main container. For more information about the environment variable file, see [Considerations for specifying environment variable files](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations).
