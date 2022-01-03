@@ -15,9 +15,13 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// Get the env var "MAGIC_WORDS" for testing if the build arg was overridden.
-var magicWords string = os.Getenv("MAGIC_WORDS")
-var volumeName string = "efsTestVolume"
+var (
+	// Get the env var "MAGIC_VERB" for testing if the build arg was overridden.
+	magicVerb = os.Getenv("MAGIC_VERB")
+	// Get the env var "MAGIC_WORD" for testing if the env var defined in env file is rendered.
+	magicWord  = os.Getenv("MAGIC_WORD")
+	volumeName = "efsTestVolume"
+)
 
 // SimpleGet just returns true no matter what
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -50,6 +54,7 @@ func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter
 func GetMagicWords(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	log.Println("Get Succeeded")
 	w.WriteHeader(http.StatusOK)
+	magicWords := magicVerb + " " + magicWord
 	log.Println(magicWords)
 	w.Write([]byte(magicWords))
 }

@@ -29,9 +29,9 @@ RUN chmod +x ./e2e-service
 
 # Define a build argument which we'll override in the copilot manifest
 # and make available to the service through the environment
-ARG MAGIC_WORDS_ARG
-ENV MAGIC_WORDS=$MAGIC_WORDS_ARG
-RUN echo $MAGIC_WORDS
+ARG MAGIC_VERB_ARG
+ENV MAGIC_VERB=$MAGIC_VERB_ARG
+RUN echo $MAGIC_VERB
 
 # Start the service
 ENTRYPOINT ["./e2e-service"]

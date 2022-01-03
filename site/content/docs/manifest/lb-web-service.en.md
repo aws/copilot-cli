@@ -42,6 +42,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
 
     variables:
       LOG_LEVEL: info
+    env_file: log.env
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
 
