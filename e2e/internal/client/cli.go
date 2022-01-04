@@ -653,10 +653,9 @@ func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, er
 			"-e", strings.Join(envs, ",")))
 }
 
-// PipelineUpdate runs "copilot pipeline update".
-// PipelineUpdate has an alias, "copilot pipeline deploy".
-func (cli *CLI) PipelineUpdate(app string) (string, error) {
-	return cli.exec(exec.Command(cli.path, "pipeline", "update", "-a", app, "--yes"))
+// PipelineDeploy runs "copilot pipeline update".
+func (cli *CLI) PipelineDeploy(app string) (string, error) {
+	return cli.exec(exec.Command(cli.path, "pipeline", "deploy", "-a", app, "--yes"))
 }
 
 // PipelineShow runs "copilot pipeline show --json"
