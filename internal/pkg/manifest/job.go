@@ -136,6 +136,11 @@ func (j *ScheduledJob) BuildRequired() (bool, error) {
 	return requiresBuild(j.ImageConfig.Image)
 }
 
+// EnvFile returns the location of the env file against the ws root directory.
+func (j *ScheduledJob) EnvFile() string {
+	return aws.StringValue(j.TaskConfig.EnvFile)
+}
+
 // JobDockerfileBuildRequired returns if the job container image should be built from local Dockerfile.
 func JobDockerfileBuildRequired(job interface{}) (bool, error) {
 	return dockerfileBuildRequired("job", job)

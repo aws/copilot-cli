@@ -6,6 +6,7 @@ package stack
 import (
 	"fmt"
 	"hash/crc32"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,7 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
+	defaultNLBProtocol     = "TCP_UDP"
 )
 
 // Supported capacityproviders for Fargate services
@@ -254,6 +256,90 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		opts.GracePeriod = aws.Int64(int64(hc.HealthCheckArgs.GracePeriod.Seconds()))
 	}
 	return opts
+}
+
+type networkLoadBalancerConfig struct {
+	settings *template.NetworkLoadBalancer
+
+	// If a domain is associated these values are not empty.
+	appDNSDelegationRole *string
+	appDNSName           *string
+	bucket               *string
+	certValidatorLambda  string
+	customDomainLambda   string
+}
+
+func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
+	nlbConfig := s.manifest.NLBConfig
+	if nlbConfig.IsEmpty() {
+		return networkLoadBalancerConfig{}, nil
+	}
+
+	// Parse listener port and protocol.
+	port, protocol, err := parsePortMapping(nlbConfig.Port)
+	if err != nil {
+		return networkLoadBalancerConfig{}, err
+	}
+	if protocol == nil {
+		protocol = aws.String(defaultNLBProtocol)
+	}
+
+	// Configure target container and port.
+	targetContainer := s.name
+	if nlbConfig.TargetContainer != nil {
+		targetContainer = aws.StringValue(nlbConfig.TargetContainer)
+	}
+
+	// By default, the target port is the same as listener port.
+	targetPort := aws.StringValue(port)
+	if targetContainer != s.name {
+		// If the target container is a sidecar container, the target port is the exposed sidecar port.
+		sideCarPort := s.manifest.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
+		port, _, err := parsePortMapping(sideCarPort)
+		if err != nil {
+			return networkLoadBalancerConfig{}, err
+		}
+		targetPort = aws.StringValue(port)
+	}
+	// Finally, if a target port is explicitly specified, use that value.
+	if nlbConfig.TargetPort != nil {
+		targetPort = strconv.Itoa(aws.IntValue(nlbConfig.TargetPort))
+	}
+
+	aliases, err := convertAlias(nlbConfig.Aliases)
+	if err != nil {
+		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
+	}
+
+	config := networkLoadBalancerConfig{
+		settings: &template.NetworkLoadBalancer{
+			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
+			Listener: template.NetworkLoadBalancerListener{
+				Port:            aws.StringValue(port),
+				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
+				TargetContainer: targetContainer,
+				TargetPort:      targetPort,
+				SSLPolicy:       nlbConfig.SSLPolicy,
+				Aliases:         aliases,
+			},
+			MainContainerPort: s.containerPort(),
+		},
+	}
+
+	if s.dnsDelegationEnabled {
+		dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
+		config.appDNSName = dnsName
+		config.appDNSDelegationRole = dnsDelegationRole
+
+		bucket, urls, err := parseS3URLs(s.nlbCustomResourceS3URLs)
+		if err != nil {
+			return networkLoadBalancerConfig{}, err
+		}
+		config.bucket = bucket
+		config.certValidatorLambda = aws.StringValue(urls[template.NLBCertValidatorLambdaFileName])
+		config.customDomainLambda = aws.StringValue(urls[template.NLBCustomDomainLambdaFileName])
+	}
+	return config, nil
 }
 
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {

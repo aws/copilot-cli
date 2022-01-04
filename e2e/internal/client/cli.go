@@ -68,6 +68,7 @@ func (e EnvInitRequestVPCImport) IsSet() bool {
 // calling copilot env init.
 type EnvInitRequestVPCConfig struct {
 	CIDR               string
+	AZs                string
 	PublicSubnetCIDRs  string
 	PrivateSubnetCIDRs string
 }
@@ -563,8 +564,10 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 			opts.VPCImport.PublicSubnetIDs, "--import-private-subnets", opts.VPCImport.PrivateSubnetIDs)
 	}
 	if (opts.VPCConfig != EnvInitRequestVPCConfig{}) {
-		commands = append(commands, "--override-vpc-cidr", opts.VPCConfig.CIDR, "--override-public-cidrs",
-			opts.VPCConfig.PublicSubnetCIDRs, "--override-private-cidrs", opts.VPCConfig.PrivateSubnetCIDRs)
+		commands = append(commands, "--override-vpc-cidr", opts.VPCConfig.CIDR,
+			"--override-az-names", opts.VPCConfig.AZs,
+			"--override-public-cidrs", opts.VPCConfig.PublicSubnetCIDRs,
+			"--override-private-cidrs", opts.VPCConfig.PrivateSubnetCIDRs)
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }

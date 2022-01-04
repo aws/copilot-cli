@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -27,6 +28,8 @@ const (
 	// Min and Max values for task ephemeral storage in GiB.
 	ephemeralMinValueGiB = 20
 	ephemeralMaxValueGiB = 200
+
+	envFileExt = ".env"
 )
 
 var (
@@ -599,6 +602,9 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	if err := c.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
+	if err := c.Aliases.Validate(); err != nil {
+		return fmt.Errorf(`validate "alias": %w`, err)
+	}
 	return nil
 }
 
@@ -616,6 +622,12 @@ func (t TaskConfig) Validate() error {
 	}
 	if err = t.Storage.Validate(); err != nil {
 		return fmt.Errorf(`validate "storage": %w`, err)
+	}
+	if t.EnvFile != nil {
+		envFile := aws.StringValue(t.EnvFile)
+		if filepath.Ext(envFile) != envFileExt {
+			return fmt.Errorf("environment file %s must have a %s file extension", envFile, envFileExt)
+		}
 	}
 	return nil
 }

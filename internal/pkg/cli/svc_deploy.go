@@ -575,13 +575,29 @@ func (o *deploySvcOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
 	}, nil
 }
 
-func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
+func uploadRDWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
 	s3Client, err := o.newS3Uploader()
 	if err != nil {
 		return nil, err
 	}
 
 	urls, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
+	}
+
+	return urls, nil
+}
+
+func uploadNLBWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
+	s3Client, err := o.newS3Uploader()
+	if err != nil {
+		return nil, err
+	}
+
+	urls, err := o.uploader.UploadNetworkLoadBalancedWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
 	})
 	if err != nil {
@@ -606,7 +622,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		if o.targetApp.Domain == "" && !t.Alias.IsEmpty() {
+		if o.targetApp.Domain == "" && t.HasAliases() {
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
@@ -614,9 +630,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 		var opts []stack.LoadBalancedWebServiceOption
 
 		// TODO: https://github.com/aws/copilot-cli/issues/2918
-		// 1. Should error out if `nlb.alias` is specified with targetApp.Domain == ""
-		// 2. Should validate `nlb.alias` is specified
-		// 3. ALB block should not be executed if http is disabled
+		// 1. ALB block should not be executed if http is disabled
 		if o.targetApp.RequiresDNSDelegation() {
 			var appVersionGetter versionGetter
 			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
@@ -625,8 +639,21 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
 				return nil, err
 			}
+			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.NLBConfig.Aliases, o.targetApp, o.envName, appVersionGetter); err != nil {
+				return nil, err
+			}
 			opts = append(opts, stack.WithHTTPS())
-			opts = append(opts, stack.WithDNSDelegation())
+
+			var caller identity.Caller
+			caller, err = o.identity.Get()
+			if err != nil {
+				return nil, fmt.Errorf("get identity: %w", err)
+			}
+			opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
+				Name:                o.targetEnvironment.App,
+				DNSName:             o.targetApp.Domain,
+				AccountPrincipalARN: caller.RootUserARN,
+			}))
 		}
 		if !t.NLBConfig.IsEmpty() {
 			cidrBlocks, err := o.publicCIDRBlocks()
@@ -634,6 +661,17 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 				return nil, err
 			}
 			opts = append(opts, stack.WithNLB(cidrBlocks))
+
+			if o.targetApp.RequiresDNSDelegation() {
+				if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
+					return nil, err
+				}
+				urls, err := uploadNLBWSCustomResources(o.uploadOpts, o.appEnvResources)
+				if err != nil {
+					return nil, err
+				}
+				opts = append(opts, stack.WithNLBCustomResources(urls))
+			}
 		}
 		conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
@@ -675,7 +713,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 		if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
 			return nil, err
 		}
-		if urls, err = uploadCustomResources(o.uploadOpts, o.appEnvResources); err != nil {
+		if urls, err = uploadRDWSCustomResources(o.uploadOpts, o.appEnvResources); err != nil {
 			return nil, err
 		}
 		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)

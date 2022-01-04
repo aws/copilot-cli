@@ -44,6 +44,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
 
     variables:
       LOG_LEVEL: info
+    env_file: log.env
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
 

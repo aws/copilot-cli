@@ -71,9 +71,9 @@ phases:
           done;
         done;
       - ls -lah ./infrastructure
-      # Concatenate jobs and services into one var for addons
-      # If addons exists, upload addons templates to each S3 bucket and write template URL to template config files.
+      # Concatenate jobs and services into one var for addons and env file
       - WORKLOADS=$(echo $jobs $svcs)
+      # If addons exists, upload addons templates to each S3 bucket and write template URL to template config files.
       - |
         for workload in $WORKLOADS; do
           ADDONSFILE=./infrastructure/$workload.addons.stack.yml
@@ -83,6 +83,29 @@ phases:
             aws s3 cp "$ADDONSFILE" "s3://{{$bucket.BucketName}}/manual/$timestamp/$workload.addons.stack.yml";{{range $envName := $bucket.Environments}}
             jq --arg a "https://{{$bucket.BucketName}}.s3.{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-{{$envName}}.params.json{{end}}{{end}}
           fi
+        done;
+      # If env file exists, upload the env file to each S3 bucket and write template URL to template config files.
+      - |
+        for workload in $WORKLOADS; do
+          manifest=$(cat $CODEBUILD_SRC_DIR/copilot/$workload/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+          type=$(echo $manifest | jq -r '.type')
+          if [ "$type" = "Request-Driven Web Service" ]; then
+            echo "skipping env file uploading for Request-Driven Web Service $workload";
+            continue
+          fi
+          for env in $pl_envs; do
+            env_files=$(echo $manifest | jq --arg env "$env" '{base_env_file: .env_file, env_env_file: (.environments? | .[$env]? | .env_file?) }')
+            env_file=$(echo $env_files | jq -r 'if (.env_env_file == null) then .base_env_file else .env_env_file end')
+            ENVFILE="./$env_file"
+            if [ -f "$ENVFILE" ]; then{{range $bucket := .ArtifactBuckets}}{{range $envName := $bucket.Environments}}
+              if [ $env = {{$envName}} ]; then
+                tmp=$(mktemp)
+                checksum=$(cat $ENVFILE | sha256sum | head -c 64)
+                aws s3 cp "$ENVFILE" "s3://{{$bucket.BucketName}}/manual/$checksum/$env_file";
+                jq --arg a "arn:$PARTITION:s3:::{{$bucket.BucketName}}/manual/$checksum/$env_file" '.Parameters.EnvFileARN = $a' ./infrastructure/$workload-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-{{$envName}}.params.json
+              fi{{end}}{{end}}
+            fi
+          done;
         done;
       # Build images
       # - For each manifest file:
