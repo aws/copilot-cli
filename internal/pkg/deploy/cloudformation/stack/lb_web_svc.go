@@ -56,6 +56,7 @@ type LoadBalancedWebService struct {
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
+	nlbCustomResourceS3URL map[string]string
 
 	parser loadBalancedWebSvcReadParser
 }
@@ -76,6 +77,13 @@ func WithHTTPS() func(s *LoadBalancedWebService) {
 func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 	return func(s *LoadBalancedWebService) {
 		s.publicSubnetCIDRBlocks = cidrBlocks
+	}
+}
+
+// WithNLBDNSCustomResources includes NLB custom resource URLs in a LoadBalancedWebService.
+func WithNLBCustomResources(urls map[string]string) func(s *LoadBalancedWebService) {
+	return func(s *LoadBalancedWebService) {
+		s.nlbCustomResourceS3URL = urls
 	}
 }
 

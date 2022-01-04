@@ -575,13 +575,29 @@ func (o *deploySvcOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
 	}, nil
 }
 
-func uploadCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
+func uploadRDWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
 	s3Client, err := o.newS3Uploader()
 	if err != nil {
 		return nil, err
 	}
 
 	urls, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
+	}
+
+	return urls, nil
+}
+
+func uploadNLBWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
+	s3Client, err := o.newS3Uploader()
+	if err != nil {
+		return nil, err
+	}
+
+	urls, err := o.uploader.UploadNetworkLoadBalancedWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
 	})
 	if err != nil {
@@ -645,6 +661,17 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 				return nil, err
 			}
 			opts = append(opts, stack.WithNLB(cidrBlocks))
+
+			if o.targetApp.RequiresDNSDelegation() {
+				if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
+					return nil, err
+				}
+				urls, err := uploadNLBWSCustomResources(o.uploadOpts, o.appEnvResources)
+				if err != nil {
+					return nil, err
+				}
+				opts = append(opts, stack.WithNLBCustomResources(urls))
+			}
 		}
 		conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
@@ -686,7 +713,7 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 		if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
 			return nil, err
 		}
-		if urls, err = uploadCustomResources(o.uploadOpts, o.appEnvResources); err != nil {
+		if urls, err = uploadRDWSCustomResources(o.uploadOpts, o.appEnvResources); err != nil {
 			return nil, err
 		}
 		conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, o.targetEnvironment.Name, appInfo, *rc, urls)

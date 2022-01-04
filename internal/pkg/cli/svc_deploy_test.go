@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -48,6 +49,7 @@ type deploySvcMocks struct {
 	mockS3Svc              *mocks.Mockuploader
 	mockAddons             *mocks.Mocktemplater
 	mockIdentity           *mocks.MockidentityService
+	mockUploader           *mocks.MockcustomResourcesUploader
 }
 
 type mockWorkloadMft struct {
@@ -827,6 +829,45 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
+		"fail to upload NLB custom resource scripts": {
+			inNLB: manifest.NetworkLoadBalancerConfiguration{
+				Port:    aws.String("80"),
+				Aliases: manifest.Alias{String: aws.String("v1.mockDomain")},
+			},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deploySvcMocks) {
+				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "1234",
+				}, nil)
+				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
+					EnvironmentVPC: describe.EnvironmentVPC{
+						ID: "mockVPCID",
+					},
+				}, nil)
+				m.mockSubnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(&ec2.VPCSubnets{
+					Public: []ec2.Subnet{{CIDRBlock: "cidr1"}, {CIDRBlock: "cidr2"}},
+				}, nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockUploader.EXPECT().UploadNetworkLoadBalancedWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("upload custom resources to bucket mockBucket: some error"),
+		},
 		"error if fail to deploy service": {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -1043,6 +1084,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				mockEnvDescriber:       mocks.NewMockenvDescriber(ctrl),
 				mockSubnetLister:       mocks.NewMockvpcSubnetLister(ctrl),
 				mockIdentity:           mocks.NewMockidentityService(ctrl),
+				mockUploader:           mocks.NewMockcustomResourcesUploader(ctrl),
 			}
 			tc.mock(m)
 
@@ -1098,6 +1140,12 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				now: func() time.Time {
 					return mockNowTime
 				},
+				uploadOpts: &uploadCustomResourcesOpts{
+					uploader: m.mockUploader,
+					newS3Uploader: func() (uploader, error) {
+						return nil, nil
+					},
+				},
 			}
 
 			gotErr := opts.deploySvc()
@@ -1152,7 +1200,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-
 			},
 
 			wantErr: errors.New("alias specified when application is not associated with a domain"),
