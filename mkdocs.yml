@@ -74,7 +74,7 @@ nav:
         - svc delete: docs/commands/svc-delete.en.md
       - Release:
         - pipeline init: docs/commands/pipeline-init.en.md
-        - pipeline deploy/update: docs/commands/pipeline-deploy-update.en.md
+        - pipeline deploy: docs/commands/pipeline-deploy.en.md
         - pipeline ls: docs/commands/pipeline-ls.en.md
         - pipeline show: docs/commands/pipeline-show.en.md
         - pipeline status: docs/commands/pipeline-status.en.md
@@ -119,7 +119,7 @@ nav:
         - job ls: docs/commands/job-ls.en.md
         - job package: docs/commands/job-package.en.md
         - pipeline delete: docs/commands/pipeline-delete.en.md
-        - pipeline deploy/update: docs/commands/pipeline-deploy-update.en.md
+        - pipeline deploy: docs/commands/pipeline-deploy.en.md
         - pipeline init: docs/commands/pipeline-init.en.md
         - pipeline ls: docs/commands/pipeline-ls.en.md
         - pipeline show: docs/commands/pipeline-show.en.md
