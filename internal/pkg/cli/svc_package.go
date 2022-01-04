@@ -160,7 +160,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 			if err != nil {
 				return nil, fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
 			}
-			urls, err := uploadCustomResources(&uploadCustomResourcesOpts{
+			urls, err := uploadRDWSCustomResources(&uploadCustomResourcesOpts{
 				uploader: template.New(),
 				newS3Uploader: func() (uploader, error) {
 					envRegion := env.Region

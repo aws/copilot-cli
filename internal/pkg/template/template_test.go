@@ -203,6 +203,109 @@ func TestTemplate_UploadRequestDrivenWebServiceCustomResources(t *testing.T) {
 	}
 }
 
+func TestTemplate_UploadNetworkLoadBalancedWebServiceCustomResources(t *testing.T) {
+	mockContent := "hello"
+	testCases := map[string]struct {
+		fs           func() map[string][]byte
+		mockUploader s3.CompressAndUploadFunc
+
+		wantedErr  error
+		wantedURLs map[string]string
+	}{
+		"success": {
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
+				for _, file := range nlbWkldCustomResourceFiles {
+					m[fmt.Sprintf("templates/custom-resources/%s.js", file)] = []byte(mockContent)
+				}
+				return m
+			},
+			mockUploader: s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
+				require.Contains(t, key, "scripts")
+				require.Contains(t, key, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+				for _, f := range files {
+					require.Equal(t, mockContent, string(f.Content()))
+				}
+				return "mockURL", nil
+			}),
+			wantedURLs: map[string]string{
+				NLBCustomDomainLambdaFileName:  "mockURL",
+				NLBCertValidatorLambdaFileName: "mockURL",
+			},
+		},
+		"errors if network load-balanced web service custom domain file doesn't exist": {
+			fs: func() map[string][]byte {
+				return nil
+			},
+			wantedErr: fmt.Errorf("read template custom-resources/nlb-cert-validator.js: open templates/custom-resources/nlb-cert-validator.js: file does not exist"),
+		},
+		"fail to upload cert validator": {
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
+				for _, file := range nlbWkldCustomResourceFiles {
+					m[fmt.Sprintf("templates/custom-resources/%s.js", file)] = []byte(mockContent)
+				}
+				return m
+			},
+			mockUploader: s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
+				require.Contains(t, key, "scripts")
+				require.Contains(t, key, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+				for _, f := range files {
+					require.Equal(t, mockContent, string(f.Content()))
+				}
+				if strings.Contains(key, "nlb-cert-validator") {
+					return "", errors.New("some error")
+				} else {
+					return "mockURL", nil
+				}
+			}),
+			wantedErr: errors.New("upload scripts/nlb-cert-validator: some error"),
+		},
+		"fail to upload nlb custom domain": {
+			fs: func() map[string][]byte {
+				m := make(map[string][]byte)
+				for _, file := range nlbWkldCustomResourceFiles {
+					m[fmt.Sprintf("templates/custom-resources/%s.js", file)] = []byte(mockContent)
+				}
+				return m
+			},
+			mockUploader: s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
+				require.Contains(t, key, "scripts")
+				require.Contains(t, key, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+				for _, f := range files {
+					require.Equal(t, mockContent, string(f.Content()))
+				}
+				if strings.Contains(key, "nlb-custom-domain") {
+					return "", errors.New("some error")
+				} else {
+					return "mockURL", nil
+				}
+			}),
+			wantedErr: errors.New("upload scripts/nlb-custom-domain: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			tpl := &Template{
+				fs: &mockReadFileFS{tc.fs()},
+			}
+
+			// WHEN
+			gotURLs, err := tpl.UploadNetworkLoadBalancedWebServiceCustomResources(tc.mockUploader)
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, len(nlbWkldCustomResourceFiles), len(gotURLs))
+				require.Equal(t, tc.wantedURLs, gotURLs)
+			}
+		})
+	}
+}
+
 func TestTemplate_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		inPath string
