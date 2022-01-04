@@ -26,7 +26,6 @@ const (
 	jsonFlag     = "json"
 	allFlag      = "all"
 	forceFlag    = "force"
-	helpFlag     = "help"
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -123,7 +122,6 @@ const (
 	envFlagShort      = "e"
 	typeFlagShort     = "t"
 	workloadFlagShort = "w"
-	helpFlagShort     = "h"
 
 	dockerFileFlagShort        = "d"
 	commandFlagShort           = "c"
@@ -193,7 +191,6 @@ const (
 	pipelineFlagDescription                 = "Name of the pipeline."
 	profileFlagDescription                  = "Name of the profile."
 	yesFlagDescription                      = "Skips confirmation prompt."
-	pipelineDeployUpdateHelpFlagDescription = "help for deploy/update"
 	execYesFlagDescription                  = "Optional. Whether to update the Session Manager Plugin."
 	jsonFlagDescription                     = "Optional. Outputs in JSON format."
 	forceFlagDescription                    = "Optional. Force a new service deployment using the existing image."
