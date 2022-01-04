@@ -331,7 +331,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		config.appDNSName = dnsName
 		config.appDNSDelegationRole = dnsDelegationRole
 
-		bucket, urls, err := parseS3URLs(s.nlbCustomResourceS3URL)
+		bucket, urls, err := parseS3URLs(s.nlbCustomResourceS3URLs)
 		if err != nil {
 			return networkLoadBalancerConfig{}, err
 		}
