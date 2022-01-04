@@ -1,5 +1,11 @@
 # Domain
 
+!!!attention
+    Today, a route53 domain name can be associated only while creating the app for the first time.  
+    If you'd like to update your application with a domain ([#3045](https://github.com/aws/copilot-cli/issues/3045)), 
+    you'll need to initialize a duplicate app with `--domain` and then run `copilot app delete` to 
+    remove the old one.
+
 ## Load Balanced Web Service
 As mentioned in the [Application Guide](../concepts/applications.en.md#additional-app-configurations), you can configure the domain name of your app when running `copilot app init`. After deploying your [Load Balanced Web Services](../concepts/services.en.md#load-balanced-web-service), you should be able to access them publicly via
 
@@ -21,9 +27,6 @@ Currently, you can only use aliases under the domain you specified when creating
 
 We'll make this feature more powerful in the future by allowing you to import certificates and use any aliases!
 
-!!!info
-    Both root and app hosted zone are in your app account, while the env hosted zones are in your env accounts.
-
 ## How do I configure an alias for my service?
 If you don't like the default domain name Copilot assigns to your service, setting an [alias](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html) for your service is also very easy. You can add it directly to your [manifest's](../manifest/overview.en.md) `alias` section. The following snippet will set an alias to your service.
 
@@ -33,9 +36,6 @@ http:
   path: '/'
   alias: example.aws
 ```
-
-!!!info
-    Using this feature requires your app version to be at least `v1.0.0`. You will be prompted to run [`app upgrade`](../commands/app-upgrade.en.md) first if your app version does not meet the requirement.
 
 ## What happens under the hood?
 Under the hood, Copilot
