@@ -176,6 +176,8 @@ plugins:
         redirect_maps:
             'docs/installing.md': 'docs/getting-started/install.en.md'
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
+            'docs/commands/pipeline-update.en.md': 'docs/commands/pipeline-deploy.en.md'
+            'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
     - i18n:
         default_language: en
         languages:
