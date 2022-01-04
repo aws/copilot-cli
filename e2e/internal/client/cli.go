@@ -653,7 +653,7 @@ func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, er
 			"-e", strings.Join(envs, ",")))
 }
 
-// PipelineDeploy runs "copilot pipeline update".
+// PipelineDeploy runs "copilot pipeline deploy".
 func (cli *CLI) PipelineDeploy(app string) (string, error) {
 	return cli.exec(exec.Command(cli.path, "pipeline", "deploy", "-a", app, "--yes"))
 }
