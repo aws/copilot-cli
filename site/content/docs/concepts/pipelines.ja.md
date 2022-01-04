@@ -41,7 +41,7 @@ Pipeline の作成に必要な手順は３つです。
 ```bash
 $ copilot pipeline init
 $ git add copilot/pipeline.yml copilot/buildspec.yml copilot/.workspace && git commit -m "Adding pipeline artifacts" && git push
-$ copilot pipeline update
+$ copilot pipeline deploy
 ```
 
 ✨ Application アカウントに新しい Pipeline が作成されたはずです！何が起きているのか、もう少し深く知りたいですよね？読み進めましょう！
@@ -100,7 +100,7 @@ stages:
 ```
 `pipeline.yml` で利用可能な全ての設定項目については [Pipeline Manifest](../manifest/pipeline.ja.md) をご覧ください。
 
-このファイルには大きく３つのパーツがあります。最初の `name` フィールドは CodePipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、どの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline update` コマンドを実行する必要があります。
+このファイルには大きく３つのパーツがあります。最初の `name` フィールドは CodePipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、どの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline deploy` コマンドを実行する必要があります。
 
 よくあるケースとしては、新たなデプロイ先の Environment を増やしたいときや、Pipeline がトラックするブランチを変更したい際にこのファイルを更新することになるでしょう。あるいはもしすでに CodeStar Connections に接続済みのリポジトリがあり、Copilot で新たに作成するのではなく既存のものを利用したい場合には、その接続名を記述することになります。また、Pipeline Manifest はデプロイの手動承認を設定したり、デプロイ後に自動テストを実行したりしたい場合の設定を記述する場所でもあります。(本ページ下部の "テストの追加" もご覧ください)
 
@@ -118,7 +118,7 @@ stages:
 
 ここからが楽しいパートです！次のコマンドを実行しましょう！
 
-`copilot pipeline update`
+`copilot pipeline deploy`
 
 このコマンドはあなたの `pipeline.yml` を解析し、Application と同じアカウントとリージョンの CodePipeline に Pipeline を作成し、Pipeline を実行します。AWS マネジメントコンソールにログイン、あるいは `copilot pipeline status` コマンドで Pipeline の実行状況を確認できます。
 

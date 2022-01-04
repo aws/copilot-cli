@@ -4,7 +4,7 @@ $ copilot pipeline deploy [flags]
 ```
 
 
-## What do they do?
+## What does it do?
 `copilot pipeline deploy` deploys a pipeline for the services in your workspace, using the environments associated with the application from a pipeline manifest.
 
 ## What are the flags?
