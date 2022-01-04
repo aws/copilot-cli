@@ -26,6 +26,8 @@ const (
 	DNSDelegationFileName               = "dns-delegation"
 	CustomDomainFileName                = "custom-domain"
 	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
+	NLBCertValidatorLambdaFileName      = "nlb-cert-validator"
+	NLBCustomDomainLambdaFileName       = "nlb-custom-domain"
 
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
@@ -41,6 +43,10 @@ var (
 	}
 	rdWkldCustomResourceFiles = []string{
 		AppRunnerCustomDomainLambdaFileName,
+	}
+	nlbWkldCustomResourceFiles = []string{
+		NLBCertValidatorLambdaFileName,
+		NLBCustomDomainLambdaFileName,
 	}
 )
 
@@ -118,9 +124,14 @@ func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadF
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
-//UploadRequestDrivenWebServiceCustomResources uploads the request driven web service custom resource scripts.
+// UploadRequestDrivenWebServiceCustomResources uploads the request driven web service custom resource scripts.
 func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
+}
+
+// UploadLoadBalancedWebServiceNLBCustomResources uploads the network load-balanced web service custom resource scripts.
+func (t *Template) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
+	return t.uploadCustomResources(upload, nlbWkldCustomResourceFiles)
 }
 
 func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {
