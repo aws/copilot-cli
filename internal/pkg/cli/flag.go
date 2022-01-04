@@ -26,7 +26,6 @@ const (
 	jsonFlag     = "json"
 	allFlag      = "all"
 	forceFlag    = "force"
-
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"

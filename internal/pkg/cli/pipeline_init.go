@@ -212,7 +212,7 @@ func (o *initPipelineOpts) Execute() error {
 func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
 		fmt.Sprintf("Commit and push the %s, %s, and %s files of your %s directory to your repository.", color.HighlightResource("buildspec.yml"), color.HighlightResource("pipeline.yml"), color.HighlightResource(".workspace"), color.HighlightResource("copilot")),
-		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline update")),
+		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline deploy")),
 	}
 }
 
