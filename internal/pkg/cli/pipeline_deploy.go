@@ -38,7 +38,7 @@ const (
 	fmtPipelineDeployProposalFailed   = "Failed to accept changes for pipeline: %s.\n"
 	fmtPipelineDeployProposalComplete = "Successfully deployed pipeline: %s\n"
 
-	fmtPipelineDeployExistPrompt = "Are you sure you want to deploy an existing pipeline: %s?"
+	fmtPipelineDeployExistPrompt = "Are you sure you want to redeploy an existing pipeline: %s?"
 )
 
 const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
@@ -64,7 +64,7 @@ type deployPipelineOpts struct {
 	shouldPromptUpdateConnection bool
 }
 
-func newUpdatePipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
+func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store client: %w", err)
@@ -235,7 +235,7 @@ func (o *deployPipelineOpts) shouldUpdate() (bool, error) {
 
 	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.pipelineName), "")
 	if err != nil {
-		return false, fmt.Errorf("prompt for pipeline deploy/update: %w", err)
+		return false, fmt.Errorf("prompt for pipeline deploy: %w", err)
 	}
 	return shouldUpdate, nil
 }
@@ -306,8 +306,8 @@ func (o *deployPipelineOpts) RecommendedActions() []string {
 	}
 }
 
-// BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
-func buildPipelineUpdateCmd() *cobra.Command {
+// BuildPipelineDeployCmd build the command for deploying a new pipeline or updating an existing pipeline.
+func buildPipelineDeployCmd() *cobra.Command {
 	vars := deployPipelineVars{}
 	cmd := &cobra.Command{
 		Use:     "deploy",
@@ -319,7 +319,7 @@ func buildPipelineUpdateCmd() *cobra.Command {
   /code $ copilot pipeline deploy
 `,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newUpdatePipelineOpts(vars)
+			opts, err := newDeployPipelineOpts(vars)
 			if err != nil {
 				return err
 			}
