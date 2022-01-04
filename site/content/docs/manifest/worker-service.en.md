@@ -28,6 +28,7 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
 
     variables:
       LOG_LEVEL: info
+    env_file: log.env
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
 
