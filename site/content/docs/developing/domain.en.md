@@ -1,7 +1,7 @@
 # Domain
 
 !!!attention
-    Today, a route53 domain name can be associated only while creating the app for the first time.  
+    Today, a Route 53 domain name can be associated only when running `copilot app init`.  
     If you'd like to update your application with a domain ([#3045](https://github.com/aws/copilot-cli/issues/3045)), 
     you'll need to initialize a duplicate app with `--domain` and then run `copilot app delete` to 
     remove the old one.
