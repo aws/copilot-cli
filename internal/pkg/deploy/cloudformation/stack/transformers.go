@@ -264,7 +264,9 @@ type networkLoadBalancerConfig struct {
 	// If a domain is associated these values are not empty.
 	appDNSDelegationRole *string
 	appDNSName           *string
-	certManagerLambda    string
+	bucket               *string
+	certValidatorLambda  string
+	customDomainLambda   string
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
@@ -329,11 +331,13 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		config.appDNSName = dnsName
 		config.appDNSDelegationRole = dnsDelegationRole
 
-		nlbCertManagerLambda, err := s.parser.Read(nlbCertManagerPath)
+		bucket, urls, err := parseS3URLs(s.nlbCustomResourceS3URLs)
 		if err != nil {
-			return networkLoadBalancerConfig{}, fmt.Errorf("read network load balancer certificate manager lambda: %w", err)
+			return networkLoadBalancerConfig{}, err
 		}
-		config.certManagerLambda = nlbCertManagerLambda.String()
+		config.bucket = bucket
+		config.certValidatorLambda = aws.StringValue(urls[template.NLBCertValidatorLambdaFileName])
+		config.customDomainLambda = aws.StringValue(urls[template.NLBCustomDomainLambdaFileName])
 	}
 	return config, nil
 }

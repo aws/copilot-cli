@@ -22,7 +22,7 @@ NLBListener:
     Protocol: {{ .NLB.Listener.Protocol }}
 {{- if eq .NLB.Listener.Protocol "TLS" }}
     Certificates:
-      - CertificateArn: !Ref NLBCertManagerAction
+      - CertificateArn: !Ref NLBCertValidatorAction
     SslPolicy: {{ if .NLB.Listener.SSLPolicy }}{{ .NLB.Listener.SSLPolicy }}{{ else }} ELBSecurityPolicy-TLS13-1-2-2021-06 {{ end }}
 {{- end}}
 
@@ -86,7 +86,7 @@ NLBSecurityGroup:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- if not .Aliases}}
+{{- if not .NLB.Listener.Aliases}}
 NLBDNSAlias:
   Metadata:
     'aws:copilot:description': 'The default alias record for the network load balancer'
@@ -109,17 +109,16 @@ NLBDNSAlias:
         AliasTarget:
           HostedZoneId: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
           DNSName: !GetAtt PublicNetworkLoadBalancer.DNSName
-{{- end}}
-{{- if eq .NLB.Listener.Protocol "TLS" }}
-NLBCertManagerAction:
+{{- else}}
+NLBCustomDomainAction:
   Metadata:
-    'aws:copilot:description': "Request and validate the certificate for the NLB and add records for aliases"
-  Type: Custom::NLBCertManagerFunction
+    'aws:copilot:description': "Add A-records for your Network Load Balancer aliases"
+  Type: Custom::NLBCustomDomainFunction
   Condition: HasAssociatedDomain
   Properties:
-    ServiceToken: !GetAtt NLBCertManagerFunction.Arn
-    LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+    ServiceToken: !GetAtt NLBCustomDomainFunction.Arn
     LoadBalancerHostedZoneID: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
+    LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
     EnvHostedZoneId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-HostedZone"
@@ -130,20 +129,20 @@ NLBCertManagerAction:
     DomainName:  {{ .AppDNSName }}
     Aliases: {{fmtSlice .NLB.Listener.Aliases }}
 
-NLBCertManagerFunction:
+NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
   Condition: HasAssociatedDomain
   Properties:
     Code:
-      ZipFile: |
-        {{ .NLBCertManagerFunctionLambda }}
+      S3Bucket: {{ .ScriptBucketName }}
+      S3Key: {{ .NLBCustomDomainFunctionLambda }}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512
-    Role: !GetAtt 'NLBCertManagerRole.Arn'
+    Role: !GetAtt 'NLBCustomDomainRole.Arn'
     Runtime: nodejs12.x
 
-NLBCertManagerRole:
+NLBCustomDomainRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
@@ -158,18 +157,96 @@ NLBCertManagerRole:
             - sts:AssumeRole
     Path: /
     Policies:
-      - PolicyName: "NLBCertManagerPolicy"
+      - PolicyName: "NLBCustomDomainPolicy"
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
+            - Sid: AllowAssumeRole
+              Effect: Allow
+              Action: sts:AssumeRole
+              Resource: "*"
+            - Sid: EnvHostedZoneUpdateAndWait
+              Effect: Allow
+              Action: route53:ChangeResourceRecordSets
+              Resource:
+                !Sub
+                - arn:${AWS::Partition}:route53:::hostedzone/${EnvHostedZone}
+                - EnvHostedZone:
+                    Fn::ImportValue:
+                      !Sub "${AppName}-${EnvName}-HostedZone"
+            - Sid: EnvHostedZoneRead
+              Effect: Allow
+              Action:
+                - route53:ListResourceRecordSets
+                - route53:GetChange
+              Resource: "*"
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+{{- end}}
+{{- if eq .NLB.Listener.Protocol "TLS" }}
+NLBCertValidatorAction:
+  Metadata:
+    'aws:copilot:description': "Request and validate the certificate for your Network Load Balancer"
+  Type: Custom::NLBCertValidatorFunction
+  Condition: HasAssociatedDomain
+  Properties:
+    ServiceToken: !GetAtt NLBCertValidatorFunction.Arn
+    LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+    EnvHostedZoneId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-HostedZone"
+    EnvName: !Ref EnvName
+    AppName: !Ref AppName
+    ServiceName: !Ref WorkloadName
+    RootDNSRole: {{ .AppDNSDelegationRole }}
+    DomainName:  {{ .AppDNSName }}
+    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
+
+NLBCertValidatorFunction:
+  Type: AWS::Lambda::Function
+  Condition: HasAssociatedDomain
+  Properties:
+    Code:
+      S3Bucket: {{ .ScriptBucketName }}
+      S3Key: {{ .NLBCertValidatorFunctionLambda }}
+    Handler: "index.handler"
+    Timeout: 900
+    MemorySize: 512
+    Role: !GetAtt 'NLBCertValidatorRole.Arn'
+    Runtime: nodejs12.x
+
+NLBCertValidatorRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        -
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    Policies:
+      - PolicyName: "NLBCertValidatorPolicy"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: AllowAssumeRole
+              Effect: Allow
+              Action: sts:AssumeRole
+              Resource: "*"
             - Sid: EnvHostedZoneUpdateAndWait
               Effect: Allow
               Action: route53:ChangeResourceRecordSets
               Resource:
                 !Sub
                   - arn:${AWS::Partition}:route53:::hostedzone/${EnvHostedZone}
-                  - EnvHostedZone: Fn::ImportValue
-                      !Sub "${AppName}-${EnvName}-HostedZone"
+                  - EnvHostedZone:
+                      Fn::ImportValue:
+                        !Sub "${AppName}-${EnvName}-HostedZone"
             - Sid: EnvHostedZoneRead
               Effect: Allow
               Action:

@@ -26,30 +26,30 @@ import (
 )
 
 const (
-	fmtPipelineUpdateResourcesStart    = "Adding pipeline resources to your application: %s"
-	fmtPipelineUpdateResourcesFailed   = "Failed to add pipeline resources to your application: %s\n"
-	fmtPipelineUpdateResourcesComplete = "Successfully added pipeline resources to your application: %s\n"
+	fmtPipelineDeployResourcesStart    = "Adding pipeline resources to your application: %s"
+	fmtPipelineDeployResourcesFailed   = "Failed to add pipeline resources to your application: %s\n"
+	fmtPipelineDeployResourcesComplete = "Successfully added pipeline resources to your application: %s\n"
 
-	fmtPipelineUpdateStart    = "Creating a new pipeline: %s"
-	fmtPipelineUpdateFailed   = "Failed to create a new pipeline: %s.\n"
-	fmtPipelineUpdateComplete = "Successfully created a new pipeline: %s\n"
+	fmtPipelineDeployStart    = "Creating a new pipeline: %s"
+	fmtPipelineDeployFailed   = "Failed to create a new pipeline: %s.\n"
+	fmtPipelineDeployComplete = "Successfully created a new pipeline: %s\n"
 
-	fmtPipelineUpdateProposalStart    = "Proposing infrastructure changes for the pipeline: %s"
-	fmtPipelineUpdateProposalFailed   = "Failed to accept changes for pipeline: %s.\n"
-	fmtPipelineUpdateProposalComplete = "Successfully updated pipeline: %s\n"
+	fmtPipelineDeployProposalStart    = "Proposing infrastructure changes for the pipeline: %s"
+	fmtPipelineDeployProposalFailed   = "Failed to accept changes for pipeline: %s.\n"
+	fmtPipelineDeployProposalComplete = "Successfully deployed pipeline: %s\n"
 
-	fmtPipelineUpdateExistPrompt = "Are you sure you want to update an existing pipeline: %s?"
+	fmtPipelineDeployExistPrompt = "Are you sure you want to redeploy an existing pipeline: %s?"
 )
 
 const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
 
-type updatePipelineVars struct {
+type deployPipelineVars struct {
 	appName          string
 	skipConfirmation bool
 }
 
-type updatePipelineOpts struct {
-	updatePipelineVars
+type deployPipelineOpts struct {
+	deployPipelineVars
 
 	pipelineDeployer pipelineDeployer
 	app              *config.Application
@@ -64,7 +64,7 @@ type updatePipelineOpts struct {
 	shouldPromptUpdateConnection bool
 }
 
-func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
+func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store client: %w", err)
@@ -85,11 +85,11 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	return &updatePipelineOpts{
+	return &deployPipelineOpts{
 		app:                app,
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
-		updatePipelineVars: vars,
+		deployPipelineVars: vars,
 		envStore:           store,
 		ws:                 ws,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
@@ -99,20 +99,20 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
-func (o *updatePipelineOpts) Validate() error {
+func (o *deployPipelineOpts) Validate() error {
 	return nil
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
-func (o *updatePipelineOpts) Execute() error {
+func (o *deployPipelineOpts) Execute() error {
 	// bootstrap pipeline resources
-	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, color.HighlightUserInput(o.appName)))
+	o.prog.Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, color.HighlightUserInput(o.appName)))
 	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
 	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, color.HighlightUserInput(o.appName)))
+		o.prog.Stop(log.Serrorf(fmtPipelineDeployResourcesFailed, color.HighlightUserInput(o.appName)))
 		return fmt.Errorf("add pipeline resources to application %s in %s: %w", o.appName, o.region, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, color.HighlightUserInput(o.appName)))
+	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, color.HighlightUserInput(o.appName)))
 
 	// read pipeline manifest
 	data, err := o.ws.ReadPipelineManifest()
@@ -173,7 +173,7 @@ func (o *updatePipelineOpts) Execute() error {
 	return nil
 }
 
-func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
+func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
 	workloads, err := o.ws.ListWorkloads()
 	if err != nil {
@@ -202,7 +202,7 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 	return stages, nil
 }
 
-func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
+func (o *deployPipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
 	regionalResources, err := o.pipelineDeployer.GetRegionalAppResources(o.app)
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, erro
 	return buckets, nil
 }
 
-func (o *updatePipelineOpts) getBucketName() (string, error) {
+func (o *deployPipelineOpts) getBucketName() (string, error) {
 	resources, err := o.pipelineDeployer.GetAppResourcesByRegion(o.app, o.region)
 	if err != nil {
 		return "", fmt.Errorf("get app resources: %w", err)
@@ -228,19 +228,19 @@ func (o *updatePipelineOpts) getBucketName() (string, error) {
 	return resources.S3Bucket, nil
 }
 
-func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
+func (o *deployPipelineOpts) shouldUpdate() (bool, error) {
 	if o.skipConfirmation {
 		return true, nil
 	}
 
-	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, o.pipelineName), "")
+	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.pipelineName), "")
 	if err != nil {
-		return false, fmt.Errorf("prompt for pipeline update: %w", err)
+		return false, fmt.Errorf("prompt for pipeline deploy: %w", err)
 	}
 	return shouldUpdate, nil
 }
 
-func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
+func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
 	exist, err := o.pipelineDeployer.PipelineExists(in)
 	if err != nil {
 		return fmt.Errorf("check if pipeline exists: %w", err)
@@ -252,7 +252,7 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("get bucket name: %w", err)
 	}
 	if !exist {
-		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.pipelineName)))
+		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.pipelineName)))
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
@@ -273,11 +273,11 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		if err := o.pipelineDeployer.CreatePipeline(in, bucketName); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
-				o.prog.Stop(log.Serrorf(fmtPipelineUpdateFailed, color.HighlightUserInput(o.pipelineName)))
+				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.pipelineName)))
 				return fmt.Errorf("create pipeline: %w", err)
 			}
 		}
-		o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateComplete, color.HighlightUserInput(o.pipelineName)))
+		o.prog.Stop(log.Ssuccessf(fmtPipelineDeployComplete, color.HighlightUserInput(o.pipelineName)))
 		return nil
 	}
 
@@ -289,35 +289,37 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	if !shouldUpdate {
 		return nil
 	}
-	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, color.HighlightUserInput(o.pipelineName)))
+	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipelineName)))
 	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, color.HighlightUserInput(o.pipelineName)))
+		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipelineName)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.pipelineName)))
+	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, color.HighlightUserInput(o.pipelineName)))
 	return nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *updatePipelineOpts) RecommendedActions() []string {
+func (o *deployPipelineOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Run %s to see the state of your pipeline.", color.HighlightCode("copilot pipeline status")),
 		fmt.Sprintf("Run %s for info about your pipeline.", color.HighlightCode("copilot pipeline show")),
 	}
 }
 
-// BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
-func buildPipelineUpdateCmd() *cobra.Command {
-	vars := updatePipelineVars{}
+// BuildPipelineDeployCmd build the command for deploying a new pipeline or updating an existing pipeline.
+func buildPipelineDeployCmd() *cobra.Command {
+	vars := deployPipelineVars{}
 	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Deploys a pipeline for the services in your workspace.",
-		Long:  `Deploys a pipeline for the services in your workspace, using the environments associated with the application.`,
+		Use:     "deploy",
+		Aliases: []string{"update"},
+		Short:   "Deploys a pipeline for the services in your workspace.",
+		Long:    `Deploys a pipeline for the services in your workspace, using the environments associated with the application.`,
 		Example: `
-  Deploys an updated pipeline for the services in your workspace.
-  /code $ copilot pipeline update`,
+  Deploys a pipeline for the services and jobs in your workspace.
+  /code $ copilot pipeline deploy
+`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newUpdatePipelineOpts(vars)
+			opts, err := newDeployPipelineOpts(vars)
 			if err != nil {
 				return err
 			}

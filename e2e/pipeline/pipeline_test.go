@@ -170,7 +170,7 @@ var _ = Describe("pipeline flow", func() {
 
 	Context("when creating the pipeline stack", func() {
 		It("should start creating the pipeline stack", func() {
-			_, err := copilot.PipelineUpdate(appName)
+			_, err := copilot.PipelineDeploy(appName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
