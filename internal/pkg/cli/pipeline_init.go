@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -44,25 +42,24 @@ const (
 	pipelineSelectURLHelpPrompt = `The repository linked to your pipeline.
 Pushing to this repository will trigger your pipeline build stage.
 Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
+	pipelineSelectBranchPrompt     = "Which branch would you like to use for your pipeline?"
+	pipelineSelectBranchHelpPrompt = "The specific branch of your chosen repository that your pipeline will follow."
 )
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	// For a GitHub repository.
-	githubURL       = "github.com"
-	defaultGHBranch = deploy.DefaultPipelineBranch
-	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
-	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
+	githubURL     = "github.com"
+	fmtGHRepoURL  = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
+	fmtSecretName = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
-	awsURL          = "aws.amazon.com"
-	ccIdentifier    = "codecommit"
-	defaultCCBranch = deploy.DefaultPipelineBranch
-	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
+	awsURL       = "aws.amazon.com"
+	ccIdentifier = "codecommit"
+	fmtCCRepoURL = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
-	bbURL           = "bitbucket.org"
-	defaultBBBranch = deploy.DefaultPipelineBranch
-	fmtBBRepoURL    = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
+	bbURL        = "bitbucket.org"
+	fmtBBRepoURL = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
 )
 
 var (
@@ -74,6 +71,7 @@ type initPipelineVars struct {
 	appName           string
 	environments      []string
 	repoURL           string
+	repoShortName     string
 	repoBranch        string
 	githubAccessToken string
 }
@@ -184,6 +182,9 @@ func (o *initPipelineOpts) Ask() error {
 	if err := o.askRepository(); err != nil {
 		return err
 	}
+	if err := o.askBranch(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -268,6 +269,16 @@ func (o *initPipelineOpts) askRepository() error {
 	return nil
 }
 
+func (o *initPipelineOpts) askBranch() error {
+	var err error
+	if o.repoBranch == "" {
+		if err = o.selectBranch(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (o *initPipelineOpts) askGitHubRepoDetails() error {
 	// If the user uses a flag to specify a GitHub access token,
 	// GitHub version 1 (not CSC) is the provider.
@@ -283,9 +294,6 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.repoOwner = repoDetails.owner
 
-	if o.repoBranch == "" {
-		o.repoBranch = defaultGHBranch
-	}
 	return nil
 }
 
@@ -311,9 +319,6 @@ func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
 		return fmt.Errorf("repository %s is in %s, but app %s is in %s; they must be in the same region", o.repoName, o.ccRegion, o.appName, region)
 	}
 
-	if o.repoBranch == "" {
-		o.repoBranch = defaultCCBranch
-	}
 	return nil
 }
 
@@ -326,9 +331,6 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.repoOwner = repoDetails.owner
 
-	if o.repoBranch == "" {
-		o.repoBranch = defaultBBBranch
-	}
 	return nil
 }
 
@@ -349,15 +351,43 @@ func (o *initPipelineOpts) selectURL() error {
 		pipelineSelectURLPrompt,
 		pipelineSelectURLHelpPrompt,
 		urls,
-		prompt.WithFinalMessage("Repository URL:"),
+		prompt.WithFinalMessage("Repository:"),
 	)
 	if err != nil {
 		return fmt.Errorf("select URL: %w", err)
 	}
-	if err := o.validateURL(url); err != nil {
+	repoParts := strings.Split(url, ": ")
+	if err := o.validateURL(repoParts[1]); err != nil {
 		return err
 	}
-	o.repoURL = url
+	o.repoURL = repoParts[1]
+	o.repoShortName = repoParts[0]
+
+	return nil
+}
+
+func (o *initPipelineOpts) selectBranch() error {
+	// Fetches and parses all branches associated with the chosen repo.
+	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoShortName + "/*"}, exec.Stdout(&o.buffer))
+	if err != nil {
+		return fmt.Errorf("get repo branch info: %w", err)
+	}
+	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.buffer.String()))
+	if err != nil {
+		return fmt.Errorf("parse git branch results: %w", err)
+	}
+	o.buffer.Reset()
+
+	branch, err := o.prompt.SelectOne(
+		pipelineSelectBranchPrompt,
+		pipelineSelectBranchHelpPrompt,
+		branches,
+		prompt.WithFinalMessage("Repository branch:"),
+	)
+	if err != nil {
+		return fmt.Errorf("select branch: %w", err)
+	}
+	o.repoBranch = branch
 
 	return nil
 }
@@ -374,11 +404,11 @@ func (o *initPipelineOpts) selectURL() error {
 // bbhttps	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
-// parseGitRemoteResults returns just the trimmed middle column (url) of the `git remote -v` results,
+// parseGitRemoteResults returns just the first (shortname) and trimmed second (url) columns of the `git remote -v` results,
 // and skips urls from unsupported sources.
 func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
-	var urls []string
-	urlSet := make(map[string]bool)
+	var repos []string
+	repoSet := make(map[string]bool)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
 		if !strings.Contains(item, githubURL) && !strings.Contains(item, ccIdentifier) && !strings.Contains(item, bbURL) {
@@ -386,12 +416,31 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 		}
 		cols := strings.Split(item, "\t")
 		url := strings.TrimSpace(strings.TrimSuffix(strings.Split(cols[1], " ")[0], ".git"))
-		urlSet[url] = true
+		nameAndURL := fmt.Sprintf("%s: %s", cols[0], url)
+		repoSet[nameAndURL] = true
 	}
-	for url := range urlSet {
-		urls = append(urls, url)
+	for repo := range repoSet {
+		repos = append(repos, repo)
 	}
-	return urls, nil
+	return repos, nil
+}
+
+func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {
+	var branches []string
+	branchSet := make(map[string]bool)
+	items := strings.Split(s, "\n")
+	for _, item := range items {
+		elements := strings.Split(item, "/")
+		if len(elements) < 3 {
+			return nil, fmt.Errorf("unparsable format")
+		}
+		branchName := elements[2]
+		branchSet[branchName] = true
+	}
+	for branch := range branchSet {
+		branches = append(branches, branch)
+	}
+	return branches, nil
 }
 
 type ghRepoURL string
