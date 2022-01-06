@@ -59,8 +59,6 @@ NLBTargetGroup:
 {{- end}}
       - Key: deregistration_delay.connection_termination.enabled {{/* It is recommended to have this enabled for UDP and TCP_UDP target groups */}}
         Value: {{- if or (eq $.NLB.Listener.Protocol "UDP") (eq $.NLB.Listener.Protocol "TCP_UDP") }} true {{- else}} false {{- end}}
-      - Key: proxy_protocol_v2.enabled
-        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
     TargetType: ip
     VpcId:
       Fn::ImportValue:
