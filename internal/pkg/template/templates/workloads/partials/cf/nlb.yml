@@ -44,23 +44,18 @@ NLBTargetGroup:
     HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
     {{- end }}
     Port: !Ref ContainerPort
-{{- if eq .NLB.Listener.Protocol "TLS"}}
-    Protocol: TCP
-{{- else}}
-    Protocol: {{ .NLB.Listener.Protocol }}
-{{- end}}
+    Protocol: {{- if eq .NLB.Listener.Protocol "TLS"}} TCP {{- else}} {{ .NLB.Listener.Protocol }} {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
         Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
 {{- if ne .NLB.Listener.Protocol "TLS"}}
-{{- if .NLB.Listener.Stickness }}
-{{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
+{{- if .NLB.Listener.Stickness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
         Value: {{ .NLB.Listener.Stickness }}
 {{- end}}
 {{- end}}
-      - Key: deregistration_delay.connection_termination.enabled
-        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
+      - Key: deregistration_delay.connection_termination.enabled {{/* It is recommended to have this enabled for UDP and TCP_UDP target groups */}}
+        Value: {{- if or (eq $.NLB.Listener.Protocol "UDP") (eq $.NLB.Listener.Protocol "TCP_UDP") }} true {{- else}} false {{- end}}
       - Key: proxy_protocol_v2.enabled
         Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
     TargetType: ip
