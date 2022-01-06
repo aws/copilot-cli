@@ -215,6 +215,15 @@ type NetworkLoadBalancerListener struct {
 	SSLPolicy       *string
 	Aliases         []string
 	Stickness       *bool
+	HealthCheck     NLBHealthCheck
+}
+
+type NLBHealthCheck struct {
+	Port               string
+	HealthyThreshold   *int64
+	UnhealthyThreshold *int64
+	Timeout            *int64
+	Interval           *int64
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.

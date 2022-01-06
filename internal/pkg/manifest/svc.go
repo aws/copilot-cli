@@ -343,3 +343,18 @@ func (hc *HealthCheckArgsOrString) Path() *string {
 	}
 	return hc.HealthCheckArgs.Path
 }
+
+// NLBHealthCheckArgs holds the configuration to determine if the network load balanced web service is healthy.
+// These options are specifiable under the "healthcheck" field.
+// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
+type NLBHealthCheckArgs struct {
+	Port               *int           `yaml:"port"`
+	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
+	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
+	Timeout            *time.Duration `yaml:"timeout"`
+	Interval           *time.Duration `yaml:"interval"`
+}
+
+func (h *NLBHealthCheckArgs) isEmpty() bool {
+	return h.Port == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Timeout == nil && h.Interval == nil
+}
