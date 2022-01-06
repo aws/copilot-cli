@@ -76,11 +76,24 @@ NLBSecurityGroup:
     GroupDescription: Allow access from the network load balancer to service
     SecurityGroupIngress:
 {{range $cidr := .NLB.PublicSubnetCIDRs}}
+      {{- if eq $.NLB.Listener.Protocol "TCP_UDP" }}
+      - CidrIp: {{$cidr}}
+        Description: Ingress to allow access from Network Load Balancer subnet
+        FromPort: {{ $.NLB.Listener.Port }}
+        IpProtocol: TCP
+        ToPort: {{ $.NLB.Listener.Port }}
+      - CidrIp: {{$cidr}}
+        Description: Ingress to allow access from Network Load Balancer subnet
+        FromPort: {{ $.NLB.Listener.Port }}
+        IpProtocol: UDP
+        ToPort: {{ $.NLB.Listener.Port }}
+      {{- else }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
         FromPort: {{ $.NLB.Listener.Port }}
         IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
         ToPort: {{ $.NLB.Listener.Port }}
+      {{- end }}
 {{end}}
     Tags:
       - Key: Name
