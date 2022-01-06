@@ -29,6 +29,8 @@
       {{- end}}
 {{- end}}{{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
+{{- if not .HTTPDisabled}}
 - Name: COPILOT_LB_DNS
   Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{- end}}
 {{- end}}
