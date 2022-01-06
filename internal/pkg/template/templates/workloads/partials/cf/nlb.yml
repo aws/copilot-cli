@@ -46,7 +46,7 @@ NLBTargetGroup:
     {{- if .NLB.Listener.HealthCheck.Port }}
     HealthCheckPort: {{.NLB.Listener.HealthCheck.Port}}
     {{- end }}
-    Port: !Ref ContainerPort
+    Port: {{ .NLB.Listener.TargetPort }}
     Protocol: {{- if eq .NLB.Listener.Protocol "TLS"}} TCP {{- else}} {{ .NLB.Listener.Protocol }} {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
