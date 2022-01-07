@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/robfig/cron/v3"
@@ -159,6 +161,18 @@ var (
 var resourceNameFormat = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
 
 const regexpFindAllMatches = -1
+
+// chainValidators accepts multiple validators that will be called in sequence and return the error of the first failure.
+func chainValidators(validators ...prompt.ValidatorFunc) prompt.ValidatorFunc {
+	return func(v interface{}) error {
+		for _, isValid := range validators {
+			if err := isValid(v); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
 
 func validateAppName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
@@ -833,6 +847,17 @@ func validateSecretName(val interface{}) error {
 	m := secretParameterNameRegExp.FindStringSubmatch(s)
 	if m == nil {
 		return errInvalidSecretNameCharacters
+	}
+	return nil
+}
+
+func validateNotDockerfile(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if strings.HasSuffix(s, "Dockerfile") {
+		return fmt.Errorf("%s should not be a Dockerfile", s)
 	}
 	return nil
 }

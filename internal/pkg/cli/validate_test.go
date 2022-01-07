@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -60,7 +62,43 @@ var basicNameTestCases = map[string]testCase{
 	},
 }
 
-func TestValidateProjectName(t *testing.T) {
+func TestChainValidators(t *testing.T) {
+	testCases := map[string]struct {
+		in     []prompt.ValidatorFunc
+		wanted error
+	}{
+		"returns nil if there are no inputs": {},
+		"keeps calling validators until there is an error": {
+			in: []prompt.ValidatorFunc{
+				func(v interface{}) error {
+					counter := v.(*int)
+					*counter += 1
+					return nil
+				},
+				func(v interface{}) error {
+					counter := v.(*int)
+					*counter += 1
+					return errors.New("oh no")
+				},
+			},
+			wanted: errors.New("oh no"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			validator := chainValidators(tc.in...)
+			var counter int
+			err := validator(&counter)
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			}
+			require.Equal(t, len(tc.in), counter)
+		})
+	}
+}
+
+func TestValidateAppName(t *testing.T) {
 	// Any project-specific name validations can be added here
 	testCases := map[string]testCase{
 		"contains emoji": {
@@ -942,4 +980,8 @@ func Test_validateTopicsExist(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateNotDockerfile(t *testing.T) {
+	require.EqualError(t, validateNotDockerfile("path/to/Dockerfile"), "path/to/Dockerfile should not be a Dockerfile")
 }

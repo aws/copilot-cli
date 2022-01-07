@@ -306,7 +306,7 @@ func (o *initJobOpts) askImage() error {
 	if o.image != "" {
 		return nil
 	}
-	image, err := o.prompt.Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil,
+	image, err := o.prompt.Get(wkldInitImagePrompt, wkldInitImagePromptHelp, validateNotDockerfile,
 		prompt.WithFinalMessage("Image:"))
 	if err != nil {
 		return fmt.Errorf("get image location: %w", err)
