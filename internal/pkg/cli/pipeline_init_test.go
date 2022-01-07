@@ -24,14 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type initPipelineMocks struct {
-	prompt	 *mocks.Mockprompter
-	runner 	 *mocks.Mockrunner
-	sessProvider *mocks.MocksessionProvider
-	selector *mocks.MockpipelineSelector
-	store *mocks.Mockstore
-}
-
 func TestInitPipelineOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName     string
@@ -150,31 +142,31 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 func TestInitPipelineOpts_Ask(t *testing.T) {
 	githubOwner := "goodGoose"
 	githubRepoName := "bhaOS"
-	githubURL := "gh: git@github.com:goodGoose/bhaOS.git"
-	githubReallyBadURL := "rb: reallybadGoosegithub.comNotEvenAURL"
+	githubURL := "archer: git@github.com:goodGoose/bhaOS.git"
+	githubReallyBadURL := "archer: reallybadGoosegithub.comNotEvenAURL"
 	githubToken := "hunter2"
 	codecommitRepoName := "repo-man"
 	codecommitAnotherRepoName := "repo-woman"
-	codecommitHTTPSURL := "cc: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man"
-	codecommitSSHURL := "cc: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman"
-	codecommitFedURL := "cc: codecommit::us-west-2://repo-man"
-	codecommitShortURL := "cc: codecommit://repo-man"
-	codecommitBadURL := "ccbu: git-codecommitus-west-2amazonaws.com"
-	codecommitBadRegion := "ccbr: codecommit::us-mess-2://repo-man"
+	codecommitHTTPSURL := "archer: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man"
+	codecommitSSHURL := "archer: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman"
+	codecommitFedURL := "archer: codecommit::us-west-2://repo-man"
+	codecommitShortURL := "archer: codecommit://repo-man"
+	codecommitBadURL := "archer: git-codecommitus-west-2amazonaws.com"
+	codecommitBadRegion := "archer: codecommit::us-mess-2://repo-man"
 	codecommitRegion := "us-west-2"
 	testCases := map[string]struct {
 		inEnvironments      []string
 		inRepoURL           string
 		inGitHubAccessToken string
 		inGitBranch         string
-		setupMocks func(mocks initPipelineMocks)
 
-		//mockPrompt       func(m *mocks.Mockprompter)
-		//mockRunner       func(m *mocks.Mockrunner)
-		//mockSessProvider func(m *mocks.MocksessionProvider)
-		//mockSelector     func(m *mocks.MockpipelineSelector)
-		//mockStore        func(m *mocks.Mockstore)
-		buffer           bytes.Buffer
+		mockPrompt       func(m *mocks.Mockprompter)
+		mockRunner       func(m *mocks.Mockrunner)
+		mockSessProvider func(m *mocks.MocksessionProvider)
+		mockSelector     func(m *mocks.MockpipelineSelector)
+		mockStore        func(m *mocks.Mockstore)
+		repoBuffer 		bytes.Buffer
+		branchBuffer           bytes.Buffer
 
 		expectedEnvironments      []string
 		expectedRepoURL           string
@@ -191,24 +183,30 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubAccessToken: githubToken,
 			inGitBranch:         "",
 
-			setupMocks: func(m initPipelineMocks) {
-				gomock.InOrder(
-					//m.buffer: *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
-					m.selector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil),
-					m.store.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-						Name:   "test",
-						Region: "us-west-2",
-					}, nil),
-					m.store.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-						Name:   "prod",
-						Region: "us-west-2",
-					}, nil),
-					m.runner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-					m.prompt.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1),
-					m.prompt.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1))
-				//mockSessProvider: func(m *mocks.MocksessionProvider) {},
-				//)
+			repoBuffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n remotes/archer/test\nremotes/archer/prod"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedRepoURL:           githubURL,
 			expectedGitHubOwner:       githubOwner,
@@ -218,319 +216,321 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedEnvironments:      []string{"test", "prod"},
 			expectedError:             nil,
 		},
-		//	"no flags, success case for CodeCommit": {
-		//		inEnvironments: []string{},
-		//		inRepoURL:      "",
-		//		buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\narcher\tssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitSSHURL, nil).Times(1)
-		//			m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
-		//
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {
-		//			m.EXPECT().Default().Return(&session.Session{
-		//				Config: &aws.Config{
-		//					Region: aws.String("us-west-2"),
-		//				},
-		//			}, nil)
-		//		},
-		//
-		//		expectedRepoURL:          codecommitSSHURL,
-		//		expectedRepoName:         codecommitAnotherRepoName,
-		//		expectedRepoBranch:       "dev",
-		//		expectedCodeCommitRegion: codecommitRegion,
-		//		expectedEnvironments:     []string{"test", "prod"},
-		//		expectedError:            nil,
-		//	},
-		//	"returns error if fail to list environments": {
-		//		inEnvironments: []string{},
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
-		//		},
-		//		mockStore:        func(m *mocks.Mockstore) {},
-		//		mockRunner:       func(m *mocks.Mockrunner) {},
-		//		mockPrompt:       func(m *mocks.Mockprompter) {},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		//
-		//		expectedEnvironments: []string{},
-		//		expectedError:        fmt.Errorf("select environments: some error"),
-		//	},
-		//
-		//	"returns error if fail to select URL": {
-		//		inRepoURL:      "",
-		//		inEnvironments: []string{},
-		//		buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		//
-		//		expectedGitHubOwner:       "",
-		//		expectedRepoName:          "",
-		//		expectedGitHubAccessToken: "",
-		//		expectedRepoBranch:        "",
-		//		expectedEnvironments:      []string{"test", "prod"},
-		//		expectedError:             fmt.Errorf("select URL: some error"),
-		//	},
-		//	"returns error if fail to select branch": {
-		//		inRepoURL:      "",
-		//		inEnvironments: []string{},
-		//		buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1)
-		//			m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
-		//
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		//
-		//		expectedGitHubOwner:       "",
-		//		expectedRepoName:          "",
-		//		expectedGitHubAccessToken: "",
-		//		expectedRepoBranch:        "",
-		//		expectedEnvironments:      []string{"test", "prod"},
-		//		expectedError:             fmt.Errorf("select branch: some error"),
-		//	},
-		//	"returns error if select invalid URL": {
-		//		inRepoURL:      "",
-		//		inEnvironments: []string{},
-		//		buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://bitbub.com/badGoose/chaOS (push)\n"),
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("https://bitbub.com/badGoose/chaOS", nil).Times(1)
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		//
-		//		expectedError: fmt.Errorf("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
-		//	},
-		//	"returns error if fail to parse GitHub URL": {
-		//		inEnvironments:      []string{},
-		//		inRepoURL:           "",
-		//		inGitHubAccessToken: "",
-		//		inGitBranch:         "",
-		//		buffer:              *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\n"),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), []string{githubReallyBadURL}, gomock.Any()).Return(githubReallyBadURL, nil).Times(1)
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		//
-		//		expectedGitHubOwner:       "",
-		//		expectedRepoName:          "",
-		//		expectedGitHubAccessToken: "",
-		//		expectedRepoBranch:        "",
-		//		expectedEnvironments:      []string{"test", "prod"},
-		//		expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
-		//	},
-		//	"returns error if fail to parse repo name out of CodeCommit URL": {
-		//		inEnvironments:      []string{},
-		//		inGitHubAccessToken: "",
-		//		buffer:              *bytes.NewBufferString(""),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadURL, nil).Times(1)
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		//
-		//		expectedRepoName:     "",
-		//		expectedEnvironments: []string{"test", "prod"},
-		//		expectedError:        fmt.Errorf("unknown CodeCommit URL format: git-codecommitus-west-2amazonaws.com"),
-		//	},
-		//	"returns error if fail to parse region out of CodeCommit URL": {
-		//		buffer: *bytes.NewBufferString(""),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadRegion, nil).Times(1)
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		//
-		//		expectedRepoURL:          codecommitHTTPSURL,
-		//		expectedRepoName:         codecommitRepoName,
-		//		expectedRepoBranch:       "",
-		//		expectedCodeCommitRegion: "",
-		//		expectedEnvironments:     []string{"test", "prod"},
-		//		expectedError:            fmt.Errorf("unable to parse the AWS region from %s", codecommitBadRegion),
-		//	},
-		//	"returns error if fail to retrieve default session": {
-		//		buffer: *bytes.NewBufferString(""),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-east-1",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitShortURL, nil).Times(1)
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {
-		//			m.EXPECT().Default().Return(nil, errors.New("some error"))
-		//		},
-		//
-		//		expectedRepoName:     "",
-		//		expectedEnvironments: []string{},
-		//		expectedError:        fmt.Errorf("retrieve default session: some error"),
-		//	},
-		//	"returns error if repo region is not app's region": {
-		//		buffer: *bytes.NewBufferString(""),
-		//
-		//		mockSelector: func(m *mocks.MockpipelineSelector) {
-		//			m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-		//		},
-		//		mockStore: func(m *mocks.Mockstore) {
-		//			m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-		//				Name:   "test",
-		//				Region: "us-west-2",
-		//			}, nil)
-		//			m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-		//				Name:   "prod",
-		//				Region: "us-east-1",
-		//			}, nil)
-		//		},
-		//		mockRunner: func(m *mocks.Mockrunner) {
-		//			m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		//		},
-		//		mockPrompt: func(m *mocks.Mockprompter) {
-		//			m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
-		//		},
-		//		mockSessProvider: func(m *mocks.MocksessionProvider) {
-		//			m.EXPECT().Default().Return(&session.Session{
-		//				Config: &aws.Config{
-		//					Region: aws.String("us-east-1"),
-		//				},
-		//			}, nil)
-		//		},
-		//
-		//		expectedRepoName:     "",
-		//		expectedEnvironments: []string{},
-		//		expectedError:        fmt.Errorf("repository repo-man is in us-west-2, but app my-app is in us-east-1; they must be in the same region"),
-		//	},
-		//}
+		"no flags, success case for CodeCommit": {
+			inEnvironments: []string{},
+			inRepoURL:      "",
+			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\narcher\tssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitSSHURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
+
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
+			},
+
+			expectedRepoURL:          codecommitSSHURL,
+			expectedRepoName:         codecommitAnotherRepoName,
+			expectedRepoBranch:       "dev",
+			expectedCodeCommitRegion: codecommitRegion,
+			expectedEnvironments:     []string{"test", "prod"},
+			expectedError:            nil,
+		},
+		"returns error if fail to list environments": {
+			inEnvironments: []string{},
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			mockStore:        func(m *mocks.Mockstore) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedEnvironments: []string{},
+			expectedError:        fmt.Errorf("select environments: some error"),
+		},
+
+		"returns error if fail to select URL": {
+			inRepoURL:      "",
+			inEnvironments: []string{},
+			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedGitHubOwner:       "",
+			expectedRepoName:          "",
+			expectedGitHubAccessToken: "",
+			expectedRepoBranch:        "",
+			expectedEnvironments:      []string{"test", "prod"},
+			expectedError:             fmt.Errorf("select URL: some error"),
+		},
+		"returns error if fail to select branch": {
+			inRepoURL:      "",
+			inEnvironments: []string{},
+			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
+
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedGitHubOwner:       "",
+			expectedRepoName:          "",
+			expectedGitHubAccessToken: "",
+			expectedRepoBranch:        "",
+			expectedEnvironments:      []string{"test", "prod"},
+			expectedError:             fmt.Errorf("select branch: some error"),
+		},
+		"returns error if select invalid URL": {
+			inRepoURL:      "",
+			inEnvironments: []string{},
+			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://bitbub.com/badGoose/chaOS (push)\n"),
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("archer: https://bitbub.com/badGoose/chaOS", nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedError: fmt.Errorf("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
+		},
+		"returns error if fail to parse GitHub URL": {
+			inEnvironments:      []string{},
+			inRepoURL:           "",
+			inGitHubAccessToken: "",
+			inGitBranch:         "",
+			repoBuffer:              *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\n"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), []string{githubReallyBadURL}, gomock.Any()).Return(githubReallyBadURL, nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedGitHubOwner:       "",
+			expectedRepoName:          "",
+			expectedGitHubAccessToken: "",
+			expectedRepoBranch:        "",
+			expectedEnvironments:      []string{"test", "prod"},
+			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
+		},
+		"returns error if fail to parse repo name out of CodeCommit URL": {
+			inEnvironments:      []string{},
+			inGitHubAccessToken: "",
+			repoBuffer:              *bytes.NewBufferString(""),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadURL, nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedRepoName:     "",
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        fmt.Errorf("unknown CodeCommit URL format: git-codecommitus-west-2amazonaws.com"),
+		},
+		"returns error if fail to parse region out of CodeCommit URL": {
+			repoBuffer: *bytes.NewBufferString(""),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadRegion, nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedRepoURL:          codecommitHTTPSURL,
+			expectedRepoName:         codecommitRepoName,
+			expectedRepoBranch:       "",
+			expectedCodeCommitRegion: "",
+			expectedEnvironments:     []string{"test", "prod"},
+			expectedError:            fmt.Errorf("unable to parse the AWS region from codecommit::us-mess-2://repo-man"),
+		},
+		"returns error if fail to retrieve default session": {
+			repoBuffer: *bytes.NewBufferString(""),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-east-1",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitShortURL, nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(nil, errors.New("some error"))
+			},
+
+			expectedRepoName:     "",
+			expectedEnvironments: []string{},
+			expectedError:        fmt.Errorf("retrieve default session: some error"),
+		},
+		"returns error if repo region is not app's region": {
+			repoBuffer: *bytes.NewBufferString(""),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-east-1",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-east-1"),
+					},
+				}, nil)
+			},
+
+			expectedRepoName:     "",
+			expectedEnvironments: []string{},
+			expectedError:        fmt.Errorf("repository repo-man is in us-west-2, but app my-app is in us-east-1; they must be in the same region"),
+		},
 	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
@@ -553,25 +553,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				prompt:       mockPrompt,
 				runner:       mockRunner,
 				sessProvider: mocksSessProvider,
-				buffer:       tc.buffer,
+				repoBuffer:       tc.repoBuffer,
+				branchBuffer: tc.branchBuffer,
 				sel:          mockSelector,
 				store:        mockStore,
 			}
-			mocks := initPipelineMocks{
-				prompt:       mocks.NewMockprompter(ctrl),
-				runner:       mocks.NewMockrunner(ctrl),
-				sessProvider: mocks.NewMocksessionProvider(ctrl),
-				selector:     mocks.NewMockpipelineSelector(ctrl),
-				store:        mocks.NewMockstore(ctrl),
-				buffer:       bytes.Buffer{},
-			}
-			tc.setupMocks(mocks)
 
-			//tc.mockPrompt(mockPrompt)
-			//tc.mockRunner(mockRunner)
-			//tc.mockSessProvider(mocksSessProvider)
-			//tc.mockSelector(mockSelector)
-			//tc.mockStore(mockStore)
+			tc.mockPrompt(mockPrompt)
+			tc.mockRunner(mockRunner)
+			tc.mockSessProvider(mocksSessProvider)
+			tc.mockSelector(mockSelector)
+			tc.mockStore(mockStore)
 
 			// WHEN
 			err := opts.Ask()
@@ -1072,6 +1064,127 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	}
 }
 
+func TestInitPipelineOpts_parseGitBranchResults(t *testing.T) {
+	testCases := map[string]struct {
+		inGitBranchResults string
+
+		expectedBranches    []string
+		expectedErr error
+	}{
+		"successfully returns branch names for selector given `git branch -a -l [repoName]` results": {
+			inGitBranchResults: "  remotes/cc/main\n  remotes/cc/dev",
+			expectedBranches: []string{"main", "dev"},
+		},
+		"success with just one branch": {
+			inGitBranchResults: "remotes/origin/mainline",
+			expectedBranches: []string{"mainline"},
+	},
+		"errors if no branches": {
+			inGitBranchResults: "",
+			expectedErr: errors.New("unparsable format"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &initPipelineOpts{}
+
+			// WHEN
+			actual, err := opts.parseGitBranchResults(tc.inGitBranchResults)
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.Equal(t, tc.expectedBranches, actual)
+			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_askBranch(t *testing.T) {
+	testCases := map[string]struct {
+		inBranchBuffer bytes.Buffer
+
+		mockRunner   func(m *mocks.Mockrunner)
+		mockPrompt   func(m *mocks.Mockprompter)
+
+		expectedErr error
+	}{
+		"returns nil if no error": {
+			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
+			},
+
+			expectedErr: nil,
+		},
+		"returns err if can't get branch info from `git branch -a -l mockRepo/*`": {
+			inBranchBuffer: *bytes.NewBufferString("\"remotes/mockRepo/main\n  remotes/mockRepo/dev\""),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
+			},
+
+			expectedErr: errors.New("get repo branch info: some error"),
+		},
+		"errors if unsuccessful in parsing git branch results": {
+			inBranchBuffer: *bytes.NewBufferString("badResults"),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
+			},
+			expectedErr: errors.New("parse git branch results: unparsable format"),
+		},
+		"errors if unsuccessful selecting branch": {
+			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			expectedErr: errors.New("select branch: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRunner := mocks.NewMockrunner(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
+
+			opts := &initPipelineOpts{
+				runner: mockRunner,
+				prompt: mockPrompt,
+				branchBuffer: tc.inBranchBuffer,
+				repoName: "mockRepo",
+			}
+
+			tc.mockRunner(mockRunner)
+			tc.mockPrompt(mockPrompt)
+
+			// WHEN
+			err := opts.askBranch()
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			}
+		})
+	}
+}
 func TestInitPipelineOpts_pipelineName(t *testing.T) {
 	testCases := map[string]struct {
 		inRepoName string
@@ -1130,7 +1243,7 @@ fed	codecommit::us-west-2://aws-sample (fetch)
 ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
 bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)`,
 
-			expectedURLs:  []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
+			expectedURLs:  []string{"badgoose: git@github.com:badgoose/grit", "badgoose: https://github.com/badgoose/cli", "origin: https://github.com/koke/grit", "koke: git://github.com/koke/grit", "https: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "fed: codecommit::us-west-2://aws-sample", "ssh: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "bb: https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
 			expectedError: nil,
 		},
 		"don't add to URL list if it is not a GitHub or CodeCommit or Bitbucket URL": {

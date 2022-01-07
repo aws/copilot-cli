@@ -98,7 +98,8 @@ type initPipelineOpts struct {
 
 	// Caches variables
 	fs         *afero.Afero
-	buffer     bytes.Buffer
+	repoBuffer     bytes.Buffer // Using two separate buffers for ease of testing.
+	branchBuffer	bytes.Buffer
 	envConfigs []*config.Environment
 }
 
@@ -336,15 +337,15 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 
 func (o *initPipelineOpts) selectURL() error {
 	// Fetches and parses all remote repositories.
-	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.buffer))
+	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.repoBuffer))
 	if err != nil {
 		return fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
 	}
-	urls, err := o.parseGitRemoteResult(strings.TrimSpace(o.buffer.String()))
+	urls, err := o.parseGitRemoteResult(strings.TrimSpace(o.repoBuffer.String()))
 	if err != nil {
 		return err
 	}
-	o.buffer.Reset()
+	o.repoBuffer.Reset()
 
 	// Prompts user to select a repo URL.
 	url, err := o.prompt.SelectOne(
@@ -368,15 +369,15 @@ func (o *initPipelineOpts) selectURL() error {
 
 func (o *initPipelineOpts) selectBranch() error {
 	// Fetches and parses all branches associated with the chosen repo.
-	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoShortName + "/*"}, exec.Stdout(&o.buffer))
+	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoShortName + "/*"}, exec.Stdout(&o.branchBuffer))
 	if err != nil {
 		return fmt.Errorf("get repo branch info: %w", err)
 	}
-	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.buffer.String()))
+	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.branchBuffer.String()))
 	if err != nil {
 		return fmt.Errorf("parse git branch results: %w", err)
 	}
-	o.buffer.Reset()
+	o.branchBuffer.Reset()
 
 	branch, err := o.prompt.SelectOne(
 		pipelineSelectBranchPrompt,
