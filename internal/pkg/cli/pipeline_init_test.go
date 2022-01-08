@@ -154,6 +154,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 	codecommitBadURL := "archer: git-codecommitus-west-2amazonaws.com"
 	codecommitBadRegion := "archer: codecommit::us-mess-2://repo-man"
 	codecommitRegion := "us-west-2"
+
 	testCases := map[string]struct {
 		inEnvironments      []string
 		inRepoURL           string
@@ -299,10 +300,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedGitHubOwner:       "",
-			expectedRepoName:          "",
-			expectedGitHubAccessToken: "",
-			expectedRepoBranch:        "",
 			expectedEnvironments:      []string{"test", "prod"},
 			expectedError:             fmt.Errorf("select URL: some error"),
 		},
@@ -335,10 +332,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedGitHubOwner:       "",
-			expectedRepoName:          "",
-			expectedGitHubAccessToken: "",
-			expectedRepoBranch:        "",
 			expectedEnvironments:      []string{"test", "prod"},
 			expectedError:             fmt.Errorf("select branch: some error"),
 		},
@@ -370,10 +363,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError: fmt.Errorf("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
 		},
 		"returns error if fail to parse GitHub URL": {
-			inEnvironments:      []string{},
-			inRepoURL:           "",
-			inGitHubAccessToken: "",
-			inGitBranch:         "",
 			repoBuffer:              *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
@@ -397,10 +386,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedGitHubOwner:       "",
-			expectedRepoName:          "",
-			expectedGitHubAccessToken: "",
-			expectedRepoBranch:        "",
 			expectedEnvironments:      []string{"test", "prod"},
 			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
 		},
@@ -460,8 +445,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedRepoURL:          codecommitHTTPSURL,
 			expectedRepoName:         codecommitRepoName,
-			expectedRepoBranch:       "",
-			expectedCodeCommitRegion: "",
 			expectedEnvironments:     []string{"test", "prod"},
 			expectedError:            fmt.Errorf("unable to parse the AWS region from codecommit::us-mess-2://repo-man"),
 		},
@@ -525,7 +508,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 
-			expectedRepoName:     "",
 			expectedEnvironments: []string{},
 			expectedError:        fmt.Errorf("repository repo-man is in us-west-2, but app my-app is in us-east-1; they must be in the same region"),
 		},
@@ -1064,168 +1046,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	}
 }
 
-func TestInitPipelineOpts_parseGitBranchResults(t *testing.T) {
-	testCases := map[string]struct {
-		inGitBranchResults string
-
-		expectedBranches    []string
-		expectedErr error
-	}{
-		"successfully returns branch names for selector given `git branch -a -l [repoName]` results": {
-			inGitBranchResults: "  remotes/cc/main\n  remotes/cc/dev",
-			expectedBranches: []string{"main", "dev"},
-		},
-		"success with just one branch": {
-			inGitBranchResults: "remotes/origin/mainline",
-			expectedBranches: []string{"mainline"},
-	},
-		"errors if no branches": {
-			inGitBranchResults: "",
-			expectedErr: errors.New("unparsable format"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{}
-
-			// WHEN
-			actual, err := opts.parseGitBranchResults(tc.inGitBranchResults)
-
-			// THEN
-			if tc.expectedErr != nil {
-				require.EqualError(t, err, tc.expectedErr.Error())
-			} else {
-				require.Equal(t, tc.expectedBranches, actual)
-			}
-		})
-	}
-}
-
-func TestInitPipelineOpts_askBranch(t *testing.T) {
-	testCases := map[string]struct {
-		inBranchBuffer bytes.Buffer
-
-		mockRunner   func(m *mocks.Mockrunner)
-		mockPrompt   func(m *mocks.Mockprompter)
-
-		expectedErr error
-	}{
-		"returns nil if no error": {
-			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
-			},
-
-			expectedErr: nil,
-		},
-		"returns err if can't get branch info from `git branch -a -l mockRepo/*`": {
-			inBranchBuffer: *bytes.NewBufferString("\"remotes/mockRepo/main\n  remotes/mockRepo/dev\""),
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
-			},
-
-			expectedErr: errors.New("get repo branch info: some error"),
-		},
-		"errors if unsuccessful in parsing git branch results": {
-			inBranchBuffer: *bytes.NewBufferString("badResults"),
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
-			},
-			expectedErr: errors.New("parse git branch results: unparsable format"),
-		},
-		"errors if unsuccessful selecting branch": {
-			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
-			},
-			expectedErr: errors.New("select branch: some error"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockRunner := mocks.NewMockrunner(ctrl)
-			mockPrompt := mocks.NewMockprompter(ctrl)
-
-			opts := &initPipelineOpts{
-				runner: mockRunner,
-				prompt: mockPrompt,
-				branchBuffer: tc.inBranchBuffer,
-				repoName: "mockRepo",
-			}
-
-			tc.mockRunner(mockRunner)
-			tc.mockPrompt(mockPrompt)
-
-			// WHEN
-			err := opts.askBranch()
-
-			// THEN
-			if tc.expectedErr != nil {
-				require.EqualError(t, err, tc.expectedErr.Error())
-			}
-		})
-	}
-}
-func TestInitPipelineOpts_pipelineName(t *testing.T) {
-	testCases := map[string]struct {
-		inRepoName string
-		inAppName  string
-
-		expected    string
-		expectedErr error
-	}{
-		"generates pipeline name": {
-			inAppName:  "goodmoose",
-			inRepoName: "repo-man",
-
-			expected: "pipeline-goodmoose-repo-man",
-		},
-		"generates and truncates pipeline name if it exceeds 100 characters": {
-			inAppName:  "goodmoose01234567820123456783012345678401234567850",
-			inRepoName: "repo-man101234567820123456783012345678401234567850",
-
-			expected: "pipeline-goodmoose01234567820123456783012345678401234567850-repo-man10123456782012345678301234567840",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{
-				initPipelineVars: initPipelineVars{
-					appName: tc.inAppName,
-				},
-				repoName: tc.inRepoName,
-			}
-
-			// WHEN
-			actual := opts.pipelineName()
-
-			// THEN
-			require.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
 func TestInitPipelineOpts_parseGitRemoteResult(t *testing.T) {
 	testCases := map[string]struct {
 		inRemoteResult string
@@ -1407,6 +1227,185 @@ func TestInitPipelineBBRepoURL_parse(t *testing.T) {
 			} else {
 				require.Equal(t, tc.expectedDetails, details)
 			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_askBranch(t *testing.T) {
+	testCases := map[string]struct {
+		inBranchBuffer bytes.Buffer
+		inBranchFlag string
+
+		mockRunner   func(m *mocks.Mockrunner)
+		mockPrompt   func(m *mocks.Mockprompter)
+
+		expectedErr error
+	}{
+		"returns nil if branch passed in with flag": {
+			inBranchFlag: "myBranch",
+			inBranchBuffer: *bytes.NewBufferString(""),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
+			},
+
+			expectedErr: nil,
+		},
+		"returns nil if no error": {
+			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
+			},
+
+			expectedErr: nil,
+		},
+		"returns err if can't get branch info from `git branch -a -l mockRepo/*`": {
+			inBranchBuffer: *bytes.NewBufferString("\"remotes/mockRepo/main\n  remotes/mockRepo/dev\""),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
+			},
+
+			expectedErr: errors.New("get repo branch info: some error"),
+		},
+		"errors if unsuccessful in parsing git branch results": {
+			inBranchBuffer: *bytes.NewBufferString("badResults"),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
+			},
+			expectedErr: errors.New("parse git branch results: unparsable format"),
+		},
+		"errors if unsuccessful selecting branch": {
+			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			expectedErr: errors.New("select branch: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRunner := mocks.NewMockrunner(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
+
+			opts := &initPipelineOpts{
+				initPipelineVars: initPipelineVars{
+					repoBranch: tc.inBranchFlag,
+						},
+				runner: mockRunner,
+				prompt: mockPrompt,
+				branchBuffer: tc.inBranchBuffer,
+				repoName: "mockRepo",
+			}
+
+			tc.mockRunner(mockRunner)
+			tc.mockPrompt(mockPrompt)
+
+			// WHEN
+			err := opts.askBranch()
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_parseGitBranchResults(t *testing.T) {
+	testCases := map[string]struct {
+		inGitBranchResults string
+
+		expectedBranches    []string
+		expectedErr error
+	}{
+		"successfully returns branch names for selector given `git branch -a -l [repoName]` results": {
+			inGitBranchResults: "  remotes/cc/main\n  remotes/cc/dev",
+			expectedBranches: []string{"main", "dev"},
+		},
+		"success with just one branch": {
+			inGitBranchResults: "remotes/origin/mainline",
+			expectedBranches: []string{"mainline"},
+		},
+		"errors if no branches": {
+			inGitBranchResults: "",
+			expectedErr: errors.New("unparsable format"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &initPipelineOpts{}
+
+			// WHEN
+			actual, err := opts.parseGitBranchResults(tc.inGitBranchResults)
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.Equal(t, tc.expectedBranches, actual)
+			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_pipelineName(t *testing.T) {
+	testCases := map[string]struct {
+		inRepoName string
+		inAppName  string
+
+		expected    string
+		expectedErr error
+	}{
+		"generates pipeline name": {
+			inAppName:  "goodmoose",
+			inRepoName: "repo-man",
+
+			expected: "pipeline-goodmoose-repo-man",
+		},
+		"generates and truncates pipeline name if it exceeds 100 characters": {
+			inAppName:  "goodmoose01234567820123456783012345678401234567850",
+			inRepoName: "repo-man101234567820123456783012345678401234567850",
+
+			expected: "pipeline-goodmoose01234567820123456783012345678401234567850-repo-man10123456782012345678301234567840",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &initPipelineOpts{
+				initPipelineVars: initPipelineVars{
+					appName: tc.inAppName,
+				},
+				repoName: tc.inRepoName,
+			}
+
+			// WHEN
+			actual := opts.pipelineName()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
