@@ -158,6 +158,9 @@ func (o *initPipelineOpts) Validate() error {
 	}
 
 	if o.repoURL != "" {
+		if o.repoBranch == "" {
+			return fmt.Errorf(`when using the '%s' flag, the '%s' flag must be used as well`, repoURLFlag, gitBranchFlag)
+		}
 		if err := o.validateURL(o.repoURL); err != nil {
 			return err
 		}
@@ -341,7 +344,7 @@ func (o *initPipelineOpts) selectURL() error {
 	if err != nil {
 		return fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
 	}
-	urls, err := o.parseGitRemoteResult(strings.TrimSpace(o.repoBuffer.String()))
+	repos, err := o.parseAndFormatGitRemoteResult(strings.TrimSpace(o.repoBuffer.String()))
 	if err != nil {
 		return err
 	}
@@ -351,7 +354,7 @@ func (o *initPipelineOpts) selectURL() error {
 	url, err := o.prompt.SelectOne(
 		pipelineSelectURLPrompt,
 		pipelineSelectURLHelpPrompt,
-		urls,
+		repos,
 		prompt.WithFinalMessage("Repository:"),
 	)
 	if err != nil {
@@ -405,10 +408,10 @@ func (o *initPipelineOpts) selectBranch() error {
 // bbhttps	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
-// parseGitRemoteResults returns just the first (shortname) and trimmed second (url) columns of the `git remote -v` results,
+// parseAndFormatGitRemoteResults returns just the first (shortname) and trimmed second (url) columns of the `git remote -v` results, formatted as 'name: url',
 // and skips urls from unsupported sources.
-func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
-	var repos []string
+func (o *initPipelineOpts) parseAndFormatGitRemoteResult(s string) ([]string, error) {
+	var formattedRepos []string
 	repoSet := make(map[string]bool)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
@@ -421,9 +424,9 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 		repoSet[nameAndURL] = true
 	}
 	for repo := range repoSet {
-		repos = append(repos, repo)
+		formattedRepos = append(formattedRepos, repo)
 	}
-	return repos, nil
+	return formattedRepos, nil
 }
 
 func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {

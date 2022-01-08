@@ -27,7 +27,8 @@ import (
 func TestInitPipelineOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName     string
-		inrepoURL     string
+		inRepoURL     string
+		inRepoBranch  string
 		inEnvs        []string
 		setupMocks    func(m *mocks.Mockstore)
 		expectedError error
@@ -46,19 +47,32 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			expectedError: fmt.Errorf("get application ghost-app: some error"),
 		},
 		"URL to unsupported repo provider": {
-			inAppName: "my-app",
-			inrepoURL: "unsupported.org/repositories/repoName",
-			inEnvs:    []string{"test"},
+			inAppName:    "my-app",
+			inRepoURL:    "unsupported.org/repositories/repoName",
+			inRepoBranch: "main",
+			inEnvs:       []string{"test"},
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 			},
 
 			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
 		},
-		"invalid environments": {
+		"URL flag without branch flag": {
 			inAppName: "my-app",
-			inrepoURL: "https://github.com/badGoose/chaOS",
 			inEnvs:    []string{"test", "prod"},
+			inRepoURL: "https://github.com/badGoose/chaOS",
+
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+
+			expectedError: errors.New("when using the 'url' flag, the 'git-branch' flag must be used as well"),
+		},
+		"invalid environments": {
+			inAppName:    "my-app",
+			inRepoURL:    "https://github.com/badGoose/chaOS",
+			inRepoBranch: "main",
+			inEnvs:       []string{"test", "prod"},
 
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
@@ -68,9 +82,10 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			expectedError: errors.New("some error"),
 		},
 		"success with GH repo": {
-			inAppName: "my-app",
-			inEnvs:    []string{"test", "prod"},
-			inrepoURL: "https://github.com/badGoose/chaOS",
+			inAppName:    "my-app",
+			inEnvs:       []string{"test", "prod"},
+			inRepoURL:    "https://github.com/badGoose/chaOS",
+			inRepoBranch: "main",
 
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
@@ -87,9 +102,10 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			expectedError: nil,
 		},
 		"success with CC repo": {
-			inAppName: "my-app",
-			inEnvs:    []string{"test", "prod"},
-			inrepoURL: "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
+			inAppName:    "my-app",
+			inEnvs:       []string{"test", "prod"},
+			inRepoURL:    "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
+			inRepoBranch: "main",
 
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
@@ -120,7 +136,8 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					appName:      tc.inAppName,
-					repoURL:      tc.inrepoURL,
+					repoURL:      tc.inRepoURL,
+					repoBranch:   tc.inRepoBranch,
 					environments: tc.inEnvs,
 				},
 				store: mockStore,
@@ -1056,14 +1073,13 @@ func TestInitPipelineOpts_parseGitRemoteResult(t *testing.T) {
 		"matched format": {
 			inRemoteResult: `badgoose	git@github.com:badgoose/grit.git (fetch)
 badgoose	https://github.com/badgoose/cli.git (fetch)
-origin	https://github.com/koke/grit (fetch)
 koke	git://github.com/koke/grit.git (push)
 https	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (fetch)
 fed	codecommit::us-west-2://aws-sample (fetch)
 ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
 bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)`,
 
-			expectedURLs:  []string{"badgoose: git@github.com:badgoose/grit", "badgoose: https://github.com/badgoose/cli", "origin: https://github.com/koke/grit", "koke: git://github.com/koke/grit", "https: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "fed: codecommit::us-west-2://aws-sample", "ssh: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "bb: https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
+			expectedURLs:  []string{"badgoose: git@github.com:badgoose/grit", "badgoose: https://github.com/badgoose/cli", "koke: git://github.com/koke/grit", "https: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "fed: codecommit::us-west-2://aws-sample", "ssh: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "bb: https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
 			expectedError: nil,
 		},
 		"don't add to URL list if it is not a GitHub or CodeCommit or Bitbucket URL": {
@@ -1080,7 +1096,7 @@ bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)
 			opts := &initPipelineOpts{}
 
 			// WHEN
-			urls, err := opts.parseGitRemoteResult(tc.inRemoteResult)
+			urls, err := opts.parseAndFormatGitRemoteResult(tc.inRemoteResult)
 			// THEN
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
