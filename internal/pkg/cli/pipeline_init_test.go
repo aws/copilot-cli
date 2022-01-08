@@ -166,8 +166,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		mockSessProvider func(m *mocks.MocksessionProvider)
 		mockSelector     func(m *mocks.MockpipelineSelector)
 		mockStore        func(m *mocks.Mockstore)
-		repoBuffer 		bytes.Buffer
-		branchBuffer           bytes.Buffer
+		repoBuffer       bytes.Buffer
+		branchBuffer     bytes.Buffer
 
 		expectedEnvironments      []string
 		expectedRepoURL           string
@@ -184,7 +184,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubAccessToken: githubToken,
 			inGitBranch:         "",
 
-			repoBuffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n remotes/archer/test\nremotes/archer/prod"),
+			repoBuffer:   *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n remotes/archer/test\nremotes/archer/prod"),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
@@ -220,8 +220,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"no flags, success case for CodeCommit": {
 			inEnvironments: []string{},
 			inRepoURL:      "",
-			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\narcher\tssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
-			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+			repoBuffer:     *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\narcher\tssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
+			branchBuffer:   *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
@@ -277,7 +277,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error if fail to select URL": {
 			inRepoURL:      "",
 			inEnvironments: []string{},
-			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
+			repoBuffer:     *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
@@ -300,14 +300,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments:      []string{"test", "prod"},
-			expectedError:             fmt.Errorf("select URL: some error"),
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        fmt.Errorf("select URL: some error"),
 		},
 		"returns error if fail to select branch": {
 			inRepoURL:      "",
 			inEnvironments: []string{},
-			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
-			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+			repoBuffer:     *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
+			branchBuffer:   *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
@@ -332,13 +332,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments:      []string{"test", "prod"},
-			expectedError:             fmt.Errorf("select branch: some error"),
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        fmt.Errorf("select branch: some error"),
 		},
 		"returns error if select invalid URL": {
 			inRepoURL:      "",
 			inEnvironments: []string{},
-			repoBuffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://bitbub.com/badGoose/chaOS (push)\n"),
+			repoBuffer:     *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://bitbub.com/badGoose/chaOS (push)\n"),
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
@@ -363,7 +363,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError: fmt.Errorf("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
 		},
 		"returns error if fail to parse GitHub URL": {
-			repoBuffer:              *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\n"),
+			repoBuffer: *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
@@ -386,13 +386,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments:      []string{"test", "prod"},
-			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
 		},
 		"returns error if fail to parse repo name out of CodeCommit URL": {
 			inEnvironments:      []string{},
 			inGitHubAccessToken: "",
-			repoBuffer:              *bytes.NewBufferString(""),
+			repoBuffer:          *bytes.NewBufferString(""),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
@@ -443,10 +443,10 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedRepoURL:          codecommitHTTPSURL,
-			expectedRepoName:         codecommitRepoName,
-			expectedEnvironments:     []string{"test", "prod"},
-			expectedError:            fmt.Errorf("unable to parse the AWS region from codecommit::us-mess-2://repo-man"),
+			expectedRepoURL:      codecommitHTTPSURL,
+			expectedRepoName:     codecommitRepoName,
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        fmt.Errorf("unable to parse the AWS region from codecommit::us-mess-2://repo-man"),
 		},
 		"returns error if fail to retrieve default session": {
 			repoBuffer: *bytes.NewBufferString(""),
@@ -535,7 +535,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				prompt:       mockPrompt,
 				runner:       mockRunner,
 				sessProvider: mocksSessProvider,
-				repoBuffer:       tc.repoBuffer,
+				repoBuffer:   tc.repoBuffer,
 				branchBuffer: tc.branchBuffer,
 				sel:          mockSelector,
 				store:        mockStore,
@@ -1234,15 +1234,15 @@ func TestInitPipelineBBRepoURL_parse(t *testing.T) {
 func TestInitPipelineOpts_askBranch(t *testing.T) {
 	testCases := map[string]struct {
 		inBranchBuffer bytes.Buffer
-		inBranchFlag string
+		inBranchFlag   string
 
-		mockRunner   func(m *mocks.Mockrunner)
-		mockPrompt   func(m *mocks.Mockprompter)
+		mockRunner func(m *mocks.Mockrunner)
+		mockPrompt func(m *mocks.Mockprompter)
 
 		expectedErr error
 	}{
 		"returns nil if branch passed in with flag": {
-			inBranchFlag: "myBranch",
+			inBranchFlag:   "myBranch",
 			inBranchBuffer: *bytes.NewBufferString(""),
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
@@ -1309,11 +1309,11 @@ func TestInitPipelineOpts_askBranch(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					repoBranch: tc.inBranchFlag,
-						},
-				runner: mockRunner,
-				prompt: mockPrompt,
+				},
+				runner:       mockRunner,
+				prompt:       mockPrompt,
 				branchBuffer: tc.inBranchBuffer,
-				repoName: "mockRepo",
+				repoName:     "mockRepo",
 			}
 
 			tc.mockRunner(mockRunner)
@@ -1334,20 +1334,20 @@ func TestInitPipelineOpts_parseGitBranchResults(t *testing.T) {
 	testCases := map[string]struct {
 		inGitBranchResults string
 
-		expectedBranches    []string
-		expectedErr error
+		expectedBranches []string
+		expectedErr      error
 	}{
 		"successfully returns branch names for selector given `git branch -a -l [repoName]` results": {
 			inGitBranchResults: "  remotes/cc/main\n  remotes/cc/dev",
-			expectedBranches: []string{"main", "dev"},
+			expectedBranches:   []string{"main", "dev"},
 		},
 		"success with just one branch": {
 			inGitBranchResults: "remotes/origin/mainline",
-			expectedBranches: []string{"mainline"},
+			expectedBranches:   []string{"mainline"},
 		},
 		"errors if no branches": {
 			inGitBranchResults: "",
-			expectedErr: errors.New("unparsable format"),
+			expectedErr:        errors.New("unparsable format"),
 		},
 	}
 

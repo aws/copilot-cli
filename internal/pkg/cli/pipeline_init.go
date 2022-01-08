@@ -97,10 +97,10 @@ type initPipelineOpts struct {
 	ccRegion  string
 
 	// Caches variables
-	fs         *afero.Afero
-	repoBuffer     bytes.Buffer // Using two separate buffers for ease of testing.
-	branchBuffer	bytes.Buffer
-	envConfigs []*config.Environment
+	fs           *afero.Afero
+	repoBuffer   bytes.Buffer // Using two separate buffers for ease of testing.
+	branchBuffer bytes.Buffer
+	envConfigs   []*config.Environment
 }
 
 type artifactBucket struct {
