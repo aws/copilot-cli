@@ -77,7 +77,7 @@ type LoadBalancedWebServiceProps struct {
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
 // has a single task with minimal CPU and memory thresholds, and sets the default health check path to "/".
 func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalancedWebService {
-	svc := newDefaultLoadBalancedWebService()
+	svc := newDefaultHTTPLoadBalancedWebService()
 	// Apply overrides.
 	svc.Name = stringP(props.Name)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
@@ -97,45 +97,21 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	return svc
 }
 
-// newDefaultLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set.
-func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
-	return &LoadBalancedWebService{
-		Workload: Workload{
-			Type: aws.String(LoadBalancedWebServiceType),
-		},
-		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{},
-			RoutingRule: RoutingRuleConfigOrBool{
-				RoutingRuleConfiguration: RoutingRuleConfiguration{
-					HealthCheck: HealthCheckArgsOrString{
-						HealthCheckPath: aws.String(DefaultHealthCheckPath),
-					},
-				},
-			},
-			TaskConfig: TaskConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
-				Count: Count{
-					Value: aws.Int(1),
-					AdvancedCount: AdvancedCount{ // Leave advanced count empty while passing down the type of the workload.
-						workloadType: LoadBalancedWebServiceType,
-					},
-				},
-				ExecuteCommand: ExecuteCommand{
-					Enable: aws.Bool(false),
-				},
-			},
-			Network: NetworkConfig{
-				VPC: vpcConfig{
-					Placement: &PublicSubnetPlacement,
-				},
+// newDefaultHTTPLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set, including default HTTP configurations.
+func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
+	lbws := newDefaultLoadBalancedWebService()
+	lbws.RoutingRule = RoutingRuleConfigOrBool{
+		RoutingRuleConfiguration: RoutingRuleConfiguration{
+			HealthCheck: HealthCheckArgsOrString{
+				HealthCheckPath: aws.String(DefaultHealthCheckPath),
 			},
 		},
 	}
+	return lbws
 }
 
-// newDefaultEmptyLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set, without any load balancer configured.
-func newDefaultEmptyLoadBalancedWebService() *LoadBalancedWebService {
+// newDefaultLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set, without any load balancer configuration.
+func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
 		Workload: Workload{
 			Type: aws.String(LoadBalancedWebServiceType),

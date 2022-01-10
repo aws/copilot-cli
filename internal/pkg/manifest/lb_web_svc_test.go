@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestNewLoadBalancedWebService(t *testing.T) {
+func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 	testCases := map[string]struct {
 		props LoadBalancedWebServiceProps
 
@@ -208,7 +208,7 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			rr := newDefaultLoadBalancedWebService().RoutingRule
+			rr := newDefaultHTTPLoadBalancedWebService().RoutingRule
 			err := yaml.Unmarshal(tc.inContent, &rr)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

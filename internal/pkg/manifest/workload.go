@@ -604,7 +604,7 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	var m manifest
 	switch typeVal {
 	case LoadBalancedWebServiceType:
-		m = newDefaultEmptyLoadBalancedWebService()
+		m = newDefaultLoadBalancedWebService()
 
 	case RequestDrivenWebServiceType:
 		m = newDefaultRequestDrivenWebService()
