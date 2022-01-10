@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -138,12 +137,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				if err != nil {
 					return nil, fmt.Errorf("create describer for environment %s in application %s: %w", env.Name, app.Name, err)
 				}
-				envSession, err := p.FromRole(env.ManagerRoleARN, env.Region)
-				if err != nil {
-					return nil, fmt.Errorf("assuming environment manager role: %w", err)
-				}
-				subnetLister := ec2.New(envSession)
-				cidrBlocks, err := publicCIDRBlocks(envDescriber, subnetLister, env.Name)
+				cidrBlocks, err := envDescriber.PublicCIDRBlocks()
 				if err != nil {
 					return nil, err
 				}

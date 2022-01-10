@@ -12,23 +12,23 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/spf13/afero"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/spf13/afero"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 )
@@ -45,7 +45,6 @@ type deploySvcMocks struct {
 	mockInterpolator       *mocks.Mockinterpolator
 	mockDeployStore        *mocks.MockdeployedEnvironmentLister
 	mockEnvDescriber       *mocks.MockenvDescriber
-	mockSubnetLister       *mocks.MockvpcSubnetLister
 	mockS3Svc              *mocks.Mockuploader
 	mockAddons             *mocks.Mocktemplater
 	mockIdentity           *mocks.MockidentityService
@@ -630,7 +629,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("interpolate environment variables for mockSvc manifest: %w", mockError),
 		},
-		"fail to describe environment": {
+		"fail to get public CIDR blocks": {
 			inBuildRequire: false,
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/udp"),
@@ -646,34 +645,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvDescriber.EXPECT().Describe().Return(nil, errors.New("some error"))
+				m.mockEnvDescriber.EXPECT().PublicCIDRBlocks().Return(nil, errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("describe environment mockEnv: some error"),
-		},
-		"fail to list subnets when NLB is enabled": {
-			inBuildRequire: false,
-			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/udp"),
-			},
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name: mockAppName,
-			},
-			mock: func(m *deploySvcMocks) {
-				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
-					EnvironmentVPC: describe.EnvironmentVPC{
-						ID: "mockVPCID",
-					},
-				}, nil)
-				m.mockSubnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(nil, errors.New("some error"))
-			},
-			wantErr: fmt.Errorf("list subnets of vpc mockVPCID in environment mockEnv: some error"),
+			wantErr: fmt.Errorf("get public CIDR blocks information from the VPC of environment mockEnv: some error"),
 		},
 		"fail to get app resources": {
 			inBuildRequire: true,
@@ -847,14 +821,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
-					EnvironmentVPC: describe.EnvironmentVPC{
-						ID: "mockVPCID",
-					},
-				}, nil)
-				m.mockSubnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(&ec2.VPCSubnets{
-					Public: []ec2.Subnet{{CIDRBlock: "cidr1"}, {CIDRBlock: "cidr2"}},
-				}, nil)
+				m.mockEnvDescriber.EXPECT().PublicCIDRBlocks().Return([]string{"mockCIDRBlock1,mockCIDRBlock2"}, nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name:   mockAppName,
 					Domain: "mockDomain",
@@ -1117,7 +1084,6 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				mockSpinner:            mocks.NewMockprogress(ctrl),
 				mockInterpolator:       mocks.NewMockinterpolator(ctrl),
 				mockEnvDescriber:       mocks.NewMockenvDescriber(ctrl),
-				mockSubnetLister:       mocks.NewMockvpcSubnetLister(ctrl),
 				mockIdentity:           mocks.NewMockidentityService(ctrl),
 				mockUploader:           mocks.NewMockcustomResourcesUploader(ctrl),
 			}
@@ -1171,7 +1137,6 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				newSvcUpdater: func(f func(*session.Session) svcForceUpdater) {},
 				spinner:       m.mockSpinner,
 				envDescriber:  m.mockEnvDescriber,
-				subnetLister:  m.mockSubnetLister,
 
 				addonsURL: mockAddonsURL,
 				now: func() time.Time {

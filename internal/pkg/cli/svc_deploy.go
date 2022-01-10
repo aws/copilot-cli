@@ -13,10 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -26,6 +25,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"golang.org/x/mod/semver"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -47,8 +49,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -97,7 +97,6 @@ type deploySvcOpts struct {
 	endpointGetter      endpointGetter
 	snsTopicGetter      deployedEnvironmentLister
 	identity            identityService
-	subnetLister        vpcSubnetLister
 	envDescriber        envDescriber
 
 	spinner progress
@@ -331,7 +330,6 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("create describer for environment %s in application %s: %w", o.envName, o.appName, err)
 	}
 	o.envDescriber = d
-	o.subnetLister = ec2.New(envSession)
 
 	// ECR client against tools account profile AND target environment region.
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
@@ -384,23 +382,6 @@ func (o *deploySvcOpts) configureClients() error {
 	id := identity.New(defaultSess)
 	o.identity = id
 	return nil
-}
-
-func publicCIDRBlocks(envDescriber envDescriber, subnetLister vpcSubnetLister, envName string) ([]string, error) {
-	envDescription, err := envDescriber.Describe()
-	if err != nil {
-		return nil, fmt.Errorf("describe environment %s: %w", envName, err)
-	}
-	vpcID := envDescription.EnvironmentVPC.ID
-	subnets, err := subnetLister.ListVPCSubnets(vpcID)
-	if err != nil {
-		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, envName, err)
-	}
-	var cidrBlocks []string
-	for _, subnet := range subnets.Public {
-		cidrBlocks = append(cidrBlocks, subnet.CIDRBlock)
-	}
-	return cidrBlocks, nil
 }
 
 func (o *deploySvcOpts) configureContainerImage() error {
@@ -633,9 +614,9 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 
 		var opts []stack.LoadBalancedWebServiceOption
 		if !t.NLBConfig.IsEmpty() {
-			cidrBlocks, err := publicCIDRBlocks(o.envDescriber, o.subnetLister, o.envName)
+			cidrBlocks, err := o.envDescriber.PublicCIDRBlocks()
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", o.envName, err)
 			}
 			opts = append(opts, stack.WithNLB(cidrBlocks))
 
