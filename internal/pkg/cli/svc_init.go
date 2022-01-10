@@ -377,11 +377,11 @@ func (o *initSvcOpts) askImage() error {
 		return nil
 	}
 
-	validator := validateNotDockerfile
+	var validator prompt.ValidatorFunc
 	promptHelp := wkldInitImagePromptHelp
 	if o.wkldType == manifest.RequestDrivenWebServiceType {
 		promptHelp = wkldInitAppRunnerImagePromptHelp
-		validator = chainValidators(validator, validateAppRunnerImage)
+		validator = validateAppRunnerImage
 	}
 
 	image, err := o.prompt.Get(
