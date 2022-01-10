@@ -66,7 +66,18 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 			},
 
-			expectedError: errors.New("when using the 'url' flag, the 'git-branch' flag must be used as well"),
+			expectedError: errors.New("must specify either both '--url' and '--git-branch' or neither"),
+		},
+		"branch flag without URL flag": {
+			inAppName: "my-app",
+			inEnvs:    []string{"test", "prod"},
+			inRepoBranch: "prod",
+
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+
+			expectedError: errors.New("must specify either both '--url' and '--git-branch' or neither"),
 		},
 		"invalid environments": {
 			inAppName:    "my-app",
@@ -1096,7 +1107,7 @@ bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)
 			opts := &initPipelineOpts{}
 
 			// WHEN
-			urls, err := opts.parseAndFormatGitRemoteResult(tc.inRemoteResult)
+			urls, err := opts.parseGitRemoteResult(tc.inRemoteResult)
 			// THEN
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())

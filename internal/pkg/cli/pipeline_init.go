@@ -157,11 +157,23 @@ func (o *initPipelineOpts) Validate() error {
 		return err
 	}
 
+	// URL flag and branch flag must both be set or not.
+	if URL, branch := o.repoURL == "", o.repoBranch == ""; URL != branch {
+		return fmt.Errorf(`must specify either both '--%s' and '--%s' or neither`, repoURLFlag, gitBranchFlag)
+	}
 	if o.repoURL != "" {
-		if o.repoBranch == "" {
-			return fmt.Errorf(`when using the '%s' flag, the '%s' flag must be used as well`, repoURLFlag, gitBranchFlag)
-		}
+		// Validate if URL of accepted source type (GitHub, Bitbucket, CodeCommit).
 		if err := o.validateURL(o.repoURL); err != nil {
+			return err
+		}
+		// Validate if URL is an existent git remote.
+		if err := o.locateURL(o.repoURL); err != nil {
+			return err
+		}
+	}
+	// Validate that branch exists for the given git remote.
+	if o.repoBranch != "" {
+		if err := o.validateBranch(o.repoURL); err != nil {
 			return err
 		}
 	}
@@ -229,6 +241,54 @@ func (o *initPipelineOpts) validateURL(url string) error {
 	}
 	return nil
 }
+
+func (o *initPipelineOpts) locateURL(url string) error {
+	repos, err := o.fetchAndParseURLs()
+	if err != nil {
+		return fmt.Errorf("fetch and parse URLs: %w", err)
+	}
+	if _, ok := repos[url]; !ok {
+		return fmt.Errorf("URL '%s' is not a local git remote; please check that you're in the correct directory", o.repoURL)
+	}
+	o.repoShortName = repos[url]
+	return nil
+}
+
+func (o *initPipelineOpts) fetchAndParseURLs() (map[string]string, error) {
+	// Fetches and parses all remote repositories.
+	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.repoBuffer))
+	if err != nil {
+		return nil, fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
+	}
+	repos, err := o.parseGitRemoteResult(strings.TrimSpace(o.repoBuffer.String()))
+	if err != nil {
+		return nil, err
+	}
+	o.branchBuffer.Reset()
+
+	return repos, nil
+}
+
+func (o *initPipelineOpts) validateBranch(url string) error {
+	// URL has already been checked to exist and be valid; repoShortName already set by locateURL.
+	// Fetches and parses all branches associated with the chosen repo.
+	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoShortName + "/*"}, exec.Stdout(&o.branchBuffer))
+	if err != nil {
+		return fmt.Errorf("get repo branch info: %w", err)
+	}
+	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.branchBuffer.String()))
+	if err != nil {
+		return fmt.Errorf("parse 'git branch' results: %w", err)
+	}
+	o.branchBuffer.Reset()
+
+	for _, branch := range branches {
+		if branch == o.repoBranch {
+			return nil
+		}
+	}
+	return fmt.Errorf("branch %s not found for repo %s", o.repoBranch, url)
+ }
 
 func (o *initPipelineOpts) askEnvs() error {
 	if len(o.environments) == 0 {
@@ -339,22 +399,21 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 }
 
 func (o *initPipelineOpts) selectURL() error {
-	// Fetches and parses all remote repositories.
-	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.repoBuffer))
+	repos, err := o.fetchAndParseURLs()
 	if err != nil {
-		return fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
+		return fmt.Errorf("fetch and parse URLs: %w", err)
 	}
-	repos, err := o.parseAndFormatGitRemoteResult(strings.TrimSpace(o.repoBuffer.String()))
-	if err != nil {
-		return err
+
+	var formattedRepos []string
+	for url, name := range repos {
+		formattedRepos = append(formattedRepos, fmt.Sprintf("%s: %s", name, url))
 	}
-	o.repoBuffer.Reset()
 
 	// Prompts user to select a repo URL.
 	url, err := o.prompt.SelectOne(
 		pipelineSelectURLPrompt,
 		pipelineSelectURLHelpPrompt,
-		repos,
+		formattedRepos,
 		prompt.WithFinalMessage("Repository:"),
 	)
 	if err != nil {
@@ -408,25 +467,19 @@ func (o *initPipelineOpts) selectBranch() error {
 // bbhttps	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
-// parseAndFormatGitRemoteResults returns just the first (shortname) and trimmed second (url) columns of the `git remote -v` results, formatted as 'name: url',
-// and skips urls from unsupported sources.
-func (o *initPipelineOpts) parseAndFormatGitRemoteResult(s string) ([]string, error) {
-	var formattedRepos []string
-	repoSet := make(map[string]bool)
+// parseGitRemoteResults returns just the first (shortname) and second (url) columns of the `git remote -v` results as a map (url: name), and skips urls from unsupported sources.
+func (o *initPipelineOpts) parseGitRemoteResult(s string) (map[string]string, error) {
+	repos := make(map[string]string)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
 		if !strings.Contains(item, githubURL) && !strings.Contains(item, ccIdentifier) && !strings.Contains(item, bbURL) {
 			continue
 		}
 		cols := strings.Split(item, "\t")
-		url := strings.TrimSpace(strings.TrimSuffix(strings.Split(cols[1], " ")[0], ".git"))
-		nameAndURL := fmt.Sprintf("%s: %s", cols[0], url)
-		repoSet[nameAndURL] = true
+		URL := strings.TrimSpace(strings.Split(cols[1], " ")[0])
+		repos[URL] = cols[0]
 	}
-	for repo := range repoSet {
-		formattedRepos = append(formattedRepos, repo)
-	}
-	return formattedRepos, nil
+	return repos, nil
 }
 
 func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {
