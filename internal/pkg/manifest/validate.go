@@ -86,7 +86,9 @@ func (l LoadBalancedWebService) Validate() error {
 func (l LoadBalancedWebServiceConfig) Validate() error {
 	var err error
 	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
-		return errors.New(`must have one of "http" or "nlb" enabled`)
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields: []string{"http", "nlb"},
+		}
 	}
 	if l.RoutingRule.Disabled() && (l.Count.AdvancedCount.Requests != nil || l.Count.AdvancedCount.ResponseTime != nil) {
 		return errors.New(`scaling based on "nlb" requests is not supported yet`)

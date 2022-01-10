@@ -215,7 +215,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errors.New(`must have one of "http" or "nlb" enabled`),
+			wantedError: errors.New(`must specify at least one of "http" or "nlb"`),
 		},
 		"error if scaling based on nlb requests": {
 			lbConfig: LoadBalancedWebService{

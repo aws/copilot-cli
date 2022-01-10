@@ -214,6 +214,7 @@ type RoutingRuleConfigOrBool struct {
 	Enabled *bool
 }
 
+// Disabled returns true if the routing rule configuration is explicitly disabled.
 func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
