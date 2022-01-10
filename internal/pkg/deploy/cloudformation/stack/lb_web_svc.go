@@ -305,7 +305,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	}...)
 
 	if !s.manifest.RoutingRule.Disabled() {
-		httpParams := []*cloudformation.Parameter{
+		wkldParams = append(wkldParams, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,
@@ -318,8 +318,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 				ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
 			},
-		}
-		wkldParams = append(wkldParams, httpParams...)
+		}...)
 	}
 	return wkldParams, nil
 }
