@@ -240,7 +240,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		AppDNSDelegationRole:           nlbConfig.appDNSDelegationRole,
 		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,
 		NLBCustomDomainFunctionLambda:  nlbConfig.customDomainLambda,
-		HTTPDisabled:                   s.manifest.RoutingRule.Disabled(),
+		ALBDisabled:                    s.manifest.RoutingRule.Disabled(),
 	})
 	if err != nil {
 		return "", err
