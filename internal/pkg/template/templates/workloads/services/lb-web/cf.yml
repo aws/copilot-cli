@@ -36,7 +36,7 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
-{{- if ALBEnabled}}
+{{- if .ALBEnabled}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
@@ -47,7 +47,7 @@ Parameters:
     Default: false
 {{- end}}
 Conditions:
-{{- if ALBEnabled}}
+{{- if .ALBEnabled}}
   HTTPLoadBalancer:
     !Not
       - !Condition HTTPSLoadBalancer
@@ -135,7 +135,7 @@ Resources:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
-    {{- if ALBEnabled}}
+    {{- if .ALBEnabled}}
      - WaitUntilListenerRuleIsCreated
     {{- end}}
     {{- if .NLB}}
@@ -146,7 +146,7 @@ Resources:
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       LoadBalancers:
-  {{- if ALBEnabled}}
+  {{- if .ALBEnabled}}
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort
           TargetGroupArn: !Ref TargetGroup
@@ -160,7 +160,7 @@ Resources:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref ContainerPort
 
-{{- if ALBEnabled}}
+{{- if .ALBEnabled}}
   TargetGroup:
     Metadata:
       'aws:copilot:description': 'A target group to connect the load balancer to your service'
@@ -447,7 +447,7 @@ Resources:
       Timeout: "1"
       Count: 0
 
-{{- end}} {{/*end if ALBEnabled */}}
+{{- end}} {{/*end if .ALBEnabled */}}
 {{- if .NLB}}
 {{include "nlb" . | indent 2}}
 {{- end}}
