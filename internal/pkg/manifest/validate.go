@@ -91,7 +91,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 		}
 	}
 	if l.RoutingRule.Disabled() && (l.Count.AdvancedCount.Requests != nil || l.Count.AdvancedCount.ResponseTime != nil) {
-		return errors.New(`scaling based on "nlb" requests is not supported yet`)
+		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
 	}
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)

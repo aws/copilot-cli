@@ -238,7 +238,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errors.New(`scaling based on "nlb" requests is not supported yet`),
+			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
 		},
 		"error if scaling based on nlb response time": {
 			lbConfig: LoadBalancedWebService{
@@ -261,7 +261,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errors.New(`scaling based on "nlb" requests is not supported yet`),
+			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
 		},
 	}
 	for name, tc := range testCases {

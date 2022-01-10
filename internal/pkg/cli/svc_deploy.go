@@ -931,26 +931,23 @@ func validateAppVersion(appName string, appVersionGetter versionGetter) error {
 	return nil
 }
 
-func validateLBWSRuntime(app *config.Application, envName string, t *manifest.LoadBalancedWebService, appVersionGetter versionGetter) error {
-	if app.Domain == "" && t.HasAliases() {
+func validateLBWSRuntime(app *config.Application, envName string, mft *manifest.LoadBalancedWebService, appVersionGetter versionGetter) error {
+	if app.Domain == "" && mft.HasAliases() {
 		log.Errorf(aliasUsedWithoutDomainFriendlyText)
 		return errors.New("alias specified when application is not associated with a domain")
 	}
 
 	if app.RequiresDNSDelegation() {
 		if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
-			logAppVersionOutdatedError(aws.StringValue(t.Name))
+			logAppVersionOutdatedError(aws.StringValue(mft.Name))
 			return err
 		}
 	}
 
-	if err := validateLBSvcAlias(t.RoutingRule.Alias, app, envName); err != nil {
+	if err := validateLBSvcAlias(mft.RoutingRule.Alias, app, envName); err != nil {
 		return err
 	}
-	if err := validateLBSvcAlias(t.NLBConfig.Aliases, app, envName); err != nil {
-		return err
-	}
-	return nil
+	return validateLBSvcAlias(mft.NLBConfig.Aliases, app, envName)
 }
 
 func logAppVersionOutdatedError(name string) {
