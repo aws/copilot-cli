@@ -391,7 +391,7 @@ type WorkloadOpts struct {
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
-	ALBDisabled              bool
+	ALBEnabled               bool
 
 	// Additional options for service templates.
 	WorkloadType        string
@@ -533,7 +533,7 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		if !o.ALBDisabled {
+		if o.ALBEnabled {
 			parameters = append(parameters, "ALBWorkloads,")
 		}
 		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
