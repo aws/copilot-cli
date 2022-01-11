@@ -71,12 +71,14 @@ Resources:
       Configuration:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
+{{- if .Telemetry }}
       ClusterSettings:
         - Name: containerInsights
-{{- if .Prod}}
+          {{- if .Telemetry.EnableContainerInsights}}
           Value: enabled
-{{- else}}
+          {{- else}}
           Value: disabled
+          {{- end}}
 {{- end}}
   PublicLoadBalancerSecurityGroup:
     Metadata:

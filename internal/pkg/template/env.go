@@ -41,6 +41,7 @@ type EnvOpts struct {
 
 	ImportVPC *config.ImportVPC
 	VPCConfig *config.AdjustVPC
+	Telemetry *config.Telemetry
 
 	LatestVersion string
 
