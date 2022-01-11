@@ -28,6 +28,7 @@ type CreateEnvironmentInput struct {
 	CustomResourcesURLs map[string]string // Environment custom resource script S3 object URLs.
 	ImportVPCConfig     *config.ImportVPC // Optional configuration if users have an existing VPC.
 	AdjustVPCConfig     *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
+	Telemetry           *config.Telemetry // Optional observability and monitoring configuration.
 
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }

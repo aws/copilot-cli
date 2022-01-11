@@ -267,6 +267,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 								ID: "abc",
 							},
 						},
+						Telemetry: &config.Telemetry{
+							EnableContainerInsights: true,
+						},
 					}, nil)
 				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
@@ -289,6 +292,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					CFNServiceRoleARN:   "execARN",
 					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: true,
+					},
 				}).Return(nil)
 
 				return &envUpgradeOpts{

@@ -97,6 +97,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ImportVPC:              e.in.ImportVPCConfig,
 		VPCConfig:              vpcConf,
 		Version:                e.in.Version,
+		Telemetry:              e.in.Telemetry,
 		LatestVersion:          deploy.LatestEnvTemplateVersion,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,

@@ -125,6 +125,12 @@ type telemetryVars struct {
 	EnableContainerInsights bool
 }
 
+func (v telemetryVars) toConfig() *config.Telemetry {
+	return &config.Telemetry{
+		EnableContainerInsights: v.EnableContainerInsights,
+	}
+}
+
 type initEnvVars struct {
 	appName       string
 	name          string // Name for the environment.
@@ -306,6 +312,7 @@ func (o *initEnvOpts) Execute() error {
 	}
 	env.Prod = o.isProduction
 	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
+	env.Telemetry = o.telemetry.toConfig()
 
 	// 6. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {
@@ -666,6 +673,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map
 		CustomResourcesURLs: customResourcesURLs,
 		AdjustVPCConfig:     o.adjustVPCConfig(),
 		ImportVPCConfig:     o.importVPCConfig(),
+		Telemetry:           o.telemetry.toConfig(),
 		Version:             deploy.LatestEnvTemplateVersion,
 	}
 
