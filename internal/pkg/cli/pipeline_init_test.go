@@ -30,40 +30,39 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		inRepoURL     string
 		inRepoBranch  string
 		inEnvs        []string
-		setupMocks    func(m *mocks.Mockstore)
+		mockStore    func(m *mocks.Mockstore)
+		mockRunner   func(m *mocks.Mockrunner)
+		repoBuffer bytes.Buffer
+		branchBuffer bytes.Buffer
 		expectedError error
 	}{
 		"empty app name": {
 			inAppName:     "",
-			setupMocks:    func(m *mocks.Mockstore) {},
+			mockStore:    func(m *mocks.Mockstore) {},
+			mockRunner: func(m *mocks.Mockrunner) {},
 			expectedError: errNoAppInWorkspace,
 		},
 		"invalid app name (not in workspace)": {
 			inAppName: "ghost-app",
-			setupMocks: func(m *mocks.Mockstore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("ghost-app").Return(nil, fmt.Errorf("get application ghost-app: some error"))
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
 			},
 
 			expectedError: fmt.Errorf("get application ghost-app: some error"),
-		},
-		"URL to unsupported repo provider": {
-			inAppName:    "my-app",
-			inRepoURL:    "unsupported.org/repositories/repoName",
-			inRepoBranch: "main",
-			inEnvs:       []string{"test"},
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
-			},
-
-			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
 		},
 		"URL flag without branch flag": {
 			inAppName: "my-app",
 			inEnvs:    []string{"test", "prod"},
 			inRepoURL: "https://github.com/badGoose/chaOS",
 
-			setupMocks: func(m *mocks.Mockstore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
 			},
 
 			expectedError: errors.New("must specify either both '--url' and '--git-branch' or neither"),
@@ -73,22 +72,134 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inEnvs:    []string{"test", "prod"},
 			inRepoBranch: "prod",
 
-			setupMocks: func(m *mocks.Mockstore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
 			},
 
 			expectedError: errors.New("must specify either both '--url' and '--git-branch' or neither"),
 		},
-		"invalid environments": {
+		"URL to unsupported repo provider": {
+			inAppName:    "my-app",
+			inRepoURL:    "unsupported.org/repositories/repoName",
+			inRepoBranch: "main",
+			inEnvs:       []string{"test"},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
+
+			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
+		},
+		"URL not a local git remote": {
 			inAppName:    "my-app",
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/wrongRepo (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+
+			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote; please check that you're in the correct directory"),
+		},
+		"errors if git remote results empty": {
+			inAppName:    "my-app",
+			inRepoURL:    "https://github.com/badGoose/chaOS",
+			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString(""),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote; please check that you're in the correct directory"),
+		},
+		"error fetching URLs": {
+			inAppName:    "my-app",
+			inRepoURL:    "https://github.com/badGoose/chaOS",
+			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/wrongRepo (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error")).Times(1)
+			},
+			expectedError: errors.New("fetch and parse URLs: get remote repository info: some error; make sure you have installed Git and are in a Git repository"),
+		},
+		"branch doesn't exist in passed in repo": {
+			inAppName:    "my-app",
+			inRepoURL:    "https://github.com/badGoose/chaOS",
+			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+
+			expectedError: errors.New("branch main not found for repo archer"),
+		},
+		"error fetching branches of given repo": {
+			inAppName:    "my-app",
+			inRepoURL:    "https://github.com/badGoose/chaOS",
+			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error")).Times(1)
+			},
+
+			expectedError: fmt.Errorf("get repo branch info: %s", "some error"),
+		},
+		"error parsing git branch results": {
+			inAppName:    "my-app",
+			inRepoURL:    "https://github.com/badGoose/chaOS",
+			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archerdev\nremotes/archer/prod"),
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+
+			expectedError: fmt.Errorf("parse 'git branch' results: %s", "unparsable format"),
+		},
+		"invalid environments": {
+			inAppName:    "my-app",
 			inEnvs:       []string{"test", "prod"},
 
-			setupMocks: func(m *mocks.Mockstore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
 			},
+			mockRunner: func(m *mocks.Mockrunner) {},
 
 			expectedError: errors.New("some error"),
 		},
@@ -97,8 +208,10 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inEnvs:       []string{"test", "prod"},
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
 
-			setupMocks: func(m *mocks.Mockstore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(
 					&config.Environment{
@@ -109,7 +222,9 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 						Name: "prod",
 					}, nil)
 			},
-
+			mockRunner: func(m *mocks.Mockrunner) {
+					m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				},
 			expectedError: nil,
 		},
 		"success with CC repo": {
@@ -117,8 +232,10 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inEnvs:       []string{"test", "prod"},
 			inRepoURL:    "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
 			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
 
-			setupMocks: func(m *mocks.Mockstore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(
 					&config.Environment{
@@ -128,6 +245,34 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 					&config.Environment{
 						Name: "prod",
 					}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+
+			expectedError: nil,
+		},
+		"success with Bitbucket repo": {
+			inAppName:    "my-app",
+			inEnvs:       []string{"test", "prod"},
+			inRepoURL:    "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git",
+			inRepoBranch: "main",
+			repoBuffer: *bytes.NewBufferString("bb\thttps://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/bb/dev\nremotes/bb/main"),
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+				m.EXPECT().GetEnvironment("my-app", "test").Return(
+					&config.Environment{
+						Name: "test",
+					}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(
+					&config.Environment{
+						Name: "prod",
+					}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 
 			expectedError: nil,
@@ -141,8 +286,10 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockstore(ctrl)
+			mockRunner := mocks.NewMockrunner(ctrl)
 
-			tc.setupMocks(mockStore)
+			tc.mockStore(mockStore)
+			tc.mockRunner(mockRunner)
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
@@ -152,6 +299,9 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 					environments: tc.inEnvs,
 				},
 				store: mockStore,
+				runner:       mockRunner,
+				repoBuffer:   tc.repoBuffer,
+				branchBuffer: tc.branchBuffer,
 			}
 
 			// WHEN
@@ -159,7 +309,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			// THEN
 			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError, err)
+				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -1069,50 +1219,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestInitPipelineOpts_parseGitRemoteResult(t *testing.T) {
-	testCases := map[string]struct {
-		inRemoteResult string
-
-		expectedURLs  []string
-		expectedError error
-	}{
-		"matched format": {
-			inRemoteResult: `badgoose	git@github.com:badgoose/grit.git (fetch)
-badgoose	https://github.com/badgoose/cli.git (fetch)
-koke	git://github.com/koke/grit.git (push)
-https	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (fetch)
-fed	codecommit::us-west-2://aws-sample (fetch)
-ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
-bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)`,
-
-			expectedURLs:  []string{"badgoose: git@github.com:badgoose/grit", "badgoose: https://github.com/badgoose/cli", "koke: git://github.com/koke/grit", "https: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "fed: codecommit::us-west-2://aws-sample", "ssh: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "bb: https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
-			expectedError: nil,
-		},
-		"don't add to URL list if it is not a GitHub or CodeCommit or Bitbucket URL": {
-			inRemoteResult: `badgoose	verybad@gitlab.com/whatever (fetch)`,
-
-			expectedURLs:  []string{},
-			expectedError: nil,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{}
-
-			// WHEN
-			urls, err := opts.parseGitRemoteResult(tc.inRemoteResult)
-			// THEN
-			if tc.expectedError != nil {
-				require.EqualError(t, err, tc.expectedError.Error())
-			} else {
-				require.ElementsMatch(t, tc.expectedURLs, urls)
 			}
 		})
 	}
