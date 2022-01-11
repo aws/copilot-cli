@@ -347,11 +347,14 @@ func (o *deployJobOpts) dfBuildArgs(job interface{}) (*dockerengine.BuildArgumen
 }
 
 func (o *deployJobOpts) deployJob() error {
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return err
+	}
 	conf, err := o.stackConfiguration()
 	if err != nil {
 		return err
 	}
-	if err := o.jobCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+	if err := o.jobCFN.DeployService(os.Stderr, conf, o.appEnvResources.S3Bucket, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		return fmt.Errorf("deploy job: %w", err)
 	}
 	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))

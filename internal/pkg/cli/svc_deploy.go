@@ -348,7 +348,7 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 
 	// CF client against env account profile AND target environment region.
-	o.svcCFN = cloudformation.New(envSession)
+	o.svcCFN = cloudformation.New(envSession, cloudformation.WithAppS3Client(defaultSessEnvRegion))
 
 	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         o.appName,
@@ -759,9 +759,11 @@ func (o *deploySvcOpts) deploySvc() error {
 	if err != nil {
 		return err
 	}
-
+	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
+		return err
+	}
 	cmdRunAt := o.now()
-	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+	if err := o.svcCFN.DeployService(os.Stderr, conf, o.appEnvResources.S3Bucket, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
 			return fmt.Errorf("deploy service: %w", err)

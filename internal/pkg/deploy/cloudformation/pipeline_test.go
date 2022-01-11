@@ -283,7 +283,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 				cfnClient:      tc.createCfnMock(ctrl),
 				codeStarClient: tc.createCsMock(ctrl),
 				cpClient:       tc.createCpMock(ctrl),
-				s3Client:       tc.createS3Mock(ctrl),
+				appS3Client:    tc.createS3Mock(ctrl),
 			}
 
 			// WHEN
@@ -354,8 +354,8 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			c := CloudFormation{
-				cfnClient: tc.createMock(ctrl),
-				s3Client:  tc.createS3Mock(ctrl),
+				cfnClient:   tc.createMock(ctrl),
+				appS3Client: tc.createS3Mock(ctrl),
 			}
 
 			// WHEN

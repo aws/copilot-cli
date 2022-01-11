@@ -884,7 +884,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("deploy service: some error"),
 		},
@@ -904,7 +910,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 			},
 			wantErr: fmt.Errorf("deploy service: change set with name mockChangeSet for stack mockStack has no changes"),
 		},
@@ -925,7 +937,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(time.Time{}, mockError)
@@ -949,7 +967,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockAfterTime, nil)
@@ -969,7 +993,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockBeforeTime, nil)
@@ -999,7 +1029,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockBeforeTime, nil)
@@ -1036,7 +1072,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
 		"success with force update": {
@@ -1056,7 +1098,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockBeforeTime, nil)
