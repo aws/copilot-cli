@@ -30,16 +30,16 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		inRepoURL     string
 		inRepoBranch  string
 		inEnvs        []string
-		mockStore    func(m *mocks.Mockstore)
-		mockRunner   func(m *mocks.Mockrunner)
-		repoBuffer bytes.Buffer
-		branchBuffer bytes.Buffer
+		mockStore     func(m *mocks.Mockstore)
+		mockRunner    func(m *mocks.Mockrunner)
+		repoBuffer    bytes.Buffer
+		branchBuffer  bytes.Buffer
 		expectedError error
 	}{
 		"empty app name": {
 			inAppName:     "",
-			mockStore:    func(m *mocks.Mockstore) {},
-			mockRunner: func(m *mocks.Mockrunner) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			mockRunner:    func(m *mocks.Mockrunner) {},
 			expectedError: errNoAppInWorkspace,
 		},
 		"invalid app name (not in workspace)": {
@@ -68,8 +68,8 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			expectedError: errors.New("must specify either both '--url' and '--git-branch' or neither"),
 		},
 		"branch flag without URL flag": {
-			inAppName: "my-app",
-			inEnvs:    []string{"test", "prod"},
+			inAppName:    "my-app",
+			inEnvs:       []string{"test", "prod"},
 			inRepoBranch: "prod",
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -99,7 +99,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inAppName:    "my-app",
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/wrongRepo (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/wrongRepo (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -115,7 +115,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inAppName:    "my-app",
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString(""),
+			repoBuffer:   *bytes.NewBufferString(""),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -130,7 +130,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inAppName:    "my-app",
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/wrongRepo (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/wrongRepo (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -145,7 +145,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inAppName:    "my-app",
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -161,7 +161,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inAppName:    "my-app",
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -178,7 +178,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inAppName:    "my-app",
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/archerdev\nremotes/archer/prod"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -192,8 +192,8 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			expectedError: fmt.Errorf("parse 'git branch' results: %s", "unparsable format"),
 		},
 		"invalid environments": {
-			inAppName:    "my-app",
-			inEnvs:       []string{"test", "prod"},
+			inAppName: "my-app",
+			inEnvs:    []string{"test", "prod"},
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
@@ -208,7 +208,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inEnvs:       []string{"test", "prod"},
 			inRepoURL:    "https://github.com/badGoose/chaOS",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -223,8 +223,8 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 					}, nil)
 			},
 			mockRunner: func(m *mocks.Mockrunner) {
-					m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
-				},
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
 			expectedError: nil,
 		},
 		"success with CC repo": {
@@ -232,7 +232,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inEnvs:       []string{"test", "prod"},
 			inRepoURL:    "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("archer\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("archer\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -257,7 +257,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inEnvs:       []string{"test", "prod"},
 			inRepoURL:    "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git",
 			inRepoBranch: "main",
-			repoBuffer: *bytes.NewBufferString("bb\thttps://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)\n"),
+			repoBuffer:   *bytes.NewBufferString("bb\thttps://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)\n"),
 			branchBuffer: *bytes.NewBufferString("remotes/bb/dev\nremotes/bb/main"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -298,7 +298,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 					repoBranch:   tc.inRepoBranch,
 					environments: tc.inEnvs,
 				},
-				store: mockStore,
+				store:        mockStore,
 				runner:       mockRunner,
 				repoBuffer:   tc.repoBuffer,
 				branchBuffer: tc.branchBuffer,

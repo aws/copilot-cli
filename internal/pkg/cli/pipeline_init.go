@@ -465,7 +465,7 @@ func (o *initPipelineOpts) selectBranch() error {
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
 // parseGitRemoteResults returns just the first (shortname) and second (url) columns of the `git remote -v` results as a map (url: name), and skips urls from unsupported sources.
-func (o *initPipelineOpts) parseGitRemoteResult(s string) (map[string]string) {
+func (o *initPipelineOpts) parseGitRemoteResult(s string) map[string]string {
 	repos := make(map[string]string)
 	items := strings.Split(s, "\n")
 	for _, item := range items {

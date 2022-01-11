@@ -179,8 +179,7 @@ Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag,
 	githubURLFlagDescription = fmt.Sprintf(`(Deprecated.) Use --url instead. Repository URL to trigger your pipeline. Must be specified along with '%s'.`, gitBranchFlag)
 	repoURLFlagDescription   = fmt.Sprintf(`The repository URL to trigger your pipeline.
 Supported providers are: %s. Must be specified along with '%s'.`, strings.Join(manifest.PipelineProviders, ", "), gitBranchFlag)
-	gitBranchFlagDescription         = fmt.Sprintf(`Branch used to trigger your pipeline. Must be specified along with '%s'.`, repoURLFlag)
-
+	gitBranchFlagDescription = fmt.Sprintf(`Branch used to trigger your pipeline. Must be specified along with '%s'.`, repoURLFlag)
 )
 
 const (
