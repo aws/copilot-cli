@@ -121,6 +121,10 @@ func (v tempCredsVars) isSet() bool {
 	return v.AccessKeyID != "" && v.SecretAccessKey != ""
 }
 
+type telemetryVars struct {
+	EnableContainerInsights bool
+}
+
 type initEnvVars struct {
 	appName       string
 	name          string // Name for the environment.
@@ -130,6 +134,7 @@ type initEnvVars struct {
 
 	importVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
 	adjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+	telemetry telemetryVars // Configure observability and monitoring settings.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -770,7 +775,7 @@ func buildEnvInitCmd() *cobra.Command {
   /code $ copilot env init --name test --profile default --default-config
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
-  /code $ copilot env init --name prod-iad --profile prod-admin --prod
+  /code $ copilot env init --name prod-iad --profile prod-admin --container-insights
 
   Creates an environment with imported VPC resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
@@ -798,7 +803,8 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.tempCreds.SessionToken, sessionTokenFlag, "", sessionTokenFlagDescription)
 	cmd.Flags().StringVar(&vars.region, regionFlag, "", envRegionTokenFlagDescription)
 
-	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription)
+	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription) // Deprecated. Use telemetry flags instead.
+	cmd.Flags().BoolVar(&vars.telemetry.EnableContainerInsights, enableContainerInsightsFlag, false, enableContainerInsightsFlagDescription)
 
 	cmd.Flags().StringVar(&vars.importVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
@@ -820,25 +826,28 @@ func buildEnvInitCmd() *cobra.Command {
 	flags.AddFlag(cmd.Flags().Lookup(sessionTokenFlag))
 	flags.AddFlag(cmd.Flags().Lookup(regionFlag))
 	flags.AddFlag(cmd.Flags().Lookup(defaultConfigFlag))
-	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
 
-	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
-	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
-	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
-	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
+	resourcesImportFlags := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 
-	resourcesConfigFlag := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overrideAZsFlag))
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overridePublicSubnetCIDRsFlag))
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(overridePrivateSubnetCIDRsFlag))
+	resourcesConfigFlags := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideAZsFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overridePublicSubnetCIDRsFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overridePrivateSubnetCIDRsFlag))
+
+	telemetryFlags := pflag.NewFlagSet("Telemetry", pflag.ContinueOnError)
+	telemetryFlags.AddFlag(cmd.Flags().Lookup(enableContainerInsightsFlag))
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":                    "Common,Import Existing Resources,Configure Default Resources",
+		"sections":                    "Common,Import Existing Resources,Configure Default Resources,Telemetry",
 		"Common":                      flags.FlagUsages(),
-		"Import Existing Resources":   resourcesImportFlag.FlagUsages(),
-		"Configure Default Resources": resourcesConfigFlag.FlagUsages(),
+		"Import Existing Resources":   resourcesImportFlags.FlagUsages(),
+		"Configure Default Resources": resourcesConfigFlags.FlagUsages(),
+		"Telemetry":                   telemetryFlags.FlagUsages(),
 	}
 
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}

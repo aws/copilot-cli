@@ -93,6 +93,8 @@ const (
 	overridePublicSubnetCIDRsFlag  = "override-public-cidrs"
 	overridePrivateSubnetCIDRsFlag = "override-private-cidrs"
 
+	enableContainerInsightsFlag = "container-insights"
+
 	defaultConfigFlag = "default-config"
 
 	accessKeyIDFlag     = "aws-access-key-id"
@@ -277,6 +279,8 @@ Cannot be specified with any other flags.`
 (default 10.0.0.0/24,10.0.1.0/24)`
 	overridePrivateSubnetCIDRsFlagDescription = `Optional. CIDR to use for private subnets.
 (default 10.0.2.0/24,10.0.3.0/24)`
+
+	enableContainerInsightsFlagDescription = "Optional. Enable CloudWatch Container Insights."
 
 	defaultConfigFlagDescription = "Optional. Skip prompting and use default environment configuration."
 
