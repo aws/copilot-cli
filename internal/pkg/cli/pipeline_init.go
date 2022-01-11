@@ -242,6 +242,18 @@ func (o *initPipelineOpts) validateURLType(url string) error {
 	return nil
 }
 
+func (o *initPipelineOpts) validateURLExists(url string) error {
+	repos, err := o.fetchAndParseURLs()
+	if err != nil {
+		return fmt.Errorf("fetch and parse URLs: %w", err)
+	}
+	if _, ok := repos[url]; !ok {
+		return fmt.Errorf("URL '%s' is not a local git remote; please check that you're in the correct directory", o.repoURL)
+	}
+	o.repoShortName = repos[url]
+	return nil
+}
+
 func (o *initPipelineOpts) validateBranch() error {
 	// URL has already been checked to exist and be valid; repoShortName already set by validateURLExists.
 	// Fetches and parses all branches associated with the chosen repo.
@@ -261,18 +273,6 @@ func (o *initPipelineOpts) validateBranch() error {
 		}
 	}
 	return fmt.Errorf("branch %s not found for repo %s", o.repoBranch, o.repoShortName)
-}
-
-func (o *initPipelineOpts) validateURLExists(url string) error {
-	repos, err := o.fetchAndParseURLs()
-	if err != nil {
-		return fmt.Errorf("fetch and parse URLs: %w", err)
-	}
-	if _, ok := repos[url]; !ok {
-		return fmt.Errorf("URL '%s' is not a local git remote; please check that you're in the correct directory", o.repoURL)
-	}
-	o.repoShortName = repos[url]
-	return nil
 }
 
 func (o *initPipelineOpts) fetchAndParseURLs() (map[string]string, error) {
