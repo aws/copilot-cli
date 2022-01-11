@@ -134,8 +134,8 @@ NLBCustomDomainFunction:
   Condition: HasAssociatedDomain
   Properties:
     Code:
-      S3Bucket: {{ .ScriptBucketName }}
-      S3Key: {{ .NLBCustomDomainFunctionLambda }}
+      ZipFile: |
+        {{.NLBCustomDomainFunctionLambda}}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512
@@ -207,8 +207,8 @@ NLBCertValidatorFunction:
   Condition: HasAssociatedDomain
   Properties:
     Code:
-      S3Bucket: {{ .ScriptBucketName }}
-      S3Key: {{ .NLBCertValidatorFunctionLambda }}
+      ZipFile: |
+        {{.NLBCertValidatorFunctionLambda}}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512

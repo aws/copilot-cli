@@ -21,6 +21,8 @@ const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 	envControllerPath                 = "custom-resources/env-controller.js"
+	nlbCertValidatorPath              = "custom-resources/nlb-cert-validator.js"
+	nlbCustomDomainPath               = "custom-resources/nlb-custom-domain.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -236,7 +238,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NLB:                            nlbConfig.settings,
 		AppDNSName:                     nlbConfig.appDNSName,
 		AppDNSDelegationRole:           nlbConfig.appDNSDelegationRole,
-		ScriptBucketName:               nlbConfig.bucket,
 		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,
 		NLBCustomDomainFunctionLambda:  nlbConfig.customDomainLambda,
 	})
