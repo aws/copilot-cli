@@ -53,10 +53,9 @@ type LoadBalancedWebService struct {
 	// `httpsEnabled` has the same value with `dnsDelegationEnabled`, because we enabled https
 	// automatically the app is associated with a domain. When an ALB is disabled, `httpsEnabled`
 	// should always be false; hence they could have different values at this time.
-	dnsDelegationEnabled    bool
-	publicSubnetCIDRBlocks  []string
-	appInfo                 deploy.AppInformation
-	nlbCustomResourceS3URLs map[string]string
+	dnsDelegationEnabled   bool
+	publicSubnetCIDRBlocks []string
+	appInfo                deploy.AppInformation
 
 	parser loadBalancedWebSvcReadParser
 }
@@ -77,13 +76,6 @@ func WithHTTPS() func(s *LoadBalancedWebService) {
 func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 	return func(s *LoadBalancedWebService) {
 		s.publicSubnetCIDRBlocks = cidrBlocks
-	}
-}
-
-// WithNLBDNSCustomResources includes NLB custom resource URLs in a LoadBalancedWebService.
-func WithNLBCustomResources(urls map[string]string) func(s *LoadBalancedWebService) {
-	return func(s *LoadBalancedWebService) {
-		s.nlbCustomResourceS3URLs = urls
 	}
 }
 

@@ -10,18 +10,19 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -32,8 +33,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -79,8 +78,6 @@ type packageSvcOpts struct {
 	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 	newEndpointGetter func(app, env string) (endpointGetter, error)
 	snsTopicGetter    deployedEnvironmentLister
-
-	needCustomResource bool
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -146,29 +143,6 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 					return nil, err
 				}
 				options = append(options, stack.WithNLB(cidrBlocks))
-
-				if app.RequiresDNSDelegation() {
-					_, protocol, err := manifest.ParsePortMapping(t.NLBConfig.Port)
-					if err != nil {
-						return nil, fmt.Errorf("parse port for NLB: %w", err)
-					}
-					if strings.ToLower(aws.StringValue(protocol)) == "tls" {
-						log.Error(`The output CloudFormation template is missing a custom resource script that validates your TLS certificate. 
-This means that the template can't be used for deployment verbatim.
-`)
-						opts.needCustomResource = true
-					}
-					if !t.NLBConfig.Aliases.IsEmpty() {
-						log.Error(`The output CloudFormation template is missing a custom resource script for your aliases. 
-This means that the template can't be used for deployment verbatim.
-`)
-						opts.needCustomResource = true
-					}
-					options = append(options, stack.WithNLBCustomResources(map[string]string{
-						template.NLBCustomDomainLambdaFileName:  "https://placeholder/placeholder-for-nlb-custom-domain-lambda-url",
-						template.NLBCertValidatorLambdaFileName: "https://placeholder/placeholder-for-nlb-cert-validator-lambda-url",
-					}))
-				}
 			}
 
 			if app.RequiresDNSDelegation() {
@@ -349,9 +323,6 @@ func (o *packageSvcOpts) Execute() error {
 	// return nil if addons not found.
 	var notFoundErr *addon.ErrAddonsNotFound
 	if errors.As(err, &notFoundErr) {
-		if o.needCustomResource {
-			return errors.New("package with custom resources is not supported yet")
-		}
 		return nil
 	}
 	if err != nil {
@@ -366,13 +337,7 @@ func (o *packageSvcOpts) Execute() error {
 	}
 
 	_, err = o.addonsWriter.Write([]byte(addonsTemplate))
-	if err != nil {
-		return err
-	}
-	if o.needCustomResource {
-		return errors.New("package with custom resources is not supported yet")
-	}
-	return nil
+	return err
 }
 
 func (o *packageSvcOpts) askSvcName() error {

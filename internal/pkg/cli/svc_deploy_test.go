@@ -803,35 +803,6 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
-		"fail to upload NLB custom resource scripts": {
-			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
-				Aliases: manifest.Alias{String: aws.String("v1.mockDomain")},
-			},
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
-			},
-			mock: func(m *deploySvcMocks) {
-				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvDescriber.EXPECT().PublicCIDRBlocks().Return([]string{"mockCIDRBlock1,mockCIDRBlock2"}, nil)
-				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
-				}, "us-west-2").Return(&stack.AppRegionalResources{
-					S3Bucket: "mockBucket",
-				}, nil)
-				m.mockUploader.EXPECT().UploadNetworkLoadBalancedWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
-			},
-			wantErr: fmt.Errorf("upload custom resources to bucket mockBucket: some error"),
-		},
 		"error if fail to deploy service": {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,

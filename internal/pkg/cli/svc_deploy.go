@@ -572,22 +572,6 @@ func uploadRDWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *st
 	return urls, nil
 }
 
-func uploadNLBWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
-	s3Client, err := o.newS3Uploader()
-	if err != nil {
-		return nil, err
-	}
-
-	urls, err := o.uploader.UploadNetworkLoadBalancedWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
-	}
-
-	return urls, nil
-}
-
 func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
@@ -619,17 +603,6 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 				return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", o.envName, err)
 			}
 			opts = append(opts, stack.WithNLB(cidrBlocks))
-
-			if o.targetApp.RequiresDNSDelegation() {
-				if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
-					return nil, err
-				}
-				urls, err := uploadNLBWSCustomResources(o.uploadOpts, o.appEnvResources)
-				if err != nil {
-					return nil, err
-				}
-				opts = append(opts, stack.WithNLBCustomResources(urls))
-			}
 		}
 		if o.targetApp.RequiresDNSDelegation() {
 			var caller identity.Caller
