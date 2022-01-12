@@ -207,6 +207,18 @@ EnvironmentManagerRole:
             "kms:Decrypt"
           ]
           Resource: "*"
+        - Sid: PutObjectsToArtifactBucket
+          Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource:
+          - {{.ArtifactBucketARN}}
+          - {{.ArtifactBucketARN}}/*
+        - Sid: EncryptObjectsInArtifactBucket
+          Effect: Allow
+          Action:
+            - kms:GenerateDataKey
+          Resource: {{.ArtifactBucketKeyARN}}
         - Sid: EC2
           Effect: Allow
           Action: [

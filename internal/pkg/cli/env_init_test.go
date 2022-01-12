@@ -1089,8 +1089,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						Name:                "phonetool",
 						AccountPrincipalARN: "some arn",
 					},
-					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
-					Version:             deploy.LatestEnvTemplateVersion,
+					CustomResourcesURLs:  map[string]string{"mockCustomResource": "mockURL"},
+					Version:              deploy.LatestEnvTemplateVersion,
+					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
+					ArtifactBucketKeyARN: "mockKMS",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
@@ -1103,7 +1105,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
 					Return(&stack.AppRegionalResources{
-						S3Bucket: "mockBucket",
+						S3Bucket:  "mockBucket",
+						KMSKeyARN: "mockKMS",
 					}, nil)
 			},
 			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
