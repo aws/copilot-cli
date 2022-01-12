@@ -71,7 +71,6 @@ type initPipelineVars struct {
 	appName           string
 	environments      []string
 	repoURL           string
-	repoShortName     string
 	repoBranch        string
 	githubAccessToken string
 }
@@ -94,6 +93,7 @@ type initPipelineOpts struct {
 	provider  string
 	repoName  string
 	repoOwner string
+	repoShortName     string
 	ccRegion  string
 
 	// Caches variables
