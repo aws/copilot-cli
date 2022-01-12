@@ -844,12 +844,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
+					Name: mockAppName,
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
@@ -869,12 +865,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
+					Name: mockAppName,
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
@@ -895,12 +887,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
+					Name: mockAppName,
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
@@ -924,12 +912,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
+					Name: mockAppName,
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
@@ -953,8 +937,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
+					Name: mockAppName,
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
@@ -981,12 +964,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
+					Name: mockAppName,
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
@@ -1049,12 +1028,8 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
 				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
+					Name: mockAppName,
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
