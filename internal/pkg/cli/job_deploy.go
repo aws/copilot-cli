@@ -277,7 +277,7 @@ func (o *deployJobOpts) configureClients() error {
 		return fmt.Errorf("initiate image builder pusher: %w", err)
 	}
 
-	o.s3 = s3.New(defaultSessEnvRegion)
+	o.s3 = s3.New(envSession)
 
 	// CF client against env account profile AND target environment region
 	o.jobCFN = cloudformation.New(envSession)
