@@ -348,7 +348,7 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 
 	// CF client against env account profile AND target environment region.
-	o.svcCFN = cloudformation.New(envSession, cloudformation.WithAppS3Client(defaultSessEnvRegion))
+	o.svcCFN = cloudformation.New(envSession)
 
 	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         o.appName,

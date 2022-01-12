@@ -39,7 +39,7 @@ func (cf CloudFormation) pushWorkloadTemplateToS3Bucket(bucket string, config St
 		return "", fmt.Errorf("generate template: %w", err)
 	}
 	reader := strings.NewReader(template)
-	url, err := cf.appS3Client.Upload(bucket, fmt.Sprintf(fmtWorkloadCFNTemplateName, config.StackName(), sha256.Sum256([]byte(template))), reader)
+	url, err := cf.S3Client.Upload(bucket, fmt.Sprintf(fmtWorkloadCFNTemplateName, config.StackName(), sha256.Sum256([]byte(template))), reader)
 	if err != nil {
 		return "", fmt.Errorf("upload workload template to S3 bucket %s: %w", bucket, err)
 	}

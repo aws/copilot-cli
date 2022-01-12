@@ -35,7 +35,7 @@ func testDeployWorkload_OnPushToS3Failure(t *testing.T, when func(w progress.Fil
 	wantedErr := errors.New("some error")
 	mS3Client := mocks.NewMocks3Client(ctrl)
 	mS3Client.EXPECT().Upload("mockBucket", gomock.Any(), gomock.Any()).Return("", wantedErr)
-	client := CloudFormation{appS3Client: mS3Client}
+	client := CloudFormation{S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -55,7 +55,7 @@ func testDeployWorkload_OnCreateChangeSetFailure(t *testing.T, when func(w progr
 	m := mocks.NewMockcfnClient(ctrl)
 	m.EXPECT().Create(gomock.Any()).Return("", wantedErr)
 	m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil)
-	client := CloudFormation{cfnClient: m, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: m, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -76,7 +76,7 @@ func testDeployWorkload_OnUpdateChangeSetFailure(t *testing.T, when func(w progr
 	m.EXPECT().Create(gomock.Any()).Return("", &cloudformation.ErrStackAlreadyExists{})
 	m.EXPECT().Update(gomock.Any()).Return("", wantedErr)
 	m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil)
-	client := CloudFormation{cfnClient: m, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: m, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -95,7 +95,7 @@ func testDeployWorkload_OnDescribeChangeSetFailure(t *testing.T, when func(w pro
 	m := mocks.NewMockcfnClient(ctrl)
 	m.EXPECT().Create(gomock.Any()).Return("1234", nil)
 	m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(nil, errors.New("DescribeChangeSet error"))
-	client := CloudFormation{cfnClient: m, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: m, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -115,7 +115,7 @@ func testDeployWorkload_OnTemplateBodyFailure(t *testing.T, when func(w progress
 	m.EXPECT().Create(gomock.Any()).Return("1234", nil)
 	m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
 	m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", errors.New("TemplateBody error"))
-	client := CloudFormation{cfnClient: m, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: m, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -137,7 +137,7 @@ func testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t *testing.T, w
 	m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
 	m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", nil)
 	m.EXPECT().DescribeStackEvents(gomock.Any()).Return(nil, wantedErr)
-	client := CloudFormation{cfnClient: m, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: m, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -171,7 +171,7 @@ func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, stackName st
 	m.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_FAILED"),
 	}, nil)
-	client := CloudFormation{cfnClient: m, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: m, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -251,7 +251,7 @@ Resources:
 	mockCFN.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
-	client := CloudFormation{cfnClient: mockCFN, ecsClient: mockECS, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: mockCFN, ecsClient: mockECS, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -331,7 +331,7 @@ Resources:
 	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
-	client := CloudFormation{cfnClient: mockCFN, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: mockCFN, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN
@@ -452,7 +452,7 @@ Resources:
 			},
 		},
 	}, nil).AnyTimes()
-	client := CloudFormation{cfnClient: m, appS3Client: mS3Client}
+	client := CloudFormation{cfnClient: m, S3Client: mS3Client}
 	buf := new(strings.Builder)
 
 	// WHEN

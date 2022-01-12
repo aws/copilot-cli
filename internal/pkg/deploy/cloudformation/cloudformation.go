@@ -106,23 +106,12 @@ type CloudFormation struct {
 	ecsClient      ecsClient
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient
-	appS3Client    s3Client
+	S3Client       s3Client
 	region         string
 }
 
-// CloudFormationOption represents an option to apply to a CloudFormation.
-type CloudFormationOption func(cf *CloudFormation)
-
-// WithAppS3Client configures the appS3Client separately. For example. caller may provide a different session for
-// s3 client from the other clients.
-func WithAppS3Client(sess *session.Session) func(cf *CloudFormation) {
-	return func(cf *CloudFormation) {
-		cf.appS3Client = s3.New(sess)
-	}
-}
-
 // New returns a configured CloudFormation client.
-func New(sess *session.Session, opts ...CloudFormationOption) CloudFormation {
+func New(sess *session.Session) CloudFormation {
 	client := CloudFormation{
 		cfnClient:      cloudformation.New(sess),
 		codeStarClient: codestar.New(sess),
@@ -134,11 +123,8 @@ func New(sess *session.Session, opts ...CloudFormationOption) CloudFormation {
 			}))
 		},
 		appStackSet: stackset.New(sess),
-		appS3Client: s3.New(sess),
+		S3Client:    s3.New(sess),
 		region:      aws.StringValue(sess.Config.Region),
-	}
-	for _, opt := range opts {
-		opt(&client)
 	}
 	return client
 }
