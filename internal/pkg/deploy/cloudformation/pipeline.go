@@ -103,7 +103,7 @@ func (cf CloudFormation) pushTemplateToS3Bucket(bucket string, config StackConfi
 		return "", fmt.Errorf("generate template: %w", err)
 	}
 	reader := strings.NewReader(template)
-	url, err := cf.S3Client.Upload(bucket, fmt.Sprintf(fmtPipelineCfnTemplateName, config.StackName()), reader)
+	url, err := cf.s3Client.Upload(bucket, fmt.Sprintf(fmtPipelineCfnTemplateName, config.StackName()), reader)
 	if err != nil {
 		return "", fmt.Errorf("upload pipeline template to S3 bucket %s: %w", bucket, err)
 	}
