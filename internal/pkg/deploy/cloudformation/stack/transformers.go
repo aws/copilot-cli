@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 
@@ -264,7 +265,6 @@ type networkLoadBalancerConfig struct {
 	// If a domain is associated these values are not empty.
 	appDNSDelegationRole *string
 	appDNSName           *string
-	bucket               *string
 	certValidatorLambda  string
 	customDomainLambda   string
 }
@@ -331,13 +331,16 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		config.appDNSName = dnsName
 		config.appDNSDelegationRole = dnsDelegationRole
 
-		bucket, urls, err := parseS3URLs(s.nlbCustomResourceS3URLs)
+		nlbCertValidatorLambda, err := s.parser.Read(nlbCertValidatorPath)
 		if err != nil {
-			return networkLoadBalancerConfig{}, err
+			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb certificate validator lambda: %w", err)
 		}
-		config.bucket = bucket
-		config.certValidatorLambda = aws.StringValue(urls[template.NLBCertValidatorLambdaFileName])
-		config.customDomainLambda = aws.StringValue(urls[template.NLBCustomDomainLambdaFileName])
+		nlbCustomDomainLambda, err := s.parser.Read(nlbCustomDomainPath)
+		if err != nil {
+			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb custom domain lambda: %w", err)
+		}
+		config.certValidatorLambda = nlbCertValidatorLambda.String()
+		config.customDomainLambda = nlbCustomDomainLambda.String()
 	}
 	return config, nil
 }
@@ -625,9 +628,9 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	if len(topics) == 0 {
 		return nil, nil
 	}
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return nil, fmt.Errorf("find the partition for region %s", region)
+	partition, err := partitions.Region(region).Partition()
+	if err != nil {
+		return nil, err
 	}
 	var publishers template.PublishOpts
 	// convert the topics to template Topics

@@ -552,7 +552,7 @@ type svcForceUpdater interface {
 }
 
 type serviceDeployer interface {
-	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, opts ...awscloudformation.StackOption) error
+	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
 }
 
 type apprunnerServiceDescriber interface {
