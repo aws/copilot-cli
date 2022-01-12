@@ -292,7 +292,7 @@ func (o *initEnvOpts) Execute() error {
 
 	// 4. Start creating the CloudFormation stack for the environment.
 	if resources.S3Bucket == "" {
-		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion)
+		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app %s. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion, app.Name)
 		return fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
 	}
 	partition, err := partitions.Region(envRegion).Partition()
