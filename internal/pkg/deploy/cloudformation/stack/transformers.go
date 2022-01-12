@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 
@@ -627,9 +628,9 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	if len(topics) == 0 {
 		return nil, nil
 	}
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return nil, fmt.Errorf("find the partition for region %s", region)
+	partition, err := partitions.Region(region).Partition()
+	if err != nil {
+		return nil, err
 	}
 	var publishers template.PublishOpts
 	// convert the topics to template Topics

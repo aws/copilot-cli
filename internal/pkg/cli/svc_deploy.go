@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
@@ -341,7 +341,7 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("initiate image builder pusher: %w", err)
 	}
 
-	o.s3 = s3.New(defaultSessEnvRegion)
+	o.s3 = s3.New(envSession)
 
 	o.newSvcUpdater = func(f func(*session.Session) svcForceUpdater) {
 		o.svcUpdater = f(envSession)
@@ -473,9 +473,9 @@ func (o *deploySvcOpts) pushEnvFilesToS3Bucket(path string) error {
 	}
 	// The app and environment are always within the same partition.
 	region := o.targetEnvironment.Region
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return fmt.Errorf("find the partition for region %s", region)
+	partition, err := partitions.Region(region).Partition()
+	if err != nil {
+		return err
 	}
 	o.envFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
 	return nil

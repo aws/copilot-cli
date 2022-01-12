@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -21,6 +21,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -36,8 +39,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 type deployJobOpts struct {
@@ -203,9 +204,9 @@ func (o *deployJobOpts) pushEnvFilesToS3Bucket(path string) error {
 	}
 	// The app and environment are always within the same partition.
 	region := o.targetEnvironment.Region
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return fmt.Errorf("find the partition for region %s", region)
+	partition, err := partitions.Region(region).Partition()
+	if err != nil {
+		return err
 	}
 	o.envFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
 	return nil

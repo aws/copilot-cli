@@ -10,14 +10,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -296,7 +295,11 @@ func (o *initEnvOpts) Execute() error {
 		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion)
 		return fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
 	}
-	if err := o.deployEnv(app, s3.FormatARN(endpoints.AwsPartitionID, resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
+	partition, err := partitions.Region(envRegion).Partition()
+	if err != nil {
+		return err
+	}
+	if err := o.deployEnv(app, s3.FormatARN(partition.ID(), resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
 		return err
 	}
 
