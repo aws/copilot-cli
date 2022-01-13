@@ -4335,6 +4335,21 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
+// PublicCIDRBlocks mocks base method.
+func (m *MockenvDescriber) PublicCIDRBlocks() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublicCIDRBlocks")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublicCIDRBlocks indicates an expected call of PublicCIDRBlocks.
+func (mr *MockenvDescriberMockRecorder) PublicCIDRBlocks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockenvDescriber)(nil).PublicCIDRBlocks))
+}
+
 // MockversionGetter is a mock of versionGetter interface.
 type MockversionGetter struct {
 	ctrl     *gomock.Controller
@@ -5529,44 +5544,6 @@ func (m *Mockec2Client) ListAZs() ([]ec2.AZ, error) {
 func (mr *Mockec2ClientMockRecorder) ListAZs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAZs", reflect.TypeOf((*Mockec2Client)(nil).ListAZs))
-}
-
-// MockvpcSubnetLister is a mock of vpcSubnetLister interface.
-type MockvpcSubnetLister struct {
-	ctrl     *gomock.Controller
-	recorder *MockvpcSubnetListerMockRecorder
-}
-
-// MockvpcSubnetListerMockRecorder is the mock recorder for MockvpcSubnetLister.
-type MockvpcSubnetListerMockRecorder struct {
-	mock *MockvpcSubnetLister
-}
-
-// NewMockvpcSubnetLister creates a new mock instance.
-func NewMockvpcSubnetLister(ctrl *gomock.Controller) *MockvpcSubnetLister {
-	mock := &MockvpcSubnetLister{ctrl: ctrl}
-	mock.recorder = &MockvpcSubnetListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockvpcSubnetLister) EXPECT() *MockvpcSubnetListerMockRecorder {
-	return m.recorder
-}
-
-// ListVPCSubnets mocks base method.
-func (m *MockvpcSubnetLister) ListVPCSubnets(vpcID string) (*ec2.VPCSubnets, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListVPCSubnets", vpcID)
-	ret0, _ := ret[0].(*ec2.VPCSubnets)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListVPCSubnets indicates an expected call of ListVPCSubnets.
-func (mr *MockvpcSubnetListerMockRecorder) ListVPCSubnets(vpcID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCSubnets", reflect.TypeOf((*MockvpcSubnetLister)(nil).ListVPCSubnets), vpcID)
 }
 
 // MockserviceResumer is a mock of serviceResumer interface.

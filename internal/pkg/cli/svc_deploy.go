@@ -13,10 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -26,6 +25,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"golang.org/x/mod/semver"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -47,8 +49,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -97,7 +97,6 @@ type deploySvcOpts struct {
 	endpointGetter      endpointGetter
 	snsTopicGetter      deployedEnvironmentLister
 	identity            identityService
-	subnetLister        vpcSubnetLister
 	envDescriber        envDescriber
 
 	spinner progress
@@ -331,7 +330,6 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("create describer for environment %s in application %s: %w", o.envName, o.appName, err)
 	}
 	o.envDescriber = d
-	o.subnetLister = ec2.New(envSession)
 
 	// ECR client against tools account profile AND target environment region.
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
@@ -384,23 +382,6 @@ func (o *deploySvcOpts) configureClients() error {
 	id := identity.New(defaultSess)
 	o.identity = id
 	return nil
-}
-
-func (o *deploySvcOpts) publicCIDRBlocks() ([]string, error) {
-	envDescription, err := o.envDescriber.Describe()
-	if err != nil {
-		return nil, fmt.Errorf("describe environment %s: %w", o.envName, err)
-	}
-	vpcID := envDescription.EnvironmentVPC.ID
-	subnets, err := o.subnetLister.ListVPCSubnets(vpcID)
-	if err != nil {
-		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, o.envName, err)
-	}
-	var cidrBlocks []string
-	for _, subnet := range subnets.Public {
-		cidrBlocks = append(cidrBlocks, subnet.CIDRBlock)
-	}
-	return cidrBlocks, nil
 }
 
 func (o *deploySvcOpts) configureContainerImage() error {
@@ -591,22 +572,6 @@ func uploadRDWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *st
 	return urls, nil
 }
 
-func uploadNLBWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
-	s3Client, err := o.newS3Uploader()
-	if err != nil {
-		return nil, err
-	}
-
-	urls, err := o.uploader.UploadNetworkLoadBalancedWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
-	}
-
-	return urls, nil
-}
-
 func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
@@ -622,28 +587,24 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		if o.targetApp.Domain == "" && t.HasAliases() {
-			log.Errorf(aliasUsedWithoutDomainFriendlyText)
-			return nil, errors.New("alias specified when application is not associated with a domain")
+		var appVersionGetter versionGetter
+		appVersionGetter, err = o.newAppVersionGetter(o.appName)
+		if err != nil {
+			return nil, fmt.Errorf("new app describer for application %s: %w", o.appName, err)
+		}
+		if err := validateLBWSRuntime(o.targetApp, o.envName, t, appVersionGetter); err != nil {
+			return nil, err
 		}
 
 		var opts []stack.LoadBalancedWebServiceOption
-
-		// TODO: https://github.com/aws/copilot-cli/issues/2918
-		// 1. ALB block should not be executed if http is disabled
+		if !t.NLBConfig.IsEmpty() {
+			cidrBlocks, err := o.envDescriber.PublicCIDRBlocks()
+			if err != nil {
+				return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", o.envName, err)
+			}
+			opts = append(opts, stack.WithNLB(cidrBlocks))
+		}
 		if o.targetApp.RequiresDNSDelegation() {
-			var appVersionGetter versionGetter
-			if appVersionGetter, err = o.newAppVersionGetter(o.appName); err != nil {
-				return nil, err
-			}
-			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, o.targetApp, o.envName, appVersionGetter); err != nil {
-				return nil, err
-			}
-			if err = validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.NLBConfig.Aliases, o.targetApp, o.envName, appVersionGetter); err != nil {
-				return nil, err
-			}
-			opts = append(opts, stack.WithHTTPS())
-
 			var caller identity.Caller
 			caller, err = o.identity.Get()
 			if err != nil {
@@ -654,23 +615,9 @@ func (o *deploySvcOpts) stackConfiguration() (cloudformation.StackConfiguration,
 				DNSName:             o.targetApp.Domain,
 				AccountPrincipalARN: caller.RootUserARN,
 			}))
-		}
-		if !t.NLBConfig.IsEmpty() {
-			cidrBlocks, err := o.publicCIDRBlocks()
-			if err != nil {
-				return nil, err
-			}
-			opts = append(opts, stack.WithNLB(cidrBlocks))
 
-			if o.targetApp.RequiresDNSDelegation() {
-				if err = o.retrieveAppResourcesForEnvRegion(); err != nil {
-					return nil, err
-				}
-				urls, err := uploadNLBWSCustomResources(o.uploadOpts, o.appEnvResources)
-				if err != nil {
-					return nil, err
-				}
-				opts = append(opts, stack.WithNLBCustomResources(urls))
+			if !t.RoutingRule.Disabled() {
+				opts = append(opts, stack.WithHTTPS())
 			}
 		}
 		conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc, opts...)
@@ -840,17 +787,13 @@ func envFile(unmarshaledManifest interface{}) string {
 	return ""
 }
 
-func validateLBSvcAliasAndAppVersion(svcName string, aliases manifest.Alias, app *config.Application, envName string, appVersionGetter versionGetter) error {
+func validateLBSvcAlias(aliases manifest.Alias, app *config.Application, envName string) error {
 	if aliases.IsEmpty() {
 		return nil
 	}
 	aliasList, err := aliases.ToStringSlice()
 	if err != nil {
 		return fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
-	}
-	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
-		logAppVersionOutdatedError(svcName)
-		return err
 	}
 	for _, alias := range aliasList {
 		// Alias should be within either env, app, or root hosted zone.
@@ -959,6 +902,25 @@ func validateAppVersion(appName string, appVersionGetter versionGetter) error {
 		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
 	}
 	return nil
+}
+
+func validateLBWSRuntime(app *config.Application, envName string, mft *manifest.LoadBalancedWebService, appVersionGetter versionGetter) error {
+	if app.Domain == "" && mft.HasAliases() {
+		log.Errorf(aliasUsedWithoutDomainFriendlyText)
+		return errors.New("alias specified when application is not associated with a domain")
+	}
+
+	if app.RequiresDNSDelegation() {
+		if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
+			logAppVersionOutdatedError(aws.StringValue(mft.Name))
+			return err
+		}
+	}
+
+	if err := validateLBSvcAlias(mft.RoutingRule.Alias, app, envName); err != nil {
+		return err
+	}
+	return validateLBSvcAlias(mft.NLBConfig.Aliases, app, envName)
 }
 
 func logAppVersionOutdatedError(name string) {

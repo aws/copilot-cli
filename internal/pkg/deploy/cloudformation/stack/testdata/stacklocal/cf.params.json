@@ -10,13 +10,13 @@
     "TaskCount": "1",
     "LogRetention": "30",
     "ContainerPort": "5000",
-    "RulePath": "my-svc",
-    "HTTPSEnabled": "true",
     "DNSDelegated": "true",
     "TargetContainer": "my-svc",
     "TargetPort": "5000",
-    "Stickiness": "false",
-    "EnvFileARN": ""
+    "EnvFileARN": "",
+    "RulePath": "my-svc",
+    "HTTPSEnabled": "true",
+    "Stickiness": "false"
   },
   "Tags": { 
     "copilot-application": "my-app",
