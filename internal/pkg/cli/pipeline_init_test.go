@@ -189,7 +189,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 
-			expectedError: fmt.Errorf("parse 'git branch' results: %s", "unparsable format"),
+			expectedError: fmt.Errorf("parse 'git branch' results: %s", "cannot parse branch name from 'remotes/archerdev'"),
 		},
 		"invalid environments": {
 			inAppName: "my-app",
@@ -1416,7 +1416,7 @@ func TestInitPipelineOpts_askBranch(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
 			},
-			expectedErr: errors.New("parse git branch results: unparsable format"),
+			expectedErr: errors.New("parse git branch results: cannot parse branch name from 'badResults'"),
 		},
 		"errors if unsuccessful selecting branch": {
 			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),
@@ -1480,7 +1480,7 @@ func TestInitPipelineOpts_parseGitBranchResults(t *testing.T) {
 		},
 		"errors if no branches": {
 			inGitBranchResults: "",
-			expectedErr:        errors.New("unparsable format"),
+			expectedErr:        errors.New("cannot parse branch name from ''"),
 		},
 	}
 

@@ -485,7 +485,7 @@ func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {
 	for _, item := range items {
 		elements := strings.Split(item, "/")
 		if len(elements) < 3 {
-			return nil, fmt.Errorf("unparsable format")
+			return nil, fmt.Errorf("cannot parse branch name from '%s'", item)
 		}
 		branchName := elements[2]
 		branches = append(branches, branchName)
