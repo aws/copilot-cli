@@ -481,7 +481,6 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) map[string]string {
 
 func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {
 	var branches []string
-	branchSet := make(map[string]bool)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
 		elements := strings.Split(item, "/")
@@ -489,10 +488,7 @@ func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {
 			return nil, fmt.Errorf("unparsable format")
 		}
 		branchName := elements[2]
-		branchSet[branchName] = true
-	}
-	for branch := range branchSet {
-		branches = append(branches, branch)
+		branches = append(branches, branchName)
 	}
 	return branches, nil
 }
