@@ -478,6 +478,11 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) map[string]string {
 	return repos
 }
 
+// parseGitBranchResults takes the output from `git branch -a -l '[remoteName]/*'`
+// ex:  remotes/cc/main
+//  	remotes/cc/dev
+// and returns just the branch names
+// ex: []string{"main", "dev"}
 func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {
 	var branches []string
 	items := strings.Split(s, "\n")
