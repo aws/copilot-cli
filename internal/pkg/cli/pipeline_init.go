@@ -89,12 +89,12 @@ type initPipelineOpts struct {
 	sel            pipelineSelector
 
 	// Outputs stored on successful actions.
-	secret    string
-	provider  string
-	repoName  string
-	repoOwner string
-	repoShortName     string
-	ccRegion  string
+	secret         string
+	provider       string
+	repoName       string
+	repoOwner      string
+	repoRemoteName string
+	ccRegion       string
 
 	// Caches variables
 	fs           *afero.Afero
@@ -250,14 +250,14 @@ func (o *initPipelineOpts) validateURLExists(url string) error {
 	if _, ok := repos[url]; !ok {
 		return fmt.Errorf("URL '%s' is not a local git remote; please check that you're in the correct directory", o.repoURL)
 	}
-	o.repoShortName = repos[url]
+	o.repoRemoteName = repos[url]
 	return nil
 }
 
 func (o *initPipelineOpts) validateBranch() error {
-	// URL has already been checked to exist and be valid; repoShortName already set by validateURLExists.
+	// URL has already been checked to exist and be valid; repoRemoteName already set by validateURLExists.
 	// Fetches and parses all branches associated with the chosen repo.
-	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoShortName + "/*"}, exec.Stdout(&o.branchBuffer))
+	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoRemoteName + "/*"}, exec.Stdout(&o.branchBuffer))
 	if err != nil {
 		return fmt.Errorf("get repo branch info: %w", err)
 	}
@@ -272,7 +272,7 @@ func (o *initPipelineOpts) validateBranch() error {
 			return nil
 		}
 	}
-	return fmt.Errorf("branch %s not found for repo %s", o.repoBranch, o.repoShortName)
+	return fmt.Errorf("branch %s not found for repo %s", o.repoBranch, o.repoRemoteName)
 }
 
 func (o *initPipelineOpts) fetchAndParseURLs() (map[string]string, error) {
@@ -396,21 +396,21 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 }
 
 func (o *initPipelineOpts) selectURL() error {
-	repos, err := o.fetchAndParseURLs()
+	URLsAndRemoteNames, err := o.fetchAndParseURLs()
 	if err != nil {
 		return fmt.Errorf("fetch and parse URLs: %w", err)
 	}
 
-	var formattedRepos []string
-	for url, name := range repos {
-		formattedRepos = append(formattedRepos, fmt.Sprintf("%s: %s", name, url))
+	var formattedRemoteNamesAndURLs []string
+	for url, remoteName := range URLsAndRemoteNames {
+		formattedRemoteNamesAndURLs = append(formattedRemoteNamesAndURLs, fmt.Sprintf("%s: %s", remoteName, url))
 	}
 
 	// Prompts user to select a repo URL.
 	url, err := o.prompt.SelectOne(
 		pipelineSelectURLPrompt,
 		pipelineSelectURLHelpPrompt,
-		formattedRepos,
+		formattedRemoteNamesAndURLs,
 		prompt.WithFinalMessage("Repository:"),
 	)
 	if err != nil {
@@ -421,14 +421,14 @@ func (o *initPipelineOpts) selectURL() error {
 		return err
 	}
 	o.repoURL = repoParts[1]
-	o.repoShortName = repoParts[0]
+	o.repoRemoteName = repoParts[0]
 
 	return nil
 }
 
 func (o *initPipelineOpts) selectBranch() error {
 	// Fetches and parses all branches associated with the chosen repo.
-	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoShortName + "/*"}, exec.Stdout(&o.branchBuffer))
+	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoRemoteName + "/*"}, exec.Stdout(&o.branchBuffer))
 	if err != nil {
 		return fmt.Errorf("get repo branch info: %w", err)
 	}
@@ -464,7 +464,7 @@ func (o *initPipelineOpts) selectBranch() error {
 // bbhttps	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
-// parseGitRemoteResults returns just the first (shortname) and second (url) columns of the `git remote -v` results as a map (url: name), and skips urls from unsupported sources.
+// parseGitRemoteResults returns just the first (remote name) and second (url) columns of the `git remote -v` results as a map (url: name), and skips urls from unsupported sources.
 func (o *initPipelineOpts) parseGitRemoteResult(s string) map[string]string {
 	repos := make(map[string]string)
 	items := strings.Split(s, "\n")
