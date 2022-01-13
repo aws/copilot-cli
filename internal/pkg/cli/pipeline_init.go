@@ -331,9 +331,8 @@ func (o *initPipelineOpts) askRepository() error {
 }
 
 func (o *initPipelineOpts) askBranch() error {
-	var err error
 	if o.repoBranch == "" {
-		if err = o.selectBranch(); err != nil {
+		if err := o.selectBranch(); err != nil {
 			return err
 		}
 	}
