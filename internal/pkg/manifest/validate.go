@@ -607,11 +607,29 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 			missingField: "port",
 		}
 	}
+	if err := validateNLBPort(c.Port); err != nil {
+		return fmt.Errorf(`validate "port": %w`, err)
+	}
 	if err := c.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	if err := c.Aliases.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
+	}
+	return nil
+}
+
+func validateNLBPort(port *string) error {
+	_, protocol, err := ParsePortMapping(port)
+	if err != nil {
+		return err
+	}
+	if protocol == nil {
+		return nil
+	}
+	protocolVal := aws.StringValue(protocol)
+	if strings.ToLower(protocolVal) != "tcp" && strings.ToLower(protocolVal) != "udp" && strings.ToLower(protocolVal) != "tls" {
+		return fmt.Errorf(`unrecognized protocol %s`, protocolVal)
 	}
 	return nil
 }

@@ -1043,6 +1043,40 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "nlb": `,
 			wantedError:          fmt.Errorf(`"port" must be specified`),
 		},
+		"error parsing port": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("sabotage/this/string"),
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "port": cannot parse port mapping from sabotage/this/string`),
+		},
+		"success if port is specified without protocol": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443"),
+			},
+		},
+		"error if protocol is not recognized": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tps"),
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "port": unrecognized protocol tps`),
+		},
+		"success if tcp": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tcp"),
+			},
+		},
+		"success if udp": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("161/udp"),
+			},
+		},
+		"success if tls": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tls"),
+			},
+		},
 	}
 
 	for name, tc := range testCases {
