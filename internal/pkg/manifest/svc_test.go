@@ -809,3 +809,40 @@ func TestQueueScaling_AcceptableBacklogPerTask(t *testing.T) {
 		})
 	}
 }
+
+func TestParsePortMapping(t *testing.T) {
+	testCases := map[string]struct {
+		inPort *string
+
+		wantedPort     *string
+		wantedProtocol *string
+		wantedErr      error
+	}{
+		"error parsing port": {
+			inPort:    stringP("1/2/3"),
+			wantedErr: errors.New("cannot parse port mapping from 1/2/3"),
+		},
+		"no error if input is empty": {},
+		"port number only": {
+			inPort:     stringP("443"),
+			wantedPort: stringP("443"),
+		},
+		"port and protocol": {
+			inPort:         stringP("443/tcp"),
+			wantedPort:     stringP("443"),
+			wantedProtocol: stringP("tcp"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotPort, gotProtocol, err := ParsePortMapping(tc.inPort)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, gotPort, tc.wantedPort)
+				require.Equal(t, gotProtocol, tc.wantedProtocol)
+			}
+		})
+	}
+}
