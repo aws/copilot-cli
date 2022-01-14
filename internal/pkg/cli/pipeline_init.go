@@ -157,11 +157,18 @@ func (o *initPipelineOpts) Validate() error {
 		return err
 	}
 
-	// URL flag and branch flag must both be set or not.
-	if URL, branch := o.repoURL == "", o.repoBranch == ""; URL != branch {
-		return fmt.Errorf(`must specify either both '--%s' and '--%s' or neither`, repoURLFlag, gitBranchFlag)
-	}
 	if o.repoURL != "" {
+		// Ask user to select branch if it is not set by flag.
+		var err error
+		o.repoRemoteName, err = o.getRemoteNameFromURL()
+		if err != nil {
+			return err
+		}
+		if o.repoBranch == "" {
+			if err := o.selectBranch(); err != nil {
+				return err
+			}
+		}
 		// Validate if URL of accepted source type (GitHub, Bitbucket, CodeCommit).
 		if err := o.validateURLType(o.repoURL); err != nil {
 			return err
@@ -171,8 +178,15 @@ func (o *initPipelineOpts) Validate() error {
 			return err
 		}
 	}
-	// Validate that branch exists for the given git remote.
+
+	// Ask user to select URL if it is not set by flag.
 	if o.repoBranch != "" {
+		if o.repoURL == "" {
+			if err := o.selectURL(); err != nil {
+				return err
+			}
+		}
+		// Validate that branch exists for the given git remote.
 		if err := o.validateBranch(); err != nil {
 			return err
 		}
@@ -411,6 +425,10 @@ func (o *initPipelineOpts) selectURL() error {
 	for url, remoteName := range URLsAndRemoteNames {
 		formattedRemoteNamesAndURLs = append(formattedRemoteNamesAndURLs, fmt.Sprintf("%s: %s", remoteName, url))
 	}
+	if len(formattedRemoteNamesAndURLs) == 1 {
+		log.Infof("Only one git repository detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(formattedRemoteNamesAndURLs[0]))
+		return nil
+	}
 
 	// Prompts user to select a repo URL.
 	url, err := o.prompt.SelectOne(
@@ -436,6 +454,10 @@ func (o *initPipelineOpts) selectBranch() error {
 	branches, err := o.fetchAndParseBranches()
 	if err != nil {
 		return err
+	}
+	if len(branches) == 1 {
+		log.Infof("Only one git branch detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(branches[0]))
+		return nil
 	}
 	branch, err := o.prompt.SelectOne(
 		pipelineSelectBranchPrompt,
@@ -495,6 +517,14 @@ func (o *initPipelineOpts) parseGitBranchResults(s string) ([]string, error) {
 		branches = append(branches, branchName)
 	}
 	return branches, nil
+}
+
+func (o *initPipelineOpts) getRemoteNameFromURL() (string, error) {
+	repos, err := o.fetchAndParseURLs()
+	if err != nil {
+		return "", err
+	}
+	return repos[o.repoURL], nil
 }
 
 type ghRepoURL string
