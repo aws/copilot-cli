@@ -6,10 +6,12 @@ package describe
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/dustin/go-humanize/english"
 )
 
 var (
@@ -51,25 +53,62 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 		return "", err
 	}
 
+	var (
+		albEnabled bool
+		nlbEnabled bool
+	)
+	resources, err := d.ecsServiceDescribers[envName].ServiceStackResources()
+	if err != nil {
+		return "", fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+	}
+	for _, resource := range resources {
+		if resource.LogicalID == svcStackResourceALBTargetGroupLogicalID {
+			albEnabled = true
+		}
+		if resource.LogicalID == svcStackResourceNLBTargetGroupLogicalID {
+			nlbEnabled = true
+		}
+	}
+
+	var uri LBWebServiceURI
+	if albEnabled {
+		albURI, err := d.albURI(envName)
+		if err != nil {
+			return "", err
+		}
+		uri.albURI = albURI
+	}
+
+	if nlbEnabled {
+		nlbURI, err := d.nlbURI(envName)
+		if err != nil {
+			return "", err
+		}
+		uri.nlbURI = nlbURI
+	}
+
+	return uri.String(), nil
+}
+
+func (d *LBWebServiceDescriber) albURI(envName string) (albURI, error) {
 	envParams, err := d.envDescriber[envName].Params()
 	if err != nil {
-		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
+		return albURI{}, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
 	envOutputs, err := d.envDescriber[envName].Outputs()
 	if err != nil {
-		return "", fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
+		return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
 	}
 	svcParams, err := d.ecsServiceDescribers[envName].Params()
 	if err != nil {
-		return "", fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
+		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
-
-	uri := &LBWebServiceURI{
+	uri := albURI{
 		DNSNames: []string{envOutputs[envOutputPublicLoadBalancerDNSName]},
 		Path:     svcParams[stack.LBWebServiceRulePathParamKey],
 	}
-	_, isHTTPS := envOutputs[envOutputSubdomain]
-	if isHTTPS {
+	isHTTPS, ok := svcParams[svcParamHTTPSEnabled]
+	if ok && isHTTPS == "true" {
 		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[envOutputSubdomain])
 		uri.DNSNames = []string{dnsName}
 		uri.HTTPS = true
@@ -78,14 +117,46 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	if aliases != "" {
 		value := make(map[string][]string)
 		if err := json.Unmarshal([]byte(aliases), &value); err != nil {
-			return "", err
+			return albURI{}, err
 		}
 		if value[d.svc] != nil {
 			uri.DNSNames = value[d.svc]
 		}
 	}
 	d.svcParams = svcParams
-	return uri.String(), nil
+	return uri, nil
+}
+
+func (d *LBWebServiceDescriber) nlbURI(envName string) (nlbURI, error) {
+	svcParams, err := d.ecsServiceDescribers[envName].Params()
+	if err != nil {
+		return nlbURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
+	}
+	port, _ := svcParams[stack.LBWebServiceNLBPortParamKey]
+	uri := nlbURI{
+		Port: port,
+	}
+	dnsDelegated, _ := svcParams[stack.LBWebServiceDNSDelegatedParamKey]
+	if dnsDelegated != "true" {
+		svcOutputs, err := d.ecsServiceDescribers[envName].Outputs()
+		if err != nil {
+			return nlbURI{}, fmt.Errorf("get stack outputs for service %s: %w", d.svc, err)
+		}
+		uri.DNSNames = []string{svcOutputs[svcOutputPublicNLBDNSName]}
+		return uri, nil
+	}
+
+	aliases, _ := svcParams[stack.LBWebServiceNLBAliasesParamKey]
+	if aliases != "" {
+		uri.DNSNames = strings.Split(aliases, ",")
+		return uri, nil
+	}
+	envOutputs, err := d.envDescriber[envName].Outputs()
+	if err != nil {
+		return nlbURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
+	}
+	uri.DNSNames = []string{fmt.Sprintf("%s-nlb.%s", d.svc, envOutputs[envOutputSubdomain])}
+	return uri, nil
 }
 
 // URI returns the service discovery namespace and is used to make
@@ -131,23 +202,37 @@ func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
 
 // LBWebServiceURI represents the unique identifier to access a load balanced web service.
 type LBWebServiceURI struct {
+	albURI albURI
+	nlbURI nlbURI
+}
+
+type albURI struct {
 	HTTPS    bool
-	DNSNames []string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public load balancer's DNS.
+	DNSNames []string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public application load balancer's DNS.
 	Path     string   // Empty if the service is served on HTTPS. Otherwise, the pattern used to match the service.
+}
+
+type nlbURI struct {
+	DNSNames []string
+	Port     string
 }
 
 func (u *LBWebServiceURI) String() string {
 	var uris []string
-	for _, dnsName := range u.DNSNames {
+	for _, dnsName := range u.albURI.DNSNames {
 		protocol := "http://"
-		if u.HTTPS {
+		if u.albURI.HTTPS {
 			protocol = "https://"
 		}
 		path := ""
-		if u.Path != "/" {
-			path = fmt.Sprintf("/%s", u.Path)
+		if u.albURI.Path != "/" {
+			path = fmt.Sprintf("/%s", u.albURI.Path)
 		}
 		uris = append(uris, fmt.Sprintf("%s%s%s", protocol, dnsName, path))
+	}
+
+	for _, dnsName := range u.nlbURI.DNSNames {
+		uris = append(uris, fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port))
 	}
 	return english.OxfordWordSeries(uris, "or")
 }
