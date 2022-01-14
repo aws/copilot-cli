@@ -34,6 +34,8 @@ const (
 	LBWebServiceTargetPortParamKey      = "TargetPort"
 	LBWebServiceStickinessParamKey      = "Stickiness"
 	LBWebServiceDNSDelegatedParamKey    = "DNSDelegated"
+	LBWebServiceNLBAliasesParamKey      = "NLBAliases"
+	LBWebServiceNLBPortParamKey         = "NLBPort"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -309,6 +311,22 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			{
 				ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
+			},
+		}...)
+	}
+	if !s.manifest.NLBConfig.IsEmpty() {
+		port, _, err := parsePortMapping(s.manifest.NLBConfig.Port)
+		if err != nil {
+			return nil, err
+		}
+		wkldParams = append(wkldParams, []*cloudformation.Parameter{
+			{
+				ParameterKey:   aws.String(LBWebServiceNLBAliasesParamKey),
+				ParameterValue: aws.String(s.manifest.NLBConfig.Aliases.ToString()),
+			},
+			{
+				ParameterKey:   aws.String(LBWebServiceNLBPortParamKey),
+				ParameterValue: port,
 			},
 		}...)
 	}

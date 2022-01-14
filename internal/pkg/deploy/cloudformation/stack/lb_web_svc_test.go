@@ -382,10 +382,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("80"),
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-			ParameterValue: aws.String("frontend"),
-		},
-		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
@@ -446,6 +442,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("2"),
 				},
 				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
@@ -469,6 +469,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				}
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("false"),
@@ -507,6 +511,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("true"),
 				},
@@ -538,6 +546,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				service.RoutingRule.Stickiness = aws.Bool(true)
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("false"),
@@ -575,6 +587,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				}
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("false"),
@@ -615,6 +631,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
@@ -637,6 +657,124 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
 					ParameterValue: aws.String("true"),
+				},
+			}...),
+		},
+		"nlb enabled": {
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
+					Port: aws.String("443/tcp"),
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBPortParamKey),
+					ParameterValue: aws.String("443"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBAliasesParamKey),
+					ParameterValue: aws.String(""),
+				},
+			}...),
+		},
+		"nlb alias enabled": {
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
+					Aliases: manifest.Alias{
+						StringSlice: []string{"example.com", "v1.example.com"},
+					},
+					Port: aws.String("443/tcp"),
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBPortParamKey),
+					ParameterValue: aws.String("443"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBAliasesParamKey),
+					ParameterValue: aws.String("example.com,v1.example.com"),
+				},
+			}...),
+		},
+		"do not render http params when disabled": {
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.RoutingRule = manifest.RoutingRuleConfigOrBool{
+					Enabled: aws.Bool(false),
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},
