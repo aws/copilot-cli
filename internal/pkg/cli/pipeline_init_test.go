@@ -109,7 +109,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 
-			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote; please check that you're in the correct directory"),
+			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote"),
 		},
 		"errors if git remote results empty": {
 			inAppName:    "my-app",
@@ -124,7 +124,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
-			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote; please check that you're in the correct directory"),
+			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote"),
 		},
 		"error fetching URLs": {
 			inAppName:    "my-app",
@@ -139,7 +139,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error")).Times(1)
 			},
-			expectedError: errors.New("fetch and parse URLs: get remote repository info: some error; make sure you have installed Git and are in a Git repository"),
+			expectedError: errors.New("get Git remote repository info: some error"),
 		},
 		"branch doesn't exist in passed in repo": {
 			inAppName:    "my-app",
@@ -155,7 +155,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 
-			expectedError: errors.New("branch main not found for repo archer"),
+			expectedError: errors.New("branch 'main' not found for repo 'archer'"),
 		},
 		"error fetching branches of given repo": {
 			inAppName:    "my-app",
@@ -172,7 +172,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error")).Times(1)
 			},
 
-			expectedError: fmt.Errorf("get repo branch info: %s", "some error"),
+			expectedError: fmt.Errorf("get Git repo branch info: %s", "some error"),
 		},
 		"error parsing git branch results": {
 			inAppName:    "my-app",
@@ -1406,7 +1406,7 @@ func TestInitPipelineOpts_askBranch(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
 			},
 
-			expectedErr: errors.New("get repo branch info: some error"),
+			expectedErr: errors.New("get Git repo branch info: some error"),
 		},
 		"errors if unsuccessful in parsing git branch results": {
 			inBranchBuffer: *bytes.NewBufferString("badResults"),

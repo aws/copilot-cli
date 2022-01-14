@@ -245,10 +245,10 @@ func (o *initPipelineOpts) validateURLType(url string) error {
 func (o *initPipelineOpts) validateURLExists(url string) error {
 	repos, err := o.fetchAndParseURLs()
 	if err != nil {
-		return fmt.Errorf("fetch and parse URLs: %w", err)
+		return err
 	}
 	if _, ok := repos[url]; !ok {
-		return fmt.Errorf("URL '%s' is not a local git remote; please check that you're in the correct directory", o.repoURL)
+		return fmt.Errorf("URL '%s' is not a local git remote", o.repoURL)
 	}
 	o.repoRemoteName = repos[url]
 	return nil
@@ -256,35 +256,42 @@ func (o *initPipelineOpts) validateURLExists(url string) error {
 
 func (o *initPipelineOpts) validateBranch() error {
 	// URL has already been checked to exist and be valid; repoRemoteName already set by validateURLExists.
-	// Fetches and parses all branches associated with the chosen repo.
-	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoRemoteName + "/*"}, exec.Stdout(&o.branchBuffer))
+	branches, err := o.fetchAndParseBranches()
 	if err != nil {
-		return fmt.Errorf("get repo branch info: %w", err)
+		return err
 	}
-	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.branchBuffer.String()))
-	if err != nil {
-		return fmt.Errorf("parse 'git branch' results: %w", err)
-	}
-	o.branchBuffer.Reset()
-
 	for _, branch := range branches {
 		if branch == o.repoBranch {
 			return nil
 		}
 	}
-	return fmt.Errorf("branch %s not found for repo %s", o.repoBranch, o.repoRemoteName)
+	return fmt.Errorf("branch '%s' not found for repo '%s'", o.repoBranch, o.repoRemoteName)
 }
 
 func (o *initPipelineOpts) fetchAndParseURLs() (map[string]string, error) {
 	// Fetches and parses all remote repositories.
 	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.repoBuffer))
 	if err != nil {
-		return nil, fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
+		return nil, fmt.Errorf("get Git remote repository info: %w", err)
 	}
 	repos := o.parseGitRemoteResult(strings.TrimSpace(o.repoBuffer.String()))
 	o.repoBuffer.Reset()
 
 	return repos, nil
+}
+
+func (o *initPipelineOpts) fetchAndParseBranches() ([]string, error) {
+	// Fetches and parses all branches associated with the chosen repo.
+	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoRemoteName + "/*"}, exec.Stdout(&o.branchBuffer))
+	if err != nil {
+		return nil, fmt.Errorf("get Git repo branch info: %w", err)
+	}
+	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.branchBuffer.String()))
+	if err != nil {
+		return nil, fmt.Errorf("parse 'git branch' results: %w", err)
+	}
+	o.branchBuffer.Reset()
+	return branches, nil
 }
 
 func (o *initPipelineOpts) askEnvs() error {
@@ -397,7 +404,7 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 func (o *initPipelineOpts) selectURL() error {
 	URLsAndRemoteNames, err := o.fetchAndParseURLs()
 	if err != nil {
-		return fmt.Errorf("fetch and parse URLs: %w", err)
+		return err
 	}
 
 	var formattedRemoteNamesAndURLs []string
@@ -426,17 +433,10 @@ func (o *initPipelineOpts) selectURL() error {
 }
 
 func (o *initPipelineOpts) selectBranch() error {
-	// Fetches and parses all branches associated with the chosen repo.
-	err := o.runner.Run("git", []string{"branch", "-a", "-l", o.repoRemoteName + "/*"}, exec.Stdout(&o.branchBuffer))
+	branches, err := o.fetchAndParseBranches()
 	if err != nil {
-		return fmt.Errorf("get repo branch info: %w", err)
+		return err
 	}
-	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.branchBuffer.String()))
-	if err != nil {
-		return fmt.Errorf("parse git branch results: %w", err)
-	}
-	o.branchBuffer.Reset()
-
 	branch, err := o.prompt.SelectOne(
 		pipelineSelectBranchPrompt,
 		pipelineSelectBranchHelpPrompt,
