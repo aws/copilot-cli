@@ -32,6 +32,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		inEnvs        []string
 		mockStore     func(m *mocks.Mockstore)
 		mockRunner    func(m *mocks.Mockrunner)
+		mockPrompt    func(m *mocks.Mockprompter)
 		repoBuffer    bytes.Buffer
 		branchBuffer  bytes.Buffer
 		expectedError error
@@ -53,19 +54,23 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			expectedError: fmt.Errorf("get application ghost-app: some error"),
 		},
-		"URL flag without branch flag": {
+		"URL flag without branch flag triggers selector with passed URL's branches": {
 			inAppName: "my-app",
-			inEnvs:    []string{"test", "prod"},
 			inRepoURL: "https://github.com/badGoose/chaOS",
+			repoBuffer: *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 			},
 			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
 			},
 
-			expectedError: errors.New("must specify either both '--url' and '--git-branch' or neither"),
+			expectedError: nil,
 		},
 		"branch flag without URL flag": {
 			inAppName:    "my-app",
@@ -287,9 +292,11 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			mockStore := mocks.NewMockstore(ctrl)
 			mockRunner := mocks.NewMockrunner(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			tc.mockStore(mockStore)
 			tc.mockRunner(mockRunner)
+			tc.mockPrompt(mockPrompter)
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
@@ -300,6 +307,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				},
 				store:        mockStore,
 				runner:       mockRunner,
+				prompt:     mockPrompter,
 				repoBuffer:   tc.repoBuffer,
 				branchBuffer: tc.branchBuffer,
 			}
