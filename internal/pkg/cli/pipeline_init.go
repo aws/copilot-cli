@@ -333,13 +333,11 @@ func (o *initPipelineOpts) parseAndAssignRepoParts(repo string) error {
 func (o *initPipelineOpts) filterThenSelectReposByBranch() error {
 	var reposWithBranch []string
 	URLsAndRemoteNames, err := o.fetchAndParseURLs()
-	fmt.Println("urls and remote names map: ", URLsAndRemoteNames)
 	if err != nil {
 		return err
 	}
 	for url, remoteName := range URLsAndRemoteNames {
 		branches, err := o.fetchAndParseBranches(remoteName)
-		fmt.Println("branches: ", branches)
 		if err != nil {
 			return err
 		}
@@ -579,7 +577,6 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) map[string]string {
 		URL := strings.TrimSpace(strings.Split(cols[1], " ")[0])
 		repos[URL] = cols[0]
 	}
-	fmt.Println("repos: ", repos)
 	return repos
 }
 
