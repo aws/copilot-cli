@@ -165,7 +165,7 @@ func (o *initPipelineOpts) Validate() error {
 			}
 		}
 	}
-	
+
 	// If both '--url' and '--git-branch' flags are passed in.
 	if o.repoURL != "" && o.repoBranch != "" {
 		// Validate if URL of accepted source type (GitHub, Bitbucket, CodeCommit).
@@ -348,7 +348,7 @@ func (o *initPipelineOpts) filterThenSelectReposByBranch() error {
 		}
 		for _, branch := range branches {
 			if branch == o.repoBranch {
-				reposWithBranch = append(reposWithBranch, fmt.Sprintf("%s: %s", remoteName, url) )
+				reposWithBranch = append(reposWithBranch, fmt.Sprintf("%s: %s", remoteName, url))
 			}
 		}
 	}
