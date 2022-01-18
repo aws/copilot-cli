@@ -292,7 +292,7 @@ type HTTPHealthCheckArgs struct {
 }
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
+	return h.Path == nil && h.SuccessCodes == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
 		h.Interval == nil && h.Timeout == nil && h.GracePeriod == nil
 }
 

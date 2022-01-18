@@ -13,17 +13,12 @@ Parameters:
     Type: String
   ContainerPort:
     Type: Number
-  RulePath:
-    Type: String
   TaskCPU:
     Type: String
   TaskMemory:
     Type: String
   TaskCount:
     Type: Number
-  HTTPSEnabled:
-    Type: String
-    AllowedValues: [true, false]
   DNSDelegated:
     Type: String
     AllowedValues: [true, false]
@@ -41,23 +36,32 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
+{{- if .ALBEnabled}}
+  HTTPSEnabled:
+    Type: String
+    AllowedValues: [true, false]
+  RulePath:
+    Type: String
   Stickiness:
     Type: String
     Default: false
+{{- end}}
 Conditions:
+{{- if .ALBEnabled}}
   HTTPLoadBalancer:
     !Not
       - !Condition HTTPSLoadBalancer
   HTTPSLoadBalancer:
     !Equals [!Ref HTTPSEnabled, true]
+  IsDefaultRootPath:
+    !Equals [!Ref RulePath, "/"]
+{{- end}}
   HasAssociatedDomain:
     !Equals [!Ref DNSDelegated, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
-  IsDefaultRootPath:
-    !Equals [!Ref RulePath, "/"]
 Resources:
 {{include "loggroup" . | indent 2}}
 
@@ -131,7 +135,9 @@ Resources:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
     DependsOn:
+    {{- if .ALBEnabled}}
      - WaitUntilListenerRuleIsCreated
+    {{- end}}
     {{- if .NLB}}
      - NLBListener
     {{- end}}
@@ -140,9 +146,11 @@ Resources:
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       LoadBalancers:
+  {{- if .ALBEnabled}}
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort
           TargetGroupArn: !Ref TargetGroup
+  {{- end}}
   {{- if .NLB}}
         - ContainerName: {{.NLB.Listener.TargetContainer}}
           ContainerPort:  {{.NLB.Listener.TargetPort}}
@@ -152,6 +160,7 @@ Resources:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref ContainerPort
 
+{{- if .ALBEnabled}}
   TargetGroup:
     Metadata:
       'aws:copilot:description': 'A target group to connect the load balancer to your service'
@@ -438,6 +447,7 @@ Resources:
       Timeout: "1"
       Count: 0
 
+{{- end}} {{/*end if .ALBEnabled */}}
 {{- if .NLB}}
 {{include "nlb" . | indent 2}}
 {{- end}}

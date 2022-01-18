@@ -94,6 +94,8 @@ func (e *EnvStackConfig) Template() (string, error) {
 		DNSDelegationLambda:    dnsDelegation,
 		CustomDomainLambda:     customDomain,
 		ScriptBucketName:       bucket,
+		ArtifactBucketARN:      e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
 		ImportVPC:              e.in.ImportVPCConfig,
 		VPCConfig:              vpcConf,
 		Version:                e.in.Version,

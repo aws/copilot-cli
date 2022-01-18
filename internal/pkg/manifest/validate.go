@@ -85,6 +85,14 @@ func (l LoadBalancedWebService) Validate() error {
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l LoadBalancedWebServiceConfig) Validate() error {
 	var err error
+	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields: []string{"http", "nlb"},
+		}
+	}
+	if l.RoutingRule.Disabled() && (l.Count.AdvancedCount.Requests != nil || l.Count.AdvancedCount.ResponseTime != nil) {
+		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
+	}
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
 	}
@@ -532,8 +540,8 @@ func (CommandOverride) Validate() error {
 	return nil
 }
 
-// Validate returns nil if RoutingRule is configured correctly.
-func (r RoutingRule) Validate() error {
+// Validate returns nil if RoutingRuleConfiguration is configured correctly.
+func (r RoutingRuleConfiguration) Validate() error {
 	var err error
 	if err = r.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)

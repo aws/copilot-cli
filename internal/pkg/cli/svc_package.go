@@ -11,15 +11,18 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-
 	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -30,8 +33,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -123,14 +124,44 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		var serializer stackSerializer
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
-			var opts []stack.LoadBalancedWebServiceOption
-			if app.RequiresDNSDelegation() {
-				if err := validateLBSvcAliasAndAppVersion(aws.StringValue(t.Name), t.Alias, app, env.Name, appVersionGetter); err != nil {
+			if err := validateLBWSRuntime(app, env.Name, t, appVersionGetter); err != nil {
+				return nil, err
+			}
+			var options []stack.LoadBalancedWebServiceOption
+			if !t.NLBConfig.IsEmpty() {
+				envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+					App:         app.Name,
+					Env:         env.Name,
+					ConfigStore: store,
+					DeployStore: deployStore,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("create describer for environment %s in application %s: %w", env.Name, app.Name, err)
+				}
+				cidrBlocks, err := envDescriber.PublicCIDRBlocks()
+				if err != nil {
 					return nil, err
 				}
-				opts = append(opts, stack.WithHTTPS())
+				options = append(options, stack.WithNLB(cidrBlocks))
 			}
-			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, opts...)
+
+			if app.RequiresDNSDelegation() {
+				var caller identity.Caller
+				caller, err = opts.identity.Get()
+				if err != nil {
+					return nil, fmt.Errorf("get identity: %w", err)
+				}
+				options = append(options, stack.WithDNSDelegation(deploy.AppInformation{
+					Name:                env.App,
+					DNSName:             app.Domain,
+					AccountPrincipalARN: caller.RootUserARN,
+				}))
+
+				if !t.RoutingRule.Disabled() {
+					options = append(options, stack.WithHTTPS())
+				}
+			}
+			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, options...)
 			if err != nil {
 				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 			}

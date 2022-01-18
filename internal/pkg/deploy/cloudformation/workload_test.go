@@ -64,8 +64,12 @@ func TestCloudFormation_DeployService(t *testing.T) {
 		},
 	}
 	when := func(w progress.FileWriter, cf CloudFormation) error {
-		return cf.DeployService(w, serviceConfig)
+		return cf.DeployService(w, serviceConfig, "mockBucket")
 	}
+
+	t.Run("returns a wrapped error if pushing to s3 bucket fails", func(t *testing.T) {
+		testDeployWorkload_OnPushToS3Failure(t, when)
+	})
 
 	t.Run("returns a wrapped error if creating a change set fails", func(t *testing.T) {
 		testDeployWorkload_OnCreateChangeSetFailure(t, when)

@@ -12,23 +12,23 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/spf13/afero"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/spf13/afero"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 )
@@ -45,7 +45,6 @@ type deploySvcMocks struct {
 	mockInterpolator       *mocks.Mockinterpolator
 	mockDeployStore        *mocks.MockdeployedEnvironmentLister
 	mockEnvDescriber       *mocks.MockenvDescriber
-	mockSubnetLister       *mocks.MockvpcSubnetLister
 	mockS3Svc              *mocks.Mockuploader
 	mockAddons             *mocks.Mocktemplater
 	mockIdentity           *mocks.MockidentityService
@@ -630,7 +629,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("interpolate environment variables for mockSvc manifest: %w", mockError),
 		},
-		"fail to describe environment": {
+		"fail to get public CIDR blocks": {
 			inBuildRequire: false,
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/udp"),
@@ -646,34 +645,9 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvDescriber.EXPECT().Describe().Return(nil, errors.New("some error"))
+				m.mockEnvDescriber.EXPECT().PublicCIDRBlocks().Return(nil, errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("describe environment mockEnv: some error"),
-		},
-		"fail to list subnets": {
-			inBuildRequire: false,
-			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/udp"),
-			},
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name: mockAppName,
-			},
-			mock: func(m *deploySvcMocks) {
-				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
-					EnvironmentVPC: describe.EnvironmentVPC{
-						ID: "mockVPCID",
-					},
-				}, nil)
-				m.mockSubnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(nil, errors.New("some error"))
-			},
-			wantErr: fmt.Errorf("list subnets of vpc mockVPCID in environment mockEnv: some error"),
+			wantErr: fmt.Errorf("get public CIDR blocks information from the VPC of environment mockEnv: some error"),
 		},
 		"fail to get app resources": {
 			inBuildRequire: true,
@@ -829,62 +803,24 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 			},
 			wantErr: fmt.Errorf(`alias "v1.v2.mockDomain" is not supported in hosted zones managed by Copilot`),
 		},
-		"fail to upload NLB custom resource scripts": {
-			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
-				Aliases: manifest.Alias{String: aws.String("v1.mockDomain")},
-			},
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
-			},
-			mock: func(m *deploySvcMocks) {
-				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
-				m.mockEnvDescriber.EXPECT().Describe().Return(&describe.EnvDescription{
-					EnvironmentVPC: describe.EnvironmentVPC{
-						ID: "mockVPCID",
-					},
-				}, nil)
-				m.mockSubnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(&ec2.VPCSubnets{
-					Public: []ec2.Subnet{{CIDRBlock: "cidr1"}, {CIDRBlock: "cidr2"}},
-				}, nil)
-				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
-					Name:   mockAppName,
-					Domain: "mockDomain",
-				}, "us-west-2").Return(&stack.AppRegionalResources{
-					S3Bucket: "mockBucket",
-				}, nil)
-				m.mockUploader.EXPECT().UploadNetworkLoadBalancedWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
-			},
-			wantErr: fmt.Errorf("upload custom resources to bucket mockBucket: some error"),
-		},
 		"error if fail to deploy service": {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
+				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name: mockAppName,
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("deploy service: some error"),
 		},
@@ -894,17 +830,18 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
+				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name: mockAppName,
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 			},
 			wantErr: fmt.Errorf("deploy service: change set with name mockChangeSet for stack mockStack has no changes"),
 		},
@@ -915,17 +852,18 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
+				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name: mockAppName,
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(time.Time{}, mockError)
@@ -939,17 +877,18 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
+				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name: mockAppName,
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockAfterTime, nil)
@@ -962,20 +901,21 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
+				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name: mockAppName,
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockBeforeTime, nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
-				}, nil)
 				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockSvcName, mockEnvName))
 				m.mockServiceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockSvcName).Return(mockError)
 				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockSvcName, mockEnvName, mockError))
@@ -989,17 +929,18 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
+				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name: mockAppName,
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockBeforeTime, nil)
@@ -1036,7 +977,13 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "1234",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:   mockAppName,
+					Domain: "mockDomain",
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
 		"success with force update": {
@@ -1046,17 +993,18 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
+				Name: mockAppName,
 			},
 			mock: func(m *deploySvcMocks) {
 				m.mockWs.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte{}, nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockIdentity.EXPECT().Get().Return(identity.Caller{
-					RootUserARN: "1234",
+				m.mockAppResourcesGetter.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name: mockAppName,
+				}, "us-west-2").Return(&stack.AppRegionalResources{
+					S3Bucket: "mockBucket",
 				}, nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockSvcName).
 					Return(mockBeforeTime, nil)
@@ -1082,7 +1030,6 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				mockSpinner:            mocks.NewMockprogress(ctrl),
 				mockInterpolator:       mocks.NewMockinterpolator(ctrl),
 				mockEnvDescriber:       mocks.NewMockenvDescriber(ctrl),
-				mockSubnetLister:       mocks.NewMockvpcSubnetLister(ctrl),
 				mockIdentity:           mocks.NewMockidentityService(ctrl),
 				mockUploader:           mocks.NewMockcustomResourcesUploader(ctrl),
 			}
@@ -1122,8 +1069,10 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 									Port: aws.Uint16(80),
 								},
 							},
-							RoutingRule: manifest.RoutingRule{
-								Alias: tc.inAliases,
+							RoutingRule: manifest.RoutingRuleConfigOrBool{
+								RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+									Alias: tc.inAliases,
+								},
 							},
 							NLBConfig: tc.inNLB,
 						},
@@ -1134,7 +1083,6 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 				newSvcUpdater: func(f func(*session.Session) svcForceUpdater) {},
 				spinner:       m.mockSpinner,
 				envDescriber:  m.mockEnvDescriber,
-				subnetLister:  m.mockSubnetLister,
 
 				addonsURL: mockAddonsURL,
 				now: func() time.Time {
