@@ -100,7 +100,9 @@ func (e *errAtLeastOneFieldMustBeSpecified) Error() string {
 	for i, f := range e.missingFields {
 		quotedFields[i] = strconv.Quote(f)
 	}
-	return fmt.Sprintf(`must specify at least one of %s if "%s" is specified`,
-		english.WordSeries(quotedFields, "or"),
-		e.conditionalField)
+	errMsg := fmt.Sprintf("must specify at least one of %s", english.WordSeries(quotedFields, "or"))
+	if e.conditionalField != "" {
+		errMsg = fmt.Sprintf(`%s if "%s" is specified`, errMsg, e.conditionalField)
+	}
+	return errMsg
 }

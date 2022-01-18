@@ -214,6 +214,7 @@ type NetworkLoadBalancerListener struct {
 	TargetPort      string
 	SSLPolicy       *string
 	Aliases         []string
+	Stickness       *bool
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
@@ -390,6 +391,7 @@ type WorkloadOpts struct {
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
+	ALBEnabled               bool
 
 	// Additional options for service templates.
 	WorkloadType        string
@@ -531,7 +533,10 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		parameters = append(parameters, []string{"ALBWorkloads,", "Aliases,"}...) // YAML needs the comma separator; resolved in EnvContr.
+		if o.ALBEnabled {
+			parameters = append(parameters, "ALBWorkloads,")
+		}
+		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,")

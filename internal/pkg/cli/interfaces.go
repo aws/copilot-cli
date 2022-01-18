@@ -413,6 +413,7 @@ type statusDescriber interface {
 
 type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
+	PublicCIDRBlocks() ([]string, error)
 }
 
 type versionGetter interface {
@@ -522,10 +523,6 @@ type ec2Client interface {
 	ListAZs() ([]ec2.AZ, error)
 }
 
-type vpcSubnetLister interface {
-	ListVPCSubnets(vpcID string) (*ec2.VPCSubnets, error)
-}
-
 type serviceResumer interface {
 	ResumeService(string) error
 }
@@ -552,7 +549,7 @@ type svcForceUpdater interface {
 }
 
 type serviceDeployer interface {
-	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, opts ...awscloudformation.StackOption) error
+	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
 }
 
 type apprunnerServiceDescriber interface {

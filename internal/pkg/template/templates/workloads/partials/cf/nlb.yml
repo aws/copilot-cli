@@ -53,9 +53,11 @@ NLBTargetGroup:
       - Key: deregistration_delay.timeout_seconds
         Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
 {{- if ne .NLB.Listener.Protocol "TLS"}}
+{{- if .NLB.Listener.Stickness }}
 {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
-        Value: !Ref Stickiness
+        Value: {{ .NLB.Listener.Stickness }}
+{{- end}}
 {{- end}}
       - Key: deregistration_delay.connection_termination.enabled
         Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
@@ -134,8 +136,8 @@ NLBCustomDomainFunction:
   Condition: HasAssociatedDomain
   Properties:
     Code:
-      S3Bucket: {{ .ScriptBucketName }}
-      S3Key: {{ .NLBCustomDomainFunctionLambda }}
+      ZipFile: |
+        {{.NLBCustomDomainFunctionLambda}}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512
@@ -207,8 +209,8 @@ NLBCertValidatorFunction:
   Condition: HasAssociatedDomain
   Properties:
     Code:
-      S3Bucket: {{ .ScriptBucketName }}
-      S3Key: {{ .NLBCertValidatorFunctionLambda }}
+      ZipFile: |
+        {{.NLBCertValidatorFunctionLambda}}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512

@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -180,7 +182,7 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}
-		if err := o.upgrade(env, urls); err != nil {
+		if err := o.upgrade(env, s3.FormatARN(endpoints.AwsPartitionID, resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
 			return err
 		}
 	}
@@ -208,7 +210,8 @@ func (o *envUpgradeOpts) listEnvsToUpgrade() ([]*config.Environment, error) {
 	return envs, nil
 }
 
-func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs map[string]string) (err error) {
+func (o *envUpgradeOpts) upgrade(env *config.Environment,
+	artifactBucketARN, artifactBucketKeyARN string, customResourcesURLs map[string]string) (err error) {
 	version, err := o.envVersion(env.Name)
 	if err != nil {
 		return err
@@ -230,9 +233,9 @@ func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs ma
 		return err
 	}
 	if version == deploy.LegacyEnvTemplateVersion {
-		return o.upgradeLegacyEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
+		return o.upgradeLegacyEnvironment(upgrader, env, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 	}
-	return o.upgradeEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
+	return o.upgradeEnvironment(upgrader, env, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 }
 
 func (o *envUpgradeOpts) envVersion(name string) (string, error) {
@@ -267,6 +270,7 @@ Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplate
 }
 
 func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment,
+	artifactBucketARN, artifactBucketKeyARN string,
 	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
@@ -281,6 +285,8 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 			Name: conf.App,
 		},
 		Name:                conf.Name,
+    ArtifactBucketKeyARN: artifactBucketKeyARN,
+		ArtifactBucketARN:    artifactBucketARN,
 		CustomResourcesURLs: customResourcesURLs,
 		ImportVPCConfig:     importedVPC,
 		AdjustVPCConfig:     adjustedVPC,
@@ -293,6 +299,7 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 }
 
 func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment,
+	artifactBucketARN, artifactBucketKeyARN string,
 	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	isDefaultEnv, err := o.isDefaultLegacyTemplate(upgrader, conf.App, conf.Name)
 	if err != nil {
@@ -309,6 +316,8 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 				Name: conf.App,
 			},
 			Name:                conf.Name,
+      ArtifactBucketKeyARN: artifactBucketKeyARN,
+			ArtifactBucketARN:    artifactBucketARN,
 			CustomResourcesURLs: customResourcesURLs,
 			CFNServiceRoleARN:   conf.ExecutionRoleARN,
 			Telemetry:           conf.Telemetry,
