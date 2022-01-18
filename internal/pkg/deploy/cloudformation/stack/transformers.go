@@ -34,7 +34,7 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
-	defaultNLBProtocol     = "TCP_UDP"
+	defaultNLBProtocol     = manifest.TCPUDP
 )
 
 // Supported capacityproviders for Fargate services

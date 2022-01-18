@@ -1077,6 +1077,11 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				Port: aws.String("443/tls"),
 			},
 		},
+		"success if tcp_udp": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/TCP_udp"),
+			},
+		},
 	}
 
 	for name, tc := range testCases {

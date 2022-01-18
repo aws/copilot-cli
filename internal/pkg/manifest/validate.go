@@ -32,6 +32,15 @@ const (
 	envFileExt = ".env"
 )
 
+const (
+	TCPUDP = "TCP_UDP"
+	tcp    = "TCP"
+	udp    = "UDP"
+	tls    = "TLS"
+)
+
+var validProtocols = []string{TCPUDP, tcp, udp, tls}
+
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
 	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
@@ -628,7 +637,14 @@ func validateNLBPort(port *string) error {
 		return nil
 	}
 	protocolVal := aws.StringValue(protocol)
-	if strings.ToLower(protocolVal) != "tcp" && strings.ToLower(protocolVal) != "udp" && strings.ToLower(protocolVal) != "tls" {
+	var isValidProtocol bool
+	for _, valid := range validProtocols {
+		if strings.EqualFold(protocolVal, valid) {
+			isValidProtocol = true
+			break
+		}
+	}
+	if !isValidProtocol {
 		return fmt.Errorf(`unrecognized protocol %s`, protocolVal)
 	}
 	return nil
