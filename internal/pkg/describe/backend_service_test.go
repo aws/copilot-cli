@@ -529,8 +529,6 @@ Resources
 				environments:     []string{"test", "prod"},
 			}
 			human := backendSvc.HumanString()
-			fmt.Println(human)
-			fmt.Println(tc.wantedHumanString)
 			json, _ := backendSvc.JSONString()
 
 			require.Equal(t, tc.wantedHumanString, human)

@@ -318,6 +318,7 @@ func (e *Alias) ToStringSlice() ([]string, error) {
 	return out, nil
 }
 
+// ToString converts an Alias to a string.
 func (e *Alias) ToString() string {
 	if e.String != nil {
 		return aws.StringValue(e.String)
