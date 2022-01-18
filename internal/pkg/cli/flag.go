@@ -176,8 +176,9 @@ Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A YAML file in which the secret values are specified.
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
+
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
-Supported providers are: %s. Must be specified along with '%s'.`, strings.Join(manifest.PipelineProviders, ", "), gitBranchFlag)
+Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
 )
 
 const (
@@ -216,6 +217,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
+	gitBranchFlagDescription = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
@@ -299,6 +301,4 @@ are also accepted.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
 
 	secretOverwriteFlagDescription = "Optional. Whether to overwrite an existing secret."
-
-	gitBranchFlagDescription = "Branch used to trigger your pipeline."
 )
