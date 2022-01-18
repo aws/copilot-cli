@@ -5,7 +5,7 @@
 例えば `linux/arm64` や `windows/x86_64` などが指定できます。デフォルトは `linux/x86_64` です。
 
 異なる `osfamily` や `architecture` を明示的に指定することもできます。
-例えば、Windows ユーザーは以下の設定を
+例えば、Windows では以下の設定はデフォルトで `WINDOWS_SERVER_2019_CORE` が利用されますが
 
 ```yaml
 platform: windows/x86_64
