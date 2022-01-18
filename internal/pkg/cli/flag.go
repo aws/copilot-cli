@@ -217,7 +217,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
-	gitBranchFlagDescription = "Branch used to trigger your pipeline."
+	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
