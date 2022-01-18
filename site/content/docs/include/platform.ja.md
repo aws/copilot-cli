@@ -11,7 +11,7 @@
 platform: windows/x86_64
 ```
 
-Map を使ってデフォルトで `WINDOWS_SERVER_2019_CORE` を利用するように変更できます。
+Map を使って `WINDOWS_SERVER_2019_FULL` を明示的に指定できます。
 
 ```yaml
 platform:
