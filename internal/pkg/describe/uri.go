@@ -132,12 +132,15 @@ func (d *LBWebServiceDescriber) nlbURI(envName string) (nlbURI, error) {
 	if err != nil {
 		return nlbURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
-	port, _ := svcParams[stack.LBWebServiceNLBPortParamKey]
+	port, ok := svcParams[stack.LBWebServiceNLBPortParamKey]
+	if !ok {
+		return nlbURI{}, nil
+	}
 	uri := nlbURI{
 		Port: port,
 	}
-	dnsDelegated, _ := svcParams[stack.LBWebServiceDNSDelegatedParamKey]
-	if dnsDelegated != "true" {
+	dnsDelegated, ok := svcParams[stack.LBWebServiceDNSDelegatedParamKey]
+	if !ok || dnsDelegated != "true" {
 		svcOutputs, err := d.ecsServiceDescribers[envName].Outputs()
 		if err != nil {
 			return nlbURI{}, fmt.Errorf("get stack outputs for service %s: %w", d.svc, err)
@@ -146,8 +149,8 @@ func (d *LBWebServiceDescriber) nlbURI(envName string) (nlbURI, error) {
 		return uri, nil
 	}
 
-	aliases, _ := svcParams[stack.LBWebServiceNLBAliasesParamKey]
-	if aliases != "" {
+	aliases, ok := svcParams[stack.LBWebServiceNLBAliasesParamKey]
+	if ok && aliases != "" {
 		uri.DNSNames = strings.Split(aliases, ",")
 		return uri, nil
 	}

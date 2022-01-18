@@ -170,7 +170,10 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						LogicalID: svcStackResourceNLBTargetGroupLogicalID,
 					},
 				}, nil)
-				m.ecsDescriber.EXPECT().Params().Return(map[string]string{}, nil)
+				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					stack.LBWebServiceNLBPortParamKey:      "443",
+					stack.LBWebServiceDNSDelegatedParamKey: "false",
+				}, nil)
 				m.ecsDescriber.EXPECT().Outputs().Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("get stack outputs for service jobs: some error"),
@@ -183,6 +186,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					},
 				}, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					stack.LBWebServiceNLBPortParamKey:      "443",
 					stack.LBWebServiceDNSDelegatedParamKey: "true",
 				}, nil)
 				m.envDescriber.EXPECT().Outputs().Return(nil, mockErr)
