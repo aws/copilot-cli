@@ -218,6 +218,7 @@ type NetworkLoadBalancerListener struct {
 	HealthCheck     NLBHealthCheck
 }
 
+// NLBHealthCheck holds configuration for Network Load Balancer health check.
 type NLBHealthCheck struct {
 	Port               string
 	HealthyThreshold   *int64
