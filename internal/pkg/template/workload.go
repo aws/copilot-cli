@@ -436,9 +436,6 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
-
-	// List of features to enable for testing that are not yet released.
-	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template

@@ -84,7 +84,7 @@ Resources:
                 Value: !Ref EnvName
               - Name: COPILOT_SERVICE_NAME
                 Value: !Ref WorkloadName
-{{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+{{- if eq .Network.SubnetsType "PrivateSubnets"}}
               - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
                 Value: {{.ServiceDiscoveryEndpoint}}
 {{- end}}
@@ -128,7 +128,7 @@ Resources:
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
       {{- end }}
-      {{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+      {{- if eq .Network.SubnetsType "PrivateSubnets"}}
       NetworkConfiguration:
         EgressConfiguration:
           EgressType: VPC
@@ -210,6 +210,6 @@ Resources:
 {{include "env-controller" . | indent 2}}
 {{- end}}
 
-{{- if (and (contains .FeatureFlags "VPCConnector") (eq .Network.SubnetsType "PrivateSubnets")) }}
+{{- if eq .Network.SubnetsType "PrivateSubnets"}}
 {{include "vpc-connector" . | indent 2 }}
 {{- end }}
