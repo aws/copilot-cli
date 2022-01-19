@@ -593,6 +593,14 @@ func (h HTTPHealthCheckArgs) Validate() error {
 	return nil
 }
 
+// Validate returns nil if NLBHealthCheckArgs is configured correctly.
+func (h NLBHealthCheckArgs) Validate() error {
+	if h.isEmpty() {
+		return nil
+	}
+	return nil
+}
+
 // Validate returns nil if Alias is configured correctly.
 func (Alias) Validate() error {
 	return nil
