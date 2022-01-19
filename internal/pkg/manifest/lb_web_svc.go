@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -315,4 +316,12 @@ func (e *Alias) ToStringSlice() ([]string, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// ToString converts an Alias to a string.
+func (e *Alias) ToString() string {
+	if e.String != nil {
+		return aws.StringValue(e.String)
+	}
+	return strings.Join(e.StringSlice, ",")
 }
