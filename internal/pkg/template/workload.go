@@ -214,7 +214,7 @@ type NetworkLoadBalancerListener struct {
 	TargetPort      string
 	SSLPolicy       *string
 	Aliases         []string
-	Stickness       *bool
+	Stickiness       *bool
 	HealthCheck     NLBHealthCheck
 }
 
