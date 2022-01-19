@@ -206,7 +206,8 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 		"set default image if not be specified in manifest": {
 			mfBuild: nil,
 			expectedBuild: &Build{
-				Image: defaultImage,
+				Image:           defaultImage,
+				EnvironmentType: "LINUX_CONTAINER",
 			},
 		},
 		"set image according to manifest": {
@@ -214,7 +215,17 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 				Image: "aws/codebuild/standard:3.0",
 			},
 			expectedBuild: &Build{
-				Image: "aws/codebuild/standard:3.0",
+				Image:           "aws/codebuild/standard:3.0",
+				EnvironmentType: "LINUX_CONTAINER",
+			},
+		},
+		"set image according to manifest (ARM based)": {
+			mfBuild: &manifest.Build{
+				Image: "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+			},
+			expectedBuild: &Build{
+				Image:           "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				EnvironmentType: "ARM_CONTAINER",
 			},
 		},
 	}
