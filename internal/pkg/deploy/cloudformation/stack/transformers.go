@@ -335,7 +335,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 				SSLPolicy:       nlbConfig.SSLPolicy,
 				Aliases:         aliases,
 				HealthCheck:     hc,
-				Stickness:       nlbConfig.Stickiness,
+				Stickiness:       nlbConfig.Stickiness,
 			},
 			MainContainerPort: s.containerPort(),
 		},
