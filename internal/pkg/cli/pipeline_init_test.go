@@ -182,12 +182,11 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 			},
 			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			expectedError: fmt.Errorf("parse 'git branch' results: %s", "cannot parse branch name from 'remotes/archerdev'"),
+			expectedError: fmt.Errorf(`parse "git branch" results: %s`, "cannot parse branch name from 'remotes/archerdev'"),
 		},
 		"both URL and branch flags; success": {
 			inAppName:    "my-app",
@@ -204,48 +203,6 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			expectedError:          nil,
-			expectedRepoURL:        "https://github.com/badGoose/chaOS",
-			expectedRepoRemoteName: "archer",
-			expectedRepoBranch:     "main",
-		},
-		"URL flag, no branch flag; ask for branch from those in specified URL": {
-			inAppName:    "my-app",
-			inRepoURL:    "https://github.com/badGoose/chaOS",
-			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\n"),
-			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
-
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
-			},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
-			},
-
-			expectedError:          nil,
-			expectedRepoURL:        "https://github.com/badGoose/chaOS",
-			expectedRepoRemoteName: "archer",
-			expectedRepoBranch:     "dev",
-		},
-		// Normally, we check each URL for the specified branch. Due to testing limitations (only one branchBuffer), rather than prompt the user to select from multiple repos that have the "main" branch, here we show the pathway of just one URL that fits the criteria.
-		"branch flag, no URL flag; return the only URL with the specified branch": {
-			inAppName:    "my-app",
-			inRepoBranch: "main",
-			repoBuffer:   *bytes.NewBufferString("archer\thttps://github.com/badGoose/chaOS (fetch)\nhunter\thttps://github.com/goodGoose/chaOS (fetch)\n"),
-			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/main\n"),
-
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
-			},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(3)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).Times(0)
-			},
 			expectedError:          nil,
 			expectedRepoURL:        "https://github.com/badGoose/chaOS",
 			expectedRepoRemoteName: "archer",
@@ -580,6 +537,34 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedEnvironments: []string{"test", "prod"},
 			expectedError:        fmt.Errorf("select branch: some error"),
 		},
+		"returns error if select a URL with no branches": {
+			repoBuffer:   *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\tgit@github.com:badGoose/chaOS"),
+			branchBuffer: *bytes.NewBufferString(""),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("list of provided options is empty")).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedError:             errors.New("select branch: list of provided options is empty"),
+		},
 		"skip over invalid (not GH, BB, CC) URLs; do not ask user to select if only one valid URL": {
 			inRepoURL:      "",
 			inEnvironments: []string{},
@@ -611,6 +596,103 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedRepoName:     "bhaOS",
 			expectedGitHubOwner:  "goodGoose",
 			expectedError:        nil,
+		},
+		"skip selecting if only one URL possible": {
+			repoBuffer:   *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(0)
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedRepoURL:           githubURL,
+			expectedGitHubOwner:       githubOwner,
+			expectedRepoName:          githubRepoName,
+			expectedRepoBranch:        "dev",
+			expectedEnvironments:      []string{"test", "prod"},
+			expectedError:             nil,
+		},
+		"skip selecting if only one branch possible": {
+			repoBuffer:   *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n remotes/archer/test\nremotes/archer/prod"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\n"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).Times(0)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedRepoURL:           githubURL,
+			expectedGitHubOwner:       githubOwner,
+			expectedRepoName:          githubRepoName,
+			expectedRepoBranch:        "dev",
+			expectedEnvironments:      []string{"test", "prod"},
+			expectedError:             nil,
+		},
+		"returns error if select URL for remote that doesn't have passed-in-with-flag branch": {
+			inRepoURL:           "",
+			inGitBranch:         "main",
+
+			repoBuffer:   *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n remotes/archer/test\nremotes/archer/prod"),
+			branchBuffer: *bytes.NewBufferString("remotes/archer/dev\nremotes/archer/prod"),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-west-2",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).Times(0)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedError:             errors.New("branch 'main' not found for repo 'archer'"),
 		},
 		"returns error if fail to parse GitHub URL": {
 			repoBuffer: *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\nhunter\tevenWorseGoosegithub.comNotEvenAURL (fetch)\n"),
@@ -780,6 +862,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					appName:           "my-app",
 					environments:      tc.inEnvironments,
 					repoURL:           tc.inRepoURL,
+					repoBranch: tc.inGitBranch,
 					githubAccessToken: tc.inGitHubAccessToken,
 				},
 				prompt:       mockPrompt,
@@ -1488,7 +1571,7 @@ func TestInitPipelineOpts_askBranch(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
 			},
-			expectedErr: errors.New("parse 'git branch' results: cannot parse branch name from 'badResults'"),
+			expectedErr: errors.New(`parse "git branch" results: cannot parse branch name from 'badResults'`),
 		},
 		"errors if unsuccessful selecting branch": {
 			inBranchBuffer: *bytes.NewBufferString("remotes/mockRepo/main\n  remotes/mockRepo/dev"),

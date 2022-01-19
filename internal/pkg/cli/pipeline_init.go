@@ -47,6 +47,7 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 )
 
 const (
+	fmtRepoSelection = "%s: %s"
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	// For a GitHub repository.
@@ -165,51 +166,25 @@ func (o *initPipelineOpts) Validate() error {
 			}
 		}
 	}
-
-	// If both '--url' and '--git-branch' flags are passed in.
-	if o.repoURL != "" && o.repoBranch != "" {
-		// Validate if URL of accepted source type (GitHub, Bitbucket, CodeCommit).
-		if err := o.validateURLType(o.repoURL); err != nil {
-			return err
-		}
-		// Validate if URL is an existent git remote and store the remote name.
-		if err := o.validateURLExists(o.repoURL); err != nil {
-			return err
-		}
-		// Validate that branch exists for the given git remote.
-		if err := o.validateBranch(); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	// If only the '--url' flag is passed in, ask for branch.
 	if o.repoURL != "" {
 		// Validate if URL of accepted source type (GitHub, Bitbucket, CodeCommit).
 		if err := o.validateURLType(o.repoURL); err != nil {
 			return err
 		}
-
-		var err error
-		o.repoRemoteName, err = o.getRemoteNameFromURL()
+		// getRemoteNameFromURL() also validates that the passed in URL is in the git remote.
+		remoteName, err := o.getRemoteNameFromURL()
 		if err != nil {
 			return err
 		}
-		if err := o.selectBranch(); err != nil {
+		o.repoRemoteName = remoteName
+	}
+	if o.repoBranch != "" && o.repoURL != "" {
+		if err := o.validateBranch(); err !=nil {
 			return err
 		}
-		return nil
 	}
+	// repoURL is required to validate repoBranch, so if only the branch is passed in, we wait until Ask() to validate both.
 
-	// If only the '--git-branch' is passed in, ask for URL.
-	if o.repoBranch != "" {
-		// Ask user to select URL if it is not set by flag.
-		// Remote repo choices include only those that have the passed in branch.
-		if err := o.filterThenSelectReposByBranch(); err != nil {
-			return err
-		}
-		return nil
-	}
 	return nil
 }
 
@@ -265,18 +240,6 @@ func (o *initPipelineOpts) validateURLType(url string) error {
 	return nil
 }
 
-func (o *initPipelineOpts) validateURLExists(url string) error {
-	repos, err := o.fetchAndParseURLs()
-	if err != nil {
-		return err
-	}
-	if _, ok := repos[url]; !ok {
-		return fmt.Errorf("URL '%s' is not a local git remote", o.repoURL)
-	}
-	o.repoRemoteName = repos[url]
-	return nil
-}
-
 func (o *initPipelineOpts) validateBranch() error {
 	// URL has already been checked to exist and be valid; repoRemoteName already set by validateURLExists.
 	branches, err := o.fetchAndParseBranches(o.repoRemoteName)
@@ -291,7 +254,7 @@ func (o *initPipelineOpts) validateBranch() error {
 	return fmt.Errorf("branch '%s' not found for repo '%s'", o.repoBranch, o.repoRemoteName)
 }
 
-func (o *initPipelineOpts) fetchAndParseURLs() (map[string]string, error) {
+func (o *initPipelineOpts) fetchAndParseURLs() ([]repoResult, error) {
 	// Fetches and parses all remote repositories; returns a map with `url: remoteName`.
 	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.repoBuffer))
 	if err != nil {
@@ -314,70 +277,18 @@ func (o *initPipelineOpts) fetchAndParseBranches(remoteName string) ([]string, e
 	}
 	branches, err := o.parseGitBranchResults(strings.TrimSpace(o.branchBuffer.String()))
 	if err != nil {
-		return nil, fmt.Errorf("parse 'git branch' results: %w", err)
+		return nil, fmt.Errorf(`parse "git branch" results: %w`, err)
 	}
 	o.branchBuffer.Reset()
 	return branches, nil
 }
 
-func (o *initPipelineOpts) parseAndAssignRepoParts(repo string) error {
+func (o *initPipelineOpts) parseRepoParts(repo string) (remoteName, repoURL string, err error) {
 	repoParts := strings.Split(repo, ": ")
 	if len(repoParts) != 2 {
-		return fmt.Errorf("cannot parse repo '%s'", repo)
+		return "", "", fmt.Errorf("cannot parse repo '%s'", repo)
 	}
-	o.repoURL = repoParts[1]
-	o.repoRemoteName = repoParts[0]
-	return nil
-}
-
-func (o *initPipelineOpts) filterThenSelectReposByBranch() error {
-	var reposWithBranch []string
-	URLsAndRemoteNames, err := o.fetchAndParseURLs()
-	if err != nil {
-		return err
-	}
-	for url, remoteName := range URLsAndRemoteNames {
-		branches, err := o.fetchAndParseBranches(remoteName)
-		if err != nil {
-			return err
-		}
-		if len(branches) == 0 {
-			continue
-		}
-		for _, branch := range branches {
-			if branch == o.repoBranch {
-				reposWithBranch = append(reposWithBranch, fmt.Sprintf("%s: %s", remoteName, url))
-			}
-		}
-	}
-
-	if len(reposWithBranch) == 1 {
-		log.Infof("Only one git repository detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(reposWithBranch[0]))
-		if err := o.parseAndAssignRepoParts(reposWithBranch[0]); err != nil {
-			return nil
-		}
-
-		return nil
-	}
-
-	// Prompts user to select a repo URL.
-	repo, err := o.prompt.SelectOne(
-		pipelineSelectURLPrompt,
-		pipelineSelectURLHelpPrompt,
-		reposWithBranch,
-		prompt.WithFinalMessage("Repository:"),
-	)
-	if err != nil {
-		return fmt.Errorf("select URL: %w", err)
-	}
-	if err = o.parseAndAssignRepoParts(repo); err != nil {
-		return err
-	}
-	if err := o.validateURLType(o.repoURL); err != nil {
-		return err
-	}
-
-	return nil
+	return repoParts[0], repoParts[1],nil
 }
 
 func (o *initPipelineOpts) askEnvs() error {
@@ -408,6 +319,13 @@ func (o *initPipelineOpts) askRepository() error {
 	var err error
 	if o.repoURL == "" {
 		if err = o.selectURL(); err != nil {
+			return err
+		}
+	}
+
+	// Validate that if a branch was passed in with the flag, the selected repo has that branch.
+	if o.repoBranch != "" {
+		if err = o.validateBranch(); err != nil {
 			return err
 		}
 	}
@@ -494,14 +412,17 @@ func (o *initPipelineOpts) selectURL() error {
 	}
 
 	var formattedRemoteNamesAndURLs []string
-	for url, remoteName := range URLsAndRemoteNames {
-		formattedRemoteNamesAndURLs = append(formattedRemoteNamesAndURLs, fmt.Sprintf("%s: %s", remoteName, url))
+	for _, repo := range URLsAndRemoteNames {
+		formattedRemoteNamesAndURLs = append(formattedRemoteNamesAndURLs, fmt.Sprintf(fmtRepoSelection, repo.remoteName, repo.remoteURL))
 	}
 	if len(formattedRemoteNamesAndURLs) == 1 {
 		log.Infof("Only one git repository detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(formattedRemoteNamesAndURLs[0]))
-		if err := o.parseAndAssignRepoParts(formattedRemoteNamesAndURLs[0]); err != nil {
+		remote, url, err := o.parseRepoParts(formattedRemoteNamesAndURLs[0])
+		if err != nil {
 			return err
 		}
+		o.repoRemoteName = remote
+		o.repoURL = url
 		if err := o.validateURLType(o.repoURL); err != nil {
 			return err
 		}
@@ -519,9 +440,12 @@ func (o *initPipelineOpts) selectURL() error {
 	if err != nil {
 		return fmt.Errorf("select URL: %w", err)
 	}
-	if err := o.parseAndAssignRepoParts(repo); err != nil {
+	remote, url, err := o.parseRepoParts(repo)
+	if err != nil {
 		return err
 	}
+	o.repoRemoteName = remote
+	o.repoURL = url
 	if err := o.validateURLType(o.repoURL); err != nil {
 		return err
 	}
@@ -553,6 +477,11 @@ func (o *initPipelineOpts) selectBranch() error {
 	return nil
 }
 
+type repoResult struct {
+	remoteName string
+	remoteURL string
+}
+
 // examples:
 // efekarakus	git@github.com:efekarakus/grit.git (fetch)
 // efekarakus	https://github.com/karakuse/grit.git (fetch)
@@ -566,8 +495,8 @@ func (o *initPipelineOpts) selectBranch() error {
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
 // parseGitRemoteResults returns just the first (remote name) and second (url) columns of the `git remote -v` results as a map (url: name), and skips urls from unsupported sources.
-func (o *initPipelineOpts) parseGitRemoteResult(s string) map[string]string {
-	repos := make(map[string]string)
+func (o *initPipelineOpts) parseGitRemoteResult(s string) []repoResult {
+	var repos []repoResult
 	items := strings.Split(s, "\n")
 	for _, item := range items {
 		if !strings.Contains(item, githubURL) && !strings.Contains(item, ccIdentifier) && !strings.Contains(item, bbURL) {
@@ -575,7 +504,10 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) map[string]string {
 		}
 		cols := strings.Split(item, "\t")
 		URL := strings.TrimSpace(strings.Split(cols[1], " ")[0])
-		repos[URL] = cols[0]
+		repos = append (repos, repoResult{
+			remoteName: cols[0],
+			remoteURL: URL,
+		})
 	}
 	return repos
 }
@@ -604,10 +536,12 @@ func (o *initPipelineOpts) getRemoteNameFromURL() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, ok := repos[o.repoURL]; !ok {
-		return "", fmt.Errorf("URL '%s' is not a local git remote", o.repoURL)
+	for _, repo := range repos {
+		if repo.remoteURL == o.repoURL {
+			return repo.remoteName, nil
+		}
 	}
-	return repos[o.repoURL], nil
+	return "", fmt.Errorf("URL '%s' is not a local git remote", o.repoURL)
 }
 
 type ghRepoURL string
