@@ -1558,3 +1558,32 @@ func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestAlias_ToString(t *testing.T) {
+	testCases := map[string]struct {
+		inAlias Alias
+		wanted  string
+	}{
+		"alias using string": {
+			inAlias: Alias{
+				String: stringP("example.com"),
+			},
+			wanted: "example.com",
+		},
+		"alias using string slice": {
+			inAlias: Alias{
+				StringSlice: []string{"example.com", "v1.example.com"},
+			},
+			wanted: "example.com,v1.example.com",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.inAlias.ToString()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}

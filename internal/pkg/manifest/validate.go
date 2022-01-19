@@ -32,6 +32,15 @@ const (
 	envFileExt = ".env"
 )
 
+const (
+	TCPUDP = "TCP_UDP"
+	tcp    = "TCP"
+	udp    = "UDP"
+	tls    = "TLS"
+)
+
+var validProtocols = []string{TCPUDP, tcp, udp, tls}
+
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
 	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
@@ -607,11 +616,36 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 			missingField: "port",
 		}
 	}
+	if err := validateNLBPort(c.Port); err != nil {
+		return fmt.Errorf(`validate "port": %w`, err)
+	}
 	if err := c.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	if err := c.Aliases.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
+	}
+	return nil
+}
+
+func validateNLBPort(port *string) error {
+	_, protocol, err := ParsePortMapping(port)
+	if err != nil {
+		return err
+	}
+	if protocol == nil {
+		return nil
+	}
+	protocolVal := aws.StringValue(protocol)
+	var isValidProtocol bool
+	for _, valid := range validProtocols {
+		if strings.EqualFold(protocolVal, valid) {
+			isValidProtocol = true
+			break
+		}
+	}
+	if !isValidProtocol {
+		return fmt.Errorf(`unrecognized protocol %s`, protocolVal)
 	}
 	return nil
 }
