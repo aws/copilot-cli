@@ -18,7 +18,7 @@ NLBListener:
       - TargetGroupArn: !Ref NLBTargetGroup
         Type: forward
     LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-    Port: {{ .NLB.Listener.Port }}
+    Port: !Ref NLBPort
     Protocol: {{ .NLB.Listener.Protocol }}
 {{- if eq .NLB.Listener.Protocol "TLS" }}
     Certificates:
@@ -86,9 +86,9 @@ NLBSecurityGroup:
       {{- else }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.Port }}
+        FromPort: !Ref NLBPort
         IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
-        ToPort: {{ $.NLB.Listener.Port }}
+        ToPort: !Ref NLBPort
       {{- end }}
       {{- if $.NLB.Listener.HealthCheck.Port}}{{- if ne $.NLB.Listener.HealthCheck.Port $.NLB.Listener.Port}}
       - CidrIp: {{$cidr}}
@@ -145,7 +145,8 @@ NLBCustomDomainAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
+    Aliases:
+      !Split [",", !Ref NLBAliases]
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -218,7 +219,8 @@ NLBCertValidatorAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
+    Aliases:
+      !Split [",", !Ref NLBAliases]
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function

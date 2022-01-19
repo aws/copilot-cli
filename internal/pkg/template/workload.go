@@ -208,7 +208,6 @@ type HTTPHealthCheckOpts struct {
 
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
 type NetworkLoadBalancerListener struct {
-	Port            string
 	Protocol        string
 	TargetContainer string
 	TargetPort      string

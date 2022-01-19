@@ -358,3 +358,19 @@ type NLBHealthCheckArgs struct {
 func (h *NLBHealthCheckArgs) isEmpty() bool {
 	return h.Port == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Timeout == nil && h.Interval == nil
 }
+
+// Parse port-protocol string into individual port and protocol strings. Valid examples: 2000/udp, or 2000.
+func ParsePortMapping(s *string) (port *string, protocol *string, err error) {
+	if s == nil {
+		return nil, nil, nil
+	}
+	portProtocol := strings.Split(*s, "/")
+	switch len(portProtocol) {
+	case 1:
+		return aws.String(portProtocol[0]), nil, nil
+	case 2:
+		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
+	default:
+		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
+	}
+}

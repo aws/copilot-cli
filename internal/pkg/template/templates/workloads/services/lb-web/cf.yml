@@ -36,6 +36,13 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
+{{- if .NLB }}
+  NLBAliases:
+    Type: String
+    Default: ""
+  NLBPort:
+    Type: String
+{{- end }}
 {{- if .ALBEnabled}}
   HTTPSEnabled:
     Type: String
@@ -464,3 +471,9 @@ Outputs:
     Value: !GetAtt DiscoveryService.Arn
     Export:
       Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
+  {{- if .NLB}}
+  PublicNetworkLoadBalancerDNSName:
+    Value: !GetAtt PublicNetworkLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerDNSName
+  {{- end}}
