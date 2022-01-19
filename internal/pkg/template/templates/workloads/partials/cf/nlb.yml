@@ -52,7 +52,7 @@ NLBTargetGroup:
       - Key: deregistration_delay.timeout_seconds
         Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
 {{- if ne .NLB.Listener.Protocol "TLS"}}
-{{- if .NLB.Listener.Stickness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
+{{- if .NLB.Listener.Stickiness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
         Value: {{ .NLB.Listener.Stickiness }}
 {{- end}}
