@@ -54,7 +54,7 @@ NLBTargetGroup:
 {{- if ne .NLB.Listener.Protocol "TLS"}}
 {{- if .NLB.Listener.Stickness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
-        Value: {{ .NLB.Listener.Stickness }}
+        Value: {{ .NLB.Listener.Stickiness }}
 {{- end}}
 {{- end}}
       - Key: deregistration_delay.connection_termination.enabled {{/* It is recommended to have this enabled for UDP and TCP_UDP target groups */}}
