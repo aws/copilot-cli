@@ -53,7 +53,9 @@ This won't create your pipeline, but it will create some local files that will b
 
 * __Release order__: You'll be prompted for environments you want to deploy to - select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
 
-* __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
+* __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. Copilot fetches all of your local git remotes, and lists those of accepted providers (GitHub, Bitbucket, CodeCommit) for you to choose from. The one you select will be the repository that, when pushed to, will trigger a pipeline execution.
+
+* __Tracking branch__: After you've selected the repository, choose the specific branch your pipeline should follow.
 
 ### Step 2: Updating the Pipeline manifest (optional)
 
@@ -97,7 +99,7 @@ You can see every available configuration option for `pipeline.yml` on the [pipe
 
 There are 3 main parts of this file: the `name` field, which is the name of your CodePipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must run `copilot pipeline deploy` afterwards.
 
-Typically, you'll update this file if you add new environments you want to deploy to, or want to track a different branch. If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here. The pipeline manifest is also where you may add a manual approval step before deployment or commands to run tests (see "Adding Tests," below) after deployment.
+Typically, you'll update this file if you add new environments you want to deploy to, or change your mind about which branch to track. If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here. The pipeline manifest is also where you may add a manual approval step before deployment or commands to run tests (see "Adding Tests," below) after deployment.
 
 ### Step 3: Updating the Buildspec (optional)
 
