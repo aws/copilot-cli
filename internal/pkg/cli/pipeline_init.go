@@ -241,7 +241,7 @@ func (o *initPipelineOpts) validateURLType(url string) error {
 }
 
 func (o *initPipelineOpts) validateBranch() error {
-	// URL has already been checked to exist and be valid; repoRemoteName already set by validateURLExists.
+	// URL has already been checked to exist and be valid; repoRemoteName already set by 'getRemoteNameFromURL()'.
 	branches, err := o.fetchAndParseBranches(o.repoRemoteName)
 	if err != nil {
 		return err
@@ -270,7 +270,7 @@ func (o *initPipelineOpts) fetchAndParseBranches(remoteName string) ([]string, e
 	// Fetches and parses all branches associated with the chosen repo.
 	err := o.runner.Run("git", []string{"branch", "-a", "-l", remoteName + "/*"}, exec.Stdout(&o.branchBuffer))
 	if err != nil {
-		return nil, fmt.Errorf("get Git repo branch info: %w", err)
+		return nil, fmt.Errorf("get Git branch info for remote repo '%s': %w", remoteName, err)
 	}
 	if o.branchBuffer.String() == "" {
 		return []string{}, nil
@@ -406,17 +406,17 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 }
 
 func (o *initPipelineOpts) selectURL() error {
-	URLsAndRemoteNames, err := o.fetchAndParseURLs()
+	urlsAndRemoteNames, err := o.fetchAndParseURLs()
 	if err != nil {
 		return err
 	}
-
+	var repoResult repoResult
 	var formattedRemoteNamesAndURLs []string
-	for _, repo := range URLsAndRemoteNames {
-		formattedRemoteNamesAndURLs = append(formattedRemoteNamesAndURLs, fmt.Sprintf(fmtRepoSelection, repo.remoteName, repo.remoteURL))
+	for _, repoResult = range urlsAndRemoteNames {
+		formattedRemoteNamesAndURLs = append(formattedRemoteNamesAndURLs, fmt.Sprintf(fmtRepoSelection, repoResult.remoteName, repoResult.remoteURL))
 	}
 	if len(formattedRemoteNamesAndURLs) == 1 {
-		log.Infof("Only one git repository detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(formattedRemoteNamesAndURLs[0]))
+		log.Infof("Only one git repository detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(repoResult.remoteURL))
 		remote, url, err := o.parseRepoParts(formattedRemoteNamesAndURLs[0])
 		if err != nil {
 			return err
@@ -494,7 +494,11 @@ type repoResult struct {
 // bbhttps	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
-// parseGitRemoteResults returns just the first (remote name) and second (url) columns of the `git remote -v` results as a map (url: name), and skips urls from unsupported sources.
+// parseGitRemoteResults returns just the first (remote name) and second (url) columns of the `git remote -v` results, and skips urls from unsupported sources.
+// ex: efekarakus	git@github.com:efekarakus/grit.git (fetch)
+//     []repoResult {
+//       remoteName: efekarakus
+//       remoteURL: https://github.com/karakuse/grit.git
 func (o *initPipelineOpts) parseGitRemoteResult(s string) []repoResult {
 	var repos []repoResult
 	items := strings.Split(s, "\n")
@@ -503,10 +507,10 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) []repoResult {
 			continue
 		}
 		cols := strings.Split(item, "\t")
-		URL := strings.TrimSpace(strings.Split(cols[1], " ")[0])
-		repos = append (repos, repoResult{
+		url := strings.TrimSpace(strings.Split(cols[1], " ")[0])
+		repos = append(repos, repoResult{
 			remoteName: cols[0],
-			remoteURL: URL,
+			remoteURL: url,
 		})
 	}
 	return repos
@@ -541,7 +545,7 @@ func (o *initPipelineOpts) getRemoteNameFromURL() (string, error) {
 			return repo.remoteName, nil
 		}
 	}
-	return "", fmt.Errorf("URL '%s' is not a local git remote", o.repoURL)
+	return "", fmt.Errorf("url '%s' is not a local git remote", o.repoURL)
 }
 
 type ghRepoURL string

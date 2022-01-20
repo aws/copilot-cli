@@ -102,7 +102,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote"),
+			expectedError: errors.New("url 'https://github.com/badGoose/chaOS' is not a local git remote"),
 		},
 		"both URL and branch flags; branch not found in specified repo": {
 			inAppName:    "my-app",
@@ -135,7 +135,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 			mockPrompt:    func(m *mocks.Mockprompter) {},
-			expectedError: errors.New("URL 'https://github.com/badGoose/chaOS' is not a local git remote"),
+			expectedError: errors.New("url 'https://github.com/badGoose/chaOS' is not a local git remote"),
 		},
 		"both URL and branch flags; error fetching URLs": {
 			inAppName:    "my-app",
@@ -169,7 +169,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			expectedError: fmt.Errorf("get Git repo branch info: %s", "some error"),
+			expectedError: fmt.Errorf("get Git branch info for remote repo 'archer': %s", "some error"),
 		},
 		"both URL and branch flags; error parsing git branch results": {
 			inAppName:    "my-app",
@@ -1561,7 +1561,7 @@ func TestInitPipelineOpts_askBranch(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectBranchPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("dev", nil).Times(0)
 			},
 
-			expectedErr: errors.New("get Git repo branch info: some error"),
+			expectedErr: errors.New("get Git branch info for remote repo '': some error"),
 		},
 		"errors if unsuccessful in parsing git branch results": {
 			inBranchBuffer: *bytes.NewBufferString("badResults"),
