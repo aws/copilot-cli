@@ -4,6 +4,11 @@ Share your applications, videos, and blog posts with fellow Copilots!
 
 | Title      | Description                          |
 | ----------- | ------------------------------------ |
+| [**AWS Copilot CLI を使って複数環境で既存の DynamoDB を使う**](https://zenn.dev/hkdord/articles/aws-copilot-cli-existing-dynamodb) by <a href="https://twitter.com/hkford3">@hkford3</a> | [Japanese] Hidekazu Karino walks us through the deployment of a service to two environments, leveraging an existing DynamoDB table, and setting up a CI/CD pipeline, all with Copilot.
+| [**レンティオの本番環境をAWS Copilot/Fargate構成に切り替えた話**](https://zenn.dev/rentio/articles/convox-to-copilot) by <a href="https://zenn.dev/rentio">the Rentio development team</a> | [Japanese] A real-life account of switching from Convox to Copilot, including the 'why's and the 'how's, what went well and what didn't.
+| [**Deploy .NET 6 API to AWS App Runner using AWS Copilot CLI**](https://dev.to/aws-builders/deploy-net-6-api-to-aws-app-runner-using-aws-copilot-cli-4hnl) by <a href="https://twitter.com/ksivamuthu">@ksivamuthu</a> | Using Copilot and App Runner, Sivamuthu Kumar deploys a .NET API project. |
+| [**Container-to-Container Communication**](https://www.miketheman.net/2021/12/28/container-to-container-communication/) by <a href="https://twitter.com/mikefiedler">@mikefiedler</a> | Mike takes us through a science experiment of sorts, a "who will win" type of battle, to determine if TCP or Unix sockets are better for inter-container communication. |
+| [**AWS Copilot で ECS(Fargate) に Express(Node.js) をデプロイする**](https://blog.morugu.com/entry/copilot-express) by Shoya Shiraki <a href="https://twitter.com/morugu">@morugu</a> | [Japanese] Follow along this blog post to build an Express Node.js app with Copilot. |
 | [**AWS Copilot – ECS**](https://blog.sivamuthukumar.com/series/aws-copilot-ecs) by <a href="https://twitter.com/ksivamuthu">@ksivamuthu</a> | Here we have a three-part series devoted to Copilot! Sivamuthu Kumar demos launching a .NET coffeeshop app, exploring pipelines, storage, addons, and logs along the way. |
 | [**Deploying a Telegram Bot to AWS ECS with AWS Copilot**](https://dev.to/chrisciokler/deploying-a-telegram-bot-to-aws-ecs-with-aws-copilot-step-by-step-for-absolut-beginners-ngl) by Christian Prado Ciokler | Christian takes you through building a Node.js app, step-by-step, with Copilot on Docker Desktop Windows Subsystem for Linux (WSL) 2. |
 | [**Deploying a Containerized Web App with AWS Copilot**](https://towardsdatascience.com/deploying-a-containerized-web-app-with-aws-copilot-db5c90467fbd) by <a href="https://twitter.com/edkruegerdata">@edkruegerdata</a> and <a href="https://www.linkedin.com/in/dylan-rossi/">Dylan Rossi</a> | Edward and Dylan start from the basics, including IAM account creation and AWS CLI installation. (Note: you'll also need to install AWS Copilot.) They demonstrate using Postman to test the deployed app. |
@@ -39,6 +44,7 @@ Share your applications, videos, and blog posts with fellow Copilots!
 
 | Repository      | Description                          | Key features |
 | ----------- | ------------------------------------ | ------------ |
+[**github.com/kcearns/fargate-node-example**](https://github.com/kcearns/fargate-node-example) | A sample Node application that includes a pipeline. | Node, pipeline
 [**github.com/efekarakus/day2-with-copilot**](https://github.com/efekarakus/day2-with-copilot) | A REST API coffeeshop application that goes beyond the basics, demoed in the ["Container Day" video](./guides.en.md#videos), above. | `alias`, secrets, DynamoDB, Redis |
 [**github.com/bvtujo/copilot-wordpress**](https://github.com/bvtujo/copilot-wordpress) | A WordPress installation launched by AWS Copilot with step-by-step instructions and options for customization. | [EFS](../docs/developing/storage.en.md#managed-efs), MySQL RDS cluster, autoscaling |
 [**#2378**](https://github.com/aws/copilot-cli/discussions/2378) | Show-and-tell with sample templates for launching isolated tasks in private subnets. | VPC Endpoints, [custom environments](../docs/developing/custom-environment-resources.en.md) |
@@ -49,4 +55,5 @@ Share your applications, videos, and blog posts with fellow Copilots!
 ## Workshops
 | Title      | Description                          |
 | ----------- | ------------------------------------ |
+[**Copilot Rocks**](https://www.copilot.rocks/) | This open-source, comprehensive, modular workshop lets you pick and choose from multiple mini-workshops, covering everything from installation to implementing pub/sub patterns. Step-by-step guides offer tips and tricks, clarify with useful diagrams, and delve into advanced patterns. (Source code is hosted [here](https://github.com/donnieprakoso/copilot.rocks).) |
 [**ECS Workshop**](https://ecsworkshop.com/microservices/) | In this workshop, we deploy a three-tier microservices application using the AWS Copilot CLI. (Optional accompanying video [here](https://www.youtube.com/watch?v=o8o9Ea9o0aI).) |
