@@ -7,6 +7,7 @@ package dockerengine
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -36,7 +37,10 @@ const (
 )
 
 const (
-	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
+	credStoreECRLogin = "ecr-login"      // set on `credStore` attribute in docker configuration file
+	podmanEnvVarKey   = "COPILOT_PODMAN" // Environment Variable which needs to be set to enable podman support
+	dockerBinary      = "docker"         // default binary name of docker
+	podmanBinary      = "podman"         // default binary name of podman
 )
 
 // CmdClient represents the docker client to interact with the server via external commands.
@@ -45,14 +49,17 @@ type CmdClient struct {
 	// Override in unit tests.
 	buf      *bytes.Buffer
 	homePath string
+	runtime  string
 }
 
 // New returns CmdClient to make requests against the Docker daemon via external commands.
 func New(cmd Cmd) CmdClient {
-	return CmdClient{
+	c := CmdClient{
 		runner:   cmd,
 		homePath: userHomeDirectory(),
+		runtime:  getContainerRuntime(),
 	}
+	return c
 }
 
 // BuildArguments holds the arguments that can be passed while building a container.
@@ -70,6 +77,11 @@ type BuildArguments struct {
 type dockerConfig struct {
 	CredsStore  string            `json:"credsStore,omitempty"`
 	CredHelpers map[string]string `json:"credHelpers,omitempty"`
+}
+
+// GetRuntime will return the used container runtime
+func (c CmdClient) GetRuntime() string {
+	return c.runtime
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
@@ -119,7 +131,7 @@ func (c CmdClient) Build(in *BuildArguments) error {
 	if in.Platform != "" {
 		log.Infof("Building your container image: docker %s\n", strings.Join(args, " "))
 	}
-	if err := c.runner.Run("docker", args); err != nil {
+	if err := c.runner.Run(c.runtime, args); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 
@@ -128,7 +140,7 @@ func (c CmdClient) Build(in *BuildArguments) error {
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
 func (c CmdClient) Login(uri, username, password string) error {
-	err := c.runner.Run("docker",
+	err := c.runner.Run(c.runtime,
 		[]string{"login", "-u", username, "--password-stdin", uri},
 		exec.Stdin(strings.NewReader(password)))
 
@@ -147,12 +159,12 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	}
 
 	for _, img := range images {
-		if err := c.runner.Run("docker", []string{"push", img}); err != nil {
-			return "", fmt.Errorf("docker push %s: %w", img, err)
+		if err := c.runner.Run(c.runtime, []string{"push", img}); err != nil {
+			return "", fmt.Errorf("%v push %s: %w", c.runtime, img, err)
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.runner.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
+	if err := c.runner.Run(c.runtime, []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, exec.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
@@ -163,15 +175,17 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	return parts[1], nil
 }
 
-// CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
-func (c CmdClient) CheckDockerEngineRunning() error {
-	if _, err := osexec.LookPath("docker"); err != nil {
-		return ErrDockerCommandNotFound
+// CheckEngineRunning will run `docker/podman info` command to check if the container engine is running.
+func (c CmdClient) CheckEngineRunning() error {
+	if _, err := osexec.LookPath(c.runtime); err != nil {
+		return ErrContainerCommandNotFound{
+			containerRuntime: c.runtime,
+		}
 	}
 	buf := &bytes.Buffer{}
-	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, exec.Stdout(buf))
+	err := c.runner.Run(c.runtime, []string{"info", "-f", "'{{json .}}'"}, exec.Stdout(buf))
 	if err != nil {
-		return fmt.Errorf("get docker info: %w", err)
+		return fmt.Errorf("get %v info: %w", c.runtime, err)
 	}
 	// Trim redundant prefix and suffix. For example: '{"ServerErrors":["Cannot connect...}'\n returns
 	// {"ServerErrors":["Cannot connect...}
@@ -181,7 +195,7 @@ func (c CmdClient) CheckDockerEngineRunning() error {
 	}
 	var msg dockerEngineNotRunningMsg
 	if err := json.Unmarshal([]byte(out), &msg); err != nil {
-		return fmt.Errorf("unmarshal docker info message: %w", err)
+		return fmt.Errorf("unmarshal %v info message: %w", c.runtime, err)
 	}
 	if len(msg.ServerErrors) == 0 {
 		return nil
@@ -191,13 +205,35 @@ func (c CmdClient) CheckDockerEngineRunning() error {
 	}
 }
 
-// GetPlatform will run the `docker version` command to get the OS/Arch.
+// GetPlatform will run the `docker/podman version` command to get the OS/Arch.
 func (c CmdClient) GetPlatform() (os, arch string, err error) {
-	if _, err := osexec.LookPath("docker"); err != nil {
-		return "", "", ErrDockerCommandNotFound
+	if _, err := osexec.LookPath(c.runtime); err != nil {
+		return "", "", ErrContainerCommandNotFound{containerRuntime: c.runtime}
 	}
+	switch c.runtime {
+	case dockerBinary:
+		return c.getPlatformDocker()
+	case podmanBinary:
+		return c.getPlatformPodman()
+	}
+	return "", "", errors.New("unknown container runtime")
+}
+
+func (c CmdClient) getPlatformPodman() (string, string, error) {
 	buf := &bytes.Buffer{}
-	err = c.runner.Run("docker", []string{"version", "-f", "'{{json .Server}}'"}, exec.Stdout(buf))
+	err := c.runner.Run(c.runtime, []string{"version", "-f", "'{{json .OsArch}}'"}, exec.Stdout(buf))
+	if err != nil {
+		return "", "", fmt.Errorf("run podman version: %w", err)
+	}
+	osArchSlice := strings.Split(strings.Trim(buf.String(), "\""), "/")
+	os := osArchSlice[0]
+	arch := osArchSlice[1]
+	return os, arch, nil
+}
+
+func (c CmdClient) getPlatformDocker() (string, string, error) {
+	buf := &bytes.Buffer{}
+	err := c.runner.Run(c.runtime, []string{"version", "-f", "'{{json .Server}}'"}, exec.Stdout(buf))
 	if err != nil {
 		return "", "", fmt.Errorf("run docker version: %w", err)
 	}
@@ -283,4 +319,19 @@ func userHomeDirectory() string {
 	}
 
 	return home
+}
+
+func podmanEnvVarSet() bool {
+	binary := os.Getenv(podmanEnvVarKey)
+	if binary != "" {
+		log.Warningf("%v set, using Podman. Here be dragons...", podmanEnvVarKey)
+		return true
+	}
+	return false
+}
+func getContainerRuntime() string {
+	if podmanEnvVarSet() {
+		return podmanBinary
+	}
+	return dockerBinary
 }

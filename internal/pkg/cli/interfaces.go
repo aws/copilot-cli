@@ -593,8 +593,9 @@ type runningTaskSelector interface {
 	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
 }
 
-type dockerEngine interface {
-	CheckDockerEngineRunning() error
+type containerEngine interface {
+	GetRuntime() string
+	CheckEngineRunning() error
 	GetPlatform() (string, string, error)
 }
 

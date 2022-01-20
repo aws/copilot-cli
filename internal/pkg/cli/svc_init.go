@@ -107,14 +107,14 @@ type initSvcOpts struct {
 	initSvcVars
 
 	// Interfaces to interact with dependencies.
-	fs           afero.Fs
-	init         svcInitializer
-	prompt       prompter
-	store        store
-	dockerEngine dockerEngine
-	sel          dockerfileSelector
-	topicSel     topicSelector
-	mftReader    manifestReader
+	fs              afero.Fs
+	init            svcInitializer
+	prompt          prompter
+	store           store
+	containerEngine containerEngine
+	sel             dockerfileSelector
+	topicSel        topicSelector
+	mftReader       manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -160,15 +160,15 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	opts := &initSvcOpts{
-		initSvcVars:  vars,
-		store:        store,
-		fs:           fs,
-		init:         initSvc,
-		prompt:       prompter,
-		sel:          sel,
-		topicSel:     snsSel,
-		mftReader:    ws,
-		dockerEngine: dockerengine.New(exec.NewCmd()),
+		initSvcVars:     vars,
+		store:           store,
+		fs:              fs,
+		init:            initSvc,
+		prompt:          prompter,
+		sel:             sel,
+		topicSel:        snsSel,
+		mftReader:       ws,
+		containerEngine: dockerengine.New(exec.NewCmd()),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -278,7 +278,7 @@ func (o *initSvcOpts) Execute() error {
 	}
 	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
 	if o.image == "" {
-		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		platform, err := legitimizePlatform(o.containerEngine, o.wkldType)
 		if err != nil {
 			return err
 		}
@@ -402,11 +402,12 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
 	}
-	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
+	if err = o.containerEngine.CheckEngineRunning(); err != nil {
 		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
+		var errCommand *dockerengine.ErrContainerCommandNotFound
 		switch {
-		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
-			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
+		case errors.As(err, &errCommand):
+			log.Infof("%v command is not found; Copilot won't build from a Dockerfile.\n", o.containerEngine.GetRuntime())
 			return false, nil
 		case errors.As(err, &errDaemon):
 			log.Info("Docker daemon is not responsive; Copilot won't build from a Dockerfile.\n")
@@ -488,7 +489,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	return nil
 }
 
-func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.PlatformString, error) {
+func legitimizePlatform(engine containerEngine, wkldType string) (manifest.PlatformString, error) {
 	detectedOs, detectedArch, err := engine.GetPlatform()
 	if err != nil {
 		return "", fmt.Errorf("get docker engine platform: %w", err)

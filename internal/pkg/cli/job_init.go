@@ -55,13 +55,13 @@ type initJobOpts struct {
 	initJobVars
 
 	// Interfaces to interact with dependencies.
-	fs           afero.Fs
-	store        store
-	init         jobInitializer
-	prompt       prompter
-	sel          initJobSelector
-	dockerEngine dockerEngine
-	mftReader    manifestReader
+	fs              afero.Fs
+	store           store
+	init            jobInitializer
+	prompt          prompter
+	sel             initJobSelector
+	containerEngine containerEngine
+	mftReader       manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -102,13 +102,13 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	return &initJobOpts{
 		initJobVars: vars,
 
-		fs:           fs,
-		store:        store,
-		init:         jobInitter,
-		prompt:       prompter,
-		sel:          sel,
-		dockerEngine: dockerengine.New(exec.NewCmd()),
-		mftReader:    ws,
+		fs:              fs,
+		store:           store,
+		init:            jobInitter,
+		prompt:          prompter,
+		sel:             sel,
+		containerEngine: dockerengine.New(exec.NewCmd()),
+		mftReader:       ws,
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
@@ -210,7 +210,7 @@ func (o *initJobOpts) Execute() error {
 	}
 	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
 	if o.image == "" {
-		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		platform, err := legitimizePlatform(o.containerEngine, o.wkldType)
 		if err != nil {
 			return err
 		}
@@ -320,11 +320,12 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
 	}
-	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
+	if err = o.containerEngine.CheckEngineRunning(); err != nil {
 		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
+		var errCommand *dockerengine.ErrContainerCommandNotFound
 		switch {
-		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
-			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
+		case errors.As(err, &errCommand):
+			log.Infof("%v command is not found; Copilot won't build from a Dockerfile.\n", o.containerEngine.GetRuntime())
 			return false, nil
 		case errors.As(err, &errDaemon):
 			log.Info("Docker daemon is not responsive; Copilot won't build from a Dockerfile.\n")

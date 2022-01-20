@@ -6241,45 +6241,45 @@ func (mr *MockrunningTaskSelectorMockRecorder) RunningTask(prompt, help interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTask", reflect.TypeOf((*MockrunningTaskSelector)(nil).RunningTask), varargs...)
 }
 
-// MockdockerEngine is a mock of dockerEngine interface.
-type MockdockerEngine struct {
+// MockcontainerEngine is a mock of containerEngine interface.
+type MockcontainerEngine struct {
 	ctrl     *gomock.Controller
-	recorder *MockdockerEngineMockRecorder
+	recorder *MockcontainerEngineMockRecorder
 }
 
-// MockdockerEngineMockRecorder is the mock recorder for MockdockerEngine.
-type MockdockerEngineMockRecorder struct {
-	mock *MockdockerEngine
+// MockcontainerEngineMockRecorder is the mock recorder for MockcontainerEngine.
+type MockcontainerEngineMockRecorder struct {
+	mock *MockcontainerEngine
 }
 
-// NewMockdockerEngine creates a new mock instance.
-func NewMockdockerEngine(ctrl *gomock.Controller) *MockdockerEngine {
-	mock := &MockdockerEngine{ctrl: ctrl}
-	mock.recorder = &MockdockerEngineMockRecorder{mock}
+// NewMockcontainerEngine creates a new mock instance.
+func NewMockcontainerEngine(ctrl *gomock.Controller) *MockcontainerEngine {
+	mock := &MockcontainerEngine{ctrl: ctrl}
+	mock.recorder = &MockcontainerEngineMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdockerEngine) EXPECT() *MockdockerEngineMockRecorder {
+func (m *MockcontainerEngine) EXPECT() *MockcontainerEngineMockRecorder {
 	return m.recorder
 }
 
-// CheckDockerEngineRunning mocks base method.
-func (m *MockdockerEngine) CheckDockerEngineRunning() error {
+// CheckEngineRunning mocks base method.
+func (m *MockcontainerEngine) CheckEngineRunning() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckDockerEngineRunning")
+	ret := m.ctrl.Call(m, "CheckEngineRunning")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CheckDockerEngineRunning indicates an expected call of CheckDockerEngineRunning.
-func (mr *MockdockerEngineMockRecorder) CheckDockerEngineRunning() *gomock.Call {
+// CheckEngineRunning indicates an expected call of CheckEngineRunning.
+func (mr *MockcontainerEngineMockRecorder) CheckEngineRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngine)(nil).CheckDockerEngineRunning))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckEngineRunning", reflect.TypeOf((*MockcontainerEngine)(nil).CheckEngineRunning))
 }
 
 // GetPlatform mocks base method.
-func (m *MockdockerEngine) GetPlatform() (string, string, error) {
+func (m *MockcontainerEngine) GetPlatform() (string, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPlatform")
 	ret0, _ := ret[0].(string)
@@ -6289,9 +6289,23 @@ func (m *MockdockerEngine) GetPlatform() (string, string, error) {
 }
 
 // GetPlatform indicates an expected call of GetPlatform.
-func (mr *MockdockerEngineMockRecorder) GetPlatform() *gomock.Call {
+func (mr *MockcontainerEngineMockRecorder) GetPlatform() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatform", reflect.TypeOf((*MockdockerEngine)(nil).GetPlatform))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatform", reflect.TypeOf((*MockcontainerEngine)(nil).GetPlatform))
+}
+
+// GetRuntime mocks base method.
+func (m *MockcontainerEngine) GetRuntime() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRuntime")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetRuntime indicates an expected call of GetRuntime.
+func (mr *MockcontainerEngineMockRecorder) GetRuntime() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockcontainerEngine)(nil).GetRuntime))
 }
 
 // Mockcodestar is a mock of codestar interface.

@@ -25,11 +25,11 @@ import (
 )
 
 type initJobMocks struct {
-	mockPrompt       *mocks.Mockprompter
-	mockSel          *mocks.MockinitJobSelector
-	mockDockerEngine *mocks.MockdockerEngine
-	mockMftReader    *mocks.MockmanifestReader
-	mockStore        *mocks.Mockstore
+	mockPrompt          *mocks.Mockprompter
+	mockSel             *mocks.MockinitJobSelector
+	MockcontainerEngine *mocks.MockcontainerEngine
+	mockMftReader       *mocks.MockmanifestReader
+	mockStore           *mocks.Mockstore
 }
 
 func TestJobInitOpts_Validate(t *testing.T) {
@@ -302,7 +302,7 @@ type: Scheduled Job`), nil)
 
 			setupMocks: func(m initJobMocks) {
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
-				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
+				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(errors.New("some error"))
 			},
 
 			wantedErr: fmt.Errorf("check if docker engine is running: some error"),
@@ -316,7 +316,7 @@ type: Scheduled Job`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
-				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
+				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(&dockerengine.ErrContainerCommandNotFound{})
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -330,7 +330,7 @@ type: Scheduled Job`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
-				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
+				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(&dockerengine.ErrDockerDaemonNotResponsive{})
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -351,7 +351,7 @@ type: Scheduled Job`), nil)
 					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
-				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(nil)
 			},
 
 			wantedErr: fmt.Errorf("get image location: mock error"),
@@ -373,7 +373,7 @@ type: Scheduled Job`), nil)
 					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
 					gomock.Any(),
 				).Return("Use an existing image instead", nil)
-				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(nil)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -393,7 +393,7 @@ type: Scheduled Job`), nil)
 					gomock.Any(),
 					gomock.Any(),
 				).Return("cuteness-aggregator/Dockerfile", nil)
-				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(nil)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -413,7 +413,7 @@ type: Scheduled Job`), nil)
 					gomock.Any(),
 					gomock.Any(),
 				).Return("", errors.New("some error"))
-				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(nil)
 			},
 
 			wantedErr: fmt.Errorf("select Dockerfile: some error"),
@@ -463,15 +463,15 @@ type: Scheduled Job`), nil)
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockSel := mocks.NewMockinitJobSelector(ctrl)
-			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
+			MockcontainerEngine := mocks.NewMockcontainerEngine(ctrl)
 			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			mocks := initJobMocks{
-				mockPrompt:       mockPrompt,
-				mockSel:          mockSel,
-				mockDockerEngine: mockDockerEngine,
-				mockMftReader:    mockManifestReader,
-				mockStore:        mockStore,
+				mockPrompt:          mockPrompt,
+				mockSel:             mockSel,
+				MockcontainerEngine: MockcontainerEngine,
+				mockMftReader:       mockManifestReader,
+				mockStore:           mockStore,
 			}
 			tc.setupMocks(mocks)
 			opts := &initJobOpts{
@@ -485,11 +485,11 @@ type: Scheduled Job`), nil)
 					},
 					schedule: tc.inJobSchedule,
 				},
-				sel:          mockSel,
-				store:        mockStore,
-				dockerEngine: mockDockerEngine,
-				mftReader:    mockManifestReader,
-				prompt:       mockPrompt,
+				sel:             mockSel,
+				store:           mockStore,
+				containerEngine: MockcontainerEngine,
+				mftReader:       mockManifestReader,
+				prompt:          mockPrompt,
 			}
 
 			// WHEN
@@ -518,9 +518,9 @@ func TestJobInitOpts_Execute(t *testing.T) {
 	second := time.Second
 	zero := 0
 	testCases := map[string]struct {
-		mockJobInit      func(m *mocks.MockjobInitializer)
-		mockDockerfile   func(m *mocks.MockdockerfileParser)
-		mockDockerEngine func(m *mocks.MockdockerEngine)
+		mockJobInit         func(m *mocks.MockjobInitializer)
+		mockDockerfile      func(m *mocks.MockdockerfileParser)
+		MockcontainerEngine func(m *mocks.MockcontainerEngine)
 
 		inApp  string
 		inName string
@@ -549,7 +549,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					Retries:     zero,
 				}, nil)
 			},
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+			MockcontainerEngine: func(m *mocks.MockcontainerEngine) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
@@ -573,7 +573,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			},
 		},
 		"fail to init job": {
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+			MockcontainerEngine: func(m *mocks.MockcontainerEngine) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
@@ -582,7 +582,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("some error"),
 		},
 		"return error if platform detection fails": {
-			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+			MockcontainerEngine: func(m *mocks.MockcontainerEngine) {
 				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
 			},
 			wantedErr: errors.New("get docker engine platform: some error"),
@@ -596,7 +596,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 
 			mockJobInitializer := mocks.NewMockjobInitializer(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
-			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
+			MockcontainerEngine := mocks.NewMockcontainerEngine(ctrl)
 
 			if tc.mockJobInit != nil {
 				tc.mockJobInit(mockJobInitializer)
@@ -604,8 +604,8 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			if tc.mockDockerfile != nil {
 				tc.mockDockerfile(mockDockerfile)
 			}
-			if tc.mockDockerEngine != nil {
-				tc.mockDockerEngine(mockDockerEngine)
+			if tc.MockcontainerEngine != nil {
+				tc.MockcontainerEngine(MockcontainerEngine)
 			}
 
 			opts := initJobOpts{
@@ -622,7 +622,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				initParser: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
-				dockerEngine: mockDockerEngine,
+				containerEngine: MockcontainerEngine,
 			}
 
 			// WHEN

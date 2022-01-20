@@ -145,7 +145,8 @@ func TestDockerCommand_Build(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
 			s := CmdClient{
-				runner: mockCmd,
+				runner:  mockCmd,
+				runtime: dockerBinary,
 			}
 			buildInput := BuildArguments{
 				Context:    tc.context,
@@ -204,7 +205,8 @@ func TestDockerCommand_Login(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
 			s := CmdClient{
-				runner: mockCmd,
+				runner:  mockCmd,
+				runtime: dockerBinary,
 			}
 
 			got := s.Login(mockURI, mockUsername, mockPassword)
@@ -231,7 +233,8 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner: m,
+			runner:  m,
+			runtime: dockerBinary,
 		}
 		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
 
@@ -248,7 +251,8 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner: m,
+			runner:  m,
+			runtime: dockerBinary,
 		}
 		_, err := cmd.Push("uri")
 
@@ -265,7 +269,8 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner: m,
+			runner:  m,
+			runtime: dockerBinary,
 		}
 		_, err := cmd.Push("uri")
 
@@ -288,7 +293,8 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner: m,
+			runner:  m,
+			runtime: dockerBinary,
 		}
 		_, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
 
@@ -297,7 +303,7 @@ func TestDockerCommand_Push(t *testing.T) {
 	})
 }
 
-func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
+func TestDockerCommand_CheckEngineRunning(t *testing.T) {
 	mockError := errors.New("some error")
 	var mockCmd *MockCmd
 
@@ -348,10 +354,11 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
 			s := CmdClient{
-				runner: mockCmd,
+				runner:  mockCmd,
+				runtime: dockerBinary,
 			}
 
-			err := s.CheckDockerEngineRunning()
+			err := s.CheckEngineRunning()
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
 			} else {
@@ -416,7 +423,8 @@ func TestDockerCommand_GetPlatform(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
 			s := CmdClient{
-				runner: mockCmd,
+				runner:  mockCmd,
+				runtime: dockerBinary,
 			}
 
 			os, arch, err := s.GetPlatform()
@@ -509,6 +517,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T) {
 				runner:   mockCmd,
 				buf:      tc.inBuffer,
 				homePath: "test/copilot",
+				runtime:  dockerBinary,
 			}
 
 			credStore := s.IsEcrCredentialHelperEnabled(uri)

@@ -4,12 +4,17 @@
 package dockerengine
 
 import (
-	"errors"
 	"fmt"
 )
 
-// ErrDockerCommandNotFound means the docker command is not found.
-var ErrDockerCommandNotFound = errors.New("docker: command not found")
+// ErrContainerCommandNotFound means the containerRuntime command is not found.
+type ErrContainerCommandNotFound struct {
+	containerRuntime string
+}
+
+func (e ErrContainerCommandNotFound) Error() string {
+	return fmt.Sprintf("%v: command not found", e.containerRuntime)
+}
 
 // ErrDockerDaemonNotResponsive means the docker daemon is not responsive.
 type ErrDockerDaemonNotResponsive struct {
