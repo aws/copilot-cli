@@ -60,7 +60,7 @@ var basicNameTestCases = map[string]testCase{
 	},
 }
 
-func TestValidateProjectName(t *testing.T) {
+func TestValidateAppName(t *testing.T) {
 	// Any project-specific name validations can be added here
 	testCases := map[string]testCase{
 		"contains emoji": {

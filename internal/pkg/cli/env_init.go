@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -290,7 +291,15 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 4. Start creating the CloudFormation stack for the environment.
-	if err := o.deployEnv(app, urls); err != nil {
+	if resources.S3Bucket == "" {
+		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app %s. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion, app.Name)
+		return fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
+	}
+	partition, err := partitions.Region(envRegion).Partition()
+	if err != nil {
+		return err
+	}
+	if err := o.deployEnv(app, s3.FormatARN(partition.ID(), resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
 		return err
 	}
 
@@ -644,7 +653,8 @@ func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
 	}
 }
 
-func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map[string]string) error {
+func (o *initEnvOpts) deployEnv(app *config.Application,
+	artifactBucketARN, artifactBucketKeyARN string, customResourcesURLs map[string]string) error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
@@ -656,12 +666,14 @@ func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map
 			DNSName:             app.Domain,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
-		Prod:                o.isProduction,
-		AdditionalTags:      app.Tags,
-		CustomResourcesURLs: customResourcesURLs,
-		AdjustVPCConfig:     o.adjustVPCConfig(),
-		ImportVPCConfig:     o.importVPCConfig(),
-		Version:             deploy.LatestEnvTemplateVersion,
+		Prod:                 o.isProduction,
+		AdditionalTags:       app.Tags,
+		CustomResourcesURLs:  customResourcesURLs,
+		ArtifactBucketARN:    artifactBucketARN,
+		ArtifactBucketKeyARN: artifactBucketKeyARN,
+		AdjustVPCConfig:      o.adjustVPCConfig(),
+		ImportVPCConfig:      o.importVPCConfig(),
+		Version:              deploy.LatestEnvTemplateVersion,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {

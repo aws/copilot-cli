@@ -328,6 +328,14 @@ func (o *initStorageOpts) validateStorageType() error {
 		ws:           o.ws,
 		workloadName: o.workloadName,
 	}); err != nil {
+		if errors.Is(err, errRDWSNotConnectedToVPC) {
+			log.Errorf(`Your %s needs to be connected to a VPC in order to use a %s resource.
+You can enable VPC connectivity by updating your manifest with:
+%s
+`, manifest.RequestDrivenWebServiceType, o.storageType, color.HighlightCodeBlock(`network:
+  vpc:
+    placement: private`))
+		}
 		return err
 	}
 	return nil

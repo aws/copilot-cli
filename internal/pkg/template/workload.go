@@ -208,12 +208,22 @@ type HTTPHealthCheckOpts struct {
 
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
 type NetworkLoadBalancerListener struct {
-	Port            string
 	Protocol        string
 	TargetContainer string
 	TargetPort      string
 	SSLPolicy       *string
 	Aliases         []string
+	Stickiness       *bool
+	HealthCheck     NLBHealthCheck
+}
+
+// NLBHealthCheck holds configuration for Network Load Balancer health check.
+type NLBHealthCheck struct {
+	Port               string
+	HealthyThreshold   *int64
+	UnhealthyThreshold *int64
+	Timeout            *int64
+	Interval           *int64
 }
 
 // NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
@@ -390,6 +400,7 @@ type WorkloadOpts struct {
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
+	ALBEnabled               bool
 
 	// Additional options for service templates.
 	WorkloadType        string
@@ -425,9 +436,6 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
-
-	// List of features to enable for testing that are not yet released.
-	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -531,7 +539,10 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		parameters = append(parameters, []string{"ALBWorkloads,", "Aliases,"}...) // YAML needs the comma separator; resolved in EnvContr.
+		if o.ALBEnabled {
+			parameters = append(parameters, "ALBWorkloads,")
+		}
+		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,")

@@ -47,9 +47,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRule{
-						TargetContainer:          aws.String("mockTargetContainer"),
-						TargetContainerCamelCase: aws.String("mockTargetContainer"),
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							TargetContainer:          aws.String("mockTargetContainer"),
+							TargetContainerCamelCase: aws.String("mockTargetContainer"),
+						},
 					},
 				},
 			},
@@ -122,8 +124,10 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRule{
-						TargetContainer: aws.String("foo"),
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							TargetContainer: aws.String("foo"),
+						},
 					},
 				},
 			},
@@ -134,8 +138,10 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRule{
-						TargetContainer: aws.String("mockName"),
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							TargetContainer: aws.String("mockName"),
+						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
 						Port:            aws.String("443"),
@@ -196,6 +202,66 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
+		},
+		"error if neither of http or nlb is enabled": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+				},
+			},
+			wantedError: errors.New(`must specify at least one of "http" or "nlb"`),
+		},
+		"error if scaling based on nlb requests": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Requests: aws.Int(3),
+							},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
+		},
+		"error if scaling based on nlb response time": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								ResponseTime: durationp(10 * time.Second),
+							},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						Enabled: aws.Bool(false),
+					},
+					NLBConfig: NetworkLoadBalancerConfiguration{
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
 		},
 	}
 	for name, tc := range testCases {
@@ -908,20 +974,20 @@ func TestDependsOn_Validate(t *testing.T) {
 
 func TestRoutingRule_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		RoutingRule RoutingRule
+		RoutingRule RoutingRuleConfiguration
 
 		wantedErrorMsgPrefix string
 		wantedError          error
 	}{
 		"error if both target_container and targetContainer are specified": {
-			RoutingRule: RoutingRule{
+			RoutingRule: RoutingRuleConfiguration{
 				TargetContainer:          aws.String("mockContainer"),
 				TargetContainerCamelCase: aws.String("mockContainer"),
 			},
 			wantedError: fmt.Errorf(`must specify one, not both, of "target_container" and "targetContainer"`),
 		},
 		"error if one of allowed_source_ips is not valid": {
-			RoutingRule: RoutingRule{
+			RoutingRule: RoutingRuleConfiguration{
 				AllowedSourceIps: []IPNet{
 					IPNet("10.1.0.0/24"),
 					IPNet("badIP"),
@@ -931,13 +997,13 @@ func TestRoutingRule_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "allowed_source_ips[1]": `,
 		},
 		"error if protocol version is not valid": {
-			RoutingRule: RoutingRule{
+			RoutingRule: RoutingRuleConfiguration{
 				ProtocolVersion: aws.String("quic"),
 			},
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"should not error if protocol version is not uppercase": {
-			RoutingRule: RoutingRule{
+			RoutingRule: RoutingRuleConfiguration{
 				ProtocolVersion: aws.String("gRPC"),
 			},
 		},
@@ -976,6 +1042,45 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
 			wantedError:          fmt.Errorf(`"port" must be specified`),
+		},
+		"error parsing port": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("sabotage/this/string"),
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "port": cannot parse port mapping from sabotage/this/string`),
+		},
+		"success if port is specified without protocol": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443"),
+			},
+		},
+		"error if protocol is not recognized": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tps"),
+			},
+			wantedErrorMsgPrefix: `validate "nlb": `,
+			wantedError:          fmt.Errorf(`validate "port": unrecognized protocol tps`),
+		},
+		"success if tcp": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tcp"),
+			},
+		},
+		"success if udp": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("161/udp"),
+			},
+		},
+		"success if tls": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tls"),
+			},
+		},
+		"success if tcp_udp": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/TCP_udp"),
+			},
 		},
 	}
 

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -24,6 +25,7 @@ const (
 	fmtErrPropertyNotAString = "property `%s` is not a string"
 
 	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
 )
 
 var (
@@ -67,6 +69,7 @@ type CreatePipelineInput struct {
 type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
 	Image string
+	EnvironmentType string
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
@@ -237,11 +240,16 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 // PipelineBuildFromManifest processes manifest info about the build project settings.
 func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
 	image := defaultPipelineBuildImage
+	environmentType := defaultPipelineEnvironmentType
 	if mfBuild != nil && mfBuild.Image != "" {
 		image = mfBuild.Image
 	}
+	if strings.Contains(image, "aarch64")  {
+		environmentType = "ARM_CONTAINER"
+	} 
 	return &Build{
 		Image: image,
+		EnvironmentType: environmentType,
 	}
 }
 

@@ -95,19 +95,21 @@ environments:
 								Credentials: aws.String("some arn"),
 							}, Port: aws.Uint16(80)},
 						},
-						RoutingRule: RoutingRule{
-							Alias: Alias{
-								StringSlice: []string{
-									"foobar.com",
-									"v1.foobar.com",
+						RoutingRule: RoutingRuleConfigOrBool{
+							RoutingRuleConfiguration: RoutingRuleConfiguration{
+								Alias: Alias{
+									StringSlice: []string{
+										"foobar.com",
+										"v1.foobar.com",
+									},
 								},
+								Path:            aws.String("svc"),
+								TargetContainer: aws.String("frontend"),
+								HealthCheck: HealthCheckArgsOrString{
+									HealthCheckPath: nil,
+								},
+								AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 							},
-							Path:            aws.String("svc"),
-							TargetContainer: aws.String("frontend"),
-							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
-							},
-							AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 						},
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(512),
@@ -803,6 +805,43 @@ func TestQueueScaling_AcceptableBacklogPerTask(t *testing.T) {
 				require.NotNil(t, err)
 			} else {
 				require.Equal(t, tc.wantedBacklog, actual)
+			}
+		})
+	}
+}
+
+func TestParsePortMapping(t *testing.T) {
+	testCases := map[string]struct {
+		inPort *string
+
+		wantedPort     *string
+		wantedProtocol *string
+		wantedErr      error
+	}{
+		"error parsing port": {
+			inPort:    stringP("1/2/3"),
+			wantedErr: errors.New("cannot parse port mapping from 1/2/3"),
+		},
+		"no error if input is empty": {},
+		"port number only": {
+			inPort:     stringP("443"),
+			wantedPort: stringP("443"),
+		},
+		"port and protocol": {
+			inPort:         stringP("443/tcp"),
+			wantedPort:     stringP("443"),
+			wantedProtocol: stringP("tcp"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotPort, gotProtocol, err := ParsePortMapping(tc.inPort)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, gotPort, tc.wantedPort)
+				require.Equal(t, gotProtocol, tc.wantedProtocol)
 			}
 		})
 	}

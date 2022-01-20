@@ -28,7 +28,8 @@ func TestGHv1Pipeline_Template(t *testing.T) {
 			PersonalAccessTokenSecretID: "my secret",
 		},
 		Build: &deploy.Build{
-			Image: "aws/codebuild/amazonlinux2-x86_64-standard:3.0",
+			Image:           "aws/codebuild/amazonlinux2-x86_64-standard:3.0",
+			EnvironmentType: "LINUX_CONTAINER",
 		},
 		Stages: []deploy.PipelineStage{
 			{

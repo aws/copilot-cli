@@ -32,6 +32,15 @@ const (
 	envFileExt = ".env"
 )
 
+const (
+	TCPUDP = "TCP_UDP"
+	tcp    = "TCP"
+	udp    = "UDP"
+	tls    = "TLS"
+)
+
+var validProtocols = []string{TCPUDP, tcp, udp, tls}
+
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
 	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
@@ -85,6 +94,14 @@ func (l LoadBalancedWebService) Validate() error {
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
 func (l LoadBalancedWebServiceConfig) Validate() error {
 	var err error
+	if l.RoutingRule.Disabled() && l.NLBConfig.IsEmpty() {
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields: []string{"http", "nlb"},
+		}
+	}
+	if l.RoutingRule.Disabled() && (l.Count.AdvancedCount.Requests != nil || l.Count.AdvancedCount.ResponseTime != nil) {
+		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
+	}
 	if err = l.ImageConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
 	}
@@ -532,8 +549,8 @@ func (CommandOverride) Validate() error {
 	return nil
 }
 
-// Validate returns nil if RoutingRule is configured correctly.
-func (r RoutingRule) Validate() error {
+// Validate returns nil if RoutingRuleConfiguration is configured correctly.
+func (r RoutingRuleConfiguration) Validate() error {
 	var err error
 	if err = r.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
@@ -576,6 +593,14 @@ func (h HTTPHealthCheckArgs) Validate() error {
 	return nil
 }
 
+// Validate returns nil if NLBHealthCheckArgs is configured correctly.
+func (h NLBHealthCheckArgs) Validate() error {
+	if h.isEmpty() {
+		return nil
+	}
+	return nil
+}
+
 // Validate returns nil if Alias is configured correctly.
 func (Alias) Validate() error {
 	return nil
@@ -599,11 +624,36 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 			missingField: "port",
 		}
 	}
+	if err := validateNLBPort(c.Port); err != nil {
+		return fmt.Errorf(`validate "port": %w`, err)
+	}
 	if err := c.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
 	if err := c.Aliases.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
+	}
+	return nil
+}
+
+func validateNLBPort(port *string) error {
+	_, protocol, err := ParsePortMapping(port)
+	if err != nil {
+		return err
+	}
+	if protocol == nil {
+		return nil
+	}
+	protocolVal := aws.StringValue(protocol)
+	var isValidProtocol bool
+	for _, valid := range validProtocols {
+		if strings.EqualFold(protocolVal, valid) {
+			isValidProtocol = true
+			break
+		}
+	}
+	if !isValidProtocol {
+		return fmt.Errorf(`unrecognized protocol %s`, protocolVal)
 	}
 	return nil
 }

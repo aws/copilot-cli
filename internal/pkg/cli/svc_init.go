@@ -31,7 +31,6 @@ import (
 )
 
 const (
-	wkldInitImagePrompt     = `What's the location of the image to use?`
 	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
 Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
 	wkldInitAppRunnerImagePromptHelp = `The name of an existing Docker image. App Runner supports images hosted in ECR or ECR Public registries.`
@@ -77,6 +76,8 @@ You should set this to the port which your Dockerfile uses to communicate with t
 	svcInitPublisherPrompt     = "Which topics do you want to subscribe to?"
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
 These messages can be consumed by the Worker Service.`
+
+	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 )
 
 var serviceTypeHints = map[string]string{

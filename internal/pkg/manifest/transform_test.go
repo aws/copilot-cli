@@ -208,7 +208,7 @@ func TestImageTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(imageTransformer{}))
 			require.NoError(t, err)
 
@@ -271,7 +271,7 @@ func TestBuildArgsOrStringTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(buildArgsOrStringTransformer{}))
 			require.NoError(t, err)
 
@@ -323,7 +323,7 @@ func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(stringSliceOrStringTransformer{}))
 			require.NoError(t, err)
 
@@ -385,7 +385,7 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(platformArgsOrStringTransformer{}))
 			require.NoError(t, err)
 
@@ -446,7 +446,7 @@ func TestHealthCheckArgsOrStringTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(healthCheckArgsOrStringTransformer{}))
 			require.NoError(t, err)
 
@@ -504,7 +504,7 @@ func TestCountTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(countTransformer{}))
 			require.NoError(t, err)
 
@@ -569,7 +569,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(advancedCountTransformer{}))
 			require.NoError(t, err)
 
@@ -633,7 +633,7 @@ func TestRangeTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(rangeTransformer{}))
 			require.NoError(t, err)
 
@@ -694,7 +694,7 @@ func TestEfsConfigOrBoolTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(efsConfigOrBoolTransformer{}))
 			require.NoError(t, err)
 
@@ -752,7 +752,7 @@ func TestEfsVolumeConfigurationTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(efsVolumeConfigurationTransformer{}))
 			require.NoError(t, err)
 
@@ -810,8 +810,66 @@ func TestSQSQueueOrBoolTransformer_Transformer(t *testing.T) {
 			err := mergo.Merge(&dst, override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use imageTransformer.
+			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(sqsQueueOrBoolTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
+func TestRoutingRuleConfigOrBoolTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(r *RoutingRuleConfigOrBool)
+		override func(r *RoutingRuleConfigOrBool)
+		wanted   func(r *RoutingRuleConfigOrBool)
+	}{
+		"bool set to empty if config is not nil": {
+			original: func(r *RoutingRuleConfigOrBool) {
+				r.Enabled = aws.Bool(true)
+			},
+			override: func(r *RoutingRuleConfigOrBool) {
+				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
+					Path: aws.String("mockPath"),
+				}
+			},
+			wanted: func(r *RoutingRuleConfigOrBool) {
+				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
+					Path: aws.String("mockPath"),
+				}
+			},
+		},
+		"config set to empty if bool is not nil": {
+			original: func(r *RoutingRuleConfigOrBool) {
+				r.RoutingRuleConfiguration = RoutingRuleConfiguration{
+					Path: aws.String("mockPath"),
+				}
+			},
+			override: func(r *RoutingRuleConfigOrBool) {
+				r.Enabled = aws.Bool(false)
+			},
+			wanted: func(r *RoutingRuleConfigOrBool) {
+				r.Enabled = aws.Bool(false)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted RoutingRuleConfigOrBool
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(routingRuleConfigOrBoolTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

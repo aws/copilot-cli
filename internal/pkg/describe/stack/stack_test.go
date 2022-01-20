@@ -125,6 +125,7 @@ func TestStackDescriber_Resources(t *testing.T) {
 						{
 							ResourceType:       aws.String("mockResourceType"),
 							PhysicalResourceId: aws.String("mockPhysicalID"),
+							LogicalResourceId:  aws.String("mockLogicalID"),
 						},
 					}, nil),
 				)
@@ -133,6 +134,7 @@ func TestStackDescriber_Resources(t *testing.T) {
 				{
 					Type:       "mockResourceType",
 					PhysicalID: "mockPhysicalID",
+					LogicalID:  "mockLogicalID",
 				},
 			},
 		},
