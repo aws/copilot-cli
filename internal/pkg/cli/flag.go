@@ -178,7 +178,7 @@ Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
-Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
+Supported providers are: %s`, strings.Join(manifest.PipelineProviders, ", "))
 )
 
 const (
@@ -215,7 +215,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
-	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
+	githubURLFlagDescription         = "(Deprecated.) Use --url instead. Repository URL to trigger your pipeline."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
