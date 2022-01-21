@@ -30,4 +30,4 @@ ADD go.sum github.com/aws/copilot-cli/
 # Startup script which inits dockerd and then runs the e2e tests
 COPY e2e/e2e.sh /bin/
 
-ENTRYPOINT ["/bin/e2e.sh"]
+ENTRYPOINT ["/bin/e2e.sh", "docker"]

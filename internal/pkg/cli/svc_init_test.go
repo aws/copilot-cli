@@ -322,6 +322,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
 				m.mockContainerEngine.EXPECT().CheckEngineRunning().Return(&dockerengine.ErrContainerCommandNotFound{})
+				m.mockContainerEngine.EXPECT().GetRuntime().Return("docker")
 
 			},
 			wantedErr: nil,

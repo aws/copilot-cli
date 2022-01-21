@@ -110,11 +110,19 @@ run-local-integ-test:
 	go test -race -count=1 -timeout=60m -tags=localintegration ${PACKAGES}
 
 .PHONY: e2e
-e2e: build-e2e
-	@echo "Building E2E Docker Image" &&\
-	docker build -t copilot/e2e . -f e2e/Dockerfile
-	@echo "Running E2E Tests" &&\
-	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" copilot/e2e:latest
+e2e: build-e2e e2e-docker e2e-podman
+
+.PHONY: e2e-docker
+	@echo "Building E2E Container Image" &&\
+		docker build -t copilot/e2e:docker  . -f e2e/Dockerfile.docker
+	@echo "Running E2E Tests with docker runtime" &&\
+	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" copilot/e2e:docker
+
+.PHONY: e2e-podman
+	@echo "Building E2E Container Image" &&\
+	docker build -t copilot/e2e . -f e2e/Dockerfile.podman
+	@echo "Running E2E Tests with podman runtime" &&\
+	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" -e "COPILOT_PODMAN=1" copilot/e2e:podman
 
 .PHONY: tools
 tools:

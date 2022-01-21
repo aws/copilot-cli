@@ -317,6 +317,7 @@ type: Scheduled Job`), nil)
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
 				m.MockcontainerEngine.EXPECT().CheckEngineRunning().Return(&dockerengine.ErrContainerCommandNotFound{})
+				m.MockcontainerEngine.EXPECT().GetRuntime().Return("docker")
 			},
 
 			wantedSchedule: wantedCronSchedule,

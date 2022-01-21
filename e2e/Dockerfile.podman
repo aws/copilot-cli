@@ -1,0 +1,21 @@
+FROM quay.io/containers/podman:v3.4.4
+
+ENV GOBIN /go/bin
+
+# Install Go, Git and other dependencies so we can run ginkgo
+RUN dnf update && dnf install bash gcc musl-dev openssl go git aws-cli jq
+
+RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
+
+# Copy the binary
+ADD bin/local/copilot-linux-amd64 /bin/copilot
+
+# Add the e2e directory and the project go.mod
+ADD e2e/ github.com/aws/copilot-cli/e2e/
+ADD go.mod github.com/aws/copilot-cli/
+ADD go.sum github.com/aws/copilot-cli/
+
+# Startup script which runs the e2e tests
+COPY e2e/e2e.sh /bin/
+
+ENTRYPOINT ["/bin/e2e.sh", "podman"]
