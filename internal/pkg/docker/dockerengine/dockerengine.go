@@ -339,7 +339,7 @@ func userHomeDirectory() string {
 func podmanEnvVarSet() bool {
 	binary := os.Getenv(podmanEnvVarKey)
 	if binary != "" {
-		log.Warningf("%v set, using Podman. Here be dragons...", podmanEnvVarKey)
+		log.Warningf("%v set, using Podman. Here be dragons...\n", podmanEnvVarKey)
 		return true
 	}
 	return false
