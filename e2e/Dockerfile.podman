@@ -3,7 +3,10 @@ FROM quay.io/containers/podman:v3.4.4
 ENV GOBIN /go/bin
 
 # Install Go, Git and other dependencies so we can run ginkgo
-RUN dnf update && dnf install bash gcc musl-dev openssl go git aws-cli jq
+RUN dnf update && \
+  dnf install -y gcc openssl go git awscli jq && \
+  dnf clean all && \
+  rm -rf /var/cache/yum
 
 RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
 

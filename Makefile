@@ -113,14 +113,16 @@ run-local-integ-test:
 e2e: build-e2e e2e-docker e2e-podman
 
 .PHONY: e2e-docker
+e2e-docker:
 	@echo "Building E2E Container Image" &&\
-		docker build -t copilot/e2e:docker  . -f e2e/Dockerfile.docker
+	docker build -t copilot/e2e:docker  . -f e2e/Dockerfile.docker
 	@echo "Running E2E Tests with docker runtime" &&\
 	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" copilot/e2e:docker
 
 .PHONY: e2e-podman
+e2e-podman:
 	@echo "Building E2E Container Image" &&\
-	docker build -t copilot/e2e . -f e2e/Dockerfile.podman
+	docker build -t copilot/e2e:podman . -f e2e/Dockerfile.podman
 	@echo "Running E2E Tests with podman runtime" &&\
 	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" -e "COPILOT_PODMAN=1" copilot/e2e:podman
 
