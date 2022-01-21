@@ -54,12 +54,11 @@ type CmdClient struct {
 
 // New returns CmdClient to make requests against the Docker daemon via external commands.
 func New(cmd Cmd) CmdClient {
-	c := CmdClient{
+	return CmdClient{
 		runner:   cmd,
 		homePath: userHomeDirectory(),
 		runtime:  getContainerRuntime(),
 	}
-	return c
 }
 
 // BuildArguments holds the arguments that can be passed while building a container.
@@ -212,7 +211,7 @@ func (c CmdClient) CheckEngineRunning() error {
 	}
 }
 
-// GetPlatform will run the `docker/podman version` command to get the OS/Arch.
+// GetPlatform will run the `docker version/podman info` command to get the OS/Arch.
 func (c CmdClient) GetPlatform() (os, arch string, err error) {
 	if _, err := osexec.LookPath(c.runtime); err != nil {
 		return "", "", ErrContainerCommandNotFound{containerRuntime: c.runtime}
