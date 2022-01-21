@@ -99,9 +99,16 @@ func (c CmdClient) Build(in *BuildArguments) error {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
 
-	// Add cache from options.
-	for _, imageFrom := range in.CacheFrom {
-		args = append(args, "--cache-from", imageFrom)
+	// Podman Docs to --cache-from flag in build command:
+	// Podman does not currently support caching so this is a NOOP.
+	// (This option is not available with the remote Podman client)
+	//
+	// just use it when building with dockerBinary
+	if c.runtime == dockerBinary {
+		// Add cache from options.
+		for _, imageFrom := range in.CacheFrom {
+			args = append(args, "--cache-from", imageFrom)
+		}
 	}
 
 	// Add target option.
@@ -221,14 +228,22 @@ func (c CmdClient) GetPlatform() (os, arch string, err error) {
 
 func (c CmdClient) getPlatformPodman() (string, string, error) {
 	buf := &bytes.Buffer{}
-	err := c.runner.Run(c.runtime, []string{"version", "-f", "'{{json .OsArch}}'"}, exec.Stdout(buf))
+	err := c.runner.Run(c.runtime, []string{"info", "-f", "'{{json .Host}}'"}, exec.Stdout(buf))
 	if err != nil {
-		return "", "", fmt.Errorf("run podman version: %w", err)
+		return "", "", fmt.Errorf("run podman info: %w", err)
 	}
-	osArchSlice := strings.Split(strings.Trim(buf.String(), "\""), "/")
-	os := osArchSlice[0]
-	arch := osArchSlice[1]
-	return os, arch, nil
+
+	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
+	var podmanInfo struct {
+		OS   string `json:"os"`
+		Arch string `json:"arch"`
+	}
+
+	if err := json.Unmarshal([]byte(out), &podmanInfo); err != nil {
+		return "", "", fmt.Errorf("unmarshal podman platform: %w", err)
+	}
+
+	return podmanInfo.OS, podmanInfo.Arch, nil
 }
 
 func (c CmdClient) getPlatformDocker() (string, string, error) {
