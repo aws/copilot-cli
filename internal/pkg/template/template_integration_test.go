@@ -176,6 +176,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					SubnetsType:    template.PrivateSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 		"renders a valid template with all storage options": {
