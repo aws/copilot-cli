@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -274,16 +275,18 @@ func (r *RoutingRuleConfiguration) isEmpty() bool {
 
 // NetworkLoadBalancerConfiguration holds options for a network load balancer
 type NetworkLoadBalancerConfiguration struct {
-	Port            *string                 `yaml:"port"`
-	HealthCheck     HealthCheckArgsOrString `yaml:"healthcheck"`
-	TargetContainer *string                 `yaml:"target_container"`
-	TargetPort      *int                    `yaml:"target_port"`
-	SSLPolicy       *string                 `yaml:"ssl_policy"`
-	Aliases         Alias                   `yaml:"alias"`
+	Port            *string            `yaml:"port"`
+	HealthCheck     NLBHealthCheckArgs `yaml:"healthcheck"`
+	TargetContainer *string            `yaml:"target_container"`
+	TargetPort      *int               `yaml:"target_port"`
+	SSLPolicy       *string            `yaml:"ssl_policy"`
+	Stickiness      *bool              `yaml:"stickiness"`
+	Aliases         Alias              `yaml:"alias"`
 }
 
 func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
-	return c.Port == nil && c.HealthCheck.IsEmpty() && c.TargetContainer == nil && c.TargetPort == nil && c.SSLPolicy == nil && c.Aliases.IsEmpty()
+	return c.Port == nil && c.HealthCheck.isEmpty() && c.TargetContainer == nil && c.TargetPort == nil &&
+		c.SSLPolicy == nil && c.Stickiness == nil && c.Aliases.IsEmpty()
 }
 
 // IPNet represents an IP network string. For example: 10.1.0.0/16
@@ -315,4 +318,12 @@ func (e *Alias) ToStringSlice() ([]string, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// ToString converts an Alias to a string.
+func (e *Alias) ToString() string {
+	if e.String != nil {
+		return aws.StringValue(e.String)
+	}
+	return strings.Join(e.StringSlice, ",")
 }

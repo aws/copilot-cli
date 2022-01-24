@@ -18,7 +18,7 @@ NLBListener:
       - TargetGroupArn: !Ref NLBTargetGroup
         Type: forward
     LoadBalancerArn: !Ref PublicNetworkLoadBalancer
-    Port: {{ .NLB.Listener.Port }}
+    Port: !Ref NLBPort
     Protocol: {{ .NLB.Listener.Protocol }}
 {{- if eq .NLB.Listener.Protocol "TLS" }}
     Certificates:
@@ -31,38 +31,34 @@ NLBTargetGroup:
     'aws:copilot:description': 'A target group to connect the network load balancer to your service'
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
-    {{- if .HTTPHealthCheck.HealthyThreshold }}
-    HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
+    {{- if .NLB.Listener.HealthCheck.HealthyThreshold }}
+    HealthyThresholdCount: {{.NLB.Listener.HealthCheck.HealthyThreshold}}
     {{- end }}
-    {{- if .HTTPHealthCheck.UnhealthyThreshold }}
-    UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}}
+    {{- if .NLB.Listener.HealthCheck.UnhealthyThreshold }}
+    UnhealthyThresholdCount: {{.NLB.Listener.HealthCheck.UnhealthyThreshold}}
     {{- end }}
-    {{- if .HTTPHealthCheck.Interval }}
-    HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}}
+    {{- if .NLB.Listener.HealthCheck.Interval }}
+    HealthCheckIntervalSeconds: {{.NLB.Listener.HealthCheck.Interval}}
     {{- end }}
-    {{- if .HTTPHealthCheck.Timeout }}
-    HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
+    {{- if .NLB.Listener.HealthCheck.Timeout }}
+    HealthCheckTimeoutSeconds: {{.NLB.Listener.HealthCheck.Timeout}}
     {{- end }}
-    Port: !Ref ContainerPort
-{{- if eq .NLB.Listener.Protocol "TLS"}}
-    Protocol: TCP
-{{- else}}
-    Protocol: {{ .NLB.Listener.Protocol }}
-{{- end}}
+    {{- if .NLB.Listener.HealthCheck.Port }}
+    HealthCheckPort: {{.NLB.Listener.HealthCheck.Port}}
+    {{- end }}
+    Port: {{ .NLB.Listener.TargetPort }}
+    Protocol: {{- if eq .NLB.Listener.Protocol "TLS"}} TCP {{- else}} {{ .NLB.Listener.Protocol }} {{- end}}
     TargetGroupAttributes:
       - Key: deregistration_delay.timeout_seconds
         Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
 {{- if ne .NLB.Listener.Protocol "TLS"}}
-{{- if .NLB.Listener.Stickness }}
-{{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
+{{- if .NLB.Listener.Stickiness }} {{/*Sticky sessions are not supported with TLS listeners and TLS target groups.*/}}
       - Key: stickiness.enabled
-        Value: {{ .NLB.Listener.Stickness }}
+        Value: {{ .NLB.Listener.Stickiness }}
 {{- end}}
 {{- end}}
-      - Key: deregistration_delay.connection_termination.enabled
-        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
-      - Key: proxy_protocol_v2.enabled
-        Value: false # NOTE: Default is false  TODO: remove this comment and investigate if we should surface this or not.
+      - Key: deregistration_delay.connection_termination.enabled {{/* It is recommended to have this enabled for UDP and TCP_UDP target groups */}}
+        Value: {{- if or (eq $.NLB.Listener.Protocol "UDP") (eq $.NLB.Listener.Protocol "TCP_UDP") }} true {{- else}} false {{- end}}
     TargetType: ip
     VpcId:
       Fn::ImportValue:
@@ -76,11 +72,31 @@ NLBSecurityGroup:
     GroupDescription: Allow access from the network load balancer to service
     SecurityGroupIngress:
 {{range $cidr := .NLB.PublicSubnetCIDRs}}
+      {{- if eq $.NLB.Listener.Protocol "TCP_UDP" }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
         FromPort: {{ $.NLB.Listener.Port }}
-        IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
+        IpProtocol: TCP
         ToPort: {{ $.NLB.Listener.Port }}
+      - CidrIp: {{$cidr}}
+        Description: Ingress to allow access from Network Load Balancer subnet
+        FromPort: {{ $.NLB.Listener.Port }}
+        IpProtocol: UDP
+        ToPort: {{ $.NLB.Listener.Port }}
+      {{- else }}
+      - CidrIp: {{$cidr}}
+        Description: Ingress to allow access from Network Load Balancer subnet
+        FromPort: !Ref NLBPort
+        IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
+        ToPort: !Ref NLBPort
+      {{- end }}
+      {{- if $.NLB.Listener.HealthCheck.Port}}{{- if ne $.NLB.Listener.HealthCheck.Port $.NLB.Listener.Port}}
+      - CidrIp: {{$cidr}}
+        Description: Ingress to allow access from Network Load Balancer subnet for health check
+        FromPort: {{ $.NLB.Listener.HealthCheck.Port }}
+        ToPort: {{ $.NLB.Listener.HealthCheck.Port }}
+        IpProtocol: TCP
+      {{- end}}{{- end}}
 {{end}}
     Tags:
       - Key: Name
@@ -129,7 +145,8 @@ NLBCustomDomainAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
+    Aliases:
+      !Split [",", !Ref NLBAliases]
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -202,7 +219,8 @@ NLBCertValidatorAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases: {{fmtSlice .NLB.Listener.Aliases }}
+    Aliases:
+      !Split [",", !Ref NLBAliases]
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function

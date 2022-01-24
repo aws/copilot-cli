@@ -3,7 +3,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      docker: 18
+      docker: 19
       ruby: 2.6
     commands:
       - echo "cd into $CODEBUILD_SRC_DIR"
