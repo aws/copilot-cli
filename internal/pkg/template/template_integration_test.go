@@ -290,7 +290,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 DiscoveryServiceArn:
   Fn::GetAtt: [DiscoveryService, Arn]
 `,
-				ALBEnabled: true},
+				ALBEnabled: true
+			},
 		},
 		"renders a valid template with Windows platform": {
 			opts: template.WorkloadOpts{
