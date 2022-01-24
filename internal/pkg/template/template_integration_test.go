@@ -122,6 +122,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid grpc template by default": {
@@ -133,6 +134,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with addons with no outputs": {
@@ -146,6 +148,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 		"renders a valid template with addons with outputs": {
@@ -162,6 +165,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 		"renders a valid template with private subnet placement": {
@@ -210,6 +214,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with minimal storage options": {
@@ -243,6 +248,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with ephemeral storage": {
@@ -256,6 +262,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with entrypoint and command overrides": {
@@ -268,6 +275,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with additional addons parameters": {
@@ -282,7 +290,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 DiscoveryServiceArn:
   Fn::GetAtt: [DiscoveryService, Arn]
 `,
-			},
+				ALBEnabled: true},
 		},
 		"renders a valid template with Windows platform": {
 			opts: template.WorkloadOpts{
@@ -296,6 +304,7 @@ DiscoveryServiceArn:
 					Arch: "x86_64",
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 	}
