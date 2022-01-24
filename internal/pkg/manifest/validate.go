@@ -549,6 +549,7 @@ func (CommandOverride) Validate() error {
 	return nil
 }
 
+// Validate returns nil if RoutingRuleConfigOrBool is configured correctly.
 func (r RoutingRuleConfigOrBool) Validate() error {
 	if aws.BoolValue(r.Enabled) {
 		return &errFieldMustBeSpecified{
