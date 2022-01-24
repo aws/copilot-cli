@@ -549,6 +549,15 @@ func (CommandOverride) Validate() error {
 	return nil
 }
 
+func (r RoutingRuleConfigOrBool) Validate() error {
+	if aws.BoolValue(r.Enabled) == true {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
+	}
+	return r.RoutingRuleConfiguration.Validate()
+}
+
 // Validate returns nil if RoutingRuleConfiguration is configured correctly.
 func (r RoutingRuleConfiguration) Validate() error {
 	var err error
@@ -572,6 +581,11 @@ func (r RoutingRuleConfiguration) Validate() error {
 	if r.ProtocolVersion != nil {
 		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
 			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
+		}
+	}
+	if r.Path == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
 		}
 	}
 	return nil
