@@ -23,6 +23,9 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
       allowed_source_ips: ["10.24.34.0/23"]
       alias: example.com
 
+    nlb:
+      port: 443/tls
+
     # Configuration for your containers and service.
     image:
       build:
