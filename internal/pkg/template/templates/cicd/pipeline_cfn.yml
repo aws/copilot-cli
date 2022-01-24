@@ -135,12 +135,17 @@ Resources:
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
         Type: CODEPIPELINE
+      {{- if eq .Build.EnvironmentType "LINUX_CONTAINER"}}
       Cache:
         Modes:
           - LOCAL_DOCKER_LAYER_CACHE
         Type: LOCAL
+      {{- else }}
+      Cache:
+        Type: "NO_CACHE"
+      {{- end }}
       Environment:
-        Type: LINUX_CONTAINER
+        Type: {{.Build.EnvironmentType}}
         ComputeType: BUILD_GENERAL1_SMALL
         PrivilegedMode: true
         Image: {{.Build.Image}}

@@ -295,8 +295,12 @@ async function validateAliases(aliases, loadBalancerDNS) {
             HostedZoneId: hostedZoneID,
             MaxItems: "1",
             StartRecordName: alias,
+            StartRecordType: "A",
         }).promise().then(({ ResourceRecordSets: recordSet }) => {
             if (!targetRecordExists(alias, recordSet)) {
+                return;
+            }
+            if (recordSet[0].Type !== "A") {
                 return;
             }
             let aliasTarget = recordSet[0].AliasTarget;

@@ -28,6 +28,7 @@ type StackDescription struct {
 type Resource struct {
 	Type       string `json:"type"`
 	PhysicalID string `json:"physicalID"`
+	LogicalID  string `json:"logicalID,omitempty"`
 }
 
 // HumanString returns the stringified Resource struct with human readable format.
@@ -107,6 +108,7 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*Resourc
 		resources = append(resources, &Resource{
 			Type:       aws.StringValue(stackResource.ResourceType),
 			PhysicalID: aws.StringValue(stackResource.PhysicalResourceId),
+			LogicalID:  aws.StringValue(stackResource.LogicalResourceId),
 		})
 	}
 	return resources

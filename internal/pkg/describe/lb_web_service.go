@@ -8,12 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"io"
 	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -26,6 +27,11 @@ import (
 const (
 	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
 	envOutputSubdomain                 = "EnvironmentSubdomain"
+	svcParamHTTPSEnabled               = "HTTPSEnabled"
+
+	svcStackResourceALBTargetGroupLogicalID = "TargetGroup"
+	svcStackResourceNLBTargetGroupLogicalID = "NLBTargetGroup"
+	svcOutputPublicNLBDNSName               = "PublicNetworkLoadBalancerDNSName"
 )
 
 type envDescriber interface {

@@ -34,7 +34,7 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
-	defaultNLBProtocol     = "TCP_UDP"
+	defaultNLBProtocol     = manifest.TCPUDP
 )
 
 // Supported capacityproviders for Fargate services
@@ -54,7 +54,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 	}
 	var sidecars []*template.SidecarOpts
 	for name, config := range s {
-		port, protocol, err := parsePortMapping(config.Port)
+		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
 		}
@@ -114,22 +114,6 @@ func convertDependsOn(d manifest.DependsOn) map[string]string {
 		dependsOn[name] = strings.ToUpper(status)
 	}
 	return dependsOn
-}
-
-// Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
-func parsePortMapping(s *string) (port *string, protocol *string, err error) {
-	if s == nil {
-		return nil, nil, nil
-	}
-	portProtocol := strings.Split(*s, "/")
-	switch len(portProtocol) {
-	case 1:
-		return aws.String(portProtocol[0]), nil, nil
-	case 2:
-		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
-	default:
-		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
-	}
 }
 
 func convertAdvancedCount(a manifest.AdvancedCount) (*template.AdvancedCount, error) {
@@ -276,7 +260,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	}
 
 	// Parse listener port and protocol.
-	port, protocol, err := parsePortMapping(nlbConfig.Port)
+	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Port)
 	if err != nil {
 		return networkLoadBalancerConfig{}, err
 	}
@@ -295,7 +279,7 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 	if targetContainer != s.name {
 		// If the target container is a sidecar container, the target port is the exposed sidecar port.
 		sideCarPort := s.manifest.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
-		port, _, err := parsePortMapping(sideCarPort)
+		port, _, err := manifest.ParsePortMapping(sideCarPort)
 		if err != nil {
 			return networkLoadBalancerConfig{}, err
 		}
@@ -311,16 +295,30 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
+	hc := template.NLBHealthCheck{
+		HealthyThreshold:   nlbConfig.HealthCheck.HealthyThreshold,
+		UnhealthyThreshold: nlbConfig.HealthCheck.UnhealthyThreshold,
+	}
+	if nlbConfig.HealthCheck.Port != nil {
+		hc.Port = strconv.Itoa(aws.IntValue(nlbConfig.HealthCheck.Port))
+	}
+	if nlbConfig.HealthCheck.Timeout != nil {
+		hc.Timeout = aws.Int64(int64(nlbConfig.HealthCheck.Timeout.Seconds()))
+	}
+	if nlbConfig.HealthCheck.Interval != nil {
+		hc.Interval = aws.Int64(int64(nlbConfig.HealthCheck.Interval.Seconds()))
+	}
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
 			Listener: template.NetworkLoadBalancerListener{
-				Port:            aws.StringValue(port),
 				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
 				TargetContainer: targetContainer,
 				TargetPort:      targetPort,
 				SSLPolicy:       nlbConfig.SSLPolicy,
 				Aliases:         aliases,
+				HealthCheck:     hc,
+				Stickiness:       nlbConfig.Stickiness,
 			},
 			MainContainerPort: s.containerPort(),
 		},
