@@ -19,11 +19,12 @@ type Environment struct {
 	Name             string        `json:"name"`                   // Name of the environment, must be unique within a App.
 	Region           string        `json:"region"`                 // Name of the region this environment is stored in.
 	AccountID        string        `json:"accountID"`              // Account ID of the account this environment is stored in.
-	Prod             bool          `json:"prod"`                   // Whether or not this environment is a production environment.
+	Prod             bool          `json:"prod"`                   // Deprecated. Whether or not this environment is a production environment.
 	RegistryURL      string        `json:"registryURL"`            // URL For ECR Registry for this environment.
 	ExecutionRoleARN string        `json:"executionRoleARN"`       // ARN used by CloudFormation to make modification to the environment stack.
 	ManagerRoleARN   string        `json:"managerRoleARN"`         // ARN for the manager role assumed to manipulate the environment and its services.
 	CustomConfig     *CustomizeEnv `json:"customConfig,omitempty"` // Custom environment configuration by users.
+	Telemetry        *Telemetry    `json:"telemetry,omitempty"`    // Optional environment telemetry features.
 }
 
 // CustomizeEnv represents the custom environment config.
@@ -56,6 +57,11 @@ type AdjustVPC struct {
 	AZs                []string `json:"availabilityZoneNames"`
 	PublicSubnetCIDRs  []string `json:"publicSubnetCIDRs"`
 	PrivateSubnetCIDRs []string `json:"privateSubnetCIDRs"`
+}
+
+// Telemetry represents optional observability and monitoring configuration.
+type Telemetry struct {
+	EnableContainerInsights bool `json:"containerInsights"`
 }
 
 // CreateEnvironment instantiates a new environment within an existing App. Skip if
