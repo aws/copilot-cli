@@ -550,7 +550,7 @@ func (CommandOverride) Validate() error {
 }
 
 func (r RoutingRuleConfigOrBool) Validate() error {
-	if aws.BoolValue(r.Enabled) == true {
+	if aws.BoolValue(r.Enabled) {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
 		}
