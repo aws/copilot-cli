@@ -69,6 +69,10 @@ Conditions:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
+{{- if .NLB}}
+  HasNLBAliases:
+    !Equals [!Ref NLBAliases, ""]
+{{- end}}
 Resources:
 {{include "loggroup" . | indent 2}}
 
