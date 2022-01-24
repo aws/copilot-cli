@@ -284,14 +284,14 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 		App: deploy.AppInformation{
 			Name: conf.App,
 		},
-		Name:                conf.Name,
-    ArtifactBucketKeyARN: artifactBucketKeyARN,
+		Name:                 conf.Name,
+		ArtifactBucketKeyARN: artifactBucketKeyARN,
 		ArtifactBucketARN:    artifactBucketARN,
-		CustomResourcesURLs: customResourcesURLs,
-		ImportVPCConfig:     importedVPC,
-		AdjustVPCConfig:     adjustedVPC,
-		CFNServiceRoleARN:   conf.ExecutionRoleARN,
-		Telemetry:           conf.Telemetry,
+		CustomResourcesURLs:  customResourcesURLs,
+		ImportVPCConfig:      importedVPC,
+		AdjustVPCConfig:      adjustedVPC,
+		CFNServiceRoleARN:    conf.ExecutionRoleARN,
+		Telemetry:            conf.Telemetry,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 	}
@@ -315,12 +315,12 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 			App: deploy.AppInformation{
 				Name: conf.App,
 			},
-			Name:                conf.Name,
-      ArtifactBucketKeyARN: artifactBucketKeyARN,
+			Name:                 conf.Name,
+			ArtifactBucketKeyARN: artifactBucketKeyARN,
 			ArtifactBucketARN:    artifactBucketARN,
-			CustomResourcesURLs: customResourcesURLs,
-			CFNServiceRoleARN:   conf.ExecutionRoleARN,
-			Telemetry:           conf.Telemetry,
+			CustomResourcesURLs:  customResourcesURLs,
+			CFNServiceRoleARN:    conf.ExecutionRoleARN,
+			Telemetry:            conf.Telemetry,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 		}

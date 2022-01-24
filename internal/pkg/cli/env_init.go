@@ -678,15 +678,15 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 			DNSName:             app.Domain,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
-		Prod:                o.isProduction,
-		AdditionalTags:      app.Tags,
-		CustomResourcesURLs: customResourcesURLs,
-    ArtifactBucketARN:    artifactBucketARN,
+		Prod:                 o.isProduction,
+		AdditionalTags:       app.Tags,
+		CustomResourcesURLs:  customResourcesURLs,
+		ArtifactBucketARN:    artifactBucketARN,
 		ArtifactBucketKeyARN: artifactBucketKeyARN,
-		AdjustVPCConfig:     o.adjustVPCConfig(),
-		ImportVPCConfig:     o.importVPCConfig(),
-		Telemetry:           o.telemetry.toConfig(),
-		Version:             deploy.LatestEnvTemplateVersion,
+		AdjustVPCConfig:      o.adjustVPCConfig(),
+		ImportVPCConfig:      o.importVPCConfig(),
+		Telemetry:            o.telemetry.toConfig(),
+		Version:              deploy.LatestEnvTemplateVersion,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
@@ -791,10 +791,10 @@ func buildEnvInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new environment in your application.",
 		Example: `
-  Creates a test environment in your "default" AWS profile using default configuration.
+  Creates a test environment using your "default" AWS profile and default configuration.
   /code $ copilot env init --name test --profile default --default-config
 
-  Creates a prod-iad environment using your "prod-admin" AWS profile.
+  Creates a prod-iad environment using your "prod-admin" AWS profile and enables container insights.
   /code $ copilot env init --name prod-iad --profile prod-admin --container-insights
 
   Creates an environment with imported VPC resources.

@@ -296,7 +296,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Telemetry: &config.Telemetry{
 						EnableContainerInsights: true,
 					},
-          ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
+					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
 					ArtifactBucketKeyARN: "mockKMS",
 				}).Return(nil)
 
