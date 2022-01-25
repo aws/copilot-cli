@@ -60,6 +60,30 @@ var (
 	}
 )
 
+// ImageWithHealthcheck represents a container image with health check.
+type ImageWithHealthcheck struct {
+	Image       Image                `yaml:",inline"`
+	HealthCheck ContainerHealthCheck `yaml:"healthcheck"`
+}
+
+// ImageWithPortAndHealthcheck represents a container image with an exposed port and health check.
+type ImageWithPortAndHealthcheck struct {
+	ImageWithPort `yaml:",inline"`
+	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
+}
+
+// ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
+type ImageWithHealthcheckAndOptionalPort struct {
+	ImageWithOptionalPort `yaml:",inline"`
+	HealthCheck           ContainerHealthCheck `yaml:"healthcheck"`
+}
+
+// ImageWithOptionalPort represents a container image with an optional exposed port.
+type ImageWithOptionalPort struct {
+	Image Image   `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
+}
+
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
 	CPU            *int                 `yaml:"cpu"`
@@ -85,12 +109,12 @@ func (t *TaskConfig) ContainerPlatform() string {
 }
 
 // IsWindows returns whether or not the service is building with a Windows OS.
-func (t *TaskConfig) IsWindows() bool {
+func (t TaskConfig) IsWindows() bool {
 	return isWindowsPlatform(t.Platform)
 }
 
 // IsARM returns whether or not the service is building with an ARM Arch.
-func (t *TaskConfig) IsARM() bool {
+func (t TaskConfig) IsARM() bool {
 	return IsArmArch(t.Platform.Arch())
 }
 

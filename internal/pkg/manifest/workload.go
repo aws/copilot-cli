@@ -58,6 +58,40 @@ type WorkloadManifest interface {
 	Validate() error
 }
 
+// UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
+// If an error occurs during deserialization, then returns the error.
+// If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
+func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
+	type manifest interface {
+		WorkloadManifest
+	}
+	am := Workload{}
+	if err := yaml.Unmarshal(in, &am); err != nil {
+		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
+	}
+	typeVal := aws.StringValue(am.Type)
+	var m manifest
+	switch typeVal {
+	case LoadBalancedWebServiceType:
+		m = newDefaultLoadBalancedWebService()
+
+	case RequestDrivenWebServiceType:
+		m = newDefaultRequestDrivenWebService()
+	case BackendServiceType:
+		m = newDefaultBackendService()
+	case WorkerServiceType:
+		m = newDefaultWorkerService()
+	case ScheduledJobType:
+		m = newDefaultScheduledJob()
+	default:
+		return nil, &ErrInvalidWorkloadType{Type: typeVal}
+	}
+	if err := yaml.Unmarshal(in, m); err != nil {
+		return nil, fmt.Errorf("unmarshal manifest for %s: %w", typeVal, err)
+	}
+	return m, nil
+}
+
 // WorkloadProps contains properties for creating a new workload manifest.
 type WorkloadProps struct {
 	Name       string
@@ -99,36 +133,6 @@ func (i *Image) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 	return nil
-}
-
-// ImageWithHealthcheck represents a container image with health check.
-type ImageWithHealthcheck struct {
-	Image       Image                `yaml:",inline"`
-	HealthCheck ContainerHealthCheck `yaml:"healthcheck"`
-}
-
-// ImageWithPortAndHealthcheck represents a container image with an exposed port and health check.
-type ImageWithPortAndHealthcheck struct {
-	ImageWithPort `yaml:",inline"`
-	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
-}
-
-// ImageWithPort represents a container image with an exposed port.
-type ImageWithPort struct {
-	Image Image   `yaml:",inline"`
-	Port  *uint16 `yaml:"port"`
-}
-
-// ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
-type ImageWithHealthcheckAndOptionalPort struct {
-	ImageWithOptionalPort `yaml:",inline"`
-	HealthCheck           ContainerHealthCheck `yaml:"healthcheck"`
-}
-
-// ImageWithOptionalPort represents a container image with an optional exposed port.
-type ImageWithOptionalPort struct {
-	Image Image   `yaml:",inline"`
-	Port  *uint16 `yaml:"port"`
 }
 
 // GetLocation returns the location of the image.
@@ -410,40 +414,6 @@ type vpcConfig struct {
 
 func (c *vpcConfig) isEmpty() bool {
 	return c.Placement == nil && c.SecurityGroups == nil
-}
-
-// UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
-// If an error occurs during deserialization, then returns the error.
-// If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
-	type manifest interface {
-		WorkloadManifest
-	}
-	am := Workload{}
-	if err := yaml.Unmarshal(in, &am); err != nil {
-		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
-	}
-	typeVal := aws.StringValue(am.Type)
-	var m manifest
-	switch typeVal {
-	case LoadBalancedWebServiceType:
-		m = newDefaultLoadBalancedWebService()
-
-	case RequestDrivenWebServiceType:
-		m = newDefaultRequestDrivenWebService()
-	case BackendServiceType:
-		m = newDefaultBackendService()
-	case WorkerServiceType:
-		m = newDefaultWorkerService()
-	case ScheduledJobType:
-		m = newDefaultScheduledJob()
-	default:
-		return nil, &ErrInvalidWorkloadType{Type: typeVal}
-	}
-	if err := yaml.Unmarshal(in, m); err != nil {
-		return nil, fmt.Errorf("unmarshal manifest for %s: %w", typeVal, err)
-	}
-	return m, nil
 }
 
 // ContainerHealthCheck holds the configuration to determine if the service container is healthy.

@@ -34,6 +34,12 @@ type RequestDrivenWebServiceConfig struct {
 	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
 }
 
+// ImageWithPort represents a container image with an exposed port.
+type ImageWithPort struct {
+	Image Image   `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
+}
+
 // RequestDrivenWebServiceNetworkConfig represents options for network connection to AWS resources for a Request-Driven Web Service.
 type RequestDrivenWebServiceNetworkConfig struct {
 	VPC rdwsVpcConfig `yaml:"vpc"`
