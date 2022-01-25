@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"strconv"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"gopkg.in/yaml.v3"
@@ -58,8 +60,83 @@ var (
 	}
 )
 
+// Logging holds configuration for Firelens to route your logs.
+type Logging struct {
+	Retention      *int              `yaml:"retention"`
+	Image          *string           `yaml:"image"`
+	Destination    map[string]string `yaml:"destination,flow"`
+	EnableMetadata *bool             `yaml:"enableMetadata"`
+	SecretOptions  map[string]string `yaml:"secretOptions"`
+	ConfigFile     *string           `yaml:"configFilePath"`
+	Variables      map[string]string `yaml:"variables"`
+	Secrets        map[string]string `yaml:"secrets"`
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (lc *Logging) IsEmpty() bool {
+	return lc.Image == nil && lc.Destination == nil && lc.EnableMetadata == nil &&
+		lc.SecretOptions == nil && lc.ConfigFile == nil && lc.Variables == nil && lc.Secrets == nil
+}
+
+// LogImage returns the default Fluent Bit image if not otherwise configured.
+func (lc *Logging) LogImage() *string {
+	if lc.Image == nil {
+		return aws.String(defaultFluentbitImage)
+	}
+	return lc.Image
+}
+
+// GetEnableMetadata returns the configuration values and sane default for the EnableMEtadata field
+func (lc *Logging) GetEnableMetadata() *string {
+	if lc.EnableMetadata == nil {
+		// Enable ecs log metadata by default.
+		return aws.String("true")
+	}
+	return aws.String(strconv.FormatBool(*lc.EnableMetadata))
+}
+
 // OverrideRule holds the manifest overriding rule for CloudFormation template.
 type OverrideRule struct {
 	Path  string    `yaml:"path"`
 	Value yaml.Node `yaml:"value"`
+}
+
+// ExecuteCommand is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type ExecuteCommandConfig.
+type ExecuteCommand struct {
+	Enable *bool
+	Config ExecuteCommandConfig
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ExecuteCommand
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (e *ExecuteCommand) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&e.Config); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !e.Config.IsEmpty() {
+		return nil
+	}
+
+	if err := value.Decode(&e.Enable); err != nil {
+		return errUnmarshalExec
+	}
+	return nil
+}
+
+// ExecuteCommandConfig represents the configuration for ECS Execute Command.
+type ExecuteCommandConfig struct {
+	Enable *bool `yaml:"enable"`
+}
+
+// IsEmpty returns whether ExecuteCommandConfig is empty.
+func (e ExecuteCommandConfig) IsEmpty() bool {
+	return e.Enable == nil
 }
