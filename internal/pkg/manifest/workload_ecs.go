@@ -60,6 +60,40 @@ var (
 	}
 )
 
+// TaskConfig represents the resource boundaries and environment variables for the containers in the task.
+type TaskConfig struct {
+	CPU            *int                 `yaml:"cpu"`
+	Memory         *int                 `yaml:"memory"`
+	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
+	Count          Count                `yaml:"count"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec"`
+	Variables      map[string]string    `yaml:"variables"`
+	EnvFile        *string              `yaml:"env_file"`
+	Secrets        map[string]string    `yaml:"secrets"`
+	Storage        Storage              `yaml:"storage"`
+}
+
+// ContainerPlatform returns the platform for the service.
+func (t *TaskConfig) ContainerPlatform() string {
+	if t.Platform.IsEmpty() {
+		return ""
+	}
+	if t.IsWindows() {
+		return platformString(OSWindows, t.Platform.Arch())
+	}
+	return platformString(t.Platform.OS(), t.Platform.Arch())
+}
+
+// IsWindows returns whether or not the service is building with a Windows OS.
+func (t *TaskConfig) IsWindows() bool {
+	return isWindowsPlatform(t.Platform)
+}
+
+// IsARM returns whether or not the service is building with an ARM Arch.
+func (t *TaskConfig) IsARM() bool {
+	return IsArmArch(t.Platform.Arch())
+}
+
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
 	Retention      *int              `yaml:"retention"`
