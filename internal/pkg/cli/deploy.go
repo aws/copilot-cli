@@ -69,7 +69,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
-			case contains(workloadType, manifest.JobTypes):
+			case contains(workloadType, manifest.JobTypes()):
 				o.deployWkld = &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 

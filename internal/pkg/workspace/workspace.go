@@ -135,7 +135,7 @@ func (ws *Workspace) ListServices() ([]string, error) {
 // ListJobs returns the names of all jobs in the workspace.
 func (ws *Workspace) ListJobs() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifest.JobTypes {
+		for _, t := range manifest.JobTypes() {
 			if wlType == t {
 				return true
 			}

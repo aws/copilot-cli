@@ -30,7 +30,7 @@ var (
 	PrivateSubnetPlacement = Placement("private")
 
 	// WorkloadTypes holds all workload manifest types.
-	WorkloadTypes = append(ServiceTypes(), JobTypes...)
+	WorkloadTypes = append(ServiceTypes(), JobTypes()...)
 
 	// Acceptable strings for Windows operating systems.
 	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}

@@ -19,9 +19,11 @@ const (
 	scheduledJobManifestPath = "workloads/jobs/scheduled-job/manifest.yml"
 )
 
-// JobTypes holds the valid job "architectures"
-var JobTypes = []string{
-	ScheduledJobType,
+// JobTypes returns the list of supported job manifest types.
+func JobTypes() []string {
+	return []string{
+		ScheduledJobType,
+	}
 }
 
 // ScheduledJob holds the configuration to build a container image that is run
