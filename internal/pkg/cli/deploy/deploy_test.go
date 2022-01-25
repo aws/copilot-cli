@@ -164,6 +164,25 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("build and push image: some error"),
 		},
+		"build and push image successfully": {
+			inShouldUpload:  true,
+			inBuildRequired: true,
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockWsReader.EXPECT().Path().Return(mockWorkspacePath, nil)
+				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
+					Dockerfile: "mockDockerfile",
+					Context:    "mockContext",
+					Platform:   "mockContainerPlatform",
+					Tags:       []string{mockImageTag},
+				}).Return("mockDigest", nil)
+				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
+					WlName: "mockWkld",
+				})
+			},
+			wantImageDigest: "mockDigest",
+		},
 		"error if fail to put env file to s3 bucket": {
 			inShouldUpload: true,
 			inEnvFile:      mockEnvFile,
@@ -282,13 +301,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				S3Bucket: mockS3Bucket,
 				ImageTag: mockImageTag,
 			}
-			in := UploadArtifactsInputs{
+			in := UploadArtifactsInput{
 				Templater:             m.mockTemplater,
 				ShouldUploadArtifacts: tc.inShouldUpload,
-				Fs:                    &afero.Afero{Fs: fs},
+				FS:                    &afero.Afero{Fs: fs},
 				Uploader:              m.mockUploader,
 				ImageBuilderPusher:    m.mockImageBuilderPusher,
-				Ws:                    m.mockWsReader,
+				WS:                    m.mockWsReader,
 				NewInterpolator: func(app, env string) Interpolator {
 					return m.mockInterpolator
 				},
@@ -309,7 +328,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.Equal(t, tc.wantAddonsURL, got.AddonsURL)
 				require.Equal(t, tc.wantEnvFileARN, got.EnvFileARN)
 				require.Equal(t, tc.wantImageDigest, got.ImageDigest)
-				require.Equal(t, tc.wantBuildRequired, got.BuildRequired)
 			}
 		})
 	}
@@ -328,12 +346,11 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 	mockBeforeTime := time.Unix(1494505743, 0)
 	mockAfterTime := time.Unix(1494505756, 0)
 	tests := map[string]struct {
-		inAliases      manifest.Alias
-		inNLB          manifest.NetworkLoadBalancerConfiguration
-		inApp          *config.Application
-		inEnvironment  *config.Environment
-		inBuildRequire bool
-		inForceDeploy  bool
+		inAliases     manifest.Alias
+		inNLB         manifest.NetworkLoadBalancerConfiguration
+		inApp         *config.Application
+		inEnvironment *config.Environment
+		inForceDeploy bool
 
 		mock func(m *deployMocks)
 
@@ -346,7 +363,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			wantErr: fmt.Errorf("get service discovery endpoint: some error"),
 		},
 		"fail to get public CIDR blocks": {
-			inBuildRequire: false,
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/udp"),
 			},
@@ -670,10 +686,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				S3Bucket: mockS3Bucket,
 			}
 
-			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInputs{
-				BuildRequired:  tc.inBuildRequire,
+			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInput{
 				ForceNewUpdate: tc.inForceDeploy,
-				Ws:             m.mockWsReader,
+				WS:             m.mockWsReader,
 				NewInterpolator: func(app, env string) Interpolator {
 					return m.mockInterpolator
 				},
@@ -913,8 +928,8 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				S3Bucket: mockBucket,
 			}
 
-			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInputs{
-				Ws: m.mockWorkspace,
+			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
+				WS: m.mockWorkspace,
 				NewInterpolator: func(app, env string) Interpolator {
 					return m.mockInterpolator
 				},
@@ -1043,8 +1058,8 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				S3Bucket: mockBucket,
 			}
 
-			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInputs{
-				Ws: m.mockWsReader,
+			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
+				WS: m.mockWsReader,
 				NewInterpolator: func(app, env string) Interpolator {
 					return m.mockInterpolator
 				},
