@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
@@ -414,52 +413,6 @@ type vpcConfig struct {
 
 func (c *vpcConfig) isEmpty() bool {
 	return c.Placement == nil && c.SecurityGroups == nil
-}
-
-// ContainerHealthCheck holds the configuration to determine if the service container is healthy.
-// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-healthcheck.html
-type ContainerHealthCheck struct {
-	Command     []string       `yaml:"command"`
-	Interval    *time.Duration `yaml:"interval"`
-	Retries     *int           `yaml:"retries"`
-	Timeout     *time.Duration `yaml:"timeout"`
-	StartPeriod *time.Duration `yaml:"start_period"`
-}
-
-// NewDefaultContainerHealthCheck returns container health check configuration
-// that's identical to a load balanced web service's defaults.
-func NewDefaultContainerHealthCheck() *ContainerHealthCheck {
-	return &ContainerHealthCheck{
-		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    durationp(10 * time.Second),
-		Retries:     aws.Int(2),
-		Timeout:     durationp(5 * time.Second),
-		StartPeriod: durationp(0 * time.Second),
-	}
-}
-
-// IsEmpty checks if the health check is empty.
-func (hc ContainerHealthCheck) IsEmpty() bool {
-	return hc.Command == nil && hc.Interval == nil && hc.Retries == nil && hc.Timeout == nil && hc.StartPeriod == nil
-}
-
-// ApplyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
-func (hc *ContainerHealthCheck) ApplyIfNotSet(other *ContainerHealthCheck) {
-	if hc.Command == nil && other.Command != nil {
-		hc.Command = other.Command
-	}
-	if hc.Interval == nil && other.Interval != nil {
-		hc.Interval = other.Interval
-	}
-	if hc.Retries == nil && other.Retries != nil {
-		hc.Retries = other.Retries
-	}
-	if hc.Timeout == nil && other.Timeout != nil {
-		hc.Timeout = other.Timeout
-	}
-	if hc.StartPeriod == nil && other.StartPeriod != nil {
-		hc.StartPeriod = other.StartPeriod
-	}
 }
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
