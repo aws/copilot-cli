@@ -75,14 +75,14 @@ NLBSecurityGroup:
       {{- if eq $.NLB.Listener.Protocol "TCP_UDP" }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.Port }}
+        FromPort: !Ref NLBPort
         IpProtocol: TCP
-        ToPort: {{ $.NLB.Listener.Port }}
+        ToPort: !Ref NLBPort
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.Port }}
+        FromPort: !Ref NLBPort
         IpProtocol: UDP
-        ToPort: {{ $.NLB.Listener.Port }}
+        ToPort: !Ref NLBPort
       {{- else }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
@@ -145,11 +145,7 @@ NLBCustomDomainAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases:
-      !If
-        - HasNLBAliases
-        - []
-        - !Split [",", !Ref NLBAliases]
+    Aliases: !Split [",", !Ref NLBAliases]
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -222,11 +218,7 @@ NLBCertValidatorAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases:
-      !If
-      - HasNLBAliases
-      - []
-      - !Split [",", !Ref NLBAliases]
+    Aliases: {{ if .NLB.Listener.Aliases }} !Split [",", !Ref NLBAliases] {{ else }} [] {{ end }}
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function
