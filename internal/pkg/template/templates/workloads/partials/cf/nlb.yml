@@ -75,20 +75,20 @@ NLBSecurityGroup:
       {{- if eq $.NLB.Listener.Protocol "TCP_UDP" }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: !Ref NLBPort
+        FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: TCP
-        ToPort: !Ref NLBPort
+        ToPort: {{ $.NLB.Listener.TargetPort }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: !Ref NLBPort
+        FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: UDP
-        ToPort: !Ref NLBPort
+        ToPort: {{ $.NLB.Listener.TargetPort }}
       {{- else }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: !Ref NLBPort
+        FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
-        ToPort: !Ref NLBPort
+        ToPort: {{ $.NLB.Listener.TargetPort }}
       {{- end }}
       {{- if $.NLB.Listener.HealthCheck.Port}}{{- if ne $.NLB.Listener.HealthCheck.Port $.NLB.Listener.Port}}
       - CidrIp: {{$cidr}}
