@@ -123,7 +123,7 @@ func (ws *Workspace) Summary() (*Summary, error) {
 // ListServices returns the names of the services in the workspace.
 func (ws *Workspace) ListServices() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
-		for _, t := range manifest.ServiceTypes {
+		for _, t := range manifest.ServiceTypes() {
 			if wlType == t {
 				return true
 			}

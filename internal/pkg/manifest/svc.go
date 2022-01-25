@@ -27,12 +27,14 @@ const (
 	WorkerServiceType = "Worker Service"
 )
 
-// ServiceTypes are the supported service manifest types.
-var ServiceTypes = []string{
-	RequestDrivenWebServiceType,
-	LoadBalancedWebServiceType,
-	BackendServiceType,
-	WorkerServiceType,
+// ServiceTypes returns the list of supported service manifest types.
+func ServiceTypes() []string {
+	return []string{
+		RequestDrivenWebServiceType,
+		LoadBalancedWebServiceType,
+		BackendServiceType,
+		WorkerServiceType,
+	}
 }
 
 // Range contains either a Range or a range configuration for Autoscaling ranges.
@@ -269,7 +271,7 @@ func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
 }
 
 func IsTypeAService(t string) bool {
-	for _, serviceType := range ServiceTypes {
+	for _, serviceType := range ServiceTypes() {
 		if t == serviceType {
 			return true
 		}
