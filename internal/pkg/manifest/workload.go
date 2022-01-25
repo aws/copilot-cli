@@ -29,9 +29,6 @@ var (
 	PublicSubnetPlacement  = Placement("public")
 	PrivateSubnetPlacement = Placement("private")
 
-	// WorkloadTypes holds all workload manifest types.
-	WorkloadTypes = append(ServiceTypes(), JobTypes()...)
-
 	// Acceptable strings for Windows operating systems.
 	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
 
@@ -77,6 +74,11 @@ var (
 	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
 	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 )
+
+// WorkloadTypes returns the list of all manifest types.
+func WorkloadTypes() []string {
+	return append(ServiceTypes(), JobTypes()...)
+}
 
 // WorkloadManifest represents a workload manifest.
 type WorkloadManifest interface {
