@@ -437,6 +437,8 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		}))
 		require.NoError(t, err)
 		environmentToDeploy.CustomResourcesURLs = urls
+		environmentToDeploy.ArtifactBucketKeyARN = "ArtifactBucketKeyARN"
+		environmentToDeploy.ArtifactBucketARN = "ArtifactBucketARN"
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
