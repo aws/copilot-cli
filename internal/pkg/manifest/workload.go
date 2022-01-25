@@ -24,44 +24,17 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
+// AWS VPC subnet placement options.
 var (
-	// AWS VPC subnet placement options.
 	PublicSubnetPlacement  = Placement("public")
 	PrivateSubnetPlacement = Placement("private")
 
-	// Acceptable strings for Windows operating systems.
-	WindowsOSFamilies = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
-
-	// ValidShortPlatforms are all of the os/arch combinations that the PlatformString field may accept.
-	ValidShortPlatforms = []string{
-		dockerengine.PlatformString(OSLinux, ArchAMD64),
-		dockerengine.PlatformString(OSLinux, ArchX86),
-		dockerengine.PlatformString(OSLinux, ArchARM),
-		dockerengine.PlatformString(OSLinux, ArchARM64),
-		dockerengine.PlatformString(OSWindows, ArchAMD64),
-		dockerengine.PlatformString(OSWindows, ArchX86),
-	}
-
-	defaultPlatform = platformString(OSLinux, ArchAMD64)
-
-	// validAdvancedPlatforms are all of the OsFamily/Arch combinations that the PlatformArgs field may accept.
-	validAdvancedPlatforms = []PlatformArgs{
-		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchX86)},
-		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchAMD64)},
-		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM)},
-		{OSFamily: aws.String(OSLinux), Arch: aws.String(ArchARM64)},
-		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchX86)},
-		{OSFamily: aws.String(OSWindows), Arch: aws.String(ArchAMD64)},
-		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchX86)},
-		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchAMD64)},
-		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchX86)},
-		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
-	}
-
 	// All placement options.
 	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
+)
 
-	// Error definitions.
+// Error definitions.
+var (
 	ErrAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 
 	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
@@ -746,7 +719,7 @@ func RedirectPlatform(os, arch, wlType string) (platform string, err error) {
 }
 
 func isWindowsPlatform(platform PlatformArgsOrString) bool {
-	for _, win := range WindowsOSFamilies {
+	for _, win := range windowsOSFamilies {
 		if platform.OS() == win {
 			return true
 		}
