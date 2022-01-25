@@ -20,10 +20,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// AWS VPC subnet placement options.
 const (
-	firelensContainerName = "firelens_log_router"
-	defaultFluentbitImage = "public.ecr.aws/aws-observability/aws-for-fluent-bit:latest"
 	defaultDockerfileName = "Dockerfile"
 )
 
@@ -443,7 +440,6 @@ func (e *ExecuteCommand) UnmarshalYAML(value *yaml.Node) error {
 // ExecuteCommandConfig represents the configuration for ECS Execute Command.
 type ExecuteCommandConfig struct {
 	Enable *bool `yaml:"enable"`
-	// Reserved for future use.
 }
 
 // IsEmpty returns whether ExecuteCommandConfig is empty.

@@ -359,7 +359,8 @@ func (h *NLBHealthCheckArgs) isEmpty() bool {
 	return h.Port == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Timeout == nil && h.Interval == nil
 }
 
-// Parse port-protocol string into individual port and protocol strings. Valid examples: 2000/udp, or 2000.
+// ParsePortMapping parses port-protocol string into individual port and protocol strings.
+// Valid examples: 2000/udp, or 2000.
 func ParsePortMapping(s *string) (port *string, protocol *string, err error) {
 	if s == nil {
 		return nil, nil, nil
