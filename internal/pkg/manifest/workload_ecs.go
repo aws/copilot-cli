@@ -95,6 +95,21 @@ func (lc *Logging) GetEnableMetadata() *string {
 	return aws.String(strconv.FormatBool(*lc.EnableMetadata))
 }
 
+// SidecarConfig represents the configurable options for setting up a sidecar container.
+type SidecarConfig struct {
+	Port          *string              `yaml:"port"`
+	Image         *string              `yaml:"image"`
+	Essential     *bool                `yaml:"essential"`
+	CredsParam    *string              `yaml:"credentialsParameter"`
+	Variables     map[string]string    `yaml:"variables"`
+	Secrets       map[string]string    `yaml:"secrets"`
+	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
+	DockerLabels  map[string]string    `yaml:"labels"`
+	DependsOn     DependsOn            `yaml:"depends_on"`
+	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
+	ImageOverride `yaml:",inline"`
+}
+
 // OverrideRule holds the manifest overriding rule for CloudFormation template.
 type OverrideRule struct {
 	Path  string    `yaml:"path"`
