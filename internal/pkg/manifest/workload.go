@@ -72,15 +72,6 @@ type Workload struct {
 	Type *string `yaml:"type"` // must be one of the supported manifest types.
 }
 
-// OverrideRule holds the manifest overriding rule for CloudFormation template.
-type OverrideRule struct {
-	Path  string    `yaml:"path"`
-	Value yaml.Node `yaml:"value"`
-}
-
-// DependsOn represents container dependency for a container.
-type DependsOn map[string]string
-
 // Image represents the workload's container image.
 type Image struct {
 	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
@@ -89,6 +80,9 @@ type Image struct {
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
 	DependsOn    DependsOn         `yaml:"depends_on,flow"` // Add any sidecar dependencies.
 }
+
+// DependsOn represents container dependency for a container.
+type DependsOn map[string]string
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
 // struct, allowing it to perform more complex unmarshaling behavior.

@@ -6,6 +6,7 @@ package manifest
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"gopkg.in/yaml.v3"
 )
 
 // Defaults for Firelens configuration.
@@ -56,3 +57,9 @@ var (
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
 	}
 )
+
+// OverrideRule holds the manifest overriding rule for CloudFormation template.
+type OverrideRule struct {
+	Path  string    `yaml:"path"`
+	Value yaml.Node `yaml:"value"`
+}
