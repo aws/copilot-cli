@@ -24,23 +24,6 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
-// Platform options.
-const (
-	OSLinux                 = dockerengine.OSLinux
-	OSWindows               = dockerengine.OSWindows
-	OSWindowsServer2019Core = "windows_server_2019_core"
-	OSWindowsServer2019Full = "windows_server_2019_full"
-
-	ArchAMD64 = dockerengine.ArchAMD64
-	ArchX86   = dockerengine.ArchX86
-	ArchARM   = dockerengine.ArchARM
-	ArchARM64 = dockerengine.ArchARM64
-
-	// Minimum CPU and mem values required for Windows-based tasks.
-	MinWindowsTaskCPU    = 1024
-	MinWindowsTaskMemory = 2048
-)
-
 var (
 	// AWS VPC subnet placement options.
 	PublicSubnetPlacement  = Placement("public")
