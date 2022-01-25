@@ -401,10 +401,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.App.Name, environmentToDeploy.Name)
 
-	app := config.Application{
-		Name:      appName,
-		AccountID: id.Account,
-	}
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
 		// Given our stack doesn't exist
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
