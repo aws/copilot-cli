@@ -25,13 +25,22 @@ When you're setting up a service, Copilot will ask you about what kind of servic
 If you want your service to serve internet traffic then you have two options:
 
 * "Request-Driven Web Service" will provision an AWS App Runner Service to run your service. 
-* "Load Balanced Web Service" will provision an Application Load Balancer, security groups, an ECS service on Fargate to run your service.
+* "Load Balanced Web Service" will provision an Application Load Balancer, a Network Load Balancer or both, along with 
+  security groups, an ECS service on Fargate to run your service.
 
 #### Request-Driven Web Service
 An AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes.
 
 #### Load Balanced Web Service
-An ECS Service running tasks on Fargate with an Application Load Balancer as ingress. This option is suitable for HTTP services with steady request volumes that need to access resources in a VPC or require advanced configuration.
+An ECS Service running tasks on Fargate with an Application Load Balancer, a Network Load Balancer or both, as ingress. 
+This option is suitable for HTTP or TCP services with steady request volumes that need to access resources in a VPC or 
+require advanced configuration. 
+
+Note that an Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Service 
+within the environment. To learn more, see [here](environments.en.md#load-balancers-and-dns). However, a Network Load Balancer 
+is a service-level resource, and hence is not shared across services.
+
+Below is a diagram for a Load Balanced Web Service that involves an Application Load Balancer only.
 
 ![lb-web-service-infra](https://user-images.githubusercontent.com/879348/86045951-39762880-ba01-11ea-9a47-fc9278600154.png)
 
