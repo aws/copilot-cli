@@ -48,7 +48,7 @@ The number of consecutive health check successes required before considering an 
 The number of consecutive health check failures required before considering a target unhealthy. The default is 3. Range: 2-10.
 
 !!! info
-    Per the latest [doc](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-health-checks.html) at the time this documentation is written, for a Network Load Balancer, unhealthy threshold is required to be the same as the healthy threshold.
+    Per the [docs](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-health-checks.html) at the time of this writing, 'unhealthy threshold' is required to be equal to 'healthy threshold' for a Network Load Balancer.
 
 <span class="parent-field">nlb.healthcheck.</span><a id="nlb-healthcheck-interval" href="#nlb-healthcheck-interval" class="field">`interval`</a> <span class="type">Duration</span>  
 The approximate amount of time, in seconds, between health checks of an individual target. The value can be 10s or 30s. The default is 30s. 
