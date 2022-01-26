@@ -877,3 +877,61 @@ func TestRoutingRuleConfigOrBoolTransformer_Transformer(t *testing.T) {
 		})
 	}
 }
+
+func TestSecretTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(s *Secret)
+		override func(s *Secret)
+		wanted   func(s *Secret)
+	}{
+		`"from" set to empty when overriding with "secretsmanager"`: {
+			original: func(s *Secret) {
+				s.from = aws.String("/github/token")
+			},
+			override: func(s *Secret) {
+				s.fromSecretsManager = secretsManagerSecret{
+					Name: aws.String("aes128-1a2b3c"),
+				}
+			},
+			wanted: func(s *Secret) {
+				s.fromSecretsManager = secretsManagerSecret{
+					Name: aws.String("aes128-1a2b3c"),
+				}
+			},
+		},
+		`"secretsmanager" set to empty when overriding with "from"`: {
+			original: func(s *Secret) {
+				s.fromSecretsManager = secretsManagerSecret{
+					Name: aws.String("aes128-1a2b3c"),
+				}
+			},
+			override: func(s *Secret) {
+				s.from = aws.String("/github/token")
+			},
+			wanted: func(s *Secret) {
+				s.from = aws.String("/github/token")
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted Secret
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(secretTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
