@@ -265,7 +265,7 @@ func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
 	return int(v), nil
 }
 
-// IsTypeAService returns is manifest type is service.
+// IsTypeAService returns if manifest type is service.
 func IsTypeAService(t string) bool {
 	for _, serviceType := range ServiceTypes() {
 		if t == serviceType {

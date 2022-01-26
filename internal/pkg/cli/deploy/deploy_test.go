@@ -364,7 +364,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/udp"),
+				Port: aws.String("443/tcp"),
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
