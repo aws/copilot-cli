@@ -33,13 +33,11 @@ const (
 )
 
 const (
-	TCPUDP = "TCP_UDP"
-	tcp    = "TCP"
-	udp    = "UDP"
-	tls    = "TLS"
+	TCP = "TCP"
+	tls = "TLS"
 )
 
-var validProtocols = []string{TCPUDP, tcp, udp, tls}
+var validProtocols = []string{TCP, tls}
 
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
@@ -671,7 +669,7 @@ func validateNLBPort(port *string) error {
 		}
 	}
 	if !isValidProtocol {
-		return fmt.Errorf(`unrecognized protocol %s`, protocolVal)
+		return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(validProtocols, "and"))
 	}
 	return nil
 }

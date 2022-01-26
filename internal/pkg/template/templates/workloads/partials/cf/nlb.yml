@@ -57,8 +57,6 @@ NLBTargetGroup:
         Value: {{ .NLB.Listener.Stickiness }}
 {{- end}}
 {{- end}}
-      - Key: deregistration_delay.connection_termination.enabled {{/* It is recommended to have this enabled for UDP and TCP_UDP target groups */}}
-        Value: {{- if or (eq $.NLB.Listener.Protocol "UDP") (eq $.NLB.Listener.Protocol "TCP_UDP") }} true {{- else}} false {{- end}}
     TargetType: ip
     VpcId:
       Fn::ImportValue:
@@ -72,24 +70,11 @@ NLBSecurityGroup:
     GroupDescription: Allow access from the network load balancer to service
     SecurityGroupIngress:
 {{range $cidr := .NLB.PublicSubnetCIDRs}}
-      {{- if eq $.NLB.Listener.Protocol "TCP_UDP" }}
-      - CidrIp: {{$cidr}}
-        Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.TargetPort }}
-        IpProtocol: TCP
-        ToPort: {{ $.NLB.Listener.TargetPort }}
-      - CidrIp: {{$cidr}}
-        Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.TargetPort }}
-        IpProtocol: UDP
-        ToPort: {{ $.NLB.Listener.TargetPort }}
-      {{- else }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
         FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
         ToPort: {{ $.NLB.Listener.TargetPort }}
-      {{- end }}
       {{- if $.NLB.Listener.HealthCheck.Port}}{{- if ne $.NLB.Listener.HealthCheck.Port $.NLB.Listener.Port}}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet for health check
