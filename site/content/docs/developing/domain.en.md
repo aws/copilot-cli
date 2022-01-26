@@ -56,7 +56,7 @@ Under the hood, Copilot
 * creates a hosted zone in your app account for the new app subdomain `${AppName}.${DomainName}`
 * creates another hosted zone in your env account for the new env subdomain `${EnvName}.${AppName}.${DomainName}`
 * creates and validates an ACM certificate for the env subdomain
-* associates the certificate with... 
+* associates the certificate with:
     - Your HTTPS listener and redirects HTTP traffic to HTTPS, if the alias is used for the Application Load Balancer (`http.alias`)
     - Your network load balancer's TLS listener, if the alias is for `nlb.alias` and TLS termination is enabled.
 * creates an optional A record for your alias
