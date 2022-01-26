@@ -290,3 +290,23 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 		})
 	}
 }
+
+func TestSsmOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, ssmOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+}
+
+func TestSsmOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "/github/token", SecretFromSSMOrARN("/github/token").ValueFrom())
+}
+
+func TestSecretsManagerName_RequiresSub(t *testing.T) {
+	require.True(t, secretsManagerName{}.RequiresSub(), "secrets refering a SecretsManager name need to be expanded to a full ARN")
+}
+
+func TestSecretsManagerName_Service(t *testing.T) {
+	require.Equal(t, "secretsmanager", secretsManagerName{}.Service())
+}
+
+func TestSecretsManagerName_ValueFrom(t *testing.T) {
+	require.Equal(t, "secret:aes128-1a2b3c", SecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
+}

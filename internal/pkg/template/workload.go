@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/google/uuid"
@@ -204,6 +206,61 @@ type HTTPHealthCheckOpts struct {
 	Timeout             *int64
 	DeregistrationDelay *int64
 	GracePeriod         *int64
+}
+
+// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
+type Secret interface {
+	RequiresSub() bool
+	ValueFrom() string
+}
+
+// ssmOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
+type ssmOrSecretARN struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s ssmOrSecretARN) RequiresSub() bool {
+	return false
+}
+
+// ValueFrom returns the valueFrom field for the secret.
+func (s ssmOrSecretARN) ValueFrom() string {
+	return s.value
+}
+
+// SecretFromSSMOrARN returns a Secret that refers to an SSM parameter or a secret ARN.
+func SecretFromSSMOrARN(value string) ssmOrSecretARN {
+	return ssmOrSecretARN{
+		value: value,
+	}
+}
+
+// secretsManagerName is a Secret that can be referred by a SecretsManager secret name.
+type secretsManagerName struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s secretsManagerName) RequiresSub() bool {
+	return true
+}
+
+// ValueFrom returns the resource ID of the SecretsManager secret for populating the ARN.
+func (s secretsManagerName) ValueFrom() string {
+	return fmt.Sprintf("secret:%s", s.value)
+}
+
+// Service returns the name of the SecretsManager service for populating the ARN.
+func (s secretsManagerName) Service() string {
+	return secretsmanager.ServiceName
+}
+
+// SecretFromSecretsManager returns a Secret that refers to SecretsManager secret name.
+func SecretFromSecretsManager(value string) secretsManagerName {
+	return secretsManagerName{
+		value: value,
+	}
 }
 
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
