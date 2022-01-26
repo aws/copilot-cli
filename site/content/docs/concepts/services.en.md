@@ -36,7 +36,7 @@ An ECS Service running tasks on Fargate with an Application Load Balancer, a Net
 This option is suitable for HTTP or TCP services with steady request volumes that need to access resources in a VPC or 
 require advanced configuration. 
 
-Note that an Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Service 
+Note that an Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Services
 within the environment. To learn more, see [here](environments.en.md#load-balancers-and-dns). However, a Network Load Balancer 
 is a service-level resource, and hence is not shared across services.
 
