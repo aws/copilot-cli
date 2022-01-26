@@ -3,7 +3,7 @@
 <a id="nlb" href="#nlb" class="field">`nlb`</a> <span class="type">Map</span>  
 The nlb section contains parameters related to integrating your service with a Network Load Balancer.
 
-The Network Load Balancer is only enabled if you specify the `nlb` field. Note that for a Load-Balanced Web Service,
+The Network Load Balancer is enabled only if you specify the `nlb` field. Note that for a Load-Balanced Web Service,
 at least one of Application Load Balancer and Network Load Balancer must be enabled.
 
 <span class="parent-field">nlb.</span><a id="nlb-port" href="#nlb-port" class="field">`port`</a> <span class="type">String</span>  
