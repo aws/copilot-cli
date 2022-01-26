@@ -208,18 +208,24 @@ type HTTPHealthCheckOpts struct {
 
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
 type NetworkLoadBalancerListener struct {
-	Protocol        string
+	// The port and protocol that the Network Load Balancer listens to.
+	Port     string
+	Protocol string
+
+	// The target container and port to which the traffic is routed to from the Network Load Balancer.
 	TargetContainer string
 	TargetPort      string
-	SSLPolicy       *string
-	Aliases         []string
-	Stickiness       *bool
-	HealthCheck     NLBHealthCheck
+
+	SSLPolicy *string // The SSL policy applied when using TLS protocol.
+
+	Aliases     []string
+	Stickiness  *bool
+	HealthCheck NLBHealthCheck
 }
 
 // NLBHealthCheck holds configuration for Network Load Balancer health check.
 type NLBHealthCheck struct {
-	Port               string
+	Port               string // The port to which health check requests made from Network Load Balancer are routed to.
 	HealthyThreshold   *int64
 	UnhealthyThreshold *int64
 	Timeout            *int64

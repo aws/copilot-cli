@@ -75,20 +75,20 @@ NLBSecurityGroup:
       {{- if eq $.NLB.Listener.Protocol "TCP_UDP" }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.Port }}
+        FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: TCP
-        ToPort: {{ $.NLB.Listener.Port }}
+        ToPort: {{ $.NLB.Listener.TargetPort }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.Port }}
+        FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: UDP
-        ToPort: {{ $.NLB.Listener.Port }}
+        ToPort: {{ $.NLB.Listener.TargetPort }}
       {{- else }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: !Ref NLBPort
+        FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
-        ToPort: !Ref NLBPort
+        ToPort: {{ $.NLB.Listener.TargetPort }}
       {{- end }}
       {{- if $.NLB.Listener.HealthCheck.Port}}{{- if ne $.NLB.Listener.HealthCheck.Port $.NLB.Listener.Port}}
       - CidrIp: {{$cidr}}
@@ -145,11 +145,7 @@ NLBCustomDomainAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases:
-      !If
-        - HasNLBAliases
-        - []
-        - !Split [",", !Ref NLBAliases]
+    Aliases: !Split [",", !Ref NLBAliases]
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -222,11 +218,7 @@ NLBCertValidatorAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases:
-      !If
-      - HasNLBAliases
-      - []
-      - !Split [",", !Ref NLBAliases]
+    Aliases: {{ if .NLB.Listener.Aliases }} !Split [",", !Ref NLBAliases] {{ else }} [] {{ end }}
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function

@@ -556,6 +556,9 @@ func (r RoutingRuleConfigOrBool) Validate() error {
 			missingField: "path",
 		}
 	}
+	if r.Enabled != nil {
+		return nil
+	}
 	return r.RoutingRuleConfiguration.Validate()
 }
 
