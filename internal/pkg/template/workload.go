@@ -49,7 +49,6 @@ const (
 	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
 
 	ArchX86   = "X86_64"
-	ArchARM   = "ARM"
 	ArchARM64 = "ARM64"
 )
 
@@ -441,7 +440,7 @@ func (p RuntimePlatformOpts) isEmpty() bool {
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
 	Variables                map[string]string
-	Secrets                  map[string]string
+	Secrets                  map[string]Secret
 	Aliases                  []string
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.

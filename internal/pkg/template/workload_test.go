@@ -122,14 +122,14 @@ func TestHasSecrets(t *testing.T) {
 		},
 		"no secrets": {
 			in: WorkloadOpts{
-				Secrets: map[string]string{},
+				Secrets: map[string]Secret{},
 			},
 			wanted: false,
 		},
 		"service has secrets": {
 			in: WorkloadOpts{
-				Secrets: map[string]string{
-					"hello": "world",
+				Secrets: map[string]Secret{
+					"hello": SecretFromSSMOrARN("world"),
 				},
 			},
 			wanted: true,

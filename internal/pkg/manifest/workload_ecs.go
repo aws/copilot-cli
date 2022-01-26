@@ -95,7 +95,7 @@ type TaskConfig struct {
 	ExecuteCommand ExecuteCommand       `yaml:"exec"`
 	Variables      map[string]string    `yaml:"variables"`
 	EnvFile        *string              `yaml:"env_file"`
-	Secrets        map[string]string    `yaml:"secrets"`
+	Secrets        map[string]Secret    `yaml:"secrets"`
 	Storage        Storage              `yaml:"storage"`
 }
 
