@@ -234,6 +234,8 @@ func TestSvcDeployOpts_configureContainerImage(t *testing.T) {
 	mockError := errors.New("mockError")
 	mockManifest := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
+http:
+  path: "/"
 image:
   build:
     dockerfile: path/to/Dockerfile
@@ -242,15 +244,20 @@ image:
 `)
 	mockManifestWithBadPlatform := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
+http:
+  path: "/"
 platform: linus/abc123
 image:
   build:
     dockerfile: path/to/Dockerfile
     context: path
   port: 80
+
 `)
 	mockManifestWithGoodPlatform := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
+http:
+  path: "/"
 platform: linux/amd64
 image:
   build:
@@ -260,18 +267,24 @@ image:
 `)
 	mockMftNoBuild := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
+http:
+  path: "/"
 image:
   location: foo/bar
   port: 80
 `)
 	mockMftBuildString := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
+http:
+  path: "/"
 image:
   build: path/to/Dockerfile
   port: 80
 `)
 	mockMftNoContext := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
+http:
+  path: "/"
 image:
   build:
     dockerfile: path/to/Dockerfile
@@ -632,7 +645,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 		"fail to get public CIDR blocks": {
 			inBuildRequire: false,
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/udp"),
+				Port: aws.String("443/tls"),
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -1071,6 +1084,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 							},
 							RoutingRule: manifest.RoutingRuleConfigOrBool{
 								RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+									Path:  aws.String("/"),
 									Alias: tc.inAliases,
 								},
 							},

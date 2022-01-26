@@ -93,6 +93,8 @@ const (
 	overridePublicSubnetCIDRsFlag  = "override-public-cidrs"
 	overridePrivateSubnetCIDRsFlag = "override-private-cidrs"
 
+	enableContainerInsightsFlag = "container-insights"
+
 	defaultConfigFlag = "default-config"
 
 	accessKeyIDFlag     = "aws-access-key-id"
@@ -137,7 +139,7 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes()), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Mutually exclusive with -%s, --%s.`, dockerFileFlagShort, dockerFileFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
@@ -147,9 +149,9 @@ Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes()), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes()), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
@@ -277,6 +279,8 @@ Cannot be specified with any other flags.`
 (default 10.0.0.0/24,10.0.1.0/24)`
 	overridePrivateSubnetCIDRsFlagDescription = `Optional. CIDR to use for private subnets.
 (default 10.0.2.0/24,10.0.3.0/24)`
+
+	enableContainerInsightsFlagDescription = "Optional. Enable CloudWatch Container Insights."
 
 	defaultConfigFlagDescription = "Optional. Skip prompting and use default environment configuration."
 

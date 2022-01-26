@@ -68,6 +68,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							},
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
@@ -79,6 +84,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					Network: NetworkConfig{
 						vpcConfig{
 							Placement: (*Placement)(aws.String("")),
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
 						},
 					},
 				},
@@ -94,6 +104,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							{},
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
@@ -107,6 +122,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							Path: "Family",
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
@@ -115,6 +135,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
@@ -126,6 +151,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            stringP("/"),
 							TargetContainer: aws.String("foo"),
 						},
 					},
@@ -140,6 +166,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            stringP("/"),
 							TargetContainer: aws.String("mockName"),
 						},
 					},
@@ -166,6 +193,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							Essential: aws.Bool(false),
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
@@ -178,6 +210,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
 						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
 					},
 				},
 			},
@@ -197,6 +234,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 								Spot:         aws.Int(123),
 								workloadType: LoadBalancedWebServiceType,
 							},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
 						},
 					},
 				},
@@ -1002,8 +1044,13 @@ func TestRoutingRule_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
+		"error if path is missing": {
+			RoutingRule:          RoutingRuleConfiguration{},
+			wantedErrorMsgPrefix: `"path" must be specified`,
+		},
 		"should not error if protocol version is not uppercase": {
 			RoutingRule: RoutingRuleConfiguration{
+				Path:            stringP("/"),
 				ProtocolVersion: aws.String("gRPC"),
 			},
 		},
@@ -1055,32 +1102,34 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				Port: aws.String("443"),
 			},
 		},
-		"error if protocol is not recognized": {
+		"fail if protocol is not recognized": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tps"),
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate "port": unrecognized protocol tps`),
+			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tcp"),
 			},
 		},
-		"success if udp": {
+		"error if udp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("161/udp"),
 			},
+			wantedError: fmt.Errorf(`validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"success if tls": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tls"),
 			},
 		},
-		"success if tcp_udp": {
+		"error if tcp_udp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/TCP_udp"),
 			},
+			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
 	}
 

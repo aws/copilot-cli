@@ -83,12 +83,12 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 
 // ListDeployedServices returns the names of deployed services in an environment.
 func (s *Store) ListDeployedServices(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, manifest.ServiceTypes)
+	return s.listDeployedWorkloads(appName, envName, manifest.ServiceTypes())
 }
 
 // ListDeployedJobs returns the names of deployed jobs in an environment.
 func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, manifest.JobTypes)
+	return s.listDeployedWorkloads(appName, envName, manifest.JobTypes())
 }
 
 func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType []string) ([]string, error) {

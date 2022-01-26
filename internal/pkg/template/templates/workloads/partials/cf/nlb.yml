@@ -57,8 +57,6 @@ NLBTargetGroup:
         Value: {{ .NLB.Listener.Stickiness }}
 {{- end}}
 {{- end}}
-      - Key: deregistration_delay.connection_termination.enabled {{/* It is recommended to have this enabled for UDP and TCP_UDP target groups */}}
-        Value: {{- if or (eq $.NLB.Listener.Protocol "UDP") (eq $.NLB.Listener.Protocol "TCP_UDP") }} true {{- else}} false {{- end}}
     TargetType: ip
     VpcId:
       Fn::ImportValue:
@@ -72,24 +70,11 @@ NLBSecurityGroup:
     GroupDescription: Allow access from the network load balancer to service
     SecurityGroupIngress:
 {{range $cidr := .NLB.PublicSubnetCIDRs}}
-      {{- if eq $.NLB.Listener.Protocol "TCP_UDP" }}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.Port }}
-        IpProtocol: TCP
-        ToPort: {{ $.NLB.Listener.Port }}
-      - CidrIp: {{$cidr}}
-        Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: {{ $.NLB.Listener.Port }}
-        IpProtocol: UDP
-        ToPort: {{ $.NLB.Listener.Port }}
-      {{- else }}
-      - CidrIp: {{$cidr}}
-        Description: Ingress to allow access from Network Load Balancer subnet
-        FromPort: !Ref NLBPort
+        FromPort: {{ $.NLB.Listener.TargetPort }}
         IpProtocol: {{- if eq $.NLB.Listener.Protocol "TLS" }} TCP {{- else }} {{ $.NLB.Listener.Protocol }} {{- end}}
-        ToPort: !Ref NLBPort
-      {{- end }}
+        ToPort: {{ $.NLB.Listener.TargetPort }}
       {{- if $.NLB.Listener.HealthCheck.Port}}{{- if ne $.NLB.Listener.HealthCheck.Port $.NLB.Listener.Port}}
       - CidrIp: {{$cidr}}
         Description: Ingress to allow access from Network Load Balancer subnet for health check
@@ -145,8 +130,7 @@ NLBCustomDomainAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases:
-      !Split [",", !Ref NLBAliases]
+    Aliases: !Split [",", !Ref NLBAliases]
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -219,8 +203,7 @@ NLBCertValidatorAction:
     ServiceName: !Ref WorkloadName
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
-    Aliases:
-      !Split [",", !Ref NLBAliases]
+    Aliases: {{ if .NLB.Listener.Aliases }} !Split [",", !Ref NLBAliases] {{ else }} [] {{ end }}
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function

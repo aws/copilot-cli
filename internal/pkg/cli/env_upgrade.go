@@ -291,6 +291,7 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 		ImportVPCConfig:      importedVPC,
 		AdjustVPCConfig:      adjustedVPC,
 		CFNServiceRoleARN:    conf.ExecutionRoleARN,
+		Telemetry:            conf.Telemetry,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 	}
@@ -319,6 +320,7 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 			ArtifactBucketARN:    artifactBucketARN,
 			CustomResourcesURLs:  customResourcesURLs,
 			CFNServiceRoleARN:    conf.ExecutionRoleARN,
+			Telemetry:            conf.Telemetry,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 		}

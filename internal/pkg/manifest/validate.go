@@ -33,13 +33,11 @@ const (
 )
 
 const (
-	TCPUDP = "TCP_UDP"
-	tcp    = "TCP"
-	udp    = "UDP"
-	tls    = "TLS"
+	TCP = "TCP"
+	tls = "TLS"
 )
 
-var validProtocols = []string{TCPUDP, tcp, udp, tls}
+var validProtocols = []string{TCP, tls}
 
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
@@ -549,6 +547,19 @@ func (CommandOverride) Validate() error {
 	return nil
 }
 
+// Validate returns nil if RoutingRuleConfigOrBool is configured correctly.
+func (r RoutingRuleConfigOrBool) Validate() error {
+	if aws.BoolValue(r.Enabled) {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
+	}
+	if r.Enabled != nil {
+		return nil
+	}
+	return r.RoutingRuleConfiguration.Validate()
+}
+
 // Validate returns nil if RoutingRuleConfiguration is configured correctly.
 func (r RoutingRuleConfiguration) Validate() error {
 	var err error
@@ -572,6 +583,11 @@ func (r RoutingRuleConfiguration) Validate() error {
 	if r.ProtocolVersion != nil {
 		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
 			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
+		}
+	}
+	if r.Path == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
 		}
 	}
 	return nil
@@ -653,7 +669,7 @@ func validateNLBPort(port *string) error {
 		}
 	}
 	if !isValidProtocol {
-		return fmt.Errorf(`unrecognized protocol %s`, protocolVal)
+		return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(validProtocols, "and"))
 	}
 	return nil
 }
@@ -723,12 +739,12 @@ func (p PlatformString) Validate() error {
 	if len(args) != 2 {
 		return fmt.Errorf("platform '%s' must be in the format [OS]/[Arch]", string(p))
 	}
-	for _, validPlatform := range ValidShortPlatforms {
+	for _, validPlatform := range validShortPlatforms {
 		if strings.ToLower(string(p)) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
+	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(validShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validShortPlatforms, "and"))
 }
 
 // Validate returns nil if Count is configured correctly.

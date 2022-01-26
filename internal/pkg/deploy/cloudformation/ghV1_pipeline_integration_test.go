@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -197,6 +198,11 @@ func TestGHv1PipelineCreation(t *testing.T) {
 		}))
 		require.NoError(t, err)
 		environmentToDeploy.CustomResourcesURLs = urls
+
+		partition, err := partitions.Region(envRegion.ID()).Partition()
+		require.NoError(t, err)
+		environmentToDeploy.ArtifactBucketARN = s3.FormatARN(partition.ID(), envBucketName)
+		environmentToDeploy.ArtifactBucketKeyARN = regionalResource.KMSKeyARN
 
 		// Deploy the environment in the same tools account but in different
 		// region and wait for it to be complete

@@ -34,7 +34,7 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
-	defaultNLBProtocol     = manifest.TCPUDP
+	defaultNLBProtocol     = manifest.TCP
 )
 
 // Supported capacityproviders for Fargate services
@@ -312,13 +312,14 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
 			Listener: template.NetworkLoadBalancerListener{
+				Port:            aws.StringValue(port),
 				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
 				TargetContainer: targetContainer,
 				TargetPort:      targetPort,
 				SSLPolicy:       nlbConfig.SSLPolicy,
 				Aliases:         aliases,
 				HealthCheck:     hc,
-				Stickiness:       nlbConfig.Stickiness,
+				Stickiness:      nlbConfig.Stickiness,
 			},
 			MainContainerPort: s.containerPort(),
 		},

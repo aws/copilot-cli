@@ -810,7 +810,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 func TestInitEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inProd bool
+		enableContainerInsights bool
 
 		expectStore             func(m *mocks.Mockstore)
 		expectDeployer          func(m *mocks.Mockdeployer)
@@ -965,12 +965,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{
 					Name: "phonetool",
 				}, nil)
-				m.EXPECT().CreateEnvironment(&config.Environment{
-					App:       "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
-				}).Return(errors.New("some create error"))
+				m.EXPECT().CreateEnvironment(gomock.Any()).Return(errors.New("some create error"))
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
@@ -1009,7 +1004,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "store environment: some create error",
 		},
 		"success": {
-			inProd: true,
+			enableContainerInsights: true,
 
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -1017,8 +1012,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					App:       "phonetool",
 					Name:      "test",
 					AccountID: "1234",
-					Prod:      true,
 					Region:    "mars-1",
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: true,
+					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -1042,7 +1039,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
-					Prod:      false,
 					App:       "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
@@ -1065,6 +1061,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: false,
+					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -1089,9 +1088,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						Name:                "phonetool",
 						AccountPrincipalARN: "some arn",
 					},
-					CustomResourcesURLs:  map[string]string{"mockCustomResource": "mockURL"},
-					Version:              deploy.LatestEnvTemplateVersion,
-					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
+					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: false,
+					},
+					Version: deploy.LatestEnvTemplateVersion,
+          ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
 					ArtifactBucketKeyARN: "mockKMS",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
@@ -1137,6 +1139,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					AccountID: "4567",
 					Region:    "us-west-2",
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: false,
+					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -1228,9 +1233,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					name:         "test",
-					appName:      "phonetool",
-					isProduction: tc.inProd,
+					name:    "test",
+					appName: "phonetool",
+					telemetry: telemetryVars{
+						EnableContainerInsights: tc.enableContainerInsights,
+					},
 				},
 				store:       mockStore,
 				envDeployer: mockDeployer,
