@@ -38,7 +38,7 @@ nlb:
     timeout: 10s
 ```
 
-<span class="parent-field">nlb.healthcheck.</span><a id="http-healthcheck-port" href="#http-healthcheck-port" class="field">`port`</a> <span class="type">String</span>  
+<span class="parent-field">nlb.healthcheck.</span><a id="nlb-healthcheck-port" href="#nlb-healthcheck-port" class="field">`port`</a> <span class="type">String</span>  
 The port that the health check requests are sent to. Specify this if your health check should be performed on a different port than the container target port.
 
 <span class="parent-field">nlb.healthcheck.</span><a id="nlb-healthcheck-healthy-threshold" href="#nlb-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
