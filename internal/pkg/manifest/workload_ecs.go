@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -117,6 +118,54 @@ func (t TaskConfig) IsWindows() bool {
 // IsARM returns whether or not the service is building with an ARM Arch.
 func (t TaskConfig) IsARM() bool {
 	return IsArmArch(t.Platform.Arch())
+}
+
+// Secret represents an identifier for sensitive data stored in either SSM or SecretsManager.
+type Secret struct {
+	from               *string              // SSM Parameter name or ARN to a secret.
+	fromSecretsManager secretsManagerSecret // Conveniently fetch from a secretsmanager secret name instead of ARN.
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshaling logic.
+func (s *Secret) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.fromSecretsManager); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+	if !s.fromSecretsManager.IsEmpty() { // Successfully unmarshaled to a secretsmanager name.
+		return nil
+	}
+	if err := value.Decode(&s.from); err != nil { // Otherwise, try decoding the simple form.
+		return errors.New(`cannot marshal "secret" field to a string or "secretsmanager" object`)
+	}
+	return nil
+}
+
+// IsSecretsManagerName returns true if the secret refers to the name of a secret stored in SecretsManager.
+func (s *Secret) IsSecretsManagerName() bool {
+	return !s.fromSecretsManager.IsEmpty()
+}
+
+// Value returns the secret value provided by clients.
+func (s *Secret) Value() string {
+	if !s.fromSecretsManager.IsEmpty() {
+		return aws.StringValue(s.fromSecretsManager.Name)
+	}
+	return aws.StringValue(s.from)
+}
+
+// secretsManagerSecret represents the name of a secret stored in SecretsManager.
+type secretsManagerSecret struct {
+	Name *string `yaml:"secretsmanager"`
+}
+
+// IsEmpty returns true if all the fields in secretsManagerSecret have the zero value.
+func (s secretsManagerSecret) IsEmpty() bool {
+	return s.Name == nil
 }
 
 // Logging holds configuration for Firelens to route your logs.
