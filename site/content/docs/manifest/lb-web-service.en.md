@@ -23,6 +23,9 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
       allowed_source_ips: ["10.24.34.0/23"]
       alias: example.com
 
+    nlb:
+      port: 443/tls
+
     # Configuration for your containers and service.
     image:
       build:
@@ -70,6 +73,8 @@ The name of your service.
 The architecture type for your service. A [Load Balanced Web Service](../concepts/services.en.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.
 
 {% include 'http-config.en.md' %}
+
+{% include 'nlb.en.md' %}
 
 {% include 'image-config-with-port.en.md' %}
 
