@@ -4,7 +4,7 @@
 The http section contains parameters related to integrating your service with an Application Load Balancer. 
 
 To disable the Application Load Balancer, specify `http: false`. Note that for a Load-Balanced Web Service,
-at least one of Application Load Balancer and Network Load Balancer must be enabled.
+at least one of Application Load Balancer or Network Load Balancer must be enabled.
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each Load Balanced Web Service should listen on a unique path.
