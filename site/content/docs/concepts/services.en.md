@@ -37,7 +37,7 @@ This option is suitable for HTTP or TCP services with steady request volumes tha
 require advanced configuration. 
 
 Note that an Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Services
-within the environment. To learn more, see [here](environments.en.md#load-balancers-and-dns). However, a Network Load Balancer 
+within the environment. To learn more, go [here](environments.en.md#load-balancers-and-dns). In contrast, a Network Load Balancer 
 is a service-level resource, and hence is not shared across services.
 
 Below is a diagram for a Load Balanced Web Service that involves an Application Load Balancer only.
