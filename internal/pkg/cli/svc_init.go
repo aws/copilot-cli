@@ -39,6 +39,7 @@ Other repositories are specified with either repository-url/image:tag or reposit
 const (
 	defaultSvcPortString = "80"
 	service              = "service"
+	job                  = "job"
 )
 
 var (
