@@ -74,6 +74,8 @@ The architecture type for your service. A [Load Balanced Web Service](../concept
 
 {% include 'http-config.en.md' %}
 
+{% include 'nlb.en.md' %}
+
 {% include 'image-config-with-port.en.md' %}
 
 {% include 'image-healthcheck.en.md' %}
