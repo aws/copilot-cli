@@ -741,12 +741,12 @@ func (p PlatformString) Validate() error {
 	if len(args) != 2 {
 		return fmt.Errorf("platform '%s' must be in the format [OS]/[Arch]", string(p))
 	}
-	for _, validPlatform := range ValidShortPlatforms {
+	for _, validPlatform := range validShortPlatforms {
 		if strings.ToLower(string(p)) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
+	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(validShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validShortPlatforms, "and"))
 }
 
 // Validate returns nil if Count is configured correctly.

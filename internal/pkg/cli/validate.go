@@ -194,7 +194,7 @@ func validateSvcType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(svcType, manifest.ServiceTypes, service)
+	return validateWorkloadType(svcType, manifest.ServiceTypes(), service)
 }
 
 func validateWorkloadType(wkldType string, validTypes []string, errFlavor string) error {
@@ -212,7 +212,7 @@ func validateJobType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(jobType, manifest.JobTypes, "job")
+	return validateWorkloadType(jobType, manifest.JobTypes(), job)
 }
 
 func validateJobName(val interface{}) error {

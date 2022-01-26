@@ -372,7 +372,7 @@ func (o *initJobOpts) askSchedule() error {
 
 func jobTypePromptOpts() []prompt.Option {
 	var options []prompt.Option
-	for _, jobType := range manifest.JobTypes {
+	for _, jobType := range manifest.JobTypes() {
 		options = append(options, prompt.Option{
 			Value: jobType,
 			Hint:  jobTypeHints[jobType],
