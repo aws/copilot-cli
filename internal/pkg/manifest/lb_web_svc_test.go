@@ -418,9 +418,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards",
 						},
-						Secrets: map[string]string{
-							"GITHUB_TOKEN": "1111",
-							"TWILIO_TOKEN": "1111",
+						Secrets: map[string]Secret{
+							"GITHUB_TOKEN": {from: aws.String("1111")},
+							"TWILIO_TOKEN": {from: aws.String("1111")},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -567,9 +567,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards-prod",
 						},
-						Secrets: map[string]string{
-							"GITHUB_TOKEN": "1111",
-							"TWILIO_TOKEN": "1111",
+						Secrets: map[string]Secret{
+							"GITHUB_TOKEN": {from: aws.String("1111")},
+							"TWILIO_TOKEN": {from: aws.String("1111")},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{

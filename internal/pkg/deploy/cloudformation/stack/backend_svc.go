@@ -117,7 +117,7 @@ func (s *BackendService) Template() (string, error) {
 	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:                s.manifest.BackendServiceConfig.Variables,
-		Secrets:                  s.manifest.BackendServiceConfig.Secrets,
+		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
