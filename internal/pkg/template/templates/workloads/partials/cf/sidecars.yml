@@ -8,9 +8,9 @@
     Value: {{$value | printf "%q"}}{{end}}{{end}}
 {{- if .LogConfig.Secrets}}
   Secrets:
-  {{- range $name, $valueFrom := .LogConfig.Secrets}}
+  {{- range $name, $secret := .LogConfig.Secrets}}
   - Name: {{$name}}
-    ValueFrom: {{$valueFrom}}
+    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
   {{- end}}
 {{- end}}
   FirelensConfiguration:
@@ -54,9 +54,9 @@
 {{include "envvars-container" . | indent 2}}
 {{- if $sidecar.Secrets}}
   Secrets:
-  {{- range $name, $valueFrom := $sidecar.Secrets}}
+  {{- range $name, $secret := $sidecar.Secrets}}
   - Name: {{$name}}
-    ValueFrom: {{$valueFrom}}
+    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
   {{- end}}
 {{- end}}
   LogConfiguration:

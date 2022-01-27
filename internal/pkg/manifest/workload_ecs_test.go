@@ -193,8 +193,8 @@ func TestLogging_IsEmpty(t *testing.T) {
 		},
 		"non empty logging": {
 			in: Logging{
-				SecretOptions: map[string]string{
-					"secret1": "value1",
+				SecretOptions: map[string]Secret{
+					"secret1": {from: aws.String("value1")},
 				},
 			},
 		},
