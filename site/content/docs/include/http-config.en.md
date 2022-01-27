@@ -1,7 +1,10 @@
 <div class="separator"></div>
 
-<a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
-The http section contains parameters related to integrating your service with an Application Load Balancer.
+<a id="http" href="#http" class="field">`http`</a> <span class="type">Boolean or Map</span>  
+The http section contains parameters related to integrating your service with an Application Load Balancer. 
+
+To disable the Application Load Balancer, specify `http: false`. Note that for a Load-Balanced Web Service,
+at least one of Application Load Balancer or Network Load Balancer must be enabled.
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each Load Balanced Web Service should listen on a unique path.

@@ -1102,32 +1102,34 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				Port: aws.String("443"),
 			},
 		},
-		"error if protocol is not recognized": {
+		"fail if protocol is not recognized": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tps"),
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate "port": unrecognized protocol tps`),
+			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tcp"),
 			},
 		},
-		"success if udp": {
+		"error if udp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("161/udp"),
 			},
+			wantedError: fmt.Errorf(`validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"success if tls": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tls"),
 			},
 		},
-		"success if tcp_udp": {
+		"error if tcp_udp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/TCP_udp"),
 			},
+			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
 	}
 

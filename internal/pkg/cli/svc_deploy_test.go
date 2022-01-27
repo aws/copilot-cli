@@ -645,7 +645,7 @@ func TestSvcDeployOpts_deploySvc(t *testing.T) {
 		"fail to get public CIDR blocks": {
 			inBuildRequire: false,
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port: aws.String("443/udp"),
+				Port: aws.String("443/tls"),
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
