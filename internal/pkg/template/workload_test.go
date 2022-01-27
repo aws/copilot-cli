@@ -300,7 +300,7 @@ func TestSsmOrSecretARN_ValueFrom(t *testing.T) {
 }
 
 func TestSecretsManagerName_RequiresSub(t *testing.T) {
-	require.True(t, secretsManagerName{}.RequiresSub(), "secrets refering a SecretsManager name need to be expanded to a full ARN")
+	require.True(t, secretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
 }
 
 func TestSecretsManagerName_Service(t *testing.T) {
