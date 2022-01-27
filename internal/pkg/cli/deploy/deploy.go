@@ -37,7 +37,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
 	"golang.org/x/mod/semver"
 )
 
@@ -134,27 +133,66 @@ type pathFinder interface {
 	Path() (string, error)
 }
 
-// WorkloadDeployer holds all the metadata and clients needed to deploy a workload.
-type WorkloadDeployer struct {
+type fileReader interface {
+	ReadFile(string) ([]byte, error)
+}
+
+type workloadDeployer struct {
+	name          string
+	app           *config.Application
+	env           *config.Environment
+	imageTag      string
+	s3Bucket      string
+	mft           interface{}
+	workspacePath string
+}
+
+// NewWorkloadDeployerInput is the input to for workloadDeployer constructor.
+type NewWorkloadDeployerInput struct {
 	Name     string
 	App      *config.Application
 	Env      *config.Environment
 	ImageTag string
 	S3Bucket string
+}
 
-	// cached variables
-	mft           interface{}
-	workspacePath string
+// NewWorkloadDeployer is the constructor for workloadDeployer.
+func NewWorkloadDeployer(in *NewWorkloadDeployerInput) (*workloadDeployer, error) {
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	mft, err := workloadManifest(&workloadManifestInput{
+		name:         in.Name,
+		appName:      in.App.Name,
+		envName:      in.Env.Name,
+		interpolator: manifest.NewInterpolator(in.App.Name, in.Env.Name),
+		ws:           ws,
+		unmarshal:    manifest.UnmarshalWorkload,
+	})
+	if err != nil {
+		return nil, err
+	}
+	workspacePath, err := ws.Path()
+	if err != nil {
+		return nil, fmt.Errorf("get workspace path: %w", err)
+	}
+	return &workloadDeployer{
+		name:          in.Name,
+		app:           in.App,
+		env:           in.Env,
+		imageTag:      in.ImageTag,
+		s3Bucket:      in.S3Bucket,
+		mft:           mft,
+		workspacePath: workspacePath,
+	}, nil
 }
 
 // UploadArtifactsInput is the input of UploadArtifacts.
 type UploadArtifactsInput struct {
-	FS                 *afero.Afero
+	FS                 fileReader
 	Uploader           Uploader
 	Templater          Templater
-	WS                 WorkspaceReader
-	NewInterpolator    func(app, env string) Interpolator
-	Unmarshal          func([]byte) (manifest.WorkloadManifest, error)
 	ImageBuilderPusher ImageBuilderPusher
 }
 
@@ -176,10 +214,8 @@ type DeployWorkloadInput struct {
 	ImageRepoURL   string
 	ForceNewUpdate bool
 
-	WS                     WorkspaceReader
-	NewInterpolator        func(app, env string) Interpolator
-	Unmarshal              func([]byte) (manifest.WorkloadManifest, error)
-	UploadOpts             *UploadCustomResourcesOpts
+	CustomResourceUploader CustomResourcesUploader
+	S3Uploader             Uploader
 	SNSTopicsLister        SNSTopicsLister
 	ServiceDeployer        ServiceDeployer
 	NewSvcUpdater          func(func(*session.Session) ServiceForceUpdater)
@@ -199,26 +235,12 @@ type DeployWorkloadOutput struct {
 }
 
 // UploadArtifacts uploads the deployment artifacts (image, addons files, env files).
-func (d *WorkloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArtifactsOutput, error) {
-	mft, err := d.manifest(&manifestInput{
-		ws:              in.WS,
-		newInterpolator: in.NewInterpolator,
-		unmarshal:       in.Unmarshal,
-	})
-	if err != nil {
-		return nil, err
-	}
-	imageOutput, err := d.uploadContainerImage(&uploadContainerImageInput{
-		ws:               in.WS,
-		mft:              mft,
-		imgBuilderPusher: in.ImageBuilderPusher,
-	})
+func (d *workloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArtifactsOutput, error) {
+	imageOutput, err := d.uploadContainerImage(in.ImageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
-		ws:        in.WS,
-		mft:       mft,
 		fs:        in.FS,
 		uploader:  in.Uploader,
 		templater: in.Templater,
@@ -235,13 +257,14 @@ func (d *WorkloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArt
 }
 
 // DeployWorkload deploys a workload using CloudFormation.
-func (d *WorkloadDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
+func (d *workloadDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
 	stackConfigoutput, err := d.stackConfiguration(in)
 	if err != nil {
 		return nil, err
 	}
 	cmdRunAt := in.now()
-	if err := in.ServiceDeployer.DeployService(os.Stderr, stackConfigoutput.conf, d.S3Bucket, awscloudformation.WithRoleARN(d.Env.ExecutionRoleARN)); err != nil {
+	if err := in.ServiceDeployer.DeployService(os.Stderr, stackConfigoutput.conf, d.s3Bucket,
+		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
 			return nil, fmt.Errorf("deploy service: %w", err)
@@ -253,9 +276,9 @@ func (d *WorkloadDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkl
 	}
 	// Force update the service if --force is set and the service is not updated by the CFN.
 	if in.ForceNewUpdate {
-		lastUpdatedAt, err := in.ServiceForceUpdater.LastUpdatedAt(d.App.Name, d.Env.Name, d.Name)
+		lastUpdatedAt, err := in.ServiceForceUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
 		if err != nil {
-			return nil, fmt.Errorf("get the last updated deployment time for %s: %w", d.Name, err)
+			return nil, fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
 		}
 		if cmdRunAt.After(lastUpdatedAt) {
 			if err := d.forceDeploy(&forceDeployInput{
@@ -277,72 +300,21 @@ type forceDeployInput struct {
 	svcUpdater ServiceForceUpdater
 }
 
-func (d *WorkloadDeployer) forceDeploy(in *forceDeployInput) error {
-	in.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(d.Name), color.HighlightUserInput(d.Env.Name)))
-	if err := in.svcUpdater.ForceUpdateService(d.App.Name, d.Env.Name, d.Name); err != nil {
-		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(d.Name),
-			color.HighlightUserInput(d.Env.Name), err)
+func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
+	in.spinner.Start(fmt.Sprintf(fmtForceUpdateSvcStart, color.HighlightUserInput(d.name), color.HighlightUserInput(d.env.Name)))
+	if err := in.svcUpdater.ForceUpdateService(d.app.Name, d.env.Name, d.name); err != nil {
+		errLog := fmt.Sprintf(fmtForceUpdateSvcFailed, color.HighlightUserInput(d.name),
+			color.HighlightUserInput(d.env.Name), err)
 		var terr timeoutError
 		if errors.As(err, &terr) {
 			errLog = fmt.Sprintf("%s  Run %s to check for the fail reason.\n", errLog,
-				color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", d.Name, d.Env.Name)))
+				color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", d.name, d.env.Name)))
 		}
 		in.spinner.Stop(log.Serror(errLog))
-		return fmt.Errorf("force an update for service %s: %w", d.Name, err)
+		return fmt.Errorf("force an update for service %s: %w", d.name, err)
 	}
-	in.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(d.Name), color.HighlightUserInput(d.Env.Name)))
+	in.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(d.name), color.HighlightUserInput(d.env.Name)))
 	return nil
-}
-
-type manifestInput struct {
-	ws              WorkspaceReader
-	newInterpolator func(app, env string) Interpolator
-	unmarshal       func([]byte) (manifest.WorkloadManifest, error)
-}
-
-func (d *WorkloadDeployer) manifest(in *manifestInput) (interface{}, error) {
-	if d.mft != nil {
-		return d.mft, nil
-	}
-	raw, err := in.ws.ReadWorkloadManifest(d.Name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", d.Name, err)
-	}
-	interpolated, err := in.newInterpolator(d.App.Name, d.Env.Name).Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", d.Name, err)
-	}
-	mft, err := in.unmarshal([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal service %s manifest: %w", d.Name, err)
-	}
-	envMft, err := mft.ApplyEnv(d.Env.Name)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", d.Env.Name, err)
-	}
-	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %s: %s", d.Env.Name, err)
-	}
-	d.mft = envMft
-	return envMft, nil
-}
-
-func (d *WorkloadDeployer) wsPath(ws pathFinder) (string, error) {
-	if d.workspacePath != "" {
-		return "", nil
-	}
-	workspacePath, err := ws.Path()
-	if err != nil {
-		return "", fmt.Errorf("get workspace path: %w", err)
-	}
-	d.workspacePath = workspacePath
-	return workspacePath, nil
-}
-
-type uploadContainerImageInput struct {
-	mft              interface{}
-	imgBuilderPusher ImageBuilderPusher
-	ws               pathFinder
 }
 
 type uploadContainerImageOutput struct {
@@ -350,9 +322,9 @@ type uploadContainerImageOutput struct {
 	imageDigest   string
 }
 
-func (d *WorkloadDeployer) uploadContainerImage(in *uploadContainerImageInput) (
+func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher ImageBuilderPusher) (
 	uploadContainerImageOutput, error) {
-	required, err := manifest.DockerfileBuildRequired(in.mft)
+	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
 		return uploadContainerImageOutput{}, err
 	}
@@ -360,15 +332,11 @@ func (d *WorkloadDeployer) uploadContainerImage(in *uploadContainerImageInput) (
 		return uploadContainerImageOutput{}, nil
 	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
-	workspacePath, err := d.wsPath(in.ws)
+	buildArg, err := buildArgs(d.name, d.imageTag, d.workspacePath, d.mft)
 	if err != nil {
 		return uploadContainerImageOutput{}, err
 	}
-	buildArg, err := buildArgs(d.Name, d.ImageTag, workspacePath, in.mft)
-	if err != nil {
-		return uploadContainerImageOutput{}, err
-	}
-	digest, err := in.imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
+	digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
 	if err != nil {
 		return uploadContainerImageOutput{}, fmt.Errorf("build and push image: %w", err)
 	}
@@ -379,11 +347,9 @@ func (d *WorkloadDeployer) uploadContainerImage(in *uploadContainerImageInput) (
 }
 
 type uploadArtifactsToS3Input struct {
-	fs        *afero.Afero
+	fs        fileReader
 	uploader  Uploader
-	ws        pathFinder
 	templater Templater
-	mft       interface{}
 }
 
 type uploadArtifactsToS3Output struct {
@@ -391,12 +357,10 @@ type uploadArtifactsToS3Output struct {
 	addonsURL  string
 }
 
-func (d *WorkloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (uploadArtifactsToS3Output, error) {
+func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (uploadArtifactsToS3Output, error) {
 	envFileARN, err := d.pushEnvFilesToS3Bucket(&pushEnvFilesToS3BucketInput{
 		fs:       in.fs,
 		uploader: in.uploader,
-		ws:       in.ws,
-		mft:      in.mft,
 	})
 	if err != nil {
 		return uploadArtifactsToS3Output{}, err
@@ -415,36 +379,30 @@ func (d *WorkloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 }
 
 type pushEnvFilesToS3BucketInput struct {
-	mft      interface{}
-	ws       pathFinder
-	fs       *afero.Afero
+	fs       fileReader
 	uploader Uploader
 }
 
-func (d *WorkloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
-	path := envFile(in.mft)
+func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
+	path := envFile(d.mft)
 	if path == "" {
 		return "", nil
 	}
-	workspacePath, err := d.wsPath(in.ws)
-	if err != nil {
-		return "", err
-	}
-	content, err := in.fs.ReadFile(filepath.Join(workspacePath, path))
+	content, err := in.fs.ReadFile(filepath.Join(d.workspacePath, path))
 	if err != nil {
 		return "", fmt.Errorf("read env file %s: %w", path, err)
 	}
 	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.S3Bucket, s3.MkdirSHA256(path, content), reader)
+	url, err := in.uploader.Upload(d.s3Bucket, s3.MkdirSHA256(path, content), reader)
 	if err != nil {
-		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.S3Bucket, err)
+		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.s3Bucket, err)
 	}
 	bucket, key, err := s3.ParseURL(url)
 	if err != nil {
 		return "", fmt.Errorf("parse s3 url: %w", err)
 	}
 	// The app and environment are always within the same partition.
-	partition, err := partitions.Region(d.Env.Region).Partition()
+	partition, err := partitions.Region(d.env.Region).Partition()
 	if err != nil {
 		return "", err
 	}
@@ -457,7 +415,7 @@ type pushAddonsTemplateToS3BucketInput struct {
 	uploader  Uploader
 }
 
-func (d *WorkloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
+func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
 	template, err := in.templater.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
@@ -468,14 +426,14 @@ func (d *WorkloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
 	reader := strings.NewReader(template)
-	url, err := in.uploader.Upload(d.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, d.Name), reader)
+	url, err := in.uploader.Upload(d.s3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, d.name), reader)
 	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.S3Bucket, err)
+		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.s3Bucket, err)
 	}
 	return url, nil
 }
 
-func (d *WorkloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.RuntimeConfig, error) {
+func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.RuntimeConfig, error) {
 	endpoint, err := in.EndpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("get service discovery endpoint: %w", err)
@@ -487,8 +445,8 @@ func (d *WorkloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 			EnvFileARN:               in.EnvFileARN,
 			AdditionalTags:           tags.Merge(in.AppTags, in.ResourceTags),
 			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                d.Env.AccountID,
-			Region:                   d.Env.Region,
+			AccountID:                d.env.AccountID,
+			Region:                   d.env.Region,
 		}, nil
 	}
 
@@ -498,12 +456,12 @@ func (d *WorkloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 		AdditionalTags:    tags.Merge(in.AppTags, in.ResourceTags),
 		Image: &stack.ECRImage{
 			RepoURL:  in.ImageRepoURL,
-			ImageTag: d.ImageTag,
+			ImageTag: d.imageTag,
 			Digest:   in.ImageDigest,
 		},
 		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                d.Env.AccountID,
-		Region:                   d.Env.Region,
+		AccountID:                d.env.AccountID,
+		Region:                   d.env.Region,
 	}, nil
 }
 
@@ -513,7 +471,7 @@ type stackConfigurationOutput struct {
 	subscriptions []manifest.TopicSubscription
 }
 
-func (d *WorkloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackConfigurationOutput, error) {
+func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -521,23 +479,15 @@ func (d *WorkloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 	in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
 		return ecs.New(s)
 	})
-	mft, err := d.manifest(&manifestInput{
-		ws:              in.WS,
-		newInterpolator: in.NewInterpolator,
-		unmarshal:       in.Unmarshal,
-	})
-	if err != nil {
-		return nil, err
-	}
 	var output stackConfigurationOutput
-	switch t := mft.(type) {
+	switch t := d.mft.(type) {
 	case *manifest.LoadBalancedWebService:
 		var appVersionGetter VersionGetter
-		appVersionGetter, err = in.NewAppVersionGetter(d.App.Name)
+		appVersionGetter, err = in.NewAppVersionGetter(d.app.Name)
 		if err != nil {
-			return nil, fmt.Errorf("new app describer for application %s: %w", d.App.Name, err)
+			return nil, fmt.Errorf("new app describer for application %s: %w", d.app.Name, err)
 		}
-		if err := validateLBWSRuntime(d.App, d.Env.Name, t, appVersionGetter); err != nil {
+		if err := validateLBWSRuntime(d.app, d.env.Name, t, appVersionGetter); err != nil {
 			return nil, err
 		}
 
@@ -545,14 +495,14 @@ func (d *WorkloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 		if !t.NLBConfig.IsEmpty() {
 			cidrBlocks, err := in.PublicCIDRBlocksGetter.PublicCIDRBlocks()
 			if err != nil {
-				return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.Env.Name, err)
+				return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
 			}
 			opts = append(opts, stack.WithNLB(cidrBlocks))
 		}
-		if d.App.RequiresDNSDelegation() {
+		if d.app.RequiresDNSDelegation() {
 			opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
-				Name:                d.App.Name,
-				DNSName:             d.App.Domain,
+				Name:                d.app.Name,
+				DNSName:             d.app.Domain,
 				AccountPrincipalARN: in.RootUserARN,
 			}))
 
@@ -560,9 +510,9 @@ func (d *WorkloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 				opts = append(opts, stack.WithHTTPS())
 			}
 		}
-		output.conf, err = stack.NewLoadBalancedWebService(t, d.Env.Name, d.App.Name, *rc, opts...)
+		output.conf, err = stack.NewLoadBalancedWebService(t, d.env.Name, d.app.Name, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
-		if d.App.Domain == "" && t.Alias != nil {
+		if d.app.Domain == "" && t.Alias != nil {
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
@@ -570,12 +520,12 @@ func (d *WorkloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 			return apprunner.New(s)
 		})
 		appInfo := deploy.AppInformation{
-			Name:                d.App.Name,
-			DNSName:             d.App.Domain,
+			Name:                d.app.Name,
+			DNSName:             d.app.Domain,
 			AccountPrincipalARN: in.RootUserARN,
 		}
 		if t.Alias == nil {
-			output.conf, err = stack.NewRequestDrivenWebService(t, d.Env.Name, appInfo, *rc)
+			output.conf, err = stack.NewRequestDrivenWebService(t, d.env.Name, appInfo, *rc)
 			break
 		}
 
@@ -584,26 +534,30 @@ func (d *WorkloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 			urls             map[string]string
 			appVersionGetter VersionGetter
 		)
-		if appVersionGetter, err = in.NewAppVersionGetter(d.App.Name); err != nil {
+		if appVersionGetter, err = in.NewAppVersionGetter(d.app.Name); err != nil {
 			return nil, err
 		}
 
-		if err = validateRDSvcAliasAndAppVersion(d.Name,
-			aws.StringValue(t.Alias), d.Env.Name, d.App, appVersionGetter); err != nil {
+		if err = validateRDSvcAliasAndAppVersion(d.name,
+			aws.StringValue(t.Alias), d.env.Name, d.app, appVersionGetter); err != nil {
 			return nil, err
 		}
 
-		if urls, err = uploadRDWSCustomResources(in.UploadOpts, d.S3Bucket); err != nil {
+		if urls, err = uploadRDWSCustomResources(&uploadRDWSCustomResourcesInput{
+			customResourceUploader: in.CustomResourceUploader,
+			s3Uploader:             in.S3Uploader,
+			s3Bucket:               d.s3Bucket,
+		}); err != nil {
 			return nil, err
 		}
-		output.conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, d.Env.Name, appInfo, *rc, urls)
+		output.conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, d.env.Name, appInfo, *rc, urls)
 	case *manifest.BackendService:
-		output.conf, err = stack.NewBackendService(t, d.Env.Name, d.App.Name, *rc)
+		output.conf, err = stack.NewBackendService(t, d.env.Name, d.app.Name, *rc)
 	case *manifest.WorkerService:
 		var topics []deploy.Topic
-		topics, err = in.SNSTopicsLister.ListSNSTopics(d.App.Name, d.Env.Name)
+		topics, err = in.SNSTopicsLister.ListSNSTopics(d.app.Name, d.env.Name)
 		if err != nil {
-			return nil, fmt.Errorf("get SNS topics for app %s and environment %s: %w", d.App.Name, d.Env.Name, err)
+			return nil, fmt.Errorf("get SNS topics for app %s and environment %s: %w", d.app.Name, d.env.Name, err)
 		}
 		var topicARNs []string
 		for _, topic := range topics {
@@ -613,17 +567,17 @@ func (d *WorkloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 			Subscriptions() []manifest.TopicSubscription
 		}
 
-		subscriptionGetter, ok := mft.(subscriptions)
+		subscriptionGetter, ok := d.mft.(subscriptions)
 		if !ok {
 			return nil, errors.New("manifest does not have required method Subscriptions")
 		}
 		// Cache the subscriptions for later.
 		output.subscriptions = subscriptionGetter.Subscriptions()
 
-		if err = validateTopicsExist(output.subscriptions, topicARNs, d.App.Name, d.Env.Name); err != nil {
+		if err = validateTopicsExist(output.subscriptions, topicARNs, d.app.Name, d.env.Name); err != nil {
 			return nil, err
 		}
-		output.conf, err = stack.NewWorkerService(t, d.Env.Name, d.App.Name, *rc)
+		output.conf, err = stack.NewWorkerService(t, d.env.Name, d.app.Name, *rc)
 
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
@@ -659,6 +613,38 @@ func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interfa
 	}, nil
 }
 
+type workloadManifestInput struct {
+	name         string
+	appName      string
+	envName      string
+	ws           WorkspaceReader
+	interpolator Interpolator
+	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
+}
+
+func workloadManifest(in *workloadManifestInput) (interface{}, error) {
+	raw, err := in.ws.ReadWorkloadManifest(in.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
+	}
+	interpolated, err := in.interpolator.Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", in.name, err)
+	}
+	mft, err := in.unmarshal([]byte(interpolated))
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal service %s manifest: %w", in.name, err)
+	}
+	envMft, err := mft.ApplyEnv(in.envName)
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
+	}
+	if err := envMft.Validate(); err != nil {
+		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
+	}
+	return envMft, nil
+}
+
 func envFile(unmarshaledManifest interface{}) string {
 	type envFile interface {
 		EnvFile() string
@@ -669,11 +655,6 @@ func envFile(unmarshaledManifest interface{}) string {
 	}
 	// If the manifest type doesn't support envFiles, ignore and move forward.
 	return ""
-}
-
-type UploadCustomResourcesOpts struct {
-	uploader      CustomResourcesUploader
-	newS3Uploader func() (Uploader, error)
 }
 
 func validateTopicsExist(subscriptions []manifest.TopicSubscription, topicARNs []string, app, env string) error {
@@ -704,17 +685,18 @@ func contains(s string, items []string) bool {
 	return false
 }
 
-func uploadRDWSCustomResources(o *UploadCustomResourcesOpts, s3Bucket string) (map[string]string, error) {
-	s3Client, err := o.newS3Uploader()
-	if err != nil {
-		return nil, err
-	}
+type uploadRDWSCustomResourcesInput struct {
+	customResourceUploader CustomResourcesUploader
+	s3Uploader             Uploader
+	s3Bucket               string
+}
 
-	urls, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(s3Bucket, key, objects...)
+func uploadRDWSCustomResources(in *uploadRDWSCustomResourcesInput) (map[string]string, error) {
+	urls, err := in.customResourceUploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return in.s3Uploader.ZipAndUpload(in.s3Bucket, key, objects...)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", s3Bucket, err)
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", in.s3Bucket, err)
 	}
 
 	return urls, nil

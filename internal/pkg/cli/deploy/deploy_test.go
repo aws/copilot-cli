@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spf13/afero"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -44,6 +42,7 @@ type deployMocks struct {
 	mockVersionGetter           *mocks.MockVersionGetter
 	mockWsReader                *mocks.MockWorkspaceReader
 	mockInterpolator            *mocks.MockInterpolator
+	mockFileReader              *mocks.MockfileReader
 }
 
 type mockWorkloadMft struct {
@@ -78,6 +77,72 @@ func (m *mockWorkloadMft) ContainerPlatform() string {
 	return "mockContainerPlatform"
 }
 
+func TestWorkloadManifest(t *testing.T) {
+	const (
+		mockName    = "mockWkld"
+		mockEnvName = "test"
+		mockAppName = "press"
+	)
+	mockError := errors.New("some error")
+	tests := map[string]struct {
+		mock func(m *deployMocks)
+
+		wantErr error
+	}{
+		"error out if fail to read workload manifest": {
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return(nil, mockError)
+			},
+			wantErr: fmt.Errorf("read manifest file for mockWkld: some error"),
+		},
+		"error out if fail to interpolate workload manifest": {
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
+			},
+			wantErr: fmt.Errorf("interpolate environment variables for mockWkld manifest: some error"),
+		},
+		"success": {
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &deployMocks{
+				mockWsReader:     mocks.NewMockWorkspaceReader(ctrl),
+				mockInterpolator: mocks.NewMockInterpolator(ctrl),
+			}
+			tc.mock(m)
+
+			in := workloadManifestInput{
+				name:         mockName,
+				envName:      mockEnvName,
+				appName:      mockAppName,
+				ws:           m.mockWsReader,
+				interpolator: m.mockInterpolator,
+				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+					return &mockWorkloadMft{}, nil
+				},
+			}
+
+			_, gotErr := workloadManifest(&in)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
 func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	const (
 		mockName            = "mockWkld"
@@ -107,44 +172,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		wantBuildRequired bool
 		wantErr           error
 	}{
-		"error out if fail to read workload manifest": {
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return(nil, mockError)
-			},
-			wantErr: fmt.Errorf("read manifest file for mockWkld: some error"),
-		},
-		"skip if build is not required and env file is not set": {
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
-					WlName: "mockWkld",
-				})
-			},
-		},
-		"error out if fail to interpolate workload manifest": {
-			inBuildRequired: true,
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
-			},
-			wantErr: fmt.Errorf("interpolate environment variables for mockWkld manifest: some error"),
-		},
-		"error out if fail to get the workspace path": {
-			inBuildRequired: true,
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockWsReader.EXPECT().Path().Return("", mockError)
-			},
-			wantErr: fmt.Errorf("get workspace path: some error"),
-		},
 		"error if failed to build and push image": {
 			inBuildRequired: true,
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockWsReader.EXPECT().Path().Return(mockWorkspacePath, nil)
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
@@ -157,9 +187,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"build and push image successfully": {
 			inBuildRequired: true,
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockWsReader.EXPECT().Path().Return(mockWorkspacePath, nil)
 				m.mockImageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
 					Dockerfile: "mockDockerfile",
 					Context:    "mockContext",
@@ -172,12 +199,18 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 			wantImageDigest: "mockDigest",
 		},
+		"error if fail to read env file": {
+			inEnvFile: mockEnvFile,
+			mock: func(m *deployMocks) {
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).
+					Return(nil, mockError)
+			},
+			wantErr: fmt.Errorf("read env file foo.env: some error"),
+		},
 		"error if fail to put env file to s3 bucket": {
 			inEnvFile: mockEnvFile,
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockWsReader.EXPECT().Path().Return(mockWorkspacePath, nil)
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return("", mockError)
 			},
@@ -186,9 +219,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"error if fail to parse s3 url": {
 			inEnvFile: mockEnvFile,
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockWsReader.EXPECT().Path().Return(mockWorkspacePath, nil)
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockBadEnvFileS3URL, nil)
 
@@ -199,9 +230,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			inRegion:  "sun-south-0",
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockWsReader.EXPECT().Path().Return(mockWorkspacePath, nil)
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 			},
@@ -211,9 +240,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inEnvFile: mockEnvFile,
 			inRegion:  "us-west-2",
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockWsReader.EXPECT().Path().Return(mockWorkspacePath, nil)
+				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockTemplater.EXPECT().Template().Return("some data", nil)
@@ -227,8 +254,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should return error if fail to upload to S3 bucket": {
 			inRegion: "us-west-2",
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockTemplater.EXPECT().Template().Return("some data", nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, "mockWkld.addons.stack.yml", gomock.Any()).
 					Return("", mockError)
@@ -238,8 +263,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"should return empty url if the service doesn't have any addons and env files": {
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
 					WlName: "mockWkld",
 				})
@@ -247,8 +270,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"should fail if addons cannot be retrieved from workspace": {
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockTemplater.EXPECT().Template().Return("", mockError)
 			},
 			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
@@ -256,8 +277,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		fs := afero.NewMemMapFs()
-		afero.WriteFile(fs, filepath.Join(mockWorkspacePath, mockEnvFile), []byte{}, 0644)
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -266,38 +285,32 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				mockUploader:           mocks.NewMockUploader(ctrl),
 				mockTemplater:          mocks.NewMockTemplater(ctrl),
 				mockImageBuilderPusher: mocks.NewMockImageBuilderPusher(ctrl),
-				mockWsReader:           mocks.NewMockWorkspaceReader(ctrl),
-				mockInterpolator:       mocks.NewMockInterpolator(ctrl),
+				mockFileReader:         mocks.NewMockfileReader(ctrl),
 			}
 			tc.mock(m)
 
-			deployer := WorkloadDeployer{
-				Name: mockName,
-				Env: &config.Environment{
+			deployer := workloadDeployer{
+				name: mockName,
+				env: &config.Environment{
 					Name:   mockEnvName,
 					Region: tc.inRegion,
 				},
-				App: &config.Application{
+				app: &config.Application{
 					Name: mockAppName,
 				},
-				S3Bucket: mockS3Bucket,
-				ImageTag: mockImageTag,
+				s3Bucket:      mockS3Bucket,
+				imageTag:      mockImageTag,
+				workspacePath: mockWorkspacePath,
+				mft: &mockWorkloadMft{
+					fileName:      tc.inEnvFile,
+					buildRequired: tc.inBuildRequired,
+				},
 			}
 			in := UploadArtifactsInput{
 				Templater:          m.mockTemplater,
-				FS:                 &afero.Afero{Fs: fs},
+				FS:                 m.mockFileReader,
 				Uploader:           m.mockUploader,
 				ImageBuilderPusher: m.mockImageBuilderPusher,
-				WS:                 m.mockWsReader,
-				NewInterpolator: func(app, env string) Interpolator {
-					return m.mockInterpolator
-				},
-				Unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
-					return &mockWorkloadMft{
-						fileName:      tc.inEnvFile,
-						buildRequired: tc.inBuildRequired,
-					}, nil
-				},
 			}
 
 			got, gotErr := deployer.UploadArtifacts(&in)
@@ -355,8 +368,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockPublicCIDRBlocksGetter.EXPECT().PublicCIDRBlocks().Return(nil, errors.New("some error"))
 			},
@@ -372,8 +383,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			wantErr: errors.New("alias specified when application is not associated with a domain"),
@@ -389,8 +398,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("", mockError)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -407,8 +414,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v0.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -428,8 +433,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v0.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -446,8 +449,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -467,8 +468,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -483,8 +482,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(errors.New("some error"))
 			},
@@ -499,8 +496,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 			},
@@ -516,8 +511,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
@@ -536,8 +529,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
@@ -555,8 +546,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
@@ -578,8 +567,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
@@ -611,8 +598,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
@@ -628,8 +613,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
@@ -648,8 +631,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockWsReader:                mocks.NewMockWorkspaceReader(ctrl),
-				mockInterpolator:            mocks.NewMockInterpolator(ctrl),
 				mockVersionGetter:           mocks.NewMockVersionGetter(ctrl),
 				mockEndpointGetter:          mocks.NewMockEndpointGetter(ctrl),
 				mockServiceDeployer:         mocks.NewMockServiceDeployer(ctrl),
@@ -660,43 +641,37 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 			tc.mock(m)
 
-			deployer := WorkloadDeployer{
-				Name:     mockName,
-				App:      tc.inApp,
-				Env:      tc.inEnvironment,
-				S3Bucket: mockS3Bucket,
+			deployer := workloadDeployer{
+				name:     mockName,
+				app:      tc.inApp,
+				env:      tc.inEnvironment,
+				s3Bucket: mockS3Bucket,
+				mft: &manifest.LoadBalancedWebService{
+					Workload: manifest.Workload{
+						Name: aws.String(mockName),
+					},
+					LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
+						ImageConfig: manifest.ImageWithPortAndHealthcheck{
+							ImageWithPort: manifest.ImageWithPort{
+								Image: manifest.Image{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
+								Port: aws.Uint16(80),
+							},
+						},
+						RoutingRule: manifest.RoutingRuleConfigOrBool{
+							RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+								Path:  aws.String("/"),
+								Alias: tc.inAliases,
+							},
+						},
+						NLBConfig: tc.inNLB,
+					},
+				},
 			}
 
 			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInput{
-				ForceNewUpdate: tc.inForceDeploy,
-				WS:             m.mockWsReader,
-				NewInterpolator: func(app, env string) Interpolator {
-					return m.mockInterpolator
-				},
-				Unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
-					return &manifest.LoadBalancedWebService{
-						Workload: manifest.Workload{
-							Name: aws.String(mockName),
-						},
-						LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
-							ImageConfig: manifest.ImageWithPortAndHealthcheck{
-								ImageWithPort: manifest.ImageWithPort{
-									Image: manifest.Image{
-										Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
-									},
-									Port: aws.Uint16(80),
-								},
-							},
-							RoutingRule: manifest.RoutingRuleConfigOrBool{
-								RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-									Path:  aws.String("/"),
-									Alias: tc.inAliases,
-								},
-							},
-							NLBConfig: tc.inNLB,
-						},
-					}, nil
-				},
+				ForceNewUpdate:  tc.inForceDeploy,
 				ServiceDeployer: m.mockServiceDeployer,
 				NewSvcUpdater:   func(f func(*session.Session) ServiceForceUpdater) {},
 				NewAppVersionGetter: func(s string) (VersionGetter, error) {
@@ -706,12 +681,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				ServiceForceUpdater:    m.mockServiceForceUpdater,
 				EndpointGetter:         m.mockEndpointGetter,
 				Spinner:                m.mockProgress,
-				UploadOpts: &UploadCustomResourcesOpts{
-					uploader: m.mockCustomResourcesUploader,
-					newS3Uploader: func() (Uploader, error) {
-						return nil, nil
-					},
-				},
+				CustomResourceUploader: m.mockCustomResourcesUploader,
 				now: func() time.Time {
 					return mockNowTime
 				},
@@ -727,11 +697,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 }
 
 type deployRDSvcMocks struct {
-	mockWorkspace      *mocks.MockWorkspaceReader
 	mockVersionGetter  *mocks.MockVersionGetter
 	mockEndpointGetter *mocks.MockEndpointGetter
 	mockUploader       *mocks.MockCustomResourcesUploader
-	mockInterpolator   *mocks.MockInterpolator
 }
 
 func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
@@ -762,8 +730,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				Name: mockAppName,
 			},
 			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 
@@ -780,8 +746,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -799,8 +763,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -818,8 +780,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -837,8 +797,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
@@ -856,8 +814,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
@@ -876,8 +832,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployRDSvcMocks) {
-				m.mockWorkspace.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(map[string]string{
@@ -894,56 +848,43 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployRDSvcMocks{
-				mockWorkspace:      mocks.NewMockWorkspaceReader(ctrl),
 				mockVersionGetter:  mocks.NewMockVersionGetter(ctrl),
 				mockEndpointGetter: mocks.NewMockEndpointGetter(ctrl),
 				mockUploader:       mocks.NewMockCustomResourcesUploader(ctrl),
-				mockInterpolator:   mocks.NewMockInterpolator(ctrl),
 			}
 			tc.mock(m)
 
-			deployer := WorkloadDeployer{
-				Name:     mockName,
-				App:      tc.inApp,
-				Env:      tc.inEnvironment,
-				S3Bucket: mockBucket,
+			deployer := workloadDeployer{
+				name:     mockName,
+				app:      tc.inApp,
+				env:      tc.inEnvironment,
+				s3Bucket: mockBucket,
+				mft: &manifest.RequestDrivenWebService{
+					Workload: manifest.Workload{
+						Name: aws.String(mockName),
+					},
+					RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
+						ImageConfig: manifest.ImageWithPort{
+							Image: manifest.Image{
+								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							},
+							Port: aws.Uint16(80),
+						},
+						RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
+							Alias: aws.String(tc.inAlias),
+						},
+					},
+				},
 			}
 
 			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				WS: m.mockWorkspace,
-				NewInterpolator: func(app, env string) Interpolator {
-					return m.mockInterpolator
-				},
-				Unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
-					return &manifest.RequestDrivenWebService{
-						Workload: manifest.Workload{
-							Name: aws.String(mockName),
-						},
-						RequestDrivenWebServiceConfig: manifest.RequestDrivenWebServiceConfig{
-							ImageConfig: manifest.ImageWithPort{
-								Image: manifest.Image{
-									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
-								},
-								Port: aws.Uint16(80),
-							},
-							RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
-								Alias: aws.String(tc.inAlias),
-							},
-						},
-					}, nil
-				},
 				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) {},
 				NewAppVersionGetter: func(s string) (VersionGetter, error) {
 					return m.mockVersionGetter, nil
 				},
-				EndpointGetter: m.mockEndpointGetter,
-				UploadOpts: &UploadCustomResourcesOpts{
-					uploader: m.mockUploader,
-					newS3Uploader: func() (Uploader, error) {
-						return nil, nil
-					},
-				},
-				AddonsURL: mockAddonsURL,
+				EndpointGetter:         m.mockEndpointGetter,
+				CustomResourceUploader: m.mockUploader,
+				AddonsURL:              mockAddonsURL,
 			})
 
 			if tc.wantErr != nil {
@@ -992,8 +933,6 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockSNSTopicsLister.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return(nil, mockError)
 			},
@@ -1009,8 +948,6 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte{}, nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockEnv.mockApp.local", nil)
 				m.mockSNSTopicsLister.EXPECT().ListSNSTopics(mockAppName, mockEnvName).Return([]deploy.Topic{
 					*topic,
@@ -1025,42 +962,34 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &deployMocks{
-				mockWsReader:        mocks.NewMockWorkspaceReader(ctrl),
 				mockEndpointGetter:  mocks.NewMockEndpointGetter(ctrl),
 				mockSNSTopicsLister: mocks.NewMockSNSTopicsLister(ctrl),
-				mockInterpolator:    mocks.NewMockInterpolator(ctrl),
 			}
 			tc.mock(m)
 
-			deployer := WorkloadDeployer{
-				Name:     mockName,
-				App:      tc.inApp,
-				Env:      tc.inEnvironment,
-				S3Bucket: mockBucket,
+			deployer := workloadDeployer{
+				name:     mockName,
+				app:      tc.inApp,
+				env:      tc.inEnvironment,
+				s3Bucket: mockBucket,
+				mft: &manifest.WorkerService{
+					Workload: manifest.Workload{
+						Name: aws.String(mockName),
+					},
+					WorkerServiceConfig: manifest.WorkerServiceConfig{
+						ImageConfig: manifest.ImageWithHealthcheck{
+							Image: manifest.Image{
+								Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+							},
+						},
+						Subscribe: manifest.SubscribeConfig{
+							Topics: mockTopics,
+						},
+					},
+				},
 			}
 
 			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				WS: m.mockWsReader,
-				NewInterpolator: func(app, env string) Interpolator {
-					return m.mockInterpolator
-				},
-				Unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
-					return &manifest.WorkerService{
-						Workload: manifest.Workload{
-							Name: aws.String(mockName),
-						},
-						WorkerServiceConfig: manifest.WorkerServiceConfig{
-							ImageConfig: manifest.ImageWithHealthcheck{
-								Image: manifest.Image{
-									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
-								},
-							},
-							Subscribe: manifest.SubscribeConfig{
-								Topics: mockTopics,
-							},
-						},
-					}, nil
-				},
 				SNSTopicsLister: m.mockSNSTopicsLister,
 				NewSvcUpdater:   func(f func(*session.Session) ServiceForceUpdater) {},
 				NewAppVersionGetter: func(s string) (VersionGetter, error) {
