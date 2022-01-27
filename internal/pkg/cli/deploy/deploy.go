@@ -149,8 +149,6 @@ type WorkloadDeployer struct {
 
 // UploadArtifactsInput is the input of UploadArtifacts.
 type UploadArtifactsInput struct {
-	ShouldUploadArtifacts bool
-
 	FS                 *afero.Afero
 	Uploader           Uploader
 	Templater          Templater
@@ -202,9 +200,6 @@ type DeployWorkloadOutput struct {
 
 // UploadArtifacts uploads the deployment artifacts (image, addons files, env files).
 func (d *WorkloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArtifactsOutput, error) {
-	if !in.ShouldUploadArtifacts {
-		return &UploadArtifactsOutput{}, nil
-	}
 	mft, err := d.manifest(&manifestInput{
 		ws:              in.WS,
 		newInterpolator: in.NewInterpolator,

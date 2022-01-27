@@ -95,7 +95,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	mockEnvFilePath := fmt.Sprintf("%s/%s/%s", "manual", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", mockEnvFile)
 	mockError := errors.New("some error")
 	tests := map[string]struct {
-		inShouldUpload  bool
 		inEnvFile       string
 		inBuildRequired bool
 		inRegion        string
@@ -108,19 +107,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		wantBuildRequired bool
 		wantErr           error
 	}{
-		"skip if do not upload artifacts": {
-			inShouldUpload: false,
-			mock:           func(m *deployMocks) {},
-		},
 		"error out if fail to read workload manifest": {
-			inShouldUpload: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return(nil, mockError)
 			},
 			wantErr: fmt.Errorf("read manifest file for mockWkld: some error"),
 		},
 		"skip if build is not required and env file is not set": {
-			inShouldUpload: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -130,7 +123,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"error out if fail to interpolate workload manifest": {
-			inShouldUpload:  true,
 			inBuildRequired: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
@@ -139,7 +131,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("interpolate environment variables for mockWkld manifest: some error"),
 		},
 		"error out if fail to get the workspace path": {
-			inShouldUpload:  true,
 			inBuildRequired: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
@@ -149,7 +140,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("get workspace path: some error"),
 		},
 		"error if failed to build and push image": {
-			inShouldUpload:  true,
 			inBuildRequired: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
@@ -165,7 +155,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("build and push image: some error"),
 		},
 		"build and push image successfully": {
-			inShouldUpload:  true,
 			inBuildRequired: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
@@ -184,8 +173,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantImageDigest: "mockDigest",
 		},
 		"error if fail to put env file to s3 bucket": {
-			inShouldUpload: true,
-			inEnvFile:      mockEnvFile,
+			inEnvFile: mockEnvFile,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -196,8 +184,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("put env file foo.env artifact to bucket mockBucket: some error"),
 		},
 		"error if fail to parse s3 url": {
-			inEnvFile:      mockEnvFile,
-			inShouldUpload: true,
+			inEnvFile: mockEnvFile,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -209,9 +196,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("parse s3 url: cannot parse S3 URL badURL into bucket name and key"),
 		},
 		"error if fail to find the partition": {
-			inShouldUpload: true,
-			inEnvFile:      mockEnvFile,
-			inRegion:       "sun-south-0",
+			inEnvFile: mockEnvFile,
+			inRegion:  "sun-south-0",
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -222,9 +208,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("find the partition for region sun-south-0"),
 		},
 		"should push addons template to S3 bucket": {
-			inEnvFile:      mockEnvFile,
-			inShouldUpload: true,
-			inRegion:       "us-west-2",
+			inEnvFile: mockEnvFile,
+			inRegion:  "us-west-2",
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -240,8 +225,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantEnvFileARN: mockEnvFileS3ARN,
 		},
 		"should return error if fail to upload to S3 bucket": {
-			inRegion:       "us-west-2",
-			inShouldUpload: true,
+			inRegion: "us-west-2",
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -253,7 +237,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantErr: fmt.Errorf("put addons artifact to bucket mockBucket: some error"),
 		},
 		"should return empty url if the service doesn't have any addons and env files": {
-			inShouldUpload: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -263,7 +246,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should fail if addons cannot be retrieved from workspace": {
-			inShouldUpload: true,
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
@@ -302,12 +284,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				ImageTag: mockImageTag,
 			}
 			in := UploadArtifactsInput{
-				Templater:             m.mockTemplater,
-				ShouldUploadArtifacts: tc.inShouldUpload,
-				FS:                    &afero.Afero{Fs: fs},
-				Uploader:              m.mockUploader,
-				ImageBuilderPusher:    m.mockImageBuilderPusher,
-				WS:                    m.mockWsReader,
+				Templater:          m.mockTemplater,
+				FS:                 &afero.Afero{Fs: fs},
+				Uploader:           m.mockUploader,
+				ImageBuilderPusher: m.mockImageBuilderPusher,
+				WS:                 m.mockWsReader,
 				NewInterpolator: func(app, env string) Interpolator {
 					return m.mockInterpolator
 				},
