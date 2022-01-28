@@ -671,12 +671,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 
 			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInput{
-				ForceNewUpdate:  tc.inForceDeploy,
-				ServiceDeployer: m.mockServiceDeployer,
-				NewSvcUpdater:   func(f func(*session.Session) ServiceForceUpdater) {},
-				NewAppVersionGetter: func(s string) (VersionGetter, error) {
-					return m.mockVersionGetter, nil
-				},
+				ForceNewUpdate:         tc.inForceDeploy,
+				ServiceDeployer:        m.mockServiceDeployer,
+				NewSvcUpdater:          func(f func(*session.Session) ServiceForceUpdater) {},
+				AppVersionGetter:       m.mockVersionGetter,
 				PublicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
 				ServiceForceUpdater:    m.mockServiceForceUpdater,
 				EndpointGetter:         m.mockEndpointGetter,
@@ -878,10 +876,8 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			}
 
 			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) {},
-				NewAppVersionGetter: func(s string) (VersionGetter, error) {
-					return m.mockVersionGetter, nil
-				},
+				NewSvcUpdater:          func(f func(*session.Session) ServiceForceUpdater) {},
+				AppVersionGetter:       m.mockVersionGetter,
 				EndpointGetter:         m.mockEndpointGetter,
 				CustomResourceUploader: m.mockUploader,
 				AddonsURL:              mockAddonsURL,
@@ -990,12 +986,10 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 			}
 
 			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				SNSTopicsLister: m.mockSNSTopicsLister,
-				NewSvcUpdater:   func(f func(*session.Session) ServiceForceUpdater) {},
-				NewAppVersionGetter: func(s string) (VersionGetter, error) {
-					return m.mockVersionGetter, nil
-				},
-				EndpointGetter: m.mockEndpointGetter,
+				SNSTopicsLister:  m.mockSNSTopicsLister,
+				NewSvcUpdater:    func(f func(*session.Session) ServiceForceUpdater) {},
+				AppVersionGetter: m.mockVersionGetter,
+				EndpointGetter:   m.mockEndpointGetter,
 			})
 
 			if tc.wantErr != nil {

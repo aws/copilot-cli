@@ -147,8 +147,8 @@ type workloadDeployer struct {
 	workspacePath string
 }
 
-// NewWorkloadDeployerInput is the input to for workloadDeployer constructor.
-type NewWorkloadDeployerInput struct {
+// WorkloadDeployerInput is the input to for workloadDeployer constructor.
+type WorkloadDeployerInput struct {
 	Name     string
 	App      *config.Application
 	Env      *config.Environment
@@ -157,7 +157,7 @@ type NewWorkloadDeployerInput struct {
 }
 
 // NewWorkloadDeployer is the constructor for workloadDeployer.
-func NewWorkloadDeployer(in *NewWorkloadDeployerInput) (*workloadDeployer, error) {
+func NewWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
@@ -219,7 +219,7 @@ type DeployWorkloadInput struct {
 	SNSTopicsLister        SNSTopicsLister
 	ServiceDeployer        ServiceDeployer
 	NewSvcUpdater          func(func(*session.Session) ServiceForceUpdater)
-	NewAppVersionGetter    func(string) (VersionGetter, error)
+	AppVersionGetter       VersionGetter
 	PublicCIDRBlocksGetter PublicCIDRBlocksGetter
 	ServiceForceUpdater    ServiceForceUpdater
 	EndpointGetter         EndpointGetter
@@ -482,12 +482,7 @@ func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 	var output stackConfigurationOutput
 	switch t := d.mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		var appVersionGetter VersionGetter
-		appVersionGetter, err = in.NewAppVersionGetter(d.app.Name)
-		if err != nil {
-			return nil, fmt.Errorf("new app describer for application %s: %w", d.app.Name, err)
-		}
-		if err := validateLBWSRuntime(d.app, d.env.Name, t, appVersionGetter); err != nil {
+		if err := validateLBWSRuntime(d.app, d.env.Name, t, in.AppVersionGetter); err != nil {
 			return nil, err
 		}
 
@@ -530,19 +525,12 @@ func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 		}
 
 		output.rdSvcAlias = aws.StringValue(t.Alias)
-		var (
-			urls             map[string]string
-			appVersionGetter VersionGetter
-		)
-		if appVersionGetter, err = in.NewAppVersionGetter(d.app.Name); err != nil {
-			return nil, err
-		}
 
 		if err = validateRDSvcAliasAndAppVersion(d.name,
-			aws.StringValue(t.Alias), d.env.Name, d.app, appVersionGetter); err != nil {
+			aws.StringValue(t.Alias), d.env.Name, d.app, in.AppVersionGetter); err != nil {
 			return nil, err
 		}
-
+		var urls map[string]string
 		if urls, err = uploadRDWSCustomResources(&uploadRDWSCustomResourcesInput{
 			customResourceUploader: in.CustomResourceUploader,
 			s3Uploader:             in.S3Uploader,
