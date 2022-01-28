@@ -19,7 +19,7 @@ For example:
 https://kudo.test.coolapp.example.aws
 ```
 
-Currently, you can only use aliases under the domain you specified when creating the application. Since we [delegate responsibility for the subdomain to Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain), the alias you specify must be in either one of these three hosted zone:
+Currently, you can only use aliases under the domain you specified when creating the application. Since we [delegate responsibility for the subdomain to Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain), the alias you specify must be in one of these three hosted zone:
 
 - root: `${DomainName}`
 - app: `${AppName}.${DomainName}`
