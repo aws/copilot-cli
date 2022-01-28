@@ -1248,6 +1248,11 @@ func (r OverrideRule) Validate() error {
 	return nil
 }
 
+// Validate is a no-op for Secrets.
+func (s Secret) Validate() error {
+	return nil
+}
+
 type validateDependenciesOpts struct {
 	mainContainerName string
 	sidecarConfig     map[string]*SidecarConfig

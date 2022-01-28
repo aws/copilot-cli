@@ -126,8 +126,8 @@ environments:
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
 							},
-							Secrets: map[string]string{
-								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
+							Secrets: map[string]Secret{
+								"DB_PASSWORD": {from: aws.String("MYSQL_DB_PASSWORD")},
 							},
 						},
 						Sidecars: map[string]*SidecarConfig{
@@ -264,8 +264,8 @@ secrets:
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(false),
 							},
-							Secrets: map[string]string{
-								"API_TOKEN": "SUBS_API_TOKEN",
+							Secrets: map[string]Secret{
+								"API_TOKEN": {from: aws.String("SUBS_API_TOKEN")},
 							},
 						},
 						Network: NetworkConfig{

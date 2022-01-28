@@ -122,14 +122,14 @@ func TestHasSecrets(t *testing.T) {
 		},
 		"no secrets": {
 			in: WorkloadOpts{
-				Secrets: map[string]string{},
+				Secrets: map[string]Secret{},
 			},
 			wanted: false,
 		},
 		"service has secrets": {
 			in: WorkloadOpts{
-				Secrets: map[string]string{
-					"hello": "world",
+				Secrets: map[string]Secret{
+					"hello": SecretFromSSMOrARN("world"),
 				},
 			},
 			wanted: true,
@@ -289,4 +289,24 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.IsDefault())
 		})
 	}
+}
+
+func TestSsmOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, ssmOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+}
+
+func TestSsmOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "/github/token", SecretFromSSMOrARN("/github/token").ValueFrom())
+}
+
+func TestSecretsManagerName_RequiresSub(t *testing.T) {
+	require.True(t, secretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
+}
+
+func TestSecretsManagerName_Service(t *testing.T) {
+	require.Equal(t, "secretsmanager", secretsManagerName{}.Service())
+}
+
+func TestSecretsManagerName_ValueFrom(t *testing.T) {
+	require.Equal(t, "secret:aes128-1a2b3c", SecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
 }

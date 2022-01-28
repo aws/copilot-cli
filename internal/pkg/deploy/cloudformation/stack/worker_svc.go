@@ -118,7 +118,7 @@ func (s *WorkerService) Template() (string, error) {
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		Variables:                      s.manifest.WorkerServiceConfig.Variables,
-		Secrets:                        s.manifest.WorkerServiceConfig.Secrets,
+		Secrets:                        convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:                    addonsOutputs,
 		AddonsExtraParams:              addonsParams,
 		Sidecars:                       sidecars,

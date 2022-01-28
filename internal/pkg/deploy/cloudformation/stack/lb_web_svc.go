@@ -200,7 +200,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:                      s.manifest.TaskConfig.Variables,
-		Secrets:                        s.manifest.TaskConfig.Secrets,
+		Secrets:                        convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                        aliases,
 		NestedStack:                    addonsOutputs,
 		AddonsExtraParams:              addonsParams,

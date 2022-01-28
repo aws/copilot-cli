@@ -28,6 +28,7 @@ var defaultTransformers = []mergo.Transformers{
 	efsVolumeConfigurationTransformer{},
 	sqsQueueOrBoolTransformer{},
 	routingRuleConfigOrBoolTransformer{},
+	secretTransformer{},
 }
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
@@ -343,6 +344,31 @@ func (t routingRuleConfigOrBoolTransformer) Transformer(typ reflect.Type) func(d
 
 		if srcStruct.Enabled != nil {
 			dstStruct.RoutingRuleConfiguration = RoutingRuleConfiguration{}
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type secretTransformer struct{}
+
+// Transformer returns custom merge logic for Secret's fields.
+func (t secretTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Secret{}) {
+		return nil
+	}
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(Secret), src.Interface().(Secret)
+
+		if !srcStruct.fromSecretsManager.IsEmpty() {
+			dstStruct.from = nil
+		}
+
+		if srcStruct.from != nil {
+			dstStruct.fromSecretsManager = secretsManagerSecret{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

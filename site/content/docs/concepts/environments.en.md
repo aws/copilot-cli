@@ -35,7 +35,7 @@ Your services are launched in the public subnets but can be reached only through
 
 ###  Load Balancers and DNS
 
-If you set up any service using one of the Load Balanced Service types, Copilot will set up an Application Load Balancer. All Load Balanced Web Services within an environment will share a load balancer by creating app-specific listeners on it. Your load balancer is allowed to communicate with services in your VPC.
+If you set up any service using one of the Load Balanced Service types, Copilot will set up an Application Load Balancer. All Load Balanced Web Services within an environment will share an Application Load Balancer by creating app-specific listeners on it. Your load balancer is allowed to communicate with services in your VPC.
 
 Optionally, when you set up an application, you can provide a domain name that you own and is registered in Route 53. If you provide a domain name, each time you spin up an environment, Copilot will create a subdomain environment-name.app-name.your-domain.com, provision an ACM cert, and bind it to your Application Load Balancer so it can use HTTPS.
 
