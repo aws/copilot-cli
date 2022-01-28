@@ -145,8 +145,8 @@ environments:
 							},
 							EnableMetadata: aws.Bool(false),
 							ConfigFile:     aws.String("/extra.conf"),
-							SecretOptions: map[string]string{
-								"LOG_TOKEN": "LOG_TOKEN",
+							SecretOptions: map[string]Secret{
+								"LOG_TOKEN": {from: aws.String("LOG_TOKEN")},
 							},
 						},
 						Network: NetworkConfig{

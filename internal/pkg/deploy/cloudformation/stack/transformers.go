@@ -74,7 +74,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			Port:       port,
 			Protocol:   protocol,
 			CredsParam: config.CredsParam,
-			Secrets:    config.Secrets,
+			Secrets:    convertSecrets(config.Secrets),
 			Variables:  config.Variables,
 			Storage: template.SidecarStorageOpts{
 				MountPoints: mp,
@@ -360,9 +360,9 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		ConfigFile:     lc.ConfigFile,
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
-		SecretOptions:  lc.SecretOptions,
+		SecretOptions:  convertSecrets(lc.SecretOptions),
 		Variables:      lc.Variables,
-		Secrets:        lc.Secrets,
+		Secrets:        convertSecrets(lc.Secrets),
 	}
 }
 

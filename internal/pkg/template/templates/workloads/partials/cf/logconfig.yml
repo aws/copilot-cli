@@ -5,9 +5,11 @@
     {{$name}}: {{$value | printf "%q"}}{{end}}
 {{- end}}
 {{- if .LogConfig.SecretOptions}}
-  SecretOptions:{{range $name, $valueFrom := .LogConfig.SecretOptions}}
+  SecretOptions:
+  {{- range $name, $secret := .LogConfig.SecretOptions}}
     - Name: {{$name}}
-      ValueFrom: {{$valueFrom}}{{end}}
+      ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
+  {{- end}}
 {{- end}}
 {{- else}}LogConfiguration:
   LogDriver: awslogs

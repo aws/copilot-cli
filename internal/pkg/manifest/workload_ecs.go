@@ -174,10 +174,10 @@ type Logging struct {
 	Image          *string           `yaml:"image"`
 	Destination    map[string]string `yaml:"destination,flow"`
 	EnableMetadata *bool             `yaml:"enableMetadata"`
-	SecretOptions  map[string]string `yaml:"secretOptions"`
+	SecretOptions  map[string]Secret `yaml:"secretOptions"`
 	ConfigFile     *string           `yaml:"configFilePath"`
 	Variables      map[string]string `yaml:"variables"`
-	Secrets        map[string]string `yaml:"secrets"`
+	Secrets        map[string]Secret `yaml:"secrets"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -210,7 +210,7 @@ type SidecarConfig struct {
 	Essential     *bool                `yaml:"essential"`
 	CredsParam    *string              `yaml:"credentialsParameter"`
 	Variables     map[string]string    `yaml:"variables"`
-	Secrets       map[string]string    `yaml:"secrets"`
+	Secrets       map[string]Secret    `yaml:"secrets"`
 	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
 	DockerLabels  map[string]string    `yaml:"labels"`
 	DependsOn     DependsOn            `yaml:"depends_on"`
