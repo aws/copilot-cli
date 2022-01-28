@@ -98,8 +98,7 @@ type initPipelineOpts struct {
 
 	// Caches variables
 	fs         *afero.Afero
-	repoBuffer   bytes.Buffer // Using two separate buffers for ease of testing.
-	branchBuffer bytes.Buffer
+	buffer   bytes.Buffer
 	envConfigs []*config.Environment
 }
 
@@ -292,12 +291,15 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 // getBranch fetches the user's current branch as a best-guess of which branch they want their pipeline to follow. If err, insert default branch name.
 func (o *initPipelineOpts) getBranch() {
 	// Fetches local git branch.
-	err := o.runner.Run("git", []string{"rev-parse", "--abbrev-ref", "HEAD"}, exec.Stdout(&o.branchBuffer))
+	err := o.runner.Run("git", []string{"rev-parse", "--abbrev-ref", "HEAD"}, exec.Stdout(&o.buffer))
+	o.repoBranch = strings.TrimSpace(o.buffer.String())
 	if err != nil {
 		o.repoBranch = defaultBranch
 	}
-	o.repoBranch = strings.TrimSpace(o.branchBuffer.String())
-	o.branchBuffer.Reset()
+	if strings.TrimSpace(o.buffer.String()) == "" {
+		o.repoBranch = defaultBranch
+	}
+	o.buffer.Reset()
 	log.Infof("Your pipeline will follow branch '%s'. You may make changes in the pipeline manifest before deployment.\n", color.HighlightUserInput(o.repoBranch))
 }
 
@@ -340,21 +342,18 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 
 func (o *initPipelineOpts) selectURL() error {
 	// Fetches and parses all remote repositories.
-	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.repoBuffer))
+	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.buffer))
 	if err != nil {
 		return fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
 	}
-	urls, err := o.parseGitRemoteResult(strings.TrimSpace(o.repoBuffer.String()))
+	urls, err := o.parseGitRemoteResult(strings.TrimSpace(o.buffer.String()))
 	if err != nil {
 		return err
 	}
-	o.repoBuffer.Reset()
+	o.buffer.Reset()
 
 	// If there is only one returned URL, set it rather than prompt to select.
 	if len(urls) == 1 {
-		if err := o.validateURL(urls[0]); err != nil {
-			return err
-		}
 		log.Infof("Only one git repository detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(urls[0]))
 		o.repoURL = urls[0]
 		return nil
@@ -369,9 +368,6 @@ func (o *initPipelineOpts) selectURL() error {
 	)
 	if err != nil {
 		return fmt.Errorf("select URL: %w", err)
-	}
-	if err := o.validateURL(url); err != nil {
-		return err
 	}
 	o.repoURL = url
 
