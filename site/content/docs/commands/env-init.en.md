@@ -14,7 +14,7 @@ You create environments using a [named profile](../credentials.en.md#environment
 Like all commands in the AWS Copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:
 ```
 Common Flags
-  -a, --app string                     Name of the application. (default "demo")
+  -a, --app string                     Name of the application.
       --aws-access-key-id string       Optional. An AWS access key.
       --aws-secret-access-key string   Optional. An AWS secret access key.
       --aws-session-token string       Optional. An AWS session token for temporary credentials.

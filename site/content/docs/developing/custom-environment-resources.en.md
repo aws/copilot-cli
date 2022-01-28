@@ -21,7 +21,7 @@ You may use the import feature to bring a VPC with only two private subnets and 
 
 ## Modifying Copilot's default resources 
 When you select the default configuration, Copilot follows [AWS best practices](https://aws.amazon.com/blogs/containers/amazon-ecs-availability-best-practices/) and creates a VPC with two public and two private subnets, with one of each type in one of two Availability Zones. 
-If you require additional availability zones or need to modify the CIDR ranges, you can opt-in to modify these settings:
+If you require additional availability zones or need to modify the CIDR ranges, you can opt in to modify these settings:
 ```bash 
 $ copilot env init --container-insights
 What is your environment's name? env-name
