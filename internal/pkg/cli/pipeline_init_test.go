@@ -460,7 +460,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError:        fmt.Errorf("repository repo-man is in us-west-2, but app my-app is in us-east-1; they must be in the same region"),
 		},
 		"skip selector prompt if only one repo URL": {
-			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
+			buffer: *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
@@ -483,12 +483,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedRepoURL:           githubAnotherURL,
-			expectedGitHubOwner:       githubOwner,
-			expectedRepoName:          githubAnotherRepoName,
-			expectedRepoBranch:        "main",
-			expectedEnvironments:      []string{"test", "prod"},
-			expectedError:             nil,
+			expectedRepoURL:      githubAnotherURL,
+			expectedGitHubOwner:  githubOwner,
+			expectedRepoName:     githubAnotherRepoName,
+			expectedRepoBranch:   "main",
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        nil,
 		},
 	}
 
@@ -561,11 +561,11 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockFileSystem              func(mockFS afero.Fs)
 		mockRegionalResourcesGetter func(m *mocks.MockappResourcesGetter)
 		mockStoreSvc                func(m *mocks.Mockstore)
-		mockRunner 					func(m *mocks.Mockrunner)
-		buffer						bytes.Buffer
+		mockRunner                  func(m *mocks.Mockrunner)
+		buffer                      bytes.Buffer
 
 		expectedBranch string
-		expectedError error
+		expectedError  error
 	}{
 		"successfully detects local branch and sets it": {
 			inProvider: "GitHub",
@@ -605,11 +605,11 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			buffer: *bytes.NewBufferString("devBranch"),
+			buffer:         *bytes.NewBufferString("devBranch"),
 			expectedBranch: "devBranch",
-			expectedError: nil,
+			expectedError:  nil,
 		},
-		"sets 'main' as branch name if error fetching it":{
+		"sets 'main' as branch name if error fetching it": {
 			inProvider: "GitHub",
 			inEnvConfigs: []*config.Environment{
 				{
@@ -648,7 +648,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			expectedBranch: "main",
-			expectedError: nil,
+			expectedError:  nil,
 		},
 		"creates secret and writes manifest and buildspec for GHV1 provider": {
 			inProvider: "GitHubV1",
@@ -693,7 +693,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError: nil,
+			expectedError:  nil,
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for GH(v2) provider": {
@@ -736,7 +736,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError: nil,
+			expectedError:  nil,
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for CC provider": {
@@ -779,7 +779,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError: nil,
+			expectedError:  nil,
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for BB provider": {
@@ -822,7 +822,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError: nil,
+			expectedError:  nil,
 			expectedBranch: "main",
 		},
 		"does not return an error if secret already exists": {
@@ -869,7 +869,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError: nil,
+			expectedError:  nil,
 			expectedBranch: "main",
 		},
 		"returns an error if can't write manifest": {
@@ -897,7 +897,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError:               errors.New("write pipeline manifest to workspace: some error"),
+			expectedError: errors.New("write pipeline manifest to workspace: some error"),
 		},
 		"returns an error if application cannot be retrieved": {
 			inProvider: "GitHubV1",
@@ -926,7 +926,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError:               errors.New("get application badgoose: some error"),
+			expectedError: errors.New("get application badgoose: some error"),
 		},
 		"returns an error if can't get regional application resources": {
 			inProvider: "GitHubV1",
@@ -1049,7 +1049,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError: nil,
+			expectedError:  nil,
 			expectedBranch: "main",
 		},
 		"returns an error if can't write buildspec": {
@@ -1131,9 +1131,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				store:          mockstore,
 				workspace:      mockWriter,
 				parser:         mockParser,
-				runner: mockRunner,
+				runner:         mockRunner,
 				fs:             memFs,
-				buffer: tc.buffer,
+				buffer:         tc.buffer,
 				envConfigs:     tc.inEnvConfigs,
 				provider:       tc.inProvider,
 				repoName:       tc.inRepoName,
@@ -1147,7 +1147,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedBranch,opts.repoBranch)
+				require.Equal(t, tc.expectedBranch, opts.repoBranch)
 			}
 		})
 	}

@@ -49,18 +49,18 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
-	defaultBranch = deploy.DefaultPipelineBranch
+	defaultBranch         = deploy.DefaultPipelineBranch
 	// For a GitHub repository.
-	githubURL       = "github.com"
-	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
-	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
+	githubURL     = "github.com"
+	fmtGHRepoURL  = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
+	fmtSecretName = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
-	awsURL          = "aws.amazon.com"
-	ccIdentifier    = "codecommit"
-	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
+	awsURL       = "aws.amazon.com"
+	ccIdentifier = "codecommit"
+	fmtCCRepoURL = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
-	bbURL           = "bitbucket.org"
-	fmtBBRepoURL    = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
+	bbURL        = "bitbucket.org"
+	fmtBBRepoURL = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
 )
 
 var (
@@ -98,7 +98,7 @@ type initPipelineOpts struct {
 
 	// Caches variables
 	fs         *afero.Afero
-	buffer   bytes.Buffer
+	buffer     bytes.Buffer
 	envConfigs []*config.Environment
 }
 
