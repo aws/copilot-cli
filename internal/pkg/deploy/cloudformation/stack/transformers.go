@@ -778,3 +778,18 @@ func convertHTTPVersion(protocolVersion *string) *string {
 	pv := strings.ToUpper(*protocolVersion)
 	return &pv
 }
+
+func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
+	if len(secrets) == 0 {
+		return nil
+	}
+	m := make(map[string]template.Secret)
+	for name, mftSecret := range secrets {
+		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
+		if mftSecret.IsSecretsManagerName() {
+			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+		}
+		m[name] = tplSecret
+	}
+	return m
+}
