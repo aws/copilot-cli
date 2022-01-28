@@ -300,7 +300,9 @@ func (o *initPipelineOpts) getBranch() {
 		o.repoBranch = defaultBranch
 	}
 	o.buffer.Reset()
-	log.Infof("Your pipeline will follow branch '%s'. You may make changes in the pipeline manifest before deployment.\n", color.HighlightUserInput(o.repoBranch))
+	log.Infof(`Your pipeline will follow branch '%s'.
+You may make changes in the pipeline manifest before deployment.
+`, color.HighlightUserInput(o.repoBranch))
 }
 
 func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
@@ -354,7 +356,9 @@ func (o *initPipelineOpts) selectURL() error {
 
 	// If there is only one returned URL, set it rather than prompt to select.
 	if len(urls) == 1 {
-		log.Infof("Only one git repository detected. Your pipeline will follow '%s'. You may make changes in the generated pipeline manifest before deployment.\n", color.HighlightUserInput(urls[0]))
+		log.Infof(`Only one git repository detected. Your pipeline will follow '%s'.
+You may make changes in the generated pipeline manifest before deployment.
+`, color.HighlightUserInput(urls[0]))
 		o.repoURL = urls[0]
 		return nil
 	}
