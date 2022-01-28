@@ -115,7 +115,7 @@ type SidecarOpts struct {
 	Protocol     *string
 	CredsParam   *string
 	Variables    map[string]string
-	Secrets      map[string]string
+	Secrets      map[string]Secret
 	Storage      SidecarStorageOpts
 	DockerLabels map[string]string
 	DependsOn    map[string]string
@@ -189,10 +189,10 @@ type LogConfigOpts struct {
 	Image          *string
 	Destination    map[string]string
 	EnableMetadata *string
-	SecretOptions  map[string]string
+	SecretOptions  map[string]Secret
 	ConfigFile     *string
 	Variables      map[string]string
-	Secrets        map[string]string
+	Secrets        map[string]Secret
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
