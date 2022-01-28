@@ -606,12 +606,12 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"invalid type": {
 			svc: struct{}{},
 
-			wantedErr: fmt.Errorf("service does not have required methods BuildRequired()"),
+			wantedErr: fmt.Errorf("manifest does not have required methods BuildRequired()"),
 		},
 		"fail to check": {
 			svc: &LoadBalancedWebService{},
 
-			wantedErr: fmt.Errorf("check if service requires building from local Dockerfile: either \"image.build\" or \"image.location\" needs to be specified in the manifest"),
+			wantedErr: fmt.Errorf("check if manifest requires building from local Dockerfile: either \"image.build\" or \"image.location\" needs to be specified in the manifest"),
 		},
 		"success with false": {
 			svc: &LoadBalancedWebService{
@@ -646,7 +646,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 
-			got, err := ServiceDockerfileBuildRequired(tc.svc)
+			got, err := DockerfileBuildRequired(tc.svc)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

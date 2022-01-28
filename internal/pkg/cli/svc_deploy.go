@@ -389,7 +389,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	required, err := manifest.ServiceDockerfileBuildRequired(svc)
+	required, err := manifest.DockerfileBuildRequired(svc)
 	if err != nil {
 		return err
 	}

@@ -319,7 +319,7 @@ func (o *deployJobOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	required, err := manifest.JobDockerfileBuildRequired(job)
+	required, err := manifest.DockerfileBuildRequired(job)
 	if err != nil {
 		return err
 	}
