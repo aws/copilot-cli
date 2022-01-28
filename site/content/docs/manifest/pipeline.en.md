@@ -53,7 +53,7 @@ The name of AWS Secrets Manager secret that holds the GitHub access token to tri
     As of AWS Copilot v1.4.0, the access token is no longer needed for GitHub repository sources. Instead, Copilot will trigger the pipeline [using AWS CodeStar connections](https://docs.aws.amazon.com/codepipeline/latest/userguide/update-github-action-connections.html).
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
-The name of the branch in your repository that triggers the pipeline. The default branch name is `main`.
+The name of the branch in your repository that triggers the pipeline. Copilot autofills this field with your current local branch.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-repository" href="#source-properties-repository" class="field">`repository`</a> <span class="type">String</span>  
 The URL of your repository.
