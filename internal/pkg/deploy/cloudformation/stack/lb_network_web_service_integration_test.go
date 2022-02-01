@@ -28,14 +28,6 @@ import (
 
 const (
 	nlbSvcManifestPath = "svc-nlb-manifest.yml"
-
-	dynamicDesiredCountPath = "custom-resources/desired-count-delegation.js"
-	rulePriorityPath        = "custom-resources/alb-rule-priority-generator.js"
-)
-
-const (
-	envControllerPath = "custom-resources/env-controller.js"
-	appName           = "my-app"
 )
 
 func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
