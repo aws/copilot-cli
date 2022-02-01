@@ -49,6 +49,11 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			svcStackPath:  "svc-nlb-test.stack.yml",
 			svcParamsPath: "svc-nlb-test.params.json",
 		},
+		"dev env": {
+			envName:       "dev",
+			svcStackPath:  "svc-nlb-dev.stack.yml",
+			svcParamsPath: "svc-nlb-dev.params.json",
+		},
 	}
 	val, exist := os.LookupEnv("TAG")
 	require.NoError(t, os.Setenv("TAG", "cicdtest"))
