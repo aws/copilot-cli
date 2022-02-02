@@ -30,12 +30,11 @@ type Config struct {
 
 // NewConfig returns a new parsed Config object from $HOME/.aws/config.
 func NewConfig() (*Config, error) {
-	homeDir, err := os.UserHomeDir()
+	cfgPath, err := cfgPath()
 	if err != nil {
-		return nil, fmt.Errorf("get home directory: %w", err)
+		return nil, fmt.Errorf("get the path of configuration file: %w", err)
 	}
 
-	cfgPath := filepath.Join(homeDir, awsCredentialsDir, awsConfigFileName)
 	cfg, err := ini.New(cfgPath)
 	if err != nil {
 		return nil, fmt.Errorf("read AWS config file %s, you might need to run %s first: %w", cfgPath, "aws configure", err)
@@ -54,4 +53,17 @@ func (c *Config) Names() []string {
 		profiles = append(profiles, strings.TrimSpace(strings.TrimPrefix(section, "profile")))
 	}
 	return profiles
+}
+
+func cfgPath() (string, error) {
+	if os.Getenv("AWS_CONFIG_FILE") != "" {
+		return os.Getenv("AWS_CONFIG_FILE"), nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("get home directory: %w", err)
+	}
+
+	return filepath.Join(homeDir, awsCredentialsDir, awsConfigFileName), nil
 }
