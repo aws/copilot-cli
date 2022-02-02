@@ -613,11 +613,6 @@ type servicePauser interface {
 	PauseService(svcARN string) error
 }
 
-type timeoutError interface {
-	error
-	Timeout() bool
-}
-
 type interpolator interface {
 	Interpolate(s string) (string, error)
 }

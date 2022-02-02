@@ -44,12 +44,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
-const (
-	fmtForceUpdateSvcStart    = "Forcing an update for service %s from environment %s"
-	fmtForceUpdateSvcFailed   = "Failed to force an update for service %s from environment %s: %v.\n"
-	fmtForceUpdateSvcComplete = "Forced an update for service %s from environment %s.\n"
-)
-
 var aliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
 	color.HighlightCode("http.alias"),
 	color.HighlightCode("copilot app init --domain example.com"))
@@ -84,7 +78,6 @@ type deploySvcOpts struct {
 	s3                 uploader
 	cmd                runner
 	addons             templater
-	appCFN             appResourcesGetter
 	svcCFN             serviceDeployer
 	newSvcUpdater      func(func(*session.Session) clideploy.ServiceForceUpdater) clideploy.ServiceForceUpdater
 	sessProvider       sessionProvider

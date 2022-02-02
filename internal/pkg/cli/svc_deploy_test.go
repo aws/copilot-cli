@@ -16,14 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 )
 
-type mockWorkloadMft struct {
-	fileName string
-}
-
-func (m *mockWorkloadMft) EnvFile() string {
-	return m.fileName
-}
-
 func TestSvcDeployOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName string

@@ -42,7 +42,6 @@ type deployJobOpts struct {
 	newInterpolator    func(app, env string) interpolator
 	cmd                runner
 	addons             templater
-	appCFN             appResourcesGetter
 	jobCFN             cloudformation.CloudFormation
 	imageBuilderPusher imageBuilderPusher
 	sessProvider       sessionProvider
@@ -213,7 +212,6 @@ func (o *deployJobOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
-	o.appCFN = cloudformation.New(defaultSess)
 
 	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
 		appName: o.appName,
