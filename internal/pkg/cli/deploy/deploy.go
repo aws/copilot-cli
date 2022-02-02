@@ -153,6 +153,7 @@ type WorkloadDeployerInput struct {
 	Env      *config.Environment
 	ImageTag string
 	S3Bucket string
+	Mft      interface{}
 }
 
 // NewWorkloadDeployer is the constructor for workloadDeployer.
@@ -160,17 +161,6 @@ func NewWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-	mft, err := workloadManifest(&workloadManifestInput{
-		name:         in.Name,
-		appName:      in.App.Name,
-		envName:      in.Env.Name,
-		interpolator: manifest.NewInterpolator(in.App.Name, in.Env.Name),
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-	})
-	if err != nil {
-		return nil, err
 	}
 	workspacePath, err := ws.Path()
 	if err != nil {
@@ -182,7 +172,7 @@ func NewWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		env:           in.Env,
 		imageTag:      in.ImageTag,
 		s3Bucket:      in.S3Bucket,
-		mft:           mft,
+		mft:           in.Mft,
 		workspacePath: workspacePath,
 	}, nil
 }
@@ -227,7 +217,6 @@ type DeployWorkloadInput struct {
 
 // DeployWorkloadOutput is the output of DeployWorkload.
 type DeployWorkloadOutput struct {
-	AppliedMft    interface{}
 	RDWSAlias     string
 	Subscriptions []manifest.TopicSubscription
 }
@@ -290,7 +279,6 @@ func (d *workloadDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkl
 	return &DeployWorkloadOutput{
 		RDWSAlias:     stackConfigOutput.rdSvcAlias,
 		Subscriptions: stackConfigOutput.subscriptions,
-		AppliedMft:    d.mft,
 	}, nil
 }
 
@@ -605,38 +593,6 @@ func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interfa
 		Platform:   mf.ContainerPlatform(),
 		Tags:       tags,
 	}, nil
-}
-
-type workloadManifestInput struct {
-	name         string
-	appName      string
-	envName      string
-	ws           WorkspaceReader
-	interpolator Interpolator
-	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
-}
-
-func workloadManifest(in *workloadManifestInput) (interface{}, error) {
-	raw, err := in.ws.ReadWorkloadManifest(in.name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
-	}
-	interpolated, err := in.interpolator.Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", in.name, err)
-	}
-	mft, err := in.unmarshal([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal service %s manifest: %w", in.name, err)
-	}
-	envMft, err := mft.ApplyEnv(in.envName)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
-	}
-	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
-	}
-	return envMft, nil
 }
 
 func envFile(unmarshaledManifest interface{}) string {

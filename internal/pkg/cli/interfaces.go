@@ -258,11 +258,6 @@ type wsSvcReader interface {
 	manifestReader
 }
 
-type wsSvcDirReader interface {
-	wsSvcReader
-	workspacePathGetter
-}
-
 type jobLister interface {
 	ListJobs() ([]string, error)
 }

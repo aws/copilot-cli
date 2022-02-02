@@ -14,6 +14,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
@@ -22,13 +24,13 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		inEnvName string
 		inSvcName string
 
-		mockWs    func(m *mocks.MockwsSvcDirReader)
+		mockWs    func(m *mocks.MockwsWlDirReader)
 		mockStore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
 		"no existing applications": {
-			mockWs:    func(m *mocks.MockwsSvcDirReader) {},
+			mockWs:    func(m *mocks.MockwsWlDirReader) {},
 			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errNoAppInWorkspace,
@@ -36,7 +38,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		"with workspace error": {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsSvcDirReader) {
+			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListServices().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -46,7 +48,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		"with service not in workspace": {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsSvcDirReader) {
+			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListServices().Return([]string{}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -56,7 +58,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		"with unknown environment": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			mockWs:    func(m *mocks.MockwsSvcDirReader) {},
+			mockWs:    func(m *mocks.MockwsWlDirReader) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
@@ -68,7 +70,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
 			inEnvName: "test",
-			mockWs: func(m *mocks.MockwsSvcDirReader) {
+			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListServices().Return([]string{"frontend"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
@@ -84,7 +86,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWs := mocks.NewMockwsSvcDirReader(ctrl)
+			mockWs := mocks.NewMockwsWlDirReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
@@ -188,8 +190,10 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 }
 
 type deployMocks struct {
-	mockDeployer    *mocks.MockworkloadDeployer
-	mockEnvUpgrader *mocks.MockactionCommand
+	mockDeployer     *mocks.MockworkloadDeployer
+	mockEnvUpgrader  *mocks.MockactionCommand
+	mockInterpolator *mocks.Mockinterpolator
+	mockWsReader     *mocks.MockwsWlDirReader
 }
 
 func TestSvcDeployOpts_Execute(t *testing.T) {
@@ -211,9 +215,28 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 			wantedError: fmt.Errorf(`execute "env upgrade --app phonetool --name prod-iad": some error`),
 		},
+		"error out if fail to read workload manifest": {
+			mock: func(m *deployMocks) {
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return(nil, mockError)
+			},
+
+			wantedError: fmt.Errorf("read manifest file for frontend: some error"),
+		},
+		"error out if fail to interpolate workload manifest": {
+			mock: func(m *deployMocks) {
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
+			},
+
+			wantedError: fmt.Errorf("interpolate environment variables for frontend manifest: some error"),
+		},
 		"error if failed to upload artifacts": {
 			mock: func(m *deployMocks) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(nil, mockError)
 			},
 
@@ -222,6 +245,8 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 		"error if failed to deploy service": {
 			mock: func(m *deployMocks) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 			},
@@ -237,8 +262,10 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockDeployer:    mocks.NewMockworkloadDeployer(ctrl),
-				mockEnvUpgrader: mocks.NewMockactionCommand(ctrl),
+				mockDeployer:     mocks.NewMockworkloadDeployer(ctrl),
+				mockEnvUpgrader:  mocks.NewMockactionCommand(ctrl),
+				mockInterpolator: mocks.NewMockinterpolator(ctrl),
+				mockWsReader:     mocks.NewMockwsWlDirReader(ctrl),
 			}
 			tc.mock(m)
 
@@ -250,9 +277,21 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 					clientConfigured: true,
 				},
-				svcDeployer:   m.mockDeployer,
+				newSvcDeployer: func(dso *deploySvcOpts) (workloadDeployer, error) {
+					return m.mockDeployer, nil
+				},
 				envUpgradeCmd: m.mockEnvUpgrader,
-				uploadOpts:    &uploadCustomResourcesOpts{},
+				newInterpolator: func(app, env string) interpolator {
+					return m.mockInterpolator
+				},
+				ws: m.mockWsReader,
+				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+					return &mockWorkloadMft{}, nil
+				},
+				uploadOpts: &uploadCustomResourcesOpts{},
+
+				targetApp:    &config.Application{},
+				appResources: &stack.AppRegionalResources{},
 			}
 
 			// WHEN
@@ -266,4 +305,17 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockWorkloadMft struct {
+	fileName      string
+	buildRequired bool
+}
+
+func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, error) {
+	return m, nil
+}
+
+func (m *mockWorkloadMft) Validate() error {
+	return nil
 }

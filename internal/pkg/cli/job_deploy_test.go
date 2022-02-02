@@ -11,6 +11,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -21,13 +23,13 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 		inEnvName string
 		inJobName string
 
-		mockWs    func(m *mocks.MockwsJobDirReader)
+		mockWs    func(m *mocks.MockwsWlDirReader)
 		mockStore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
 		"no existing applications": {
-			mockWs:    func(m *mocks.MockwsJobDirReader) {},
+			mockWs:    func(m *mocks.MockwsWlDirReader) {},
 			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errNoAppInWorkspace,
@@ -35,7 +37,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 		"with workspace error": {
 			inAppName: "phonetool",
 			inJobName: "resizer",
-			mockWs: func(m *mocks.MockwsJobDirReader) {
+			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListJobs().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -45,7 +47,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 		"with job not in workspace": {
 			inAppName: "phonetool",
 			inJobName: "resizer",
-			mockWs: func(m *mocks.MockwsJobDirReader) {
+			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListJobs().Return([]string{}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -55,7 +57,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 		"with unknown environment": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			mockWs:    func(m *mocks.MockwsJobDirReader) {},
+			mockWs:    func(m *mocks.MockwsWlDirReader) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
@@ -67,7 +69,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inJobName: "resizer",
 			inEnvName: "test",
-			mockWs: func(m *mocks.MockwsJobDirReader) {
+			mockWs: func(m *mocks.MockwsWlDirReader) {
 				m.EXPECT().ListJobs().Return([]string{"resizer"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
@@ -83,7 +85,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWs := mocks.NewMockwsJobDirReader(ctrl)
+			mockWs := mocks.NewMockwsWlDirReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
@@ -205,9 +207,28 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 
 			wantedError: fmt.Errorf(`execute "env upgrade --app phonetool --name prod-iad": some error`),
 		},
+		"error out if fail to read workload manifest": {
+			mock: func(m *deployMocks) {
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return(nil, mockError)
+			},
+
+			wantedError: fmt.Errorf("read manifest file for upload: some error"),
+		},
+		"error out if fail to interpolate workload manifest": {
+			mock: func(m *deployMocks) {
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
+			},
+
+			wantedError: fmt.Errorf("interpolate environment variables for upload manifest: some error"),
+		},
 		"error if failed to upload artifacts": {
 			mock: func(m *deployMocks) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(nil, mockError)
 			},
 
@@ -216,6 +237,8 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		"error if failed to deploy service": {
 			mock: func(m *deployMocks) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 			},
@@ -231,8 +254,10 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockDeployer:    mocks.NewMockworkloadDeployer(ctrl),
-				mockEnvUpgrader: mocks.NewMockactionCommand(ctrl),
+				mockDeployer:     mocks.NewMockworkloadDeployer(ctrl),
+				mockEnvUpgrader:  mocks.NewMockactionCommand(ctrl),
+				mockInterpolator: mocks.NewMockinterpolator(ctrl),
+				mockWsReader:     mocks.NewMockwsWlDirReader(ctrl),
 			}
 			tc.mock(m)
 
@@ -244,8 +269,20 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 
 					clientConfigured: true,
 				},
-				jobDeployer:   m.mockDeployer,
+				ws: m.mockWsReader,
+				newJobDeployer: func(djo *deployJobOpts) (workloadDeployer, error) {
+					return m.mockDeployer, nil
+				},
+				newInterpolator: func(app, env string) interpolator {
+					return m.mockInterpolator
+				},
+				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+					return &mockWorkloadMft{}, nil
+				},
 				envUpgradeCmd: m.mockEnvUpgrader,
+
+				targetApp:    &config.Application{},
+				appResources: &stack.AppRegionalResources{},
 			}
 
 			// WHEN

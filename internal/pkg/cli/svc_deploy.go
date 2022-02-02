@@ -70,7 +70,7 @@ type deploySvcOpts struct {
 
 	store              store
 	deployStore        *deploy.Store
-	ws                 wsSvcDirReader
+	ws                 wsWlDirReader
 	fs                 *afero.Afero
 	imageBuilderPusher imageBuilderPusher
 	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
@@ -86,21 +86,21 @@ type deploySvcOpts struct {
 	endpointGetter     endpointGetter
 	snsTopicGetter     deployedEnvironmentLister
 	envDescriber       envDescriber
-	svcDeployer        workloadDeployer
+	newSvcDeployer     func(*deploySvcOpts) (workloadDeployer, error)
 
 	spinner progress
 	sel     wsSelector
 	prompt  prompter
 
 	// cached variables
+	targetApp       *config.Application
+	targetEnv       *config.Environment
 	svcType         string
-	appTags         map[string]string
 	appliedManifest interface{}
-
-	imageRepoURL  string
-	rootUserARN   string
-	rdSvcAlias    string
-	subscriptions []manifest.TopicSubscription
+	appResources    *stack.AppRegionalResources
+	rootUserARN     string
+	rdSvcAlias      string
+	subscriptions   []manifest.TopicSubscription
 
 	uploadOpts *uploadCustomResourcesOpts
 }
@@ -134,6 +134,20 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessions.NewProvider(),
 		snsTopicGetter:  deployStore,
+		newSvcDeployer: func(o *deploySvcOpts) (workloadDeployer, error) {
+			deployer, err := clideploy.NewWorkloadDeployer(&clideploy.WorkloadDeployerInput{
+				Name:     o.name,
+				App:      o.targetApp,
+				Env:      o.targetEnv,
+				ImageTag: o.imageTag,
+				S3Bucket: o.appResources.S3Bucket,
+				Mft:      o.appliedManifest,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("initiate workload deployer: %w", err)
+			}
+			return deployer, nil
+		},
 	}
 	return opts, err
 }
@@ -181,7 +195,23 @@ func (o *deploySvcOpts) Execute() error {
 	if err := o.envUpgradeCmd.Execute(); err != nil {
 		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.envName, err)
 	}
-	uploadOut, err := o.svcDeployer.UploadArtifacts(&clideploy.UploadArtifactsInput{
+	mft, err := workloadManifest(&workloadManifestInput{
+		name:         o.name,
+		appName:      o.appName,
+		envName:      o.envName,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		ws:           o.ws,
+		unmarshal:    o.unmarshal,
+	})
+	if err != nil {
+		return err
+	}
+	o.appliedManifest = mft
+	deployer, err := o.newSvcDeployer(o)
+	if err != nil {
+		return err
+	}
+	uploadOut, err := deployer.UploadArtifacts(&clideploy.UploadArtifactsInput{
 		FS:                 o.fs,
 		Uploader:           o.s3,
 		Templater:          o.addons,
@@ -190,13 +220,13 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
 	}
-	deployOut, err := o.svcDeployer.DeployWorkload(&clideploy.DeployWorkloadInput{
+	deployOut, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		ImageDigest:            uploadOut.ImageDigest,
 		EnvFileARN:             uploadOut.EnvFileARN,
 		AddonsURL:              uploadOut.AddonsURL,
 		RootUserARN:            o.rootUserARN,
-		Tags:                   tags.Merge(o.appTags, o.resourceTags),
-		ImageRepoURL:           o.imageRepoURL,
+		Tags:                   tags.Merge(o.targetApp.Tags, o.resourceTags),
+		ImageRepoURL:           o.appResources.RepositoryURLs[o.name],
 		ForceNewUpdate:         o.forceNewUpdate,
 		CustomResourceUploader: o.uploadOpts.uploader,
 		S3Uploader:             o.s3,
@@ -214,7 +244,6 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	o.rdSvcAlias = deployOut.RDWSAlias
 	o.subscriptions = deployOut.Subscriptions
-	o.appliedManifest = deployOut.AppliedMft
 
 	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	return nil
@@ -286,11 +315,12 @@ func (o *deploySvcOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
 	}
-	o.appTags = app.Tags
+	o.targetApp = app
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
+	o.targetEnv = env
 	svc, err := o.store.GetService(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get service %s configuration: %w", o.name, err)
@@ -359,7 +389,7 @@ func (o *deploySvcOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
 	}
-	o.imageRepoURL = resources.RepositoryURLs[o.name]
+	o.appResources = resources
 
 	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
 		appName: o.appName,
@@ -396,19 +426,39 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.appVersionGetter = versionGetter
 
-	deployer, err := clideploy.NewWorkloadDeployer(&clideploy.WorkloadDeployerInput{
-		Name:     o.name,
-		App:      app,
-		Env:      env,
-		ImageTag: o.imageTag,
-		S3Bucket: resources.S3Bucket,
-	})
-	if err != nil {
-		return fmt.Errorf("initiate workload deployer: %w", err)
-	}
-	o.svcDeployer = deployer
-
 	return nil
+}
+
+type workloadManifestInput struct {
+	name         string
+	appName      string
+	envName      string
+	ws           wsWlDirReader
+	interpolator interpolator
+	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
+}
+
+func workloadManifest(in *workloadManifestInput) (interface{}, error) {
+	raw, err := in.ws.ReadWorkloadManifest(in.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
+	}
+	interpolated, err := in.interpolator.Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", in.name, err)
+	}
+	mft, err := in.unmarshal([]byte(interpolated))
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal service %s manifest: %w", in.name, err)
+	}
+	envMft, err := mft.ApplyEnv(in.envName)
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
+	}
+	if err := envMft.Validate(); err != nil {
+		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
+	}
+	return envMft, nil
 }
 
 func uploadRDWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {

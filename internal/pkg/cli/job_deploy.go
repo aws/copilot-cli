@@ -24,6 +24,7 @@ import (
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -36,7 +37,7 @@ type deployJobOpts struct {
 	deployWkldVars
 
 	store              store
-	ws                 wsJobDirReader
+	ws                 wsWlDirReader
 	fs                 *afero.Afero
 	unmarshal          func(in []byte) (manifest.WorkloadManifest, error)
 	newInterpolator    func(app, env string) interpolator
@@ -48,16 +49,18 @@ type deployJobOpts struct {
 	s3                 uploader
 	envUpgradeCmd      actionCommand
 	endpointGetter     endpointGetter
-	jobDeployer        workloadDeployer
+	newJobDeployer     func(*deployJobOpts) (workloadDeployer, error)
 
 	spinner progress
 	sel     wsSelector
 	prompt  prompter
 
 	// cached variables
-	appTags      map[string]string
-	imageRepoURL string
-	rootUserARN  string
+	targetApp       *config.Application
+	targetEnv       *config.Environment
+	appResources    *stack.AppRegionalResources
+	appliedManifest interface{}
+	rootUserARN     string
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
@@ -87,6 +90,20 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessions.NewProvider(),
 		newInterpolator: newManifestInterpolator,
+		newJobDeployer: func(o *deployJobOpts) (workloadDeployer, error) {
+			deployer, err := clideploy.NewWorkloadDeployer(&clideploy.WorkloadDeployerInput{
+				Name:     o.name,
+				App:      o.targetApp,
+				Env:      o.targetEnv,
+				ImageTag: o.imageTag,
+				S3Bucket: o.appResources.S3Bucket,
+				Mft:      o.appliedManifest,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("initiate workload deployer: %w", err)
+			}
+			return deployer, nil
+		},
 	}, nil
 }
 
@@ -129,7 +146,23 @@ func (o *deployJobOpts) Execute() error {
 	if err := o.envUpgradeCmd.Execute(); err != nil {
 		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.envName, err)
 	}
-	uploadOut, err := o.jobDeployer.UploadArtifacts(&clideploy.UploadArtifactsInput{
+	mft, err := workloadManifest(&workloadManifestInput{
+		name:         o.name,
+		appName:      o.appName,
+		envName:      o.envName,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		ws:           o.ws,
+		unmarshal:    o.unmarshal,
+	})
+	if err != nil {
+		return err
+	}
+	o.appliedManifest = mft
+	deployer, err := o.newJobDeployer(o)
+	if err != nil {
+		return err
+	}
+	uploadOut, err := deployer.UploadArtifacts(&clideploy.UploadArtifactsInput{
 		FS:                 o.fs,
 		Uploader:           o.s3,
 		Templater:          o.addons,
@@ -138,13 +171,13 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
-	if _, err = o.jobDeployer.DeployWorkload(&clideploy.DeployWorkloadInput{
+	if _, err = deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		ImageDigest:     uploadOut.ImageDigest,
 		EnvFileARN:      uploadOut.EnvFileARN,
 		AddonsURL:       uploadOut.AddonsURL,
 		RootUserARN:     o.rootUserARN,
-		Tags:            tags.Merge(o.appTags, o.resourceTags),
-		ImageRepoURL:    o.imageRepoURL,
+		Tags:            tags.Merge(o.targetApp.Tags, o.resourceTags),
+		ImageRepoURL:    o.appResources.RepositoryURLs[o.name],
 		ForceNewUpdate:  o.forceNewUpdate,
 		S3Uploader:      o.s3,
 		ServiceDeployer: o.jobCFN,
@@ -164,11 +197,12 @@ func (o *deployJobOpts) configureClients() error {
 	if err != nil {
 		return err
 	}
+	o.targetEnv = env
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return err
 	}
-	o.appTags = app.Tags
+	o.targetApp = app
 
 	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(env.Region)
 	if err != nil {
@@ -233,19 +267,7 @@ func (o *deployJobOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
 	}
-	o.imageRepoURL = resources.RepositoryURLs[o.name]
-
-	deployer, err := clideploy.NewWorkloadDeployer(&clideploy.WorkloadDeployerInput{
-		Name:     o.name,
-		App:      app,
-		Env:      env,
-		ImageTag: o.imageTag,
-		S3Bucket: resources.S3Bucket,
-	})
-	if err != nil {
-		return fmt.Errorf("initiate workload deployer: %w", err)
-	}
-	o.jobDeployer = deployer
+	o.appResources = resources
 
 	return nil
 }

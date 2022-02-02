@@ -65,82 +65,8 @@ func (m *mockWorkloadMft) BuildArgs(rootDirectory string) *manifest.DockerBuildA
 	}
 }
 
-func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, error) {
-	return m, nil
-}
-
-func (m *mockWorkloadMft) Validate() error {
-	return nil
-}
-
 func (m *mockWorkloadMft) ContainerPlatform() string {
 	return "mockContainerPlatform"
-}
-
-func TestWorkloadManifest(t *testing.T) {
-	const (
-		mockName    = "mockWkld"
-		mockEnvName = "test"
-		mockAppName = "press"
-	)
-	mockError := errors.New("some error")
-	tests := map[string]struct {
-		mock func(m *deployMocks)
-
-		wantErr error
-	}{
-		"error out if fail to read workload manifest": {
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return(nil, mockError)
-			},
-			wantErr: fmt.Errorf("read manifest file for mockWkld: some error"),
-		},
-		"error out if fail to interpolate workload manifest": {
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
-			},
-			wantErr: fmt.Errorf("interpolate environment variables for mockWkld manifest: some error"),
-		},
-		"success": {
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			m := &deployMocks{
-				mockWsReader:     mocks.NewMockWorkspaceReader(ctrl),
-				mockInterpolator: mocks.NewMockInterpolator(ctrl),
-			}
-			tc.mock(m)
-
-			in := workloadManifestInput{
-				name:         mockName,
-				envName:      mockEnvName,
-				appName:      mockAppName,
-				ws:           m.mockWsReader,
-				interpolator: m.mockInterpolator,
-				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
-					return &mockWorkloadMft{}, nil
-				},
-			}
-
-			_, gotErr := workloadManifest(&in)
-
-			if tc.wantErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
-			} else {
-				require.NoError(t, gotErr)
-			}
-		})
-	}
 }
 
 func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
