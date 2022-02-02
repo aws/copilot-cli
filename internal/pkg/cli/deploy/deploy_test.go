@@ -40,8 +40,6 @@ type deployMocks struct {
 	mockTemplater               *mocks.MockTemplater
 	mockUploader                *mocks.MockUploader
 	mockVersionGetter           *mocks.MockVersionGetter
-	mockWsReader                *mocks.MockWorkspaceReader
-	mockInterpolator            *mocks.MockInterpolator
 	mockFileReader              *mocks.MockfileReader
 }
 

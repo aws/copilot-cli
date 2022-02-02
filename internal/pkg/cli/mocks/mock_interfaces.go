@@ -2410,74 +2410,6 @@ func (mr *MockwsSvcReaderMockRecorder) ReadWorkloadManifest(name interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadWorkloadManifest), name)
 }
 
-// MockwsSvcDirReader is a mock of wsSvcDirReader interface.
-type MockwsSvcDirReader struct {
-	ctrl     *gomock.Controller
-	recorder *MockwsSvcDirReaderMockRecorder
-}
-
-// MockwsSvcDirReaderMockRecorder is the mock recorder for MockwsSvcDirReader.
-type MockwsSvcDirReaderMockRecorder struct {
-	mock *MockwsSvcDirReader
-}
-
-// NewMockwsSvcDirReader creates a new mock instance.
-func NewMockwsSvcDirReader(ctrl *gomock.Controller) *MockwsSvcDirReader {
-	mock := &MockwsSvcDirReader{ctrl: ctrl}
-	mock.recorder = &MockwsSvcDirReaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockwsSvcDirReader) EXPECT() *MockwsSvcDirReaderMockRecorder {
-	return m.recorder
-}
-
-// ListServices mocks base method.
-func (m *MockwsSvcDirReader) ListServices() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListServices")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListServices indicates an expected call of ListServices.
-func (mr *MockwsSvcDirReaderMockRecorder) ListServices() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockwsSvcDirReader)(nil).ListServices))
-}
-
-// Path mocks base method.
-func (m *MockwsSvcDirReader) Path() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Path")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Path indicates an expected call of Path.
-func (mr *MockwsSvcDirReaderMockRecorder) Path() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockwsSvcDirReader)(nil).Path))
-}
-
-// ReadWorkloadManifest mocks base method.
-func (m *MockwsSvcDirReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].(workspace.WorkloadManifest)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest.
-func (mr *MockwsSvcDirReaderMockRecorder) ReadWorkloadManifest(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadWorkloadManifest), name)
-}
-
 // MockjobLister is a mock of jobLister interface.
 type MockjobLister struct {
 	ctrl     *gomock.Controller
@@ -6428,57 +6360,6 @@ func (m *MockservicePauser) PauseService(svcARN string) error {
 func (mr *MockservicePauserMockRecorder) PauseService(svcARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseService", reflect.TypeOf((*MockservicePauser)(nil).PauseService), svcARN)
-}
-
-// MocktimeoutError is a mock of timeoutError interface.
-type MocktimeoutError struct {
-	ctrl     *gomock.Controller
-	recorder *MocktimeoutErrorMockRecorder
-}
-
-// MocktimeoutErrorMockRecorder is the mock recorder for MocktimeoutError.
-type MocktimeoutErrorMockRecorder struct {
-	mock *MocktimeoutError
-}
-
-// NewMocktimeoutError creates a new mock instance.
-func NewMocktimeoutError(ctrl *gomock.Controller) *MocktimeoutError {
-	mock := &MocktimeoutError{ctrl: ctrl}
-	mock.recorder = &MocktimeoutErrorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MocktimeoutError) EXPECT() *MocktimeoutErrorMockRecorder {
-	return m.recorder
-}
-
-// Error mocks base method.
-func (m *MocktimeoutError) Error() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Error")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Error indicates an expected call of Error.
-func (mr *MocktimeoutErrorMockRecorder) Error() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Error", reflect.TypeOf((*MocktimeoutError)(nil).Error))
-}
-
-// Timeout mocks base method.
-func (m *MocktimeoutError) Timeout() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Timeout")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// Timeout indicates an expected call of Timeout.
-func (mr *MocktimeoutErrorMockRecorder) Timeout() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Timeout", reflect.TypeOf((*MocktimeoutError)(nil).Timeout))
 }
 
 // Mockinterpolator is a mock of interpolator interface.

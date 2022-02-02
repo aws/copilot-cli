@@ -16,7 +16,6 @@ import (
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
-	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -468,97 +467,6 @@ func (mr *MockServiceForceUpdaterMockRecorder) LastUpdatedAt(app, env, svc inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUpdatedAt", reflect.TypeOf((*MockServiceForceUpdater)(nil).LastUpdatedAt), app, env, svc)
 }
 
-// MockWorkspaceReader is a mock of WorkspaceReader interface.
-type MockWorkspaceReader struct {
-	ctrl     *gomock.Controller
-	recorder *MockWorkspaceReaderMockRecorder
-}
-
-// MockWorkspaceReaderMockRecorder is the mock recorder for MockWorkspaceReader.
-type MockWorkspaceReaderMockRecorder struct {
-	mock *MockWorkspaceReader
-}
-
-// NewMockWorkspaceReader creates a new mock instance.
-func NewMockWorkspaceReader(ctrl *gomock.Controller) *MockWorkspaceReader {
-	mock := &MockWorkspaceReader{ctrl: ctrl}
-	mock.recorder = &MockWorkspaceReaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockWorkspaceReader) EXPECT() *MockWorkspaceReaderMockRecorder {
-	return m.recorder
-}
-
-// Path mocks base method.
-func (m *MockWorkspaceReader) Path() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Path")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Path indicates an expected call of Path.
-func (mr *MockWorkspaceReaderMockRecorder) Path() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockWorkspaceReader)(nil).Path))
-}
-
-// ReadWorkloadManifest mocks base method.
-func (m *MockWorkspaceReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].(workspace.WorkloadManifest)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest.
-func (mr *MockWorkspaceReaderMockRecorder) ReadWorkloadManifest(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockWorkspaceReader)(nil).ReadWorkloadManifest), name)
-}
-
-// MockInterpolator is a mock of Interpolator interface.
-type MockInterpolator struct {
-	ctrl     *gomock.Controller
-	recorder *MockInterpolatorMockRecorder
-}
-
-// MockInterpolatorMockRecorder is the mock recorder for MockInterpolator.
-type MockInterpolatorMockRecorder struct {
-	mock *MockInterpolator
-}
-
-// NewMockInterpolator creates a new mock instance.
-func NewMockInterpolator(ctrl *gomock.Controller) *MockInterpolator {
-	mock := &MockInterpolator{ctrl: ctrl}
-	mock.recorder = &MockInterpolatorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockInterpolator) EXPECT() *MockInterpolatorMockRecorder {
-	return m.recorder
-}
-
-// Interpolate mocks base method.
-func (m *MockInterpolator) Interpolate(s string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Interpolate", s)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Interpolate indicates an expected call of Interpolate.
-func (mr *MockInterpolatorMockRecorder) Interpolate(s interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Interpolate", reflect.TypeOf((*MockInterpolator)(nil).Interpolate), s)
-}
-
 // MockProgress is a mock of Progress interface.
 type MockProgress struct {
 	ctrl     *gomock.Controller
@@ -604,82 +512,6 @@ func (m *MockProgress) Stop(label string) {
 func (mr *MockProgressMockRecorder) Stop(label interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockProgress)(nil).Stop), label)
-}
-
-// MockmanifestReader is a mock of manifestReader interface.
-type MockmanifestReader struct {
-	ctrl     *gomock.Controller
-	recorder *MockmanifestReaderMockRecorder
-}
-
-// MockmanifestReaderMockRecorder is the mock recorder for MockmanifestReader.
-type MockmanifestReaderMockRecorder struct {
-	mock *MockmanifestReader
-}
-
-// NewMockmanifestReader creates a new mock instance.
-func NewMockmanifestReader(ctrl *gomock.Controller) *MockmanifestReader {
-	mock := &MockmanifestReader{ctrl: ctrl}
-	mock.recorder = &MockmanifestReaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockmanifestReader) EXPECT() *MockmanifestReaderMockRecorder {
-	return m.recorder
-}
-
-// ReadWorkloadManifest mocks base method.
-func (m *MockmanifestReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", name)
-	ret0, _ := ret[0].(workspace.WorkloadManifest)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest.
-func (mr *MockmanifestReaderMockRecorder) ReadWorkloadManifest(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockmanifestReader)(nil).ReadWorkloadManifest), name)
-}
-
-// MockpathFinder is a mock of pathFinder interface.
-type MockpathFinder struct {
-	ctrl     *gomock.Controller
-	recorder *MockpathFinderMockRecorder
-}
-
-// MockpathFinderMockRecorder is the mock recorder for MockpathFinder.
-type MockpathFinderMockRecorder struct {
-	mock *MockpathFinder
-}
-
-// NewMockpathFinder creates a new mock instance.
-func NewMockpathFinder(ctrl *gomock.Controller) *MockpathFinder {
-	mock := &MockpathFinder{ctrl: ctrl}
-	mock.recorder = &MockpathFinderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockpathFinder) EXPECT() *MockpathFinderMockRecorder {
-	return m.recorder
-}
-
-// Path mocks base method.
-func (m *MockpathFinder) Path() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Path")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Path indicates an expected call of Path.
-func (mr *MockpathFinderMockRecorder) Path() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockpathFinder)(nil).Path))
 }
 
 // MockfileReader is a mock of fileReader interface.

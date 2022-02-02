@@ -107,29 +107,10 @@ type ServiceForceUpdater interface {
 	LastUpdatedAt(app, env, svc string) (time.Time, error)
 }
 
-// WorkspaceReader reads from the workspace.
-type WorkspaceReader interface {
-	manifestReader
-	pathFinder
-}
-
-// Interpolator interpolates a manifest.
-type Interpolator interface {
-	Interpolate(s string) (string, error)
-}
-
 // progress is the interface to inform the user that a long operation is taking place.
 type Progress interface {
 	Start(label string)
 	Stop(label string)
-}
-
-type manifestReader interface {
-	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
-}
-
-type pathFinder interface {
-	Path() (string, error)
 }
 
 type fileReader interface {

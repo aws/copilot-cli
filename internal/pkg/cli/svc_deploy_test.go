@@ -307,10 +307,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 	}
 }
 
-type mockWorkloadMft struct {
-	fileName      string
-	buildRequired bool
-}
+type mockWorkloadMft struct{}
 
 func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, error) {
 	return m, nil
