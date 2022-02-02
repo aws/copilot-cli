@@ -6,28 +6,14 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/spf13/afero"
-
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
-
-type deployJobMocks struct {
-	mockWs                 *mocks.MockwsJobDirReader
-	mockimageBuilderPusher *mocks.MockimageBuilderPusher
-	mockInterpolator       *mocks.Mockinterpolator
-	mockS3Svc              *mocks.Mockuploader
-	mockAddons             *mocks.Mocktemplater
-}
 
 func TestJobDeployOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -200,320 +186,76 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 	}
 }
 
-func TestJobDeployOpts_configureContainerImage(t *testing.T) {
-	mockError := errors.New("mockError")
-	mockManifest := []byte(`name: mailer
-type: 'Scheduled Job'
-image:
-  build:
-    dockerfile: path/to/Dockerfile
-    context: path
-on:
-  schedule: "@daily"`)
-	mockMftNoBuild := []byte(`name: mailer
-type: 'Scheduled Job'
-image:
-  location: foo/bar
-on:
-  schedule: "@daily"`)
-	mockMftBuildString := []byte(`name: mailer
-type: 'Scheduled Job'
-image:
-  build: path/to/Dockerfile
-on:
-  schedule: "@daily"`)
-	mockMftNoContext := []byte(`name: mailer
-type: 'Scheduled Job'
-image:
-  build:
-    dockerfile: path/to/Dockerfile
-on:
-  schedule: "@daily"`)
-
-	tests := map[string]struct {
-		inputJob   string
-		setupMocks func(mocks deployJobMocks)
-
-		wantErr      error
-		wantedDigest string
-	}{
-		"should return error if ws ReadFile returns error": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(nil, mockError),
-				)
-			},
-			wantErr: fmt.Errorf("read job %s manifest: %w", "mailer", mockError),
-		},
-		"should return error if interpolation fail": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest(gomock.Any()).Return(mockManifest, nil),
-					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return("", mockError),
-				)
-			},
-			wantErr: fmt.Errorf("interpolate environment variables for mailer manifest: %w", mockError),
-		},
-		"should return error if workspace methods fail": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest(gomock.Any()).Return(mockManifest, nil),
-					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
-					m.mockWs.EXPECT().Path().Return("", mockError),
-				)
-			},
-			wantErr: fmt.Errorf("get workspace path: %w", mockError),
-		},
-		"success without building and pushing": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftNoBuild, nil),
-					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoBuild)).Return(string(mockMftNoBuild), nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Times(0),
-				)
-			},
-		},
-		"should return error if fail to build and push": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockManifest, nil),
-					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
-					m.mockWs.EXPECT().Path().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Return("", mockError),
-				)
-			},
-			wantErr: fmt.Errorf("build and push image: mockError"),
-		},
-		"success": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockManifest, nil),
-					m.mockInterpolator.EXPECT().Interpolate(string(mockManifest)).Return(string(mockManifest), nil),
-					m.mockWs.EXPECT().Path().Return("/ws/root", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
-						Context:    filepath.Join("/ws", "root", "path"),
-					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
-				)
-			},
-			wantedDigest: "sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49",
-		},
-		"using simple buildstring (backwards compatible)": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftBuildString, nil),
-					m.mockInterpolator.EXPECT().Interpolate(string(mockMftBuildString)).Return(string(mockMftBuildString), nil),
-					m.mockWs.EXPECT().Path().Return("/ws/root", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
-						Context:    filepath.Join("/ws", "root", "path", "to"),
-					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
-				)
-			},
-			wantedDigest: "sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49",
-		},
-		"without context field in overrides": {
-			inputJob: "mailer",
-			setupMocks: func(m deployJobMocks) {
-				gomock.InOrder(
-					m.mockWs.EXPECT().ReadWorkloadManifest("mailer").Return(mockMftNoContext, nil),
-					m.mockInterpolator.EXPECT().Interpolate(string(mockMftNoContext)).Return(string(mockMftNoContext), nil),
-					m.mockWs.EXPECT().Path().Return("/ws/root", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &dockerengine.BuildArguments{
-						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
-						Context:    filepath.Join("/ws", "root", "path", "to"),
-					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
-				)
-			},
-			wantedDigest: "sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49",
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockWorkspace := mocks.NewMockwsJobDirReader(ctrl)
-			mockimageBuilderPusher := mocks.NewMockimageBuilderPusher(ctrl)
-			mockInterpolator := mocks.NewMockinterpolator(ctrl)
-			mocks := deployJobMocks{
-				mockWs:                 mockWorkspace,
-				mockimageBuilderPusher: mockimageBuilderPusher,
-				mockInterpolator:       mockInterpolator,
-			}
-			test.setupMocks(mocks)
-			opts := deployJobOpts{
-				deployWkldVars: deployWkldVars{
-					name: test.inputJob,
-				},
-				unmarshal:          manifest.UnmarshalWorkload,
-				imageBuilderPusher: mockimageBuilderPusher,
-				ws:                 mockWorkspace,
-				newInterpolator: func(app, env string) interpolator {
-					return mockInterpolator
-				},
-			}
-
-			gotErr := opts.configureContainerImage()
-
-			if test.wantErr != nil {
-				require.EqualError(t, gotErr, test.wantErr.Error())
-			} else {
-				require.NoError(t, gotErr)
-				require.Equal(t, test.wantedDigest, opts.imageDigest)
-			}
-		})
-	}
-}
-
-func TestJobDeployOpts_pushToS3Bucket(t *testing.T) {
+func TestJobDeployOpts_Execute(t *testing.T) {
 	const (
-		mockJobName         = "mockJob"
-		mockEnvFile         = "foo.env"
-		mockS3Bucket        = "mockBucket"
-		mockAddonsS3URL     = "https://mockS3DomainName/mockPath"
-		mockBadEnvFileS3URL = "badURL"
-		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
-		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
+		mockAppName = "phonetool"
+		mockJobName = "upload"
+		mockEnvName = "prod-iad"
 	)
-	mockEnvFilePath := fmt.Sprintf("%s/%s/%s", "manual", "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", mockEnvFile)
 	mockError := errors.New("some error")
-	tests := map[string]struct {
-		inEnvFile     string
-		inEnvironment *config.Environment
-		inApp         *config.Application
+	testCases := map[string]struct {
+		mock func(m *deployMocks)
 
-		mock func(m *deployJobMocks)
-
-		wantAddonsURL  string
-		wantEnvFileARN string
-		wantErr        error
+		wantedError error
 	}{
-		"error if fail to put env file to s3 bucket": {
-			inEnvFile: mockEnvFile,
-			mock: func(m *deployJobMocks) {
-				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
-					Return("", mockError)
-			},
-			wantErr: fmt.Errorf("put env file foo.env artifact to bucket mockBucket: some error"),
-		},
-		"error if fail to parse s3 url": {
-			inEnvFile: mockEnvFile,
-			mock: func(m *deployJobMocks) {
-				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
-					Return(mockBadEnvFileS3URL, nil)
-
-			},
-			wantErr: fmt.Errorf("parse s3 url: cannot parse S3 URL badURL into bucket name and key"),
-		},
-		"error if fail to find the partition": {
-			inEnvFile: mockEnvFile,
-			inEnvironment: &config.Environment{
-				Region: "sun-south-0",
-			},
-			mock: func(m *deployJobMocks) {
-				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
-					Return(mockEnvFileS3URL, nil)
-			},
-			wantErr: fmt.Errorf("find the partition for region sun-south-0"),
-		},
-		"should push addons template to S3 bucket": {
-			inEnvFile: mockEnvFile,
-			inEnvironment: &config.Environment{
-				Name:   "mockEnv",
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name: "mockApp",
-			},
-			mock: func(m *deployJobMocks) {
-				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
-					Return(mockEnvFileS3URL, nil)
-				m.mockAddons.EXPECT().Template().Return("some data", nil)
-				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, "mockJob.addons.stack.yml", gomock.Any()).
-					Return(mockAddonsS3URL, nil)
+		"error if failed to upgrade environment": {
+			mock: func(m *deployMocks) {
+				m.mockEnvUpgrader.EXPECT().Execute().Return(mockError)
 			},
 
-			wantAddonsURL:  mockAddonsS3URL,
-			wantEnvFileARN: mockEnvFileS3ARN,
+			wantedError: fmt.Errorf(`execute "env upgrade --app phonetool --name prod-iad": some error`),
 		},
-		"should return error if fail to upload to S3 bucket": {
-			inEnvironment: &config.Environment{
-				Name:   "mockEnv",
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name: "mockApp",
-			},
-			mock: func(m *deployJobMocks) {
-				m.mockAddons.EXPECT().Template().Return("some data", nil)
-				m.mockS3Svc.EXPECT().Upload(mockS3Bucket, "mockJob.addons.stack.yml", gomock.Any()).
-					Return("", mockError)
+		"error if failed to upload artifacts": {
+			mock: func(m *deployMocks) {
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(nil, mockError)
 			},
 
-			wantErr: fmt.Errorf("put addons artifact to bucket mockBucket: some error"),
+			wantedError: fmt.Errorf("upload deploy resources for job upload: some error"),
 		},
-		"should return empty url if the service doesn't have any addons and env files": {
-			mock: func(m *deployJobMocks) {
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
-					WlName: "mockJob",
-				})
+		"error if failed to deploy service": {
+			mock: func(m *deployMocks) {
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
+				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(&deploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 			},
-		},
-		"should fail if addons cannot be retrieved from workspace": {
-			mock: func(m *deployJobMocks) {
-				m.mockAddons.EXPECT().Template().Return("", mockError)
-			},
-			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
+
+			wantedError: fmt.Errorf("deploy job upload to environment prod-iad: some error"),
 		},
 	}
 
-	for name, tc := range tests {
-		fs := afero.NewMemMapFs()
-		afero.WriteFile(fs, mockEnvFile, []byte("foobar"), 0644)
+	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			m := &deployJobMocks{
-				mockWs:     mocks.NewMockwsJobDirReader(ctrl),
-				mockS3Svc:  mocks.NewMockuploader(ctrl),
-				mockAddons: mocks.NewMocktemplater(ctrl),
+			m := &deployMocks{
+				mockDeployer:    mocks.NewMockworkloadDeployer(ctrl),
+				mockEnvUpgrader: mocks.NewMockactionCommand(ctrl),
 			}
 			tc.mock(m)
 
 			opts := deployJobOpts{
 				deployWkldVars: deployWkldVars{
-					name: mockJobName,
+					appName: mockAppName,
+					name:    mockJobName,
+					envName: mockEnvName,
+
+					clientConfigured: true,
 				},
-				addons:            m.mockAddons,
-				s3:                m.mockS3Svc,
-				ws:                m.mockWs,
-				fs:                &afero.Afero{Fs: fs},
-				appliedManifest:   &mockWorkloadMft{tc.inEnvFile},
-				workspacePath:     ".",
-				targetEnvironment: tc.inEnvironment,
-				targetApp:         tc.inApp,
-				appEnvResources: &stack.AppRegionalResources{
-					S3Bucket: mockS3Bucket,
-				},
+				jobDeployer:   m.mockDeployer,
+				envUpgradeCmd: m.mockEnvUpgrader,
 			}
 
-			gotErr := opts.pushArtifactsToS3()
+			// WHEN
+			err := opts.Execute()
 
-			if gotErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
+			// THEN
+			if tc.wantedError == nil {
+				require.NoError(t, err)
 			} else {
-				require.Equal(t, tc.wantAddonsURL, opts.addonsURL)
-				require.Equal(t, tc.wantEnvFileARN, opts.envFileARN)
+				require.EqualError(t, err, tc.wantedError.Error())
 			}
 		})
 	}

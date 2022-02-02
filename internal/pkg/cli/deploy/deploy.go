@@ -23,7 +23,6 @@ import (
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -209,8 +208,7 @@ type DeployWorkloadInput struct {
 	EnvFileARN     string
 	AddonsURL      string
 	RootUserARN    string
-	AppTags        map[string]string
-	ResourceTags   map[string]string
+	Tags           map[string]string
 	ImageRepoURL   string
 	ForceNewUpdate bool
 
@@ -218,18 +216,18 @@ type DeployWorkloadInput struct {
 	S3Uploader             Uploader
 	SNSTopicsLister        SNSTopicsLister
 	ServiceDeployer        ServiceDeployer
-	NewSvcUpdater          func(func(*session.Session) ServiceForceUpdater)
+	NewSvcUpdater          func(func(*session.Session) ServiceForceUpdater) ServiceForceUpdater
 	AppVersionGetter       VersionGetter
 	PublicCIDRBlocksGetter PublicCIDRBlocksGetter
-	ServiceForceUpdater    ServiceForceUpdater
 	EndpointGetter         EndpointGetter
 	Spinner                Progress
 
-	now func() time.Time
+	Now func() time.Time
 }
 
 // DeployWorkloadOutput is the output of DeployWorkload.
 type DeployWorkloadOutput struct {
+	AppliedMft    interface{}
 	RDWSAlias     string
 	Subscriptions []manifest.TopicSubscription
 }
@@ -258,12 +256,12 @@ func (d *workloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArt
 
 // DeployWorkload deploys a workload using CloudFormation.
 func (d *workloadDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
-	stackConfigoutput, err := d.stackConfiguration(in)
+	stackConfigOutput, err := d.stackConfiguration(in)
 	if err != nil {
 		return nil, err
 	}
-	cmdRunAt := in.now()
-	if err := in.ServiceDeployer.DeployService(os.Stderr, stackConfigoutput.conf, d.s3Bucket,
+	cmdRunAt := in.Now()
+	if err := in.ServiceDeployer.DeployService(os.Stderr, stackConfigOutput.conf, d.s3Bucket,
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
@@ -276,22 +274,23 @@ func (d *workloadDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkl
 	}
 	// Force update the service if --force is set and the service is not updated by the CFN.
 	if in.ForceNewUpdate {
-		lastUpdatedAt, err := in.ServiceForceUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
+		lastUpdatedAt, err := stackConfigOutput.svcUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
 		if err != nil {
 			return nil, fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
 		}
 		if cmdRunAt.After(lastUpdatedAt) {
 			if err := d.forceDeploy(&forceDeployInput{
 				spinner:    in.Spinner,
-				svcUpdater: in.ServiceForceUpdater,
+				svcUpdater: stackConfigOutput.svcUpdater,
 			}); err != nil {
 				return nil, err
 			}
 		}
 	}
 	return &DeployWorkloadOutput{
-		RDWSAlias:     stackConfigoutput.rdSvcAlias,
-		Subscriptions: stackConfigoutput.subscriptions,
+		RDWSAlias:     stackConfigOutput.rdSvcAlias,
+		Subscriptions: stackConfigOutput.subscriptions,
+		AppliedMft:    d.mft,
 	}, nil
 }
 
@@ -443,7 +442,7 @@ func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
 			EnvFileARN:               in.EnvFileARN,
-			AdditionalTags:           tags.Merge(in.AppTags, in.ResourceTags),
+			AdditionalTags:           in.Tags,
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                d.env.AccountID,
 			Region:                   d.env.Region,
@@ -453,7 +452,7 @@ func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 	return &stack.RuntimeConfig{
 		AddonsTemplateURL: in.AddonsURL,
 		EnvFileARN:        in.EnvFileARN,
-		AdditionalTags:    tags.Merge(in.AppTags, in.ResourceTags),
+		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
 			RepoURL:  in.ImageRepoURL,
 			ImageTag: d.imageTag,
@@ -469,6 +468,7 @@ type stackConfigurationOutput struct {
 	conf          cloudformation.StackConfiguration
 	rdSvcAlias    string
 	subscriptions []manifest.TopicSubscription
+	svcUpdater    ServiceForceUpdater
 }
 
 func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackConfigurationOutput, error) {
@@ -476,16 +476,12 @@ func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 	if err != nil {
 		return nil, err
 	}
-	in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
-		return ecs.New(s)
-	})
 	var output stackConfigurationOutput
 	switch t := d.mft.(type) {
 	case *manifest.LoadBalancedWebService:
 		if err := validateLBWSRuntime(d.app, d.env.Name, t, in.AppVersionGetter); err != nil {
 			return nil, err
 		}
-
 		var opts []stack.LoadBalancedWebServiceOption
 		if !t.NLBConfig.IsEmpty() {
 			cidrBlocks, err := in.PublicCIDRBlocksGetter.PublicCIDRBlocks()
@@ -505,15 +501,15 @@ func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 				opts = append(opts, stack.WithHTTPS())
 			}
 		}
+		output.svcUpdater = in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
+			return ecs.New(s)
+		})
 		output.conf, err = stack.NewLoadBalancedWebService(t, d.env.Name, d.app.Name, *rc, opts...)
 	case *manifest.RequestDrivenWebService:
 		if d.app.Domain == "" && t.Alias != nil {
 			log.Errorf(aliasUsedWithoutDomainFriendlyText)
 			return nil, errors.New("alias specified when application is not associated with a domain")
 		}
-		in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
-			return apprunner.New(s)
-		})
 		appInfo := deploy.AppInformation{
 			Name:                d.app.Name,
 			DNSName:             d.app.Domain,
@@ -538,8 +534,14 @@ func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 		}); err != nil {
 			return nil, err
 		}
+		output.svcUpdater = in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
+			return apprunner.New(s)
+		})
 		output.conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, d.env.Name, appInfo, *rc, urls)
 	case *manifest.BackendService:
+		output.svcUpdater = in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
+			return ecs.New(s)
+		})
 		output.conf, err = stack.NewBackendService(t, d.env.Name, d.app.Name, *rc)
 	case *manifest.WorkerService:
 		var topics []deploy.Topic
@@ -565,8 +567,12 @@ func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackCo
 		if err = validateTopicsExist(output.subscriptions, topicARNs, d.app.Name, d.env.Name); err != nil {
 			return nil, err
 		}
+		output.svcUpdater = in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
+			return ecs.New(s)
+		})
 		output.conf, err = stack.NewWorkerService(t, d.env.Name, d.app.Name, *rc)
-
+	case *manifest.ScheduledJob:
+		output.conf, err = stack.NewScheduledJob(t, d.env.Name, d.app.Name, *rc)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}

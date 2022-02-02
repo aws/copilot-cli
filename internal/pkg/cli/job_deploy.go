@@ -4,20 +4,11 @@
 package cli
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -25,14 +16,14 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -58,22 +49,16 @@ type deployJobOpts struct {
 	s3                 uploader
 	envUpgradeCmd      actionCommand
 	endpointGetter     endpointGetter
+	jobDeployer        workloadDeployer
 
 	spinner progress
 	sel     wsSelector
 	prompt  prompter
 
 	// cached variables
-	targetApp         *config.Application
-	targetEnvironment *config.Environment
-	targetJob         *config.Workload
-	appEnvResources   *stack.AppRegionalResources
-	appliedManifest   interface{}
-	workspacePath     string
-	addonsURL         string
-	envFileARN        string
-	imageDigest       string
-	buildRequired     bool
+	appTags      map[string]string
+	imageRepoURL string
+	rootUserARN  string
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
@@ -137,134 +122,61 @@ func (o *deployJobOpts) Ask() error {
 
 // Execute builds and pushes the container image for the job.
 func (o *deployJobOpts) Execute() error {
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
-	env, err := targetEnv(o.store, o.appName, o.envName)
-	if err != nil {
-		return err
-	}
-	o.targetEnvironment = env
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return err
-	}
-	o.targetApp = app
-	job, err := o.store.GetJob(o.appName, o.name)
-	if err != nil {
-		return fmt.Errorf("get job configuration: %w", err)
-	}
-	o.targetJob = job
-	if err := o.configureClients(); err != nil {
-		return err
+	if !o.clientConfigured {
+		if err := o.configureClients(); err != nil {
+			return err
+		}
 	}
 	if err := o.envUpgradeCmd.Execute(); err != nil {
-		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.targetEnvironment.Name, err)
+		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.envName, err)
 	}
-	if err := o.configureContainerImage(); err != nil {
-		return err
+	uploadOut, err := o.jobDeployer.UploadArtifacts(&clideploy.UploadArtifactsInput{
+		FS:                 o.fs,
+		Uploader:           o.s3,
+		Templater:          o.addons,
+		ImageBuilderPusher: o.imageBuilderPusher,
+	})
+	if err != nil {
+		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
-	if err := o.pushArtifactsToS3(); err != nil {
-		return err
+	if _, err = o.jobDeployer.DeployWorkload(&clideploy.DeployWorkloadInput{
+		ImageDigest:     uploadOut.ImageDigest,
+		EnvFileARN:      uploadOut.EnvFileARN,
+		AddonsURL:       uploadOut.AddonsURL,
+		RootUserARN:     o.rootUserARN,
+		Tags:            tags.Merge(o.appTags, o.resourceTags),
+		ImageRepoURL:    o.imageRepoURL,
+		ForceNewUpdate:  o.forceNewUpdate,
+		S3Uploader:      o.s3,
+		ServiceDeployer: o.jobCFN,
+		EndpointGetter:  o.endpointGetter,
+		Spinner:         o.spinner,
+		Now:             time.Now,
+	}); err != nil {
+		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
 	}
-	return o.deployJob()
-}
 
-func (o *deployJobOpts) pushArtifactsToS3() error {
-	mft, err := o.manifest()
-	if err != nil {
-		return err
-	}
-	if err := o.pushEnvFilesToS3Bucket(envFile(mft)); err != nil {
-		return err
-	}
-	return o.pushAddonsTemplateToS3Bucket()
-}
-
-func (o *deployJobOpts) pushEnvFilesToS3Bucket(path string) error {
-	if path == "" {
-		return nil
-	}
-	if err := o.retrieveWorkspacePath(); err != nil {
-		return err
-	}
-	content, err := o.fs.ReadFile(filepath.Join(o.workspacePath, path))
-	if err != nil {
-		return fmt.Errorf("read env file %s: %w", path, err)
-	}
-	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
-		return err
-	}
-	reader := bytes.NewReader(content)
-	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, s3.MkdirSHA256(path, content), reader)
-	if err != nil {
-		return fmt.Errorf("put env file %s artifact to bucket %s: %w", path, o.appEnvResources.S3Bucket, err)
-	}
-	bucket, key, err := s3.ParseURL(url)
-	if err != nil {
-		return fmt.Errorf("parse s3 url: %w", err)
-	}
-	// The app and environment are always within the same partition.
-	region := o.targetEnvironment.Region
-	partition, err := partitions.Region(region).Partition()
-	if err != nil {
-		return err
-	}
-	o.envFileARN = s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
-	return nil
-}
-
-func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() error {
-	template, err := o.addons.Template()
-	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if errors.As(err, &notFoundErr) {
-			// addons doesn't exist for job, the url is empty.
-			return nil
-		}
-		return fmt.Errorf("retrieve addons template: %w", err)
-	}
-	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
-		return err
-	}
-	reader := strings.NewReader(template)
-	url, err := o.s3.Upload(o.appEnvResources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
-	if err != nil {
-		return fmt.Errorf("put addons artifact to bucket %s: %w", o.appEnvResources.S3Bucket, err)
-	}
-	o.addonsURL = url
-	return nil
-}
-
-func (o *deployJobOpts) retrieveWorkspacePath() error {
-	if o.workspacePath != "" {
-		return nil
-	}
-	workspacePath, err := o.ws.Path()
-	if err != nil {
-		return fmt.Errorf("get workspace path: %w", err)
-	}
-	o.workspacePath = workspacePath
-	return nil
-}
-
-func (o *deployJobOpts) retrieveAppResourcesForEnvRegion() error {
-	if o.appEnvResources != nil {
-		return nil
-	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
-	}
-	o.appEnvResources = resources
 	return nil
 }
 
 func (o *deployJobOpts) configureClients() error {
-	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
+	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
-		return fmt.Errorf("create ECR session with region %s: %w", o.targetEnvironment.Region, err)
+		return err
+	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return err
+	}
+	o.appTags = app.Tags
+
+	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(env.Region)
+	if err != nil {
+		return fmt.Errorf("create ECR session with region %s: %w", env.Region, err)
 	}
 
-	envSession, err := o.sessProvider.FromRole(o.targetEnvironment.ManagerRoleARN, o.targetEnvironment.Region)
+	envSession, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return fmt.Errorf("assuming environment manager role: %w", err)
 	}
@@ -305,149 +217,39 @@ func (o *deployJobOpts) configureClients() error {
 
 	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
 		appName: o.appName,
-		name:    o.targetEnvironment.Name,
+		name:    env.Name,
 	})
 	if err != nil {
 		return fmt.Errorf("new env upgrade command: %v", err)
 	}
 	o.envUpgradeCmd = cmd
+
+	// client to retrieve caller identity.
+	caller, err := identity.New(defaultSess).Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+	o.rootUserARN = caller.RootUserARN
+
+	resources, err := cloudformation.New(defaultSess).GetAppResourcesByRegion(app, env.Region)
+	if err != nil {
+		return fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
+	}
+	o.imageRepoURL = resources.RepositoryURLs[o.name]
+
+	deployer, err := clideploy.NewWorkloadDeployer(&clideploy.WorkloadDeployerInput{
+		Name:     o.name,
+		App:      app,
+		Env:      env,
+		ImageTag: o.imageTag,
+		S3Bucket: resources.S3Bucket,
+	})
+	if err != nil {
+		return fmt.Errorf("initiate workload deployer: %w", err)
+	}
+	o.jobDeployer = deployer
+
 	return nil
-}
-
-func (o *deployJobOpts) configureContainerImage() error {
-	job, err := o.manifest()
-	if err != nil {
-		return err
-	}
-	required, err := manifest.DockerfileBuildRequired(job)
-	if err != nil {
-		return err
-	}
-	if !required {
-		return nil
-	}
-	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArg, err := o.dfBuildArgs(job)
-	if err != nil {
-		return err
-	}
-	digest, err := o.imageBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
-	if err != nil {
-		return fmt.Errorf("build and push image: %w", err)
-	}
-	o.imageDigest = digest
-	o.buildRequired = true
-	return nil
-}
-
-func (o *deployJobOpts) dfBuildArgs(job interface{}) (*dockerengine.BuildArguments, error) {
-	if err := o.retrieveWorkspacePath(); err != nil {
-		return nil, err
-	}
-	return buildArgs(o.name, o.imageTag, o.workspacePath, job)
-}
-
-func (o *deployJobOpts) deployJob() error {
-	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
-		return err
-	}
-	conf, err := o.stackConfiguration()
-	if err != nil {
-		return err
-	}
-	if err := o.jobCFN.DeployService(os.Stderr, conf, o.appEnvResources.S3Bucket, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
-		return fmt.Errorf("deploy job: %w", err)
-	}
-	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
-	return nil
-}
-
-func (o *deployJobOpts) stackConfiguration() (cloudformation.StackConfiguration, error) {
-	mft, err := o.manifest()
-	if err != nil {
-		return nil, err
-	}
-	rc, err := o.runtimeConfig()
-	if err != nil {
-		return nil, err
-	}
-	var conf cloudformation.StackConfiguration
-	switch t := mft.(type) {
-	case *manifest.ScheduledJob:
-		conf, err = stack.NewScheduledJob(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
-	default:
-		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
-	}
-	return conf, nil
-}
-
-func (o *deployJobOpts) runtimeConfig() (*stack.RuntimeConfig, error) {
-	endpoint, err := o.endpointGetter.ServiceDiscoveryEndpoint()
-	if err != nil {
-		return nil, err
-	}
-	if !o.buildRequired {
-		return &stack.RuntimeConfig{
-			AddonsTemplateURL:        o.addonsURL,
-			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
-			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                o.targetEnvironment.AccountID,
-			Region:                   o.targetEnvironment.Region,
-		}, nil
-	}
-	if err := o.retrieveAppResourcesForEnvRegion(); err != nil {
-		return nil, err
-	}
-	repoURL, ok := o.appEnvResources.RepositoryURLs[o.name]
-	if !ok {
-		return nil, &errRepoNotFound{
-			wlName:       o.name,
-			envRegion:    o.targetEnvironment.Region,
-			appAccountID: o.targetApp.AccountID,
-		}
-	}
-	return &stack.RuntimeConfig{
-		Image: &stack.ECRImage{
-			RepoURL:  repoURL,
-			ImageTag: o.imageTag,
-			Digest:   o.imageDigest,
-		},
-		AddonsTemplateURL:        o.addonsURL,
-		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
-		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                o.targetEnvironment.AccountID,
-		Region:                   o.targetEnvironment.Region,
-	}, nil
-}
-
-func (o *deployJobOpts) manifest() (interface{}, error) {
-	if o.appliedManifest != nil {
-		return o.appliedManifest, nil
-	}
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
-	if err != nil {
-		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
-	}
-	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
-	}
-	mft, err := o.unmarshal([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal job %s manifest: %w", o.name, err)
-	}
-	envMft, err := mft.ApplyEnv(o.envName)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
-	}
-	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
-	}
-	o.appliedManifest = envMft // cache the results.
-	return envMft, nil
 }
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
@@ -469,8 +271,8 @@ func (o *deployJobOpts) validateJobName() error {
 }
 
 func (o *deployJobOpts) validateEnvName() error {
-	if _, err := targetEnv(o.store, o.appName, o.envName); err != nil {
-		return err
+	if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
 	return nil
 }

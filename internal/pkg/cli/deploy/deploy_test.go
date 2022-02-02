@@ -671,16 +671,17 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 
 			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInput{
-				ForceNewUpdate:         tc.inForceDeploy,
-				ServiceDeployer:        m.mockServiceDeployer,
-				NewSvcUpdater:          func(f func(*session.Session) ServiceForceUpdater) {},
+				ForceNewUpdate:  tc.inForceDeploy,
+				ServiceDeployer: m.mockServiceDeployer,
+				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) ServiceForceUpdater {
+					return m.mockServiceForceUpdater
+				},
 				AppVersionGetter:       m.mockVersionGetter,
 				PublicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
-				ServiceForceUpdater:    m.mockServiceForceUpdater,
 				EndpointGetter:         m.mockEndpointGetter,
 				Spinner:                m.mockProgress,
 				CustomResourceUploader: m.mockCustomResourcesUploader,
-				now: func() time.Time {
+				Now: func() time.Time {
 					return mockNowTime
 				},
 			})
@@ -876,7 +877,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			}
 
 			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				NewSvcUpdater:          func(f func(*session.Session) ServiceForceUpdater) {},
+				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) ServiceForceUpdater {
+					return nil
+				},
 				AppVersionGetter:       m.mockVersionGetter,
 				EndpointGetter:         m.mockEndpointGetter,
 				CustomResourceUploader: m.mockUploader,
@@ -986,8 +989,10 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 			}
 
 			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				SNSTopicsLister:  m.mockSNSTopicsLister,
-				NewSvcUpdater:    func(f func(*session.Session) ServiceForceUpdater) {},
+				SNSTopicsLister: m.mockSNSTopicsLister,
+				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) ServiceForceUpdater {
+					return nil
+				},
 				AppVersionGetter: m.mockVersionGetter,
 				EndpointGetter:   m.mockEndpointGetter,
 			})

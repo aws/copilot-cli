@@ -6,7 +6,6 @@ package cli
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -171,14 +169,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,
 		spinner:         spin,
-		now:             time.Now,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
 		snsTopicGetter:  deployStore,
-
-		newAppVersionGetter: func(appName string) (versionGetter, error) {
-			return describe.NewAppDescriber(appName)
-		},
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
