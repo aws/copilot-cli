@@ -278,11 +278,15 @@ func NewLBDeployer(in *WorkloadDeployerInput) (*lbSvcDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create describer for environment %s in application %s: %w", in.Env.Name, in.App.Name, err)
 	}
+	lbMft, ok := in.Mft.(*manifest.LoadBalancedWebService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.LoadBalancedWebServiceType)
+	}
 	return &lbSvcDeployer{
 		svcDeployer:            svcDeployer,
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
-		lbMft:                  in.Mft.(*manifest.LoadBalancedWebService),
+		lbMft:                  lbMft,
 	}, nil
 }
 
@@ -297,9 +301,13 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 	if err != nil {
 		return nil, err
 	}
+	bsMft, ok := in.Mft.(*manifest.BackendService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.BackendServiceType)
+	}
 	return &backendSvcDeployer{
 		svcDeployer: svcDeployer,
-		backendMft:  in.Mft.(*manifest.BackendService),
+		backendMft:  bsMft,
 	}, nil
 }
 
@@ -314,9 +322,13 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
+	jobMft, ok := in.Mft.(*manifest.ScheduledJob)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.ScheduledJobType)
+	}
 	return &jobDeployer{
 		workloadDeployer: wkldDeployer,
-		jobMft:           in.Mft.(*manifest.ScheduledJob),
+		jobMft:           jobMft,
 	}, nil
 }
 
@@ -338,12 +350,16 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
 	}
+	rdwsMft, ok := in.Mft.(*manifest.RequestDrivenWebService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.RequestDrivenWebServiceType)
+	}
 	return &rdwsDeployer{
 		svcDeployer:            svcDeployer,
 		customResourceUploader: template.New(),
 		customResourceS3Client: s3.New(svcDeployer.defaultSessWithEnvRegion),
 		appVersionGetter:       versionGetter,
-		rdwsMft:                in.Mft.(*manifest.RequestDrivenWebService),
+		rdwsMft:                rdwsMft,
 	}, nil
 }
 
@@ -363,10 +379,14 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
+	wsMft, ok := in.Mft.(*manifest.WorkerService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.WorkerServiceType)
+	}
 	return &workerSvcDeployer{
 		svcDeployer: svcDeployer,
 		topicLister: deployStore,
-		wsMft:       in.Mft.(*manifest.WorkerService),
+		wsMft:       wsMft,
 	}, nil
 }
 
