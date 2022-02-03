@@ -19,6 +19,7 @@ import (
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
 	mockMap := map[string]string{"foo": "bar"}
+	mockSecrets := map[string]template.Secret{"foo": template.SecretFromSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
 		inPort            *string
@@ -46,7 +47,7 @@ func Test_convertSidecar(t *testing.T) {
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
 			},
@@ -61,7 +62,7 @@ func Test_convertSidecar(t *testing.T) {
 				Protocol:   aws.String("udp"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
 			},
@@ -78,7 +79,7 @@ func Test_convertSidecar(t *testing.T) {
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
 				DependsOn: map[string]string{
@@ -98,7 +99,7 @@ func Test_convertSidecar(t *testing.T) {
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				DockerLabels: map[string]string{
@@ -111,7 +112,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
@@ -127,7 +128,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: []string{"bin"},
@@ -143,7 +144,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: []string{"bin", "arg"},
@@ -159,7 +160,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
@@ -175,7 +176,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
@@ -191,7 +192,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				HealthCheck: &template.ContainerHealthCheck{
@@ -210,7 +211,7 @@ func Test_convertSidecar(t *testing.T) {
 				"foo": {
 					CredsParam:    mockCredsParam,
 					Image:         mockImage,
-					Secrets:       mockMap,
+					Secrets:       map[string]manifest.Secret{"foo": {}},
 					Variables:     mockMap,
 					Essential:     aws.Bool(tc.inEssential),
 					Port:          tc.inPort,
