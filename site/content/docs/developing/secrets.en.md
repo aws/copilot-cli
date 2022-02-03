@@ -37,7 +37,7 @@ Once you deploy this updated manifest, your service or job will be able to acces
 This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you.
 
 ### In Secrets Manager
-Similar to SSM, first ensure that your Secrets Manager secret has the `copilot-application` and `copilot-environments` tags.  
+Similar to SSM, first ensure that your Secrets Manager secret has the `copilot-application` and `copilot-environment` tags.  
 
 Suppose you have a Secrets Manager secret with the following configuration:
 
