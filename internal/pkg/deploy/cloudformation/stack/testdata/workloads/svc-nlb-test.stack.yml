@@ -1,0 +1,514 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a load balanced web service on Amazon ECS.
+Parameters:
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  WorkloadName:
+    Type: String
+  ContainerImage:
+    Type: String
+  ContainerPort:
+    Type: Number
+  TaskCPU:
+    Type: String
+  TaskMemory:
+    Type: String
+  TaskCount:
+    Type: Number
+  DNSDelegated:
+    Type: String
+    AllowedValues: [true, false]
+  LogRetention:
+    Type: Number
+  AddonsTemplateURL:
+    Description: 'URL of the addons nested stack template within the S3 bucket.'
+    Type: String
+    Default: ""
+  EnvFileARN:
+    Description: 'URL of the environment file.'
+    Type: String
+    Default: ""
+  TargetContainer:
+    Type: String
+  TargetPort:
+    Type: Number
+  NLBAliases:
+    Type: String
+    Default: ""
+  NLBPort:
+    Type: String
+Conditions:
+  HasAssociatedDomain: !Equals [!Ref DNSDelegated, true]
+  HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
+Resources: # If a bucket URL is specified, that means the template exists.
+  LogGroup:
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
+      RetentionInDays: !Ref LogRetention
+  TaskDefinition:
+    Metadata:
+      'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: LogGroup
+    Properties:
+      Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: !Ref TaskCPU
+      Memory: !Ref TaskMemory
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: !Ref WorkloadName
+          Image: !Ref ContainerImage
+          Environment:
+            - Name: COPILOT_APPLICATION_NAME
+              Value: !Sub '${AppName}'
+            - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+              Value: test.my-app.local
+            - Name: COPILOT_ENVIRONMENT_NAME
+              Value: !Sub '${EnvName}'
+            - Name: COPILOT_SERVICE_NAME
+              Value: !Sub '${WorkloadName}'
+            - Name: LOG_LEVEL
+              Value: "info"
+          EnvironmentFiles:
+            - !If
+              - HasEnvFile
+              - Type: s3
+                Value: !Ref EnvFileARN
+              - !Ref AWS::NoValue
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: copilot
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+            - ContainerPort: 443
+              Protocol: tcp
+  ExecutionRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, SecretsPolicy]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'ssm:GetParameters'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                Condition:
+                  StringEquals:
+                    'ssm:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'ssm:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              - Effect: 'Allow'
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+                Condition:
+                  StringEquals:
+                    'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'secretsmanager:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              - Effect: 'Allow'
+                Action:
+                  - 'kms:Decrypt'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+        - !If
+          # Optional IAM permission required by ECS task def env file
+          # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam
+          # Example EnvFileARN: arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env
+          - HasEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref EnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+          - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  TaskRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'DenyIAMExceptTaggedRoles'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Deny'
+                Action: 'iam:*'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 'sts:AssumeRole'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+  DiscoveryService:
+    Metadata:
+      'aws:copilot:description': 'Service discovery for your services to communicate within the VPC'
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the Copilot services
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 10
+            Type: A
+          - TTL: 10
+            Type: SRV
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name: !Ref WorkloadName
+      NamespaceId:
+        Fn::ImportValue: !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
+  EnvControllerAction:
+    Metadata:
+      'aws:copilot:description': "Update your environment's shared resources"
+    Type: Custom::EnvControllerFunction
+    Properties:
+      ServiceToken: !GetAtt EnvControllerFunction.Arn
+      Workload: !Ref WorkloadName
+      EnvStack: !Sub '${AppName}-${EnvName}'
+      Parameters: [Aliases]
+  EnvControllerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          mockEnvControllerZipFile
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'EnvControllerRole.Arn'
+      Runtime: nodejs12.x
+  EnvControllerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "EnvControllerStackUpdate"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:UpdateStack
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
+                Condition:
+                  StringEquals:
+                    'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: "EnvControllerRolePass"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  Service:
+    Metadata:
+      'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
+    Type: AWS::ECS::Service
+    DependsOn:
+      - NLBListener
+    Properties:
+      PlatformVersion: LATEST
+      Cluster:
+        Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref TaskCount
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      PropagateTags: SERVICE
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            Fn::Split:
+              - ','
+              - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          SecurityGroups:
+            - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+            - !Ref NLBSecurityGroup
+      # This may need to be adjusted if the container takes a while to start up
+      HealthCheckGracePeriodSeconds: 60
+      LoadBalancers:
+        - ContainerName: fe
+          ContainerPort: 443
+          TargetGroupArn: !Ref NLBTargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt DiscoveryService.Arn
+          Port: !Ref ContainerPort
+  PublicNetworkLoadBalancer:
+    Metadata:
+      'aws:copilot:description': 'A Network Load Balancer to distribute public traffic to your service'
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Subnets:
+        Fn::Split:
+          - ","
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+      Type: network
+  NLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref NLBTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref PublicNetworkLoadBalancer
+      Port: !Ref NLBPort
+      Protocol: TLS
+      Certificates:
+        - CertificateArn: !Ref NLBCertValidatorAction
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+        
+  NLBTargetGroup:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the network load balancer to your service'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPort: 80
+      Port: 443
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60 # ECS Default is 300; Copilot default is 60.
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  NLBSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your network load balancer to route traffic to service'
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access from the network load balancer to service
+      SecurityGroupIngress:
+        - CidrIp: 10.0.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet
+          FromPort: 443
+          IpProtocol: TCP
+          ToPort: 443
+        - CidrIp: 10.0.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet for health check
+          FromPort: 80
+          IpProtocol: TCP
+          ToPort: 80
+        - CidrIp: 10.1.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet
+          FromPort: 443
+          IpProtocol: TCP
+          ToPort: 443
+        - CidrIp: 10.1.0.0/24
+          Description: Ingress to allow access from Network Load Balancer subnet for health check
+          FromPort: 80
+          IpProtocol: TCP
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
+      VpcId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-VpcId"
+  NLBDNSAlias:
+    Metadata:
+      'aws:copilot:description': 'The default alias record for the network load balancer'
+    Type: AWS::Route53::RecordSetGroup
+    Condition: HasAssociatedDomain
+    Properties:
+      HostedZoneId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
+      Comment: !Sub "Default NetworkLoadBalancer alias for service ${WorkloadName}"
+      RecordSets:
+        - Name: !Join
+            - '.'
+            - - !Sub "${WorkloadName}-nlb"
+              - Fn::ImportValue: !Sub "${AppName}-${EnvName}-SubDomain"
+              - ""
+          Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt PublicNetworkLoadBalancer.CanonicalHostedZoneID
+            DNSName: !GetAtt PublicNetworkLoadBalancer.DNSName
+  NLBCertValidatorAction:
+    Metadata:
+      'aws:copilot:description': "Request and validate the certificate for your Network Load Balancer"
+    Type: Custom::NLBCertValidatorFunction
+    Condition: HasAssociatedDomain
+    Properties:
+      ServiceToken: !GetAtt NLBCertValidatorFunction.Arn
+      LoadBalancerDNS: !GetAtt PublicNetworkLoadBalancer.DNSName
+      EnvHostedZoneId:
+        Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
+      EnvName: !Ref EnvName
+      AppName: !Ref AppName
+      ServiceName: !Ref WorkloadName
+      RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
+      DomainName: example.com
+      Aliases: []
+  NLBCertValidatorFunction:
+    Type: AWS::Lambda::Function
+    Condition: HasAssociatedDomain
+    Properties:
+      Code:
+        ZipFile: |
+          const AWS=require("aws-sdk"),CRYPTO=require("crypto"),ATTEMPTS_VALIDATION_OPTIONS_READY=10,ATTEMPTS_RECORD_SETS_CHANGE=10,DELAY_RECORD_SETS_CHANGE_IN_S=30,ATTEMPTS_CERTIFICATE_VALIDATED=19,ATTEMPTS_CERTIFICATE_NOT_IN_USE=12,DELAY_CERTIFICATE_VALIDATED_IN_S=30;let envHostedZoneID,appName,envName,serviceName,certificateDomain,domainTypes,rootDNSRole,domainName,defaultSleep=function(a){return new Promise(b=>setTimeout(b,a))},sleep=defaultSleep,random=Math.random;const appRoute53Context=()=>{let a;return()=>(a||(a=new AWS.Route53({credentials:new AWS.ChainableTemporaryCredentials({params:{RoleArn:rootDNSRole},masterCredentials:new AWS.EnvironmentCredentials("AWS")})})),a)},envRoute53Context=()=>{let a;return()=>(a||(a=new AWS.Route53),a)},acmContext=()=>{let a;return()=>(a||(a=new AWS.ACM),a)},resourceGroupsTaggingAPIContext=()=>{let a;return()=>(a||(a=new AWS.ResourceGroupsTaggingAPI),a)},clients={app:{route53:appRoute53Context()},root:{route53:appRoute53Context()},env:{route53:envRoute53Context()},acm:acmContext(),resourceGroupsTaggingAPI:resourceGroupsTaggingAPIContext()},appHostedZoneIDContext=()=>{let a;return async()=>(a||(a=await hostedZoneIDByName(`${appName}.${domainName}`)),a)},rootHostedZoneIDContext=()=>{let a;return async()=>(a||(a=await hostedZoneIDByName(`${domainName}`)),a)};let hostedZoneID={app:appHostedZoneIDContext(),root:rootHostedZoneIDContext()};function report(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");let k=`${f} (Log: ${b.logGroupName}/${b.logStreamName})`,l=JSON.stringify({Status:c,Reason:k,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const m=new j(a.ResponseURL),n={hostname:m.hostname,port:443,path:m.pathname+m.search,method:"PUT",headers:{"Content-Type":"","Content-Length":l.length}};i.request(n).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(l,"utf8")})}exports.handler=async function(a,b){const c=a.ResourceProperties;let{LoadBalancerDNS:d}=c;const e=new Set(c.Aliases);envHostedZoneID=c.EnvHostedZoneId,envName=c.EnvName,appName=c.AppName,serviceName=c.ServiceName,domainName=c.DomainName,rootDNSRole=c.RootDNSRole,certificateDomain=`${serviceName}-nlb.${envName}.${appName}.${domainName}`,domainTypes={EnvDomainZone:{regex:new RegExp(`^([^\.]+\.)?${envName}.${appName}.${domainName}`),domain:`${envName}.${appName}.${domainName}`},AppDomainZone:{regex:new RegExp(`^([^\.]+\.)?${appName}.${domainName}`),domain:`${appName}.${domainName}`},RootDomainZone:{regex:new RegExp(`^([^\.]+\.)?${domainName}`),domain:`${domainName}`}};let f=[...e].sort().join(","),g=a.PhysicalResourceId,h=async function(){switch(a.RequestType){case"Update":let b=new Set(a.OldResourceProperties.Aliases),c=[...b].sort().join(",");if(c===f)break;case"Create":await validateAliases(e,d);const h=await requestCertificate({aliases:e,idempotencyToken:CRYPTO.createHash("md5").update(`/${serviceName}/${f}`).digest("hex")});g=h;const i=await waitForValidationOptionsToBeReady(h,e);await validate(h,i);break;case"Delete":if(!g||!g.startsWith("arn:"))break;let j=await unusedValidationOptions(g,d);await devalidate(j),await deleteCertificate(g);break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}};try{await Promise.race([exports.deadlineExpired(),h()]),await report(a,b,"SUCCESS",g)}catch(c){console.log(`Caught error for service ${serviceName}: ${c.message}`),await report(a,b,"FAILED",g,null,c.message)}};async function deleteCertificate(a){let b;for(b=0;b<ATTEMPTS_CERTIFICATE_NOT_IN_USE;b++){let b;try{({Certificate:b}=await clients.acm().describeCertificate({CertificateArn:a}).promise())}catch(a){if("ResourceNotFoundException"===a.name)return;throw a}if(!b.InUseBy||0>=b.InUseBy.length)break;await sleep(3e4)}if(b>=ATTEMPTS_CERTIFICATE_NOT_IN_USE)throw new Error(`Certificate still in use after checking for ${ATTEMPTS_CERTIFICATE_NOT_IN_USE} attempts.`);await clients.acm().deleteCertificate({CertificateArn:a}).promise().catch(a=>{if("ResourceNotFoundException"!==a.name)throw a})}async function validateAliases(a,b){let c=[];for(let d of a){let{hostedZoneID:a,route53Client:e}=await domainResources(d);const f=e.listResourceRecordSets({HostedZoneId:a,MaxItems:"1",StartRecordName:d,StartRecordType:"A"}).promise().then(({ResourceRecordSets:a})=>{if(targetRecordExists(d,a)&&"A"===a[0].Type){let c=a[0].AliasTarget;if(!(c&&`${b.toLowerCase()}.`===c.DNSName.toLowerCase())){if(c)throw new Error(`Alias ${d} is already in use by ${c.DNSName}. This could be another load balancer of a different service.`);throw new Error(`Alias ${d} is already in use`)}}});c.push(f)}await Promise.all(c)}async function requestCertificate({aliases:a,idempotencyToken:b}){const{CertificateArn:c}=await clients.acm().requestCertificate({DomainName:certificateDomain,IdempotencyToken:b,SubjectAlternativeNames:0===a.size?null:[...a],Tags:[{Key:"copilot-application",Value:appName},{Key:"copilot-environment",Value:envName},{Key:"copilot-service",Value:serviceName}],ValidationMethod:"DNS"}).promise();return c}async function waitForValidationOptionsToBeReady(a,b){let c,d=b.size+1;for(c=0;c<ATTEMPTS_VALIDATION_OPTIONS_READY;c++){let e=0;const{Certificate:f}=await clients.acm().describeCertificate({CertificateArn:a}).promise(),g=f.DomainValidationOptions||[];if(g.forEach(a=>{a.ResourceRecord&&(b.has(a.DomainName)||a.DomainName.toLowerCase()===certificateDomain.toLowerCase())&&e++}),e===d)return g;const h=Math.pow(2,c);await sleep(50*(random()*h)+150*h)}throw new Error(`resource validation records are not ready after ${c} tries`)}async function validate(a,b){let c=[];for(let d of b)c.push(validateOption(d));await Promise.all(c),await clients.acm().waitFor("certificateValidated",{$waiter:{delay:DELAY_CERTIFICATE_VALIDATED_IN_S,maxAttempts:ATTEMPTS_CERTIFICATE_VALIDATED},CertificateArn:a}).promise()}async function validateOption(a){let b=[{Action:"UPSERT",ResourceRecordSet:{Name:a.ResourceRecord.Name,Type:a.ResourceRecord.Type,TTL:60,ResourceRecords:[{Value:a.ResourceRecord.Value}]}}],{hostedZoneID:c,route53Client:d}=await domainResources(a.DomainName),{ChangeInfo:e}=await d.changeResourceRecordSets({ChangeBatch:{Comment:`Validate the certificate for the alias ${a.DomainName}`,Changes:b},HostedZoneId:c}).promise();await d.waitFor("resourceRecordSetsChanged",{$waiter:{delay:DELAY_RECORD_SETS_CHANGE_IN_S,maxAttempts:ATTEMPTS_RECORD_SETS_CHANGE},Id:e.Id}).promise()}async function unusedValidationOptions(a,b){const c=await serviceCertificates(),{certOwned:d,otherCerts:e}=categorizeCertificates(c,a);if(!d)return new Set;let f=await unusedOptionsByService(d,e),g=[];for(const c of f){const a=c.DomainName;let d;try{({route53Client:d}=await domainResources(a))}catch(a){if(!a instanceof UnrecognizedDomainTypeError)throw a}const e=inUseByOtherServices(b,a,d).then(a=>{a&&f.delete(c)});g.push(e)}return await Promise.all(g),f}async function devalidate(a){let b=[];for(let c of a)b.push(devalidateOption(c));await Promise.all(b)}async function devalidateOption(a){let b,c=[{Action:"DELETE",ResourceRecordSet:{Name:a.ResourceRecord.Name,Type:a.ResourceRecord.Type,TTL:60,ResourceRecords:[{Value:a.ResourceRecord.Value}]}}],{hostedZoneID:d,route53Client:e}=await domainResources(a.DomainName),f={ChangeBatch:{Comment:`Delete the validation record for ${a.DomainName}`,Changes:c},HostedZoneId:d};try{({ChangeInfo:b}=await e.changeResourceRecordSets(f).promise())}catch(b){let c=/.*Tried to delete resource record set.*but it was not found.*/;if(c.test(b.message))return;throw new Error(`delete record ${a.ResourceRecord.Name}: `+b.message)}await e.waitFor("resourceRecordSetsChanged",{$waiter:{delay:DELAY_RECORD_SETS_CHANGE_IN_S,maxAttempts:ATTEMPTS_RECORD_SETS_CHANGE},Id:b.Id}).promise()}async function serviceCertificates(){let{ResourceTagMappingList:a}=await clients.resourceGroupsTaggingAPI().getResources({TagFilters:[{Key:"copilot-application",Values:[appName]},{Key:"copilot-environment",Values:[envName]},{Key:"copilot-service",Values:[serviceName]}],ResourceTypeFilters:["acm:certificate"]}).promise(),b=[],c=[];for(const{ResourceARN:d}of a){let a=clients.acm().describeCertificate({CertificateArn:d}).promise().then(({Certificate:a})=>{b.push(a)});c.push(a)}return await Promise.all(c),b}async function unusedOptionsByService(a,b){let c=new Map;for(const d of a.DomainValidationOptions)d.ResourceRecord&&c.set(JSON.stringify(d.ResourceRecord),d);for(const{DomainValidationOptions:d}of b)for(const a of d)a.ResourceRecord&&c.delete(JSON.stringify(a.ResourceRecord));let d=new Set;for(const e of c.values())d.add(e);return d}async function inUseByOtherServices(a,b,c){let d;try{({hostedZoneID:d}=await domainResources(b))}catch(a){if(a instanceof UnrecognizedDomainTypeError)return console.log(`Found ${b} in subject alternative names. `+"It does not match any of these patterns: '.<env>.<app>.<domain>'\uFF0C '.<app>.<domain>' or '.<domain>'. This is unexpected. We don't error out as it may not cause any issue."),!0;throw a}const{ResourceRecordSets:e}=await c.listResourceRecordSets({HostedZoneId:d,MaxItems:"1",StartRecordName:b}).promise();if(!targetRecordExists(b,e))return!1;const f=e[0].AliasTarget&&`${a.toLowerCase()}.`===e[0].AliasTarget.DNSName.toLowerCase();return!f}function categorizeCertificates(a,b){let c,d=[];for(const e of a)e.CertificateArn.toLowerCase()===b.toLowerCase()?c=e:d.push(e);return{certOwned:c,otherCerts:d}}function targetRecordExists(a,b){return!!(b&&0!==b.length)&&`${a}.`===b[0].Name}async function hostedZoneIDByName(a){const{HostedZones:b}=await clients.app.route53().listHostedZonesByName({DNSName:a,MaxItems:"1"}).promise();if(!b||0===b.length)throw new Error(`Couldn't find any Hosted Zone with DNS name ${domainName}.`);return b[0].Id.split("/").pop()}async function domainResources(a){if(domainTypes.EnvDomainZone.regex.test(a))return{domain:domainTypes.EnvDomainZone.domain,route53Client:clients.env.route53(),hostedZoneID:envHostedZoneID};if(domainTypes.AppDomainZone.regex.test(a))return{domain:domainTypes.AppDomainZone.domain,route53Client:clients.app.route53(),hostedZoneID:await hostedZoneID.app()};if(domainTypes.RootDomainZone.regex.test(a))return{domain:domainTypes.RootDomainZone.domain,route53Client:clients.root.route53(),hostedZoneID:await hostedZoneID.root()};throw new UnrecognizedDomainTypeError(`unrecognized domain type for ${a}`)}function setEqual(a,b){if(a.size!==b.size)return!1;for(let c of a)if(!b.has(c))return!1;return!0}function UnrecognizedDomainTypeError(a=""){this.message=a}UnrecognizedDomainTypeError.prototype=Object.create(Error.prototype,{constructor:{value:Error,enumerable:!1,writable:!0,configurable:!0}}),exports.deadlineExpired=function(){return new Promise(function(a,b){setTimeout(b,870000,new Error(`Lambda took longer than 14.5 minutes to update custom domain`))})},exports.withSleep=function(a){sleep=a},exports.reset=function(){sleep=defaultSleep},exports.withDeadlineExpired=function(a){exports.deadlineExpired=a},exports.attemptsValidationOptionsReady=ATTEMPTS_VALIDATION_OPTIONS_READY;
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'NLBCertValidatorRole.Arn'
+      Runtime: nodejs12.x
+  NLBCertValidatorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "NLBCertValidatorPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowAssumeRole
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: "*"
+              - Sid: EnvHostedZoneUpdateAndWait
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: !Sub
+                  - arn:${AWS::Partition}:route53:::hostedzone/${EnvHostedZone}
+                  - EnvHostedZone:
+                      Fn::ImportValue: !Sub "${AppName}-${EnvName}-HostedZone"
+              - Sid: EnvHostedZoneRead
+                Effect: Allow
+                Action:
+                  - route53:ListResourceRecordSets
+                  - route53:GetChange
+                Resource: "*"
+              - Sid: ServiceCertificateDelete
+                Effect: Allow
+                Action: acm:DeleteCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: TaggedResourcesRead
+                Effect: Allow
+                Action: tag:GetResources
+                Resource: "*"
+              - Sid: ServiceCertificateCreate
+                Effect: Allow
+                Action:
+                  - acm:RequestCertificate
+                  - acm:AddTagsToCertificate
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
+                    'aws:ResourceTag/copilot-service': !Sub '${WorkloadName}'
+              - Sid: CertificateRead
+                Effect: Allow
+                Action: acm:DescribeCertificate
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack # Needed for #1848
+    DependsOn: EnvControllerAction
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvName
+        Name: !Ref WorkloadName
+      TemplateURL: !Ref AddonsTemplateURL
+Outputs:
+  DiscoveryServiceARN:
+    Description: ARN of the Discovery Service.
+    Value: !GetAtt DiscoveryService.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
+  PublicNetworkLoadBalancerDNSName:
+    Value: !GetAtt PublicNetworkLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerDNSName
