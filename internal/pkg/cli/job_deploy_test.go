@@ -11,7 +11,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -281,8 +280,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				},
 				envUpgradeCmd: m.mockEnvUpgrader,
 
-				targetApp:    &config.Application{},
-				appResources: &stack.AppRegionalResources{},
+				targetApp: &config.Application{},
 			}
 
 			// WHEN

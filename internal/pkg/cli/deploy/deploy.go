@@ -123,7 +123,7 @@ type workloadDeployer struct {
 	app           *config.Application
 	env           *config.Environment
 	imageTag      string
-	s3Bucket      string
+	resources     *stack.AppRegionalResources
 	mft           interface{}
 	workspacePath string
 
@@ -149,7 +149,6 @@ type WorkloadDeployerInput struct {
 	App      *config.Application
 	Env      *config.Environment
 	ImageTag string
-	S3Bucket string
 	Mft      interface{}
 }
 
@@ -179,6 +178,10 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create default session with region %s: %w", in.Env.Region, err)
 	}
+	resources, err := cloudformation.New(defaultSession).GetAppResourcesByRegion(in.App, in.Env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
+	}
 	addonsSvc, err := addon.New(in.Name)
 	if err != nil {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
@@ -206,7 +209,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		app:                in.App,
 		env:                in.Env,
 		imageTag:           in.ImageTag,
-		s3Bucket:           in.S3Bucket,
+		resources:          resources,
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
 		s3Client:           s3.New(envSession),
@@ -381,7 +384,6 @@ type DeployWorkloadInput struct {
 	AddonsURL      string
 	RootUserARN    string
 	Tags           map[string]string
-	ImageRepoURL   string
 	ForceNewUpdate bool
 }
 
@@ -528,7 +530,7 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.s3Bucket,
+	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket,
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
@@ -537,7 +539,7 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 
 func (d *svcDeployer) deploy(in *DeployWorkloadInput, stackConfigOutput svcStackConfigurationOutput) error {
 	cmdRunAt := d.now()
-	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.s3Bucket,
+	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket,
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
@@ -664,9 +666,9 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 		return "", fmt.Errorf("read env file %s: %w", path, err)
 	}
 	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.s3Bucket, s3.MkdirSHA256(path, content), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, s3.MkdirSHA256(path, content), reader)
 	if err != nil {
-		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.s3Bucket, err)
+		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
 	}
 	bucket, key, err := s3.ParseURL(url)
 	if err != nil {
@@ -697,9 +699,9 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
 	reader := strings.NewReader(template)
-	url, err := in.uploader.Upload(d.s3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, d.name), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, d.name), reader)
 	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.s3Bucket, err)
+		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
 	return url, nil
 }
@@ -726,7 +728,7 @@ func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 		EnvFileARN:        in.EnvFileARN,
 		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
-			RepoURL:  in.ImageRepoURL,
+			RepoURL:  d.resources.RepositoryURLs[d.name],
 			ImageTag: d.imageTag,
 			Digest:   in.ImageDigest,
 		},
@@ -839,7 +841,7 @@ func (d *rdwsDeployer) stackConfiguration(in *DeployWorkloadInput) (*rdwsStackCo
 	if urls, err = uploadRDWSCustomResources(&uploadRDWSCustomResourcesInput{
 		customResourceUploader: d.customResourceUploader,
 		s3Uploader:             d.customResourceS3Client,
-		s3Bucket:               d.s3Bucket,
+		s3Bucket:               d.resources.S3Bucket,
 	}); err != nil {
 		return nil, err
 	}

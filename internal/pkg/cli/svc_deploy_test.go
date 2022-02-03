@@ -14,7 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
@@ -288,10 +287,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return &mockWorkloadMft{}, nil
 				},
-				uploadOpts: &uploadCustomResourcesOpts{},
-
-				targetApp:    &config.Application{},
-				appResources: &stack.AppRegionalResources{},
+				targetApp: &config.Application{},
 			}
 
 			// WHEN

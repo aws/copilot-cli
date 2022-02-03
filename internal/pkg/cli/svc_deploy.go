@@ -22,7 +22,6 @@ import (
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -59,15 +58,14 @@ type uploadCustomResourcesOpts struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store            store
-	ws               wsWlDirReader
-	unmarshal        func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator  func(app, env string) interpolator
-	cmd              runner
-	envUpgradeCmd    actionCommand
-	appVersionGetter versionGetter
-	sessProvider     *sessions.Provider
-	newSvcDeployer   func(*deploySvcOpts) (workloadDeployer, error)
+	store           store
+	ws              wsWlDirReader
+	unmarshal       func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator func(app, env string) interpolator
+	cmd             runner
+	envUpgradeCmd   actionCommand
+	sessProvider    *sessions.Provider
+	newSvcDeployer  func(*deploySvcOpts) (workloadDeployer, error)
 
 	spinner progress
 	sel     wsSelector
@@ -78,11 +76,8 @@ type deploySvcOpts struct {
 	targetEnv       *config.Environment
 	svcType         string
 	appliedManifest interface{}
-	appResources    *stack.AppRegionalResources
 	rootUserARN     string
 	deployRecs      clideploy.ActionRecommender
-
-	uploadOpts *uploadCustomResourcesOpts
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -120,7 +115,6 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		App:      o.targetApp,
 		Env:      o.targetEnv,
 		ImageTag: o.imageTag,
-		S3Bucket: o.appResources.S3Bucket,
 		Mft:      o.appliedManifest,
 	}
 	switch t := o.appliedManifest.(type) {
@@ -210,7 +204,6 @@ func (o *deploySvcOpts) Execute() error {
 		AddonsURL:      uploadOut.AddonsURL,
 		RootUserARN:    o.rootUserARN,
 		Tags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
-		ImageRepoURL:   o.appResources.RepositoryURLs[o.name],
 		ForceNewUpdate: o.forceNewUpdate,
 	})
 	if err != nil {
@@ -301,18 +294,6 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.svcType = svc.Type
 
-	// client to retrieve an application's resources created with CloudFormation.
-	defaultSess, err := o.sessProvider.Default()
-	if err != nil {
-		return fmt.Errorf("create default session: %w", err)
-	}
-
-	resources, err := cloudformation.New(defaultSess).GetAppResourcesByRegion(app, env.Region)
-	if err != nil {
-		return fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
-	}
-	o.appResources = resources
-
 	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
 		appName: o.appName,
 		name:    env.Name,
@@ -322,18 +303,18 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.envUpgradeCmd = cmd
 
+	// client to retrieve an application's resources created with CloudFormation.
+	defaultSess, err := o.sessProvider.Default()
+	if err != nil {
+		return fmt.Errorf("create default session: %w", err)
+	}
+
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
 	o.rootUserARN = caller.RootUserARN
-
-	versionGetter, err := describe.NewAppDescriber(o.appName)
-	if err != nil {
-		return fmt.Errorf("new app describer for application %s: %w", o.appName, err)
-	}
-	o.appVersionGetter = versionGetter
 
 	return nil
 }

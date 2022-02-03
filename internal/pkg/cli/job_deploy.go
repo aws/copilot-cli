@@ -16,8 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -42,7 +40,6 @@ type deployJobOpts struct {
 	// cached variables
 	targetApp       *config.Application
 	targetEnv       *config.Environment
-	appResources    *stack.AppRegionalResources
 	appliedManifest interface{}
 	rootUserARN     string
 }
@@ -83,7 +80,6 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 		App:      o.targetApp,
 		Env:      o.targetEnv,
 		ImageTag: o.imageTag,
-		S3Bucket: o.appResources.S3Bucket,
 		Mft:      o.appliedManifest,
 	}
 	switch t := o.appliedManifest.(type) {
@@ -163,7 +159,6 @@ func (o *deployJobOpts) Execute() error {
 		AddonsURL:      uploadOut.AddonsURL,
 		RootUserARN:    o.rootUserARN,
 		Tags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
-		ImageRepoURL:   o.appResources.RepositoryURLs[o.name],
 		ForceNewUpdate: o.forceNewUpdate,
 	}); err != nil {
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
@@ -206,12 +201,6 @@ func (o *deployJobOpts) configureClients() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 	o.rootUserARN = caller.RootUserARN
-
-	resources, err := cloudformation.New(defaultSess).GetAppResourcesByRegion(app, env.Region)
-	if err != nil {
-		return fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
-	}
-	o.appResources = resources
 
 	return nil
 }

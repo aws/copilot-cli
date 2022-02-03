@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -80,6 +81,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		mockEnvFileS3URL    = "https://stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf.s3.us-west-2.amazonaws.com/manual/1638391936/env"
 		mockEnvFileS3ARN    = "arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env"
 	)
+	mockResources := &stack.AppRegionalResources{
+		S3Bucket: mockS3Bucket,
+	}
 	mockEnvFilePath := fmt.Sprintf("%s/%s/%s", "manual", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", mockEnvFile)
 	mockError := errors.New("some error")
 	tests := map[string]struct {
@@ -221,7 +225,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				app: &config.Application{
 					Name: mockAppName,
 				},
-				s3Bucket:      mockS3Bucket,
+				resources:     mockResources,
 				imageTag:      mockImageTag,
 				workspacePath: mockWorkspacePath,
 				mft: &mockWorkloadMft{
@@ -258,6 +262,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		mockAddonsURL = "mockAddonsURL"
 		mockS3Bucket  = "mockBucket"
 	)
+	mockResources := &stack.AppRegionalResources{
+		S3Bucket: mockS3Bucket,
+	}
 	mockNowTime := time.Unix(1494505750, 0)
 	mockBeforeTime := time.Unix(1494505743, 0)
 	mockAfterTime := time.Unix(1494505756, 0)
@@ -568,7 +575,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						name:           mockName,
 						app:            tc.inApp,
 						env:            tc.inEnvironment,
-						s3Bucket:       mockS3Bucket,
+						resources:      mockResources,
 						deployer:       m.mockServiceDeployer,
 						endpointGetter: m.mockEndpointGetter,
 						spinner:        m.mockSpinner,
@@ -633,6 +640,9 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 		mockAddonsURL = "mockAddonsURL"
 		mockBucket    = "mockBucket"
 	)
+	mockResources := &stack.AppRegionalResources{
+		S3Bucket: mockBucket,
+	}
 	tests := map[string]struct {
 		inAlias       string
 		inApp         *config.Application
@@ -783,7 +793,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						name:           mockName,
 						app:            tc.inApp,
 						env:            tc.inEnvironment,
-						s3Bucket:       mockBucket,
+						resources:      mockResources,
 						endpointGetter: m.mockEndpointGetter,
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
@@ -833,6 +843,9 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 		mockName    = "mockwkld"
 		mockBucket  = "mockBucket"
 	)
+	mockResources := &stack.AppRegionalResources{
+		S3Bucket: mockBucket,
+	}
 	mockTopics := []manifest.TopicSubscription{
 		{
 			Name:    aws.String("givesdogs"),
@@ -900,7 +913,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 						name:           mockName,
 						app:            tc.inApp,
 						env:            tc.inEnvironment,
-						s3Bucket:       mockBucket,
+						resources:      mockResources,
 						endpointGetter: m.mockEndpointGetter,
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
