@@ -44,7 +44,7 @@ Suppose you have a Secrets Manager secret with the following configuration:
 | Field  | Value                                                                                                                                                                 |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Name   | `demo/test/mysql`                                                                                                                                                     |
-| ARN    | `arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL `                                                                                        |
+| ARN    | `arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL`                                                                                        |
 | Value  | `{"engine": "mysql","username": "user1","password": "i29wwX!%9wFV","host": "my-database-endpoint.us-east-1.rds.amazonaws.com","dbname": "myDatabase","port": "3306"`} |
 | Tags   | `copilot-application=demo`, `copilot-environment=test` |
 
