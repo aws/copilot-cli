@@ -516,8 +516,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 						Logging: Logging{
-							SecretOptions: map[string]string{
-								"FOO": "BAR",
+							SecretOptions: map[string]Secret{
+								"FOO": {from: aws.String("BAR")},
 							},
 						},
 						Network: NetworkConfig{
@@ -609,8 +609,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
-						SecretOptions: map[string]string{
-							"FOO": "BAR",
+						SecretOptions: map[string]Secret{
+							"FOO": {from: aws.String("BAR")},
 						},
 					},
 					Network: NetworkConfig{

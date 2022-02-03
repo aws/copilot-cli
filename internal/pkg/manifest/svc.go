@@ -265,11 +265,7 @@ func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
 	return int(v), nil
 }
 
-// ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
-func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
-	return dockerfileBuildRequired("service", svc)
-}
-
+// IsTypeAService returns if manifest type is service.
 func IsTypeAService(t string) bool {
 	for _, serviceType := range ServiceTypes() {
 		if t == serviceType {

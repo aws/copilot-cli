@@ -187,7 +187,8 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/repository/mocks/mock_repository.go -source=./internal/pkg/repository/repository.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/logging/mocks/mock_service.go -source=./internal/pkg/logging/service.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/logging/mocks/mock_task.go -source=./internal/pkg/logging/task.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/list/mocks/mock_list.go -source=./internal/pkg/list/list.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/list/mocks/mock_list.go -source=./internal/pkg/cli/list/list.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_deploy.go -source=./internal/pkg/cli/deploy/deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/apprunner/apprunner.go
