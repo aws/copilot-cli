@@ -45,6 +45,7 @@ const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connec
 
 type deployPipelineVars struct {
 	appName          string
+	name			 string
 	skipConfirmation bool
 }
 
@@ -60,7 +61,6 @@ type deployPipelineOpts struct {
 	ws               wsPipelineReader
 	codestar         codestar
 
-	pipelineName                 string
 	shouldPromptUpdateConnection bool
 }
 
@@ -100,6 +100,11 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
+	if o.name != "" {
+		if err := o.validatePipelineName(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -114,7 +119,7 @@ func (o *deployPipelineOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, color.HighlightUserInput(o.appName)))
 
-	// read pipeline manifest
+	// Read pipeline manifest.
 	data, err := o.ws.ReadPipelineManifest()
 	if err != nil {
 		return fmt.Errorf("read pipeline manifest: %w", err)
@@ -123,10 +128,13 @@ func (o *deployPipelineOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
-	if len(pipeline.Name) > 100 {
-		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, pipeline.Name)
+	// Set pipeline name if not passed in with flag.
+	if o.name == "" {
+		if len(pipeline.Name) > 100 {
+			return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, pipeline.Name)
+		}
 	}
-	o.pipelineName = pipeline.Name
+	o.name = pipeline.Name
 
 	// If the source has an existing connection, get the correlating ConnectionARN .
 	connection, ok := pipeline.Source.Properties["connection_name"]
@@ -170,6 +178,22 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 
+	return nil
+}
+
+func (o *deployPipelineOpts) validatePipelineName() error {
+	// TODO: After pipeline file structure changes, validate with o.ws.ListPipelines() instead.
+	data, err := o.ws.ReadPipelineManifest()
+	if err != nil {
+		return fmt.Errorf("read pipeline manifest: %w", err)
+	}
+	pipeline, err := manifest.UnmarshalPipeline(data)
+	if err != nil {
+		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	}
+	if pipeline.Name != o.name {
+		return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
+	}
 	return nil
 }
 
@@ -233,7 +257,7 @@ func (o *deployPipelineOpts) shouldUpdate() (bool, error) {
 		return true, nil
 	}
 
-	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.pipelineName), "")
+	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.name), "")
 	if err != nil {
 		return false, fmt.Errorf("prompt for pipeline deploy: %w", err)
 	}
@@ -252,7 +276,7 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("get bucket name: %w", err)
 	}
 	if !exist {
-		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.pipelineName)))
+		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.name)))
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
@@ -273,11 +297,11 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		if err := o.pipelineDeployer.CreatePipeline(in, bucketName); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
-				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.pipelineName)))
+				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.name)))
 				return fmt.Errorf("create pipeline: %w", err)
 			}
 		}
-		o.prog.Stop(log.Ssuccessf(fmtPipelineDeployComplete, color.HighlightUserInput(o.pipelineName)))
+		o.prog.Stop(log.Ssuccessf(fmtPipelineDeployComplete, color.HighlightUserInput(o.name)))
 		return nil
 	}
 
@@ -289,12 +313,12 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	if !shouldUpdate {
 		return nil
 	}
-	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipelineName)))
+	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.name)))
 	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipelineName)))
+		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.name)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, color.HighlightUserInput(o.pipelineName)))
+	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, color.HighlightUserInput(o.name)))
 	return nil
 }
 
@@ -338,6 +362,7 @@ func buildPipelineDeployCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }
