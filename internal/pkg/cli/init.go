@@ -170,6 +170,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		newSvcDeployer:  newSvcDeployer,
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
@@ -184,6 +185,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sel:             sel,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		newJobDeployer:  newJobDeployer,
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()
