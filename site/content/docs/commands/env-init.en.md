@@ -48,7 +48,7 @@ Creates a test environment using your "default" AWS profile and default configur
 $ copilot env init --name test --profile default --default-config
 ```
 
-Creates a prod-iad environment using your "prod-admin" AWS profile and enables container insights.
+Creates a prod-iad environment using your "prod-admin" AWS profile and enables CloudWatch Container Insights.
 ```bash
 $ copilot env init --name prod-iad --profile prod-admin --container-insights 
 ```
