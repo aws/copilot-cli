@@ -33,14 +33,14 @@ version: 1
 `
 	)
 	testCases := map[string]struct {
-		inAppName string
+		inAppName      string
 		inPipelineName string
-		mockWs func(m *mocks.MockwsPipelineReader)
+		mockWs         func(m *mocks.MockwsPipelineReader)
 
 		wantedError error
 	}{
 		"pipeline doesn't exist": {
-			inAppName: "app",
+			inAppName:      "app",
 			inPipelineName: "nonexistentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
@@ -50,7 +50,7 @@ version: 1
 			wantedError: errors.New("pipeline nonexistentPipeline not found in the workspace"),
 		},
 		"success": {
-			inAppName: "app",
+			inAppName:      "app",
 			inPipelineName: "existentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
@@ -73,7 +73,7 @@ version: 1
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
 				},
-				ws:    mockWs,
+				ws: mockWs,
 			}
 
 			// WHEN
@@ -566,7 +566,7 @@ stages:
 			opts := &deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
-					name: tc.inPipelineName,
+					name:    tc.inPipelineName,
 				},
 				pipelineDeployer: mockPipelineDeployer,
 				ws:               mockWorkspace,

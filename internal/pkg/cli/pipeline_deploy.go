@@ -45,7 +45,7 @@ const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connec
 
 type deployPipelineVars struct {
 	appName          string
-	name			 string
+	name             string
 	skipConfirmation bool
 }
 
