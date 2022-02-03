@@ -49,20 +49,18 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
+	defaultBranch         = deploy.DefaultPipelineBranch
 	// For a GitHub repository.
-	githubURL       = "github.com"
-	defaultGHBranch = deploy.DefaultPipelineBranch
-	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
-	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
+	githubURL     = "github.com"
+	fmtGHRepoURL  = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
+	fmtSecretName = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
-	awsURL          = "aws.amazon.com"
-	ccIdentifier    = "codecommit"
-	defaultCCBranch = deploy.DefaultPipelineBranch
-	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
+	awsURL       = "aws.amazon.com"
+	ccIdentifier = "codecommit"
+	fmtCCRepoURL = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
-	bbURL           = "bitbucket.org"
-	defaultBBBranch = deploy.DefaultPipelineBranch
-	fmtBBRepoURL    = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
+	bbURL        = "bitbucket.org"
+	fmtBBRepoURL = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
 )
 
 var (
@@ -189,6 +187,10 @@ func (o *initPipelineOpts) Ask() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
+	if o.repoBranch == "" {
+		o.getBranch()
+	}
+
 	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
@@ -283,10 +285,24 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.repoOwner = repoDetails.owner
 
-	if o.repoBranch == "" {
-		o.repoBranch = defaultGHBranch
-	}
 	return nil
+}
+
+// getBranch fetches the user's current branch as a best-guess of which branch they want their pipeline to follow. If err, insert default branch name.
+func (o *initPipelineOpts) getBranch() {
+	// Fetches local git branch.
+	err := o.runner.Run("git", []string{"rev-parse", "--abbrev-ref", "HEAD"}, exec.Stdout(&o.buffer))
+	o.repoBranch = strings.TrimSpace(o.buffer.String())
+	if err != nil {
+		o.repoBranch = defaultBranch
+	}
+	if strings.TrimSpace(o.buffer.String()) == "" {
+		o.repoBranch = defaultBranch
+	}
+	o.buffer.Reset()
+	log.Infof(`Your pipeline will follow branch '%s'.
+You may make changes in the pipeline manifest before deployment.
+`, color.HighlightUserInput(o.repoBranch))
 }
 
 func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
@@ -311,9 +327,6 @@ func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
 		return fmt.Errorf("repository %s is in %s, but app %s is in %s; they must be in the same region", o.repoName, o.ccRegion, o.appName, region)
 	}
 
-	if o.repoBranch == "" {
-		o.repoBranch = defaultCCBranch
-	}
 	return nil
 }
 
@@ -326,9 +339,6 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.repoOwner = repoDetails.owner
 
-	if o.repoBranch == "" {
-		o.repoBranch = defaultBBBranch
-	}
 	return nil
 }
 
@@ -344,6 +354,15 @@ func (o *initPipelineOpts) selectURL() error {
 	}
 	o.buffer.Reset()
 
+	// If there is only one returned URL, set it rather than prompt to select.
+	if len(urls) == 1 {
+		log.Infof(`Only one git repository detected. Your pipeline will follow '%s'.
+You may make changes in the generated pipeline manifest before deployment.
+`, color.HighlightUserInput(urls[0]))
+		o.repoURL = urls[0]
+		return nil
+	}
+
 	// Prompts user to select a repo URL.
 	url, err := o.prompt.SelectOne(
 		pipelineSelectURLPrompt,
@@ -353,9 +372,6 @@ func (o *initPipelineOpts) selectURL() error {
 	)
 	if err != nil {
 		return fmt.Errorf("select URL: %w", err)
-	}
-	if err := o.validateURL(url); err != nil {
-		return err
 	}
 	o.repoURL = url
 

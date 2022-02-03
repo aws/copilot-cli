@@ -55,6 +55,8 @@ This won't create your pipeline, but it will create some local files that will b
 
 * __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
 
+* __Tracking branch__: After you've selected the repository, Copilot will designate your current local branch as the branch your pipeline will follow. This can be changed in Step 2.
+
 ### Step 2: Updating the Pipeline manifest (optional)
 
 Just like your service has a simple manifest file, so does your pipeline. After you run `pipeline init`, two files are created: `pipeline.yml` and `buildspec.yml`, both in your `copilot/` directory. If you poke in, you'll see that the `pipeline.yml` looks something like this (for a service called "api-frontend" with two environments, "test" and "prod"):

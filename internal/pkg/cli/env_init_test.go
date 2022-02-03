@@ -1092,8 +1092,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Telemetry: &config.Telemetry{
 						EnableContainerInsights: false,
 					},
-					Version: deploy.LatestEnvTemplateVersion,
-          ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
+					Version:              deploy.LatestEnvTemplateVersion,
+					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
 					ArtifactBucketKeyARN: "mockKMS",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{

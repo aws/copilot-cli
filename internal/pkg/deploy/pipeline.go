@@ -24,7 +24,7 @@ const (
 	fmtErrMissingProperty    = "missing `%s` in properties"
 	fmtErrPropertyNotAString = "property `%s` is not a string"
 
-	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
 )
 
@@ -68,7 +68,7 @@ type CreatePipelineInput struct {
 // to build and test Docker image.
 type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
-	Image string
+	Image           string
 	EnvironmentType string
 }
 
@@ -244,11 +244,11 @@ func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
 	if mfBuild != nil && mfBuild.Image != "" {
 		image = mfBuild.Image
 	}
-	if strings.Contains(image, "aarch64")  {
+	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
-	} 
+	}
 	return &Build{
-		Image: image,
+		Image:           image,
 		EnvironmentType: environmentType,
 	}
 }

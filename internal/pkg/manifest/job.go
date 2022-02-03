@@ -143,11 +143,6 @@ func (j *ScheduledJob) EnvFile() string {
 	return aws.StringValue(j.TaskConfig.EnvFile)
 }
 
-// JobDockerfileBuildRequired returns if the job container image should be built from local Dockerfile.
-func JobDockerfileBuildRequired(job interface{}) (bool, error) {
-	return dockerfileBuildRequired("job", job)
-}
-
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
 func newDefaultScheduledJob() *ScheduledJob {
 	return &ScheduledJob{
