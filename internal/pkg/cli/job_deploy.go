@@ -5,20 +5,13 @@ package cli
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -27,7 +20,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -36,24 +28,16 @@ import (
 type deployJobOpts struct {
 	deployWkldVars
 
-	store              store
-	ws                 wsWlDirReader
-	fs                 *afero.Afero
-	unmarshal          func(in []byte) (manifest.WorkloadManifest, error)
-	newInterpolator    func(app, env string) interpolator
-	cmd                runner
-	addons             templater
-	jobCFN             cloudformation.CloudFormation
-	imageBuilderPusher imageBuilderPusher
-	sessProvider       sessionProvider
-	s3                 uploader
-	envUpgradeCmd      actionCommand
-	endpointGetter     endpointGetter
-	newJobDeployer     func(*deployJobOpts) (workloadDeployer, error)
+	store           store
+	ws              wsWlDirReader
+	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
+	newInterpolator func(app, env string) interpolator
+	cmd             runner
+	sessProvider    sessionProvider
+	envUpgradeCmd   actionCommand
+	newJobDeployer  func(*deployJobOpts) (workloadDeployer, error)
 
-	spinner progress
-	sel     wsSelector
-	prompt  prompter
+	sel wsSelector
 
 	// cached variables
 	targetApp       *config.Application
@@ -82,29 +66,36 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 
 		store:           store,
 		ws:              ws,
-		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		unmarshal:       manifest.UnmarshalWorkload,
-		spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:          prompter,
-		cmd:             exec.NewCmd(),
 		sessProvider:    sessions.NewProvider(),
 		newInterpolator: newManifestInterpolator,
-		newJobDeployer: func(o *deployJobOpts) (workloadDeployer, error) {
-			deployer, err := clideploy.NewWorkloadDeployer(&clideploy.WorkloadDeployerInput{
-				Name:     o.name,
-				App:      o.targetApp,
-				Env:      o.targetEnv,
-				ImageTag: o.imageTag,
-				S3Bucket: o.appResources.S3Bucket,
-				Mft:      o.appliedManifest,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("initiate workload deployer: %w", err)
-			}
-			return deployer, nil
-		},
+		cmd:             exec.NewCmd(),
+		newJobDeployer:  newJobDeployer,
 	}, nil
+}
+
+func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
+	var err error
+	var deployer workloadDeployer
+	in := clideploy.WorkloadDeployerInput{
+		Name:     o.name,
+		App:      o.targetApp,
+		Env:      o.targetEnv,
+		ImageTag: o.imageTag,
+		S3Bucket: o.appResources.S3Bucket,
+		Mft:      o.appliedManifest,
+	}
+	switch t := o.appliedManifest.(type) {
+	case *manifest.ScheduledJob:
+		deployer, err = clideploy.NewJobDeployer(&in)
+	default:
+		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("initiate workload deployer: %w", err)
+	}
+	return deployer, nil
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -162,32 +153,22 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	uploadOut, err := deployer.UploadArtifacts(&clideploy.UploadArtifactsInput{
-		FS:                 o.fs,
-		Uploader:           o.s3,
-		Templater:          o.addons,
-		ImageBuilderPusher: o.imageBuilderPusher,
-	})
+	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
 	if _, err = deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
-		ImageDigest:     uploadOut.ImageDigest,
-		EnvFileARN:      uploadOut.EnvFileARN,
-		AddonsURL:       uploadOut.AddonsURL,
-		RootUserARN:     o.rootUserARN,
-		Tags:            tags.Merge(o.targetApp.Tags, o.resourceTags),
-		ImageRepoURL:    o.appResources.RepositoryURLs[o.name],
-		ForceNewUpdate:  o.forceNewUpdate,
-		S3Uploader:      o.s3,
-		ServiceDeployer: o.jobCFN,
-		EndpointGetter:  o.endpointGetter,
-		Spinner:         o.spinner,
-		Now:             time.Now,
+		ImageDigest:    uploadOut.ImageDigest,
+		EnvFileARN:     uploadOut.EnvFileARN,
+		AddonsURL:      uploadOut.AddonsURL,
+		RootUserARN:    o.rootUserARN,
+		Tags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
+		ImageRepoURL:   o.appResources.RepositoryURLs[o.name],
+		ForceNewUpdate: o.forceNewUpdate,
 	}); err != nil {
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
 	}
-
+	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }
 
@@ -203,43 +184,6 @@ func (o *deployJobOpts) configureClients() error {
 		return err
 	}
 	o.targetApp = app
-
-	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(env.Region)
-	if err != nil {
-		return fmt.Errorf("create ECR session with region %s: %w", env.Region, err)
-	}
-
-	envSession, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
-	if err != nil {
-		return fmt.Errorf("assuming environment manager role: %w", err)
-	}
-
-	// ECR client against tools account profile AND target environment region
-	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
-	registry := ecr.New(defaultSessEnvRegion)
-	o.imageBuilderPusher, err = repository.New(repoName, registry)
-	if err != nil {
-		return fmt.Errorf("initiate image builder pusher: %w", err)
-	}
-
-	o.s3 = s3.New(envSession)
-
-	// CF client against env account profile AND target environment region
-	o.jobCFN = cloudformation.New(envSession)
-	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-		App:         o.appName,
-		Env:         o.envName,
-		ConfigStore: o.store,
-	})
-	if err != nil {
-		return fmt.Errorf("initiate environment describer: %w", err)
-	}
-
-	addonsSvc, err := addon.New(o.name)
-	if err != nil {
-		return fmt.Errorf("initiate addons service: %w", err)
-	}
-	o.addons = addonsSvc
 
 	// client to retrieve an application's resources created with CloudFormation
 	defaultSess, err := o.sessProvider.Default()

@@ -164,14 +164,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:           ssm,
 		prompt:          prompt,
 		ws:              ws,
-		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		newInterpolator: newManifestInterpolator,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,
 		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
-		snsTopicGetter:  deployStore,
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
@@ -180,13 +178,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			appName:  vars.appName,
 		},
 		store:           ssm,
-		prompt:          prompt,
 		ws:              ws,
-		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		newInterpolator: newManifestInterpolator,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,
-		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
 	}

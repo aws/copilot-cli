@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -20,7 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -53,10 +51,6 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	deployStore, err := deploy.NewStore(store)
-	if err != nil {
-		return nil, fmt.Errorf("new deploy store: %w", err)
-	}
 	prompter := prompt.New()
 	return &deployOpts{
 		deployWkldVars: vars,
@@ -73,14 +67,12 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 
 					store:           o.store,
 					ws:              o.ws,
-					fs:              &afero.Afero{Fs: afero.NewOsFs()},
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
-					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
 					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
-					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessions.NewProvider(),
+					newJobDeployer:  newJobDeployer,
 				}
 			case contains(workloadType, manifest.ServiceTypes()):
 				opts := &deploySvcOpts{
@@ -88,7 +80,6 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 
 					store:           o.store,
 					ws:              o.ws,
-					fs:              &afero.Afero{Fs: afero.NewOsFs()},
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
@@ -96,7 +87,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessions.NewProvider(),
-					snsTopicGetter:  deployStore,
+					newSvcDeployer:  newSvcDeployer,
 				}
 				o.deployWkld = opts
 			}

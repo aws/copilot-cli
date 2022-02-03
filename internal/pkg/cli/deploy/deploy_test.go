@@ -29,18 +29,17 @@ import (
 )
 
 type deployMocks struct {
-	mockImageBuilderPusher      *mocks.MockImageBuilderPusher
-	mockCustomResourcesUploader *mocks.MockCustomResourcesUploader
-	mockEndpointGetter          *mocks.MockEndpointGetter
-	mockProgress                *mocks.MockProgress
-	mockPublicCIDRBlocksGetter  *mocks.MockPublicCIDRBlocksGetter
-	mockSNSTopicsLister         *mocks.MockSNSTopicsLister
-	mockServiceDeployer         *mocks.MockServiceDeployer
-	mockServiceForceUpdater     *mocks.MockServiceForceUpdater
-	mockTemplater               *mocks.MockTemplater
-	mockUploader                *mocks.MockUploader
-	mockVersionGetter           *mocks.MockVersionGetter
-	mockFileReader              *mocks.MockfileReader
+	mockImageBuilderPusher     *mocks.MockimageBuilderPusher
+	mockEndpointGetter         *mocks.MockendpointGetter
+	mockSpinner                *mocks.Mockspinner
+	mockPublicCIDRBlocksGetter *mocks.MockpublicCIDRBlocksGetter
+	mockSNSTopicsLister        *mocks.MocksnsTopicsLister
+	mockServiceDeployer        *mocks.MockserviceDeployer
+	mockServiceForceUpdater    *mocks.MockserviceForceUpdater
+	mockTemplater              *mocks.Mocktemplater
+	mockUploader               *mocks.Mockuploader
+	mockVersionGetter          *mocks.MockversionGetter
+	mockFileReader             *mocks.MockfileReader
 }
 
 type mockWorkloadMft struct {
@@ -206,9 +205,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:           mocks.NewMockUploader(ctrl),
-				mockTemplater:          mocks.NewMockTemplater(ctrl),
-				mockImageBuilderPusher: mocks.NewMockImageBuilderPusher(ctrl),
+				mockUploader:           mocks.NewMockuploader(ctrl),
+				mockTemplater:          mocks.NewMocktemplater(ctrl),
+				mockImageBuilderPusher: mocks.NewMockimageBuilderPusher(ctrl),
 				mockFileReader:         mocks.NewMockfileReader(ctrl),
 			}
 			tc.mock(m)
@@ -229,15 +228,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					fileName:      tc.inEnvFile,
 					buildRequired: tc.inBuildRequired,
 				},
-			}
-			in := UploadArtifactsInput{
-				Templater:          m.mockTemplater,
-				FS:                 m.mockFileReader,
-				Uploader:           m.mockUploader,
-				ImageBuilderPusher: m.mockImageBuilderPusher,
+
+				templater:          m.mockTemplater,
+				fs:                 m.mockFileReader,
+				s3Client:           m.mockUploader,
+				imageBuilderPusher: m.mockImageBuilderPusher,
 			}
 
-			got, gotErr := deployer.UploadArtifacts(&in)
+			got, gotErr := deployer.UploadArtifacts()
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
@@ -475,9 +473,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
-				m.mockProgress.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
+				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
 				m.mockServiceForceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockName).Return(mockError)
-				m.mockProgress.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockName, mockEnvName, mockError))
+				m.mockSpinner.EXPECT().Stop(log.Serrorf(fmtForceUpdateSvcFailed, mockName, mockEnvName, mockError))
 			},
 			wantErr: fmt.Errorf("force an update for service mockWkld: some error"),
 		},
@@ -496,10 +494,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
-				m.mockProgress.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
+				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
 				m.mockServiceForceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockName).
 					Return(&ecs.ErrWaitServiceStableTimeout{})
-				m.mockProgress.EXPECT().Stop(
+				m.mockSpinner.EXPECT().Stop(
 					log.Serror(fmt.Sprintf("%s  Run %s to check for the fail reason.\n",
 						fmt.Sprintf(fmtForceUpdateSvcFailed, mockName, mockEnvName, &ecs.ErrWaitServiceStableTimeout{}),
 						color.HighlightCode(fmt.Sprintf("copilot svc status --name %s --env %s", mockName, mockEnvName)))))
@@ -542,9 +540,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
-				m.mockProgress.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
+				m.mockSpinner.EXPECT().Start(fmt.Sprintf(fmtForceUpdateSvcStart, mockName, mockEnvName))
 				m.mockServiceForceUpdater.EXPECT().ForceUpdateService(mockAppName, mockEnvName, mockName).Return(nil)
-				m.mockProgress.EXPECT().Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, mockName, mockEnvName))
+				m.mockSpinner.EXPECT().Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, mockName, mockEnvName))
 			},
 		},
 	}
@@ -555,22 +553,36 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockVersionGetter:           mocks.NewMockVersionGetter(ctrl),
-				mockEndpointGetter:          mocks.NewMockEndpointGetter(ctrl),
-				mockServiceDeployer:         mocks.NewMockServiceDeployer(ctrl),
-				mockServiceForceUpdater:     mocks.NewMockServiceForceUpdater(ctrl),
-				mockProgress:                mocks.NewMockProgress(ctrl),
-				mockPublicCIDRBlocksGetter:  mocks.NewMockPublicCIDRBlocksGetter(ctrl),
-				mockCustomResourcesUploader: mocks.NewMockCustomResourcesUploader(ctrl),
+				mockVersionGetter:          mocks.NewMockversionGetter(ctrl),
+				mockEndpointGetter:         mocks.NewMockendpointGetter(ctrl),
+				mockServiceDeployer:        mocks.NewMockserviceDeployer(ctrl),
+				mockServiceForceUpdater:    mocks.NewMockserviceForceUpdater(ctrl),
+				mockSpinner:                mocks.NewMockspinner(ctrl),
+				mockPublicCIDRBlocksGetter: mocks.NewMockpublicCIDRBlocksGetter(ctrl),
 			}
 			tc.mock(m)
 
-			deployer := workloadDeployer{
-				name:     mockName,
-				app:      tc.inApp,
-				env:      tc.inEnvironment,
-				s3Bucket: mockS3Bucket,
-				mft: &manifest.LoadBalancedWebService{
+			deployer := lbSvcDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						name:           mockName,
+						app:            tc.inApp,
+						env:            tc.inEnvironment,
+						s3Bucket:       mockS3Bucket,
+						deployer:       m.mockServiceDeployer,
+						endpointGetter: m.mockEndpointGetter,
+						spinner:        m.mockSpinner,
+					},
+					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+						return m.mockServiceForceUpdater
+					},
+					now: func() time.Time {
+						return mockNowTime
+					},
+				},
+				appVersionGetter:       m.mockVersionGetter,
+				publicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
+				lbMft: &manifest.LoadBalancedWebService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),
 					},
@@ -595,19 +607,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 
 			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInput{
-				ForceNewUpdate:  tc.inForceDeploy,
-				ServiceDeployer: m.mockServiceDeployer,
-				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) ServiceForceUpdater {
-					return m.mockServiceForceUpdater
-				},
-				AppVersionGetter:       m.mockVersionGetter,
-				PublicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
-				EndpointGetter:         m.mockEndpointGetter,
-				Spinner:                m.mockProgress,
-				CustomResourceUploader: m.mockCustomResourcesUploader,
-				Now: func() time.Time {
-					return mockNowTime
-				},
+				ForceNewUpdate: tc.inForceDeploy,
 			})
 
 			if tc.wantErr != nil {
@@ -620,9 +620,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 }
 
 type deployRDSvcMocks struct {
-	mockVersionGetter  *mocks.MockVersionGetter
-	mockEndpointGetter *mocks.MockEndpointGetter
-	mockUploader       *mocks.MockCustomResourcesUploader
+	mockVersionGetter  *mocks.MockversionGetter
+	mockEndpointGetter *mocks.MockendpointGetter
+	mockUploader       *mocks.MockcustomResourcesUploader
 }
 
 func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
@@ -771,18 +771,28 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployRDSvcMocks{
-				mockVersionGetter:  mocks.NewMockVersionGetter(ctrl),
-				mockEndpointGetter: mocks.NewMockEndpointGetter(ctrl),
-				mockUploader:       mocks.NewMockCustomResourcesUploader(ctrl),
+				mockVersionGetter:  mocks.NewMockversionGetter(ctrl),
+				mockEndpointGetter: mocks.NewMockendpointGetter(ctrl),
+				mockUploader:       mocks.NewMockcustomResourcesUploader(ctrl),
 			}
 			tc.mock(m)
 
-			deployer := workloadDeployer{
-				name:     mockName,
-				app:      tc.inApp,
-				env:      tc.inEnvironment,
-				s3Bucket: mockBucket,
-				mft: &manifest.RequestDrivenWebService{
+			deployer := rdwsDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						name:           mockName,
+						app:            tc.inApp,
+						env:            tc.inEnvironment,
+						s3Bucket:       mockBucket,
+						endpointGetter: m.mockEndpointGetter,
+					},
+					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+						return nil
+					},
+				},
+				customResourceUploader: m.mockUploader,
+				appVersionGetter:       m.mockVersionGetter,
+				rdwsMft: &manifest.RequestDrivenWebService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),
 					},
@@ -801,13 +811,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			}
 
 			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) ServiceForceUpdater {
-					return nil
-				},
-				AppVersionGetter:       m.mockVersionGetter,
-				EndpointGetter:         m.mockEndpointGetter,
-				CustomResourceUploader: m.mockUploader,
-				AddonsURL:              mockAddonsURL,
+				AddonsURL: mockAddonsURL,
 			})
 
 			if tc.wantErr != nil {
@@ -885,17 +889,26 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &deployMocks{
-				mockEndpointGetter:  mocks.NewMockEndpointGetter(ctrl),
-				mockSNSTopicsLister: mocks.NewMockSNSTopicsLister(ctrl),
+				mockEndpointGetter:  mocks.NewMockendpointGetter(ctrl),
+				mockSNSTopicsLister: mocks.NewMocksnsTopicsLister(ctrl),
 			}
 			tc.mock(m)
 
-			deployer := workloadDeployer{
-				name:     mockName,
-				app:      tc.inApp,
-				env:      tc.inEnvironment,
-				s3Bucket: mockBucket,
-				mft: &manifest.WorkerService{
+			deployer := workerSvcDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						name:           mockName,
+						app:            tc.inApp,
+						env:            tc.inEnvironment,
+						s3Bucket:       mockBucket,
+						endpointGetter: m.mockEndpointGetter,
+					},
+					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+						return nil
+					},
+				},
+				topicLister: m.mockSNSTopicsLister,
+				wsMft: &manifest.WorkerService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),
 					},
@@ -912,14 +925,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				},
 			}
 
-			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
-				SNSTopicsLister: m.mockSNSTopicsLister,
-				NewSvcUpdater: func(f func(*session.Session) ServiceForceUpdater) ServiceForceUpdater {
-					return nil
-				},
-				AppVersionGetter: m.mockVersionGetter,
-				EndpointGetter:   m.mockEndpointGetter,
-			})
+			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{})
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())

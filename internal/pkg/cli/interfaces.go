@@ -538,10 +538,6 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type serviceDeployer interface {
-	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
-}
-
 type apprunnerServiceDescriber interface {
 	ServiceARN() (string, error)
 }
@@ -613,6 +609,6 @@ type interpolator interface {
 }
 
 type workloadDeployer interface {
-	UploadArtifacts(in *clideploy.UploadArtifactsInput) (*clideploy.UploadArtifactsOutput, error)
-	DeployWorkload(in *clideploy.DeployWorkloadInput) (*clideploy.DeployWorkloadOutput, error)
+	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
+	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
 }

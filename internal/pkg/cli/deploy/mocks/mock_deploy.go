@@ -19,31 +19,68 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockImageBuilderPusher is a mock of ImageBuilderPusher interface.
-type MockImageBuilderPusher struct {
+// MockActionRecommender is a mock of ActionRecommender interface.
+type MockActionRecommender struct {
 	ctrl     *gomock.Controller
-	recorder *MockImageBuilderPusherMockRecorder
+	recorder *MockActionRecommenderMockRecorder
 }
 
-// MockImageBuilderPusherMockRecorder is the mock recorder for MockImageBuilderPusher.
-type MockImageBuilderPusherMockRecorder struct {
-	mock *MockImageBuilderPusher
+// MockActionRecommenderMockRecorder is the mock recorder for MockActionRecommender.
+type MockActionRecommenderMockRecorder struct {
+	mock *MockActionRecommender
 }
 
-// NewMockImageBuilderPusher creates a new mock instance.
-func NewMockImageBuilderPusher(ctrl *gomock.Controller) *MockImageBuilderPusher {
-	mock := &MockImageBuilderPusher{ctrl: ctrl}
-	mock.recorder = &MockImageBuilderPusherMockRecorder{mock}
+// NewMockActionRecommender creates a new mock instance.
+func NewMockActionRecommender(ctrl *gomock.Controller) *MockActionRecommender {
+	mock := &MockActionRecommender{ctrl: ctrl}
+	mock.recorder = &MockActionRecommenderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockImageBuilderPusher) EXPECT() *MockImageBuilderPusherMockRecorder {
+func (m *MockActionRecommender) EXPECT() *MockActionRecommenderMockRecorder {
+	return m.recorder
+}
+
+// RecommendedActions mocks base method.
+func (m *MockActionRecommender) RecommendedActions() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecommendedActions")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// RecommendedActions indicates an expected call of RecommendedActions.
+func (mr *MockActionRecommenderMockRecorder) RecommendedActions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockActionRecommender)(nil).RecommendedActions))
+}
+
+// MockimageBuilderPusher is a mock of imageBuilderPusher interface.
+type MockimageBuilderPusher struct {
+	ctrl     *gomock.Controller
+	recorder *MockimageBuilderPusherMockRecorder
+}
+
+// MockimageBuilderPusherMockRecorder is the mock recorder for MockimageBuilderPusher.
+type MockimageBuilderPusherMockRecorder struct {
+	mock *MockimageBuilderPusher
+}
+
+// NewMockimageBuilderPusher creates a new mock instance.
+func NewMockimageBuilderPusher(ctrl *gomock.Controller) *MockimageBuilderPusher {
+	mock := &MockimageBuilderPusher{ctrl: ctrl}
+	mock.recorder = &MockimageBuilderPusherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 	return m.recorder
 }
 
 // BuildAndPush mocks base method.
-func (m *MockImageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
+func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(string)
@@ -52,36 +89,36 @@ func (m *MockImageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBu
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockImageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
+func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockImageBuilderPusher)(nil).BuildAndPush), docker, args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), docker, args)
 }
 
-// MockUploader is a mock of Uploader interface.
-type MockUploader struct {
+// Mockuploader is a mock of uploader interface.
+type Mockuploader struct {
 	ctrl     *gomock.Controller
-	recorder *MockUploaderMockRecorder
+	recorder *MockuploaderMockRecorder
 }
 
-// MockUploaderMockRecorder is the mock recorder for MockUploader.
-type MockUploaderMockRecorder struct {
-	mock *MockUploader
+// MockuploaderMockRecorder is the mock recorder for Mockuploader.
+type MockuploaderMockRecorder struct {
+	mock *Mockuploader
 }
 
-// NewMockUploader creates a new mock instance.
-func NewMockUploader(ctrl *gomock.Controller) *MockUploader {
-	mock := &MockUploader{ctrl: ctrl}
-	mock.recorder = &MockUploaderMockRecorder{mock}
+// NewMockuploader creates a new mock instance.
+func NewMockuploader(ctrl *gomock.Controller) *Mockuploader {
+	mock := &Mockuploader{ctrl: ctrl}
+	mock.recorder = &MockuploaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUploader) EXPECT() *MockUploaderMockRecorder {
+func (m *Mockuploader) EXPECT() *MockuploaderMockRecorder {
 	return m.recorder
 }
 
 // Upload mocks base method.
-func (m *MockUploader) Upload(bucket, key string, data io.Reader) (string, error) {
+func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
 	ret0, _ := ret[0].(string)
@@ -90,13 +127,13 @@ func (m *MockUploader) Upload(bucket, key string, data io.Reader) (string, error
 }
 
 // Upload indicates an expected call of Upload.
-func (mr *MockUploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
+func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockUploader)(nil).Upload), bucket, key, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), bucket, key, data)
 }
 
 // ZipAndUpload mocks base method.
-func (m *MockUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
+func (m *Mockuploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{bucket, key}
 	for _, a := range files {
@@ -109,37 +146,37 @@ func (m *MockUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary)
 }
 
 // ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockUploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
+func (mr *MockuploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{bucket, key}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockUploader)(nil).ZipAndUpload), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*Mockuploader)(nil).ZipAndUpload), varargs...)
 }
 
-// MockTemplater is a mock of Templater interface.
-type MockTemplater struct {
+// Mocktemplater is a mock of templater interface.
+type Mocktemplater struct {
 	ctrl     *gomock.Controller
-	recorder *MockTemplaterMockRecorder
+	recorder *MocktemplaterMockRecorder
 }
 
-// MockTemplaterMockRecorder is the mock recorder for MockTemplater.
-type MockTemplaterMockRecorder struct {
-	mock *MockTemplater
+// MocktemplaterMockRecorder is the mock recorder for Mocktemplater.
+type MocktemplaterMockRecorder struct {
+	mock *Mocktemplater
 }
 
-// NewMockTemplater creates a new mock instance.
-func NewMockTemplater(ctrl *gomock.Controller) *MockTemplater {
-	mock := &MockTemplater{ctrl: ctrl}
-	mock.recorder = &MockTemplaterMockRecorder{mock}
+// NewMocktemplater creates a new mock instance.
+func NewMocktemplater(ctrl *gomock.Controller) *Mocktemplater {
+	mock := &Mocktemplater{ctrl: ctrl}
+	mock.recorder = &MocktemplaterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTemplater) EXPECT() *MockTemplaterMockRecorder {
+func (m *Mocktemplater) EXPECT() *MocktemplaterMockRecorder {
 	return m.recorder
 }
 
 // Template mocks base method.
-func (m *MockTemplater) Template() (string, error) {
+func (m *Mocktemplater) Template() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Template")
 	ret0, _ := ret[0].(string)
@@ -148,36 +185,36 @@ func (m *MockTemplater) Template() (string, error) {
 }
 
 // Template indicates an expected call of Template.
-func (mr *MockTemplaterMockRecorder) Template() *gomock.Call {
+func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockTemplater)(nil).Template))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
 }
 
-// MockEndpointGetter is a mock of EndpointGetter interface.
-type MockEndpointGetter struct {
+// MockendpointGetter is a mock of endpointGetter interface.
+type MockendpointGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockEndpointGetterMockRecorder
+	recorder *MockendpointGetterMockRecorder
 }
 
-// MockEndpointGetterMockRecorder is the mock recorder for MockEndpointGetter.
-type MockEndpointGetterMockRecorder struct {
-	mock *MockEndpointGetter
+// MockendpointGetterMockRecorder is the mock recorder for MockendpointGetter.
+type MockendpointGetterMockRecorder struct {
+	mock *MockendpointGetter
 }
 
-// NewMockEndpointGetter creates a new mock instance.
-func NewMockEndpointGetter(ctrl *gomock.Controller) *MockEndpointGetter {
-	mock := &MockEndpointGetter{ctrl: ctrl}
-	mock.recorder = &MockEndpointGetterMockRecorder{mock}
+// NewMockendpointGetter creates a new mock instance.
+func NewMockendpointGetter(ctrl *gomock.Controller) *MockendpointGetter {
+	mock := &MockendpointGetter{ctrl: ctrl}
+	mock.recorder = &MockendpointGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockEndpointGetter) EXPECT() *MockEndpointGetterMockRecorder {
+func (m *MockendpointGetter) EXPECT() *MockendpointGetterMockRecorder {
 	return m.recorder
 }
 
 // ServiceDiscoveryEndpoint mocks base method.
-func (m *MockEndpointGetter) ServiceDiscoveryEndpoint() (string, error) {
+func (m *MockendpointGetter) ServiceDiscoveryEndpoint() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ServiceDiscoveryEndpoint")
 	ret0, _ := ret[0].(string)
@@ -186,36 +223,36 @@ func (m *MockEndpointGetter) ServiceDiscoveryEndpoint() (string, error) {
 }
 
 // ServiceDiscoveryEndpoint indicates an expected call of ServiceDiscoveryEndpoint.
-func (mr *MockEndpointGetterMockRecorder) ServiceDiscoveryEndpoint() *gomock.Call {
+func (mr *MockendpointGetterMockRecorder) ServiceDiscoveryEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDiscoveryEndpoint", reflect.TypeOf((*MockEndpointGetter)(nil).ServiceDiscoveryEndpoint))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDiscoveryEndpoint", reflect.TypeOf((*MockendpointGetter)(nil).ServiceDiscoveryEndpoint))
 }
 
-// MockVersionGetter is a mock of VersionGetter interface.
-type MockVersionGetter struct {
+// MockversionGetter is a mock of versionGetter interface.
+type MockversionGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockVersionGetterMockRecorder
+	recorder *MockversionGetterMockRecorder
 }
 
-// MockVersionGetterMockRecorder is the mock recorder for MockVersionGetter.
-type MockVersionGetterMockRecorder struct {
-	mock *MockVersionGetter
+// MockversionGetterMockRecorder is the mock recorder for MockversionGetter.
+type MockversionGetterMockRecorder struct {
+	mock *MockversionGetter
 }
 
-// NewMockVersionGetter creates a new mock instance.
-func NewMockVersionGetter(ctrl *gomock.Controller) *MockVersionGetter {
-	mock := &MockVersionGetter{ctrl: ctrl}
-	mock.recorder = &MockVersionGetterMockRecorder{mock}
+// NewMockversionGetter creates a new mock instance.
+func NewMockversionGetter(ctrl *gomock.Controller) *MockversionGetter {
+	mock := &MockversionGetter{ctrl: ctrl}
+	mock.recorder = &MockversionGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockVersionGetter) EXPECT() *MockVersionGetterMockRecorder {
+func (m *MockversionGetter) EXPECT() *MockversionGetterMockRecorder {
 	return m.recorder
 }
 
 // Version mocks base method.
-func (m *MockVersionGetter) Version() (string, error) {
+func (m *MockversionGetter) Version() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Version")
 	ret0, _ := ret[0].(string)
@@ -224,36 +261,36 @@ func (m *MockVersionGetter) Version() (string, error) {
 }
 
 // Version indicates an expected call of Version.
-func (mr *MockVersionGetterMockRecorder) Version() *gomock.Call {
+func (mr *MockversionGetterMockRecorder) Version() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockVersionGetter)(nil).Version))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionGetter)(nil).Version))
 }
 
-// MockPublicCIDRBlocksGetter is a mock of PublicCIDRBlocksGetter interface.
-type MockPublicCIDRBlocksGetter struct {
+// MockpublicCIDRBlocksGetter is a mock of publicCIDRBlocksGetter interface.
+type MockpublicCIDRBlocksGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockPublicCIDRBlocksGetterMockRecorder
+	recorder *MockpublicCIDRBlocksGetterMockRecorder
 }
 
-// MockPublicCIDRBlocksGetterMockRecorder is the mock recorder for MockPublicCIDRBlocksGetter.
-type MockPublicCIDRBlocksGetterMockRecorder struct {
-	mock *MockPublicCIDRBlocksGetter
+// MockpublicCIDRBlocksGetterMockRecorder is the mock recorder for MockpublicCIDRBlocksGetter.
+type MockpublicCIDRBlocksGetterMockRecorder struct {
+	mock *MockpublicCIDRBlocksGetter
 }
 
-// NewMockPublicCIDRBlocksGetter creates a new mock instance.
-func NewMockPublicCIDRBlocksGetter(ctrl *gomock.Controller) *MockPublicCIDRBlocksGetter {
-	mock := &MockPublicCIDRBlocksGetter{ctrl: ctrl}
-	mock.recorder = &MockPublicCIDRBlocksGetterMockRecorder{mock}
+// NewMockpublicCIDRBlocksGetter creates a new mock instance.
+func NewMockpublicCIDRBlocksGetter(ctrl *gomock.Controller) *MockpublicCIDRBlocksGetter {
+	mock := &MockpublicCIDRBlocksGetter{ctrl: ctrl}
+	mock.recorder = &MockpublicCIDRBlocksGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockPublicCIDRBlocksGetter) EXPECT() *MockPublicCIDRBlocksGetterMockRecorder {
+func (m *MockpublicCIDRBlocksGetter) EXPECT() *MockpublicCIDRBlocksGetterMockRecorder {
 	return m.recorder
 }
 
 // PublicCIDRBlocks mocks base method.
-func (m *MockPublicCIDRBlocksGetter) PublicCIDRBlocks() ([]string, error) {
+func (m *MockpublicCIDRBlocksGetter) PublicCIDRBlocks() ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PublicCIDRBlocks")
 	ret0, _ := ret[0].([]string)
@@ -262,36 +299,36 @@ func (m *MockPublicCIDRBlocksGetter) PublicCIDRBlocks() ([]string, error) {
 }
 
 // PublicCIDRBlocks indicates an expected call of PublicCIDRBlocks.
-func (mr *MockPublicCIDRBlocksGetterMockRecorder) PublicCIDRBlocks() *gomock.Call {
+func (mr *MockpublicCIDRBlocksGetterMockRecorder) PublicCIDRBlocks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockPublicCIDRBlocksGetter)(nil).PublicCIDRBlocks))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockpublicCIDRBlocksGetter)(nil).PublicCIDRBlocks))
 }
 
-// MockCustomResourcesUploader is a mock of CustomResourcesUploader interface.
-type MockCustomResourcesUploader struct {
+// MockcustomResourcesUploader is a mock of customResourcesUploader interface.
+type MockcustomResourcesUploader struct {
 	ctrl     *gomock.Controller
-	recorder *MockCustomResourcesUploaderMockRecorder
+	recorder *MockcustomResourcesUploaderMockRecorder
 }
 
-// MockCustomResourcesUploaderMockRecorder is the mock recorder for MockCustomResourcesUploader.
-type MockCustomResourcesUploaderMockRecorder struct {
-	mock *MockCustomResourcesUploader
+// MockcustomResourcesUploaderMockRecorder is the mock recorder for MockcustomResourcesUploader.
+type MockcustomResourcesUploaderMockRecorder struct {
+	mock *MockcustomResourcesUploader
 }
 
-// NewMockCustomResourcesUploader creates a new mock instance.
-func NewMockCustomResourcesUploader(ctrl *gomock.Controller) *MockCustomResourcesUploader {
-	mock := &MockCustomResourcesUploader{ctrl: ctrl}
-	mock.recorder = &MockCustomResourcesUploaderMockRecorder{mock}
+// NewMockcustomResourcesUploader creates a new mock instance.
+func NewMockcustomResourcesUploader(ctrl *gomock.Controller) *MockcustomResourcesUploader {
+	mock := &MockcustomResourcesUploader{ctrl: ctrl}
+	mock.recorder = &MockcustomResourcesUploaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockCustomResourcesUploader) EXPECT() *MockCustomResourcesUploaderMockRecorder {
+func (m *MockcustomResourcesUploader) EXPECT() *MockcustomResourcesUploaderMockRecorder {
 	return m.recorder
 }
 
 // UploadEnvironmentCustomResources mocks base method.
-func (m *MockCustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
+func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadEnvironmentCustomResources", upload)
 	ret0, _ := ret[0].(map[string]string)
@@ -300,13 +337,13 @@ func (m *MockCustomResourcesUploader) UploadEnvironmentCustomResources(upload s3
 }
 
 // UploadEnvironmentCustomResources indicates an expected call of UploadEnvironmentCustomResources.
-func (mr *MockCustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResources(upload interface{}) *gomock.Call {
+func (mr *MockcustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResources(upload interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockCustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
 }
 
 // UploadNetworkLoadBalancedWebServiceCustomResources mocks base method.
-func (m *MockCustomResourcesUploader) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
+func (m *MockcustomResourcesUploader) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadNetworkLoadBalancedWebServiceCustomResources", upload)
 	ret0, _ := ret[0].(map[string]string)
@@ -315,13 +352,13 @@ func (m *MockCustomResourcesUploader) UploadNetworkLoadBalancedWebServiceCustomR
 }
 
 // UploadNetworkLoadBalancedWebServiceCustomResources indicates an expected call of UploadNetworkLoadBalancedWebServiceCustomResources.
-func (mr *MockCustomResourcesUploaderMockRecorder) UploadNetworkLoadBalancedWebServiceCustomResources(upload interface{}) *gomock.Call {
+func (mr *MockcustomResourcesUploaderMockRecorder) UploadNetworkLoadBalancedWebServiceCustomResources(upload interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadNetworkLoadBalancedWebServiceCustomResources", reflect.TypeOf((*MockCustomResourcesUploader)(nil).UploadNetworkLoadBalancedWebServiceCustomResources), upload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadNetworkLoadBalancedWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadNetworkLoadBalancedWebServiceCustomResources), upload)
 }
 
 // UploadRequestDrivenWebServiceCustomResources mocks base method.
-func (m *MockCustomResourcesUploader) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
+func (m *MockcustomResourcesUploader) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadRequestDrivenWebServiceCustomResources", upload)
 	ret0, _ := ret[0].(map[string]string)
@@ -330,36 +367,36 @@ func (m *MockCustomResourcesUploader) UploadRequestDrivenWebServiceCustomResourc
 }
 
 // UploadRequestDrivenWebServiceCustomResources indicates an expected call of UploadRequestDrivenWebServiceCustomResources.
-func (mr *MockCustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceCustomResources(upload interface{}) *gomock.Call {
+func (mr *MockcustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceCustomResources(upload interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceCustomResources", reflect.TypeOf((*MockCustomResourcesUploader)(nil).UploadRequestDrivenWebServiceCustomResources), upload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadRequestDrivenWebServiceCustomResources), upload)
 }
 
-// MockSNSTopicsLister is a mock of SNSTopicsLister interface.
-type MockSNSTopicsLister struct {
+// MocksnsTopicsLister is a mock of snsTopicsLister interface.
+type MocksnsTopicsLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockSNSTopicsListerMockRecorder
+	recorder *MocksnsTopicsListerMockRecorder
 }
 
-// MockSNSTopicsListerMockRecorder is the mock recorder for MockSNSTopicsLister.
-type MockSNSTopicsListerMockRecorder struct {
-	mock *MockSNSTopicsLister
+// MocksnsTopicsListerMockRecorder is the mock recorder for MocksnsTopicsLister.
+type MocksnsTopicsListerMockRecorder struct {
+	mock *MocksnsTopicsLister
 }
 
-// NewMockSNSTopicsLister creates a new mock instance.
-func NewMockSNSTopicsLister(ctrl *gomock.Controller) *MockSNSTopicsLister {
-	mock := &MockSNSTopicsLister{ctrl: ctrl}
-	mock.recorder = &MockSNSTopicsListerMockRecorder{mock}
+// NewMocksnsTopicsLister creates a new mock instance.
+func NewMocksnsTopicsLister(ctrl *gomock.Controller) *MocksnsTopicsLister {
+	mock := &MocksnsTopicsLister{ctrl: ctrl}
+	mock.recorder = &MocksnsTopicsListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockSNSTopicsLister) EXPECT() *MockSNSTopicsListerMockRecorder {
+func (m *MocksnsTopicsLister) EXPECT() *MocksnsTopicsListerMockRecorder {
 	return m.recorder
 }
 
 // ListSNSTopics mocks base method.
-func (m *MockSNSTopicsLister) ListSNSTopics(appName, envName string) ([]deploy.Topic, error) {
+func (m *MocksnsTopicsLister) ListSNSTopics(appName, envName string) ([]deploy.Topic, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListSNSTopics", appName, envName)
 	ret0, _ := ret[0].([]deploy.Topic)
@@ -368,36 +405,36 @@ func (m *MockSNSTopicsLister) ListSNSTopics(appName, envName string) ([]deploy.T
 }
 
 // ListSNSTopics indicates an expected call of ListSNSTopics.
-func (mr *MockSNSTopicsListerMockRecorder) ListSNSTopics(appName, envName interface{}) *gomock.Call {
+func (mr *MocksnsTopicsListerMockRecorder) ListSNSTopics(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSNSTopics", reflect.TypeOf((*MockSNSTopicsLister)(nil).ListSNSTopics), appName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSNSTopics", reflect.TypeOf((*MocksnsTopicsLister)(nil).ListSNSTopics), appName, envName)
 }
 
-// MockServiceDeployer is a mock of ServiceDeployer interface.
-type MockServiceDeployer struct {
+// MockserviceDeployer is a mock of serviceDeployer interface.
+type MockserviceDeployer struct {
 	ctrl     *gomock.Controller
-	recorder *MockServiceDeployerMockRecorder
+	recorder *MockserviceDeployerMockRecorder
 }
 
-// MockServiceDeployerMockRecorder is the mock recorder for MockServiceDeployer.
-type MockServiceDeployerMockRecorder struct {
-	mock *MockServiceDeployer
+// MockserviceDeployerMockRecorder is the mock recorder for MockserviceDeployer.
+type MockserviceDeployerMockRecorder struct {
+	mock *MockserviceDeployer
 }
 
-// NewMockServiceDeployer creates a new mock instance.
-func NewMockServiceDeployer(ctrl *gomock.Controller) *MockServiceDeployer {
-	mock := &MockServiceDeployer{ctrl: ctrl}
-	mock.recorder = &MockServiceDeployerMockRecorder{mock}
+// NewMockserviceDeployer creates a new mock instance.
+func NewMockserviceDeployer(ctrl *gomock.Controller) *MockserviceDeployer {
+	mock := &MockserviceDeployer{ctrl: ctrl}
+	mock.recorder = &MockserviceDeployerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockServiceDeployer) EXPECT() *MockServiceDeployerMockRecorder {
+func (m *MockserviceDeployer) EXPECT() *MockserviceDeployerMockRecorder {
 	return m.recorder
 }
 
 // DeployService mocks base method.
-func (m *MockServiceDeployer) DeployService(out progress.FileWriter, conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
+func (m *MockserviceDeployer) DeployService(out progress.FileWriter, conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{out, conf, bucketName}
 	for _, a := range opts {
@@ -409,37 +446,37 @@ func (m *MockServiceDeployer) DeployService(out progress.FileWriter, conf cloudf
 }
 
 // DeployService indicates an expected call of DeployService.
-func (mr *MockServiceDeployerMockRecorder) DeployService(out, conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockserviceDeployerMockRecorder) DeployService(out, conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{out, conf, bucketName}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockServiceDeployer)(nil).DeployService), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
 }
 
-// MockServiceForceUpdater is a mock of ServiceForceUpdater interface.
-type MockServiceForceUpdater struct {
+// MockserviceForceUpdater is a mock of serviceForceUpdater interface.
+type MockserviceForceUpdater struct {
 	ctrl     *gomock.Controller
-	recorder *MockServiceForceUpdaterMockRecorder
+	recorder *MockserviceForceUpdaterMockRecorder
 }
 
-// MockServiceForceUpdaterMockRecorder is the mock recorder for MockServiceForceUpdater.
-type MockServiceForceUpdaterMockRecorder struct {
-	mock *MockServiceForceUpdater
+// MockserviceForceUpdaterMockRecorder is the mock recorder for MockserviceForceUpdater.
+type MockserviceForceUpdaterMockRecorder struct {
+	mock *MockserviceForceUpdater
 }
 
-// NewMockServiceForceUpdater creates a new mock instance.
-func NewMockServiceForceUpdater(ctrl *gomock.Controller) *MockServiceForceUpdater {
-	mock := &MockServiceForceUpdater{ctrl: ctrl}
-	mock.recorder = &MockServiceForceUpdaterMockRecorder{mock}
+// NewMockserviceForceUpdater creates a new mock instance.
+func NewMockserviceForceUpdater(ctrl *gomock.Controller) *MockserviceForceUpdater {
+	mock := &MockserviceForceUpdater{ctrl: ctrl}
+	mock.recorder = &MockserviceForceUpdaterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockServiceForceUpdater) EXPECT() *MockServiceForceUpdaterMockRecorder {
+func (m *MockserviceForceUpdater) EXPECT() *MockserviceForceUpdaterMockRecorder {
 	return m.recorder
 }
 
 // ForceUpdateService mocks base method.
-func (m *MockServiceForceUpdater) ForceUpdateService(app, env, svc string) error {
+func (m *MockserviceForceUpdater) ForceUpdateService(app, env, svc string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ForceUpdateService", app, env, svc)
 	ret0, _ := ret[0].(error)
@@ -447,13 +484,13 @@ func (m *MockServiceForceUpdater) ForceUpdateService(app, env, svc string) error
 }
 
 // ForceUpdateService indicates an expected call of ForceUpdateService.
-func (mr *MockServiceForceUpdaterMockRecorder) ForceUpdateService(app, env, svc interface{}) *gomock.Call {
+func (mr *MockserviceForceUpdaterMockRecorder) ForceUpdateService(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceUpdateService", reflect.TypeOf((*MockServiceForceUpdater)(nil).ForceUpdateService), app, env, svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceUpdateService", reflect.TypeOf((*MockserviceForceUpdater)(nil).ForceUpdateService), app, env, svc)
 }
 
 // LastUpdatedAt mocks base method.
-func (m *MockServiceForceUpdater) LastUpdatedAt(app, env, svc string) (time.Time, error) {
+func (m *MockserviceForceUpdater) LastUpdatedAt(app, env, svc string) (time.Time, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LastUpdatedAt", app, env, svc)
 	ret0, _ := ret[0].(time.Time)
@@ -462,56 +499,56 @@ func (m *MockServiceForceUpdater) LastUpdatedAt(app, env, svc string) (time.Time
 }
 
 // LastUpdatedAt indicates an expected call of LastUpdatedAt.
-func (mr *MockServiceForceUpdaterMockRecorder) LastUpdatedAt(app, env, svc interface{}) *gomock.Call {
+func (mr *MockserviceForceUpdaterMockRecorder) LastUpdatedAt(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUpdatedAt", reflect.TypeOf((*MockServiceForceUpdater)(nil).LastUpdatedAt), app, env, svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUpdatedAt", reflect.TypeOf((*MockserviceForceUpdater)(nil).LastUpdatedAt), app, env, svc)
 }
 
-// MockProgress is a mock of Progress interface.
-type MockProgress struct {
+// Mockspinner is a mock of spinner interface.
+type Mockspinner struct {
 	ctrl     *gomock.Controller
-	recorder *MockProgressMockRecorder
+	recorder *MockspinnerMockRecorder
 }
 
-// MockProgressMockRecorder is the mock recorder for MockProgress.
-type MockProgressMockRecorder struct {
-	mock *MockProgress
+// MockspinnerMockRecorder is the mock recorder for Mockspinner.
+type MockspinnerMockRecorder struct {
+	mock *Mockspinner
 }
 
-// NewMockProgress creates a new mock instance.
-func NewMockProgress(ctrl *gomock.Controller) *MockProgress {
-	mock := &MockProgress{ctrl: ctrl}
-	mock.recorder = &MockProgressMockRecorder{mock}
+// NewMockspinner creates a new mock instance.
+func NewMockspinner(ctrl *gomock.Controller) *Mockspinner {
+	mock := &Mockspinner{ctrl: ctrl}
+	mock.recorder = &MockspinnerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockProgress) EXPECT() *MockProgressMockRecorder {
+func (m *Mockspinner) EXPECT() *MockspinnerMockRecorder {
 	return m.recorder
 }
 
 // Start mocks base method.
-func (m *MockProgress) Start(label string) {
+func (m *Mockspinner) Start(label string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start", label)
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockProgressMockRecorder) Start(label interface{}) *gomock.Call {
+func (mr *MockspinnerMockRecorder) Start(label interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockProgress)(nil).Start), label)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*Mockspinner)(nil).Start), label)
 }
 
 // Stop mocks base method.
-func (m *MockProgress) Stop(label string) {
+func (m *Mockspinner) Stop(label string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop", label)
 }
 
 // Stop indicates an expected call of Stop.
-func (mr *MockProgressMockRecorder) Stop(label interface{}) *gomock.Call {
+func (mr *MockspinnerMockRecorder) Stop(label interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockProgress)(nil).Stop), label)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*Mockspinner)(nil).Stop), label)
 }
 
 // MockfileReader is a mock of fileReader interface.

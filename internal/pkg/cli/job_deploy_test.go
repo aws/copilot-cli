@@ -229,7 +229,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(nil, mockError)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(nil, mockError)
 			},
 
 			wantedError: fmt.Errorf("upload deploy resources for job upload: some error"),
@@ -239,7 +239,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockDeployer.EXPECT().UploadArtifacts(gomock.Any()).Return(&deploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 			},
 

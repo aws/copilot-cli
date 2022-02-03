@@ -7,24 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strings"
-	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"golang.org/x/mod/semver"
-
-	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -35,7 +27,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -68,25 +59,15 @@ type uploadCustomResourcesOpts struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store              store
-	deployStore        *deploy.Store
-	ws                 wsWlDirReader
-	fs                 *afero.Afero
-	imageBuilderPusher imageBuilderPusher
-	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator    func(app, env string) interpolator
-	s3                 uploader
-	cmd                runner
-	addons             templater
-	svcCFN             serviceDeployer
-	newSvcUpdater      func(func(*session.Session) clideploy.ServiceForceUpdater) clideploy.ServiceForceUpdater
-	sessProvider       sessionProvider
-	envUpgradeCmd      actionCommand
-	appVersionGetter   versionGetter
-	endpointGetter     endpointGetter
-	snsTopicGetter     deployedEnvironmentLister
-	envDescriber       envDescriber
-	newSvcDeployer     func(*deploySvcOpts) (workloadDeployer, error)
+	store            store
+	ws               wsWlDirReader
+	unmarshal        func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator  func(app, env string) interpolator
+	cmd              runner
+	envUpgradeCmd    actionCommand
+	appVersionGetter versionGetter
+	sessProvider     *sessions.Provider
+	newSvcDeployer   func(*deploySvcOpts) (workloadDeployer, error)
 
 	spinner progress
 	sel     wsSelector
@@ -99,8 +80,7 @@ type deploySvcOpts struct {
 	appliedManifest interface{}
 	appResources    *stack.AppRegionalResources
 	rootUserARN     string
-	rdSvcAlias      string
-	subscriptions   []manifest.TopicSubscription
+	deployRecs      clideploy.ActionRecommender
 
 	uploadOpts *uploadCustomResourcesOpts
 }
@@ -109,10 +89,6 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
-	}
-	deployStore, err := deploy.NewStore(store)
-	if err != nil {
-		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
 	ws, err := workspace.New()
 	if err != nil {
@@ -123,9 +99,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		deployWkldVars: vars,
 
 		store:           store,
-		deployStore:     deployStore,
 		ws:              ws,
-		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		unmarshal:       manifest.UnmarshalWorkload,
 		spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
@@ -133,23 +107,38 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessions.NewProvider(),
-		snsTopicGetter:  deployStore,
-		newSvcDeployer: func(o *deploySvcOpts) (workloadDeployer, error) {
-			deployer, err := clideploy.NewWorkloadDeployer(&clideploy.WorkloadDeployerInput{
-				Name:     o.name,
-				App:      o.targetApp,
-				Env:      o.targetEnv,
-				ImageTag: o.imageTag,
-				S3Bucket: o.appResources.S3Bucket,
-				Mft:      o.appliedManifest,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("initiate workload deployer: %w", err)
-			}
-			return deployer, nil
-		},
+		newSvcDeployer:  newSvcDeployer,
 	}
 	return opts, err
+}
+
+func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
+	var err error
+	var deployer workloadDeployer
+	in := clideploy.WorkloadDeployerInput{
+		Name:     o.name,
+		App:      o.targetApp,
+		Env:      o.targetEnv,
+		ImageTag: o.imageTag,
+		S3Bucket: o.appResources.S3Bucket,
+		Mft:      o.appliedManifest,
+	}
+	switch t := o.appliedManifest.(type) {
+	case *manifest.LoadBalancedWebService:
+		deployer, err = clideploy.NewLBDeployer(&in)
+	case *manifest.BackendService:
+		deployer, err = clideploy.NewBackendDeployer(&in)
+	case *manifest.RequestDrivenWebService:
+		deployer, err = clideploy.NewRDWSDeployer(&in)
+	case *manifest.WorkerService:
+		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
+	default:
+		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("initiate workload deployer: %w", err)
+	}
+	return deployer, nil
 }
 
 func newManifestInterpolator(app, env string) interpolator {
@@ -211,40 +200,23 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	uploadOut, err := deployer.UploadArtifacts(&clideploy.UploadArtifactsInput{
-		FS:                 o.fs,
-		Uploader:           o.s3,
-		Templater:          o.addons,
-		ImageBuilderPusher: o.imageBuilderPusher,
-	})
+	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
 	}
-	deployOut, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
-		ImageDigest:            uploadOut.ImageDigest,
-		EnvFileARN:             uploadOut.EnvFileARN,
-		AddonsURL:              uploadOut.AddonsURL,
-		RootUserARN:            o.rootUserARN,
-		Tags:                   tags.Merge(o.targetApp.Tags, o.resourceTags),
-		ImageRepoURL:           o.appResources.RepositoryURLs[o.name],
-		ForceNewUpdate:         o.forceNewUpdate,
-		CustomResourceUploader: o.uploadOpts.uploader,
-		S3Uploader:             o.s3,
-		SNSTopicsLister:        o.snsTopicGetter,
-		ServiceDeployer:        o.svcCFN,
-		NewSvcUpdater:          o.newSvcUpdater,
-		AppVersionGetter:       o.appVersionGetter,
-		PublicCIDRBlocksGetter: o.envDescriber,
-		EndpointGetter:         o.endpointGetter,
-		Spinner:                o.spinner,
-		Now:                    time.Now,
+	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
+		ImageDigest:    uploadOut.ImageDigest,
+		EnvFileARN:     uploadOut.EnvFileARN,
+		AddonsURL:      uploadOut.AddonsURL,
+		RootUserARN:    o.rootUserARN,
+		Tags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
+		ImageRepoURL:   o.appResources.RepositoryURLs[o.name],
+		ForceNewUpdate: o.forceNewUpdate,
 	})
 	if err != nil {
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
 	}
-	o.rdSvcAlias = deployOut.RDWSAlias
-	o.subscriptions = deployOut.Subscriptions
-
+	o.deployRecs = deployRecs
 	log.Successf("Deployed service %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }
@@ -257,8 +229,10 @@ func (o *deploySvcOpts) RecommendActions() error {
 		return err
 	}
 	recommendations = append(recommendations, uriRecs...)
+	if o.deployRecs != nil {
+		recommendations = append(recommendations, o.deployRecs.RecommendedActions()...)
+	}
 	recommendations = append(recommendations, o.publishRecommendedActions()...)
-	recommendations = append(recommendations, o.subscribeRecommendedActions()...)
 	logRecommendedActions(recommendations)
 	return nil
 }
@@ -327,58 +301,6 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.svcType = svc.Type
 
-	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(env.Region)
-	if err != nil {
-		return fmt.Errorf("create ECR session with region %s: %w", env.Region, err)
-	}
-
-	envSession, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
-	if err != nil {
-		return fmt.Errorf("assuming environment manager role: %w", err)
-	}
-
-	d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-		App:         o.appName,
-		Env:         o.envName,
-		ConfigStore: o.store,
-		DeployStore: o.deployStore,
-	})
-	if err != nil {
-		return fmt.Errorf("create describer for environment %s in application %s: %w", o.envName, o.appName, err)
-	}
-	o.envDescriber = d
-
-	// ECR client against tools account profile AND target environment region.
-	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
-	registry := ecr.New(defaultSessEnvRegion)
-	o.imageBuilderPusher, err = repository.New(repoName, registry)
-	if err != nil {
-		return fmt.Errorf("initiate image builder pusher: %w", err)
-	}
-
-	o.s3 = s3.New(envSession)
-
-	o.newSvcUpdater = func(f func(*session.Session) clideploy.ServiceForceUpdater) clideploy.ServiceForceUpdater {
-		return f(envSession)
-	}
-
-	// CF client against env account profile AND target environment region.
-	o.svcCFN = cloudformation.New(envSession)
-
-	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-		App:         o.appName,
-		Env:         o.envName,
-		ConfigStore: o.store,
-	})
-	if err != nil {
-		return fmt.Errorf("initiate env describer: %w", err)
-	}
-	addonsSvc, err := addon.New(o.name)
-	if err != nil {
-		return fmt.Errorf("initiate addons service: %w", err)
-	}
-	o.addons = addonsSvc
-
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
@@ -406,19 +328,6 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 	o.rootUserARN = caller.RootUserARN
-
-	o.uploadOpts = &uploadCustomResourcesOpts{
-		uploader: template.New(),
-		newS3Uploader: func() (uploader, error) {
-			envRegion := env.Region
-			sess, err := o.sessProvider.DefaultWithRegion(env.Region)
-			if err != nil {
-				return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
-			}
-			s3Client := s3.New(sess)
-			return s3Client, nil
-		},
-	}
 
 	versionGetter, err := describe.NewAppDescriber(o.appName)
 	if err != nil {
@@ -647,40 +556,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	recs := []string{
 		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri), network),
 	}
-	if o.rdSvcAlias != "" {
-		recs = append(recs, fmt.Sprintf(`The validation process for https://%s can take more than 15 minutes.
-    Please visit %s to check the validation status.`, o.rdSvcAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home")))
-	}
 	return recs, nil
-}
-
-func (o *deploySvcOpts) subscribeRecommendedActions() []string {
-	type subscriber interface {
-		Subscriptions() []manifest.TopicSubscription
-	}
-	if _, ok := o.appliedManifest.(subscriber); !ok {
-		return nil
-	}
-	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
-	actionRetrieveEnvVar := fmt.Sprintf(
-		`Update %s's code to leverage the injected environment variable "COPILOT_QUEUE_URI".
-    In JavaScript you can write %s.`,
-		o.name,
-		color.HighlightCode(retrieveEnvVarCode),
-	)
-	recs := []string{actionRetrieveEnvVar}
-	topicQueueNames := o.buildWorkerQueueNames()
-	if topicQueueNames == "" {
-		return recs
-	}
-	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = JSON.parse(process.env.COPILOT_TOPIC_QUEUE_URIS)", topicQueueNames)
-	actionRetrieveTopicQueues := fmt.Sprintf(
-		`You can retrieve topic-specific queues by writing
-    %s.`,
-		color.HighlightCode(retrieveTopicQueueEnvVarCode),
-	)
-	recs = append(recs, actionRetrieveTopicQueues)
-	return recs
 }
 
 func (o *deploySvcOpts) publishRecommendedActions() []string {
@@ -701,26 +577,6 @@ func (o *deploySvcOpts) publishRecommendedActions() []string {
 			o.name,
 			color.HighlightCode("const {<topicName>} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)")),
 	}
-}
-
-func (o *deploySvcOpts) buildWorkerQueueNames() string {
-	sb := new(strings.Builder)
-	first := true
-	for _, subscription := range o.subscriptions {
-		if subscription.Queue.IsEmpty() {
-			continue
-		}
-		topicSvc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
-		topicName := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
-		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
-		if first {
-			sb.WriteString(subName)
-			first = false
-		} else {
-			sb.WriteString(fmt.Sprintf(", %s", subName))
-		}
-	}
-	return sb.String()
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.

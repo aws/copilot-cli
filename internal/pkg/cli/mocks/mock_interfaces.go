@@ -5666,48 +5666,6 @@ func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
 }
 
-// MockserviceDeployer is a mock of serviceDeployer interface.
-type MockserviceDeployer struct {
-	ctrl     *gomock.Controller
-	recorder *MockserviceDeployerMockRecorder
-}
-
-// MockserviceDeployerMockRecorder is the mock recorder for MockserviceDeployer.
-type MockserviceDeployerMockRecorder struct {
-	mock *MockserviceDeployer
-}
-
-// NewMockserviceDeployer creates a new mock instance.
-func NewMockserviceDeployer(ctrl *gomock.Controller) *MockserviceDeployer {
-	mock := &MockserviceDeployer{ctrl: ctrl}
-	mock.recorder = &MockserviceDeployerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockserviceDeployer) EXPECT() *MockserviceDeployerMockRecorder {
-	return m.recorder
-}
-
-// DeployService mocks base method.
-func (m *MockserviceDeployer) DeployService(out progress.FileWriter, conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{out, conf, bucketName}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DeployService", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeployService indicates an expected call of DeployService.
-func (mr *MockserviceDeployerMockRecorder) DeployService(out, conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{out, conf, bucketName}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
-}
-
 // MockapprunnerServiceDescriber is a mock of apprunnerServiceDescriber interface.
 type MockapprunnerServiceDescriber struct {
 	ctrl     *gomock.Controller
@@ -6424,10 +6382,10 @@ func (m *MockworkloadDeployer) EXPECT() *MockworkloadDeployerMockRecorder {
 }
 
 // DeployWorkload mocks base method.
-func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (*deploy.DeployWorkloadOutput, error) {
+func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployWorkload", in)
-	ret0, _ := ret[0].(*deploy.DeployWorkloadOutput)
+	ret0, _ := ret[0].(deploy.ActionRecommender)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -6439,16 +6397,16 @@ func (mr *MockworkloadDeployerMockRecorder) DeployWorkload(in interface{}) *gomo
 }
 
 // UploadArtifacts mocks base method.
-func (m *MockworkloadDeployer) UploadArtifacts(in *deploy.UploadArtifactsInput) (*deploy.UploadArtifactsOutput, error) {
+func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadArtifacts", in)
+	ret := m.ctrl.Call(m, "UploadArtifacts")
 	ret0, _ := ret[0].(*deploy.UploadArtifactsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UploadArtifacts indicates an expected call of UploadArtifacts.
-func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts(in interface{}) *gomock.Call {
+func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
 }
