@@ -314,7 +314,7 @@ stages:
 			},
 			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
 		},
-		"returns an error if pipeline name exceeds 100 characters": {
+		"returns an error if pipeline name fails validation": {
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
@@ -330,7 +330,7 @@ version: 1
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
 				)
 			},
-			expectedError: fmt.Errorf("pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
+			expectedError: fmt.Errorf("validate pipeline: pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
 		},
 		"returns an error if provider is not a supported type": {
 			inApp:     &app,
