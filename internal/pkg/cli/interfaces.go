@@ -6,7 +6,6 @@ package cli
 import (
 	"encoding"
 	"io"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -256,11 +256,6 @@ type serviceLister interface {
 type wsSvcReader interface {
 	serviceLister
 	manifestReader
-}
-
-type wsSvcDirReader interface {
-	wsSvcReader
-	workspacePathGetter
 }
 
 type jobLister interface {
@@ -543,15 +538,6 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type svcForceUpdater interface {
-	ForceUpdateService(app, env, svc string) error
-	LastUpdatedAt(app, env, svc string) (time.Time, error)
-}
-
-type serviceDeployer interface {
-	DeployService(out termprogress.FileWriter, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
-}
-
 type apprunnerServiceDescriber interface {
 	ServiceARN() (string, error)
 }
@@ -618,11 +604,11 @@ type servicePauser interface {
 	PauseService(svcARN string) error
 }
 
-type timeoutError interface {
-	error
-	Timeout() bool
-}
-
 type interpolator interface {
 	Interpolate(s string) (string, error)
+}
+
+type workloadDeployer interface {
+	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
+	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
 }
