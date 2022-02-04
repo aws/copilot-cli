@@ -183,11 +183,6 @@ type templater interface {
 	Template() (string, error)
 }
 
-type stackSerializer interface {
-	templater
-	SerializedParameters() (string, error)
-}
-
 type runner interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 }
@@ -413,10 +408,6 @@ type envDescriber interface {
 
 type versionGetter interface {
 	Version() (string, error)
-}
-
-type endpointGetter interface {
-	ServiceDiscoveryEndpoint() (string, error)
 }
 
 type envTemplater interface {

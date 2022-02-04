@@ -45,12 +45,6 @@ type packageJobOpts struct {
 	// Subcommand implementing svc_package's Execute()
 	packageCmd    actionCommand
 	newPackageCmd func(*packageJobOpts)
-
-	// cached variables
-	targetApp       *config.Application
-	targetEnv       *config.Environment
-	appliedManifest interface{}
-	rootUserARN     string
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {

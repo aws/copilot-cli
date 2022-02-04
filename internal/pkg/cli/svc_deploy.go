@@ -25,10 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
-var aliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
-	color.HighlightCode("http.alias"),
-	color.HighlightCode("copilot app init --domain example.com"))
-
 type deployWkldVars struct {
 	appName        string
 	name           string
@@ -39,11 +35,6 @@ type deployWkldVars struct {
 
 	// To facilitate unit tests.
 	clientConfigured bool
-}
-
-type uploadCustomResourcesOpts struct {
-	uploader      customResourcesUploader
-	newS3Uploader func() (uploader, error)
 }
 
 type deploySvcOpts struct {
