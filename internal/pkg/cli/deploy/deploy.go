@@ -463,7 +463,7 @@ func (d *rdwsDeployOutput) RecommendedActions() []string {
 		return nil
 	}
 	return []string{fmt.Sprintf(`The validation process for https://%s can take more than 15 minutes.
-    Please visit %s to check the validation status.`, d.rdwsAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))}
+  Please visit %s to check the validation status.`, d.rdwsAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))}
 }
 
 // DeployWorkload deploys a request driven web service using CloudFormation.
