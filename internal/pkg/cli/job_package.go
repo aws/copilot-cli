@@ -8,13 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/exec"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -40,16 +36,21 @@ type packageJobOpts struct {
 	packageJobVars
 
 	// Interfaces to interact with dependencies.
-	ws              wsJobDirReader
-	store           store
-	runner          runner
-	sel             wsSelector
-	prompt          prompter
-	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	ws     wsJobDirReader
+	store  store
+	runner runner
+	sel    wsSelector
+	prompt prompter
 
 	// Subcommand implementing svc_package's Execute()
 	packageCmd    actionCommand
 	newPackageCmd func(*packageJobOpts)
+
+	// cached variables
+	targetApp       *config.Application
+	targetEnv       *config.Environment
+	appliedManifest interface{}
+	rootUserARN     string
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
@@ -61,11 +62,6 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
-	p := sessions.NewProvider()
-	sess, err := p.Default()
-	if err != nil {
-		return nil, fmt.Errorf("retrieve default session: %w", err)
-	}
 	prompter := prompt.New()
 	opts := &packageJobOpts{
 		packageJobVars: vars,
@@ -74,16 +70,6 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		runner:         exec.NewCmd(),
 		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:         prompter,
-	}
-
-	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
-		var serializer stackSerializer
-		jobMft := mft.(*manifest.ScheduledJob)
-		serializer, err := stack.NewScheduledJob(jobMft, env.Name, app.Name, rc)
-		if err != nil {
-			return nil, fmt.Errorf("init scheduled job stack serializer: %w", err)
-		}
-		return serializer, nil
 	}
 
 	opts.newPackageCmd = func(o *packageJobOpts) {
@@ -99,24 +85,14 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			initAddonsClient: initPackageAddonsClient,
 			ws:               ws,
 			store:            o.store,
-			appCFN:           cloudformation.New(sess),
 			stackWriter:      os.Stdout,
+			unmarshal:        manifest.UnmarshalWorkload,
 			newInterpolator:  newManifestInterpolator,
 			paramsWriter:     ioutil.Discard,
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
-			stackSerializer:  o.stackSerializer,
-			newEndpointGetter: func(app, env string) (endpointGetter, error) {
-				d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-					App:         app,
-					Env:         env,
-					ConfigStore: store,
-				})
-				if err != nil {
-					return nil, fmt.Errorf("new env describer for environment %s in app %s: %v", env, app, err)
-				}
-				return d, nil
-			},
+			sessProvider:     sessions.NewProvider(),
+			newTplGenerator:  newWkldTplGenerator,
 		}
 	}
 	return opts, nil

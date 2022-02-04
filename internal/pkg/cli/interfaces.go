@@ -612,3 +612,8 @@ type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
 }
+
+type workloadTemplateGenerator interface {
+	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
+		*clideploy.GenerateCloudFormationTemplateOutput, error)
+}

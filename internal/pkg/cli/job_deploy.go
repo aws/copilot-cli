@@ -14,7 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
-	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -75,7 +75,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	var err error
 	var deployer workloadDeployer
-	in := clideploy.WorkloadDeployerInput{
+	in := deploy.WorkloadDeployerInput{
 		Name:     o.name,
 		App:      o.targetApp,
 		Env:      o.targetEnv,
@@ -84,7 +84,7 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.ScheduledJob:
-		deployer, err = clideploy.NewJobDeployer(&in)
+		deployer, err = deploy.NewJobDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -153,12 +153,14 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
-	if _, err = deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
-		ImageDigest:    uploadOut.ImageDigest,
-		EnvFileARN:     uploadOut.EnvFileARN,
-		AddonsURL:      uploadOut.AddonsURL,
-		RootUserARN:    o.rootUserARN,
-		Tags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
+	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
+		StackConfiguration: deploy.StackConfiguration{
+			ImageDigest: uploadOut.ImageDigest,
+			EnvFileARN:  uploadOut.EnvFileARN,
+			AddonsURL:   uploadOut.AddonsURL,
+			RootUserARN: o.rootUserARN,
+			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
+		},
 		ForceNewUpdate: o.forceNewUpdate,
 	}); err != nil {
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
