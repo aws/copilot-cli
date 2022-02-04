@@ -182,7 +182,6 @@ func (o *deployPipelineOpts) Execute() error {
 }
 
 func (o *deployPipelineOpts) validatePipelineName() error {
-	// TODO: After pipeline file structure changes, validate with o.ws.ListPipelines() instead.
 	data, err := o.ws.ReadPipelineManifest()
 	if err != nil {
 		return fmt.Errorf("read pipeline manifest: %w", err)
