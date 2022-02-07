@@ -15,15 +15,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -36,7 +40,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"golang.org/x/mod/semver"
 )
 
@@ -54,83 +60,58 @@ var (
 	resourceNameFormat                = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
 )
 
-// ImageBuilderPusher builds and pushes an image.
-type ImageBuilderPusher interface {
+// ActionRecommender contains methods that output action recommendation.
+type ActionRecommender interface {
+	RecommendedActions() []string
+}
+
+type imageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
 
-// Uploader uploads a file.
-type Uploader interface {
+type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
-// Templater stringifies a golang template.
-type Templater interface {
+type templater interface {
 	Template() (string, error)
 }
 
-// EndpointGetter gets the service discovery endpoint.
-type EndpointGetter interface {
+type endpointGetter interface {
 	ServiceDiscoveryEndpoint() (string, error)
 }
 
-// VersionGetter gets the version.
-type VersionGetter interface {
+type versionGetter interface {
 	Version() (string, error)
 }
 
-// PublicCIDRBlocksGetter gets the public CIDR blocks.
-type PublicCIDRBlocksGetter interface {
+type publicCIDRBlocksGetter interface {
 	PublicCIDRBlocks() ([]string, error)
 }
 
-// CustomResourcesUploader uploads the custom resource files to S3.
-type CustomResourcesUploader interface {
+type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 	UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 }
 
-// SNSTopicsLister lists SNS topics.
-type SNSTopicsLister interface {
+type snsTopicsLister interface {
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
-// ServiceDeployer uses CloudFormation to deploy a service.
-type ServiceDeployer interface {
+type serviceDeployer interface {
 	DeployService(out progress.FileWriter, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
 }
 
-// ServiceForceUpdater force updates a service.
-type ServiceForceUpdater interface {
+type serviceForceUpdater interface {
 	ForceUpdateService(app, env, svc string) error
 	LastUpdatedAt(app, env, svc string) (time.Time, error)
 }
 
-// WorkspaceReader reads from the workspace.
-type WorkspaceReader interface {
-	manifestReader
-	pathFinder
-}
-
-// Interpolator interpolates a manifest.
-type Interpolator interface {
-	Interpolate(s string) (string, error)
-}
-
-// progress is the interface to inform the user that a long operation is taking place.
-type Progress interface {
+type spinner interface {
 	Start(label string)
 	Stop(label string)
-}
-
-type manifestReader interface {
-	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
-}
-
-type pathFinder interface {
-	Path() (string, error)
 }
 
 type fileReader interface {
@@ -142,9 +123,24 @@ type workloadDeployer struct {
 	app           *config.Application
 	env           *config.Environment
 	imageTag      string
-	s3Bucket      string
+	resources     *stack.AppRegionalResources
 	mft           interface{}
 	workspacePath string
+
+	// dependencies
+	fs                 fileReader
+	s3Client           uploader
+	templater          templater
+	imageBuilderPusher imageBuilderPusher
+	deployer           serviceDeployer
+	endpointGetter     endpointGetter
+	spinner            spinner
+
+	// cached varibles
+	defaultSess              *session.Session
+	defaultSessWithEnvRegion *session.Session
+	envSess                  *session.Session
+	store                    *config.Store
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -153,47 +149,245 @@ type WorkloadDeployerInput struct {
 	App      *config.Application
 	Env      *config.Environment
 	ImageTag string
-	S3Bucket string
+	Mft      interface{}
 }
 
 // NewWorkloadDeployer is the constructor for workloadDeployer.
-func NewWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
+func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-	mft, err := workloadManifest(&workloadManifestInput{
-		name:         in.Name,
-		appName:      in.App.Name,
-		envName:      in.Env.Name,
-		interpolator: manifest.NewInterpolator(in.App.Name, in.Env.Name),
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-	})
-	if err != nil {
-		return nil, err
 	}
 	workspacePath, err := ws.Path()
 	if err != nil {
 		return nil, fmt.Errorf("get workspace path: %w", err)
 	}
+	sessProvider := sessions.NewProvider()
+	defaultSession, err := sessProvider.Default()
+	if err != nil {
+		return nil, fmt.Errorf("create default: %w", err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("create env session with region %s: %w", in.Env.Region, err)
+	}
+	envSession, err := sessProvider.FromRole(in.Env.ManagerRoleARN, in.Env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("create env session with region %s: %w", in.Env.Region, err)
+	}
+	defaultSessEnvRegion, err := sessProvider.DefaultWithRegion(in.Env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("create default session with region %s: %w", in.Env.Region, err)
+	}
+	resources, err := cloudformation.New(defaultSession).GetAppResourcesByRegion(in.App, in.Env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
+	}
+	addonsSvc, err := addon.New(in.Name)
+	if err != nil {
+		return nil, fmt.Errorf("initiate addons service: %w", err)
+	}
+	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
+	registry := ecr.New(defaultSessEnvRegion)
+	imageBuilderPusher, err := repository.New(repoName, registry)
+	if err != nil {
+		return nil, fmt.Errorf("initiate image builder pusher: %w", err)
+	}
+	store, err := config.NewStore()
+	if err != nil {
+		return nil, fmt.Errorf("new config store: %w", err)
+	}
+	endpointGetter, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         in.App.Name,
+		Env:         in.Env.Name,
+		ConfigStore: store,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("initiate env describer: %w", err)
+	}
 	return &workloadDeployer{
-		name:          in.Name,
-		app:           in.App,
-		env:           in.Env,
-		imageTag:      in.ImageTag,
-		s3Bucket:      in.S3Bucket,
-		mft:           mft,
-		workspacePath: workspacePath,
+		name:               in.Name,
+		app:                in.App,
+		env:                in.Env,
+		imageTag:           in.ImageTag,
+		resources:          resources,
+		workspacePath:      workspacePath,
+		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
+		s3Client:           s3.New(envSession),
+		templater:          addonsSvc,
+		imageBuilderPusher: imageBuilderPusher,
+		deployer:           cloudformation.New(envSession),
+		endpointGetter:     endpointGetter,
+		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
+
+		defaultSess:              defaultSession,
+		defaultSessWithEnvRegion: defaultSessEnvRegion,
+		envSess:                  envSession,
+		store:                    store,
+
+		mft: in.Mft,
 	}, nil
 }
 
-// UploadArtifactsInput is the input of UploadArtifacts.
-type UploadArtifactsInput struct {
-	FS                 fileReader
-	Uploader           Uploader
-	Templater          Templater
-	ImageBuilderPusher ImageBuilderPusher
+type svcDeployer struct {
+	*workloadDeployer
+	newSvcUpdater func(func(*session.Session) serviceForceUpdater) serviceForceUpdater
+	now           func() time.Time
+}
+
+func newSvcDeployer(in *WorkloadDeployerInput) (*svcDeployer, error) {
+	wkldDeployer, err := newWorkloadDeployer(in)
+	if err != nil {
+		return nil, err
+	}
+	return &svcDeployer{
+		workloadDeployer: wkldDeployer,
+		newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+			return f(wkldDeployer.envSess)
+		},
+		now: time.Now,
+	}, nil
+}
+
+type lbSvcDeployer struct {
+	*svcDeployer
+	appVersionGetter       versionGetter
+	publicCIDRBlocksGetter publicCIDRBlocksGetter
+	lbMft                  *manifest.LoadBalancedWebService
+}
+
+// NewLBDeployer is the constructor for lbSvcDeployer.
+func NewLBDeployer(in *WorkloadDeployerInput) (*lbSvcDeployer, error) {
+	svcDeployer, err := newSvcDeployer(in)
+	if err != nil {
+		return nil, err
+	}
+	versionGetter, err := describe.NewAppDescriber(in.App.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
+	}
+	deployStore, err := deploy.NewStore(svcDeployer.store)
+	if err != nil {
+		return nil, fmt.Errorf("new deploy store: %w", err)
+	}
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         in.App.Name,
+		Env:         in.Env.Name,
+		ConfigStore: svcDeployer.store,
+		DeployStore: deployStore,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create describer for environment %s in application %s: %w", in.Env.Name, in.App.Name, err)
+	}
+	lbMft, ok := in.Mft.(*manifest.LoadBalancedWebService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.LoadBalancedWebServiceType)
+	}
+	return &lbSvcDeployer{
+		svcDeployer:            svcDeployer,
+		appVersionGetter:       versionGetter,
+		publicCIDRBlocksGetter: envDescriber,
+		lbMft:                  lbMft,
+	}, nil
+}
+
+type backendSvcDeployer struct {
+	*svcDeployer
+	backendMft *manifest.BackendService
+}
+
+// NewBackendDeployer is the constructor for backendSvcDeployer.
+func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) {
+	svcDeployer, err := newSvcDeployer(in)
+	if err != nil {
+		return nil, err
+	}
+	bsMft, ok := in.Mft.(*manifest.BackendService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.BackendServiceType)
+	}
+	return &backendSvcDeployer{
+		svcDeployer: svcDeployer,
+		backendMft:  bsMft,
+	}, nil
+}
+
+type jobDeployer struct {
+	*workloadDeployer
+	jobMft *manifest.ScheduledJob
+}
+
+// NewJobDeployer is the constructor for jobDeployer.
+func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
+	wkldDeployer, err := newWorkloadDeployer(in)
+	if err != nil {
+		return nil, err
+	}
+	jobMft, ok := in.Mft.(*manifest.ScheduledJob)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.ScheduledJobType)
+	}
+	return &jobDeployer{
+		workloadDeployer: wkldDeployer,
+		jobMft:           jobMft,
+	}, nil
+}
+
+type rdwsDeployer struct {
+	*svcDeployer
+	customResourceUploader customResourcesUploader
+	customResourceS3Client uploader
+	appVersionGetter       versionGetter
+	rdwsMft                *manifest.RequestDrivenWebService
+}
+
+// NewRDWSDeployer is the constructor for RDWSDeployer.
+func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
+	svcDeployer, err := newSvcDeployer(in)
+	if err != nil {
+		return nil, err
+	}
+	versionGetter, err := describe.NewAppDescriber(in.App.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
+	}
+	rdwsMft, ok := in.Mft.(*manifest.RequestDrivenWebService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.RequestDrivenWebServiceType)
+	}
+	return &rdwsDeployer{
+		svcDeployer:            svcDeployer,
+		customResourceUploader: template.New(),
+		customResourceS3Client: s3.New(svcDeployer.defaultSessWithEnvRegion),
+		appVersionGetter:       versionGetter,
+		rdwsMft:                rdwsMft,
+	}, nil
+}
+
+type workerSvcDeployer struct {
+	*svcDeployer
+	topicLister snsTopicsLister
+	wsMft       *manifest.WorkerService
+}
+
+// NewWorkerSvcDeployer is the constructor for workerSvcDeployer.
+func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error) {
+	svcDeployer, err := newSvcDeployer(in)
+	if err != nil {
+		return nil, err
+	}
+	deployStore, err := deploy.NewStore(svcDeployer.store)
+	if err != nil {
+		return nil, fmt.Errorf("new deploy store: %w", err)
+	}
+	wsMft, ok := in.Mft.(*manifest.WorkerService)
+	if !ok {
+		return nil, fmt.Errorf("manifest is not of type %s", manifest.WorkerServiceType)
+	}
+	return &workerSvcDeployer{
+		svcDeployer: svcDeployer,
+		topicLister: deployStore,
+		wsMft:       wsMft,
+	}, nil
 }
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
@@ -209,41 +403,20 @@ type DeployWorkloadInput struct {
 	EnvFileARN     string
 	AddonsURL      string
 	RootUserARN    string
-	AppTags        map[string]string
-	ResourceTags   map[string]string
-	ImageRepoURL   string
+	Tags           map[string]string
 	ForceNewUpdate bool
-
-	CustomResourceUploader CustomResourcesUploader
-	S3Uploader             Uploader
-	SNSTopicsLister        SNSTopicsLister
-	ServiceDeployer        ServiceDeployer
-	NewSvcUpdater          func(func(*session.Session) ServiceForceUpdater)
-	AppVersionGetter       VersionGetter
-	PublicCIDRBlocksGetter PublicCIDRBlocksGetter
-	ServiceForceUpdater    ServiceForceUpdater
-	EndpointGetter         EndpointGetter
-	Spinner                Progress
-
-	now func() time.Time
-}
-
-// DeployWorkloadOutput is the output of DeployWorkload.
-type DeployWorkloadOutput struct {
-	RDWSAlias     string
-	Subscriptions []manifest.TopicSubscription
 }
 
 // UploadArtifacts uploads the deployment artifacts (image, addons files, env files).
-func (d *workloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArtifactsOutput, error) {
-	imageOutput, err := d.uploadContainerImage(in.ImageBuilderPusher)
+func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+	imageOutput, err := d.uploadContainerImage(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
-		fs:        in.FS,
-		uploader:  in.Uploader,
-		templater: in.Templater,
+		fs:        d.fs,
+		uploader:  d.s3Client,
+		templater: d.templater,
 	})
 	if err != nil {
 		return nil, err
@@ -256,48 +429,168 @@ func (d *workloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArt
 	}, nil
 }
 
-// DeployWorkload deploys a workload using CloudFormation.
-func (d *workloadDeployer) DeployWorkload(in *DeployWorkloadInput) (*DeployWorkloadOutput, error) {
-	stackConfigoutput, err := d.stackConfiguration(in)
+// DeployWorkload deploys a load balanced web service using CloudFormation.
+func (d *lbSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(in)
 	if err != nil {
 		return nil, err
 	}
-	cmdRunAt := in.now()
-	if err := in.ServiceDeployer.DeployService(os.Stderr, stackConfigoutput.conf, d.s3Bucket,
+	if err := d.deploy(in, *stackConfigOutput); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// DeployWorkload deploys a backend service using CloudFormation.
+func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(in)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.deploy(in, *stackConfigOutput); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+type rdwsDeployOutput struct {
+	rdwsAlias string
+}
+
+// RecommendedActions returns the recommended actions after deployment.
+func (d *rdwsDeployOutput) RecommendedActions() []string {
+	if d.rdwsAlias == "" {
+		return nil
+	}
+	return []string{fmt.Sprintf(`The validation process for https://%s can take more than 15 minutes.
+    Please visit %s to check the validation status.`, d.rdwsAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))}
+}
+
+// DeployWorkload deploys a request driven web service using CloudFormation.
+func (d *rdwsDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(in)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.deploy(in, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+		return nil, err
+	}
+	return &rdwsDeployOutput{
+		rdwsAlias: stackConfigOutput.rdSvcAlias,
+	}, nil
+}
+
+type workerSvcDeployOutput struct {
+	subs []manifest.TopicSubscription
+}
+
+// RecommendedActions returns the recommended actions after deployment.
+func (d *workerSvcDeployOutput) RecommendedActions() []string {
+	if d.subs == nil {
+		return nil
+	}
+	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
+	actionRetrieveEnvVar := fmt.Sprintf(
+		`Update worker service code to leverage the injected environment variable "COPILOT_QUEUE_URI".
+    In JavaScript you can write %s.`,
+		color.HighlightCode(retrieveEnvVarCode),
+	)
+	recs := []string{actionRetrieveEnvVar}
+	topicQueueNames := d.buildWorkerQueueNames()
+	if topicQueueNames == "" {
+		return recs
+	}
+	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = JSON.parse(process.env.COPILOT_TOPIC_QUEUE_URIS)", topicQueueNames)
+	actionRetrieveTopicQueues := fmt.Sprintf(
+		`You can retrieve topic-specific queues by writing
+    %s.`,
+		color.HighlightCode(retrieveTopicQueueEnvVarCode),
+	)
+	recs = append(recs, actionRetrieveTopicQueues)
+	return recs
+}
+
+func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {
+	sb := new(strings.Builder)
+	first := true
+	for _, subscription := range d.subs {
+		if subscription.Queue.IsEmpty() {
+			continue
+		}
+		topicSvc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
+		topicName := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
+		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
+		if first {
+			sb.WriteString(subName)
+			first = false
+		} else {
+			sb.WriteString(fmt.Sprintf(", %s", subName))
+		}
+	}
+	return sb.String()
+}
+
+// DeployWorkload deploys a worker servsice using CloudFormation.
+func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(in)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.deploy(in, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+		return nil, err
+	}
+	return &workerSvcDeployOutput{
+		subs: stackConfigOutput.subscriptions,
+	}, nil
+}
+
+// DeployWorkload deploys a job using CloudFormation.
+func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(in)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket,
+		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
+		return nil, fmt.Errorf("deploy job: %w", err)
+	}
+	return nil, nil
+}
+
+func (d *svcDeployer) deploy(in *DeployWorkloadInput, stackConfigOutput svcStackConfigurationOutput) error {
+	cmdRunAt := d.now()
+	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket,
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
-			return nil, fmt.Errorf("deploy service: %w", err)
+			return fmt.Errorf("deploy service: %w", err)
 		}
 		if !in.ForceNewUpdate {
 			log.Warningln("Set --force to force an update for the service.")
-			return nil, fmt.Errorf("deploy service: %w", err)
+			return fmt.Errorf("deploy service: %w", err)
 		}
 	}
 	// Force update the service if --force is set and the service is not updated by the CFN.
 	if in.ForceNewUpdate {
-		lastUpdatedAt, err := in.ServiceForceUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
+		lastUpdatedAt, err := stackConfigOutput.svcUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
 		if err != nil {
-			return nil, fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
+			return fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
 		}
 		if cmdRunAt.After(lastUpdatedAt) {
 			if err := d.forceDeploy(&forceDeployInput{
-				spinner:    in.Spinner,
-				svcUpdater: in.ServiceForceUpdater,
+				spinner:    d.spinner,
+				svcUpdater: stackConfigOutput.svcUpdater,
 			}); err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
-	return &DeployWorkloadOutput{
-		RDWSAlias:     stackConfigoutput.rdSvcAlias,
-		Subscriptions: stackConfigoutput.subscriptions,
-	}, nil
+	return nil
 }
 
 type forceDeployInput struct {
-	spinner    Progress
-	svcUpdater ServiceForceUpdater
+	spinner    spinner
+	svcUpdater serviceForceUpdater
 }
 
 func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
@@ -322,7 +615,7 @@ type uploadContainerImageOutput struct {
 	imageDigest   string
 }
 
-func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher ImageBuilderPusher) (
+func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (
 	uploadContainerImageOutput, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
@@ -348,8 +641,8 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher ImageBuilderPus
 
 type uploadArtifactsToS3Input struct {
 	fs        fileReader
-	uploader  Uploader
-	templater Templater
+	uploader  uploader
+	templater templater
 }
 
 type uploadArtifactsToS3Output struct {
@@ -380,7 +673,7 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 
 type pushEnvFilesToS3BucketInput struct {
 	fs       fileReader
-	uploader Uploader
+	uploader uploader
 }
 
 func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
@@ -393,9 +686,9 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 		return "", fmt.Errorf("read env file %s: %w", path, err)
 	}
 	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.s3Bucket, s3.MkdirSHA256(path, content), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, s3.MkdirSHA256(path, content), reader)
 	if err != nil {
-		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.s3Bucket, err)
+		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
 	}
 	bucket, key, err := s3.ParseURL(url)
 	if err != nil {
@@ -411,8 +704,8 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 }
 
 type pushAddonsTemplateToS3BucketInput struct {
-	templater Templater
-	uploader  Uploader
+	templater templater
+	uploader  uploader
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
@@ -426,15 +719,15 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
 	reader := strings.NewReader(template)
-	url, err := in.uploader.Upload(d.s3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, d.name), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, d.name), reader)
 	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.s3Bucket, err)
+		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
 	return url, nil
 }
 
 func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.RuntimeConfig, error) {
-	endpoint, err := in.EndpointGetter.ServiceDiscoveryEndpoint()
+	endpoint, err := d.endpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("get service discovery endpoint: %w", err)
 	}
@@ -443,7 +736,7 @@ func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
 			EnvFileARN:               in.EnvFileARN,
-			AdditionalTags:           tags.Merge(in.AppTags, in.ResourceTags),
+			AdditionalTags:           in.Tags,
 			ServiceDiscoveryEndpoint: endpoint,
 			AccountID:                d.env.AccountID,
 			Region:                   d.env.Region,
@@ -453,9 +746,9 @@ func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 	return &stack.RuntimeConfig{
 		AddonsTemplateURL: in.AddonsURL,
 		EnvFileARN:        in.EnvFileARN,
-		AdditionalTags:    tags.Merge(in.AppTags, in.ResourceTags),
+		AdditionalTags:    in.Tags,
 		Image: &stack.ECRImage{
-			RepoURL:  in.ImageRepoURL,
+			RepoURL:  d.resources.RepositoryURLs[d.name],
 			ImageTag: d.imageTag,
 			Digest:   in.ImageDigest,
 		},
@@ -465,115 +758,182 @@ func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 	}, nil
 }
 
-type stackConfigurationOutput struct {
-	conf          cloudformation.StackConfiguration
-	rdSvcAlias    string
-	subscriptions []manifest.TopicSubscription
+type svcStackConfigurationOutput struct {
+	conf       cloudformation.StackConfiguration
+	svcUpdater serviceForceUpdater
 }
 
-func (d *workloadDeployer) stackConfiguration(in *DeployWorkloadInput) (*stackConfigurationOutput, error) {
+func (d *lbSvcDeployer) stackConfiguration(in *DeployWorkloadInput) (*svcStackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
 	}
-	in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
-		return ecs.New(s)
-	})
-	var output stackConfigurationOutput
-	switch t := d.mft.(type) {
-	case *manifest.LoadBalancedWebService:
-		if err := validateLBWSRuntime(d.app, d.env.Name, t, in.AppVersionGetter); err != nil {
-			return nil, err
+	if err := validateLBWSRuntime(d.app, d.env.Name, d.lbMft, d.appVersionGetter); err != nil {
+		return nil, err
+	}
+	var opts []stack.LoadBalancedWebServiceOption
+	if !d.lbMft.NLBConfig.IsEmpty() {
+		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
+		if err != nil {
+			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
 		}
-
-		var opts []stack.LoadBalancedWebServiceOption
-		if !t.NLBConfig.IsEmpty() {
-			cidrBlocks, err := in.PublicCIDRBlocksGetter.PublicCIDRBlocks()
-			if err != nil {
-				return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
-			}
-			opts = append(opts, stack.WithNLB(cidrBlocks))
-		}
-		if d.app.RequiresDNSDelegation() {
-			opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
-				Name:                d.app.Name,
-				DNSName:             d.app.Domain,
-				AccountPrincipalARN: in.RootUserARN,
-			}))
-
-			if !t.RoutingRule.Disabled() {
-				opts = append(opts, stack.WithHTTPS())
-			}
-		}
-		output.conf, err = stack.NewLoadBalancedWebService(t, d.env.Name, d.app.Name, *rc, opts...)
-	case *manifest.RequestDrivenWebService:
-		if d.app.Domain == "" && t.Alias != nil {
-			log.Errorf(aliasUsedWithoutDomainFriendlyText)
-			return nil, errors.New("alias specified when application is not associated with a domain")
-		}
-		in.NewSvcUpdater(func(s *session.Session) ServiceForceUpdater {
-			return apprunner.New(s)
-		})
-		appInfo := deploy.AppInformation{
+		opts = append(opts, stack.WithNLB(cidrBlocks))
+	}
+	if d.app.RequiresDNSDelegation() {
+		opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
 			Name:                d.app.Name,
 			DNSName:             d.app.Domain,
 			AccountPrincipalARN: in.RootUserARN,
+		}))
+		if !d.lbMft.RoutingRule.Disabled() {
+			opts = append(opts, stack.WithHTTPS())
 		}
-		if t.Alias == nil {
-			output.conf, err = stack.NewRequestDrivenWebService(t, d.env.Name, appInfo, *rc)
-			break
-		}
-
-		output.rdSvcAlias = aws.StringValue(t.Alias)
-
-		if err = validateRDSvcAliasAndAppVersion(d.name,
-			aws.StringValue(t.Alias), d.env.Name, d.app, in.AppVersionGetter); err != nil {
-			return nil, err
-		}
-		var urls map[string]string
-		if urls, err = uploadRDWSCustomResources(&uploadRDWSCustomResourcesInput{
-			customResourceUploader: in.CustomResourceUploader,
-			s3Uploader:             in.S3Uploader,
-			s3Bucket:               d.s3Bucket,
-		}); err != nil {
-			return nil, err
-		}
-		output.conf, err = stack.NewRequestDrivenWebServiceWithAlias(t, d.env.Name, appInfo, *rc, urls)
-	case *manifest.BackendService:
-		output.conf, err = stack.NewBackendService(t, d.env.Name, d.app.Name, *rc)
-	case *manifest.WorkerService:
-		var topics []deploy.Topic
-		topics, err = in.SNSTopicsLister.ListSNSTopics(d.app.Name, d.env.Name)
-		if err != nil {
-			return nil, fmt.Errorf("get SNS topics for app %s and environment %s: %w", d.app.Name, d.env.Name, err)
-		}
-		var topicARNs []string
-		for _, topic := range topics {
-			topicARNs = append(topicARNs, topic.ARN())
-		}
-		type subscriptions interface {
-			Subscriptions() []manifest.TopicSubscription
-		}
-
-		subscriptionGetter, ok := d.mft.(subscriptions)
-		if !ok {
-			return nil, errors.New("manifest does not have required method Subscriptions")
-		}
-		// Cache the subscriptions for later.
-		output.subscriptions = subscriptionGetter.Subscriptions()
-
-		if err = validateTopicsExist(output.subscriptions, topicARNs, d.app.Name, d.env.Name); err != nil {
-			return nil, err
-		}
-		output.conf, err = stack.NewWorkerService(t, d.env.Name, d.app.Name, *rc)
-
-	default:
-		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
+	conf, err := stack.NewLoadBalancedWebService(d.lbMft, d.env.Name, d.app.Name, *rc, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
-	return &output, nil
+	return &svcStackConfigurationOutput{
+		conf: conf,
+		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
+			return ecs.New(s)
+		}),
+	}, nil
+}
+
+func (d *backendSvcDeployer) stackConfiguration(in *DeployWorkloadInput) (*svcStackConfigurationOutput, error) {
+	rc, err := d.runtimeConfig(in)
+	if err != nil {
+		return nil, err
+	}
+	conf, err := stack.NewBackendService(d.backendMft, d.env.Name, d.app.Name, *rc)
+	if err != nil {
+		return nil, fmt.Errorf("create stack configuration: %w", err)
+	}
+	return &svcStackConfigurationOutput{
+		conf: conf,
+		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
+			return ecs.New(s)
+		}),
+	}, nil
+}
+
+type rdwsStackConfigurationOutput struct {
+	svcStackConfigurationOutput
+	rdSvcAlias string
+}
+
+func (d *rdwsDeployer) stackConfiguration(in *DeployWorkloadInput) (*rdwsStackConfigurationOutput, error) {
+	rc, err := d.runtimeConfig(in)
+	if err != nil {
+		return nil, err
+	}
+
+	if d.app.Domain == "" && d.rdwsMft.Alias != nil {
+		log.Errorf(aliasUsedWithoutDomainFriendlyText)
+		return nil, errors.New("alias specified when application is not associated with a domain")
+	}
+	appInfo := deploy.AppInformation{
+		Name:                d.app.Name,
+		DNSName:             d.app.Domain,
+		AccountPrincipalARN: in.RootUserARN,
+	}
+	if d.rdwsMft.Alias == nil {
+		conf, err := stack.NewRequestDrivenWebService(d.rdwsMft, d.env.Name, appInfo, *rc)
+		if err != nil {
+			return nil, fmt.Errorf("create stack configuration: %w", err)
+		}
+		return &rdwsStackConfigurationOutput{
+			svcStackConfigurationOutput: svcStackConfigurationOutput{
+				conf: conf,
+				svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
+					return apprunner.New(s)
+				}),
+			},
+		}, nil
+	}
+
+	if err = validateRDSvcAliasAndAppVersion(d.name,
+		aws.StringValue(d.rdwsMft.Alias), d.env.Name, d.app, d.appVersionGetter); err != nil {
+		return nil, err
+	}
+	var urls map[string]string
+	if urls, err = uploadRDWSCustomResources(&uploadRDWSCustomResourcesInput{
+		customResourceUploader: d.customResourceUploader,
+		s3Uploader:             d.customResourceS3Client,
+		s3Bucket:               d.resources.S3Bucket,
+	}); err != nil {
+		return nil, err
+	}
+	conf, err := stack.NewRequestDrivenWebServiceWithAlias(d.rdwsMft, d.env.Name, appInfo, *rc, urls)
+	if err != nil {
+		return nil, fmt.Errorf("create stack configuration: %w", err)
+	}
+	return &rdwsStackConfigurationOutput{
+		svcStackConfigurationOutput: svcStackConfigurationOutput{
+			conf: conf,
+			svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
+				return apprunner.New(s)
+			}),
+		},
+		rdSvcAlias: aws.StringValue(d.rdwsMft.Alias),
+	}, nil
+}
+
+type workerSvcStackConfigurationOutput struct {
+	svcStackConfigurationOutput
+	subscriptions []manifest.TopicSubscription
+}
+
+func (d *workerSvcDeployer) stackConfiguration(in *DeployWorkloadInput) (*workerSvcStackConfigurationOutput, error) {
+	rc, err := d.runtimeConfig(in)
+	if err != nil {
+		return nil, err
+	}
+	var topics []deploy.Topic
+	topics, err = d.topicLister.ListSNSTopics(d.app.Name, d.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("get SNS topics for app %s and environment %s: %w", d.app.Name, d.env.Name, err)
+	}
+	var topicARNs []string
+	for _, topic := range topics {
+		topicARNs = append(topicARNs, topic.ARN())
+	}
+	subs := d.wsMft.Subscriptions()
+	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
+		return nil, err
+	}
+	conf, err := stack.NewWorkerService(d.wsMft, d.env.Name, d.app.Name, *rc)
+	if err != nil {
+		return nil, fmt.Errorf("create stack configuration: %w", err)
+	}
+	return &workerSvcStackConfigurationOutput{
+		svcStackConfigurationOutput: svcStackConfigurationOutput{
+			conf: conf,
+			svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
+				return ecs.New(s)
+			}),
+		},
+		subscriptions: subs,
+	}, nil
+}
+
+type jobStackConfigurationOutput struct {
+	conf cloudformation.StackConfiguration
+}
+
+func (d *jobDeployer) stackConfiguration(in *DeployWorkloadInput) (*jobStackConfigurationOutput, error) {
+	rc, err := d.runtimeConfig(in)
+	if err != nil {
+		return nil, err
+	}
+	conf, err := stack.NewScheduledJob(d.jobMft, d.env.Name, d.app.Name, *rc)
+	if err != nil {
+		return nil, fmt.Errorf("create stack configuration: %w", err)
+	}
+	return &jobStackConfigurationOutput{
+		conf: conf,
+	}, nil
 }
 
 func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interface{}) (*dockerengine.BuildArguments, error) {
@@ -599,38 +959,6 @@ func buildArgs(name, imageTag, workspacePath string, unmarshaledManifest interfa
 		Platform:   mf.ContainerPlatform(),
 		Tags:       tags,
 	}, nil
-}
-
-type workloadManifestInput struct {
-	name         string
-	appName      string
-	envName      string
-	ws           WorkspaceReader
-	interpolator Interpolator
-	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
-}
-
-func workloadManifest(in *workloadManifestInput) (interface{}, error) {
-	raw, err := in.ws.ReadWorkloadManifest(in.name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
-	}
-	interpolated, err := in.interpolator.Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", in.name, err)
-	}
-	mft, err := in.unmarshal([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal service %s manifest: %w", in.name, err)
-	}
-	envMft, err := mft.ApplyEnv(in.envName)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
-	}
-	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
-	}
-	return envMft, nil
 }
 
 func envFile(unmarshaledManifest interface{}) string {
@@ -674,8 +1002,8 @@ func contains(s string, items []string) bool {
 }
 
 type uploadRDWSCustomResourcesInput struct {
-	customResourceUploader CustomResourcesUploader
-	s3Uploader             Uploader
+	customResourceUploader customResourcesUploader
+	s3Uploader             uploader
 	s3Bucket               string
 }
 
@@ -690,7 +1018,7 @@ func uploadRDWSCustomResources(in *uploadRDWSCustomResourcesInput) (map[string]s
 	return urls, nil
 }
 
-func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter VersionGetter) error {
+func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {
 	if alias == "" {
 		return nil
 	}
@@ -721,7 +1049,7 @@ Where <subdomain> cannot be the application name.
 	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
 }
 
-func validateAppVersion(appName string, appVersionGetter VersionGetter) error {
+func validateAppVersion(appName string, appVersionGetter versionGetter) error {
 	appVersion, err := appVersionGetter.Version()
 	if err != nil {
 		return fmt.Errorf("get version for app %s: %w", appName, err)
@@ -733,7 +1061,7 @@ func validateAppVersion(appName string, appVersionGetter VersionGetter) error {
 	return nil
 }
 
-func validateLBWSRuntime(app *config.Application, envName string, mft *manifest.LoadBalancedWebService, appVersionGetter VersionGetter) error {
+func validateLBWSRuntime(app *config.Application, envName string, mft *manifest.LoadBalancedWebService, appVersionGetter versionGetter) error {
 	if app.Domain == "" && mft.HasAliases() {
 		log.Errorf(aliasUsedWithoutDomainFriendlyText)
 		return errors.New("alias specified when application is not associated with a domain")

@@ -6,7 +6,6 @@ package cli
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -166,19 +164,13 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:           ssm,
 		prompt:          prompt,
 		ws:              ws,
-		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		newInterpolator: newManifestInterpolator,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,
 		spinner:         spin,
-		now:             time.Now,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
-		snsTopicGetter:  deployStore,
-
-		newAppVersionGetter: func(appName string) (versionGetter, error) {
-			return describe.NewAppDescriber(appName)
-		},
+		newSvcDeployer:  newSvcDeployer,
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
@@ -187,15 +179,13 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			appName:  vars.appName,
 		},
 		store:           ssm,
-		prompt:          prompt,
 		ws:              ws,
-		fs:              &afero.Afero{Fs: afero.NewOsFs()},
 		newInterpolator: newManifestInterpolator,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             sel,
-		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
+		newJobDeployer:  newJobDeployer,
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()
