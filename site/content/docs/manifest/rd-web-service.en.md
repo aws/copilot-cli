@@ -148,7 +148,9 @@ in your environment, or connect to a database in your VPC such as Amazon Aurora 
 Subnets in the VPC to route egress traffic from the service.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
-Must be `'private'` for the App Runner service to route egress traffic through the private subnets of the VPC.  
+The only valid option today is `'private'`. If you prefer the service not to be connect to a VPC, you can remove the `network` field.
+
+When the placement is `'private'`, the App Runner service routes egress traffic through the private subnets of the VPC.  
 If you use a Copilot-generated VPC, Copilot will automatically add NAT Gateways to your environment for internet connectivity. (See [pricing](https://aws.amazon.com/vpc/pricing/).)
 Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints 
 for isolated workloads. See our [custom environment resources](../developing/custom-environment-resources.en.md) page for more.
