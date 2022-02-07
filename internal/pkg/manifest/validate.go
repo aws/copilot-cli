@@ -401,6 +401,14 @@ func (s ScheduledJobConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if the pipeline manifest is configured correctly.
+func (p PipelineManifest) Validate() error {
+	if len(p.Name) > 100 {
+		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, p.Name)
+	}
+	return nil
+}
+
 // Validate returns nil if Workload is configured correctly.
 func (w Workload) Validate() error {
 	if w.Name == nil {

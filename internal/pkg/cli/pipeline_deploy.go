@@ -128,12 +128,10 @@ func (o *deployPipelineOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
-	// Set pipeline name if not passed in with flag.
-	if o.name == "" {
-		if len(pipeline.Name) > 100 {
-			return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, pipeline.Name)
-		}
+	if err := pipeline.Validate(); err != nil {
+		return fmt.Errorf("validate pipeline: %w", err)
 	}
+	// Set pipeline name; if passed in with flag, should be identical.
 	o.name = pipeline.Name
 
 	// If the source has an existing connection, get the correlating ConnectionARN .
@@ -182,7 +180,6 @@ func (o *deployPipelineOpts) Execute() error {
 }
 
 func (o *deployPipelineOpts) validatePipelineName() error {
-	// TODO: After pipeline file structure changes, validate with o.ws.ListPipelines() instead.
 	data, err := o.ws.ReadPipelineManifest()
 	if err != nil {
 		return fmt.Errorf("read pipeline manifest: %w", err)

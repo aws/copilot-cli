@@ -35,6 +35,7 @@ const (
 	SummaryFileName = ".workspace"
 
 	addonsDirName             = "addons"
+	pipelinesDirName          = "pipelines"
 	maximumParentDirsToSearch = 5
 	pipelineFileName          = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
@@ -149,6 +150,69 @@ func (ws *Workspace) ListWorkloads() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
 		return true
 	})
+}
+
+// ListPipelines returns the names of all pipelines in the workspace.
+func (ws *Workspace) ListPipelines() ([]string, error) {
+	var pipelines []string
+	// Look for legacy pipeline.
+	pmPath, err := ws.pipelineManifestPath()
+	if err != nil {
+		return nil, err
+	}
+	manifestExists, err := ws.fsUtils.Exists(pmPath)
+	if err != nil {
+		return nil, err
+	}
+	if manifestExists {
+		data, err := ws.ReadPipelineManifest()
+		if err != nil {
+			return nil, fmt.Errorf("read pipeline manifest: %w", err)
+		}
+		pipelineManifest := PipelineManifest(data)
+		name, err := pipelineManifest.pipelineName()
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("adding legacy pipeline: ", name)
+		pipelines = append(pipelines, name)
+	}
+
+	// Look for other pipelines.
+	copilotPath, err := ws.copilotDirPath()
+	if err != nil {
+		return nil, err
+	}
+	files, err := ws.fsUtils.ReadDir(filepath.Join(copilotPath, pipelinesDirName))
+	if err != nil {
+		return nil, fmt.Errorf("read directory %s: %w", filepath.Join(copilotPath, pipelinesDirName), err)
+	}
+	for _, file := range files {
+		// Look for moved legacy pipeline.
+		if file.Name() == "pipeline.yml" {
+			data, err := ws.read(filepath.Join(pipelinesDirName, file.Name()))
+			if err != nil {
+				return nil, fmt.Errorf("read pipeline manifest: %w", err)
+			}
+			pipelineManifest := PipelineManifest(data)
+			name, err := pipelineManifest.pipelineName()
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("adding moved legacy pipeline: ", name)
+			pipelines = append(pipelines, name)
+			continue
+		}
+		// Ignore buildspecs.
+		if strings.HasSuffix(file.Name(), "buildspec.yml") {
+			continue
+		}
+		if strings.HasSuffix(file.Name(), ".yml") {
+			fmt.Println("adding new style pipeline name: ", strings.Trim(file.Name(), ".yml"))
+			pipelines = append(pipelines, strings.TrimSuffix(file.Name(), ".yml"))
+		}
+	}
+	return pipelines, nil
 }
 
 // listWorkloads returns the name of all workloads (either services or jobs) in the workspace.
@@ -489,6 +553,19 @@ func RelPath(fullPath string) (string, error) {
 		return "", fmt.Errorf("get relative path of file: %w", err)
 	}
 	return path, nil
+}
+
+// PipelineManifest represents a local pipeline manifest.
+type PipelineManifest []byte
+
+func (p PipelineManifest) pipelineName() (string, error) {
+	pl := struct {
+		Name string `yaml:"name"`
+	}{}
+	if err := yaml.Unmarshal(p, &pl); err != nil {
+		return "", fmt.Errorf(`unmarshal pipeline manifest file to retrieve "name": %w`, err)
+	}
+	return pl.Name, nil
 }
 
 // WorkloadManifest represents raw local workload manifest.

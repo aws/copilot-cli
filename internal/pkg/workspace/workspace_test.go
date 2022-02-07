@@ -509,6 +509,66 @@ type: Scheduled Job`))
 	}
 }
 
+func TestWorkspace_ListPipelines(t *testing.T) {
+	testCases := map[string]struct {
+		copilotDir string
+		fs         func() afero.Fs
+
+		wantedNames []string
+		wantedErr   error
+	}{
+		"success finding legacy pipeline (in both copilot/ and copilot/pipelines)(read manifest) and other pipelines (read filename), weeding out buildspecs": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				legacyInCopiDir, _ := fs.Create("/copilot/pipeline.yml")
+				defer legacyInCopiDir.Close()
+				legacyInCopiDir.Write([]byte(`name: legacyInCopiDir`))
+
+				fs.Create("/copilot/buildspec.yml")
+
+				fs.Mkdir("/copilot/pipelines", 0755)
+				legacyInPipelinesDirManifest, _ := fs.Create("/copilot/pipelines/pipeline.yml")
+				defer legacyInPipelinesDirManifest.Close()
+				legacyInPipelinesDirManifest.Write([]byte(`name: legacyInPipelinesDir`))
+
+				fs.Create("/copilot/pipelines/buildspec.yml")
+
+				otherInPipelinesDirManifest, _ := fs.Create("/copilot/pipelines/other.yml")
+				defer otherInPipelinesDirManifest.Close()
+				otherInPipelinesDirManifest.Write([]byte(`name: otherInPipelinesDir`))
+
+				otherInPipelinesDirBuildspec, _ := fs.Create("/copilot/pipelines/other.buildspec.yml")
+				defer otherInPipelinesDirBuildspec.Close()
+				otherInPipelinesDirBuildspec.Write([]byte(`name: buildspecInPipelinesDir`))
+
+				return fs
+			},
+
+			wantedNames: []string{"legacyInCopiDir", "legacyInPipelinesDir", "other"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: tc.copilotDir,
+				fsUtils: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			names, err := ws.ListPipelines()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.ElementsMatch(t, tc.wantedNames, names)
+			}
+		})
+	}
+}
+
 func TestIsInGitRepository(t *testing.T) {
 	testCases := map[string]struct {
 		given  func() FileStat
