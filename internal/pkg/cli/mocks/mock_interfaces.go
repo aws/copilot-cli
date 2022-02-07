@@ -2826,6 +2826,21 @@ func (m *MockwsPipelineReader) EXPECT() *MockwsPipelineReaderMockRecorder {
 	return m.recorder
 }
 
+// ListPipelines mocks base method.
+func (m *MockwsPipelineReader) ListPipelines() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelines")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPipelines indicates an expected call of ListPipelines.
+func (mr *MockwsPipelineReaderMockRecorder) ListPipelines() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockwsPipelineReader)(nil).ListPipelines))
+}
+
 // ListWorkloads mocks base method.
 func (m *MockwsPipelineReader) ListWorkloads() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -5228,6 +5243,29 @@ func (m *MockwsSelector) Workload(msg, help string) (string, error) {
 func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
+}
+
+// MockwsPipelineSelector is a mock of wsPipelineSelector interface.
+type MockwsPipelineSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsPipelineSelectorMockRecorder
+}
+
+// MockwsPipelineSelectorMockRecorder is the mock recorder for MockwsPipelineSelector.
+type MockwsPipelineSelectorMockRecorder struct {
+	mock *MockwsPipelineSelector
+}
+
+// NewMockwsPipelineSelector creates a new mock instance.
+func NewMockwsPipelineSelector(ctrl *gomock.Controller) *MockwsPipelineSelector {
+	mock := &MockwsPipelineSelector{ctrl: ctrl}
+	mock.recorder = &MockwsPipelineSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsPipelineSelector) EXPECT() *MockwsPipelineSelectorMockRecorder {
+	return m.recorder
 }
 
 // MockinitJobSelector is a mock of initJobSelector interface.

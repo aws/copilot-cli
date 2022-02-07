@@ -293,6 +293,7 @@ type wsWlDirReader interface {
 type wsPipelineReader interface {
 	wsPipelineManifestReader
 	wlLister
+	ListPipelines() ([]string, error)
 }
 
 type wsAppManager interface {
