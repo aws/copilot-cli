@@ -1657,59 +1657,6 @@ func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
 }
 
-// MockstackSerializer is a mock of stackSerializer interface.
-type MockstackSerializer struct {
-	ctrl     *gomock.Controller
-	recorder *MockstackSerializerMockRecorder
-}
-
-// MockstackSerializerMockRecorder is the mock recorder for MockstackSerializer.
-type MockstackSerializerMockRecorder struct {
-	mock *MockstackSerializer
-}
-
-// NewMockstackSerializer creates a new mock instance.
-func NewMockstackSerializer(ctrl *gomock.Controller) *MockstackSerializer {
-	mock := &MockstackSerializer{ctrl: ctrl}
-	mock.recorder = &MockstackSerializerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockstackSerializer) EXPECT() *MockstackSerializerMockRecorder {
-	return m.recorder
-}
-
-// SerializedParameters mocks base method.
-func (m *MockstackSerializer) SerializedParameters() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SerializedParameters")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SerializedParameters indicates an expected call of SerializedParameters.
-func (mr *MockstackSerializerMockRecorder) SerializedParameters() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SerializedParameters", reflect.TypeOf((*MockstackSerializer)(nil).SerializedParameters))
-}
-
-// Template mocks base method.
-func (m *MockstackSerializer) Template() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Template")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Template indicates an expected call of Template.
-func (mr *MockstackSerializerMockRecorder) Template() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackSerializer)(nil).Template))
-}
-
 // Mockrunner is a mock of runner interface.
 type Mockrunner struct {
 	ctrl     *gomock.Controller
@@ -4320,44 +4267,6 @@ func (mr *MockversionGetterMockRecorder) Version() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionGetter)(nil).Version))
 }
 
-// MockendpointGetter is a mock of endpointGetter interface.
-type MockendpointGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockendpointGetterMockRecorder
-}
-
-// MockendpointGetterMockRecorder is the mock recorder for MockendpointGetter.
-type MockendpointGetterMockRecorder struct {
-	mock *MockendpointGetter
-}
-
-// NewMockendpointGetter creates a new mock instance.
-func NewMockendpointGetter(ctrl *gomock.Controller) *MockendpointGetter {
-	mock := &MockendpointGetter{ctrl: ctrl}
-	mock.recorder = &MockendpointGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockendpointGetter) EXPECT() *MockendpointGetterMockRecorder {
-	return m.recorder
-}
-
-// ServiceDiscoveryEndpoint mocks base method.
-func (m *MockendpointGetter) ServiceDiscoveryEndpoint() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceDiscoveryEndpoint")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ServiceDiscoveryEndpoint indicates an expected call of ServiceDiscoveryEndpoint.
-func (mr *MockendpointGetterMockRecorder) ServiceDiscoveryEndpoint() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDiscoveryEndpoint", reflect.TypeOf((*MockendpointGetter)(nil).ServiceDiscoveryEndpoint))
-}
-
 // MockenvTemplater is a mock of envTemplater interface.
 type MockenvTemplater struct {
 	ctrl     *gomock.Controller
@@ -6397,18 +6306,18 @@ func (mr *MockworkloadDeployerMockRecorder) DeployWorkload(in interface{}) *gomo
 }
 
 // UploadArtifacts mocks base method.
-func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput, error) {
+func (m *MockworkloadDeployer) UploadArtifacts(in *deploy.UploadArtifactsInput) (*deploy.UploadArtifactsOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadArtifacts")
+	ret := m.ctrl.Call(m, "UploadArtifacts", in)
 	ret0, _ := ret[0].(*deploy.UploadArtifactsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UploadArtifacts indicates an expected call of UploadArtifacts.
-func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
+func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts), in)
 }
 
 // MockworkloadTemplateGenerator is a mock of workloadTemplateGenerator interface.

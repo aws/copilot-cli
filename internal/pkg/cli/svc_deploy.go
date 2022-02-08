@@ -6,8 +6,12 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
 
 	"github.com/spf13/cobra"
 
@@ -40,14 +44,17 @@ type deployWkldVars struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store           store
-	ws              wsWlDirReader
-	unmarshal       func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator func(app, env string) interpolator
-	cmd             runner
-	envUpgradeCmd   actionCommand
-	sessProvider    *sessions.Provider
-	newSvcDeployer  func(*deploySvcOpts) (workloadDeployer, error)
+	store            store
+	ws               wsWlDirReader
+	unmarshal        func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator  func(app, env string) interpolator
+	cmd              runner
+	envUpgradeCmd    actionCommand
+	sessProvider     *sessions.Provider
+	uploader         deploy.Uploader
+	templater        deploy.Templater
+	imgBuilderPusher deploy.ImageBuilderPusher
+	newSvcDeployer   func(*deploySvcOpts) (workloadDeployer, error)
 
 	spinner progress
 	sel     wsSelector
@@ -176,7 +183,11 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	uploadOut, err := deployer.UploadArtifacts()
+	uploadOut, err := deployer.UploadArtifacts(&deploy.UploadArtifactsInput{
+		ImageBuilderPusher: o.imgBuilderPusher,
+		Templater:          o.templater,
+		Uploader:           o.uploader,
+	})
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
 	}
@@ -292,6 +303,27 @@ func (o *deploySvcOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
+	envSession, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return fmt.Errorf("create env session with region %s: %w", env.Region, err)
+	}
+	o.uploader = s3.New(envSession)
+	addonsSvc, err := addon.New(o.name)
+	if err != nil {
+		return fmt.Errorf("initiate addons service: %w", err)
+	}
+	o.templater = addonsSvc
+	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(env.Region)
+	if err != nil {
+		return fmt.Errorf("create default session with region %s: %w", env.Region, err)
+	}
+	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
+	registry := ecr.New(defaultSessEnvRegion)
+	imageBuilderPusher, err := repository.New(repoName, registry)
+	if err != nil {
+		return fmt.Errorf("initiate image builder pusher: %w", err)
+	}
+	o.imgBuilderPusher = imageBuilderPusher
 
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()

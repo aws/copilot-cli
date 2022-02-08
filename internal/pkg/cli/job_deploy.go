@@ -6,12 +6,16 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/spf13/cobra"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -26,14 +30,17 @@ import (
 type deployJobOpts struct {
 	deployWkldVars
 
-	store           store
-	ws              wsWlDirReader
-	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
-	newInterpolator func(app, env string) interpolator
-	cmd             runner
-	sessProvider    sessionProvider
-	envUpgradeCmd   actionCommand
-	newJobDeployer  func(*deployJobOpts) (workloadDeployer, error)
+	store            store
+	ws               wsWlDirReader
+	unmarshal        func(in []byte) (manifest.WorkloadManifest, error)
+	newInterpolator  func(app, env string) interpolator
+	cmd              runner
+	sessProvider     sessionProvider
+	envUpgradeCmd    actionCommand
+	newJobDeployer   func(*deployJobOpts) (workloadDeployer, error)
+	uploader         deploy.Uploader
+	templater        deploy.Templater
+	imgBuilderPusher deploy.ImageBuilderPusher
 
 	sel wsSelector
 
@@ -149,7 +156,11 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	uploadOut, err := deployer.UploadArtifacts()
+	uploadOut, err := deployer.UploadArtifacts(&deploy.UploadArtifactsInput{
+		ImageBuilderPusher: o.imgBuilderPusher,
+		Templater:          o.templater,
+		Uploader:           o.uploader,
+	})
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
@@ -196,6 +207,27 @@ func (o *deployJobOpts) configureClients() error {
 		return fmt.Errorf("new env upgrade command: %v", err)
 	}
 	o.envUpgradeCmd = cmd
+	envSession, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return fmt.Errorf("create env session with region %s: %w", env.Region, err)
+	}
+	o.uploader = s3.New(envSession)
+	addonsSvc, err := addon.New(o.name)
+	if err != nil {
+		return fmt.Errorf("initiate addons service: %w", err)
+	}
+	o.templater = addonsSvc
+	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(env.Region)
+	if err != nil {
+		return fmt.Errorf("create default session with region %s: %w", env.Region, err)
+	}
+	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
+	registry := ecr.New(defaultSessEnvRegion)
+	imageBuilderPusher, err := repository.New(repoName, registry)
+	if err != nil {
+		return fmt.Errorf("initiate image builder pusher: %w", err)
+	}
+	o.imgBuilderPusher = imageBuilderPusher
 
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()

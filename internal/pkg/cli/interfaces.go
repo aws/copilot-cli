@@ -600,7 +600,7 @@ type interpolator interface {
 }
 
 type workloadDeployer interface {
-	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
+	UploadArtifacts(in *clideploy.UploadArtifactsInput) (*clideploy.UploadArtifactsOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
 }
 

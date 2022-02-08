@@ -56,31 +56,31 @@ func (mr *MockActionRecommenderMockRecorder) RecommendedActions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockActionRecommender)(nil).RecommendedActions))
 }
 
-// MockimageBuilderPusher is a mock of imageBuilderPusher interface.
-type MockimageBuilderPusher struct {
+// MockImageBuilderPusher is a mock of ImageBuilderPusher interface.
+type MockImageBuilderPusher struct {
 	ctrl     *gomock.Controller
-	recorder *MockimageBuilderPusherMockRecorder
+	recorder *MockImageBuilderPusherMockRecorder
 }
 
-// MockimageBuilderPusherMockRecorder is the mock recorder for MockimageBuilderPusher.
-type MockimageBuilderPusherMockRecorder struct {
-	mock *MockimageBuilderPusher
+// MockImageBuilderPusherMockRecorder is the mock recorder for MockImageBuilderPusher.
+type MockImageBuilderPusherMockRecorder struct {
+	mock *MockImageBuilderPusher
 }
 
-// NewMockimageBuilderPusher creates a new mock instance.
-func NewMockimageBuilderPusher(ctrl *gomock.Controller) *MockimageBuilderPusher {
-	mock := &MockimageBuilderPusher{ctrl: ctrl}
-	mock.recorder = &MockimageBuilderPusherMockRecorder{mock}
+// NewMockImageBuilderPusher creates a new mock instance.
+func NewMockImageBuilderPusher(ctrl *gomock.Controller) *MockImageBuilderPusher {
+	mock := &MockImageBuilderPusher{ctrl: ctrl}
+	mock.recorder = &MockImageBuilderPusherMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
+func (m *MockImageBuilderPusher) EXPECT() *MockImageBuilderPusherMockRecorder {
 	return m.recorder
 }
 
 // BuildAndPush mocks base method.
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
+func (m *MockImageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(string)
@@ -89,36 +89,36 @@ func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBu
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
-func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
+func (mr *MockImageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), docker, args)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockImageBuilderPusher)(nil).BuildAndPush), docker, args)
 }
 
-// Mockuploader is a mock of uploader interface.
-type Mockuploader struct {
+// MockUploader is a mock of Uploader interface.
+type MockUploader struct {
 	ctrl     *gomock.Controller
-	recorder *MockuploaderMockRecorder
+	recorder *MockUploaderMockRecorder
 }
 
-// MockuploaderMockRecorder is the mock recorder for Mockuploader.
-type MockuploaderMockRecorder struct {
-	mock *Mockuploader
+// MockUploaderMockRecorder is the mock recorder for MockUploader.
+type MockUploaderMockRecorder struct {
+	mock *MockUploader
 }
 
-// NewMockuploader creates a new mock instance.
-func NewMockuploader(ctrl *gomock.Controller) *Mockuploader {
-	mock := &Mockuploader{ctrl: ctrl}
-	mock.recorder = &MockuploaderMockRecorder{mock}
+// NewMockUploader creates a new mock instance.
+func NewMockUploader(ctrl *gomock.Controller) *MockUploader {
+	mock := &MockUploader{ctrl: ctrl}
+	mock.recorder = &MockUploaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mockuploader) EXPECT() *MockuploaderMockRecorder {
+func (m *MockUploader) EXPECT() *MockUploaderMockRecorder {
 	return m.recorder
 }
 
 // Upload mocks base method.
-func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error) {
+func (m *MockUploader) Upload(bucket, key string, data io.Reader) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
 	ret0, _ := ret[0].(string)
@@ -127,13 +127,13 @@ func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error
 }
 
 // Upload indicates an expected call of Upload.
-func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
+func (mr *MockUploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), bucket, key, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockUploader)(nil).Upload), bucket, key, data)
 }
 
 // ZipAndUpload mocks base method.
-func (m *Mockuploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
+func (m *MockUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{bucket, key}
 	for _, a := range files {
@@ -146,37 +146,37 @@ func (m *Mockuploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary)
 }
 
 // ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockuploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
+func (mr *MockUploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{bucket, key}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*Mockuploader)(nil).ZipAndUpload), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockUploader)(nil).ZipAndUpload), varargs...)
 }
 
-// Mocktemplater is a mock of templater interface.
-type Mocktemplater struct {
+// MockTemplater is a mock of Templater interface.
+type MockTemplater struct {
 	ctrl     *gomock.Controller
-	recorder *MocktemplaterMockRecorder
+	recorder *MockTemplaterMockRecorder
 }
 
-// MocktemplaterMockRecorder is the mock recorder for Mocktemplater.
-type MocktemplaterMockRecorder struct {
-	mock *Mocktemplater
+// MockTemplaterMockRecorder is the mock recorder for MockTemplater.
+type MockTemplaterMockRecorder struct {
+	mock *MockTemplater
 }
 
-// NewMocktemplater creates a new mock instance.
-func NewMocktemplater(ctrl *gomock.Controller) *Mocktemplater {
-	mock := &Mocktemplater{ctrl: ctrl}
-	mock.recorder = &MocktemplaterMockRecorder{mock}
+// NewMockTemplater creates a new mock instance.
+func NewMockTemplater(ctrl *gomock.Controller) *MockTemplater {
+	mock := &MockTemplater{ctrl: ctrl}
+	mock.recorder = &MockTemplaterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mocktemplater) EXPECT() *MocktemplaterMockRecorder {
+func (m *MockTemplater) EXPECT() *MockTemplaterMockRecorder {
 	return m.recorder
 }
 
 // Template mocks base method.
-func (m *Mocktemplater) Template() (string, error) {
+func (m *MockTemplater) Template() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Template")
 	ret0, _ := ret[0].(string)
@@ -185,9 +185,9 @@ func (m *Mocktemplater) Template() (string, error) {
 }
 
 // Template indicates an expected call of Template.
-func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
+func (mr *MockTemplaterMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockTemplater)(nil).Template))
 }
 
 // MockstackSerializer is a mock of stackSerializer interface.

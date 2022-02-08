@@ -30,15 +30,15 @@ import (
 )
 
 type deployMocks struct {
-	mockImageBuilderPusher     *mocks.MockimageBuilderPusher
+	mockImageBuilderPusher     *mocks.MockImageBuilderPusher
 	mockEndpointGetter         *mocks.MockendpointGetter
 	mockSpinner                *mocks.Mockspinner
 	mockPublicCIDRBlocksGetter *mocks.MockpublicCIDRBlocksGetter
 	mockSNSTopicsLister        *mocks.MocksnsTopicsLister
 	mockServiceDeployer        *mocks.MockserviceDeployer
 	mockServiceForceUpdater    *mocks.MockserviceForceUpdater
-	mockTemplater              *mocks.Mocktemplater
-	mockUploader               *mocks.Mockuploader
+	mockTemplater              *mocks.MockTemplater
+	mockUploader               *mocks.MockUploader
 	mockVersionGetter          *mocks.MockversionGetter
 	mockFileReader             *mocks.MockfileReader
 }
@@ -209,9 +209,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockUploader:           mocks.NewMockuploader(ctrl),
-				mockTemplater:          mocks.NewMocktemplater(ctrl),
-				mockImageBuilderPusher: mocks.NewMockimageBuilderPusher(ctrl),
+				mockUploader:           mocks.NewMockUploader(ctrl),
+				mockTemplater:          mocks.NewMockTemplater(ctrl),
+				mockImageBuilderPusher: mocks.NewMockImageBuilderPusher(ctrl),
 				mockFileReader:         mocks.NewMockfileReader(ctrl),
 			}
 			tc.mock(m)
@@ -233,13 +233,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					buildRequired: tc.inBuildRequired,
 				},
 
-				templater:          m.mockTemplater,
-				fs:                 m.mockFileReader,
-				s3Client:           m.mockUploader,
-				imageBuilderPusher: m.mockImageBuilderPusher,
+				fs: m.mockFileReader,
 			}
 
-			got, gotErr := deployer.UploadArtifacts()
+			got, gotErr := deployer.UploadArtifacts(&UploadArtifactsInput{
+				ImageBuilderPusher: m.mockImageBuilderPusher,
+				Templater:          m.mockTemplater,
+				Uploader:           m.mockUploader,
+			})
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())

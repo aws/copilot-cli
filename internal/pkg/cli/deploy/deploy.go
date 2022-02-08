@@ -24,7 +24,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -65,21 +64,24 @@ type ActionRecommender interface {
 	RecommendedActions() []string
 }
 
-type imageBuilderPusher interface {
+// ImageBuilderPusher contains methods that build and push a ECR image.
+type ImageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
 
-type uploader interface {
+// Uploader contains methods that upload to a S3 bucket.
+type Uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
-type templater interface {
+// Templater containers methods that generate a template.
+type Templater interface {
 	Template() (string, error)
 }
 
 type stackSerializer interface {
-	templater
+	Templater
 	SerializedParameters() (string, error)
 }
 
@@ -133,13 +135,10 @@ type workloadDeployer struct {
 	workspacePath string
 
 	// dependencies
-	fs                 fileReader
-	s3Client           uploader
-	templater          templater
-	imageBuilderPusher imageBuilderPusher
-	deployer           serviceDeployer
-	endpointGetter     endpointGetter
-	spinner            spinner
+	fs             fileReader
+	deployer       serviceDeployer
+	endpointGetter endpointGetter
+	spinner        spinner
 
 	// cached varibles
 	defaultSess              *session.Session
@@ -187,16 +186,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
-	addonsSvc, err := addon.New(in.Name)
-	if err != nil {
-		return nil, fmt.Errorf("initiate addons service: %w", err)
-	}
-	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
-	registry := ecr.New(defaultSessEnvRegion)
-	imageBuilderPusher, err := repository.New(repoName, registry)
-	if err != nil {
-		return nil, fmt.Errorf("initiate image builder pusher: %w", err)
-	}
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
@@ -210,19 +199,16 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("initiate env describer: %w", err)
 	}
 	return &workloadDeployer{
-		name:               in.Name,
-		app:                in.App,
-		env:                in.Env,
-		imageTag:           in.ImageTag,
-		resources:          resources,
-		workspacePath:      workspacePath,
-		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:           s3.New(envSession),
-		templater:          addonsSvc,
-		imageBuilderPusher: imageBuilderPusher,
-		deployer:           cloudformation.New(envSession),
-		endpointGetter:     endpointGetter,
-		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
+		name:           in.Name,
+		app:            in.App,
+		env:            in.Env,
+		imageTag:       in.ImageTag,
+		resources:      resources,
+		workspacePath:  workspacePath,
+		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		deployer:       cloudformation.New(envSession),
+		endpointGetter: endpointGetter,
+		spinner:        termprogress.NewSpinner(log.DiagnosticWriter),
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -340,7 +326,7 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 type rdwsDeployer struct {
 	*svcDeployer
 	customResourceUploader customResourcesUploader
-	customResourceS3Client uploader
+	customResourceS3Client Uploader
 	appVersionGetter       versionGetter
 	rdwsMft                *manifest.RequestDrivenWebService
 }
@@ -395,13 +381,6 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	}, nil
 }
 
-// UploadArtifactsOutput is the output of UploadArtifacts.
-type UploadArtifactsOutput struct {
-	ImageDigest string
-	EnvFileARN  string
-	AddonsURL   string
-}
-
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
 	ImageDigest string
@@ -417,16 +396,30 @@ type DeployWorkloadInput struct {
 	ForceNewUpdate bool
 }
 
+// UploadArtifactsInput is the input of UploadArtifacts.
+type UploadArtifactsInput struct {
+	ImageBuilderPusher ImageBuilderPusher
+	Templater          Templater
+	Uploader           Uploader
+}
+
+// UploadArtifactsOutput is the output of UploadArtifacts.
+type UploadArtifactsOutput struct {
+	ImageDigest string
+	EnvFileARN  string
+	AddonsURL   string
+}
+
 // UploadArtifacts uploads the deployment artifacts (image, addons files, env files).
-func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageOutput, err := d.uploadContainerImage(d.imageBuilderPusher)
+func (d *workloadDeployer) UploadArtifacts(in *UploadArtifactsInput) (*UploadArtifactsOutput, error) {
+	imageOutput, err := d.uploadContainerImage(in.ImageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
 		fs:        d.fs,
-		uploader:  d.s3Client,
-		templater: d.templater,
+		uploader:  in.Uploader,
+		templater: in.Templater,
 	})
 	if err != nil {
 		return nil, err
@@ -695,7 +688,7 @@ type uploadContainerImageOutput struct {
 	imageDigest   string
 }
 
-func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (
+func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher ImageBuilderPusher) (
 	uploadContainerImageOutput, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
@@ -721,8 +714,8 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 
 type uploadArtifactsToS3Input struct {
 	fs        fileReader
-	uploader  uploader
-	templater templater
+	uploader  Uploader
+	templater Templater
 }
 
 type uploadArtifactsToS3Output struct {
@@ -753,7 +746,7 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 
 type pushEnvFilesToS3BucketInput struct {
 	fs       fileReader
-	uploader uploader
+	uploader Uploader
 }
 
 func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
@@ -784,8 +777,8 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 }
 
 type pushAddonsTemplateToS3BucketInput struct {
-	templater templater
-	uploader  uploader
+	templater Templater
+	uploader  Uploader
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
@@ -1081,7 +1074,7 @@ func contains(s string, items []string) bool {
 
 type uploadRDWSCustomResourcesInput struct {
 	customResourceUploader customResourcesUploader
-	s3Uploader             uploader
+	s3Uploader             Uploader
 	s3Bucket               string
 }
 
