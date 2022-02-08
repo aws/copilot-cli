@@ -65,12 +65,16 @@ func (o WriteLogEventsOpts) limit() *int64 {
 	if o.Limit != nil {
 		return o.Limit
 	}
-	if o.StartTime != nil || o.EndTime != nil {
+	if o.hasTimeFilters() {
 		// If time filtering is set, then set limit to be maximum number.
 		// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html#CWL-GetLogEvents-request-limit
 		return nil
 	}
 	return aws.Int64(defaultServiceLogsLimit)
+}
+
+func (o WriteLogEventsOpts) hasTimeFilters() bool {
+	return o.Follow || o.StartTime != nil || o.EndTime != nil
 }
 
 // NewServiceClient returns a ServiceClient for the svc service under env and app.
