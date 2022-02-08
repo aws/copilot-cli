@@ -153,63 +153,41 @@ func (ws *Workspace) ListWorkloads() ([]string, error) {
 }
 
 // ListPipelines returns the names of all pipelines in the workspace.
-func (ws *Workspace) ListPipelines() ([]string, error) {
-	var pipelines []string
+func (ws *Workspace) ListPipelines() (map[string]string, error) {
+	var pipelines map[string]string
 	// Look for legacy pipeline.
-	pmPath, err := ws.pipelineManifestPath()
+	legacyPath, err := ws.pipelineManifestLegacyPath()
 	if err != nil {
 		return nil, err
 	}
-	manifestExists, err := ws.fsUtils.Exists(pmPath)
+	name, err := ws.PipelineNameFromManifest(legacyPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get name from pipeline manifest: %w", err)
 	}
-	if manifestExists {
-		data, err := ws.ReadPipelineManifest()
-		if err != nil {
-			return nil, fmt.Errorf("read pipeline manifest: %w", err)
-		}
-		pipelineManifest := PipelineManifest(data)
-		name, err := pipelineManifest.pipelineName()
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println("adding legacy pipeline: ", name)
-		pipelines = append(pipelines, name)
-	}
+	pipelines[name] = legacyPath
 
 	// Look for other pipelines.
-	copilotPath, err := ws.copilotDirPath()
+	pipelinesPath, err := ws.pipelineManifestPath()
 	if err != nil {
 		return nil, err
 	}
-	files, err := ws.fsUtils.ReadDir(filepath.Join(copilotPath, pipelinesDirName))
+	files, err := ws.fsUtils.ReadDir(pipelinesPath)
 	if err != nil {
-		return nil, fmt.Errorf("read directory %s: %w", filepath.Join(copilotPath, pipelinesDirName), err)
+		return nil, fmt.Errorf("read directory %s: %w", pipelinesPath, err)
 	}
 	for _, file := range files {
-		// Look for moved legacy pipeline.
-		if file.Name() == "pipeline.yml" {
-			data, err := ws.read(filepath.Join(pipelinesDirName, file.Name()))
-			if err != nil {
-				return nil, fmt.Errorf("read pipeline manifest: %w", err)
-			}
-			pipelineManifest := PipelineManifest(data)
-			name, err := pipelineManifest.pipelineName()
-			if err != nil {
-				return nil, err
-			}
-			fmt.Println("adding moved legacy pipeline: ", name)
-			pipelines = append(pipelines, name)
-			continue
-		}
 		// Ignore buildspecs.
 		if strings.HasSuffix(file.Name(), "buildspec.yml") {
 			continue
 		}
+		// Read manifests of moved legacy pipeline and any other pipelines.
 		if strings.HasSuffix(file.Name(), ".yml") {
-			fmt.Println("adding new style pipeline name: ", strings.Trim(file.Name(), ".yml"))
-			pipelines = append(pipelines, strings.TrimSuffix(file.Name(), ".yml"))
+			path := filepath.Join(pipelinesDirName, file.Name())
+			name, err := ws.PipelineNameFromManifest(path)
+			if err != nil {
+				return nil, fmt.Errorf("read pipeline manifest: %w", err)
+			}
+			pipelines[name] = path
 		}
 	}
 	return pipelines, nil
@@ -266,14 +244,9 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 	return mft, nil
 }
 
-// ReadPipelineManifest returns the contents of the pipeline manifest under copilot/pipeline.yml.
-func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
-	pmPath, err := ws.pipelineManifestPath()
-	if err != nil {
-		return nil, err
-	}
-	manifestExists, err := ws.fsUtils.Exists(pmPath)
-
+// ReadPipelineManifest returns the contents of the pipeline manifest under the given path.
+func (ws *Workspace) ReadPipelineManifest(path string) ([]byte, error) {
+	manifestExists, err := ws.fsUtils.Exists(path)
 	if err != nil {
 		return nil, err
 	}
@@ -390,13 +363,21 @@ func (ws *Workspace) writeSummary(appName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
-func (ws *Workspace) pipelineManifestPath() (string, error) {
+func (ws *Workspace) pipelineManifestLegacyPath() (string, error) {
 	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err
 	}
 	pipelineManifestPath := filepath.Join(copilotPath, pipelineFileName)
 	return pipelineManifestPath, nil
+}
+
+func (ws *Workspace) pipelineManifestPath() (string, error) {
+	copilotPath, err := ws.copilotDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(copilotPath, pipelinesDirName), nil
 }
 
 func (ws *Workspace) summaryPath() (string, error) {
@@ -543,29 +524,28 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 }
 
 // RelPath returns the path relative to the current working directory.
-func RelPath(fullPath string) (string, error) {
-	wkdir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get working directory: %w", err)
-	}
-	path, err := filepath.Rel(wkdir, fullPath)
-	if err != nil {
-		return "", fmt.Errorf("get relative path of file: %w", err)
-	}
-	return path, nil
-}
+//func RelPath(fullPath string) (string, error) {
+//	wkdir, err := os.Getwd()
+//	if err != nil {
+//		return "", fmt.Errorf("get working directory: %w", err)
+//	}
+//	path, err := filepath.Rel(wkdir, fullPath)
+//	if err != nil {
+//		return "", fmt.Errorf("get relative path of file: %w", err)
+//	}
+//	return path, nil
+//}
 
-// PipelineManifest represents a local pipeline manifest.
-type PipelineManifest []byte
-
-func (p PipelineManifest) pipelineName() (string, error) {
-	pl := struct {
-		Name string `yaml:"name"`
-	}{}
-	if err := yaml.Unmarshal(p, &pl); err != nil {
-		return "", fmt.Errorf(`unmarshal pipeline manifest file to retrieve "name": %w`, err)
+func (ws Workspace) PipelineNameFromManifest(path string) (string, error) {
+	data, err := ws.ReadPipelineManifest(path)
+	if err != nil {
+		return "", fmt.Errorf("read pipeline manifest: %w", err)
 	}
-	return pl.Name, nil
+	pipelineManifest, err := manifest.UnmarshalPipeline(data)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	}
+	return pipelineManifest.Name, nil
 }
 
 // WorkloadManifest represents raw local workload manifest.

@@ -71,7 +71,8 @@ const (
 	taskFinalMsg        = "Task:"
 	workloadFinalMsg    = "Name:"
 	dockerfileFinalMsg  = "Dockerfile:"
-	topicFinalmessage   = "Topic subscriptions:"
+	topicFinalMessage   = "Topic subscriptions:"
+	pipelineFinalMsg    = "Pipeline: "
 )
 
 var scheduleTypes = []string{
@@ -93,6 +94,7 @@ type Prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
+	SelectOptionReturnValueAndHint(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value, hint string, err error)
 	MultiSelect(message, help string, options []string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) ([]string, error)
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
@@ -121,6 +123,7 @@ type WsWorkloadLister interface {
 	ListServices() ([]string, error)
 	ListJobs() ([]string, error)
 	ListWorkloads() ([]string, error)
+	ListPipelines() (map[string]string, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -673,6 +676,30 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 	return filtered
 }
 
+// Pipeline fetches all the pipelines in a workspace and prompts the user to select one.
+func (w *WorkspaceSelect) Pipeline(msg, help string, additionalOpts ...string) (name, path string, err error) {
+	pipelines, err := w.retrieveWorkspacePipelines()
+	if err != nil {
+		return "", "", err
+	}
+	if len(pipelines) == 0 {
+		return "", "", errors.New("no pipelines found")
+	}
+	var pipelineNames []string
+	for k, _ := range pipelines {
+		pipelineNames = append(pipelineNames, k)
+	}
+	if len(pipelineNames) == 1 {
+		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelineNames[0]))
+		return pipelineNames[0], pipelines[pipelineNames[0]], nil
+	}
+	selectedPipelineName, selectedPipelinePath, err := w.prompt.SelectOptionReturnValueAndHint(msg, help, pipelinePromptOpts(pipelines), prompt.WithFinalMessage(pipelineFinalMsg))
+	if err != nil {
+		return "", "", fmt.Errorf("select pipeline: %w", err)
+	}
+	return selectedPipelineName, selectedPipelinePath, err
+}
+
 // Service fetches all services in an app and prompts the user to select one.
 func (s *ConfigSelect) Service(msg, help, app string) (string, error) {
 	services, err := s.retrieveServices(app)
@@ -884,6 +911,14 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 	return localWlNames, nil
 }
 
+func (s *WorkspaceSelect) retrieveWorkspacePipelines() (map[string]string, error) {
+	localPipelineNames, err := s.ws.ListPipelines()
+	if err != nil {
+		return nil, err
+	}
+	return localPipelineNames, nil
+}
+
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
 func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
@@ -1079,7 +1114,7 @@ func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, erro
 		help,
 		topicDescriptions,
 		nil,
-		prompt.WithFinalMessage(topicFinalmessage),
+		prompt.WithFinalMessage(topicFinalMessage),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
@@ -1101,4 +1136,15 @@ func intersect(firstMap map[string]deploy.Topic, secondArr []deploy.Topic) map[s
 		}
 	}
 	return out
+}
+
+func pipelinePromptOpts(pipelines map[string]string) []prompt.Option {
+	var options []prompt.Option
+	for name, path := range pipelines {
+		options = append(options, prompt.Option{
+			Value: name,
+			Hint:  path,
+		})
+	}
+	return options
 }

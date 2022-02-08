@@ -481,6 +481,10 @@ type pipelineSelector interface {
 	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
 }
 
+type wsPipelineSelector interface {
+	Pipeline(prompt, help string) (string, error)
+}
+
 type wsSelector interface {
 	appEnvSelector
 	Service(prompt, help string) (string, error)

@@ -517,7 +517,7 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 		wantedNames []string
 		wantedErr   error
 	}{
-		"success finding legacy pipeline (in both copilot/ and copilot/pipelines)(read manifest) and other pipelines (read filename), weeding out buildspecs": {
+		"success finding legacy pipeline (in both copilot/ and copilot/pipelines) and other pipelines, weeding out buildspecs": {
 			copilotDir: "/copilot",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -546,7 +546,7 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 				return fs
 			},
 
-			wantedNames: []string{"legacyInCopiDir", "legacyInPipelinesDir", "other"},
+			wantedNames: []string{"legacyInCopiDir", "legacyInPipelinesDir", "otherInPipelinesDir"},
 		},
 	}
 

@@ -26,6 +26,8 @@ import (
 )
 
 const (
+	pipelineSelectPrompt = "Select a pipeline from your workspace to deploy"
+
 	fmtPipelineDeployResourcesStart    = "Adding pipeline resources to your application: %s"
 	fmtPipelineDeployResourcesFailed   = "Failed to add pipeline resources to your application: %s\n"
 	fmtPipelineDeployResourcesComplete = "Successfully added pipeline resources to your application: %s\n"
@@ -54,6 +56,7 @@ type deployPipelineOpts struct {
 
 	pipelineDeployer pipelineDeployer
 	app              *config.Application
+	sel              wsPipelineSelector
 	prog             progress
 	prompt           prompter
 	region           string
@@ -61,6 +64,7 @@ type deployPipelineOpts struct {
 	ws               wsPipelineReader
 	codestar         codestar
 
+	path                         string
 	shouldPromptUpdateConnection bool
 }
 
@@ -104,6 +108,14 @@ func (o *deployPipelineOpts) Validate() error {
 		if err := o.validatePipelineName(); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// Ask prompts the user for any required fields that are not provided.
+func (o *deployPipelineOpts) Ask() error {
+	if err := o.askPipelineName(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -180,17 +192,27 @@ func (o *deployPipelineOpts) Execute() error {
 }
 
 func (o *deployPipelineOpts) validatePipelineName() error {
-	data, err := o.ws.ReadPipelineManifest()
+	pipelines, err := o.ws.ListPipelines()
 	if err != nil {
-		return fmt.Errorf("read pipeline manifest: %w", err)
+		return fmt.Errorf("list pipelines: %w", err)
 	}
-	pipeline, err := manifest.UnmarshalPipeline(data)
+	for _, pipeline := range pipelines {
+		if pipeline == o.name {
+			return nil
+		}
+	}
+	return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
+}
+
+func (o *deployPipelineOpts) askPipelineName() error {
+	if o.name != "" {
+		return nil
+	}
+	name, err := o.sel.Pipeline(pipelineSelectPrompt, "")
 	if err != nil {
-		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
+		return fmt.Errorf("select pipeline: %w", err)
 	}
-	if pipeline.Name != o.name {
-		return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
-	}
+	o.name = name
 	return nil
 }
 
