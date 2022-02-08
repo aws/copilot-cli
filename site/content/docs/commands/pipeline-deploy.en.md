@@ -8,8 +8,10 @@ $ copilot pipeline deploy [flags]
 
 ## What are the flags?
 ```bash
--h, --help   help for deploy
-    --yes    Skips confirmation prompt.
+-a, --app string    Name of the application.
+-h, --help          help for deploy
+-n, --name string   Name of the pipeline.
+    --yes           Skips confirmation prompt.
 ```
 
 ## Examples

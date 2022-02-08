@@ -29,7 +29,11 @@ If you want your service to serve internet traffic then you have two options:
   security groups, an ECS service on Fargate to run your service.
 
 #### Request-Driven Web Service
-An AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes.
+An AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. 
+This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes.
+
+Unlike ECS, App Runner services are not connected by default to a VPC. In order to route egress traffic through a VPC, 
+you can configure the [`network`](../manifest/rd-web-service.en.md#network) field in the manifest.
 
 #### Load Balanced Web Service
 An ECS Service running tasks on Fargate with an Application Load Balancer, a Network Load Balancer or both, as ingress. 
