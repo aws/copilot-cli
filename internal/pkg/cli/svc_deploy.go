@@ -181,7 +181,7 @@ func (o *deploySvcOpts) Execute() error {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
 	}
 	deployRecs, err := deployer.DeployWorkload(&deploy.DeployWorkloadInput{
-		StackConfiguration: deploy.StackConfiguration{
+		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest: uploadOut.ImageDigest,
 			EnvFileARN:  uploadOut.EnvFileARN,
 			AddonsURL:   uploadOut.AddonsURL,

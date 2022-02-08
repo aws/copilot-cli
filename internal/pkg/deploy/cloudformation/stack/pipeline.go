@@ -19,7 +19,7 @@ type pipelineStackConfig struct {
 	parser template.Parser
 }
 
-// NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
+// NewPipelineStackConfig sets up a struct which can provide values to CloudFormation for
 // spinning up a pipeline.
 func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig {
 	return &pipelineStackConfig{

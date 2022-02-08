@@ -297,7 +297,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 		return nil, err
 	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
-		StackConfiguration: clideploy.StackConfiguration{
+		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN: o.rootUserARN,
 			Tags:        o.targetApp.Tags,
 		},

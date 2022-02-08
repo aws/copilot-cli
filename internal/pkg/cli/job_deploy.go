@@ -154,7 +154,7 @@ func (o *deployJobOpts) Execute() error {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
-		StackConfiguration: deploy.StackConfiguration{
+		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest: uploadOut.ImageDigest,
 			EnvFileARN:  uploadOut.EnvFileARN,
 			AddonsURL:   uploadOut.AddonsURL,
