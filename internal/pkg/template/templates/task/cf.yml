@@ -25,6 +25,10 @@ Parameters:
     Type: String
   Arch:
     Type: String
+  App:
+    Type: String
+  Env:
+    Type: String
 Conditions:
   # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
@@ -39,6 +43,13 @@ Conditions:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
   HasCustomPlatform:
     !Not [!Equals [!Ref OS, ""]]
+  HasApp:
+    !Not [!Equals [!Ref App, ""]]
+  HasEnv:
+    !Not [!Equals [!Ref Env, ""]]
+  HasAppAndEnv: !And
+    - !Condition HasApp
+    - !Condition HasEnv
 Resources:
   TaskDefinition:
     Metadata:
@@ -89,6 +100,22 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+      {{- if .Secrets}}
+      Policies:
+        - PolicyName: 'PullSecrets'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                - ssm:GetParameters  
+                Condition:
+                  StringEquals:
+                    "ssm:ResourceTag/copilot-application": !If [ HasAppAndEnv, !Ref App, !Ref "AWS::NoValue" ]
+                    "ssm:ResourceTag/copilot-environment": !If [ HasAppAndEnv, !Ref Env, !Ref "AWS::NoValue" ]
+                    "ssm:ResourceTag/copilot-task": !If [ HasAppAndEnv, !Ref "AWS::NoValue", !Ref TaskName ]
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+      {{- end}}
   DefaultTaskRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
