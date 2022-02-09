@@ -102,19 +102,31 @@ Resources:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
       {{- if .Secrets}}
       Policies:
-        - PolicyName: 'PullSecrets'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                - ssm:GetParameters  
-                Condition:
-                  StringEquals:
-                    "ssm:ResourceTag/copilot-application": !If [ HasAppAndEnv, !Ref App, !Ref "AWS::NoValue" ]
-                    "ssm:ResourceTag/copilot-environment": !If [ HasAppAndEnv, !Ref Env, !Ref "AWS::NoValue" ]
-                    "ssm:ResourceTag/copilot-task": !If [ HasAppAndEnv, !Ref "AWS::NoValue", !Ref TaskName ]
-                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+        - !If
+          - HasAppAndEnv
+          - PolicyName: 'PullSecrets'
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                  - ssm:GetParameters
+                  Condition:
+                    StringEquals:
+                      "ssm:ResourceTag/copilot-application": !If [ HasAppAndEnv, !Ref App, !Ref "AWS::NoValue" ]
+                      "ssm:ResourceTag/copilot-environment": !If [ HasAppAndEnv, !Ref Env, !Ref "AWS::NoValue" ]
+                  Resource:
+                    - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+                - Effect: 'Allow'
+                  Action:
+                    - secretsmanager:GetSecretValue
+                  Condition:
+                    StringEquals:
+                      "secretsmanager:ResourceTag/copilot-application": !If [ HasAppAndEnv, !Ref App, !Ref "AWS::NoValue" ]
+                      "secretsmanager:ResourceTag/copilot-environment": !If [ HasAppAndEnv, !Ref Env, !Ref "AWS::NoValue" ]
+                  Resource:
+                    - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
+          - !Ref AWS::NoValue
       {{- end}}
   DefaultTaskRole:
     Metadata:
