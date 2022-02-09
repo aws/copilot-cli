@@ -36,6 +36,8 @@ type ServiceClient struct {
 	logStreamNamePrefix string
 	eventsGetter        logGetter
 	w                   io.Writer
+
+	now func() time.Time
 }
 
 // WriteLogEventsOpts wraps the parameters to call WriteLogEvents.
@@ -73,6 +75,17 @@ func (o WriteLogEventsOpts) limit() *int64 {
 	return aws.Int64(defaultServiceLogsLimit)
 }
 
+func (o WriteLogEventsOpts) startTime(now func() time.Time) *int64 {
+	if o.StartTime != nil {
+		return o.StartTime
+	}
+	if o.Follow {
+		// Start following log events from current timestamp.
+		return aws.Int64(now().Unix() * 1000) // Multiplied by 1000 to convert the Unix() timestamp in seconds to milliseconds
+	}
+	return nil
+}
+
 func (o WriteLogEventsOpts) hasTimeFilters() bool {
 	return o.Follow || o.StartTime != nil || o.EndTime != nil
 }
@@ -92,6 +105,7 @@ func NewServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, error) {
 		logStreamNamePrefix: fmt.Sprintf(fmtSvcLogStreamPrefix, opts.Svc),
 		eventsGetter:        cloudwatchlogs.New(opts.Sess),
 		w:                   log.OutputWriter,
+		now:                 time.Now,
 	}, nil
 }
 
@@ -130,6 +144,7 @@ func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, erro
 		logGroupName: logGroup,
 		eventsGetter: cloudwatchlogs.New(opts.Sess),
 		w:            log.OutputWriter,
+		now:          time.Now,
 	}, nil
 }
 
@@ -139,7 +154,7 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		LogGroup:  s.logGroupName,
 		Limit:     opts.limit(),
 		EndTime:   opts.EndTime,
-		StartTime: opts.StartTime,
+		StartTime: opts.startTime(s.now),
 	}
 	if opts.TaskIDs != nil {
 		logEventsOpts.LogStreams = s.logStreams(opts.TaskIDs)
