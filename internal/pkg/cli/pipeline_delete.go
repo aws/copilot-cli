@@ -10,7 +10,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -128,33 +127,6 @@ func (o *deletePipelineOpts) Execute() error {
 
 	if err := o.deleteStack(); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (o *deletePipelineOpts) readPipelineManifest() error {
-	legacyPath, err := o.ws.PipelineManifestLegacyPath()
-	if err != nil {
-		return err
-	}
-	data, err := o.ws.ReadPipelineManifest(legacyPath)
-	if err != nil {
-		if err == workspace.ErrNoPipelineInWorkspace {
-			return err
-		}
-		return fmt.Errorf("read pipeline manifest: %w", err)
-	}
-
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-
-	o.name = pipeline.Name
-
-	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
-		o.PipelineSecret = secret
 	}
 
 	return nil

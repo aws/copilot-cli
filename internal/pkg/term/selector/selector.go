@@ -72,7 +72,7 @@ const (
 	workloadFinalMsg    = "Name:"
 	dockerfileFinalMsg  = "Dockerfile:"
 	topicFinalMessage   = "Topic subscriptions:"
-	pipelineFinalMsg    = "Pipeline: "
+	pipelineFinalMsg    = "Pipeline:"
 )
 
 var scheduleTypes = []string{

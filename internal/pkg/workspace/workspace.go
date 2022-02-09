@@ -528,19 +528,6 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
-// RelPath returns the path relative to the current working directory.
-//func RelPath(fullPath string) (string, error) {
-//	wkdir, err := os.Getwd()
-//	if err != nil {
-//		return "", fmt.Errorf("get working directory: %w", err)
-//	}
-//	path, err := filepath.Rel(wkdir, fullPath)
-//	if err != nil {
-//		return "", fmt.Errorf("get relative path of file: %w", err)
-//	}
-//	return path, nil
-//}
-
 func (ws Workspace) PipelineNameFromManifest(path string) (string, error) {
 	data, err := ws.ReadPipelineManifest(path)
 	if err != nil {
