@@ -336,6 +336,11 @@ type AutoscalingQueueDelayOpts struct {
 	AcceptableBacklogPerTask int
 }
 
+// ObservabilityOpts holds configurations for observability.
+type ObservabilityOpts struct {
+	Tracing string // The name of the vendor used for tracing.
+}
+
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
 type ExecuteCommandOpts struct{}
 
@@ -488,6 +493,8 @@ type WorkloadOpts struct {
 	// Additional options for request driven web service templates.
 	StartCommand      *string
 	EnableHealthCheck bool
+	Observability     ObservabilityOpts
+
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
 	ScriptBucketName     *string
@@ -498,6 +505,8 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
+
+	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
