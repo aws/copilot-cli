@@ -7,6 +7,8 @@ package repository
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 )
 
@@ -28,28 +30,24 @@ type Registry interface {
 type Repository struct {
 	name     string
 	registry Registry
-
-	uri string
 }
 
 // New instantiates a new Repository.
-func New(name string, registry Registry) (*Repository, error) {
-	uri, err := registry.RepositoryURI(name)
-	if err != nil {
-		return nil, fmt.Errorf("get repository URI: %w", err)
-	}
-
+func New(name string, sess *session.Session) (*Repository, error) {
 	return &Repository{
 		name:     name,
-		uri:      uri,
-		registry: registry,
+		registry: ecr.New(sess),
 	}, nil
 }
 
 // BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
 func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (digest string, err error) {
 	if args.URI == "" {
-		args.URI = r.uri
+		uri, err := r.registry.RepositoryURI(r.name)
+		if err != nil {
+			return "", fmt.Errorf("get repository URI: %w", err)
+		}
+		args.URI = uri
 	}
 	if err := docker.Build(args); err != nil {
 		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
@@ -75,6 +73,10 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *docker
 }
 
 // URI returns the uri of the repository.
-func (r *Repository) URI() string {
-	return r.uri
+func (r *Repository) URI() (string, error) {
+	uri, err := r.registry.RepositoryURI(r.name)
+	if err != nil {
+		return "", fmt.Errorf("get repository URI: %w", err)
+	}
+	return uri, nil
 }

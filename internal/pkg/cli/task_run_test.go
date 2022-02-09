@@ -768,6 +768,22 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New("provision resources for task my-task: error deploying"),
 		},
+		"error getting repo URI": {
+			setupMocks: func(m runTaskMocks) {
+				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
+					Name:       inGroupName,
+					Image:      "",
+					Command:    []string{},
+					EntryPoint: []string{},
+				}).Return(nil)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
+				m.repository.EXPECT().URI().Return(mockRepoURI, errors.New("some error"))
+				mockHasDefaultCluster(m)
+			},
+			wantedError: errors.New("get ECR repository URI: some error"),
+		},
 		"error updating resources": {
 			setupMocks: func(m runTaskMocks) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
@@ -779,7 +795,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					EntryPoint: []string{},
 				}).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
-				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
 					Name:       inGroupName,
 					Image:      "uri/repo:latest",
@@ -878,7 +894,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
-				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "uri/repo:latest",

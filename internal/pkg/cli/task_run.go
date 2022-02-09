@@ -25,7 +25,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -182,8 +181,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	opts.configureRepository = func() error {
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
-		registry := ecr.New(opts.sess)
-		repo, err := repository.New(repoName, registry)
+		repo, err := repository.New(repoName, opts.sess)
 		if err != nil {
 			return fmt.Errorf("initialize repository %s: %w", repoName, err)
 		}
@@ -571,7 +569,11 @@ func (o *runTaskOpts) Execute() error {
 		if o.imageTag != "" {
 			tag = o.imageTag
 		}
-		o.image = fmt.Sprintf(fmtImageURI, o.repository.URI(), tag)
+		uri, err := o.repository.URI()
+		if err != nil {
+			return fmt.Errorf("get ECR repository URI: %w", err)
+		}
+		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
