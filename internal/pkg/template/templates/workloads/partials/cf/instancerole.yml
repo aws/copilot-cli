@@ -47,3 +47,18 @@ InstanceRole:
               {{- end }}
       {{- end }}
       {{- end }}
+      {{- if and (contains .FeatureFlags "Tracing") (eq .Tracing "AWSXRAY")}}
+      - PolicyName: 'EnableAWSXRayTracing'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action: 
+                - 'xray:PutTraceSegments'
+                - 'xray:PutTelemetryRecords'
+                - 'xray:GetSamplingRules'
+                - 'xray:GetSamplingTargets'
+                - 'xray:GetSamplingStatisticSummaries'
+                - 'ssm:GetParameters'
+              Resource: '*'
+      {{- end}}

@@ -488,6 +488,7 @@ type WorkloadOpts struct {
 	// Additional options for request driven web service templates.
 	StartCommand      *string
 	EnableHealthCheck bool
+	Tracing           string
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
 	ScriptBucketName     *string
@@ -498,6 +499,8 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
+
+	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
