@@ -6410,3 +6410,41 @@ func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
 }
+
+// MockworkloadTemplateGenerator is a mock of workloadTemplateGenerator interface.
+type MockworkloadTemplateGenerator struct {
+	ctrl     *gomock.Controller
+	recorder *MockworkloadTemplateGeneratorMockRecorder
+}
+
+// MockworkloadTemplateGeneratorMockRecorder is the mock recorder for MockworkloadTemplateGenerator.
+type MockworkloadTemplateGeneratorMockRecorder struct {
+	mock *MockworkloadTemplateGenerator
+}
+
+// NewMockworkloadTemplateGenerator creates a new mock instance.
+func NewMockworkloadTemplateGenerator(ctrl *gomock.Controller) *MockworkloadTemplateGenerator {
+	mock := &MockworkloadTemplateGenerator{ctrl: ctrl}
+	mock.recorder = &MockworkloadTemplateGeneratorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockworkloadTemplateGenerator) EXPECT() *MockworkloadTemplateGeneratorMockRecorder {
+	return m.recorder
+}
+
+// GenerateCloudFormationTemplate mocks base method.
+func (m *MockworkloadTemplateGenerator) GenerateCloudFormationTemplate(in *deploy.GenerateCloudFormationTemplateInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
+	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenerateCloudFormationTemplate indicates an expected call of GenerateCloudFormationTemplate.
+func (mr *MockworkloadTemplateGeneratorMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).GenerateCloudFormationTemplate), in)
+}

@@ -183,11 +183,6 @@ type templater interface {
 	Template() (string, error)
 }
 
-type stackSerializer interface {
-	templater
-	SerializedParameters() (string, error)
-}
-
 type runner interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 }
@@ -415,10 +410,6 @@ type versionGetter interface {
 	Version() (string, error)
 }
 
-type endpointGetter interface {
-	ServiceDiscoveryEndpoint() (string, error)
-}
-
 type envTemplater interface {
 	EnvironmentTemplate(appName, envName string) (string, error)
 }
@@ -611,4 +602,9 @@ type interpolator interface {
 type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
+}
+
+type workloadTemplateGenerator interface {
+	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
+		*clideploy.GenerateCloudFormationTemplateOutput, error)
 }

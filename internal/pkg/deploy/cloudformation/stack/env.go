@@ -140,6 +140,13 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	}, nil
 }
 
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *EnvStackConfig) SerializedParameters() (string, error) {
+	// No-op for now.
+	return "", nil
+}
+
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(e.in.AdditionalTags, map[string]string{

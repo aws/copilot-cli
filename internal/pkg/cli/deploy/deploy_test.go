@@ -820,7 +820,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 				},
 			}
 
-			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{
+			got, gotErr := deployer.stackConfiguration(&StackRuntimeConfiguration{
 				AddonsURL: mockAddonsURL,
 			})
 
@@ -938,7 +938,7 @@ func TestSvcDeployOpts_stackConfiguration_worker(t *testing.T) {
 				},
 			}
 
-			got, gotErr := deployer.stackConfiguration(&DeployWorkloadInput{})
+			got, gotErr := deployer.stackConfiguration(&StackRuntimeConfiguration{})
 
 			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())

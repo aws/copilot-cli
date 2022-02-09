@@ -4,25 +4,16 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
-	"regexp"
-
-	"golang.org/x/mod/semver"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 
-	"github.com/aws/aws-sdk-go/aws"
-
 	"github.com/spf13/cobra"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -34,10 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
-var aliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
-	color.HighlightCode("http.alias"),
-	color.HighlightCode("copilot app init --domain example.com"))
-
 type deployWkldVars struct {
 	appName        string
 	name           string
@@ -48,11 +35,6 @@ type deployWkldVars struct {
 
 	// To facilitate unit tests.
 	clientConfigured bool
-}
-
-type uploadCustomResourcesOpts struct {
-	uploader      customResourcesUploader
-	newS3Uploader func() (uploader, error)
 }
 
 type deploySvcOpts struct {
@@ -77,7 +59,7 @@ type deploySvcOpts struct {
 	svcType         string
 	appliedManifest interface{}
 	rootUserARN     string
-	deployRecs      clideploy.ActionRecommender
+	deployRecs      deploy.ActionRecommender
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -110,7 +92,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	var err error
 	var deployer workloadDeployer
-	in := clideploy.WorkloadDeployerInput{
+	in := deploy.WorkloadDeployerInput{
 		Name:     o.name,
 		App:      o.targetApp,
 		Env:      o.targetEnv,
@@ -119,13 +101,13 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
-		deployer, err = clideploy.NewLBDeployer(&in)
+		deployer, err = deploy.NewLBDeployer(&in)
 	case *manifest.BackendService:
-		deployer, err = clideploy.NewBackendDeployer(&in)
+		deployer, err = deploy.NewBackendDeployer(&in)
 	case *manifest.RequestDrivenWebService:
-		deployer, err = clideploy.NewRDWSDeployer(&in)
+		deployer, err = deploy.NewRDWSDeployer(&in)
 	case *manifest.WorkerService:
-		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
+		deployer, err = deploy.NewWorkerSvcDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -198,12 +180,14 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
 	}
-	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
-		ImageDigest:    uploadOut.ImageDigest,
-		EnvFileARN:     uploadOut.EnvFileARN,
-		AddonsURL:      uploadOut.AddonsURL,
-		RootUserARN:    o.rootUserARN,
-		Tags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
+	deployRecs, err := deployer.DeployWorkload(&deploy.DeployWorkloadInput{
+		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
+			ImageDigest: uploadOut.ImageDigest,
+			EnvFileARN:  uploadOut.EnvFileARN,
+			AddonsURL:   uploadOut.AddonsURL,
+			RootUserARN: o.rootUserARN,
+			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
+		},
 		ForceNewUpdate: o.forceNewUpdate,
 	})
 	if err != nil {
@@ -349,164 +333,6 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
 	}
 	return envMft, nil
-}
-
-func uploadRDWSCustomResources(o *uploadCustomResourcesOpts, appEnvResources *stack.AppRegionalResources) (map[string]string, error) {
-	s3Client, err := o.newS3Uploader()
-	if err != nil {
-		return nil, err
-	}
-
-	urls, err := o.uploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(appEnvResources.S3Bucket, key, objects...)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", appEnvResources.S3Bucket, err)
-	}
-
-	return urls, nil
-}
-
-func validateLBSvcAlias(aliases manifest.Alias, app *config.Application, envName string) error {
-	if aliases.IsEmpty() {
-		return nil
-	}
-	aliasList, err := aliases.ToStringSlice()
-	if err != nil {
-		return fmt.Errorf(`convert 'http.alias' to string slice: %w`, err)
-	}
-	for _, alias := range aliasList {
-		// Alias should be within either env, app, or root hosted zone.
-		var regEnvHostedZone, regAppHostedZone, regRootHostedZone *regexp.Regexp
-		var err error
-		if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
-			return err
-		}
-		if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
-			return err
-		}
-		if regRootHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain)); err != nil {
-			return err
-		}
-		var validAlias bool
-		for _, re := range []*regexp.Regexp{regEnvHostedZone, regAppHostedZone, regRootHostedZone} {
-			if re.MatchString(alias) {
-				validAlias = true
-				break
-			}
-		}
-		if validAlias {
-			continue
-		}
-		log.Errorf(`%s must match one of the following patterns:
-- %s.%s.%s,
-- <name>.%s.%s.%s,
-- %s.%s,
-- <name>.%s.%s,
-- %s,
-- <name>.%s
-`, color.HighlightCode("http.alias"), envName, app.Name, app.Domain, envName,
-			app.Name, app.Domain, app.Name, app.Domain, app.Name,
-			app.Domain, app.Domain, app.Domain)
-		return fmt.Errorf(`alias "%s" is not supported in hosted zones managed by Copilot`, alias)
-	}
-	return nil
-}
-
-func checkUnsupportedRDSvcAlias(alias, envName string, app *config.Application) error {
-	var regEnvHostedZone, regAppHostedZone *regexp.Regexp
-	var err error
-	// Example: subdomain.env.app.domain, env.app.domain
-	if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
-		return err
-	}
-
-	// Example: subdomain.app.domain, app.domain
-	if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
-		return err
-	}
-
-	if regEnvHostedZone.MatchString(alias) {
-		return fmt.Errorf("%s is an environment-level alias, which is not supported yet", alias)
-	}
-
-	if regAppHostedZone.MatchString(alias) {
-		return fmt.Errorf("%s is an application-level alias, which is not supported yet", alias)
-	}
-
-	if alias == app.Domain {
-		return fmt.Errorf("%s is a root domain alias, which is not supported yet", alias)
-	}
-
-	return nil
-}
-
-func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {
-	if alias == "" {
-		return nil
-	}
-	if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
-		logAppVersionOutdatedError(svcName)
-		return err
-	}
-	// Alias should be within root hosted zone.
-	aliasInvalidLog := fmt.Sprintf(`%s of %s field should match the pattern <subdomain>.%s 
-Where <subdomain> cannot be the application name.
-`, color.HighlightUserInput(alias), color.HighlightCode("http.alias"), app.Domain)
-	if err := checkUnsupportedRDSvcAlias(alias, envName, app); err != nil {
-		log.Errorf(aliasInvalidLog)
-		return err
-	}
-
-	// Example: subdomain.domain
-	regRootHostedZone, err := regexp.Compile(fmt.Sprintf(`^([^\.]+\.)%s`, app.Domain))
-	if err != nil {
-		return err
-	}
-
-	if regRootHostedZone.MatchString(alias) {
-		return nil
-	}
-
-	log.Errorf(aliasInvalidLog)
-	return fmt.Errorf("alias is not supported in hosted zones that are not managed by Copilot")
-}
-
-func validateAppVersion(appName string, appVersionGetter versionGetter) error {
-	appVersion, err := appVersionGetter.Version()
-	if err != nil {
-		return fmt.Errorf("get version for app %s: %w", appName, err)
-	}
-	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
-	if diff < 0 {
-		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
-	}
-	return nil
-}
-
-func validateLBWSRuntime(app *config.Application, envName string, mft *manifest.LoadBalancedWebService, appVersionGetter versionGetter) error {
-	if app.Domain == "" && mft.HasAliases() {
-		log.Errorf(aliasUsedWithoutDomainFriendlyText)
-		return errors.New("alias specified when application is not associated with a domain")
-	}
-
-	if app.RequiresDNSDelegation() {
-		if err := validateAppVersion(app.Name, appVersionGetter); err != nil {
-			logAppVersionOutdatedError(aws.StringValue(mft.Name))
-			return err
-		}
-	}
-
-	if err := validateLBSvcAlias(mft.RoutingRule.Alias, app, envName); err != nil {
-		return err
-	}
-	return validateLBSvcAlias(mft.NLBConfig.Aliases, app, envName)
-}
-
-func logAppVersionOutdatedError(name string) {
-	log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
-`, name, color.HighlightCode("copilot app upgrade"))
 }
 
 func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
