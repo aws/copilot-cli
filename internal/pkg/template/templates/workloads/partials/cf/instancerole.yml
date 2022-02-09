@@ -47,7 +47,7 @@ InstanceRole:
               {{- end }}
       {{- end }}
       {{- end }}
-      {{- if and (contains .FeatureFlags "Tracing") (eq .Tracing "AWSXRAY")}}
+      {{- if and (contains .FeatureFlags "Tracing") (eq .Observability.Tracing "AWSXRAY")}}
       - PolicyName: 'EnableAWSXRayTracing'
         PolicyDocument:
           Version: '2012-10-17'

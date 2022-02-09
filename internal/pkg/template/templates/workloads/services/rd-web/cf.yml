@@ -134,7 +134,7 @@ Resources:
           EgressType: VPC
           VpcConnectorArn: !Ref VpcConnector
       {{- end }}
-      {{- if and (contains .FeatureFlags "Tracing") (eq .Tracing "AWSXRAY")}}
+      {{- if and (contains .FeatureFlags "Tracing") (eq .Observability.Tracing "AWSXRAY")}}
       ObservabilityConfiguration:
         ObservabilityEnabled: true
         ObservabilityConfigurationArn: !Sub 'arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:observabilityconfiguration/DefaultConfiguration/1/00000000000000000000000000000001'
