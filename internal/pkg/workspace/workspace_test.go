@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -514,39 +515,51 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 		copilotDir string
 		fs         func() afero.Fs
 
-		wantedNames []string
-		wantedErr   error
+		wantedPipelines map[string]string
+		wantedErr       error
 	}{
 		"success finding legacy pipeline (in both copilot/ and copilot/pipelines) and other pipelines, weeding out buildspecs": {
 			copilotDir: "/copilot",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				fs.Mkdir("/copilot", 0755)
-				legacyInCopiDir, _ := fs.Create("/copilot/pipeline.yml")
-				defer legacyInCopiDir.Close()
-				legacyInCopiDir.Write([]byte(`name: legacyInCopiDir`))
+				legacyInCopiDirManifest, _ := fs.Create("/copilot/pipeline.yml")
+				defer legacyInCopiDirManifest.Close()
+				legacyInCopiDirManifest.Write([]byte(`
+name: legacyInCopiDir
+version: 1
+`))
 
 				fs.Create("/copilot/buildspec.yml")
 
 				fs.Mkdir("/copilot/pipelines", 0755)
 				legacyInPipelinesDirManifest, _ := fs.Create("/copilot/pipelines/pipeline.yml")
 				defer legacyInPipelinesDirManifest.Close()
-				legacyInPipelinesDirManifest.Write([]byte(`name: legacyInPipelinesDir`))
+				legacyInPipelinesDirManifest.Write([]byte(`
+name: legacyInPipelinesDir
+version: 1
+`))
 
 				fs.Create("/copilot/pipelines/buildspec.yml")
 
 				otherInPipelinesDirManifest, _ := fs.Create("/copilot/pipelines/other.yml")
 				defer otherInPipelinesDirManifest.Close()
-				otherInPipelinesDirManifest.Write([]byte(`name: otherInPipelinesDir`))
+				otherInPipelinesDirManifest.Write([]byte(`
+name: otherInPipelinesDir
+version: 1
+`))
 
 				otherInPipelinesDirBuildspec, _ := fs.Create("/copilot/pipelines/other.buildspec.yml")
 				defer otherInPipelinesDirBuildspec.Close()
-				otherInPipelinesDirBuildspec.Write([]byte(`name: buildspecInPipelinesDir`))
+				otherInPipelinesDirBuildspec.Write([]byte(`
+name: buildspecInPipelinesDir
+`))
 
 				return fs
 			},
 
-			wantedNames: []string{"legacyInCopiDir", "legacyInPipelinesDir", "otherInPipelinesDir"},
+			wantedPipelines: map[string]string{"legacyInCopiDir": "/copilot/pipeline.yml", "legacyInPipelinesDir": "/copilot/pipelines/pipeline.yml", "otherInPipelinesDir": "/copilot/pipelines/other.yml"},
+			wantedErr:       nil,
 		},
 	}
 
@@ -559,11 +572,80 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 				},
 			}
 
-			names, err := ws.ListPipelines()
+			pipelines, err := ws.ListPipelines()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.ElementsMatch(t, tc.wantedNames, names)
+				require.True(t, reflect.DeepEqual(tc.wantedPipelines, pipelines))
+			}
+		})
+	}
+}
+
+func TestWorkspace_PipelineNameFromManifest(t *testing.T) {
+	copilotDir := "/copilot"
+	testCases := map[string]struct {
+		fs            func() afero.Fs
+		expectedName  string
+		expectedError error
+	}{
+		"returns pipeline name from manifest": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll(copilotDir, 0755)
+				manifest, _ := fs.Create("/copilot/pipeline.yml")
+				defer manifest.Close()
+				manifest.Write([]byte(`
+name: pipelineName
+version: 1
+`))
+				return fs
+			},
+			expectedName:  "pipelineName",
+			expectedError: nil,
+		},
+
+		"error reading pipeline manifest": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir(copilotDir, 0755)
+				return fs
+			},
+			expectedError: fmt.Errorf("read pipeline manifest: %w", ErrNoPipelineInWorkspace),
+		},
+		"error unmarshaling pipeline name": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll(copilotDir, 0755)
+				manifest, _ := fs.Create("/copilot/pipeline.yml")
+				defer manifest.Close()
+				manifest.Write([]byte(`
+game: pinochle
+`))
+				return fs
+			},
+			expectedError: errors.New("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := tc.fs()
+			ws := &Workspace{
+				copilotDir: copilotDir,
+				fsUtils:    &afero.Afero{Fs: fs},
+			}
+
+			// WHEN
+			name, err := ws.PipelineNameFromManifest("/copilot/pipeline.yml")
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedName, name)
 			}
 		})
 	}
@@ -598,114 +680,6 @@ func TestIsInGitRepository(t *testing.T) {
 			actual := IsInGitRepository(fs)
 
 			require.Equal(t, tc.wanted, actual)
-		})
-	}
-}
-
-func TestWorkspace_read(t *testing.T) {
-	testCases := map[string]struct {
-		elems []string
-
-		copilotDir string
-		fs         func() afero.Fs
-
-		wantedData []byte
-		wantedErr  error
-	}{
-		"return error if file does not exist": {
-			elems: []string{"webhook", "manifest.yml"},
-
-			copilotDir: "/copilot",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				return fs
-			},
-
-			wantedErr: fmt.Errorf("file /copilot/webhook/manifest.yml does not exists"),
-		},
-		"read existing file": {
-			elems: []string{"webhook", "manifest.yml"},
-
-			copilotDir: "/copilot",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot/webhook/", 0755)
-				f, _ := fs.Create("/copilot/webhook/manifest.yml")
-				defer f.Close()
-				f.Write([]byte("hello"))
-				return fs
-			},
-
-			wantedData: []byte("hello"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ws := &Workspace{
-				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
-					Fs: tc.fs(),
-				},
-			}
-
-			data, err := ws.read(tc.elems...)
-
-			if tc.wantedErr == nil {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedData, data)
-			} else {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			}
-		})
-	}
-}
-
-func TestWorkspace_write(t *testing.T) {
-	testCases := map[string]struct {
-		elems []string
-
-		wantedPath string
-		wantedErr  error
-	}{
-		"create file under nested directories": {
-			elems:      []string{"webhook", "addons", "policy.yml"},
-			wantedPath: "/copilot/webhook/addons/policy.yml",
-		},
-		"create file under copilot directory": {
-			elems:      []string{pipelineFileName},
-			wantedPath: "/copilot/pipeline.yml",
-		},
-		"return ErrFileExists if file already exists": {
-			elems:     []string{"manifest.yml"},
-			wantedErr: &ErrFileExists{FileName: "/copilot/manifest.yml"},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			fs := afero.NewMemMapFs()
-			utils := &afero.Afero{
-				Fs: fs,
-			}
-			utils.MkdirAll("/copilot", 0755)
-			utils.WriteFile("/copilot/manifest.yml", []byte{}, 0644)
-			ws := &Workspace{
-				workingDir: "/",
-				copilotDir: "/copilot",
-				fsUtils:    utils,
-			}
-
-			// WHEN
-			actualPath, actualErr := ws.write(nil, tc.elems...)
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
-			} else {
-				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
-			}
 		})
 	}
 }
@@ -837,7 +811,7 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 		"reads existing pipeline manifest": {
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot", 0755)
+				fs.MkdirAll(copilotDir, 0755)
 				manifest, _ := fs.Create("/copilot/pipeline.yml")
 				defer manifest.Close()
 				manifest.Write([]byte("hello"))
@@ -866,7 +840,7 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 			}
 
 			// WHEN
-			_, err := ws.ReadPipelineManifest()
+			_, err := ws.ReadPipelineManifest("/copilot/pipeline.yml")
 
 			// THEN
 			if tc.expectedError != nil {
@@ -982,6 +956,114 @@ func TestWorkspace_ListDockerfiles(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.dockerfiles, got)
+			}
+		})
+	}
+}
+
+func TestWorkspace_read(t *testing.T) {
+	testCases := map[string]struct {
+		elems []string
+
+		copilotDir string
+		fs         func() afero.Fs
+
+		wantedData []byte
+		wantedErr  error
+	}{
+		"return error if file does not exist": {
+			elems: []string{"webhook", "manifest.yml"},
+
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+
+			wantedErr: fmt.Errorf("file /copilot/webhook/manifest.yml does not exists"),
+		},
+		"read existing file": {
+			elems: []string{"webhook", "manifest.yml"},
+
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/webhook/", 0755)
+				f, _ := fs.Create("/copilot/webhook/manifest.yml")
+				defer f.Close()
+				f.Write([]byte("hello"))
+				return fs
+			},
+
+			wantedData: []byte("hello"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: tc.copilotDir,
+				fsUtils: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			data, err := ws.read(tc.elems...)
+
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedData, data)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
+func TestWorkspace_write(t *testing.T) {
+	testCases := map[string]struct {
+		elems []string
+
+		wantedPath string
+		wantedErr  error
+	}{
+		"create file under nested directories": {
+			elems:      []string{"webhook", "addons", "policy.yml"},
+			wantedPath: "/copilot/webhook/addons/policy.yml",
+		},
+		"create file under copilot directory": {
+			elems:      []string{pipelineFileName},
+			wantedPath: "/copilot/pipeline.yml",
+		},
+		"return ErrFileExists if file already exists": {
+			elems:     []string{"manifest.yml"},
+			wantedErr: &ErrFileExists{FileName: "/copilot/manifest.yml"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := afero.NewMemMapFs()
+			utils := &afero.Afero{
+				Fs: fs,
+			}
+			utils.MkdirAll("/copilot", 0755)
+			utils.WriteFile("/copilot/manifest.yml", []byte{}, 0644)
+			ws := &Workspace{
+				workingDir: "/",
+				copilotDir: "/copilot",
+				fsUtils:    utils,
+			}
+
+			// WHEN
+			actualPath, actualErr := ws.write(nil, tc.elems...)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
+			} else {
+				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
 			}
 		})
 	}

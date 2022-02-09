@@ -68,23 +68,6 @@ func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...
 	return parseValueFromOptionFmt(result), nil
 }
 
-// SelectOptionReturnValueAndHint prompts the user to select one option from options and returns the Value of the option.
-func (p Prompt) SelectOptionReturnValueAndHint(message, help string, opts []Option, promptCfgs ...PromptConfig) (value, hint string, err error) {
-	if len(opts) <= 0 {
-		return "", "", ErrEmptyOptions
-	}
-
-	choices, err := stringifyOptions(opts)
-	if err != nil {
-		return "", "", err
-	}
-	result, err := p.SelectOne(message, help, choices, promptCfgs...)
-	if err != nil {
-		return "", "", err
-	}
-	return parseValueFromOptionFmt(result), parseHintFromOptionFmt(result), nil
-}
-
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
 func (p Prompt) SelectOne(message, help string, options []string, promptCfgs ...PromptConfig) (string, error) {
 	if len(options) <= 0 {
@@ -129,14 +112,6 @@ func stringifyOptions(opts []Option) ([]string, error) {
 }
 
 func parseValueFromOptionFmt(formatted string) string {
-	if idx := strings.Index(formatted, "("); idx != -1 {
-		s := regexpSGR.ReplaceAllString(formatted[:idx], "")
-		return strings.TrimSpace(s)
-	}
-	return strings.TrimSpace(formatted)
-}
-
-func parseHintFromOptionFmt(formatted string) string {
 	if idx := strings.Index(formatted, "("); idx != -1 {
 		s := regexpSGR.ReplaceAllString(formatted[:idx], "")
 		return strings.TrimSpace(s)

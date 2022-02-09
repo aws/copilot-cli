@@ -6,12 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +19,8 @@ const (
 	testAppName        = "badgoose"
 	testPipelineName   = "honkpipes"
 	testPipelineSecret = "honkhonkhonk"
+
+	pipelineManifestLegacyPath = "copilot/pipeline.yml"
 )
 
 type deletePipelineMocks struct {
@@ -28,48 +29,34 @@ type deletePipelineMocks struct {
 	secretsmanager *mocks.MocksecretsManager
 	deployer       *mocks.MockpipelineDeployer
 	ws             *mocks.MockwsPipelineReader
+	getter         *mocks.MockpipelineGetter
 }
 
 func TestDeletePipelineOpts_Validate(t *testing.T) {
-	pipelineData := `
-name: pipeline-badgoose-honker-repo
-version: 1
-
-source:
-  provider: GitHub
-  properties:
-    repository: badgoose/repo
-    access_token_secret: "github-token-badgoose-repo"
-    branch: main
-
-stages:
-    -
-      name: test
-    -
-      name: prod
-`
-
 	testCases := map[string]struct {
-		inAppName string
-		callMocks func(m deletePipelineMocks)
+		inAppName      string
+		inPipelineName string
+		callMocks      func(m deletePipelineMocks)
 
 		wantedError error
 	}{
-		"happy path": {
-			inAppName: testAppName,
+		"happy path with name flag": {
+			inAppName:      testAppName,
+			inPipelineName: testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
-				m.ws.EXPECT().ReadPipelineManifest().Return([]byte(pipelineData), nil)
+				m.getter.EXPECT().GetPipeline(testPipelineName).Return(&codepipeline.Pipeline{Name: testPipelineName}, nil)
 			},
 			wantedError: nil,
 		},
 
-		"pipeline manifest does not exist": {
-			inAppName: testAppName,
+		"flag-indicated pipeline doesn't exist among deployed pipelines": {
+			inAppName:      testAppName,
+			inPipelineName: testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
-				m.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace)
+				m.getter.EXPECT().GetPipeline(testPipelineName).Return(nil, errors.New("some error"))
 			},
 
-			wantedError: workspace.ErrNoPipelineInWorkspace,
+			wantedError: errors.New("get pipeline 'honkpipes': some error"),
 		},
 
 		"application does not exist": {
@@ -86,9 +73,9 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
+			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 			mocks := deletePipelineMocks{
-				ws: mockWorkspace,
+				getter: mockPipelineGetter,
 			}
 
 			tc.callMocks(mocks)
@@ -96,8 +83,9 @@ stages:
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
 					appName: tc.inAppName,
+					name:    tc.inPipelineName,
 				},
-				ws: mockWorkspace,
+				pipelineSvc: mockPipelineGetter,
 			}
 
 			// WHEN
@@ -164,9 +152,9 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 				deletePipelineVars: deletePipelineVars{
 					skipConfirmation: tc.skipConfirmation,
 					appName:          tc.inAppName,
+					name:             tc.inPipelineName,
 				},
-				PipelineName: tc.inPipelineName,
-				prompt:       mockPrompt,
+				prompt: mockPrompt,
 			}
 
 			// WHEN
@@ -312,8 +300,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				deletePipelineVars: deletePipelineVars{
 					shouldDeleteSecret: tc.deleteSecret,
 					appName:            tc.inAppName,
+					name:               tc.inPipelineName,
 				},
-				PipelineName:     tc.inPipelineName,
 				PipelineSecret:   tc.inPipelineSecret,
 				secretsmanager:   mockSecretsManager,
 				pipelineDeployer: mockDeployer,

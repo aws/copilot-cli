@@ -27,16 +27,12 @@ type deployPipelineMocks struct {
 }
 
 func TestDeployPipelineOpts_Validate(t *testing.T) {
-	const (
-		mockPipelineManifest = `name: existentPipeline
-version: 1
-`
-	)
 	testCases := map[string]struct {
 		inAppName      string
 		inPipelineName string
 		mockWs         func(m *mocks.MockwsPipelineReader)
 
+		wantedPath  string
 		wantedError error
 	}{
 		"pipeline doesn't exist": {
@@ -44,7 +40,7 @@ version: 1
 			inPipelineName: "nonexistentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(mockPipelineManifest), nil)
+				m.EXPECT().ListPipelines().Return(map[string]string{"existentPipeline": "copilot/pipeline.yml"}, nil)
 			},
 
 			wantedError: errors.New("pipeline nonexistentPipeline not found in the workspace"),
@@ -54,9 +50,10 @@ version: 1
 			inPipelineName: "existentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(mockPipelineManifest), nil)
+				m.EXPECT().ListPipelines().Return(map[string]string{"existentPipeline": "copilot/pipeline.yml"}, nil)
 			},
 
+			wantedPath:  "copilot/pipeline.yml",
 			wantedError: nil,
 		},
 	}
@@ -84,6 +81,76 @@ version: 1
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedPath, opts.path)
+			}
+		})
+	}
+}
+
+func TestDeployPipelineOpts_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName      string
+		inPipelineName string
+		mockWs         func(m *mocks.MockwsPipelineReader)
+		mockSel        func(m *mocks.MockwsPipelineSelector)
+
+		wantedPipeline string
+		wantedPath     string
+		wantedError    error
+	}{
+		"return nil if pipeline name passed in with flag": {
+			inAppName:      "app",
+			inPipelineName: "existentPipeline",
+			mockSel:        func(m *mocks.MockwsPipelineSelector) {},
+
+			wantedPipeline: "existentPipeline",
+			wantedError:    nil,
+		},
+		"success": {
+			inAppName: "app",
+			mockSel: func(m *mocks.MockwsPipelineSelector) {
+				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return("selectedPipeline", "selectedPath", nil)
+			},
+
+			wantedPipeline: "selectedPipeline",
+			wantedPath:     "selectedPath",
+			wantedError:    nil,
+		},
+		"errors if fail to select pipeline": {
+			inAppName: "app",
+			mockSel: func(m *mocks.MockwsPipelineSelector) {
+				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return("", "", errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("select pipeline: some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockSel := mocks.NewMockwsPipelineSelector(ctrl)
+			tc.mockSel(mockSel)
+			opts := deployPipelineOpts{
+				deployPipelineVars: deployPipelineVars{
+					appName: tc.inAppName,
+					name:    tc.inPipelineName,
+				},
+				sel: mockSel,
+			}
+
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPipeline, opts.name)
+				require.Equal(t, tc.wantedPath, opts.path)
 			}
 		})
 	}
@@ -91,11 +158,12 @@ version: 1
 
 func TestDeployPipelineOpts_Execute(t *testing.T) {
 	const (
-		appName      = "badgoose"
-		region       = "us-west-2"
-		accountID    = "123456789012"
-		pipelineName = "pipepiper"
-		content      = `
+		appName                    = "badgoose"
+		region                     = "us-west-2"
+		accountID                  = "123456789012"
+		pipelineName               = "pipepiper"
+		pipelineManifestLegacyPath = "/copilot/pipeline.yml"
+		content                    = `
 name: pipepiper
 version: 1
 
@@ -163,7 +231,7 @@ stages:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -193,7 +261,7 @@ stages:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -224,7 +292,7 @@ stages:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -252,7 +320,7 @@ stages:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -293,7 +361,7 @@ stages:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), errors.New("some error")),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), errors.New("some error")),
 				)
 			},
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
@@ -309,7 +377,7 @@ stages:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 				)
 			},
 			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
@@ -327,7 +395,7 @@ version: 1
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 				)
 			},
 			expectedError: fmt.Errorf("validate pipeline: pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
@@ -352,7 +420,7 @@ source:
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 				)
 			},
 			expectedError: fmt.Errorf("read source from manifest: invalid repo source provider: NotGitHub"),
@@ -367,7 +435,7 @@ source:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return(nil, errors.New("some error")).Times(1),
 				)
 			},
@@ -383,7 +451,7 @@ source:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -406,7 +474,7 @@ source:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -432,7 +500,7 @@ source:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -462,7 +530,7 @@ source:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -519,7 +587,7 @@ stages:
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
-					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(content), nil),
 					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
@@ -572,6 +640,7 @@ stages:
 				ws:               mockWorkspace,
 				app:              tc.inApp,
 				region:           tc.inRegion,
+				path:             pipelineManifestLegacyPath,
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,

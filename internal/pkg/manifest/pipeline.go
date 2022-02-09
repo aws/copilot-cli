@@ -233,8 +233,6 @@ func UnmarshalPipeline(in []byte) (*PipelineManifest, error) {
 	if version, err = validateVersion(&pm); err != nil {
 		return nil, err
 	}
-
-	// TODO: #221 Do more validations
 	switch version {
 	case Ver1:
 		return &pm, nil

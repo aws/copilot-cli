@@ -92,22 +92,14 @@ func (o *deletePipelineOpts) Validate() error {
 
 	if o.name != "" {
 		if _, err := o.pipelineSvc.GetPipeline(o.name); err != nil {
-			return err
+			return fmt.Errorf("get pipeline '%s': %w", o.name, err)
 		}
 	}
-	//if err := o.readPipelineManifest(); err != nil {
-	//	return err
-	//}
-
 	return nil
 }
 
 // Ask prompts for fields that are required but not passed in.
 func (o *deletePipelineOpts) Ask() error {
-	if err := o.askPipelineName(); err != nil {
-		return err
-	}
-
 	if o.skipConfirmation {
 		return nil
 	}
@@ -141,16 +133,12 @@ func (o *deletePipelineOpts) Execute() error {
 	return nil
 }
 
-func (o *deletePipelineOpts) askPipelineName() error {
-	if o.name != "" {
-		return nil
-	}
-	// select from deployed pipelines, not ws pipelines
-	name, err := o.sel.Pipeline
-}
-
 func (o *deletePipelineOpts) readPipelineManifest() error {
-	data, err := o.ws.ReadPipelineManifest()
+	legacyPath, err := o.ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return err
+	}
+	data, err := o.ws.ReadPipelineManifest(legacyPath)
 	if err != nil {
 		if err == workspace.ErrNoPipelineInWorkspace {
 			return err

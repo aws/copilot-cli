@@ -204,7 +204,11 @@ func (o *pipelineStatusOpts) retrieveAllPipelines() ([]string, error) {
 }
 
 func (o *pipelineStatusOpts) getPipelineNameFromManifest() (string, error) {
-	data, err := o.ws.ReadPipelineManifest()
+	path, err := o.ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return "", err
+	}
+	data, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
 		return "", err
 	}

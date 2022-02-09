@@ -241,7 +241,7 @@ type workspacePathGetter interface {
 }
 
 type wsPipelineManifestReader interface {
-	ReadPipelineManifest() ([]byte, error)
+	ReadPipelineManifest(path string) ([]byte, error)
 }
 
 type wsPipelineWriter interface {
@@ -288,7 +288,8 @@ type wsWlDirReader interface {
 type wsPipelineReader interface {
 	wsPipelineManifestReader
 	wlLister
-	ListPipelines() ([]string, error)
+	ListPipelines() (map[string]string, error)
+	PipelineManifestLegacyPath() (string, error)
 }
 
 type wsAppManager interface {
@@ -477,12 +478,12 @@ type deploySelector interface {
 	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
-type pipelineSelector interface {
+type pipelineEnvSelector interface {
 	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
 }
 
 type wsPipelineSelector interface {
-	Pipeline(prompt, help string) (string, error)
+	Pipeline(prompt, help string) (name, path string, err error)
 }
 
 type wsSelector interface {

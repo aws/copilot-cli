@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
@@ -91,11 +92,12 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 	return &deployPipelineOpts{
 		app:                app,
+		ws:                 ws,
+		sel:                selector.NewWsPipelineSelect(ws),
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
 		deployPipelineVars: vars,
 		envStore:           store,
-		ws:                 ws,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
 		codestar:           cs.New(defaultSession),
@@ -132,7 +134,7 @@ func (o *deployPipelineOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, color.HighlightUserInput(o.appName)))
 
 	// Read pipeline manifest.
-	data, err := o.ws.ReadPipelineManifest()
+	data, err := o.ws.ReadPipelineManifest(o.path)
 	if err != nil {
 		return fmt.Errorf("read pipeline manifest: %w", err)
 	}
@@ -143,7 +145,6 @@ func (o *deployPipelineOpts) Execute() error {
 	if err := pipeline.Validate(); err != nil {
 		return fmt.Errorf("validate pipeline: %w", err)
 	}
-	// Set pipeline name; if passed in with flag, should be identical.
 	o.name = pipeline.Name
 
 	// If the source has an existing connection, get the correlating ConnectionARN .
@@ -196,8 +197,9 @@ func (o *deployPipelineOpts) validatePipelineName() error {
 	if err != nil {
 		return fmt.Errorf("list pipelines: %w", err)
 	}
-	for _, pipeline := range pipelines {
-		if pipeline == o.name {
+	for name, path := range pipelines {
+		if name == o.name {
+			o.path = path
 			return nil
 		}
 	}
@@ -208,11 +210,13 @@ func (o *deployPipelineOpts) askPipelineName() error {
 	if o.name != "" {
 		return nil
 	}
-	name, err := o.sel.Pipeline(pipelineSelectPrompt, "")
+	name, path, err := o.sel.Pipeline(pipelineSelectPrompt, "")
 	if err != nil {
 		return fmt.Errorf("select pipeline: %w", err)
 	}
 	o.name = name
+	o.path = path
+
 	return nil
 }
 
@@ -367,6 +371,9 @@ func buildPipelineDeployCmd() *cobra.Command {
 				return err
 			}
 			if err := opts.Validate(); err != nil {
+				return err
+			}
+			if err := opts.Ask(); err != nil {
 				return err
 			}
 			if err := opts.Execute(); err != nil {

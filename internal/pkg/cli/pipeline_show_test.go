@@ -117,8 +117,9 @@ func TestPipelineShow_Validate(t *testing.T) {
 
 func TestPipelineShow_Ask(t *testing.T) {
 	const (
-		mockAppName      = "dinder"
-		mockPipelineName = "pipeline-dinder-badgoose-repo"
+		mockAppName                = "dinder"
+		mockPipelineName           = "pipeline-dinder-badgoose-repo"
+		pipelineManifestLegacyPath = "copilot/pipeline.yml"
 	)
 	mockError := errors.New("mock error")
 	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
@@ -168,7 +169,8 @@ stages:
 			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.ws.EXPECT().ReadPipelineManifest().Return([]byte(pipelineData), nil),
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(pipelineData), nil),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -179,7 +181,8 @@ stages:
 			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return(mockPipelineName, nil),
 				)
@@ -193,7 +196,8 @@ stages:
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{mockPipelineName}, nil),
 				)
 			},
@@ -206,7 +210,8 @@ stages:
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{}, nil),
 				)
 			},
@@ -231,7 +236,8 @@ stages:
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(nil, mockError),
 				)
 			},
@@ -241,7 +247,8 @@ stages:
 			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return("", mockError),
 				)

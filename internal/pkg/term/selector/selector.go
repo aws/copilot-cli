@@ -94,7 +94,6 @@ type Prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
-	SelectOptionReturnValueAndHint(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value, hint string, err error)
 	MultiSelect(message, help string, options []string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) ([]string, error)
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
@@ -123,7 +122,17 @@ type WsWorkloadLister interface {
 	ListServices() ([]string, error)
 	ListJobs() ([]string, error)
 	ListWorkloads() ([]string, error)
+}
+
+// WsPipelineLister wraps the method to get pipelines in the current workspace.
+type WsPipelineLister interface {
 	ListPipelines() (map[string]string, error)
+}
+
+// WsPipelineSelector is a pipeline selector.
+type WsPipelineSelector interface {
+	WsPipelineLister
+	//Pipeline(msg, help string) (name, path string, err error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -166,11 +175,17 @@ type ConfigSelect struct {
 	workloadLister ConfigWorkloadLister
 }
 
-// WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
+// WorkspaceSelect  is an application and environment selector, but can also choose a service or pipeline from the workspace.
 type WorkspaceSelect struct {
 	*Select
 	ws      WorkspaceRetriever
 	appName string
+}
+
+// PipelineSelect is a workspace pipeline selector.
+type PipelineSelect struct {
+	*Select
+	ws WsPipelineSelector
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -249,6 +264,13 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 	return &WorkspaceSelect{
 		Select: NewSelect(prompt, store),
 		ws:     ws,
+	}
+}
+
+// NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
+func NewWsPipelineSelect(ws WsPipelineSelector) *PipelineSelect {
+	return &PipelineSelect{
+		ws: ws,
 	}
 }
 
@@ -677,8 +699,8 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 }
 
 // Pipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (w *WorkspaceSelect) Pipeline(msg, help string, additionalOpts ...string) (name, path string, err error) {
-	pipelines, err := w.retrieveWorkspacePipelines()
+func (s *PipelineSelect) Pipeline(msg, help string) (name, path string, err error) {
+	pipelines, err := s.retrieveWorkspacePipelines()
 	if err != nil {
 		return "", "", err
 	}
@@ -693,11 +715,11 @@ func (w *WorkspaceSelect) Pipeline(msg, help string, additionalOpts ...string) (
 		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelineNames[0]))
 		return pipelineNames[0], pipelines[pipelineNames[0]], nil
 	}
-	selectedPipelineName, selectedPipelinePath, err := w.prompt.SelectOptionReturnValueAndHint(msg, help, pipelinePromptOpts(pipelines), prompt.WithFinalMessage(pipelineFinalMsg))
+	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {
 		return "", "", fmt.Errorf("select pipeline: %w", err)
 	}
-	return selectedPipelineName, selectedPipelinePath, err
+	return selectedPipeline, pipelines[selectedPipeline], nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.
@@ -911,7 +933,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 	return localWlNames, nil
 }
 
-func (s *WorkspaceSelect) retrieveWorkspacePipelines() (map[string]string, error) {
+func (s *PipelineSelect) retrieveWorkspacePipelines() (map[string]string, error) {
 	localPipelineNames, err := s.ws.ListPipelines()
 	if err != nil {
 		return nil, err
@@ -1136,15 +1158,4 @@ func intersect(firstMap map[string]deploy.Topic, secondArr []deploy.Topic) map[s
 		}
 	}
 	return out
-}
-
-func pipelinePromptOpts(pipelines map[string]string) []prompt.Option {
-	var options []prompt.Option
-	for name, path := range pipelines {
-		options = append(options, prompt.Option{
-			Value: name,
-			Hint:  path,
-		})
-	}
-	return options
 }

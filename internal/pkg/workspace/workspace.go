@@ -154,9 +154,9 @@ func (ws *Workspace) ListWorkloads() ([]string, error) {
 
 // ListPipelines returns the names of all pipelines in the workspace.
 func (ws *Workspace) ListPipelines() (map[string]string, error) {
-	var pipelines map[string]string
+	pipelines := make(map[string]string)
 	// Look for legacy pipeline.
-	legacyPath, err := ws.pipelineManifestLegacyPath()
+	legacyPath, err := ws.PipelineManifestLegacyPath()
 	if err != nil {
 		return nil, err
 	}
@@ -165,29 +165,34 @@ func (ws *Workspace) ListPipelines() (map[string]string, error) {
 		return nil, fmt.Errorf("get name from pipeline manifest: %w", err)
 	}
 	pipelines[name] = legacyPath
-
 	// Look for other pipelines.
 	pipelinesPath, err := ws.pipelineManifestPath()
 	if err != nil {
 		return nil, err
 	}
-	files, err := ws.fsUtils.ReadDir(pipelinesPath)
+	exists, err := ws.fsUtils.Exists(pipelinesPath)
 	if err != nil {
-		return nil, fmt.Errorf("read directory %s: %w", pipelinesPath, err)
+		return nil, err
 	}
-	for _, file := range files {
-		// Ignore buildspecs.
-		if strings.HasSuffix(file.Name(), "buildspec.yml") {
-			continue
+	if exists {
+		files, err := ws.fsUtils.ReadDir(pipelinesPath)
+		if err != nil {
+			return nil, fmt.Errorf("read directory %s: %w", pipelinesPath, err)
 		}
-		// Read manifests of moved legacy pipeline and any other pipelines.
-		if strings.HasSuffix(file.Name(), ".yml") {
-			path := filepath.Join(pipelinesDirName, file.Name())
-			name, err := ws.PipelineNameFromManifest(path)
-			if err != nil {
-				return nil, fmt.Errorf("read pipeline manifest: %w", err)
+		for _, file := range files {
+			// Ignore buildspecs.
+			if strings.HasSuffix(file.Name(), "buildspec.yml") {
+				continue
 			}
-			pipelines[name] = path
+			// Read manifests of moved legacy pipeline and any other pipelines.
+			if strings.HasSuffix(file.Name(), ".yml") {
+				path := filepath.Join(pipelinesPath, file.Name())
+				name, err := ws.PipelineNameFromManifest(path)
+				if err != nil {
+					return nil, fmt.Errorf("read pipeline manifest: %w", err)
+				}
+				pipelines[name] = path
+			}
 		}
 	}
 	return pipelines, nil
@@ -253,7 +258,7 @@ func (ws *Workspace) ReadPipelineManifest(path string) ([]byte, error) {
 	if !manifestExists {
 		return nil, ErrNoPipelineInWorkspace
 	}
-	return ws.read(pipelineFileName)
+	return ws.fsUtils.ReadFile(path)
 }
 
 // WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
@@ -363,7 +368,7 @@ func (ws *Workspace) writeSummary(appName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
-func (ws *Workspace) pipelineManifestLegacyPath() (string, error) {
+func (ws *Workspace) PipelineManifestLegacyPath() (string, error) {
 	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err

@@ -87,7 +87,7 @@ type initPipelineOpts struct {
 	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
-	sel            pipelineSelector
+	sel            pipelineEnvSelector
 
 	// Outputs stored on successful actions.
 	secret    string
