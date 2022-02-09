@@ -11,13 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/aws-sdk-go/aws"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -25,11 +21,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -55,29 +49,35 @@ type packageSvcVars struct {
 	appName   string
 	tag       string
 	outputDir string
+
+	// To facilitate unit tests.
+	clientConfigured bool
 }
 
 type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient      templater
-	initAddonsClient  func(*packageSvcOpts) error // Overridden in tests.
-	ws                wsSvcReader
-	store             store
-	appCFN            appResourcesGetter
-	stackWriter       io.Writer
-	paramsWriter      io.Writer
-	addonsWriter      io.Writer
-	fs                afero.Fs
-	runner            runner
-	sel               wsSelector
-	prompt            prompter
-	identity          identityService
-	newInterpolator   func(app, env string) interpolator
-	stackSerializer   func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
-	newEndpointGetter func(app, env string) (endpointGetter, error)
-	snsTopicGetter    deployedEnvironmentLister
+	addonsClient     templater
+	initAddonsClient func(*packageSvcOpts) error // Overridden in tests.
+	ws               wsWlDirReader
+	fs               afero.Fs
+	store            store
+	stackWriter      io.Writer
+	paramsWriter     io.Writer
+	addonsWriter     io.Writer
+	runner           runner
+	sessProvider     *sessions.Provider
+	sel              wsSelector
+	unmarshal        func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator  func(app, env string) interpolator
+	newTplGenerator  func(*packageSvcOpts) (workloadTemplateGenerator, error)
+
+	// cached variables
+	targetApp       *config.Application
+	targetEnv       *config.Environment
+	appliedManifest interface{}
+	rootUserARN     string
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -89,176 +89,54 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
-	deployStore, err := deploy.NewStore(store)
-	if err != nil {
-		return nil, fmt.Errorf("new deploy store: %w", err)
-	}
-	p := sessions.NewProvider()
-	sess, err := p.Default()
-	if err != nil {
-		return nil, fmt.Errorf("retrieve default session: %w", err)
-	}
 	prompter := prompt.New()
 	opts := &packageSvcOpts{
 		packageSvcVars:   vars,
 		initAddonsClient: initPackageAddonsClient,
-		ws:               ws,
 		store:            store,
-		appCFN:           cloudformation.New(sess),
+		ws:               ws,
+		fs:               &afero.Afero{Fs: afero.NewOsFs()},
+		unmarshal:        manifest.UnmarshalWorkload,
 		runner:           exec.NewCmd(),
 		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:           prompter,
-		identity:         identity.New(sess),
 		stackWriter:      os.Stdout,
 		paramsWriter:     ioutil.Discard,
 		addonsWriter:     ioutil.Discard,
-		fs:               &afero.Afero{Fs: afero.NewOsFs()},
-		snsTopicGetter:   deployStore,
 		newInterpolator:  newManifestInterpolator,
-	}
-	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
-	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
-	}
-	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
-		var serializer stackSerializer
-		switch t := mft.(type) {
-		case *manifest.LoadBalancedWebService:
-			if err := validateLBWSRuntime(app, env.Name, t, appVersionGetter); err != nil {
-				return nil, err
-			}
-			var options []stack.LoadBalancedWebServiceOption
-			if !t.NLBConfig.IsEmpty() {
-				envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-					App:         app.Name,
-					Env:         env.Name,
-					ConfigStore: store,
-					DeployStore: deployStore,
-				})
-				if err != nil {
-					return nil, fmt.Errorf("create describer for environment %s in application %s: %w", env.Name, app.Name, err)
-				}
-				cidrBlocks, err := envDescriber.PublicCIDRBlocks()
-				if err != nil {
-					return nil, err
-				}
-				options = append(options, stack.WithNLB(cidrBlocks))
-			}
-
-			if app.RequiresDNSDelegation() {
-				var caller identity.Caller
-				caller, err = opts.identity.Get()
-				if err != nil {
-					return nil, fmt.Errorf("get identity: %w", err)
-				}
-				options = append(options, stack.WithDNSDelegation(deploy.AppInformation{
-					Name:                env.App,
-					DNSName:             app.Domain,
-					AccountPrincipalARN: caller.RootUserARN,
-				}))
-
-				if !t.RoutingRule.Disabled() {
-					options = append(options, stack.WithHTTPS())
-				}
-			}
-			serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc, options...)
-			if err != nil {
-				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
-			}
-		case *manifest.RequestDrivenWebService:
-			caller, err := opts.identity.Get()
-			if err != nil {
-				return nil, fmt.Errorf("get identity: %w", err)
-			}
-			appInfo := deploy.AppInformation{
-				Name:                env.App,
-				DNSName:             app.Domain,
-				AccountPrincipalARN: caller.RootUserARN,
-			}
-			if t.Alias == nil {
-				serializer, err = stack.NewRequestDrivenWebService(t, env.Name, appInfo, rc)
-				if err != nil {
-					return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
-				}
-				break
-			}
-
-			if err = validateRDSvcAliasAndAppVersion(opts.name, aws.StringValue(t.Alias), env.Name, app, appVersionGetter); err != nil {
-				return nil, err
-			}
-
-			resources, err := opts.appCFN.GetAppResourcesByRegion(app, env.Region)
-			if err != nil {
-				return nil, fmt.Errorf("get application %s resources from region %s: %w", app.Name, env.Region, err)
-			}
-			urls, err := uploadRDWSCustomResources(&uploadCustomResourcesOpts{
-				uploader: template.New(),
-				newS3Uploader: func() (uploader, error) {
-					envRegion := env.Region
-					sess, err := p.DefaultWithRegion(env.Region)
-					if err != nil {
-						return nil, fmt.Errorf("create session with region %s: %w", envRegion, err)
-					}
-					s3Client := s3.New(sess)
-					return s3Client, nil
-				},
-			}, resources)
-			if err != nil {
-				return nil, err
-			}
-			serializer, err = stack.NewRequestDrivenWebServiceWithAlias(t, env.Name, appInfo, rc, urls)
-			if err != nil {
-				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
-			}
-		case *manifest.BackendService:
-			serializer, err = stack.NewBackendService(t, env.Name, app.Name, rc)
-			if err != nil {
-				return nil, fmt.Errorf("init backend service stack serializer: %w", err)
-			}
-		case *manifest.WorkerService:
-			var topics []deploy.Topic
-			topics, err = opts.snsTopicGetter.ListSNSTopics(opts.appName, opts.envName)
-			if err != nil {
-				return nil, err
-			}
-			var topicARNs []string
-			for _, topic := range topics {
-				topicARNs = append(topicARNs, topic.ARN())
-			}
-			type subscriptions interface {
-				Subscriptions() []manifest.TopicSubscription
-			}
-
-			subscriptionGetter, ok := mft.(subscriptions)
-			if !ok {
-				return nil, errors.New("manifest does not have required method Subscriptions")
-			}
-			// Cache the subscriptions for later.
-			topicSubs := subscriptionGetter.Subscriptions()
-			if err = validateTopicsExist(topicSubs, topicARNs, app.Name, env.Name); err != nil {
-				return nil, err
-			}
-			serializer, err = stack.NewWorkerService(t, env.Name, app.Name, rc)
-			if err != nil {
-				return nil, fmt.Errorf("init worker service stack serializer: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)
-		}
-		return serializer, nil
-	}
-	opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
-		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:         app,
-			Env:         env,
-			ConfigStore: store,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("new env describer for environment %s in app %s: %v", env, app, err)
-		}
-		return d, nil
+		sessProvider:     sessions.NewProvider(),
+		newTplGenerator:  newWkldTplGenerator,
 	}
 	return opts, nil
+}
+
+func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
+	var err error
+	var deployer workloadTemplateGenerator
+	in := clideploy.WorkloadDeployerInput{
+		Name:     o.name,
+		App:      o.targetApp,
+		Env:      o.targetEnv,
+		ImageTag: o.tag,
+		Mft:      o.appliedManifest,
+	}
+	switch t := o.appliedManifest.(type) {
+	case *manifest.LoadBalancedWebService:
+		deployer, err = clideploy.NewLBDeployer(&in)
+	case *manifest.BackendService:
+		deployer, err = clideploy.NewBackendDeployer(&in)
+	case *manifest.RequestDrivenWebService:
+		deployer, err = clideploy.NewRDWSDeployer(&in)
+	case *manifest.WorkerService:
+		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
+	case *manifest.ScheduledJob:
+		deployer, err = clideploy.NewJobDeployer(&in)
+	default:
+		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("initiate workload template generator: %w", err)
+	}
+	return deployer, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
@@ -296,19 +174,17 @@ func (o *packageSvcOpts) Ask() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageSvcOpts) Execute() error {
-	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
-	env, err := o.store.GetEnvironment(o.appName, o.envName)
-	if err != nil {
-		return err
+	if !o.clientConfigured {
+		if err := o.configureClients(); err != nil {
+			return err
+		}
 	}
-
 	if o.outputDir != "" {
 		if err := o.setOutputFileWriters(); err != nil {
 			return err
 		}
 	}
-
-	appTemplates, err := o.getSvcTemplates(env)
+	appTemplates, err := o.getSvcTemplates(o.targetEnv)
 	if err != nil {
 		return err
 	}
@@ -318,7 +194,6 @@ func (o *packageSvcOpts) Execute() error {
 	if _, err = o.paramsWriter.Write([]byte(appTemplates.configuration)); err != nil {
 		return err
 	}
-
 	addonsTemplate, err := o.getAddonsTemplate()
 	// return nil if addons not found.
 	var notFoundErr *addon.ErrAddonsNotFound
@@ -328,14 +203,12 @@ func (o *packageSvcOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("retrieve addons template: %w", err)
 	}
-
 	// Addons template won't show up without setting --output-dir flag.
 	if o.outputDir != "" {
 		if err := o.setAddonsFileWriter(); err != nil {
 			return err
 		}
 	}
-
 	_, err = o.addonsWriter.Write([]byte(addonsTemplate))
 	return err
 }
@@ -373,86 +246,66 @@ func (o *packageSvcOpts) getAddonsTemplate() (string, error) {
 	return o.addonsClient.Template()
 }
 
-type svcCfnTemplates struct {
+func (o *packageSvcOpts) configureClients() error {
+	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return err
+	}
+	o.targetEnv = env
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	}
+	o.targetApp = app
+	// client to retrieve an application's resources created with CloudFormation.
+	defaultSess, err := o.sessProvider.Default()
+	if err != nil {
+		return fmt.Errorf("create default session: %w", err)
+	}
+	// client to retrieve caller identity.
+	caller, err := identity.New(defaultSess).Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+	o.rootUserARN = caller.RootUserARN
+
+	return nil
+}
+
+type wkldCfnTemplates struct {
 	stack         string
 	configuration string
 }
 
 // getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
-func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
-	if err != nil {
-		return nil, fmt.Errorf("read service manifest: %w", err)
-	}
-	interpolated, err := o.newInterpolator(o.appName, env.Name).Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", o.name, err)
-	}
-	mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal workload: %w", err)
-	}
-	envMft, err := mft.ApplyEnv(o.envName)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
-	}
-	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %s: %s", o.envName, err)
-	}
-	imgNeedsBuild, err := manifest.DockerfileBuildRequired(envMft)
+func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTemplates, error) {
+	mft, err := workloadManifest(&workloadManifestInput{
+		name:         o.name,
+		appName:      o.appName,
+		envName:      o.envName,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		ws:           o.ws,
+		unmarshal:    o.unmarshal,
+	})
 	if err != nil {
 		return nil, err
 	}
-	app, err := o.store.GetApplication(o.appName)
+	o.appliedManifest = mft
+	generator, err := o.newTplGenerator(o)
 	if err != nil {
 		return nil, err
 	}
-	endpointGetter, err := o.newEndpointGetter(o.appName, o.envName)
+	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
+		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
+			RootUserARN: o.rootUserARN,
+			Tags:        o.targetApp.Tags,
+		},
+	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
 	}
-	endpoint, err := endpointGetter.ServiceDiscoveryEndpoint()
-	if err != nil {
-		return nil, err
-	}
-	rc := stack.RuntimeConfig{
-		AdditionalTags:           app.Tags,
-		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                env.AccountID,
-		Region:                   env.Region,
-	}
-
-	if imgNeedsBuild {
-		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
-		if err != nil {
-			return nil, err
-		}
-		repoURL, ok := resources.RepositoryURLs[o.name]
-		if !ok {
-			return nil, &errRepoNotFound{
-				wlName:       o.name,
-				envRegion:    env.Region,
-				appAccountID: app.AccountID,
-			}
-		}
-		rc.Image = &stack.ECRImage{
-			RepoURL:  repoURL,
-			ImageTag: o.tag,
-		}
-	}
-	serializer, err := o.stackSerializer(envMft, env, app, rc)
-	if err != nil {
-		return nil, err
-	}
-	tpl, err := serializer.Template()
-	if err != nil {
-		return nil, fmt.Errorf("generate stack template: %w", err)
-	}
-	params, err := serializer.SerializedParameters()
-	if err != nil {
-		return nil, fmt.Errorf("generate stack template configuration: %w", err)
-	}
-	return &svcCfnTemplates{stack: tpl, configuration: params}, nil
+	return &wkldCfnTemplates{stack: output.Template, configuration: output.Parameters}, nil
 }
 
 // setOutputFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
@@ -504,26 +357,6 @@ func contains(s string, items []string) bool {
 		}
 	}
 	return false
-}
-
-type errRepoNotFound struct {
-	wlName       string
-	envRegion    string
-	appAccountID string
-}
-
-func (e *errRepoNotFound) Error() string {
-	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.wlName, e.envRegion, e.appAccountID)
-}
-
-func (e *errRepoNotFound) Is(target error) bool {
-	t, ok := target.(*errRepoNotFound)
-	if !ok {
-		return false
-	}
-	return e.wlName == t.wlName &&
-		e.envRegion == t.envRegion &&
-		e.appAccountID == t.appAccountID
 }
 
 // buildSvcPackageCmd builds the command for printing a service's CloudFormation template.

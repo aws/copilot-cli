@@ -19,6 +19,8 @@ type pipelineStackConfig struct {
 	parser template.Parser
 }
 
+// NewPipelineStackConfig sets up a struct which can provide values to CloudFormation for
+// spinning up a pipeline.
 func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig {
 	return &pipelineStackConfig{
 		CreatePipelineInput: in,
@@ -26,10 +28,12 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 	}
 }
 
+// StackName returns the name of the CloudFormation stack.
 func (p *pipelineStackConfig) StackName() string {
 	return p.Name
 }
 
+// Template returns the CloudFormation template for the service parametrized for the environment.
 func (p *pipelineStackConfig) Template() (string, error) {
 	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(cfTemplateFunctions), template.WithFuncs(map[string]interface{}{
 		"isCodeStarConnection": func(source interface{}) bool {
@@ -46,10 +50,19 @@ func (p *pipelineStackConfig) Template() (string, error) {
 	return content.String(), nil
 }
 
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *pipelineStackConfig) SerializedParameters() (string, error) {
+	// No-op for now.
+	return "", nil
+}
+
+// Parameters returns the list of CloudFormation parameters used by the template.
 func (p *pipelineStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	return nil, nil
 }
 
+// Tags returns the tags that should be applied to the pipeline CloudFormation stack.
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(p.AdditionalTags, map[string]string{
 		deploy.AppTagKey: p.AppName,

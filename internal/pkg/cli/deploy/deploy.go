@@ -78,6 +78,11 @@ type templater interface {
 	Template() (string, error)
 }
 
+type stackSerializer interface {
+	templater
+	SerializedParameters() (string, error)
+}
+
 type endpointGetter interface {
 	ServiceDiscoveryEndpoint() (string, error)
 }
@@ -187,11 +192,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
 	}
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
-	registry := ecr.New(defaultSessEnvRegion)
-	imageBuilderPusher, err := repository.New(repoName, registry)
-	if err != nil {
-		return nil, fmt.Errorf("initiate image builder pusher: %w", err)
-	}
+	imageBuilderPusher := repository.NewWithURI(
+		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
@@ -397,13 +399,18 @@ type UploadArtifactsOutput struct {
 	AddonsURL   string
 }
 
+// StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
+type StackRuntimeConfiguration struct {
+	ImageDigest string
+	EnvFileARN  string
+	AddonsURL   string
+	RootUserARN string
+	Tags        map[string]string
+}
+
 // DeployWorkloadInput is the input of DeployWorkload.
 type DeployWorkloadInput struct {
-	ImageDigest    string
-	EnvFileARN     string
-	AddonsURL      string
-	RootUserARN    string
-	Tags           map[string]string
+	StackRuntimeConfiguration
 	ForceNewUpdate bool
 }
 
@@ -429,25 +436,56 @@ func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	}, nil
 }
 
-// DeployWorkload deploys a load balanced web service using CloudFormation.
-func (d *lbSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(in)
+// GenerateCloudFormationTemplateInput is the input of GenerateCloudFormationTemplate.
+type GenerateCloudFormationTemplateInput struct {
+	StackRuntimeConfiguration
+}
+
+// GenerateCloudFormationTemplateOutput is the output of GenerateCloudFormationTemplate.
+type GenerateCloudFormationTemplateOutput struct {
+	Template   string
+	Parameters string
+}
+
+// GenerateCloudFormationTemplate genrates a CloudFormation template and parameters for a workload.
+func (d *lbSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
+	*GenerateCloudFormationTemplateOutput, error) {
+	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in, *stackConfigOutput); err != nil {
+	return d.generateCloudFormationTemplate(output.conf)
+}
+
+// DeployWorkload deploys a load balanced web service using CloudFormation.
+func (d *lbSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.deploy(in.ForceNewUpdate, *stackConfigOutput); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// DeployWorkload deploys a backend service using CloudFormation.
-func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(in)
+// GenerateCloudFormationTemplate genrates a CloudFormation template and parameters for a workload.
+func (d *backendSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
+	*GenerateCloudFormationTemplateOutput, error) {
+	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in, *stackConfigOutput); err != nil {
+	return d.generateCloudFormationTemplate(output.conf)
+}
+
+// DeployWorkload deploys a backend service using CloudFormation.
+func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.deploy(in.ForceNewUpdate, *stackConfigOutput); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -466,13 +504,23 @@ func (d *rdwsDeployOutput) RecommendedActions() []string {
     Please visit %s to check the validation status.`, d.rdwsAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))}
 }
 
-// DeployWorkload deploys a request driven web service using CloudFormation.
-func (d *rdwsDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(in)
+// GenerateCloudFormationTemplate genrates a CloudFormation template and parameters for a workload.
+func (d *rdwsDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
+	*GenerateCloudFormationTemplateOutput, error) {
+	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+	return d.generateCloudFormationTemplate(output.conf)
+}
+
+// DeployWorkload deploys a request driven web service using CloudFormation.
+func (d *rdwsDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.deploy(in.ForceNewUpdate, stackConfigOutput.svcStackConfigurationOutput); err != nil {
 		return nil, err
 	}
 	return &rdwsDeployOutput{
@@ -510,33 +558,23 @@ func (d *workerSvcDeployOutput) RecommendedActions() []string {
 	return recs
 }
 
-func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {
-	sb := new(strings.Builder)
-	first := true
-	for _, subscription := range d.subs {
-		if subscription.Queue.IsEmpty() {
-			continue
-		}
-		topicSvc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
-		topicName := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
-		subName := fmt.Sprintf("%s%sEventsQueue", topicSvc, strings.Title(topicName))
-		if first {
-			sb.WriteString(subName)
-			first = false
-		} else {
-			sb.WriteString(fmt.Sprintf(", %s", subName))
-		}
+// GenerateCloudFormationTemplate genrates a CloudFormation template and parameters for a workload.
+func (d *workerSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
+	*GenerateCloudFormationTemplateOutput, error) {
+	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
+	if err != nil {
+		return nil, err
 	}
-	return sb.String()
+	return d.generateCloudFormationTemplate(output.conf)
 }
 
 // DeployWorkload deploys a worker servsice using CloudFormation.
 func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(in)
+	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+	if err := d.deploy(in.ForceNewUpdate, stackConfigOutput.svcStackConfigurationOutput); err != nil {
 		return nil, err
 	}
 	return &workerSvcDeployOutput{
@@ -544,9 +582,19 @@ func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecom
 	}, nil
 }
 
+// GenerateCloudFormationTemplate genrates a CloudFormation template and parameters for a workload.
+func (d *jobDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
+	*GenerateCloudFormationTemplateOutput, error) {
+	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	return d.generateCloudFormationTemplate(output.conf)
+}
+
 // DeployWorkload deploys a job using CloudFormation.
 func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(in)
+	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
@@ -557,7 +605,23 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 	return nil, nil
 }
 
-func (d *svcDeployer) deploy(in *DeployWorkloadInput, stackConfigOutput svcStackConfigurationOutput) error {
+func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) (
+	*GenerateCloudFormationTemplateOutput, error) {
+	tpl, err := conf.Template()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template: %w", err)
+	}
+	params, err := conf.SerializedParameters()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template parameters: %w", err)
+	}
+	return &GenerateCloudFormationTemplateOutput{
+		Template:   tpl,
+		Parameters: params,
+	}, nil
+}
+
+func (d *svcDeployer) deploy(forceNewUpdate bool, stackConfigOutput svcStackConfigurationOutput) error {
 	cmdRunAt := d.now()
 	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket,
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
@@ -565,13 +629,13 @@ func (d *svcDeployer) deploy(in *DeployWorkloadInput, stackConfigOutput svcStack
 		if !errors.As(err, &errEmptyCS) {
 			return fmt.Errorf("deploy service: %w", err)
 		}
-		if !in.ForceNewUpdate {
+		if !forceNewUpdate {
 			log.Warningln("Set --force to force an update for the service.")
 			return fmt.Errorf("deploy service: %w", err)
 		}
 	}
 	// Force update the service if --force is set and the service is not updated by the CFN.
-	if in.ForceNewUpdate {
+	if forceNewUpdate {
 		lastUpdatedAt, err := stackConfigOutput.svcUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
 		if err != nil {
 			return fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
@@ -608,6 +672,19 @@ func (d *workloadDeployer) forceDeploy(in *forceDeployInput) error {
 	}
 	in.spinner.Stop(log.Ssuccessf(fmtForceUpdateSvcComplete, color.HighlightUserInput(d.name), color.HighlightUserInput(d.env.Name)))
 	return nil
+}
+
+func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {
+	var queueNames []string
+	for _, subscription := range d.subs {
+		if subscription.Queue.IsEmpty() {
+			continue
+		}
+		svc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
+		topic := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
+		queueNames = append(queueNames, fmt.Sprintf("%s%sEventsQueue", svc, strings.Title(topic)))
+	}
+	return strings.Join(queueNames, ", ")
 }
 
 type uploadContainerImageOutput struct {
@@ -726,12 +803,11 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 	return url, nil
 }
 
-func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.RuntimeConfig, error) {
+func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.RuntimeConfig, error) {
 	endpoint, err := d.endpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("get service discovery endpoint: %w", err)
 	}
-
 	if in.ImageDigest == "" {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
@@ -742,7 +818,6 @@ func (d *workloadDeployer) runtimeConfig(in *DeployWorkloadInput) (*stack.Runtim
 			Region:                   d.env.Region,
 		}, nil
 	}
-
 	return &stack.RuntimeConfig{
 		AddonsTemplateURL: in.AddonsURL,
 		EnvFileARN:        in.EnvFileARN,
@@ -763,7 +838,7 @@ type svcStackConfigurationOutput struct {
 	svcUpdater serviceForceUpdater
 }
 
-func (d *lbSvcDeployer) stackConfiguration(in *DeployWorkloadInput) (*svcStackConfigurationOutput, error) {
+func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -801,7 +876,7 @@ func (d *lbSvcDeployer) stackConfiguration(in *DeployWorkloadInput) (*svcStackCo
 	}, nil
 }
 
-func (d *backendSvcDeployer) stackConfiguration(in *DeployWorkloadInput) (*svcStackConfigurationOutput, error) {
+func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -823,7 +898,7 @@ type rdwsStackConfigurationOutput struct {
 	rdSvcAlias string
 }
 
-func (d *rdwsDeployer) stackConfiguration(in *DeployWorkloadInput) (*rdwsStackConfigurationOutput, error) {
+func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsStackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -885,7 +960,7 @@ type workerSvcStackConfigurationOutput struct {
 	subscriptions []manifest.TopicSubscription
 }
 
-func (d *workerSvcDeployer) stackConfiguration(in *DeployWorkloadInput) (*workerSvcStackConfigurationOutput, error) {
+func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*workerSvcStackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -922,7 +997,7 @@ type jobStackConfigurationOutput struct {
 	conf cloudformation.StackConfiguration
 }
 
-func (d *jobDeployer) stackConfiguration(in *DeployWorkloadInput) (*jobStackConfigurationOutput, error) {
+func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobStackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err

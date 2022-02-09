@@ -225,7 +225,7 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 func parseSince(since time.Duration) *int64 {
 	sinceSec := int64(since.Round(time.Second).Seconds())
 	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
-	return aws.Int64(timeNow.Unix() * 1000)
+	return aws.Int64(timeNow.UnixMilli())
 }
 
 func parseRFC3339(timeStr string) (int64, error) {
@@ -233,7 +233,7 @@ func parseRFC3339(timeStr string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("reading time value %s: %w", timeStr, err)
 	}
-	return startTimeTmp.Unix() * 1000, nil
+	return startTimeTmp.UnixMilli(), nil
 }
 
 // buildSvcLogsCmd builds the command for displaying service logs in an application.

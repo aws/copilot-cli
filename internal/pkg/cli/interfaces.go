@@ -167,7 +167,7 @@ type imageBuilderPusher interface {
 }
 
 type repositoryURIGetter interface {
-	URI() string
+	URI() (string, error)
 }
 
 type repositoryService interface {
@@ -181,11 +181,6 @@ type logEventsWriter interface {
 
 type templater interface {
 	Template() (string, error)
-}
-
-type stackSerializer interface {
-	templater
-	SerializedParameters() (string, error)
 }
 
 type runner interface {
@@ -417,10 +412,6 @@ type versionGetter interface {
 	Version() (string, error)
 }
 
-type endpointGetter interface {
-	ServiceDiscoveryEndpoint() (string, error)
-}
-
 type envTemplater interface {
 	EnvironmentTemplate(appName, envName string) (string, error)
 }
@@ -617,4 +608,9 @@ type interpolator interface {
 type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
+}
+
+type workloadTemplateGenerator interface {
+	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
+		*clideploy.GenerateCloudFormationTemplateOutput, error)
 }

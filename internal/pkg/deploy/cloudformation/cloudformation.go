@@ -46,6 +46,7 @@ type StackConfiguration interface {
 	Template() (string, error)
 	Parameters() ([]*sdkcloudformation.Parameter, error)
 	Tags() []*sdkcloudformation.Tag
+	SerializedParameters() (string, error)
 }
 
 type ecsClient interface {
