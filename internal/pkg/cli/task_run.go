@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -181,11 +182,10 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	opts.configureRepository = func() error {
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
-		repo, err := repository.New(repoName, opts.sess)
-		if err != nil {
-			return fmt.Errorf("initialize repository %s: %w", repoName, err)
+		opts.repository = &repository.Repository{
+			Name:     repoName,
+			Registry: ecr.New(opts.sess),
 		}
-		opts.repository = repo
 		return nil
 	}
 

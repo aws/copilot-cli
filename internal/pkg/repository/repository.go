@@ -7,8 +7,6 @@ package repository
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 )
 
@@ -28,24 +26,17 @@ type Registry interface {
 
 // Repository builds and pushes images to a repository.
 type Repository struct {
-	name     string
-	registry Registry
-}
-
-// New instantiates a new Repository.
-func New(name string, sess *session.Session) (*Repository, error) {
-	return &Repository{
-		name:     name,
-		registry: ecr.New(sess),
-	}, nil
+	Name     string
+	Registry Registry
+	Uri      string
 }
 
 // BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
 func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (digest string, err error) {
 	if args.URI == "" {
-		uri, err := r.registry.RepositoryURI(r.name)
+		uri, err := r.URI()
 		if err != nil {
-			return "", fmt.Errorf("get repository URI: %w", err)
+			return "", err
 		}
 		args.URI = uri
 	}
@@ -55,26 +46,29 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *docker
 
 	// Perform docker login only if credStore attribute value != ecr-login
 	if !docker.IsEcrCredentialHelperEnabled(args.URI) {
-		username, password, err := r.registry.Auth()
+		username, password, err := r.Registry.Auth()
 		if err != nil {
 			return "", fmt.Errorf("get auth: %w", err)
 		}
 
 		if err := docker.Login(args.URI, username, password); err != nil {
-			return "", fmt.Errorf("login to repo %s: %w", r.name, err)
+			return "", fmt.Errorf("login to repo %s: %w", r.Name, err)
 		}
 	}
 
 	digest, err = docker.Push(args.URI, args.Tags...)
 	if err != nil {
-		return "", fmt.Errorf("push to repo %s: %w", r.name, err)
+		return "", fmt.Errorf("push to repo %s: %w", r.Name, err)
 	}
 	return digest, nil
 }
 
 // URI returns the uri of the repository.
 func (r *Repository) URI() (string, error) {
-	uri, err := r.registry.RepositoryURI(r.name)
+	if r.Uri != "" {
+		return r.Uri, nil
+	}
+	uri, err := r.Registry.RepositoryURI(r.Name)
 	if err != nil {
 		return "", fmt.Errorf("get repository URI: %w", err)
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -191,9 +192,10 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
 	}
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
-	imageBuilderPusher, err := repository.New(repoName, defaultSessEnvRegion)
-	if err != nil {
-		return nil, fmt.Errorf("initiate image builder pusher: %w", err)
+	imageBuilderPusher := &repository.Repository{
+		Name:     repoName,
+		Registry: ecr.New(defaultSessEnvRegion),
+		Uri:      resources.RepositoryURLs[in.Name],
 	}
 	store, err := config.NewStore()
 	if err != nil {
