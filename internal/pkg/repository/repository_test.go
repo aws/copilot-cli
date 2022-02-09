@@ -136,9 +136,9 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			}
 
 			repo := &Repository{
-				Name:     inRepoName,
-				Registry: mockRepoGetter,
-				Uri:      tc.inURI,
+				name:     inRepoName,
+				registry: mockRepoGetter,
+				uri:      tc.inURI,
 			}
 
 			digest, err := repo.BuildAndPush(mockDocker, &dockerengine.BuildArguments{

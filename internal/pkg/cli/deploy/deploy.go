@@ -192,11 +192,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
 	}
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
-	imageBuilderPusher := &repository.Repository{
-		Name:     repoName,
-		Registry: ecr.New(defaultSessEnvRegion),
-		Uri:      resources.RepositoryURLs[in.Name],
-	}
+	imageBuilderPusher := repository.NewWithURI(
+		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)

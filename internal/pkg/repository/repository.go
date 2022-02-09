@@ -26,9 +26,26 @@ type Registry interface {
 
 // Repository builds and pushes images to a repository.
 type Repository struct {
-	Name     string
-	Registry Registry
-	Uri      string
+	name     string
+	registry Registry
+	uri      string
+}
+
+// New instantiates a new Repository.
+func New(registry Registry, name string) *Repository {
+	return &Repository{
+		name:     name,
+		registry: registry,
+	}
+}
+
+// NewWithURI instantiates a new Repository with uri being set.
+func NewWithURI(registry Registry, name, uri string) *Repository {
+	return &Repository{
+		name:     name,
+		registry: registry,
+		uri:      uri,
+	}
 }
 
 // BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
@@ -46,29 +63,29 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *docker
 
 	// Perform docker login only if credStore attribute value != ecr-login
 	if !docker.IsEcrCredentialHelperEnabled(args.URI) {
-		username, password, err := r.Registry.Auth()
+		username, password, err := r.registry.Auth()
 		if err != nil {
 			return "", fmt.Errorf("get auth: %w", err)
 		}
 
 		if err := docker.Login(args.URI, username, password); err != nil {
-			return "", fmt.Errorf("login to repo %s: %w", r.Name, err)
+			return "", fmt.Errorf("login to repo %s: %w", r.name, err)
 		}
 	}
 
 	digest, err = docker.Push(args.URI, args.Tags...)
 	if err != nil {
-		return "", fmt.Errorf("push to repo %s: %w", r.Name, err)
+		return "", fmt.Errorf("push to repo %s: %w", r.name, err)
 	}
 	return digest, nil
 }
 
 // URI returns the uri of the repository.
 func (r *Repository) URI() (string, error) {
-	if r.Uri != "" {
-		return r.Uri, nil
+	if r.uri != "" {
+		return r.uri, nil
 	}
-	uri, err := r.Registry.RepositoryURI(r.Name)
+	uri, err := r.registry.RepositoryURI(r.name)
 	if err != nil {
 		return "", fmt.Errorf("get repository URI: %w", err)
 	}
