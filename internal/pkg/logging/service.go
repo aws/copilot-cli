@@ -81,7 +81,7 @@ func (o WriteLogEventsOpts) startTime(now func() time.Time) *int64 {
 	}
 	if o.Follow {
 		// Start following log events from current timestamp.
-		return aws.Int64(now().Unix() * 1000) // Multiplied by 1000 to convert the Unix() timestamp in seconds to milliseconds
+		return aws.Int64(now().UnixMilli())
 	}
 	return nil
 }

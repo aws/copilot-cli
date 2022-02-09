@@ -121,7 +121,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
 							var val *int64 = nil // Explicitly mark that nil is of type *int64 otherwise require.Equal returns an error.
 							require.Equal(t, param.Limit, val)
-							require.Equal(t, param.StartTime, aws.Int64(mockCurrentTimestamp.Unix()*1000))
+							require.Equal(t, param.StartTime, aws.Int64(mockCurrentTimestamp.UnixMilli()))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:              logEvents,
