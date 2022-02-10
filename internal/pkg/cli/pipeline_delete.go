@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -53,7 +54,7 @@ type deletePipelineOpts struct {
 	prog             progress
 	prompt           prompter
 	secretsmanager   secretsManager
-	ws               wsPipelineReader
+	ws               wsPipelineGetter
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
@@ -101,6 +102,10 @@ func (o *deletePipelineOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *deletePipelineOpts) Ask() error {
+	if err := o.getNameAndSecret(); err != nil {
+		return err
+	}
+
 	if o.skipConfirmation {
 		return nil
 	}
@@ -131,6 +136,31 @@ func (o *deletePipelineOpts) Execute() error {
 		return err
 	}
 
+	return nil
+}
+
+func (o *deletePipelineOpts) getNameAndSecret() error {
+	path, err := o.ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return err
+	}
+	data, err := o.ws.ReadPipelineManifest(path)
+	if err != nil {
+		if err == workspace.ErrNoPipelineInWorkspace {
+			return err
+		}
+		return fmt.Errorf("read pipeline manifest: %w", err)
+	}
+	pipeline, err := manifest.UnmarshalPipeline(data)
+	if err != nil {
+		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	}
+	fmt.Println("pipeline name: ", pipeline.Name)
+	o.name = pipeline.Name
+
+	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
+		o.PipelineSecret = secret
+	}
 	return nil
 }
 

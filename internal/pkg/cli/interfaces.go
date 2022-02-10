@@ -281,6 +281,11 @@ type wsWlDirReader interface {
 }
 
 type wsPipelineReader interface {
+	wsPipelineGetter
+	PipelineNameFromManifest(string) (string, error)
+}
+
+type wsPipelineGetter interface {
 	wsPipelineManifestReader
 	wlLister
 	ListPipelines() (map[string]string, error)

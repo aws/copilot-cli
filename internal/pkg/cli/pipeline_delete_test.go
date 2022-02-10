@@ -28,7 +28,7 @@ type deletePipelineMocks struct {
 	prog           *mocks.Mockprogress
 	secretsmanager *mocks.MocksecretsManager
 	deployer       *mocks.MockpipelineDeployer
-	ws             *mocks.MockwsPipelineReader
+	ws             *mocks.MockwsPipelineGetter
 	getter         *mocks.MockpipelineGetter
 }
 
@@ -56,7 +56,7 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 				m.getter.EXPECT().GetPipeline(testPipelineName).Return(nil, errors.New("some error"))
 			},
 
-			wantedError: errors.New("get pipeline 'honkpipes': some error"),
+			wantedError: errors.New("some error"),
 		},
 
 		"application does not exist": {
@@ -100,6 +100,21 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 }
 
 func TestDeletePipelineOpts_Ask(t *testing.T) {
+	pipelineData := `
+name: honkpipes
+version: 1
+source:
+  provider: GitHub
+  properties:
+    repository: badgoose/repo
+    branch: main
+stages:
+    -
+      name: test
+      test_commands: [make test, echo 'honk']
+    -
+      name: prod
+`
 	testCases := map[string]struct {
 		skipConfirmation bool
 		inAppName        string
@@ -114,7 +129,10 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 
-			callMocks: func(m deletePipelineMocks) {},
+			callMocks: func(m deletePipelineMocks) {
+				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(pipelineData), nil)
+			},
 
 			wantedError: nil,
 		},
@@ -124,6 +142,8 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
+				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(pipelineData), nil)
 				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(pipelineDeleteConfirmPrompt, testPipelineName, testAppName),
 					pipelineDeleteConfirmHelp,
@@ -141,9 +161,11 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineGetter(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt: mockPrompt,
+				ws: mockWorkspace,
 			}
 
 			tc.callMocks(mocks)
@@ -155,6 +177,8 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 					name:             tc.inPipelineName,
 				},
 				prompt: mockPrompt,
+				ws: mockWorkspace,
+
 			}
 
 			// WHEN
@@ -284,7 +308,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			mockProg := mocks.NewMockprogress(ctrl)
 			mockDeployer := mocks.NewMockpipelineDeployer(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineGetter(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt:         mockPrompter,

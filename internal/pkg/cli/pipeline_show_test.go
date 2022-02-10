@@ -123,23 +123,6 @@ func TestPipelineShow_Ask(t *testing.T) {
 	)
 	mockError := errors.New("mock error")
 	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
-	pipelineData := `
-name: pipeline-dinder-badgoose-repo
-version: 1
-
-source:
-  provider: GitHub
-  properties:
-    repository: badgoose/repo
-    access_token_secret: "github-token-badgoose-repo"
-    branch: main
-
-stages:
-    -
-      name: test
-    -
-      name: prod
-`
 	testTags := map[string]string{
 		"copilot-application": mockAppName,
 	}
@@ -170,7 +153,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(pipelineData), nil),
+					mocks.ws.EXPECT().PipelineNameFromManifest(pipelineManifestLegacyPath).Return(mockPipelineName, nil),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -182,7 +165,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineNameFromManifest(pipelineManifestLegacyPath).Return("", workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return(mockPipelineName, nil),
 				)
@@ -197,7 +180,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineNameFromManifest(pipelineManifestLegacyPath).Return("", workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{mockPipelineName}, nil),
 				)
 			},
@@ -211,7 +194,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineNameFromManifest(pipelineManifestLegacyPath).Return("", workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{}, nil),
 				)
 			},
@@ -237,7 +220,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineNameFromManifest(pipelineManifestLegacyPath).Return("", workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(nil, mockError),
 				)
 			},
@@ -248,7 +231,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.ws.EXPECT().PipelineNameFromManifest(pipelineManifestLegacyPath).Return("", workspace.ErrNoPipelineInWorkspace),
 					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return("", mockError),
 				)
