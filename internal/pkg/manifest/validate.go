@@ -33,11 +33,11 @@ const (
 )
 
 const (
-	// Protocols
+	// Protocols.
 	TCP = "TCP"
 	tls = "TLS"
 
-	// Tracing vendors
+	// Tracing vendors.
 	awsXRAY = "awsxray"
 )
 
