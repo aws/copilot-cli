@@ -43,13 +43,9 @@ Conditions:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
   HasCustomPlatform:
     !Not [!Equals [!Ref OS, ""]]
-  HasApp:
-    !Not [!Equals [!Ref App, ""]]
-  HasEnv:
-    !Not [!Equals [!Ref Env, ""]]
   HasAppAndEnv: !And
-    - !Condition HasApp
-    - !Condition HasEnv
+    - !Not [!Equals [!Ref App, ""]]
+    - !Not [!Equals [!Ref Env, ""]]
 Resources:
   TaskDefinition:
     Metadata:
