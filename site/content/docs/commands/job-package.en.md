@@ -1,4 +1,4 @@
-# job package 
+# job package
 ```bash
 $ copilot job package
 ```
@@ -16,18 +16,19 @@ $ copilot job package
   -n, --name string         Name of the job.
       --output-dir string   Optional. Writes the stack template and template configuration to a directory.
       --tag string          Optional. The container image tag.
+      --upload-resources    Optional. Whether to upload resources that are required for deployment.
 ```
 
 ## Examples
 
 Prints the CloudFormation template for the "report-generator" job parametrized for the "test" environment.
- 
+
 ```bash
 $ copilot job package -n report-generator -e test
 ```
 
 Writes the CloudFormation stack and configuration to an "infrastructure/" sub-directory instead of printing.
-  
+
 ```bash
 $ copilot job package -n report-generator -e test --output-dir ./infrastructure
 $ ls ./infrastructure

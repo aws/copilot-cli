@@ -235,6 +235,7 @@ count: 1`
 				envName:          "test",
 				tag:              "1234",
 				clientConfigured: true,
+				uploadResources:  true,
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
 				mockWs := mocks.NewMockwsWlDirReader(ctrl)
@@ -243,6 +244,7 @@ count: 1`
 					Return([]byte(lbwsMft), nil)
 
 				mockGenerator := mocks.NewMockworkloadTemplateGenerator(ctrl)
+				mockGenerator.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				mockGenerator.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).
 					Return(&deploy.GenerateCloudFormationTemplateOutput{
 						Template:   "mystack",
