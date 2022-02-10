@@ -36,7 +36,7 @@ Follow the three steps below, from your workspace root:
 ```bash
 $ copilot pipeline init
 $ git add copilot/pipeline.yml copilot/buildspec.yml copilot/.workspace && git commit -m "Adding pipeline artifacts" && git push
-$ copilot pipeline deploy
+$ copilot pipeline update
 ```
 
 ✨ And you'll have a new pipeline configured in your application account. Want to understand a little bit more what's going on? Read on!
@@ -97,7 +97,7 @@ stages:
 ```
 You can see every available configuration option for `pipeline.yml` on the [pipeline manifest](../manifest/pipeline.en.md) page.
 
-There are 3 main parts of this file: the `name` field, which is the name of your CodePipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must run `copilot pipeline deploy` afterwards.
+There are 3 main parts of this file: the `name` field, which is the name of your CodePipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must run `copilot pipeline update` afterwards.
 
 Typically, you'll update this file if you add new environments you want to deploy to, or want to track a different branch. If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here. The pipeline manifest is also where you may add a manual approval step before deployment or commands to run tests (see "Adding Tests," below) after deployment.
 
@@ -115,7 +115,7 @@ Now that your `pipeline.yml`, `buildspec.yml`, and `.workspace` files have been 
 
 Here's the fun part! Run:
 
-`copilot pipeline deploy`
+`copilot pipeline update`
 
 This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your application and kicks off a pipeline execution. Log into the AWS Console to watch your pipeline go, or run `copilot pipeline status` to check in on its execution.
 
