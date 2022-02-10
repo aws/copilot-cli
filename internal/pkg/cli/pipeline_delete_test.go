@@ -165,7 +165,7 @@ stages:
 
 			mocks := deletePipelineMocks{
 				prompt: mockPrompt,
-				ws: mockWorkspace,
+				ws:     mockWorkspace,
 			}
 
 			tc.callMocks(mocks)
@@ -177,8 +177,7 @@ stages:
 					name:             tc.inPipelineName,
 				},
 				prompt: mockPrompt,
-				ws: mockWorkspace,
-
+				ws:     mockWorkspace,
 			}
 
 			// WHEN
