@@ -32,6 +32,16 @@ type RequestDrivenWebServiceConfig struct {
 	Tags                              map[string]string                    `yaml:"tags"`
 	PublishConfig                     PublishConfig                        `yaml:"publish"`
 	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
+	Observability                     Observability                        `yaml:"observability"`
+}
+
+// Observability holds configuration for observability to the service.
+type Observability struct {
+	Tracing *string `yaml:"tracing"`
+}
+
+func (o *Observability) isEmpty() bool {
+	return o.Tracing == nil
 }
 
 // ImageWithPort represents a container image with an exposed port.
