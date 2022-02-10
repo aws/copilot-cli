@@ -707,7 +707,7 @@ func (s *PipelineSelect) Pipeline(msg, help string) (name, path string, err erro
 		return "", "", errors.New("no pipelines found")
 	}
 	var pipelineNames []string
-	for k, _ := range pipelines {
+	for k := range pipelines {
 		pipelineNames = append(pipelineNames, k)
 	}
 	if len(pipelineNames) == 1 {

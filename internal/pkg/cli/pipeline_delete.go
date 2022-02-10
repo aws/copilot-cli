@@ -50,7 +50,6 @@ type deletePipelineOpts struct {
 	// Interfaces to dependencies
 	pipelineDeployer pipelineDeployer
 	pipelineSvc      pipelineGetter
-	sel              wsPipelineSelector
 	prog             progress
 	prompt           prompter
 	secretsmanager   secretsManager
