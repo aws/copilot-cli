@@ -167,7 +167,7 @@ type imageBuilderPusher interface {
 }
 
 type repositoryURIGetter interface {
-	URI() string
+	URI() (string, error)
 }
 
 type repositoryService interface {
