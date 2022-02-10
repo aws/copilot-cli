@@ -155,7 +155,6 @@ func (o *deletePipelineOpts) getNameAndSecret() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
-	fmt.Println("pipeline name: ", pipeline.Name)
 	o.name = pipeline.Name
 
 	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {

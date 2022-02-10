@@ -132,7 +132,6 @@ type WsPipelineLister interface {
 // WsPipelineSelector is a pipeline selector.
 type WsPipelineSelector interface {
 	WsPipelineLister
-	//Pipeline(msg, help string) (name, path string, err error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
