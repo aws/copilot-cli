@@ -35,6 +35,7 @@ type RequestDrivenWebServiceConfig struct {
 	Observability                     Observability                        `yaml:"observability"`
 }
 
+// Observability holds configuration for observability to the service.
 type Observability struct {
 	Tracing *string `yaml:"tracing"`
 }
