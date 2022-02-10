@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -75,6 +76,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		deletePipelineVars: vars,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
+		pipelineSvc:        codepipeline.New(defaultSess),
 		secretsmanager:     secretsmanager,
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
@@ -91,7 +93,7 @@ func (o *deletePipelineOpts) Validate() error {
 
 	if o.name != "" {
 		if _, err := o.pipelineSvc.GetPipeline(o.name); err != nil {
-			return fmt.Errorf("get pipeline '%s': %w", o.name, err)
+			return err
 		}
 	}
 	return nil
