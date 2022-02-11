@@ -434,5 +434,5 @@ func (idx *routeTableIndex) IsPublicSubnet(subnetID string) bool {
 	if ok {
 		return rt.HasIGW()
 	}
-	return false
+	return idx.mainTable.HasIGW()
 }

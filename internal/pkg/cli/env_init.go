@@ -512,7 +512,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		})
 		if err != nil {
 			if errors.Is(err, selector.ErrSubnetsNotFound) {
-				log.Warningf(`No existing subnets were found in VPC %s.
+				log.Warningf(`No existing public subnets were found in VPC %s.
 If you proceed without at least two public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
 `, o.importVPC.ID)
 			} else {
@@ -533,9 +533,10 @@ If you proceed without at least two public subnets, you will not be able to depl
 		})
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing subnets were found in VPC %s. You can either:
+				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
 - Create new private subnets and then import them.
-- Use the default Copilot environment configuration.`, o.importVPC.ID)
+- Use the default Copilot environment configuration.
+`, o.importVPC.ID)
 			}
 			return fmt.Errorf("select private subnets: %w", err)
 		}
