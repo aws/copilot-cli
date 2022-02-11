@@ -6,6 +6,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 )
 
 // ErrNoPipelineInWorkspace means there was no pipeline manifest in the workspace dir.
@@ -53,8 +54,12 @@ func (e *errNoAssociatedApplication) Error() string {
 // errHasExistingApplication means we tried to create a workspace that belongs to another application.
 type errHasExistingApplication struct {
 	existingAppName string
+	basePath        string
+	summaryPath     string
 }
 
 func (e *errHasExistingApplication) Error() string {
-	return fmt.Sprintf("this workspace is already registered with application %s", e.existingAppName)
+	relPath := e.summaryPath
+	relPath, _ = filepath.Rel(e.basePath, e.summaryPath)
+	return fmt.Sprintf("workspace is already registered with application %s under %s", e.existingAppName, relPath)
 }
