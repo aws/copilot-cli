@@ -45,11 +45,11 @@ type deletePipelineVars struct {
 type deletePipelineOpts struct {
 	deletePipelineVars
 
-	PipelineSecret string
+	ghAccessTokenSecretName string
 
 	// Interfaces to dependencies
 	pipelineDeployer pipelineDeployer
-	pipelineSvc      pipelineGetter
+	codepipeline     pipelineGetter
 	prog             progress
 	prompt           prompter
 	secretsmanager   secretsManager
@@ -76,7 +76,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		deletePipelineVars: vars,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
-		pipelineSvc:        codepipeline.New(defaultSess),
+		codepipeline:       codepipeline.New(defaultSess),
 		secretsmanager:     secretsmanager,
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
@@ -92,7 +92,7 @@ func (o *deletePipelineOpts) Validate() error {
 	}
 
 	if o.name != "" {
-		if _, err := o.pipelineSvc.GetPipeline(o.name); err != nil {
+		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
 			return err
 		}
 	}
@@ -157,19 +157,19 @@ func (o *deletePipelineOpts) getNameAndSecret() error {
 	o.name = pipeline.Name
 
 	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
-		o.PipelineSecret = secret
+		o.ghAccessTokenSecretName = secret
 	}
 	return nil
 }
 
 func (o *deletePipelineOpts) deleteSecret() error {
-	if o.PipelineSecret == "" {
+	if o.ghAccessTokenSecretName == "" {
 		return nil
 	}
 	// Only pipelines created with GitHubV1 have personal access tokens saved as secrets.
 	if !o.shouldDeleteSecret {
 		confirmDeletion, err := o.prompt.Confirm(
-			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.PipelineSecret, o.name),
+			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.ghAccessTokenSecretName, o.name),
 			pipelineDeleteSecretConfirmHelp,
 		)
 		if err != nil {
@@ -177,16 +177,16 @@ func (o *deletePipelineOpts) deleteSecret() error {
 		}
 
 		if !confirmDeletion {
-			log.Infof("Skipping deletion of secret %s.\n", o.PipelineSecret)
+			log.Infof("Skipping deletion of secret %s.\n", o.ghAccessTokenSecretName)
 			return nil
 		}
 	}
 
-	if err := o.secretsmanager.DeleteSecret(o.PipelineSecret); err != nil {
+	if err := o.secretsmanager.DeleteSecret(o.ghAccessTokenSecretName); err != nil {
 		return err
 	}
 
-	log.Successf("Deleted secret %s.\n", o.PipelineSecret)
+	log.Successf("Deleted secret %s.\n", o.ghAccessTokenSecretName)
 
 	return nil
 }
