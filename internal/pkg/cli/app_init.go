@@ -134,8 +134,10 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 			return nil
 		}
 		if o.name != summary.Application {
-			summaryPath := summary.Path
-			summaryPath, _ = relPath(summary.Path)
+			summaryPath, _ := relPath(summary.Path)
+			if summaryPath == "" {
+				summaryPath = summary.Path
+			}
 
 			log.Errorf(`Workspace is already registered with application %s instead of %s.
 If you'd like to delete the application locally, you can delete the file at %s.

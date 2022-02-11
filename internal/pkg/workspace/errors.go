@@ -59,7 +59,9 @@ type errHasExistingApplication struct {
 }
 
 func (e *errHasExistingApplication) Error() string {
-	relPath := e.summaryPath
-	relPath, _ = filepath.Rel(e.basePath, e.summaryPath)
+	relPath, _ := filepath.Rel(e.basePath, e.summaryPath)
+	if relPath == "" {
+		relPath = e.summaryPath
+	}
 	return fmt.Sprintf("workspace is already registered with application %s under %s", e.existingAppName, relPath)
 }
