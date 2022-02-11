@@ -394,14 +394,14 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigest string
+	ImageDigest *string
 	EnvFileARN  string
 	AddonsURL   string
 }
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	ImageDigest string
+	ImageDigest *string
 	EnvFileARN  string
 	AddonsURL   string
 	RootUserARN string
@@ -416,7 +416,7 @@ type DeployWorkloadInput struct {
 
 // UploadArtifacts uploads the deployment artifacts (image, addons files, env files).
 func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageOutput, err := d.uploadContainerImage(d.imageBuilderPusher)
+	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +430,7 @@ func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	}
 
 	return &UploadArtifactsOutput{
-		ImageDigest: imageOutput.imageDigest,
+		ImageDigest: imageDigest,
 		EnvFileARN:  s3Artifacts.envFileARN,
 		AddonsURL:   s3Artifacts.addonsURL,
 	}, nil
@@ -687,33 +687,24 @@ func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {
 	return strings.Join(queueNames, ", ")
 }
 
-type uploadContainerImageOutput struct {
-	buildRequired bool
-	imageDigest   string
-}
-
-func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (
-	uploadContainerImageOutput, error) {
+func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPusher) (*string, error) {
 	required, err := manifest.DockerfileBuildRequired(d.mft)
 	if err != nil {
-		return uploadContainerImageOutput{}, err
+		return nil, err
 	}
 	if !required {
-		return uploadContainerImageOutput{}, nil
+		return nil, nil
 	}
 	// If it is built from local Dockerfile, build and push to the ECR repo.
 	buildArg, err := buildArgs(d.name, d.imageTag, d.workspacePath, d.mft)
 	if err != nil {
-		return uploadContainerImageOutput{}, err
+		return nil, err
 	}
 	digest, err := imgBuilderPusher.BuildAndPush(dockerengine.New(exec.NewCmd()), buildArg)
 	if err != nil {
-		return uploadContainerImageOutput{}, fmt.Errorf("build and push image: %w", err)
+		return nil, fmt.Errorf("build and push image: %w", err)
 	}
-	return uploadContainerImageOutput{
-		buildRequired: true,
-		imageDigest:   digest,
-	}, nil
+	return aws.String(digest), nil
 }
 
 type uploadArtifactsToS3Input struct {
@@ -808,7 +799,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	if err != nil {
 		return nil, fmt.Errorf("get service discovery endpoint: %w", err)
 	}
-	if in.ImageDigest == "" {
+	if in.ImageDigest == nil {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
 			EnvFileARN:               in.EnvFileARN,
@@ -825,7 +816,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		Image: &stack.ECRImage{
 			RepoURL:  d.resources.RepositoryURLs[d.name],
 			ImageTag: d.imageTag,
-			Digest:   in.ImageDigest,
+			Digest:   aws.StringValue(in.ImageDigest),
 		},
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,

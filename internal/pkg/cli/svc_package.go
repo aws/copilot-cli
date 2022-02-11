@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -297,7 +298,9 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	if err != nil {
 		return nil, err
 	}
-	var uploadOut clideploy.UploadArtifactsOutput
+	uploadOut := clideploy.UploadArtifactsOutput{
+		ImageDigest: aws.String(""),
+	}
 	if o.uploadResources {
 		out, err := generator.UploadArtifacts()
 		if err != nil {
