@@ -240,25 +240,12 @@ func (c *EC2) ListVPCSubnets(vpcID string) (*VPCSubnets, error) {
 		Name:   "vpc-id",
 		Values: []string{vpcID},
 	}
-	respRouteTables, err := c.routeTables(vpcFilter)
+	routeTables, err := c.routeTables(vpcFilter)
 	if err != nil {
 		return nil, err
 	}
-	publicSubnetMap := make(map[string]bool)
-	for _, routeTable := range respRouteTables {
-		var igwAttached bool
-		for _, route := range routeTable.Routes {
-			if strings.HasPrefix(aws.StringValue(route.GatewayId), internetGatewayIDPrefix) {
-				igwAttached = true
-				break
-			}
-		}
-		if igwAttached {
-			for _, association := range routeTable.Associations {
-				publicSubnetMap[aws.StringValue(association.SubnetId)] = true
-			}
-		}
-	}
+	rtIndex := indexRouteTables(routeTables)
+
 	var publicSubnets, privateSubnets []Subnet
 	respSubnets, err := c.subnets(vpcFilter)
 	if err != nil {
@@ -278,7 +265,7 @@ func (c *EC2) ListVPCSubnets(vpcID string) (*VPCSubnets, error) {
 			},
 			CIDRBlock: aws.StringValue(subnet.CidrBlock),
 		}
-		if _, ok := publicSubnetMap[s.ID]; ok {
+		if rtIndex.IsPublicSubnet(s.ID) {
 			publicSubnets = append(publicSubnets, s)
 		} else {
 			privateSubnets = append(privateSubnets, s)
@@ -376,4 +363,76 @@ func toEC2Filter(filters []Filter) []*ec2.Filter {
 		})
 	}
 	return ec2Filter
+}
+
+type routeTable ec2.RouteTable
+
+// IsMain returns true if the route table is the default route table for the VPC.
+// If a subnet is not associated with a particular route table, then it will default to the main route table.
+func (rt *routeTable) IsMain() bool {
+	for _, association := range rt.Associations {
+		if aws.BoolValue(association.Main) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasIGW returns true if the route table has a route to an internet gateway.
+func (rt *routeTable) HasIGW() bool {
+	for _, route := range rt.Routes {
+		if strings.HasPrefix(aws.StringValue(route.GatewayId), internetGatewayIDPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// AssociatedSubnets returns the list of subnet IDs associated with the route table.
+func (rt *routeTable) AssociatedSubnets() []string {
+	var subnetIDs []string
+	for _, association := range rt.Associations {
+		if association.SubnetId == nil {
+			continue
+		}
+		subnetIDs = append(subnetIDs, aws.StringValue(association.SubnetId))
+	}
+	return subnetIDs
+}
+
+// routeTableIndex holds cached data to quickly return information about route tables in a VPC.
+type routeTableIndex struct {
+	// Route table that subnets default to. There is always one main table in the VPC.
+	mainTable *routeTable
+
+	// Explicit route table association for a subnet. A subnet can only be associated to one route table.
+	routeTableForSubnet map[string]*routeTable
+}
+
+func indexRouteTables(tables []*ec2.RouteTable) *routeTableIndex {
+	index := &routeTableIndex{
+		routeTableForSubnet: make(map[string]*routeTable),
+	}
+	for _, table := range tables { // Index all properties in a single pass.
+		table := (*routeTable)(table)
+
+		for _, subnetID := range table.AssociatedSubnets() {
+			index.routeTableForSubnet[subnetID] = table
+		}
+
+		if table.IsMain() {
+			index.mainTable = table
+		}
+	}
+	return index
+}
+
+// IsPublicSubnet returns true if the subnet has a route to an internet gateway regardless if the
+// route is explicit or implicit.
+func (idx *routeTableIndex) IsPublicSubnet(subnetID string) bool {
+	rt, ok := idx.routeTableForSubnet[subnetID]
+	if ok {
+		return rt.HasIGW()
+	}
+	return false
 }
