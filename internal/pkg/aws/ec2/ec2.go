@@ -427,8 +427,9 @@ func indexRouteTables(tables []*ec2.RouteTable) *routeTableIndex {
 	return index
 }
 
-// IsPublicSubnet returns true if the subnet has a route to an internet gateway regardless if the
-// route is explicit or implicit.
+// IsPublicSubnet returns true if the subnet has a route to an internet gateway.
+// We consider the subnet to have internet access if there is an explicit route in the route table to an internet gateway.
+// Or if there is an implicit route, where the subnet defaults to the main route table with an internet gateway.
 func (idx *routeTableIndex) IsPublicSubnet(subnetID string) bool {
 	rt, ok := idx.routeTableForSubnet[subnetID]
 	if ok {
