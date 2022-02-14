@@ -48,6 +48,8 @@ const (
 // Summary is a description of what's associated with this workspace.
 type Summary struct {
 	Application string `yaml:"application"` // Name of the application.
+
+	Path string // absolute path to the summary file.
 }
 
 // Workspace typically represents a Git repository where the user has its infrastructure-as-code files as well as source files.
@@ -87,7 +89,11 @@ func (ws *Workspace) Create(appName string) error {
 	if err == nil {
 		// If a summary exists, but is registered to a different application, throw an error.
 		if summary.Application != appName {
-			return &errHasExistingApplication{existingAppName: summary.Application}
+			return &errHasExistingApplication{
+				existingAppName: summary.Application,
+				basePath:        ws.workingDir,
+				summaryPath:     summary.Path,
+			}
 		}
 		// Otherwise our work is all done.
 		return nil
@@ -114,7 +120,9 @@ func (ws *Workspace) Summary() (*Summary, error) {
 		if err != nil {
 			return nil, err
 		}
-		wsSummary := Summary{}
+		wsSummary := Summary{
+			Path: summaryPath,
+		}
 		return &wsSummary, yaml.Unmarshal(value, &wsSummary)
 	}
 	return nil, &errNoAssociatedApplication{}
