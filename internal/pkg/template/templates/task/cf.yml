@@ -109,8 +109,8 @@ Resources:
                   - ssm:GetParameters
                   Condition:
                     StringEquals:
-                      "ssm:ResourceTag/copilot-application": !If [ HasAppAndEnv, !Ref App, !Ref "AWS::NoValue" ]
-                      "ssm:ResourceTag/copilot-environment": !If [ HasAppAndEnv, !Ref Env, !Ref "AWS::NoValue" ]
+                      "ssm:ResourceTag/copilot-application": !Ref App
+                      "ssm:ResourceTag/copilot-environment": !Ref Env
                   Resource:
                     - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
                 - Effect: 'Allow'
@@ -118,8 +118,8 @@ Resources:
                     - secretsmanager:GetSecretValue
                   Condition:
                     StringEquals:
-                      "secretsmanager:ResourceTag/copilot-application": !If [ HasAppAndEnv, !Ref App, !Ref "AWS::NoValue" ]
-                      "secretsmanager:ResourceTag/copilot-environment": !If [ HasAppAndEnv, !Ref Env, !Ref "AWS::NoValue" ]
+                      "secretsmanager:ResourceTag/copilot-application": !Ref App
+                      "secretsmanager:ResourceTag/copilot-environment": !Ref Env
                   Resource:
                     - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
           - !Ref AWS::NoValue
