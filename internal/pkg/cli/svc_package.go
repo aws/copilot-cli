@@ -304,7 +304,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	if o.uploadResources {
 		out, err := generator.UploadArtifacts()
 		if err != nil {
-			return nil, fmt.Errorf("upload deploy resources for %s: %w", o.name, err)
+			return nil, fmt.Errorf("upload resources required for deployment for %s: %w", o.name, err)
 		}
 		uploadOut = *out
 	}
