@@ -134,13 +134,9 @@ func (o *deployPipelineOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, color.HighlightUserInput(o.appName)))
 
 	// Read pipeline manifest.
-	data, err := o.ws.ReadPipelineManifest(o.path)
+	pipeline, err := o.ws.ReadPipelineManifest(o.path)
 	if err != nil {
 		return fmt.Errorf("read pipeline manifest: %w", err)
-	}
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
 	if err := pipeline.Validate(); err != nil {
 		return fmt.Errorf("validate pipeline: %w", err)

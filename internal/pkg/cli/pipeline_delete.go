@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -143,20 +141,13 @@ func (o *deletePipelineOpts) getNameAndSecret() error {
 	if err != nil {
 		return err
 	}
-	data, err := o.ws.ReadPipelineManifest(path)
+	manifest, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
-		if err == workspace.ErrNoPipelineInWorkspace {
-			return err
-		}
-		return fmt.Errorf("read pipeline manifest: %w", err)
+		return err
 	}
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-	o.name = pipeline.Name
+	o.name = manifest.Name
 
-	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
+	if secret, ok := (manifest.Source.Properties["access_token_secret"]).(string); ok {
 		o.ghAccessTokenSecretName = secret
 	}
 	return nil

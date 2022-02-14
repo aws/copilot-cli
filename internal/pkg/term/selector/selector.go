@@ -183,7 +183,7 @@ type WorkspaceSelect struct {
 
 // PipelineSelect is a workspace pipeline selector.
 type PipelineSelect struct {
-	*Select
+	prompt Prompter
 	ws WsPipelineSelector
 }
 
@@ -699,7 +699,7 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 
 // Pipeline fetches all the pipelines in a workspace and prompts the user to select one.
 func (s *PipelineSelect) Pipeline(msg, help string) (name, path string, err error) {
-	pipelines, err := s.retrieveWorkspacePipelines()
+	pipelines, err := s.ws.ListPipelines()
 	if err != nil {
 		return "", "", err
 	}
@@ -930,14 +930,6 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 		return nil, err
 	}
 	return localWlNames, nil
-}
-
-func (s *PipelineSelect) retrieveWorkspacePipelines() (map[string]string, error) {
-	localPipelineNames, err := s.ws.ListPipelines()
-	if err != nil {
-		return nil, err
-	}
-	return localPipelineNames, nil
 }
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current

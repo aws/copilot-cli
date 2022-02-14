@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -29,7 +30,7 @@ type deletePipelineMocks struct {
 	secretsmanager *mocks.MocksecretsManager
 	deployer       *mocks.MockpipelineDeployer
 	ws             *mocks.MockwsPipelineGetter
-	getter         *mocks.MockpipelineGetter
+	codepipeline   *mocks.MockpipelineGetter
 }
 
 func TestDeletePipelineOpts_Validate(t *testing.T) {
@@ -44,7 +45,7 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 			inAppName:      testAppName,
 			inPipelineName: testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
-				m.getter.EXPECT().GetPipeline(testPipelineName).Return(&codepipeline.Pipeline{Name: testPipelineName}, nil)
+				m.codepipeline.EXPECT().GetPipeline(testPipelineName).Return(&codepipeline.Pipeline{Name: testPipelineName}, nil)
 			},
 			wantedError: nil,
 		},
@@ -53,7 +54,7 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 			inAppName:      testAppName,
 			inPipelineName: testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
-				m.getter.EXPECT().GetPipeline(testPipelineName).Return(nil, errors.New("some error"))
+				m.codepipeline.EXPECT().GetPipeline(testPipelineName).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -75,7 +76,7 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 
 			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 			mocks := deletePipelineMocks{
-				getter: mockPipelineGetter,
+				codepipeline: mockPipelineGetter,
 			}
 
 			tc.callMocks(mocks)
@@ -85,7 +86,7 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
 				},
-				pipelineSvc: mockPipelineGetter,
+				codepipeline: mockPipelineGetter,
 			}
 
 			// WHEN
@@ -100,21 +101,29 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 }
 
 func TestDeletePipelineOpts_Ask(t *testing.T) {
-	pipelineData := `
-name: honkpipes
-version: 1
-source:
-  provider: GitHub
-  properties:
-    repository: badgoose/repo
-    branch: main
-stages:
-    -
-      name: test
-      test_commands: [make test, echo 'honk']
-    -
-      name: prod
-`
+	mockPipelineManifest := &manifest.PipelineManifest{
+		Name:    testPipelineName,
+		Version: 1,
+		Source: &manifest.Source{
+			ProviderName: "GitHub",
+			Properties: map[string]interface{}{
+				"access_token_secret": "github-token-badgoose-backend",
+				"repository":          "aws/somethingCool",
+				"branch":              "main",
+			},
+		},
+	}
+	mockPipelineManifestWithoutSecret := &manifest.PipelineManifest{
+		Name:    testPipelineName,
+		Version: 1,
+		Source: &manifest.Source{
+			ProviderName: "GitHub",
+			Properties: map[string]interface{}{
+				"repository": "aws/somethingCool",
+				"branch":     "main",
+			},
+		},
+	}
 	testCases := map[string]struct {
 		skipConfirmation bool
 		inAppName        string
@@ -122,8 +131,34 @@ stages:
 
 		callMocks func(m deletePipelineMocks)
 
+		wantedPipelineName string
+		wantedSecret string
 		wantedError error
 	}{
+		"gets name of legacy pipeline and secret": {
+			skipConfirmation: true,
+			inAppName: testAppName,
+
+			callMocks: func(m deletePipelineMocks) {
+				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
+			},
+			wantedPipelineName: testPipelineName,
+			wantedSecret: "github-token-badgoose-backend",
+			wantedError: nil,
+		},
+		"gets name of legacy pipeline, no secret": {
+			skipConfirmation: true,
+			inAppName: testAppName,
+
+			callMocks: func(m deletePipelineMocks) {
+				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifestWithoutSecret, nil)
+			},
+			wantedPipelineName: testPipelineName,
+			wantedSecret: "",
+			wantedError: nil,
+		},
 		"skips confirmation works": {
 			skipConfirmation: true,
 			inAppName:        testAppName,
@@ -131,9 +166,10 @@ stages:
 
 			callMocks: func(m deletePipelineMocks) {
 				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(pipelineData), nil)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
 			},
-
+			wantedPipelineName: testPipelineName,
+			wantedSecret: "github-token-badgoose-backend",
 			wantedError: nil,
 		},
 
@@ -143,13 +179,15 @@ stages:
 			inPipelineName:   testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
 				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return([]byte(pipelineData), nil)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
 				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(pipelineDeleteConfirmPrompt, testPipelineName, testAppName),
 					pipelineDeleteConfirmHelp,
 					gomock.Any(),
 				).Times(1).Return(true, nil)
 			},
+			wantedPipelineName: testPipelineName,
+			wantedSecret: "github-token-badgoose-backend",
 			wantedError: nil,
 		},
 	}
@@ -186,6 +224,10 @@ stages:
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPipelineName, opts.name, "expected pipeline names to match")
+				require.Equal(t, tc.wantedSecret, opts.ghAccessTokenSecretName, "expected secrets to match")
 			}
 		})
 	}
@@ -325,7 +367,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					appName:            tc.inAppName,
 					name:               tc.inPipelineName,
 				},
-				PipelineSecret:   tc.inPipelineSecret,
+				ghAccessTokenSecretName:   tc.inPipelineSecret,
 				secretsmanager:   mockSecretsManager,
 				pipelineDeployer: mockDeployer,
 				ws:               mockWorkspace,

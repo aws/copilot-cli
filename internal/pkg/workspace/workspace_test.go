@@ -582,75 +582,6 @@ name: buildspecInPipelinesDir
 	}
 }
 
-func TestWorkspace_PipelineNameFromManifest(t *testing.T) {
-	copilotDir := "/copilot"
-	testCases := map[string]struct {
-		fs            func() afero.Fs
-		expectedName  string
-		expectedError error
-	}{
-		"returns pipeline name from manifest": {
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll(copilotDir, 0755)
-				manifest, _ := fs.Create("/copilot/pipeline.yml")
-				defer manifest.Close()
-				manifest.Write([]byte(`
-name: pipelineName
-version: 1
-`))
-				return fs
-			},
-			expectedName:  "pipelineName",
-			expectedError: nil,
-		},
-
-		"error reading pipeline manifest": {
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.Mkdir(copilotDir, 0755)
-				return fs
-			},
-			expectedError: fmt.Errorf("read pipeline manifest: %w", ErrNoPipelineInWorkspace),
-		},
-		"error unmarshaling pipeline name": {
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll(copilotDir, 0755)
-				manifest, _ := fs.Create("/copilot/pipeline.yml")
-				defer manifest.Close()
-				manifest.Write([]byte(`
-game: pinochle
-`))
-				return fs
-			},
-			expectedError: errors.New("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			fs := tc.fs()
-			ws := &Workspace{
-				copilotDir: copilotDir,
-				fsUtils:    &afero.Afero{Fs: fs},
-			}
-
-			// WHEN
-			name, err := ws.PipelineNameFromManifest("/copilot/pipeline.yml")
-
-			// THEN
-			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError.Error(), err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedName, name)
-			}
-		})
-	}
-}
-
 func TestIsInGitRepository(t *testing.T) {
 	testCases := map[string]struct {
 		given  func() FileStat
@@ -814,7 +745,10 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 				fs.MkdirAll(copilotDir, 0755)
 				manifest, _ := fs.Create("/copilot/pipeline.yml")
 				defer manifest.Close()
-				manifest.Write([]byte("hello"))
+				manifest.Write([]byte(`
+name: somePipelineName
+version: 1
+`))
 				return fs
 			},
 			expectedError: nil,
@@ -827,6 +761,20 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 				return fs
 			},
 			expectedError: ErrNoPipelineInWorkspace,
+		},
+		"error unmarshaling pipeline manifest": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll(copilotDir, 0755)
+				manifest, _ := fs.Create("/copilot/pipeline.yml")
+				defer manifest.Close()
+				manifest.Write([]byte(`
+name: somePipelineName
+version: 0
+`))
+				return fs
+			},
+			expectedError: errors.New("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
 		},
 	}
 

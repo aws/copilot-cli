@@ -160,11 +160,11 @@ func (ws *Workspace) ListPipelines() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	name, err := ws.PipelineNameFromManifest(legacyPath)
+	manifest, err := ws.ReadPipelineManifest(legacyPath)
 	if err != nil {
-		return nil, fmt.Errorf("get name from pipeline manifest: %w", err)
+		return nil, err
 	}
-	pipelines[name] = legacyPath
+	pipelines[manifest.Name] = legacyPath
 	// Look for other pipelines.
 	pipelinesPath, err := ws.pipelineManifestPath()
 	if err != nil {
@@ -187,11 +187,11 @@ func (ws *Workspace) ListPipelines() (map[string]string, error) {
 			// Read manifests of moved legacy pipeline and any other pipelines.
 			if strings.HasSuffix(file.Name(), ".yml") {
 				path := filepath.Join(pipelinesPath, file.Name())
-				name, err := ws.PipelineNameFromManifest(path)
+				manifest, err := ws.ReadPipelineManifest(path)
 				if err != nil {
-					return nil, fmt.Errorf("read pipeline manifest: %w", err)
+					return nil, err
 				}
-				pipelines[name] = path
+				pipelines[manifest.Name] = path
 			}
 		}
 	}
@@ -250,7 +250,7 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 }
 
 // ReadPipelineManifest returns the contents of the pipeline manifest under the given path.
-func (ws *Workspace) ReadPipelineManifest(path string) ([]byte, error) {
+func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
 	manifestExists, err := ws.fsUtils.Exists(path)
 	if err != nil {
 		return nil, err
@@ -258,7 +258,15 @@ func (ws *Workspace) ReadPipelineManifest(path string) ([]byte, error) {
 	if !manifestExists {
 		return nil, ErrNoPipelineInWorkspace
 	}
-	return ws.fsUtils.ReadFile(path)
+	data, err := ws.fsUtils.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read pipeline manifest: %w", err)
+	}
+	pipelineManifest, err := manifest.UnmarshalPipeline(data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	}
+	return pipelineManifest, nil
 }
 
 // WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
@@ -526,18 +534,6 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	}
 	sort.Strings(dockerfiles)
 	return dockerfiles, nil
-}
-
-func (ws Workspace) PipelineNameFromManifest(path string) (string, error) {
-	data, err := ws.ReadPipelineManifest(path)
-	if err != nil {
-		return "", fmt.Errorf("read pipeline manifest: %w", err)
-	}
-	pipelineManifest, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-	return pipelineManifest.Name, nil
 }
 
 // WorkloadManifest represents raw local workload manifest.

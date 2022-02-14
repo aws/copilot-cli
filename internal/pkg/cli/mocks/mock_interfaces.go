@@ -28,6 +28,7 @@ import (
 	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
+	manifest "github.com/aws/copilot-cli/internal/pkg/manifest"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -2201,10 +2202,10 @@ func (m *MockwsPipelineManifestReader) EXPECT() *MockwsPipelineManifestReaderMoc
 }
 
 // ReadPipelineManifest mocks base method.
-func (m *MockwsPipelineManifestReader) ReadPipelineManifest(path string) ([]byte, error) {
+func (m *MockwsPipelineManifestReader) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadPipelineManifest", path)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(*manifest.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2752,26 +2753,11 @@ func (mr *MockwsPipelineReaderMockRecorder) PipelineManifestLegacyPath() *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineManifestLegacyPath", reflect.TypeOf((*MockwsPipelineReader)(nil).PipelineManifestLegacyPath))
 }
 
-// PipelineNameFromManifest mocks base method.
-func (m *MockwsPipelineReader) PipelineNameFromManifest(arg0 string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PipelineNameFromManifest", arg0)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PipelineNameFromManifest indicates an expected call of PipelineNameFromManifest.
-func (mr *MockwsPipelineReaderMockRecorder) PipelineNameFromManifest(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineNameFromManifest", reflect.TypeOf((*MockwsPipelineReader)(nil).PipelineNameFromManifest), arg0)
-}
-
 // ReadPipelineManifest mocks base method.
-func (m *MockwsPipelineReader) ReadPipelineManifest(path string) ([]byte, error) {
+func (m *MockwsPipelineReader) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadPipelineManifest", path)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(*manifest.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2851,10 +2837,10 @@ func (mr *MockwsPipelineGetterMockRecorder) PipelineManifestLegacyPath() *gomock
 }
 
 // ReadPipelineManifest mocks base method.
-func (m *MockwsPipelineGetter) ReadPipelineManifest(path string) ([]byte, error) {
+func (m *MockwsPipelineGetter) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadPipelineManifest", path)
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].(*manifest.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

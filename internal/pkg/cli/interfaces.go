@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -236,7 +237,7 @@ type workspacePathGetter interface {
 }
 
 type wsPipelineManifestReader interface {
-	ReadPipelineManifest(path string) ([]byte, error)
+	ReadPipelineManifest(path string) (*manifest.PipelineManifest, error)
 }
 
 type wsPipelineWriter interface {
@@ -282,7 +283,6 @@ type wsWlDirReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
-	PipelineNameFromManifest(string) (string, error)
 }
 
 type wsPipelineGetter interface {

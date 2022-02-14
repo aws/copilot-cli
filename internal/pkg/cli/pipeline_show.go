@@ -190,12 +190,12 @@ func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	name, err := o.ws.PipelineNameFromManifest(path)
+	manifest, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
 		return "", err
 	}
 
-	return name, nil
+	return manifest.Name, nil
 }
 
 // Execute shows details about the pipeline.
