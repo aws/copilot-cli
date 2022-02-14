@@ -18,6 +18,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -166,13 +167,13 @@ func (ws *Workspace) ListPipelines() (map[string]string, error) {
 	}
 	pipelines[manifest.Name] = legacyPath
 	// Look for other pipelines.
-	pipelinesPath, err := ws.pipelineManifestPath()
+	pipelinesPath, err := ws.pipelinesDirPath()
 	if err != nil {
 		return nil, err
 	}
 	exists, err := ws.fsUtils.Exists(pipelinesPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("check if pipeline manifest exists at %s: %w", pipelinesPath, err)
 	}
 	if exists {
 		files, err := ws.fsUtils.ReadDir(pipelinesPath)
@@ -260,7 +261,8 @@ func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.PipelineManife
 	}
 	data, err := ws.fsUtils.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read pipeline manifest: %w", err)
+		log.Infof("Unable to read pipeline manifest file at '%s'", path)
+		return nil, nil
 	}
 	pipelineManifest, err := manifest.UnmarshalPipeline(data)
 	if err != nil {
@@ -385,7 +387,7 @@ func (ws *Workspace) PipelineManifestLegacyPath() (string, error) {
 	return pipelineManifestPath, nil
 }
 
-func (ws *Workspace) pipelineManifestPath() (string, error) {
+func (ws *Workspace) pipelinesDirPath() (string, error) {
 	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err

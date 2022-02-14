@@ -124,14 +124,14 @@ type WsWorkloadLister interface {
 	ListWorkloads() ([]string, error)
 }
 
-// WsPipelineLister wraps the method to get pipelines in the current workspace.
-type WsPipelineLister interface {
+// wsPipelineLister wraps the method to get pipelines in the current workspace.
+type wsPipelineLister interface {
 	ListPipelines() (map[string]string, error)
 }
 
 // WsPipelineSelector is a pipeline selector.
 type WsPipelineSelector interface {
-	WsPipelineLister
+	wsPipelineLister
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -174,7 +174,7 @@ type ConfigSelect struct {
 	workloadLister ConfigWorkloadLister
 }
 
-// WorkspaceSelect  is an application and environment selector, but can also choose a service or pipeline from the workspace.
+// WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*Select
 	ws      WorkspaceRetriever

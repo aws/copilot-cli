@@ -145,7 +145,9 @@ func (o *deletePipelineOpts) getNameAndSecret() error {
 	if err != nil {
 		return err
 	}
-	o.name = manifest.Name
+	if o.name == "" {
+		o.name = manifest.Name
+	}
 
 	if secret, ok := (manifest.Source.Properties["access_token_secret"]).(string); ok {
 		o.ghAccessTokenSecretName = secret
