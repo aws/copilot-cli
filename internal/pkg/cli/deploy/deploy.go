@@ -401,6 +401,9 @@ type UploadArtifactsOutput struct {
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
+	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
+	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
+	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
 	ImageDigest *string
 	EnvFileARN  string
 	AddonsURL   string
