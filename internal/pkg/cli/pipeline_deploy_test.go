@@ -26,209 +26,64 @@ type deployPipelineMocks struct {
 	ws       *mocks.MockwsPipelineReader
 }
 
-func TestDeployPipelineOpts_convertStages(t *testing.T) {
+func TestDeployPipelineOpts_Validate(t *testing.T) {
+	const (
+		mockPipelineManifest = `name: existentPipeline
+version: 1
+`
+	)
 	testCases := map[string]struct {
-		stages    []manifest.PipelineStage
-		inAppName string
-		callMocks func(m deployPipelineMocks)
+		inAppName      string
+		inPipelineName string
+		mockWs         func(m *mocks.MockwsPipelineReader)
 
-		expectedStages []deploy.PipelineStage
-		expectedError  error
+		wantedError error
 	}{
-		"converts stages with test commands": {
-			stages: []manifest.PipelineStage{
-				{
-					Name:         "test",
-					TestCommands: []string{"make test", "echo \"made test\""},
-				},
-			},
-			inAppName: "badgoose",
-			callMocks: func(m deployPipelineMocks) {
-				mockEnv := &config.Environment{
-					Name:      "test",
-					App:       "badgoose",
-					Region:    "us-west-2",
-					AccountID: "123456789012",
-					Prod:      false,
-				}
-				gomock.InOrder(
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
-				)
+		"pipeline doesn't exist": {
+			inAppName:      "app",
+			inPipelineName: "nonexistentPipeline",
+
+			mockWs: func(m *mocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(mockPipelineManifest), nil)
 			},
 
-			expectedStages: []deploy.PipelineStage{
-				{
-					AssociatedEnvironment: &deploy.AssociatedEnvironment{
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "123456789012",
-					},
-					LocalWorkloads:   []string{"frontend", "backend"},
-					RequiresApproval: false,
-					TestCommands:     []string{"make test", "echo \"made test\""},
-				},
-			},
-			expectedError: nil,
+			wantedError: errors.New("pipeline nonexistentPipeline not found in the workspace"),
 		},
-		"converts stages with only stage name": {
-			stages: []manifest.PipelineStage{
-				{
-					Name: "test",
-				},
-			},
-			inAppName: "badgoose",
-			callMocks: func(m deployPipelineMocks) {
-				mockEnv := &config.Environment{
-					Name:      "test",
-					App:       "badgoose",
-					Region:    "us-west-2",
-					AccountID: "123456789012",
-					Prod:      false,
-				}
-				gomock.InOrder(
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
-				)
+		"success": {
+			inAppName:      "app",
+			inPipelineName: "existentPipeline",
+
+			mockWs: func(m *mocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(mockPipelineManifest), nil)
 			},
 
-			expectedStages: []deploy.PipelineStage{
-				{
-					AssociatedEnvironment: &deploy.AssociatedEnvironment{
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "123456789012",
-					},
-					LocalWorkloads:   []string{"frontend", "backend"},
-					RequiresApproval: false,
-					TestCommands:     []string(nil),
-				},
-			},
-			expectedError: nil,
-		},
-		"converts stages with requires approval": {
-			stages: []manifest.PipelineStage{
-				{
-					Name:             "test",
-					RequiresApproval: true,
-				},
-			},
-			inAppName: "badgoose",
-			callMocks: func(m deployPipelineMocks) {
-				mockEnv := &config.Environment{
-					Name:      "test",
-					App:       "badgoose",
-					Region:    "us-west-2",
-					AccountID: "123456789012",
-					Prod:      true,
-				}
-				gomock.InOrder(
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
-				)
-			},
-
-			expectedStages: []deploy.PipelineStage{
-				{
-					AssociatedEnvironment: &deploy.AssociatedEnvironment{
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "123456789012",
-					},
-					LocalWorkloads:   []string{"frontend", "backend"},
-					RequiresApproval: true,
-					TestCommands:     []string(nil),
-				},
-			},
-			expectedError: nil,
+			wantedError: nil,
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
-			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
-			mocks := deployPipelineMocks{
-				envStore: mockEnvStore,
-				ws:       mockWorkspace,
-			}
-
-			tc.callMocks(mocks)
-
-			opts := &deployPipelineOpts{
+			mockWs := mocks.NewMockwsPipelineReader(ctrl)
+			tc.mockWs(mockWs)
+			opts := deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
+					name:    tc.inPipelineName,
 				},
-				envStore: mockEnvStore,
-				ws:       mockWorkspace,
+				ws: mockWs,
 			}
 
 			// WHEN
-			actualStages, err := opts.convertStages(tc.stages)
+			err := opts.Validate()
 
 			// THEN
-			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError, err)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.ElementsMatch(t, tc.expectedStages, actualStages)
-			}
-		})
-	}
-}
-
-func TestDeployPipelineOpts_getArtifactBuckets(t *testing.T) {
-	testCases := map[string]struct {
-		mockDeployer func(m *mocks.MockpipelineDeployer)
-
-		expectedOut []deploy.ArtifactBucket
-
-		expectedError error
-	}{
-		"getsBucketInfo": {
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				mockResources := []*stack.AppRegionalResources{
-					{
-						S3Bucket:  "someBucket",
-						KMSKeyARN: "someKey",
-					},
-				}
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-			},
-			expectedOut: []deploy.ArtifactBucket{
-				{
-					BucketName: "someBucket",
-					KeyArn:     "someKey",
-				},
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockPipelineDeployer := mocks.NewMockpipelineDeployer(ctrl)
-			tc.mockDeployer(mockPipelineDeployer)
-
-			opts := &deployPipelineOpts{
-				pipelineDeployer: mockPipelineDeployer,
-			}
-
-			// WHEN
-			actual, err := opts.getArtifactBuckets()
-
-			// THEN
-			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError, err)
-			} else {
-				require.NoError(t, err)
-				require.ElementsMatch(t, tc.expectedOut, actual)
 			}
 		})
 	}
@@ -459,7 +314,7 @@ stages:
 			},
 			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
 		},
-		"returns an error if pipeline name exceeds 100 characters": {
+		"returns an error if pipeline name fails validation": {
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
@@ -475,7 +330,7 @@ version: 1
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
 				)
 			},
-			expectedError: fmt.Errorf("pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
+			expectedError: fmt.Errorf("validate pipeline: pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
 		},
 		"returns an error if provider is not a supported type": {
 			inApp:     &app,
@@ -711,6 +566,7 @@ stages:
 			opts := &deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
+					name:    tc.inPipelineName,
 				},
 				pipelineDeployer: mockPipelineDeployer,
 				ws:               mockWorkspace,
@@ -719,8 +575,6 @@ stages:
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
-
-				pipelineName: tc.inPipelineName,
 			}
 
 			// WHEN
@@ -731,6 +585,214 @@ stages:
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDeployPipelineOpts_convertStages(t *testing.T) {
+	testCases := map[string]struct {
+		stages    []manifest.PipelineStage
+		inAppName string
+		callMocks func(m deployPipelineMocks)
+
+		expectedStages []deploy.PipelineStage
+		expectedError  error
+	}{
+		"converts stages with test commands": {
+			stages: []manifest.PipelineStage{
+				{
+					Name:         "test",
+					TestCommands: []string{"make test", "echo \"made test\""},
+				},
+			},
+			inAppName: "badgoose",
+			callMocks: func(m deployPipelineMocks) {
+				mockEnv := &config.Environment{
+					Name:      "test",
+					App:       "badgoose",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
+					Prod:      false,
+				}
+				gomock.InOrder(
+					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+				)
+			},
+
+			expectedStages: []deploy.PipelineStage{
+				{
+					AssociatedEnvironment: &deploy.AssociatedEnvironment{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789012",
+					},
+					LocalWorkloads:   []string{"frontend", "backend"},
+					RequiresApproval: false,
+					TestCommands:     []string{"make test", "echo \"made test\""},
+				},
+			},
+			expectedError: nil,
+		},
+		"converts stages with only stage name": {
+			stages: []manifest.PipelineStage{
+				{
+					Name: "test",
+				},
+			},
+			inAppName: "badgoose",
+			callMocks: func(m deployPipelineMocks) {
+				mockEnv := &config.Environment{
+					Name:      "test",
+					App:       "badgoose",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
+					Prod:      false,
+				}
+				gomock.InOrder(
+					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+				)
+			},
+
+			expectedStages: []deploy.PipelineStage{
+				{
+					AssociatedEnvironment: &deploy.AssociatedEnvironment{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789012",
+					},
+					LocalWorkloads:   []string{"frontend", "backend"},
+					RequiresApproval: false,
+					TestCommands:     []string(nil),
+				},
+			},
+			expectedError: nil,
+		},
+		"converts stages with requires approval": {
+			stages: []manifest.PipelineStage{
+				{
+					Name:             "test",
+					RequiresApproval: true,
+				},
+			},
+			inAppName: "badgoose",
+			callMocks: func(m deployPipelineMocks) {
+				mockEnv := &config.Environment{
+					Name:      "test",
+					App:       "badgoose",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
+					Prod:      true,
+				}
+				gomock.InOrder(
+					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+				)
+			},
+
+			expectedStages: []deploy.PipelineStage{
+				{
+					AssociatedEnvironment: &deploy.AssociatedEnvironment{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789012",
+					},
+					LocalWorkloads:   []string{"frontend", "backend"},
+					RequiresApproval: true,
+					TestCommands:     []string(nil),
+				},
+			},
+			expectedError: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
+			mocks := deployPipelineMocks{
+				envStore: mockEnvStore,
+				ws:       mockWorkspace,
+			}
+
+			tc.callMocks(mocks)
+
+			opts := &deployPipelineOpts{
+				deployPipelineVars: deployPipelineVars{
+					appName: tc.inAppName,
+				},
+				envStore: mockEnvStore,
+				ws:       mockWorkspace,
+			}
+
+			// WHEN
+			actualStages, err := opts.convertStages(tc.stages)
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
+			} else {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.expectedStages, actualStages)
+			}
+		})
+	}
+}
+
+func TestDeployPipelineOpts_getArtifactBuckets(t *testing.T) {
+	testCases := map[string]struct {
+		mockDeployer func(m *mocks.MockpipelineDeployer)
+
+		expectedOut []deploy.ArtifactBucket
+
+		expectedError error
+	}{
+		"getsBucketInfo": {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
+				mockResources := []*stack.AppRegionalResources{
+					{
+						S3Bucket:  "someBucket",
+						KMSKeyARN: "someKey",
+					},
+				}
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
+			},
+			expectedOut: []deploy.ArtifactBucket{
+				{
+					BucketName: "someBucket",
+					KeyArn:     "someKey",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockPipelineDeployer := mocks.NewMockpipelineDeployer(ctrl)
+			tc.mockDeployer(mockPipelineDeployer)
+
+			opts := &deployPipelineOpts{
+				pipelineDeployer: mockPipelineDeployer,
+			}
+
+			// WHEN
+			actual, err := opts.getArtifactBuckets()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
+			} else {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.expectedOut, actual)
 			}
 		})
 	}

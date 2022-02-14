@@ -5,7 +5,6 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
     ```yaml
     # Your service name will be used in naming your resources like log groups, App Runner services, etc.
     name: frontend
-    # The "architecture" of the service you're running.
     type: Request-Driven Web Service
 
     http:
@@ -21,9 +20,12 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
     image:
       build: ./frontend/Dockerfile
       port: 80
-
     cpu: 1024
     memory: 2048
+
+    network:
+      vpc:
+        placement: 'private'
 
     variables:
       LOG_LEVEL: info
@@ -134,6 +136,24 @@ Number of CPU units reserved for each instance of your service. See the [AWS App
 
 <a id="memory" href="#memory" class="field">`memory`</a> <span class="type">Integer</span>  
 Amount of memory in MiB reserved for each instance of your service. See the [AWS App Runner docs](https://docs.aws.amazon.com/apprunner/latest/api/API_InstanceConfiguration.html#apprunner-Type-InstanceConfiguration-Memory) for valid memory values.
+
+<div class="separator"></div>
+
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
+The `network` section contains parameters for connecting the service to AWS resources in the environment's VPC.  
+By connecting the service to a VPC, you can use [service discovery](../developing/service-discovery.en.md) to communicate with other services
+in your environment, or connect to a database in your VPC such as Amazon Aurora with [`storage init`](../commands/storage-init.en.md).
+
+<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
+Subnets in the VPC to route egress traffic from the service.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
+The only valid option today is `'private'`. If you prefer the service not to be connected to a VPC, you can remove the `network` field.
+
+When the placement is `'private'`, the App Runner service routes egress traffic through the private subnets of the VPC.  
+If you use a Copilot-generated VPC, Copilot will automatically add NAT Gateways to your environment for internet connectivity. (See [pricing](https://aws.amazon.com/vpc/pricing/).)
+Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints 
+for isolated workloads. See our [custom environment resources](../developing/custom-environment-resources.en.md) page for more.
 
 <div class="separator"></div>
 

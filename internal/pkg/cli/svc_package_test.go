@@ -6,20 +6,20 @@ package cli
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPackageSvcOpts_Validate(t *testing.T) {
 	var (
-		mockWorkspace *mocks.MockwsSvcReader
+		mockWorkspace *mocks.MockwsWlDirReader
 		mockStore     *mocks.Mockstore
 	)
 
@@ -84,7 +84,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace = mocks.NewMockwsSvcReader(ctrl)
+			mockWorkspace = mocks.NewMockwsWlDirReader(ctrl)
 			mockStore = mocks.NewMockstore(ctrl)
 
 			tc.setupMocks()
@@ -119,7 +119,6 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 		inEnvName string
 
 		expectSelector func(m *mocks.MockwsSelector)
-		expectPrompt   func(m *mocks.Mockprompter)
 
 		wantedSvcName string
 		wantedEnvName string
@@ -132,9 +131,6 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
 				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
 
 			wantedSvcName: "frontend",
 			wantedEnvName: "test",
@@ -145,9 +141,6 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
-			},
-			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedSvcName: "frontend",
@@ -160,9 +153,6 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedSvcName: "frontend",
@@ -177,11 +167,9 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSelector := mocks.NewMockwsSelector(ctrl)
-			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockRunner := mocks.NewMockrunner(ctrl)
 
 			tc.expectSelector(mockSelector)
-			tc.expectPrompt(mockPrompt)
 
 			opts := &packageSvcOpts{
 				packageSvcVars: packageSvcVars{
@@ -190,7 +178,6 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 					appName: testAppName,
 				},
 				sel:    mockSelector,
-				prompt: mockPrompt,
 				runner: mockRunner,
 			}
 
@@ -243,56 +230,33 @@ count: 1`
 	}{
 		"writes service template without addons": {
 			inVars: packageSvcVars{
-				appName: "ecs-kudos",
-				name:    "api",
-				envName: "test",
-				tag:     "1234",
+				appName:          "ecs-kudos",
+				name:             "api",
+				envName:          "test",
+				tag:              "1234",
+				clientConfigured: true,
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
-				mockStore := mocks.NewMockstore(ctrl)
-				mockStore.EXPECT().
-					GetEnvironment("ecs-kudos", "test").
-					Return(&config.Environment{
-						App:       "ecs-kudos",
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "1111",
-					}, nil)
-				mockApp := &config.Application{
-					Name:      "ecs-kudos",
-					AccountID: "1112",
-					Tags: map[string]string{
-						"owner": "boss",
-					},
-				}
-				mockStore.EXPECT().
-					GetApplication("ecs-kudos").
-					Return(mockApp, nil)
-
-				mockWs := mocks.NewMockwsSvcReader(ctrl)
+				mockWs := mocks.NewMockwsWlDirReader(ctrl)
 				mockWs.EXPECT().
 					ReadWorkloadManifest("api").
 					Return([]byte(lbwsMft), nil)
 
+				mockGenerator := mocks.NewMockworkloadTemplateGenerator(ctrl)
+				mockGenerator.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).
+					Return(&deploy.GenerateCloudFormationTemplateOutput{
+						Template:   "mystack",
+						Parameters: "myparams",
+					}, nil)
+
 				mockItpl := mocks.NewMockinterpolator(ctrl)
 				mockItpl.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
-
-				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
-				mockCfn.EXPECT().
-					GetAppResourcesByRegion(mockApp, "us-west-2").
-					Return(&stack.AppRegionalResources{
-						RepositoryURLs: map[string]string{
-							"api": "some url",
-						},
-					}, nil)
 
 				mockAddons := mocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
 					Return("", &addon.ErrAddonsNotFound{})
 
-				opts.store = mockStore
 				opts.ws = mockWs
-				opts.appCFN = mockCfn
 				opts.initAddonsClient = func(opts *packageSvcOpts) error {
 					opts.addonsClient = mockAddons
 					return nil
@@ -300,18 +264,8 @@ count: 1`
 				opts.newInterpolator = func(app, env string) interpolator {
 					return mockItpl
 				}
-				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
-					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
-					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
-					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
-					require.Equal(t, rc.AccountID, "1111", "ensure the environment's account is used while rendering stack")
-					require.Equal(t, rc.Region, "us-west-2")
-					return mockStackSerializer, nil
-				}
-				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
-					mockendpointGetter := mocks.NewMockendpointGetter(ctrl)
-					mockendpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(fmt.Sprintf("%s.%s.local", env, app), nil)
-					return mockendpointGetter, nil
+				opts.newTplGenerator = func(pso *packageSvcOpts) (workloadTemplateGenerator, error) {
+					return mockGenerator, nil
 				}
 			},
 
@@ -320,33 +274,14 @@ count: 1`
 		},
 		"writes request-driven web service template with custom resource": {
 			inVars: packageSvcVars{
-				appName: "ecs-kudos",
-				name:    "api",
-				envName: "test",
-				tag:     "1234",
+				appName:          "ecs-kudos",
+				name:             "api",
+				envName:          "test",
+				tag:              "1234",
+				clientConfigured: true,
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
-				mockStore := mocks.NewMockstore(ctrl)
-				mockStore.EXPECT().
-					GetEnvironment("ecs-kudos", "test").
-					Return(&config.Environment{
-						App:       "ecs-kudos",
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "1111",
-					}, nil)
-				mockApp := &config.Application{
-					Name:      "ecs-kudos",
-					AccountID: "1112",
-					Tags: map[string]string{
-						"owner": "boss",
-					},
-				}
-				mockStore.EXPECT().
-					GetApplication("ecs-kudos").
-					Return(mockApp, nil)
-
-				mockWs := mocks.NewMockwsSvcReader(ctrl)
+				mockWs := mocks.NewMockwsWlDirReader(ctrl)
 				mockWs.EXPECT().
 					ReadWorkloadManifest("api").
 					Return([]byte(rdwsMft), nil)
@@ -354,22 +289,18 @@ count: 1`
 				mockItpl := mocks.NewMockinterpolator(ctrl)
 				mockItpl.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
 
-				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
-				mockCfn.EXPECT().
-					GetAppResourcesByRegion(mockApp, "us-west-2").
-					Return(&stack.AppRegionalResources{
-						RepositoryURLs: map[string]string{
-							"api": "some url",
-						},
-					}, nil)
-
 				mockAddons := mocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
 					Return("", &addon.ErrAddonsNotFound{})
 
-				opts.store = mockStore
+				mockGenerator := mocks.NewMockworkloadTemplateGenerator(ctrl)
+				mockGenerator.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).
+					Return(&deploy.GenerateCloudFormationTemplateOutput{
+						Template:   "mystack",
+						Parameters: "myparams",
+					}, nil)
+
 				opts.ws = mockWs
-				opts.appCFN = mockCfn
 				opts.initAddonsClient = func(opts *packageSvcOpts) error {
 					opts.addonsClient = mockAddons
 					return nil
@@ -377,16 +308,8 @@ count: 1`
 				opts.newInterpolator = func(app, env string) interpolator {
 					return mockItpl
 				}
-				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
-					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
-					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
-					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
-					return mockStackSerializer, nil
-				}
-				opts.newEndpointGetter = func(app, env string) (endpointGetter, error) {
-					mockendpointGetter := mocks.NewMockendpointGetter(ctrl)
-					mockendpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(fmt.Sprintf("%s.%s.local", env, app), nil)
-					return mockendpointGetter, nil
+				opts.newTplGenerator = func(pso *packageSvcOpts) (workloadTemplateGenerator, error) {
+					return mockGenerator, nil
 				}
 			},
 
@@ -410,6 +333,10 @@ count: 1`
 				stackWriter:  stackBuf,
 				paramsWriter: paramsBuf,
 				addonsWriter: addonsBuf,
+				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+					return &mockWorkloadMft{}, nil
+				},
+				targetApp: &config.Application{},
 			}
 			tc.mockDependencies(ctrl, opts)
 

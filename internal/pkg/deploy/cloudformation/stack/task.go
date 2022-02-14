@@ -128,6 +128,13 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	}, nil
 }
 
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *taskStackConfig) SerializedParameters() (string, error) {
+	// No-op for now.
+	return "", nil
+}
+
 // Tags returns the tags that should be applied to the task CloudFormation.
 func (t *taskStackConfig) Tags() []*cloudformation.Tag {
 	tags := map[string]string{

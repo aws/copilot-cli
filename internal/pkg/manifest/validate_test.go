@@ -551,6 +551,25 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
 		},
+		"error if fail to validate observability": {
+			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: stringP("mockLocation"),
+						},
+						Port: uint16P(80),
+					},
+					Observability: Observability{
+						Tracing: aws.String("unknown-vendor"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "observability": `,
+		},
 		"error if name is not set": {
 			config: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
@@ -909,6 +928,32 @@ func TestScheduledJob_Validate(t *testing.T) {
 				return
 			}
 			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestPipelineManifest_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		Pipeline PipelineManifest
+
+		wantedError error
+	}{
+		"error if name exceeds 100 characters": {
+			Pipeline: PipelineManifest{
+				Name: "12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890",
+			},
+			wantedError: errors.New("pipeline name '12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890' must be shorter than 100 characters"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.Pipeline.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
 		})
 	}
 }
@@ -2105,6 +2150,40 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
 			} else if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestObservability_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config            Observability
+		wantedErrorPrefix string
+	}{
+		"error if tracing has invalid vendor": {
+			config: Observability{
+				Tracing: aws.String("unknown-vendor"),
+			},
+			wantedErrorPrefix: `invalid tracing vendor unknown-vendor: `,
+		},
+		"ok if tracing is aws-xray": {
+			config: Observability{
+				Tracing: aws.String("awsxray"),
+			},
+		},
+		"ok if observability is empty": {
+			config: Observability{},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.NotNil(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
 			} else {
 				require.NoError(t, gotErr)
 			}
