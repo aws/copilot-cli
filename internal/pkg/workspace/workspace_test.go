@@ -117,8 +117,11 @@ func TestWorkspace_Summary(t *testing.T) {
 		mockFileSystem  func(fs afero.Fs)
 	}{
 		"existing workspace summary": {
-			expectedSummary: Summary{Application: "DavidsApp"},
-			workingDir:      "test/",
+			expectedSummary: Summary{
+				Application: "DavidsApp",
+				Path:        "test/copilot/.workspace",
+			},
+			workingDir: "test/",
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
@@ -189,7 +192,7 @@ func TestWorkspace_Create(t *testing.T) {
 		"existing workspace and different application": {
 			workingDir:    "test/",
 			appName:       "DavidsApp",
-			expectedError: fmt.Errorf("this workspace is already registered with application DavidsOtherApp"),
+			expectedError: fmt.Errorf("workspace is already registered with application DavidsOtherApp under copilot/.workspace"),
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
