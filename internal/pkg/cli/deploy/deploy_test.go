@@ -95,7 +95,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 		wantAddonsURL     string
 		wantEnvFileARN    string
-		wantImageDigest   string
+		wantImageDigest   *string
 		wantBuildRequired bool
 		wantErr           error
 	}{
@@ -124,7 +124,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					WlName: "mockWkld",
 				})
 			},
-			wantImageDigest: "mockDigest",
+			wantImageDigest: aws.String("mockDigest"),
 		},
 		"error if fail to read env file": {
 			inEnvFile: mockEnvFile,
