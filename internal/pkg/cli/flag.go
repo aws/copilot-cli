@@ -202,7 +202,7 @@ const (
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription  = "Optional. Writes the stack template and template configuration to a directory."
-	uploadResourcesFlagDescription = "Optional. Whether to upload dependency resources (e.g., an image that needs to be built and pushed), so that the output of `copilot svc package` can be directly used for deployment."
+	uploadResourcesFlagDescription = "Optional. Whether to upload dependency resources (e.g., an image that needs to be built and pushed), so that the output can be directly used for deployment."
 	prodEnvFlagDescription         = "If the environment contains production services."
 
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10

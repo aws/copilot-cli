@@ -4,8 +4,10 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -19,11 +21,12 @@ import (
 )
 
 type deployPipelineMocks struct {
-	envStore *mocks.MockenvironmentStore
-	prompt   *mocks.Mockprompter
-	prog     *mocks.Mockprogress
-	deployer *mocks.MockpipelineDeployer
-	ws       *mocks.MockwsPipelineReader
+	envStore  *mocks.MockenvironmentStore
+	prompt    *mocks.Mockprompter
+	prog      *mocks.Mockprogress
+	deployer  *mocks.MockpipelineDeployer
+	ws        *mocks.MockwsPipelineReader
+	actionCmd *mocks.MockactionCommand
 }
 
 func TestDeployPipelineOpts_Validate(t *testing.T) {
@@ -164,7 +167,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -194,7 +197,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -225,7 +228,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -253,7 +256,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -368,10 +371,10 @@ source:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return(nil, errors.New("some error")).Times(1),
+					m.actionCmd.EXPECT().Execute().Return(errors.New("some error")),
 				)
 			},
-			expectedError: fmt.Errorf("convert environments to deployment stage: get workload names from workspace: some error"),
+			expectedError: fmt.Errorf("convert environments to deployment stage: get local services: some error"),
 		},
 		"returns an error if fails to get cross-regional resources": {
 			inApp:     &app,
@@ -384,7 +387,7 @@ source:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -407,7 +410,7 @@ source:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -433,7 +436,7 @@ source:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -463,7 +466,7 @@ source:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -520,7 +523,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -552,13 +555,15 @@ stages:
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockActionCmd := mocks.NewMockactionCommand(ctrl)
 
 			mocks := deployPipelineMocks{
-				envStore: mockEnvStore,
-				prompt:   mockPrompt,
-				prog:     mockProgress,
-				deployer: mockPipelineDeployer,
-				ws:       mockWorkspace,
+				envStore:  mockEnvStore,
+				prompt:    mockPrompt,
+				prog:      mockProgress,
+				deployer:  mockPipelineDeployer,
+				ws:        mockWorkspace,
+				actionCmd: mockActionCmd,
 			}
 
 			tc.callMocks(mocks)
@@ -575,6 +580,14 @@ stages:
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
+				newSvcListCmd: func(w io.Writer) actionCommand {
+					return mockActionCmd
+				},
+				newJobListCmd: func(w io.Writer) actionCommand {
+					return mockActionCmd
+				},
+				svcBuffer: bytes.NewBufferString(`{"services":[{"app":"badgoose","name":"frontend","type":""}]}`),
+				jobBuffer: bytes.NewBufferString(`{"jobs":[{"app":"badgoose","name":"backend","type":""}]}`),
 			}
 
 			// WHEN
@@ -616,7 +629,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 					Prod:      false,
 				}
 				gomock.InOrder(
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
@@ -651,7 +664,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 					Prod:      false,
 				}
 				gomock.InOrder(
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
@@ -687,7 +700,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 					Prod:      true,
 				}
 				gomock.InOrder(
-					m.ws.EXPECT().ListWorkloads().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.actionCmd.EXPECT().Execute().Times(2),
 					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
@@ -716,9 +729,11 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 
 			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
+			mockActionCmd := mocks.NewMockactionCommand(ctrl)
 			mocks := deployPipelineMocks{
-				envStore: mockEnvStore,
-				ws:       mockWorkspace,
+				envStore:  mockEnvStore,
+				ws:        mockWorkspace,
+				actionCmd: mockActionCmd,
 			}
 
 			tc.callMocks(mocks)
@@ -729,7 +744,14 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				},
 				envStore: mockEnvStore,
 				ws:       mockWorkspace,
-			}
+				newSvcListCmd: func(w io.Writer) actionCommand {
+					return mockActionCmd
+				},
+				newJobListCmd: func(w io.Writer) actionCommand {
+					return mockActionCmd
+				},
+				svcBuffer: bytes.NewBufferString(`{"services":[{"app":"badgoose","name":"frontend","type":""}]}`),
+				jobBuffer: bytes.NewBufferString(`{"jobs":[{"app":"badgoose","name":"backend","type":""}]}`)}
 
 			// WHEN
 			actualStages, err := opts.convertStages(tc.stages)

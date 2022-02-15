@@ -55,6 +55,11 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 	}, nil
 }
 
+// Validate is a no-op for this command.
+func (o *listSvcOpts) Validate() error {
+	return nil
+}
+
 // Ask asks for fields that are required but not passed in.
 func (o *listSvcOpts) Ask() error {
 	if o.appName != "" {
@@ -71,11 +76,15 @@ func (o *listSvcOpts) Ask() error {
 
 // Execute lists the services through the prompt.
 func (o *listSvcOpts) Execute() error {
-
 	if err := o.list.Write(o.appName); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// RecommendActions is a no-op for this command.
+func (o *listSvcOpts) RecommendActions() error {
 	return nil
 }
 
