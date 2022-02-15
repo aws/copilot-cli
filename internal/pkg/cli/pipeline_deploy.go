@@ -116,10 +116,7 @@ func (o *deployPipelineOpts) Validate() error {
 
 // Ask prompts the user for any required fields that are not provided.
 func (o *deployPipelineOpts) Ask() error {
-	if err := o.askPipelineName(); err != nil {
-		return err
-	}
-	return nil
+	return o.askPipelineName()
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
