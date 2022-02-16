@@ -152,7 +152,7 @@ func (ws *Workspace) ListJobs() ([]string, error) {
 	})
 }
 
-// ListWorkloads returns the name of all the workloads in the workspace.
+// ListWorkloads returns the name of all the workloads in the workspace (could be unregistered in SSM).
 func (ws *Workspace) ListWorkloads() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
 		return true

@@ -83,11 +83,6 @@ func (o *listSvcOpts) Execute() error {
 	return nil
 }
 
-// RecommendActions is a no-op for this command.
-func (o *listSvcOpts) RecommendActions() error {
-	return nil
-}
-
 // buildSvcListCmd builds the command for listing services in an appication.
 func buildSvcListCmd() *cobra.Command {
 	vars := listWkldVars{}

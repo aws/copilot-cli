@@ -80,11 +80,6 @@ func (o *listJobOpts) Execute() error {
 	return nil
 }
 
-// RecommendActions is a no-op for this command.
-func (o *listJobOpts) RecommendActions() error {
-	return nil
-}
-
 func buildJobListCmd() *cobra.Command {
 	vars := listWkldVars{}
 	cmd := &cobra.Command{

@@ -333,7 +333,7 @@ version: 1
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
 				)
 			},
-			expectedError: fmt.Errorf("validate pipeline: pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
+			expectedError: fmt.Errorf("validate pipeline manifest: pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
 		},
 		"returns an error if provider is not a supported type": {
 			inApp:     &app,
@@ -580,10 +580,10 @@ stages:
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
-				newSvcListCmd: func(w io.Writer) actionCommand {
+				newSvcListCmd: func(w io.Writer) cmd {
 					return mockActionCmd
 				},
-				newJobListCmd: func(w io.Writer) actionCommand {
+				newJobListCmd: func(w io.Writer) cmd {
 					return mockActionCmd
 				},
 				svcBuffer: bytes.NewBufferString(`{"services":[{"app":"badgoose","name":"frontend","type":""}]}`),
@@ -744,10 +744,10 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				},
 				envStore: mockEnvStore,
 				ws:       mockWorkspace,
-				newSvcListCmd: func(w io.Writer) actionCommand {
+				newSvcListCmd: func(w io.Writer) cmd {
 					return mockActionCmd
 				},
-				newJobListCmd: func(w io.Writer) actionCommand {
+				newJobListCmd: func(w io.Writer) cmd {
 					return mockActionCmd
 				},
 				svcBuffer: bytes.NewBufferString(`{"services":[{"app":"badgoose","name":"frontend","type":""}]}`),

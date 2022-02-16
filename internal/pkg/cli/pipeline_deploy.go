@@ -65,14 +65,15 @@ type deployPipelineOpts struct {
 	envStore         environmentStore
 	ws               wsPipelineReader
 	codestar         codestar
-	newSvcListCmd    func(io.Writer) actionCommand
-	newJobListCmd    func(io.Writer) actionCommand
+	newSvcListCmd    func(io.Writer) cmd
+	newJobListCmd    func(io.Writer) cmd
 
 	shouldPromptUpdateConnection bool
 
 	// cache variables
-	svcBuffer *bytes.Buffer
-	jobBuffer *bytes.Buffer
+	pipelineMft *manifest.PipelineManifest
+	svcBuffer   *bytes.Buffer
+	jobBuffer   *bytes.Buffer
 }
 
 func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
@@ -106,7 +107,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
 		codestar:           cs.New(defaultSession),
-		newSvcListCmd: func(w io.Writer) actionCommand {
+		newSvcListCmd: func(w io.Writer) cmd {
 			return &listSvcOpts{
 				listWkldVars: listWkldVars{
 					appName: vars.appName,
@@ -122,7 +123,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
-		newJobListCmd: func(w io.Writer) actionCommand {
+		newJobListCmd: func(w io.Writer) cmd {
 			return &listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: vars.appName,
@@ -227,6 +228,9 @@ func (o *deployPipelineOpts) Execute() error {
 }
 
 func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error) {
+	if o.pipelineMft != nil {
+		return o.pipelineMft, nil
+	}
 	data, err := o.ws.ReadPipelineManifest()
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
@@ -236,8 +240,9 @@ func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error
 		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
 	if err := pipeline.Validate(); err != nil {
-		return nil, fmt.Errorf("validate pipeline: %w", err)
+		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
 	}
+	o.pipelineMft = pipeline
 	return pipeline, nil
 }
 
