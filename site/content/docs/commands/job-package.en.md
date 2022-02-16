@@ -16,7 +16,8 @@ $ copilot job package
   -n, --name string         Name of the job.
       --output-dir string   Optional. Writes the stack template and template configuration to a directory.
       --tag string          Optional. The container image tag.
-      --upload-resources    Optional. Whether to upload dependency resources (e.g., an image that needs to be built and pushed), so that the output of `copilot svc package` can be directly used for deployment.
+      --upload-assets    Optional. Whether to upload assets (container images, Lambda functions, etc.).
+                            Uploaded asset locations are filled in the template configuration.
 ```
 
 ## Examples
