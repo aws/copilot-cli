@@ -80,9 +80,7 @@ Select %s to run the task in your default VPC instead of any existing environmen
 )
 
 var (
-	taskSSMSecretsPrompt            = fmt.Sprintf(" %s to the following SSM parameters:", color.Emphasize("ssm:GetParameters"))
-	taskSecretsManagerSecretsPrompt = fmt.Sprintf(" %s to the following Secrets Manager secrets:", color.Emphasize("secretsmanager:GetSecretValue"))
-	taskSecretsPermission           = "\nDo you grant permission to the ECS/Fargate agent for these secrets?"
+	taskSecretsPermission = "\nDo you grant permission to the ECS/Fargate agent for these secrets?"
 )
 
 type runTaskVars struct {
@@ -413,7 +411,7 @@ func (o *runTaskOpts) validateSecrets() error {
 			return fmt.Errorf("failed to confirm deployment: %w", err)
 		}
 
-		if v == false {
+		if !v {
 			return fmt.Errorf("can't use secret(s) without granting access to it")
 		}
 	}
