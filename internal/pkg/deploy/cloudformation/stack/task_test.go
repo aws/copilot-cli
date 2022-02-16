@@ -31,13 +31,13 @@ func TestTaskStackConfig_Template(t *testing.T) {
 	}{
 		"should return error if unable to read": {
 			mockReadParser: func(m *mocks.MockReadParser) {
-				m.EXPECT().Parse(taskTemplatePath, gomock.Any()).Return(nil, errors.New("error reading template"))
+				m.EXPECT().Parse(taskTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("error reading template"))
 			},
 			wantedError: errors.New("read template for task stack: error reading template"),
 		},
 		"should return template body when present": {
 			mockReadParser: func(m *mocks.MockReadParser) {
-				m.EXPECT().Parse(taskTemplatePath, gomock.Any()).Return(&template.Content{
+				m.EXPECT().Parse(taskTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("This is the task template"),
 				}, nil)
 			},

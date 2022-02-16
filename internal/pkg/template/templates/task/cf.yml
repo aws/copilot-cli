@@ -44,8 +44,8 @@ Conditions:
   HasCustomPlatform:
     !Not [!Equals [!Ref OS, ""]]
   HasAppAndEnv: !And
-    - !Not [!Equals [!Ref App, ""]]
-    - !Not [!Equals [!Ref Env, ""]]
+    - !Not [ !Equals [ !Ref App, "" ] ]
+    - !Not [ !Equals [ !Ref Env, "" ] ]
 Resources:
   TaskDefinition:
     Metadata:
@@ -96,7 +96,7 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-      {{- if .Secrets}}
+      {{- if .Secrets }}
       Policies:
         - !If
           - HasAppAndEnv
@@ -106,7 +106,7 @@ Resources:
               Statement:
                 - Effect: 'Allow'
                   Action:
-                  - ssm:GetParameters
+                    - ssm:GetParameters
                   Condition:
                     StringEquals:
                       "ssm:ResourceTag/copilot-application": !Ref App
@@ -122,8 +122,17 @@ Resources:
                       "secretsmanager:ResourceTag/copilot-environment": !Ref Env
                   Resource:
                     - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
-          - !Ref AWS::NoValue
-      {{- end}}
+          - PolicyName: 'PullSecrets'
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - ssm:GetParameters
+                    - secretsmanager:GetSecretValue
+                  Resource: {{range $name, $valueFrom := .Secrets}}
+                    - {{- if isARN $valueFrom}} {{$valueFrom}} {{- else }} !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter{{$valueFrom}} {{- end}} {{end}}
+      {{- end }}
   DefaultTaskRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'

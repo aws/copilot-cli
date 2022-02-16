@@ -6,6 +6,7 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,6 +24,9 @@ const (
 // not permitted in ecs-cli generated resource names).
 func ReplaceDashesFunc(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
+}
+func IsARN(value string) bool {
+	return arn.IsARN(value)
 }
 
 // DashReplacedLogicalIDToOriginal takes a "sanitized" logical ID

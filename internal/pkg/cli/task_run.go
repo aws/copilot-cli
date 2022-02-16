@@ -79,12 +79,20 @@ Select %s to run the task in your default VPC instead of any existing applicatio
 Select %s to run the task in your default VPC instead of any existing environment.`, color.Emphasize(appEnvOptionNone))
 )
 
+var (
+	taskSSMSecretsPrompt            = fmt.Sprintf(" %s to the following SSM parameters:", color.Emphasize("ssm:GetParameters"))
+	taskSecretsManagerSecretsPrompt = fmt.Sprintf(" %s to the following Secrets Manager secrets:", color.Emphasize("secretsmanager:GetSecretValue"))
+	taskSecretsPermission           = "\nDo you grant permission to the ECS/Fargate agent for these secrets?"
+)
+
 type runTaskVars struct {
 	count  int
 	cpu    int
 	memory int
 
 	groupName string
+
+	acknowledgeSecretsAccess bool
 
 	image                 string
 	dockerfilePath        string
@@ -124,6 +132,7 @@ type runTaskOpts struct {
 	store   store
 	sel     appEnvSelector
 	spinner progress
+	prompt  prompter
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
@@ -158,13 +167,14 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
-
+	prompter := prompt.New()
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
 		fs:       &afero.Afero{Fs: afero.NewOsFs()},
 		store:    store,
-		sel:      selector.NewSelect(prompt.New(), store),
+		prompt:   prompter,
+		sel:      selector.NewSelect(prompter, store),
 		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
 		provider: sessions.NewProvider(),
 	}
@@ -371,6 +381,42 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
+	if len(o.secrets) > 0 {
+		if err := o.validateSecrets(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *runTaskOpts) validateSecrets() error {
+	if o.appName == "" && o.env == "" && !o.acknowledgeSecretsAccess {
+		fmt.Println("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
+
+		for _, value := range o.secrets {
+			if !arn.IsARN(value) || strings.Contains(value, ":ssm:") {
+				fmt.Println("* " + value)
+			}
+		}
+
+		fmt.Println("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+
+		for _, value := range o.secrets {
+			if strings.Contains(value, ":secretsmanager:") {
+				fmt.Println("* " + value)
+			}
+		}
+
+		v, err := o.prompt.Confirm(taskSecretsPermission, "")
+		if err != nil {
+			return fmt.Errorf("failed to confirm deployment: %w", err)
+		}
+
+		if v == false {
+			return fmt.Errorf("can't use secret(s) without granting access to it")
+		}
+	}
 	return nil
 }
 
@@ -952,6 +998,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", taskAppFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringVar(&vars.cluster, clusterFlag, "", clusterFlagDescription)
+	cmd.Flags().BoolVar(&vars.acknowledgeSecretsAccess, acknowledgeSecretsAccessFlag, false, acknowledgeSecretsAccessDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
@@ -1007,6 +1054,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	utilityFlags := pflag.NewFlagSet("Utility", pflag.ContinueOnError)
 	utilityFlags.AddFlag(cmd.Flags().Lookup(followFlag))
 	utilityFlags.AddFlag(cmd.Flags().Lookup(generateCommandFlag))
+	utilityFlags.AddFlag(cmd.Flags().Lookup(acknowledgeSecretsAccessFlag))
 
 	// prettify help menu.
 	cmd.Annotations = map[string]string{
