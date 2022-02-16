@@ -32,7 +32,7 @@ const (
 	imageTagFlag          = "tag"
 	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
-	uploadAssetsFlag      = "upload-resources"
+	uploadAssetsFlag      = "upload-assets"
 	limitFlag             = "limit"
 	followFlag            = "follow"
 	sinceFlag             = "since"
@@ -202,7 +202,7 @@ const (
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
-	uploadAssetsFlagDescription   = `Optional. Whether to upload assets (container images, Lambda functions).
+	uploadAssetsFlagDescription   = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
 Uploaded asset locations are filled in the template configuration.`
 	prodEnvFlagDescription = "If the environment contains production services."
 
