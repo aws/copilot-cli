@@ -532,18 +532,21 @@ If you proceed without at least two public subnets, you will not be able to depl
 			IsPublic: false,
 		})
 		if err != nil {
-			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
-- Create new private subnets and then import them.
-- Use the default Copilot environment configuration.
+			if errors.Is(err, selector.ErrSubnetsNotFound) {
+				log.Warningf(`No existing private subnets were found in VPC %s. 
+If you proceed without private subnets, you will not be able to add them after this environment is created.
 `, o.importVPC.ID)
+			} else {
+				return fmt.Errorf("select private subnets: %w", err)
 			}
-			return fmt.Errorf("select private subnets: %w", err)
 		}
-		if len(privateSubnets) < 2 {
+		if len(privateSubnets) == 1 {
 			return errors.New("select private subnets: at least two private subnets must be selected")
 		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
+	}
+	if len(o.importVPC.PublicSubnetIDs) + len(o.importVPC.PrivateSubnetIDs) == 0 {
+		return errors.New("VPC must have subnets in order to proceed with environment creation")
 	}
 	return nil
 }
