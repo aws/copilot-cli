@@ -545,6 +545,9 @@ If you proceed without private subnets, you will not be able to add them after t
 		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
 	}
+	if len(o.importVPC.PublicSubnetIDs) + len(o.importVPC.PrivateSubnetIDs) == 0 {
+		return errors.New("VPC must have subnets in order to proceed with environment creation")
+	}
 	return nil
 }
 

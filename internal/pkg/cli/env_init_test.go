@@ -630,6 +630,23 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},
+		"error if no subnets selected": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				ID: "mockVPC",
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return(nil, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return(nil, nil)
+			},
+			wantedError: fmt.Errorf("VPC must have subnets in order to proceed with environment creation"),
+		},
 		"fail to get VPC CIDR": {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
