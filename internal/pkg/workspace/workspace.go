@@ -43,7 +43,7 @@ const (
 	ymlFileExtension = ".yml"
 
 	dockerfileName = "dockerfile"
-	dockerignoreName = "dockerignore"
+	dockerignoreName = ".dockerignore"
 )
 
 // Summary is a description of what's associated with this workspace.
