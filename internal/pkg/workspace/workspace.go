@@ -458,7 +458,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 		// Add current file if it is a Dockerfile and not a directory; otherwise continue.
 		if !wdFile.IsDir() {
 			fname := wdFile.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.Contains(strings.ToLower(fname), dockerignoreName) {
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
 				path := filepath.Dir(fname) + "/" + fname
 				dockerfiles = append(dockerfiles, path)
 			}
