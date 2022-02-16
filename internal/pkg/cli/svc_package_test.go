@@ -240,7 +240,7 @@ count: 1`
 				envName:          "test",
 				tag:              "1234",
 				clientConfigured: true,
-				uploadResources:  true,
+				uploadAssets:     true,
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
 				mockWs := mocks.NewMockwsWlDirReader(ctrl)
