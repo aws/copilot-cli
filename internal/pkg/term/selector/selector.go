@@ -126,7 +126,7 @@ type WsWorkloadLister interface {
 
 // wsPipelineLister wraps the method to get pipelines in the current workspace.
 type wsPipelineLister interface {
-	ListPipelines() (map[string]string, error)
+	ListPipelines() ([]workspace.Pipeline, error)
 }
 
 // WsPipelineSelector is a pipeline selector.
@@ -267,8 +267,9 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 }
 
 // NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(ws WsPipelineSelector) *PipelineSelect {
+func NewWsPipelineSelect(prompt Prompter, ws WsPipelineSelector) *PipelineSelect {
 	return &PipelineSelect{
+		prompt: prompt,
 		ws: ws,
 	}
 }
@@ -707,18 +708,19 @@ func (s *PipelineSelect) Pipeline(msg, help string) (name, path string, err erro
 		return "", "", errors.New("no pipelines found")
 	}
 	var pipelineNames []string
-	for k := range pipelines {
-		pipelineNames = append(pipelineNames, k)
+	for _, pipeline := range pipelines {
+		pipelineNames = append(pipelineNames, pipeline.Name)
 	}
 	if len(pipelineNames) == 1 {
 		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelineNames[0]))
-		return pipelineNames[0], pipelines[pipelineNames[0]], nil
+
+		return pipelineNames[0], s.pipelinePath(pipelines, pipelineNames[0]), nil
 	}
 	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {
 		return "", "", fmt.Errorf("select pipeline: %w", err)
 	}
-	return selectedPipeline, pipelines[selectedPipeline], nil
+	return selectedPipeline, s.pipelinePath(pipelines, selectedPipeline), nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.
@@ -860,6 +862,128 @@ func (s *Select) Application(msg, help string, additionalOpts ...string) (string
 	return app, nil
 }
 
+// Dockerfile asks the user to select from a list of Dockerfiles in the current
+// directory or one level down. If no dockerfiles are found, it asks for a custom path.
+func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+	dockerfiles, err := s.ws.ListDockerfiles()
+	if err != nil {
+		return "", fmt.Errorf("list Dockerfiles: %w", err)
+	}
+	var sel string
+	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
+	sel, err = s.prompt.SelectOne(
+		selPrompt,
+		selHelp,
+		dockerfiles,
+		prompt.WithFinalMessage(dockerfileFinalMsg),
+	)
+	if err != nil {
+		return "", fmt.Errorf("select Dockerfile: %w", err)
+	}
+	if sel != dockerfilePromptUseCustom {
+		return sel, nil
+	}
+	sel, err = s.prompt.Get(
+		notFoundPrompt,
+		notFoundHelp,
+		pathValidator,
+		prompt.WithFinalMessage(dockerfileFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
+	}
+	return sel, nil
+}
+
+// Schedule asks the user to select either a rate, preset cron, or custom cron.
+func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+	scheduleType, err := s.prompt.SelectOne(
+		scheduleTypePrompt,
+		scheduleTypeHelp,
+		scheduleTypes,
+		prompt.WithFinalMessage("Schedule type:"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get schedule type: %w", err)
+	}
+	switch scheduleType {
+	case rate:
+		return s.askRate(rateValidator)
+	case fixedSchedule:
+		return s.askCron(scheduleValidator)
+	default:
+		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
+	}
+}
+
+// Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
+// across all environments* and returns the topic structs.
+func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
+	envs, err := s.config.ListEnvironments(app)
+	if err != nil {
+		return nil, fmt.Errorf("list environments: %w", err)
+	}
+	if len(envs) == 0 {
+		log.Infoln("No environments are currently deployed. Skipping subscription selection.")
+		return nil, nil
+	}
+
+	envTopics := make(map[string][]deploy.Topic, len(envs))
+	for _, env := range envs {
+		topics, err := s.deployStoreSvc.ListSNSTopics(app, env.Name)
+		if err != nil {
+			return nil, fmt.Errorf("list SNS topics: %w", err)
+		}
+		envTopics[env.Name] = topics
+	}
+
+	// Get only topics deployed in all environments.
+	// Computes the intersection of the `envTopics` lists.
+	overallTopics := make(map[string]deploy.Topic)
+	// Initialize the list of topics.
+	for _, topic := range envTopics[envs[0].Name] {
+		overallTopics[topic.String()] = topic
+	}
+	// Then do the pairwise intersection of all other envs.
+	for _, env := range envs[1:] {
+		topics := envTopics[env.Name]
+		overallTopics = intersect(overallTopics, topics)
+	}
+
+	if len(overallTopics) == 0 {
+		log.Infoln("No SNS topics are currently deployed in all environments. You can customize subscriptions in your manifest.")
+		return nil, nil
+	}
+	// Create the list of options.
+	var topicDescriptions []string
+	for t := range overallTopics {
+		topicDescriptions = append(topicDescriptions, t)
+	}
+	// Sort descriptions by ARN, which implies sorting by workload name and then by topic name due to
+	// behavior of `intersect`. That is, the `overallTopics` map is guaranteed to contain topics
+	// referencing the same environment.
+	sort.Slice(topicDescriptions, func(i, j int) bool {
+		return overallTopics[topicDescriptions[i]].ARN() < overallTopics[topicDescriptions[j]].ARN()
+	})
+
+	selectedTopics, err := s.prompt.MultiSelect(
+		promptMsg,
+		help,
+		topicDescriptions,
+		nil,
+		prompt.WithFinalMessage(topicFinalMessage),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select SNS topics: %w", err)
+	}
+
+	// Get the topics from the topic descriptions again.
+	var topics []deploy.Topic
+	for _, t := range selectedTopics {
+		topics = append(topics, overallTopics[t])
+	}
+	return topics, nil
+}
+
 func (s *Select) retrieveApps() ([]string, error) {
 	apps, err := s.config.ListApplications()
 	if err != nil {
@@ -932,57 +1056,13 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 	return localWlNames, nil
 }
 
-// Dockerfile asks the user to select from a list of Dockerfiles in the current
-// directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
-	dockerfiles, err := s.ws.ListDockerfiles()
-	if err != nil {
-		return "", fmt.Errorf("list Dockerfiles: %w", err)
+func (s *PipelineSelect) pipelinePath(pipelines []workspace.Pipeline, name string) string {
+	for _, pipeline := range pipelines {
+		if pipeline.Name == name {
+			return pipeline.Path
+		}
 	}
-	var sel string
-	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
-	sel, err = s.prompt.SelectOne(
-		selPrompt,
-		selHelp,
-		dockerfiles,
-		prompt.WithFinalMessage(dockerfileFinalMsg),
-	)
-	if err != nil {
-		return "", fmt.Errorf("select Dockerfile: %w", err)
-	}
-	if sel != dockerfilePromptUseCustom {
-		return sel, nil
-	}
-	sel, err = s.prompt.Get(
-		notFoundPrompt,
-		notFoundHelp,
-		pathValidator,
-		prompt.WithFinalMessage(dockerfileFinalMsg))
-	if err != nil {
-		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
-	}
-	return sel, nil
-}
-
-// Schedule asks the user to select either a rate, preset cron, or custom cron.
-func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
-	scheduleType, err := s.prompt.SelectOne(
-		scheduleTypePrompt,
-		scheduleTypeHelp,
-		scheduleTypes,
-		prompt.WithFinalMessage("Schedule type:"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("get schedule type: %w", err)
-	}
-	switch scheduleType {
-	case rate:
-		return s.askRate(rateValidator)
-	case fixedSchedule:
-		return s.askCron(scheduleValidator)
-	default:
-		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
-	}
+	return ""
 }
 
 func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
@@ -1070,75 +1150,6 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 		}
 	}
 	return outServices, nil
-}
-
-// Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
-// across all environments* and returns the topic structs.
-func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
-	envs, err := s.config.ListEnvironments(app)
-	if err != nil {
-		return nil, fmt.Errorf("list environments: %w", err)
-	}
-	if len(envs) == 0 {
-		log.Infoln("No environments are currently deployed. Skipping subscription selection.")
-		return nil, nil
-	}
-
-	envTopics := make(map[string][]deploy.Topic, len(envs))
-	for _, env := range envs {
-		topics, err := s.deployStoreSvc.ListSNSTopics(app, env.Name)
-		if err != nil {
-			return nil, fmt.Errorf("list SNS topics: %w", err)
-		}
-		envTopics[env.Name] = topics
-	}
-
-	// Get only topics deployed in all environments.
-	// Computes the intersection of the `envTopics` lists.
-	overallTopics := make(map[string]deploy.Topic)
-	// Initialize the list of topics.
-	for _, topic := range envTopics[envs[0].Name] {
-		overallTopics[topic.String()] = topic
-	}
-	// Then do the pairwise intersection of all other envs.
-	for _, env := range envs[1:] {
-		topics := envTopics[env.Name]
-		overallTopics = intersect(overallTopics, topics)
-	}
-
-	if len(overallTopics) == 0 {
-		log.Infoln("No SNS topics are currently deployed in all environments. You can customize subscriptions in your manifest.")
-		return nil, nil
-	}
-	// Create the list of options.
-	var topicDescriptions []string
-	for t := range overallTopics {
-		topicDescriptions = append(topicDescriptions, t)
-	}
-	// Sort descriptions by ARN, which implies sorting by workload name and then by topic name due to
-	// behavior of `intersect`. That is, the `overallTopics` map is guaranteed to contain topics
-	// referencing the same environment.
-	sort.Slice(topicDescriptions, func(i, j int) bool {
-		return overallTopics[topicDescriptions[i]].ARN() < overallTopics[topicDescriptions[j]].ARN()
-	})
-
-	selectedTopics, err := s.prompt.MultiSelect(
-		promptMsg,
-		help,
-		topicDescriptions,
-		nil,
-		prompt.WithFinalMessage(topicFinalMessage),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("select SNS topics: %w", err)
-	}
-
-	// Get the topics from the topic descriptions again.
-	var topics []deploy.Topic
-	for _, t := range selectedTopics {
-		topics = append(topics, overallTopics[t])
-	}
-	return topics, nil
 }
 
 func intersect(firstMap map[string]deploy.Topic, secondArr []deploy.Topic) map[string]deploy.Topic {

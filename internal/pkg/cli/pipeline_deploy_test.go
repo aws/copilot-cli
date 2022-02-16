@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -40,7 +41,12 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			inPipelineName: "nonexistentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ListPipelines().Return(map[string]string{"existentPipeline": "copilot/pipeline.yml"}, nil)
+				m.EXPECT().ListPipelines().Return([]workspace.Pipeline{
+					{
+						Name: "existentPipeline",
+						Path: "copilot/pipeline.yml",
+					},
+				}, nil)
 			},
 
 			wantedError: errors.New("pipeline nonexistentPipeline not found in the workspace"),
@@ -50,7 +56,12 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			inPipelineName: "existentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ListPipelines().Return(map[string]string{"existentPipeline": "copilot/pipeline.yml"}, nil)
+				m.EXPECT().ListPipelines().Return([]workspace.Pipeline{
+					{
+						Name: "existentPipeline",
+						Path: "copilot/pipeline.yml",
+					},
+				}, nil)
 			},
 
 			wantedPath:  "copilot/pipeline.yml",

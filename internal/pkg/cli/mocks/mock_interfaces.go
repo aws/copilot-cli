@@ -2709,10 +2709,10 @@ func (m *MockwsPipelineReader) EXPECT() *MockwsPipelineReaderMockRecorder {
 }
 
 // ListPipelines mocks base method.
-func (m *MockwsPipelineReader) ListPipelines() (map[string]string, error) {
+func (m *MockwsPipelineReader) ListPipelines() ([]workspace.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].([]workspace.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2792,10 +2792,10 @@ func (m *MockwsPipelineGetter) EXPECT() *MockwsPipelineGetterMockRecorder {
 }
 
 // ListPipelines mocks base method.
-func (m *MockwsPipelineGetter) ListPipelines() (map[string]string, error) {
+func (m *MockwsPipelineGetter) ListPipelines() ([]workspace.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].([]workspace.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

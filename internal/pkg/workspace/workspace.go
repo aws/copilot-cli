@@ -153,9 +153,15 @@ func (ws *Workspace) ListWorkloads() ([]string, error) {
 	})
 }
 
-// ListPipelines returns the names of all pipelines in the workspace.
-func (ws *Workspace) ListPipelines() (map[string]string, error) {
-	pipelines := make(map[string]string)
+// Pipeline holds identifying information about a pipeline.
+type Pipeline struct {
+	Name string
+	Path string
+}
+
+// ListPipelines returns all pipelines in the workspace.
+func (ws *Workspace) ListPipelines() ([]Pipeline, error) {
+	var pipelines []Pipeline
 	// Look for legacy pipeline.
 	legacyPath, err := ws.PipelineManifestLegacyPath()
 	if err != nil {
@@ -165,7 +171,10 @@ func (ws *Workspace) ListPipelines() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	pipelines[manifest.Name] = legacyPath
+	pipelines = append(pipelines, Pipeline{
+		Name: manifest.Name,
+		Path: legacyPath,
+	})
 	// Look for other pipelines.
 	pipelinesPath, err := ws.pipelinesDirPath()
 	if err != nil {
@@ -192,7 +201,10 @@ func (ws *Workspace) ListPipelines() (map[string]string, error) {
 				if err != nil {
 					return nil, err
 				}
-				pipelines[manifest.Name] = path
+				pipelines = append(pipelines, Pipeline{
+					Name: manifest.Name,
+					Path: path,
+				})
 			}
 		}
 	}

@@ -288,7 +288,7 @@ type wsPipelineReader interface {
 type wsPipelineGetter interface {
 	wsPipelineManifestReader
 	wlLister
-	ListPipelines() (map[string]string, error)
+	ListPipelines() ([]workspace.Pipeline, error)
 	PipelineManifestLegacyPath() (string, error)
 }
 

@@ -79,6 +79,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", vars.appName, err)
 	}
+	prompter := prompt.New()
 
 	defaultSession, err := sessions.NewProvider().Default()
 	if err != nil {
@@ -93,13 +94,13 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	return &deployPipelineOpts{
 		app:                app,
 		ws:                 ws,
-		sel:                selector.NewWsPipelineSelect(ws),
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
 		deployPipelineVars: vars,
 		envStore:           store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:             prompt.New(),
+		prompt:             prompter,
+		sel:                selector.NewWsPipelineSelect(prompter, ws),
 		codestar:           cs.New(defaultSession),
 	}, nil
 }
@@ -190,9 +191,9 @@ func (o *deployPipelineOpts) validatePipelineName() error {
 	if err != nil {
 		return fmt.Errorf("list pipelines: %w", err)
 	}
-	for name, path := range pipelines {
-		if name == o.name {
-			o.path = path
+	for _, pipeline := range pipelines {
+		if pipeline.Name == o.name {
+			o.path = pipeline.Path
 			return nil
 		}
 	}

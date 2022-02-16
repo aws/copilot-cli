@@ -426,42 +426,42 @@ func (mr *MockWsWorkloadListerMockRecorder) ListWorkloads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockWsWorkloadLister)(nil).ListWorkloads))
 }
 
-// MockWsPipelineLister is a mock of WsPipelineLister interface.
-type MockWsPipelineLister struct {
+// MockwsPipelineLister is a mock of wsPipelineLister interface.
+type MockwsPipelineLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockWsPipelineListerMockRecorder
+	recorder *MockwsPipelineListerMockRecorder
 }
 
-// MockWsPipelineListerMockRecorder is the mock recorder for MockWsPipelineLister.
-type MockWsPipelineListerMockRecorder struct {
-	mock *MockWsPipelineLister
+// MockwsPipelineListerMockRecorder is the mock recorder for MockwsPipelineLister.
+type MockwsPipelineListerMockRecorder struct {
+	mock *MockwsPipelineLister
 }
 
-// NewMockWsPipelineLister creates a new mock instance.
-func NewMockWsPipelineLister(ctrl *gomock.Controller) *MockWsPipelineLister {
-	mock := &MockWsPipelineLister{ctrl: ctrl}
-	mock.recorder = &MockWsPipelineListerMockRecorder{mock}
+// NewMockwsPipelineLister creates a new mock instance.
+func NewMockwsPipelineLister(ctrl *gomock.Controller) *MockwsPipelineLister {
+	mock := &MockwsPipelineLister{ctrl: ctrl}
+	mock.recorder = &MockwsPipelineListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockWsPipelineLister) EXPECT() *MockWsPipelineListerMockRecorder {
+func (m *MockwsPipelineLister) EXPECT() *MockwsPipelineListerMockRecorder {
 	return m.recorder
 }
 
 // ListPipelines mocks base method.
-func (m *MockWsPipelineLister) ListPipelines() (map[string]string, error) {
+func (m *MockwsPipelineLister) ListPipelines() ([]workspace.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].([]workspace.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListPipelines indicates an expected call of ListPipelines.
-func (mr *MockWsPipelineListerMockRecorder) ListPipelines() *gomock.Call {
+func (mr *MockwsPipelineListerMockRecorder) ListPipelines() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockWsPipelineLister)(nil).ListPipelines))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockwsPipelineLister)(nil).ListPipelines))
 }
 
 // MockWsPipelineSelector is a mock of WsPipelineSelector interface.
@@ -488,10 +488,10 @@ func (m *MockWsPipelineSelector) EXPECT() *MockWsPipelineSelectorMockRecorder {
 }
 
 // ListPipelines mocks base method.
-func (m *MockWsPipelineSelector) ListPipelines() (map[string]string, error) {
+func (m *MockWsPipelineSelector) ListPipelines() ([]workspace.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].([]workspace.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -515,7 +514,7 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 		copilotDir string
 		fs         func() afero.Fs
 
-		wantedPipelines map[string]string
+		wantedPipelines []Pipeline
 		wantedErr       error
 	}{
 		"success finding legacy pipeline (in both copilot/ and copilot/pipelines) and other pipelines, weeding out buildspecs": {
@@ -558,7 +557,21 @@ name: buildspecInPipelinesDir
 				return fs
 			},
 
-			wantedPipelines: map[string]string{"legacyInCopiDir": "/copilot/pipeline.yml", "legacyInPipelinesDir": "/copilot/pipelines/pipeline.yml", "otherInPipelinesDir": "/copilot/pipelines/other.yml"},
+			wantedPipelines: []Pipeline{
+				{
+				Name: "legacyInCopiDir",
+				Path: "/copilot/pipeline.yml",
+			},
+				{
+					Name: "otherInPipelinesDir",
+					Path: "/copilot/pipelines/other.yml",
+				},
+			{
+					Name: "legacyInPipelinesDir",
+					Path: "/copilot/pipelines/pipeline.yml",
+			},
+		},
+
 			wantedErr:       nil,
 		},
 	}
@@ -576,7 +589,7 @@ name: buildspecInPipelinesDir
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.True(t, reflect.DeepEqual(tc.wantedPipelines, pipelines))
+				require.Equal(t, tc.wantedPipelines, pipelines)
 			}
 		})
 	}
