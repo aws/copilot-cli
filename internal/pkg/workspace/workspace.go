@@ -477,7 +477,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 				continue
 			}
 			fname := f.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.Contains(strings.ToLower(fname), dockerignoreName) {
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
 				path := wdFile.Name() + "/" + f.Name()
 				dockerfiles = append(dockerfiles, path)
 			}
