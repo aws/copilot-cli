@@ -157,8 +157,8 @@ Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
-	acknowledgeSecretsAccessDescription = fmt.Sprintf(`Optional. If provided, does not ask grant permission for secrets. 
-Cannot be specified without '%s.`, acknowledgeSecretsAccessFlag)
+	acknowledgeSecretsAccessDescription = fmt.Sprintf(`Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag. 
+This flag is useful only when --secrets is specified`)
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.

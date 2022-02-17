@@ -80,7 +80,8 @@ Select %s to run the task in your default VPC instead of any existing environmen
 )
 
 var (
-	taskSecretsPermission = "\nDo you grant permission to the ECS/Fargate agent for these secrets?"
+	taskSecretsPermissionPrompt     = "\nDo you grant permission to the ECS/Fargate agent for these secrets? "
+	taskSecretsPermissionPromptHelp = "Copilot needs permission to access secrets. select yes to grant permission."
 )
 
 type runTaskVars struct {
@@ -89,8 +90,6 @@ type runTaskVars struct {
 	memory int
 
 	groupName string
-
-	acknowledgeSecretsAccess bool
 
 	image                 string
 	dockerfilePath        string
@@ -107,11 +106,12 @@ type runTaskVars struct {
 	appName                     string
 	useDefaultSubnetsAndCluster bool
 
-	envVars      map[string]string
-	secrets      map[string]string
-	command      string
-	entrypoint   string
-	resourceTags map[string]string
+	envVars                  map[string]string
+	secrets                  map[string]string
+	acknowledgeSecretsAccess bool
+	command                  string
+	entrypoint               string
+	resourceTags             map[string]string
 
 	follow                bool
 	generateCommandTarget string
@@ -379,40 +379,40 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if len(o.secrets) > 0 {
-		if err := o.validateSecrets(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-func (o *runTaskOpts) validateSecrets() error {
+func (o *runTaskOpts) confirmSecretsAccess() error {
+
+	if o.executionRole != "" {
+		return nil
+	}
+
 	if o.appName == "" && o.env == "" && !o.acknowledgeSecretsAccess {
-		fmt.Println("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
+		log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
 
 		for _, value := range o.secrets {
+			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
 			if !arn.IsARN(value) || strings.Contains(value, ":ssm:") {
-				fmt.Println("* " + value)
+				log.Infoln("* " + value)
 			}
 		}
 
-		fmt.Println("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+		log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
 
 		for _, value := range o.secrets {
 			if strings.Contains(value, ":secretsmanager:") {
-				fmt.Println("* " + value)
+				log.Infoln("* " + value)
 			}
 		}
 
-		v, err := o.prompt.Confirm(taskSecretsPermission, "")
+		secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
 		if err != nil {
-			return fmt.Errorf("failed to confirm deployment: %w", err)
+			return fmt.Errorf("prompt to confirm secrets access: %w", err)
 		}
 
-		if !v {
-			return fmt.Errorf("can't use secret(s) without granting access to it")
+		if !secretsAccessConfirmed {
+			return errors.New("access to secrets denied")
 		}
 	}
 	return nil
@@ -535,6 +535,11 @@ func (o *runTaskOpts) Ask() error {
 			return err
 		}
 		if err := o.askEnvName(); err != nil {
+			return err
+		}
+	}
+	if len(o.secrets) > 0 {
+		if err := o.confirmSecretsAccess(); err != nil {
 			return err
 		}
 	}
@@ -1045,6 +1050,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	taskFlags.AddFlag(cmd.Flags().Lookup(archFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(envVarsFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(secretsFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(acknowledgeSecretsAccessFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(commandFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(entrypointFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(resourceTagsFlag))
@@ -1052,7 +1058,6 @@ func BuildTaskRunCmd() *cobra.Command {
 	utilityFlags := pflag.NewFlagSet("Utility", pflag.ContinueOnError)
 	utilityFlags.AddFlag(cmd.Flags().Lookup(followFlag))
 	utilityFlags.AddFlag(cmd.Flags().Lookup(generateCommandFlag))
-	utilityFlags.AddFlag(cmd.Flags().Lookup(acknowledgeSecretsAccessFlag))
 
 	// prettify help menu.
 	cmd.Annotations = map[string]string{
