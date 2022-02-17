@@ -43,7 +43,7 @@ const (
 	ymlFileExtension = ".yml"
 
 	dockerfileName = "dockerfile"
-	dockerignoreName = "dockerignore"
+	dockerignoreName = ".dockerignore"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -153,7 +153,7 @@ func (ws *Workspace) ListJobs() ([]string, error) {
 	})
 }
 
-// ListWorkloads returns the name of all the workloads in the workspace.
+// ListWorkloads returns the name of all the workloads in the workspace (could be unregistered in SSM).
 func (ws *Workspace) ListWorkloads() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
 		return true
@@ -458,7 +458,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 		// Add current file if it is a Dockerfile and not a directory; otherwise continue.
 		if !wdFile.IsDir() {
 			fname := wdFile.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.Contains(strings.ToLower(fname), dockerignoreName) {
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
 				path := filepath.Dir(fname) + "/" + fname
 				dockerfiles = append(dockerfiles, path)
 			}
@@ -477,7 +477,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 				continue
 			}
 			fname := f.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.Contains(strings.ToLower(fname), dockerignoreName) {
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
 				path := wdFile.Name() + "/" + f.Name()
 				dockerfiles = append(dockerfiles, path)
 			}
