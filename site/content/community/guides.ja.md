@@ -14,14 +14,12 @@ Copilot な仲間たちとアプリケーションや動画、ブログポスト
 | [**AWS Copilot: an application-first CLI for containers on AWS**](https://aws.amazon.com/blogs/containers/aws-copilot-an-application-first-cli-for-containers-on-aws/) by <a href="https://twitter.com/efekarakus">@efekarakus</a> | Efe walks through the design tenets of the CLI: why they were chosen, how they map to Copilot features, and the vision for how the CLI will evolve in the future.  |
 | [**Introducing AWS Copilot**](https://aws.amazon.com/blogs/containers/introducing-aws-copilot/) by <a href="https://twitter.com/nathankpeck">@nathankpeck</a> | Nathan explains how with the AWS Copilot CLI you can go from idea to implementation much faster, with the confidence that the infrastructure you have deployed has production-ready configuration. |
 
-
-
 ## 動画
 
 | タイトル     | 概要                         |
 | ----------- | ------------------------------------ |
 | [**Build, Operate, and Observe a Containerized Application on AWS Fargate**](https://nathanpeck.com/build-operate-and-observe-container-application-on-aws-fargate/) by <a href="https://twitter.com/nathankpeck">@nathankpeck</a> | AWS's indefatigable Nathan Peck is back! In this session for AWS Application Modernization Day, he champions containers and demonstrates the deployment of a load-balanced web service and a load-testing scheduled job. |
-| [**Using Jenkins and AWS Copilot CLI to Deploy to AWS App Runner**](https://www.youtube.com/watch?v=ajgQ4WfgKA8) by <a href="https://twitter.com/DarinPope">@DarinPope</a> | Darin, a developer advocate for CloudBees, uses AWS Copilot and a Jenkinsfile to deploy to AWS AppRunner. | 
+| [**Using Jenkins and AWS Copilot CLI to Deploy to AWS App Runner**](https://www.youtube.com/watch?v=ajgQ4WfgKA8) by <a href="https://twitter.com/DarinPope">@DarinPope</a> | Darin, a developer advocate for CloudBees, uses AWS Copilot and a Jenkinsfile to deploy to AWS AppRunner. |
 | [**Deploy a Web App with AWS CoPilot**](https://www.youtube.com/watch?v=OLiO5LLl6Ng&list=PLoxFga2t8Vw0tB6QRMZiADnAvmuTUZcc6) by <a href="https://twitter.com/edkruegerdata">@edkruegerdata</a> | This three-part series includes "Creating an Administrator User Group in AWS," "Create an IAM Account on AWS," and "Deploying the Web App." |
 | [**Container Day: Amazon ECS Edition-- Demo: deploy a modern application on AWS Fargate with ECS Copilot**](https://www.youtube.com/watch?v=k01AdJC-dcA&t=14236s) by <a href="https://twitter.com/efekarakus">@efekarakus</a> and <a href="https://twitter.com/realadamjkeller">@realadamjkeller</a> | Efe goes beyond the basics, demoing how to grow [an application](https://github.com/efekarakus/day2-with-copilot); he highlights the `alias` field, secrets and environment variables, addons, and more. |
 | [**Copilot– What AWS ECS and Fargate Container Management Should Have Been**](https://www.youtube.com/watch?v=YCCFK2RRm7U) by <a href="https://twitter.com/vfarcic">@vfarcic</a> | Viktor lauds Copilot for its simplicity and ease of use in this clear, step-by-step demo. |
@@ -33,8 +31,6 @@ Copilot な仲間たちとアプリケーションや動画、ブログポスト
 | [**How to Deploy a .NET Application to Amazon Elastic Container Service (ECS) with AWS Copilot**](https://youtu.be/nWaw8Rp8JgQ) by <a href="https://twitter.com/ignacioafuentes">@ignacioafuentes</a> | Get a demo on how to build and deploy a .NET application on Amazon ECS and AWS Fargate. |
 | [**AWS What's Next**](https://www.youtube.com/watch?v=vmTJgVDERZU) by <a href="https://twitter.com/nathankpeck">@nathankpeck</a> and <a href="https://twitter.com/efekarakus">@efekarakus</a> | Nathan and Efe discuss what makes AWS Copilot unique compared to other infrastructure provisioning tools and then demo an overview of the existing commands. |
 
-
-
 ## コード・サンプル
 
 | リポジトリ     | 詳細                         | 特徴 |
@@ -45,10 +41,9 @@ Copilot な仲間たちとアプリケーションや動画、ブログポスト
 [**github.com/copilot-example-voting-app**](https://github.com/copilot-example-voting-app), [**#1745**](https://github.com/aws/copilot-cli/discussions/1745) | A voting application distributed over three ECS services created with AWS Copilot. | Amazon Aurora PostgreSQL database, service discovery, autoscaling |
 [**#1925**](https://github.com/aws/copilot-cli/discussions/1925) | Show-and-tell explaining how you can do continuous deployments from branches with AWS Copilot pipelines. | Branch-based deploys, AWS CodePipeline |
 
-
-
 ## ワークショップ
 
 | タイトル     | 詳細                         |
 | ----------- | ------------------------------------ |
 [**ECS Workshop**](https://ecsworkshop.com/microservices/) | In this workshop, we deploy a three-tier microservices application using the AWS Copilot CLI. (Optional accompanying video [here](https://www.youtube.com/watch?v=o8o9Ea9o0aI).) |
+[**Copilot Primer Workshop**](https://catalog.us-east-1.prod.workshops.aws/workshops/d03316be-3c29-49db-8dc3-eb196c1778c9/ja-JP) | In this workshop, you will experience AWS Copilot CLI through the creation of a sample to-do list application. With AWS Copilot CLI, you initialize your application, create a development environment and deploy containers onto the environment. You can also deploy your containers from a pipeline. |
