@@ -699,13 +699,13 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 }
 
 // Pipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *PipelineSelect) Pipeline(msg, help string) (name, path string, err error) {
+func (s *PipelineSelect) Pipeline(msg, help string) (*workspace.Pipeline, error) {
 	pipelines, err := s.ws.ListPipelines()
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	if len(pipelines) == 0 {
-		return "", "", errors.New("no pipelines found")
+		return nil, errors.New("no pipelines found")
 	}
 	var pipelineNames []string
 	for _, pipeline := range pipelines {
@@ -713,14 +713,19 @@ func (s *PipelineSelect) Pipeline(msg, help string) (name, path string, err erro
 	}
 	if len(pipelineNames) == 1 {
 		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelineNames[0]))
-
-		return pipelineNames[0], s.pipelinePath(pipelines, pipelineNames[0]), nil
+		return &workspace.Pipeline{
+			Name: pipelineNames[0],
+			Path: s.pipelinePath(pipelines, pipelineNames[0]),
+		}, nil
 	}
 	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {
-		return "", "", fmt.Errorf("select pipeline: %w", err)
+		return nil, fmt.Errorf("select pipeline: %w", err)
 	}
-	return selectedPipeline, s.pipelinePath(pipelines, selectedPipeline), nil
+	return &workspace.Pipeline{
+		Name: selectedPipeline,
+		Path: s.pipelinePath(pipelines, selectedPipeline),
+	}, nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.

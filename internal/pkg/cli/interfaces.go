@@ -479,7 +479,7 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
-	Pipeline(prompt, help string) (name, path string, err error)
+	Pipeline(prompt, help string) (*workspace.Pipeline, error)
 }
 
 type wsSelector interface {

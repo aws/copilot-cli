@@ -113,17 +113,6 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			},
 		},
 	}
-	mockPipelineManifestWithoutSecret := &manifest.PipelineManifest{
-		Name:    testPipelineName,
-		Version: 1,
-		Source: &manifest.Source{
-			ProviderName: "GitHub",
-			Properties: map[string]interface{}{
-				"repository": "aws/somethingCool",
-				"branch":     "main",
-			},
-		},
-	}
 	testCases := map[string]struct {
 		skipConfirmation bool
 		inAppName        string
@@ -135,30 +124,6 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 		wantedSecret string
 		wantedError error
 	}{
-		"gets name of legacy pipeline and secret": {
-			skipConfirmation: true,
-			inAppName: testAppName,
-
-			callMocks: func(m deletePipelineMocks) {
-				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
-			},
-			wantedPipelineName: testPipelineName,
-			wantedSecret: "github-token-badgoose-backend",
-			wantedError: nil,
-		},
-		"gets name of legacy pipeline, no secret": {
-			skipConfirmation: true,
-			inAppName: testAppName,
-
-			callMocks: func(m deletePipelineMocks) {
-				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifestWithoutSecret, nil)
-			},
-			wantedPipelineName: testPipelineName,
-			wantedSecret: "",
-			wantedError: nil,
-		},
 		"skips confirmation works": {
 			skipConfirmation: true,
 			inAppName:        testAppName,
@@ -235,6 +200,17 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {
 	testError := errors.New("some error")
+	mockPipelineManifest := &manifest.PipelineManifest{
+		Name:    testPipelineName,
+		Version: 1,
+		Source: &manifest.Source{
+			ProviderName: "GitHub",
+			Properties: map[string]interface{}{
+				"repository":          "aws/somethingCool",
+				"branch":              "main",
+			},
+		},
+	}
 	testCases := map[string]struct {
 		deleteSecret     bool
 		inAppName        string
@@ -250,6 +226,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			inPipelineName: testPipelineName,
 			setupMocks: func(mocks deletePipelineMocks) {
 				gomock.InOrder(
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
 					mocks.secretsmanager.EXPECT().DeleteSecret(gomock.Any()).Times(0),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
@@ -268,6 +246,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deletePipelineMocks) {
 				gomock.InOrder(
 					// no confirmation prompt for deleting secret
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
@@ -285,6 +265,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 			setupMocks: func(mocks deletePipelineMocks) {
 				gomock.InOrder(
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
 					mocks.prompt.EXPECT().Confirm(
 						fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, testPipelineSecret, testPipelineName),
 						pipelineDeleteSecretConfirmHelp,
@@ -306,6 +288,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 			setupMocks: func(mocks deletePipelineMocks) {
 				gomock.InOrder(
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
 					mocks.prompt.EXPECT().Confirm(
 						fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, testPipelineSecret, testPipelineName),
 						pipelineDeleteSecretConfirmHelp,
@@ -329,6 +313,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 			setupMocks: func(mocks deletePipelineMocks) {
 				gomock.InOrder(
+					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Times(1).Return(testError),

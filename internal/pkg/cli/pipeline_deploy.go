@@ -71,7 +71,8 @@ type deployPipelineOpts struct {
 	newSvcListCmd    func(io.Writer) cmd
 	newJobListCmd    func(io.Writer) cmd
 
-	path                         string
+	// cached variables
+	pipeline                     *workspace.Pipeline
 	shouldPromptUpdateConnection bool
 
 	// cache variables
@@ -161,7 +162,14 @@ func (o *deployPipelineOpts) Validate() error {
 		if pipelineMft.Name != o.name {
 			return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 		}
-		o.
+		path, err := o.ws.PipelineManifestLegacyPath()
+		if err != nil {
+			return fmt.Errorf("get pipeline path: %w", err)
+		}
+		o.pipeline = &workspace.Pipeline{
+			Name: o.name,
+			Path: path,
+		}
 	}
 	return nil
 }
@@ -187,7 +195,6 @@ func (o *deployPipelineOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	o.name = pipeline.Name
 
 	// If the source has an existing connection, get the correlating ConnectionARN .
 	connection, ok := pipeline.Source.Properties["connection_name"]
@@ -241,26 +248,25 @@ func (o *deployPipelineOpts) validatePipelineName() error {
 	}
 	for _, pipeline := range pipelines {
 		if pipeline.Name == o.name {
-			o.path = pipeline.Path
+			o.pipeline = &pipeline
 			return nil
 		}
 	}
 	return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 }
 
-func (o *deployPipelineOpts) askPipelineName() error{
-		if o.name != ""{
+func (o *deployPipelineOpts) askPipelineName() error {
+	if o.name != "" {
 		return nil
 	}
-		name, path, err := o.sel.Pipeline(pipelineSelectPrompt, "")
-		if err != nil{
+	pipeline, err := o.sel.Pipeline(pipelineSelectPrompt, "")
+	if err != nil {
 		return fmt.Errorf("select pipeline: %w", err)
 	}
-		o.name = name
-		o.path = path
+	o.pipeline = pipeline
 
-		return nil
-	}
+	return nil
+}
 
 func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error) {
 	if o.pipelineMft != nil {
@@ -363,7 +369,7 @@ func (o *deployPipelineOpts) shouldUpdate() (bool, error) {
 		return true, nil
 	}
 
-	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.name), "")
+	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.pipeline.Name), "")
 	if err != nil {
 		return false, fmt.Errorf("prompt for pipeline deploy: %w", err)
 	}
@@ -382,7 +388,7 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("get bucket name: %w", err)
 	}
 	if !exist {
-		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.name)))
+		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.pipeline.Name)))
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
@@ -403,11 +409,11 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		if err := o.pipelineDeployer.CreatePipeline(in, bucketName); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
-				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.name)))
+				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.pipeline.Name)))
 				return fmt.Errorf("create pipeline: %w", err)
 			}
 		}
-		o.prog.Stop(log.Ssuccessf(fmtPipelineDeployComplete, color.HighlightUserInput(o.name)))
+		o.prog.Stop(log.Ssuccessf(fmtPipelineDeployComplete, color.HighlightUserInput(o.pipeline.Name)))
 		return nil
 	}
 
@@ -419,12 +425,12 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	if !shouldUpdate {
 		return nil
 	}
-	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.name)))
+	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipeline.Name)))
 	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.name)))
+		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipeline.Name)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, color.HighlightUserInput(o.name)))
+	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, color.HighlightUserInput(o.pipeline.Name)))
 	return nil
 }
 
