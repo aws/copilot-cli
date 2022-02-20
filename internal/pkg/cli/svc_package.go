@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -44,11 +45,12 @@ var initPackageAddonsClient = func(o *packageSvcOpts) error {
 }
 
 type packageSvcVars struct {
-	name      string
-	envName   string
-	appName   string
-	tag       string
-	outputDir string
+	name         string
+	envName      string
+	appName      string
+	tag          string
+	outputDir    string
+	uploadAssets bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -296,10 +298,23 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	if err != nil {
 		return nil, err
 	}
+	uploadOut := clideploy.UploadArtifactsOutput{
+		ImageDigest: aws.String(""),
+	}
+	if o.uploadAssets {
+		out, err := generator.UploadArtifacts()
+		if err != nil {
+			return nil, fmt.Errorf("upload resources required for deployment for %s: %w", o.name, err)
+		}
+		uploadOut = *out
+	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN: o.rootUserARN,
 			Tags:        o.targetApp.Tags,
+			ImageDigest: uploadOut.ImageDigest,
+			EnvFileARN:  uploadOut.EnvFileARN,
+			AddonsURL:   uploadOut.AddonsURL,
 		},
 	})
 	if err != nil {
@@ -387,5 +402,6 @@ func buildSvcPackageCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
+	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	return cmd
 }

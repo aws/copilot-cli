@@ -4,13 +4,16 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/cli/list"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -18,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -64,9 +68,16 @@ type deployPipelineOpts struct {
 	envStore         environmentStore
 	ws               wsPipelineReader
 	codestar         codestar
+	newSvcListCmd    func(io.Writer) cmd
+	newJobListCmd    func(io.Writer) cmd
 
 	path                         string
 	shouldPromptUpdateConnection bool
+
+	// cache variables
+	pipelineMft *manifest.PipelineManifest
+	svcBuffer   *bytes.Buffer
+	jobBuffer   *bytes.Buffer
 }
 
 func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
@@ -102,14 +113,52 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		prompt:             prompter,
 		sel:                selector.NewWsPipelineSelect(prompter, ws),
 		codestar:           cs.New(defaultSession),
+		newSvcListCmd: func(w io.Writer) cmd {
+			return &listSvcOpts{
+				listWkldVars: listWkldVars{
+					appName: vars.appName,
+				},
+				sel: selector.NewSelect(prompt.New(), store),
+				list: &list.SvcListWriter{
+					Ws:    ws,
+					Store: store,
+					Out:   w,
+
+					ShowLocalSvcs: true,
+					OutputJSON:    true,
+				},
+			}
+		},
+		newJobListCmd: func(w io.Writer) cmd {
+			return &listJobOpts{
+				listWkldVars: listWkldVars{
+					appName: vars.appName,
+				},
+				sel: selector.NewSelect(prompt.New(), store),
+				list: &list.JobListWriter{
+					Ws:    ws,
+					Store: store,
+					Out:   w,
+
+					ShowLocalJobs: true,
+					OutputJSON:    true,
+				},
+			}
+		},
+		svcBuffer: &bytes.Buffer{},
+		jobBuffer: &bytes.Buffer{},
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
 	if o.name != "" {
-		if err := o.validatePipelineName(); err != nil {
+		pipeline, err := o.getPipelineMft()
+		if err != nil {
 			return err
+		}
+		if pipeline.Name != o.name {
+			return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 		}
 	}
 	return nil
@@ -132,12 +181,9 @@ func (o *deployPipelineOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, color.HighlightUserInput(o.appName)))
 
 	// Read pipeline manifest.
-	pipeline, err := o.ws.ReadPipelineManifest(o.path)
+	pipeline, err := o.getPipelineMft()
 	if err != nil {
-		return fmt.Errorf("read pipeline manifest: %w", err)
-	}
-	if err := pipeline.Validate(); err != nil {
-		return fmt.Errorf("validate pipeline: %w", err)
+		return err
 	}
 	o.name = pipeline.Name
 
@@ -200,27 +246,41 @@ func (o *deployPipelineOpts) validatePipelineName() error {
 	return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 }
 
-func (o *deployPipelineOpts) askPipelineName() error {
-	if o.name != "" {
+func (o *deployPipelineOpts) askPipelineName() error{
+		if o.name != ""{
 		return nil
 	}
-	name, path, err := o.sel.Pipeline(pipelineSelectPrompt, "")
-	if err != nil {
+		name, path, err := o.sel.Pipeline(pipelineSelectPrompt, "")
+		if err != nil{
 		return fmt.Errorf("select pipeline: %w", err)
 	}
-	o.name = name
-	o.path = path
+		o.name = name
+		o.path = path
 
-	return nil
+		return nil
+	}
+
+func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error) {
+	if o.pipelineMft != nil {
+		return o.pipelineMft, nil
+	}
+	pipeline, err := o.ws.ReadPipelineManifest(o.path)
+	if err != nil {
+		return nil, fmt.Errorf("read pipeline manifest: %w", err)
+	}
+	if err := pipeline.Validate(); err != nil {
+		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
+	}
+	o.pipelineMft = pipeline
+	return pipeline, nil
 }
 
 func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	workloads, err := o.ws.ListWorkloads()
+	workloads, err := o.getLocalWorkloads()
 	if err != nil {
-		return nil, fmt.Errorf("get workload names from workspace: %w", err)
+		return nil, err
 	}
-
 	for _, stage := range manifestStages {
 		env, err := o.envStore.GetEnvironment(o.appName, stage.Name)
 		if err != nil {
@@ -241,6 +301,30 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 	}
 
 	return stages, nil
+}
+
+func (o deployPipelineOpts) getLocalWorkloads() ([]string, error) {
+	var localWklds []string
+	if err := o.newSvcListCmd(o.svcBuffer).Execute(); err != nil {
+		return nil, fmt.Errorf("get local services: %w", err)
+	}
+	if err := o.newJobListCmd(o.jobBuffer).Execute(); err != nil {
+		return nil, fmt.Errorf("get local jobs: %w", err)
+	}
+	svcOutput, jobOutput := &list.ServiceJSONOutput{}, &list.JobJSONOutput{}
+	if err := json.Unmarshal(o.svcBuffer.Bytes(), svcOutput); err != nil {
+		return nil, fmt.Errorf("unmarshal service list output; %w", err)
+	}
+	for _, svc := range svcOutput.Services {
+		localWklds = append(localWklds, svc.Name)
+	}
+	if err := json.Unmarshal(o.jobBuffer.Bytes(), jobOutput); err != nil {
+		return nil, fmt.Errorf("unmarshal job list output; %w", err)
+	}
+	for _, job := range jobOutput.Jobs {
+		localWklds = append(localWklds, job.Name)
+	}
+	return localWklds, nil
 }
 
 func (o *deployPipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
@@ -364,21 +448,7 @@ func buildPipelineDeployCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Infoln()
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

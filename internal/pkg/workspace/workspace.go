@@ -45,11 +45,14 @@ const (
 	ymlFileExtension = ".yml"
 
 	dockerfileName = "dockerfile"
+	dockerignoreName = ".dockerignore"
 )
 
 // Summary is a description of what's associated with this workspace.
 type Summary struct {
 	Application string `yaml:"application"` // Name of the application.
+
+	Path string // absolute path to the summary file.
 }
 
 // Workspace typically represents a Git repository where the user has its infrastructure-as-code files as well as source files.
@@ -89,7 +92,11 @@ func (ws *Workspace) Create(appName string) error {
 	if err == nil {
 		// If a summary exists, but is registered to a different application, throw an error.
 		if summary.Application != appName {
-			return &errHasExistingApplication{existingAppName: summary.Application}
+			return &errHasExistingApplication{
+				existingAppName: summary.Application,
+				basePath:        ws.workingDir,
+				summaryPath:     summary.Path,
+			}
 		}
 		// Otherwise our work is all done.
 		return nil
@@ -116,7 +123,9 @@ func (ws *Workspace) Summary() (*Summary, error) {
 		if err != nil {
 			return nil, err
 		}
-		wsSummary := Summary{}
+		wsSummary := Summary{
+			Path: summaryPath,
+		}
 		return &wsSummary, yaml.Unmarshal(value, &wsSummary)
 	}
 	return nil, &errNoAssociatedApplication{}
@@ -146,7 +155,7 @@ func (ws *Workspace) ListJobs() ([]string, error) {
 	})
 }
 
-// ListWorkloads returns the name of all the workloads in the workspace.
+// ListWorkloads returns the name of all the workloads in the workspace (could be unregistered in SSM).
 func (ws *Workspace) ListWorkloads() ([]string, error) {
 	return ws.listWorkloads(func(wlType string) bool {
 		return true
@@ -521,7 +530,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 		// Add current file if it is a Dockerfile and not a directory; otherwise continue.
 		if !wdFile.IsDir() {
 			fname := wdFile.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) {
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
 				path := filepath.Dir(fname) + "/" + fname
 				dockerfiles = append(dockerfiles, path)
 			}
@@ -540,7 +549,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 				continue
 			}
 			fname := f.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) {
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
 				path := wdFile.Name() + "/" + f.Name()
 				dockerfiles = append(dockerfiles, path)
 			}

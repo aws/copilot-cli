@@ -33,11 +33,13 @@ const (
 )
 
 const (
+	// Protocols.
 	TCP = "TCP"
 	tls = "TLS"
-)
 
-var validProtocols = []string{TCP, tls}
+	// Tracing vendors.
+	awsXRAY = "awsxray"
+)
 
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
@@ -49,6 +51,8 @@ var (
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+	nlbValidProtocols                        = []string{TCP, tls}
+	TracingValidVendors                      = []string{awsXRAY}
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
@@ -248,6 +252,9 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	}
 	if err = r.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if err = r.Observability.Validate(); err != nil {
+		return fmt.Errorf(`validate "observability": %w`, err)
 	}
 	return nil
 }
@@ -670,14 +677,14 @@ func validateNLBPort(port *string) error {
 	}
 	protocolVal := aws.StringValue(protocol)
 	var isValidProtocol bool
-	for _, valid := range validProtocols {
+	for _, valid := range nlbValidProtocols {
 		if strings.EqualFold(protocolVal, valid) {
 			isValidProtocol = true
 			break
 		}
 	}
 	if !isValidProtocol {
-		return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(validProtocols, "and"))
+		return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(nlbValidProtocols, "and"))
 	}
 	return nil
 }
@@ -1150,6 +1157,22 @@ func (r AppRunnerInstanceConfig) Validate() error {
 // Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
 func (r RequestDrivenWebServiceHttpConfig) Validate() error {
 	return r.HealthCheckConfiguration.Validate()
+}
+
+// Validate returns nil if Observability is configured correctly.
+func (o Observability) Validate() error {
+	if o.isEmpty() {
+		return nil
+	}
+	for _, validVendor := range TracingValidVendors {
+		if strings.EqualFold(aws.StringValue(o.Tracing), validVendor) {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid tracing vendor %s: %s %s",
+		aws.StringValue(o.Tracing),
+		english.PluralWord(len(TracingValidVendors), "the valid vendor is", "valid vendors are"),
+		english.WordSeries(TracingValidVendors, "and"))
 }
 
 // Validate returns nil if JobTriggerConfig is configured correctly.

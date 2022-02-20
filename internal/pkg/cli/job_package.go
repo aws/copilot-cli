@@ -25,11 +25,12 @@ const (
 )
 
 type packageJobVars struct {
-	name      string
-	envName   string
-	appName   string
-	tag       string
-	outputDir string
+	name         string
+	envName      string
+	appName      string
+	tag          string
+	outputDir    string
+	uploadAssets bool
 }
 
 type packageJobOpts struct {
@@ -69,11 +70,12 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	opts.newPackageCmd = func(o *packageJobOpts) {
 		opts.packageCmd = &packageSvcOpts{
 			packageSvcVars: packageSvcVars{
-				name:      o.name,
-				envName:   o.envName,
-				appName:   o.appName,
-				tag:       imageTagFromGit(o.runner, o.tag),
-				outputDir: o.outputDir,
+				name:         o.name,
+				envName:      o.envName,
+				appName:      o.appName,
+				tag:          imageTagFromGit(o.runner, o.tag),
+				outputDir:    o.outputDir,
+				uploadAssets: o.uploadAssets,
 			},
 			runner:           o.runner,
 			initAddonsClient: initPackageAddonsClient,
@@ -185,5 +187,6 @@ func buildJobPackageCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
+	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	return cmd
 }

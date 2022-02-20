@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -198,7 +199,10 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 }
 
 func TestPackageSvcOpts_Execute(t *testing.T) {
-	lbwsMft := `name: api
+	const (
+		mockARN    = "mockARN"
+		mockDigest = "mockDigest"
+		lbwsMft    = `name: api
 type: Load Balanced Web Service
 image:
   build: ./Dockerfile
@@ -208,7 +212,7 @@ http:
 cpu: 256
 memory: 512
 count: 1`
-	rdwsMft := `name: api
+		rdwsMft = `name: api
 type: Request-Driven Web Service
 image:
   build: ./Dockerfile
@@ -218,6 +222,7 @@ http:
 cpu: 256
 memory: 512
 count: 1`
+	)
 	testCases := map[string]struct {
 		inVars packageSvcVars
 
@@ -235,6 +240,7 @@ count: 1`
 				envName:          "test",
 				tag:              "1234",
 				clientConfigured: true,
+				uploadAssets:     true,
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
 				mockWs := mocks.NewMockwsWlDirReader(ctrl)
@@ -243,7 +249,15 @@ count: 1`
 					Return([]byte(lbwsMft), nil)
 
 				mockGenerator := mocks.NewMockworkloadTemplateGenerator(ctrl)
-				mockGenerator.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).
+				mockGenerator.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{
+					ImageDigest: aws.String(mockDigest),
+				}, nil)
+				mockGenerator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
+						ImageDigest: aws.String(mockDigest),
+						RootUserARN: mockARN,
+					},
+				}).
 					Return(&deploy.GenerateCloudFormationTemplateOutput{
 						Template:   "mystack",
 						Parameters: "myparams",
@@ -294,7 +308,12 @@ count: 1`
 					Return("", &addon.ErrAddonsNotFound{})
 
 				mockGenerator := mocks.NewMockworkloadTemplateGenerator(ctrl)
-				mockGenerator.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).
+				mockGenerator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
+						ImageDigest: aws.String(""),
+						RootUserARN: mockARN,
+					},
+				}).
 					Return(&deploy.GenerateCloudFormationTemplateOutput{
 						Template:   "mystack",
 						Parameters: "myparams",
@@ -336,7 +355,8 @@ count: 1`
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return &mockWorkloadMft{}, nil
 				},
-				targetApp: &config.Application{},
+				rootUserARN: mockARN,
+				targetApp:   &config.Application{},
 			}
 			tc.mockDependencies(ctrl, opts)
 
