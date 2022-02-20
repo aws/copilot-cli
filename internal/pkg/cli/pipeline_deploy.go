@@ -153,13 +153,15 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
 	if o.name != "" {
-		pipeline, err := o.getPipelineMft()
+		pipelineMft, err := o.getPipelineMft()
+		o.pipelineMft = pipelineMft
 		if err != nil {
 			return err
 		}
-		if pipeline.Name != o.name {
+		if pipelineMft.Name != o.name {
 			return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 		}
+		o.
 	}
 	return nil
 }
@@ -264,15 +266,18 @@ func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
-	pipeline, err := o.ws.ReadPipelineManifest(o.path)
+	path, err := o.ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return nil, fmt.Errorf("get pipeline manifest path: %w", err)
+	}
+	pipelineMft, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
-	if err := pipeline.Validate(); err != nil {
+	if err := pipelineMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
 	}
-	o.pipelineMft = pipeline
-	return pipeline, nil
+	return pipelineMft, nil
 }
 
 func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {

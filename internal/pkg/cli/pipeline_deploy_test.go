@@ -10,13 +10,13 @@ import (
 	"io"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
