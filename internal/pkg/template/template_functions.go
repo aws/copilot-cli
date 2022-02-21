@@ -33,18 +33,12 @@ func IsARNFunc(value string) bool {
 
 // IsSSMParamFunc takes a string value and determines if it's a SSM parameter
 func IsSSMParamFunc(value string) bool {
-	if strings.Contains(value, ":ssm:") || !strings.Contains(value, ":secretsmanager:") {
-		return true
-	}
-	return false
+	return strings.Contains(value, ":ssm:") || !strings.Contains(value, ":secretsmanager:")
 }
 
 // IsSecretsManagerSecretsFunc takes a string value and determines if it's a secretes manager secret
 func IsSecretsManagerSecretsFunc(value string) bool {
-	if strings.Contains(value, ":secretsmanager:") {
-		return true
-	}
-	return false
+	return strings.Contains(value, ":secretsmanager:")
 }
 
 // IsSSMParamFlagFunc takes secret values and determines if it consist a SSM parameter
