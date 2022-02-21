@@ -184,7 +184,7 @@ type WorkspaceSelect struct {
 // PipelineSelect is a workspace pipeline selector.
 type PipelineSelect struct {
 	prompt Prompter
-	ws WsPipelineSelector
+	ws     WsPipelineSelector
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -270,7 +270,7 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 func NewWsPipelineSelect(prompt Prompter, ws WsPipelineSelector) *PipelineSelect {
 	return &PipelineSelect{
 		prompt: prompt,
-		ws: ws,
+		ws:     ws,
 	}
 }
 

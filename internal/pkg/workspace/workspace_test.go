@@ -562,20 +562,20 @@ name: buildspecInPipelinesDir
 
 			wantedPipelines: []Pipeline{
 				{
-				Name: "legacyInCopiDir",
-				Path: "/copilot/pipeline.yml",
-			},
+					Name: "legacyInCopiDir",
+					Path: "/copilot/pipeline.yml",
+				},
 				{
 					Name: "otherInPipelinesDir",
 					Path: "/copilot/pipelines/other.yml",
 				},
-			{
+				{
 					Name: "legacyInPipelinesDir",
 					Path: "/copilot/pipelines/pipeline.yml",
+				},
 			},
-		},
 
-			wantedErr:       nil,
+			wantedErr: nil,
 		},
 	}
 

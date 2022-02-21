@@ -555,7 +555,7 @@ be able to add them after this environment is created.
 		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
 	}
-	if len(o.importVPC.PublicSubnetIDs) + len(o.importVPC.PrivateSubnetIDs) == 0 {
+	if len(o.importVPC.PublicSubnetIDs)+len(o.importVPC.PrivateSubnetIDs) == 0 {
 		return errors.New("VPC must have subnets in order to proceed with environment creation")
 	}
 	return nil

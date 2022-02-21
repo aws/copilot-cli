@@ -5103,13 +5103,12 @@ func (m *MockwsPipelineSelector) EXPECT() *MockwsPipelineSelectorMockRecorder {
 }
 
 // Pipeline mocks base method.
-func (m *MockwsPipelineSelector) Pipeline(prompt, help string) (string, string, error) {
+func (m *MockwsPipelineSelector) Pipeline(prompt, help string) (*workspace.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Pipeline", prompt, help)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(*workspace.Pipeline)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Pipeline indicates an expected call of Pipeline.

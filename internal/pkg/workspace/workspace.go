@@ -44,7 +44,7 @@ const (
 
 	ymlFileExtension = ".yml"
 
-	dockerfileName = "dockerfile"
+	dockerfileName   = "dockerfile"
 	dockerignoreName = ".dockerignore"
 )
 
@@ -178,7 +178,7 @@ func (ws *Workspace) ListPipelines() ([]Pipeline, error) {
 	}
 	manifest, err := ws.ReadPipelineManifest(legacyPath)
 	if err != nil {
-		return nil, err
+		log.Infof("Unable to read pipeline manifest at '%s'", legacyPath)
 	}
 	pipelines = append(pipelines, Pipeline{
 		Name: manifest.Name,
@@ -211,7 +211,7 @@ func (ws *Workspace) ListPipelines() ([]Pipeline, error) {
 			path := filepath.Join(pipelinesPath, file.Name())
 			manifest, err := ws.ReadPipelineManifest(path)
 			if err != nil {
-				return nil, err
+				log.Infof("Unable to read pipeline manifest at '%s'", path)
 			}
 			pipelines = append(pipelines, Pipeline{
 				Name: manifest.Name,
@@ -284,8 +284,7 @@ func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.PipelineManife
 	}
 	data, err := ws.fsUtils.ReadFile(path)
 	if err != nil {
-		log.Infof("Unable to read pipeline manifest file at '%s'", path)
-		return nil, nil
+		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
 	pipelineManifest, err := manifest.UnmarshalPipeline(data)
 	if err != nil {

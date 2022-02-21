@@ -99,6 +99,9 @@ func (o *deletePipelineOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *deletePipelineOpts) Ask() error {
+	if err := o.getNameAndSecret(); err != nil {
+		return err
+	}
 	if o.skipConfirmation {
 		return nil
 	}
@@ -121,9 +124,6 @@ func (o *deletePipelineOpts) Ask() error {
 
 // Execute deletes the secret and pipeline stack.
 func (o *deletePipelineOpts) Execute() error {
-	if err := o.getNameAndSecret(); err != nil {
-		return err
-	}
 	if err := o.deleteSecret(); err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (o *deletePipelineOpts) Execute() error {
 func (o *deletePipelineOpts) getNameAndSecret() error {
 	path, err := o.ws.PipelineManifestLegacyPath()
 	if err != nil {
-		return err
+		return fmt.Errorf("get path to pipeline manifest: %w", err)
 	}
 	manifest, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
