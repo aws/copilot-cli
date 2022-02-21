@@ -46,11 +46,11 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			inPipelineName: "nonexistentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().PipelineManifestLegacyPath().Return(legacyPath, nil)
-				m.EXPECT().ReadPipelineManifest(legacyPath).Return(&manifest.PipelineManifest{
-					Name:    "existentPipeline",
-					Version: 1,
-				}, nil)
+				m.EXPECT().ListPipelines().Return([]workspace.Pipeline{
+					{
+						Name: "existentPipeline",
+						Path: legacyPath,
+					}}, nil)
 			},
 
 			wantedError: errors.New("pipeline nonexistentPipeline not found in the workspace"),
@@ -60,11 +60,11 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			inPipelineName: "existentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().PipelineManifestLegacyPath().Return(legacyPath, nil).Times(2)
-				m.EXPECT().ReadPipelineManifest(legacyPath).Return(&manifest.PipelineManifest{
-					Name:    "existentPipeline",
-					Version: 1,
-				}, nil)
+				m.EXPECT().ListPipelines().Return([]workspace.Pipeline{
+					{
+						Name: "existentPipeline",
+						Path: legacyPath,
+					}}, nil)
 			},
 
 			wantedPipeline: &workspace.Pipeline{

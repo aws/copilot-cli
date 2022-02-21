@@ -154,21 +154,8 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
 	if o.name != "" {
-		pipelineMft, err := o.getPipelineMft()
-		o.pipelineMft = pipelineMft
-		if err != nil {
+		if err := o.validatePipelineName(); err != nil {
 			return err
-		}
-		if pipelineMft.Name != o.name {
-			return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
-		}
-		path, err := o.ws.PipelineManifestLegacyPath()
-		if err != nil {
-			return fmt.Errorf("get pipeline path: %w", err)
-		}
-		o.pipeline = &workspace.Pipeline{
-			Name: o.name,
-			Path: path,
 		}
 	}
 	return nil
