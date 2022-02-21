@@ -56,7 +56,11 @@ func (t *taskStackConfig) StackName() string {
 }
 
 var cfnFuntion = map[string]interface{}{
-	"isARN": template.IsARN,
+	"isARN":                        template.IsARNFunc,
+	"isSSMParam":                   template.IsSSMParamFunc,
+	"isSecretsManagerSecrets":      template.IsSecretsManagerSecretsFunc,
+	"isSSMParamFlag":               template.IsSSMParamFlagFunc,
+	"isSecretsManagersSecretsFlag": template.IsSecretsManagersSecretsFlagFunc,
 }
 
 // Template returns the task CloudFormation template.

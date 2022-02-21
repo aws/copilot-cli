@@ -126,12 +126,28 @@ Resources:
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
+              {{- if isSSMParamFlag .Secrets}}
                 - Effect: 'Allow'
                   Action:
                     - ssm:GetParameters
+                  Resource: {{range $name, $valueFrom := .Secrets}}
+                      {{- if isSSMParam $valueFrom }} {{- if isARN $valueFrom }}
+                    - {{$valueFrom}}
+                      {{- else }}
+                    - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter{{$valueFrom}}
+                    {{- end}} {{- end}}
+                    {{end}}
+              {{- end }}
+              {{- if isSecretsManagersSecretsFlag .Secrets }}
+                - Effect: 'Allow'
+                  Action:
                     - secretsmanager:GetSecretValue
                   Resource: {{range $name, $valueFrom := .Secrets}}
-                    - {{- if isARN $valueFrom}} {{$valueFrom}} {{- else }} !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter{{$valueFrom}} {{- end}} {{end}}
+                      {{- if isSecretsManagerSecrets $valueFrom }}
+                    - {{$valueFrom}}
+                      {{- end}}
+                      {{end}}
+              {{- end }}
       {{- end }}
   DefaultTaskRole:
     Metadata:

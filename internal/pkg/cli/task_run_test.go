@@ -444,9 +444,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		inSubnets        []string
 		inSecurityGroups []string
 
-		inDefault bool
-		inEnv     string
-		appName   string
+		inDefault                  bool
+		inEnv                      string
+		appName                    string
+		inSecrets                  map[string]string
+		inAcknowledgeSecretsAccess bool
 
 		mockSel    func(m *mocks.MockappEnvSelector)
 		mockPrompt func(m *mocks.Mockprompter)
@@ -636,6 +638,25 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedError: errors.New("ask for environment: error selecting environment"),
 		},
+		"When secrets are provided without app and env leads to a secret access permission prompt": {
+			inSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inCluster: "cluster-1",
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Return(true, nil)
+			},
+		},
+		"secret access permission prompt is skipped when acknowledge-secret-access flag is provided": {
+			inSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inCluster:                  "cluster-1",
+			inAcknowledgeSecretsAccess: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Times(0)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -663,8 +684,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					subnets:                     tc.inSubnets,
 					securityGroups:              tc.inSecurityGroups,
 					cluster:                     tc.inCluster,
+					acknowledgeSecretsAccess:    tc.inAcknowledgeSecretsAccess,
+					secrets:                     tc.inSecrets,
 				},
-				sel: mockSel,
+				sel:    mockSel,
+				prompt: mockPrompter,
 			}
 
 			err := opts.Ask()

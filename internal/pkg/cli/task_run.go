@@ -388,32 +388,38 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 		return nil
 	}
 
-	if o.appName == "" && o.env == "" && !o.acknowledgeSecretsAccess {
-		log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
+	if o.appName != "" || o.env != "" {
+		return nil
+	}
 
-		for _, value := range o.secrets {
-			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
-			if !arn.IsARN(value) || strings.Contains(value, ":ssm:") {
-				log.Infoln("* " + value)
-			}
+	if o.acknowledgeSecretsAccess {
+		return nil
+	}
+
+	log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
+
+	for _, value := range o.secrets {
+		//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
+		if !arn.IsARN(value) || strings.Contains(value, ":ssm:") {
+			log.Infoln("* " + value)
 		}
+	}
 
-		log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
 
-		for _, value := range o.secrets {
-			if strings.Contains(value, ":secretsmanager:") {
-				log.Infoln("* " + value)
-			}
+	for _, value := range o.secrets {
+		if strings.Contains(value, ":secretsmanager:") {
+			log.Infoln("* " + value)
 		}
+	}
 
-		secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
-		if err != nil {
-			return fmt.Errorf("prompt to confirm secrets access: %w", err)
-		}
+	secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
+	if err != nil {
+		return fmt.Errorf("prompt to confirm secrets access: %w", err)
+	}
 
-		if !secretsAccessConfirmed {
-			return errors.New("access to secrets denied")
-		}
+	if !secretsAccessConfirmed {
+		return errors.New("access to secrets denied")
 	}
 	return nil
 }

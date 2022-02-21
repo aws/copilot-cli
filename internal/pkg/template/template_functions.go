@@ -25,8 +25,46 @@ const (
 func ReplaceDashesFunc(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
 }
-func IsARN(value string) bool {
+
+// IsArnFunc takes a string value and determines if it's an ARN or not
+func IsARNFunc(value string) bool {
 	return arn.IsARN(value)
+}
+
+// IsSSMParamFunc takes a string value and determines if it's a SSM parameter
+func IsSSMParamFunc(value string) bool {
+	if strings.Contains(value, ":ssm:") || !strings.Contains(value, ":secretsmanager:") {
+		return true
+	}
+	return false
+}
+
+// IsSecretsManagerSecretsFunc takes a string value and determines if it's a secretes manager secret
+func IsSecretsManagerSecretsFunc(value string) bool {
+	if strings.Contains(value, ":secretsmanager:") {
+		return true
+	}
+	return false
+}
+
+// IsSSMParamFlagFunc takes secret values and determines if it consist a SSM parameter
+func IsSSMParamFlagFunc(secrets map[string]string) bool {
+	for _, value := range secrets {
+		if !arn.IsARN(value) || strings.Contains(value, ":ssm:") {
+			return true
+		}
+	}
+	return false
+}
+
+// IsSecretsManagersSecretsFlagFunc takes secret values and determines if consist a secrets manager secret
+func IsSecretsManagersSecretsFlagFunc(secrets map[string]string) bool {
+	for _, value := range secrets {
+		if strings.Contains(value, ":secretsmanager:") {
+			return true
+		}
+	}
+	return false
 }
 
 // DashReplacedLogicalIDToOriginal takes a "sanitized" logical ID
