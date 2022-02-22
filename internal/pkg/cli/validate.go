@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -737,25 +736,6 @@ func validatePubSubName(name string) error {
 		return errInvalidPubSubTopicName
 	}
 
-	return nil
-}
-
-func validateTopicsExist(subscriptions []manifest.TopicSubscription, topicARNs []string, app, env string) error {
-	validTopicResources := make([]string, 0, len(topicARNs))
-	for _, topic := range topicARNs {
-		parsedTopic, err := arn.Parse(topic)
-		if err != nil {
-			continue
-		}
-		validTopicResources = append(validTopicResources, parsedTopic.Resource)
-	}
-
-	for _, ts := range subscriptions {
-		topicName := fmt.Sprintf(resourceNameFormat, app, env, aws.StringValue(ts.Service), aws.StringValue(ts.Name))
-		if !contains(topicName, validTopicResources) {
-			return fmt.Errorf(fmtErrTopicSubscriptionNotAllowed, topicName, env)
-		}
-	}
 	return nil
 }
 
