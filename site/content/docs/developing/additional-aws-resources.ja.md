@@ -135,7 +135,7 @@ Copilot では、 `App`, `Env` そして `Name` パラメーターがテンプ�
 Parameters:
   ServiceName: !GetAtt Service.Name
 ```
-最後に、新しい[パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を参照するようにテンプレートファイルを更新してください。
+最後に、新しいパラメーターを参照するようにテンプレートファイルを更新しましょう。
 
 ```yaml
 Parameters:
