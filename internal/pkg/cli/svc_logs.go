@@ -9,6 +9,9 @@ import (
 	"io"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -61,10 +64,13 @@ type wkldLogOpts struct {
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
-	configStore, err := config.NewStore()
+	sessProvider := sessions.NewProvider()
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to environment config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+
+	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	deployStore, err := deploy.NewStore(configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
@@ -79,10 +85,6 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		},
 	}
 	opts.initLogsSvc = func() error {
-		configStore, err := config.NewStore()
-		if err != nil {
-			return fmt.Errorf("connect to environment config store: %w", err)
-		}
 		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
@@ -91,7 +93,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return fmt.Errorf("get workload: %w", err)
 		}
-		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}

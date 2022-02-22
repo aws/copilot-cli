@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -173,15 +175,13 @@ type initEnvOpts struct {
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, err
-	}
 	sessProvider := sessions.NewProvider()
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("read named profiles: %w", err)
@@ -555,7 +555,7 @@ be able to add them after this environment is created.
 		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
 	}
-	if len(o.importVPC.PublicSubnetIDs) + len(o.importVPC.PrivateSubnetIDs) == 0 {
+	if len(o.importVPC.PublicSubnetIDs)+len(o.importVPC.PrivateSubnetIDs) == 0 {
 		return errors.New("VPC must have subnets in order to proceed with environment creation")
 	}
 	return nil

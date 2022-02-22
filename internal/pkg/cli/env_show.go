@@ -7,6 +7,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -42,26 +47,29 @@ type showEnvOpts struct {
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
-	configStore, err := config.NewStore()
+	sessProvider := sessions.NewProvider()
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to copilot config store: %w", err)
+		return nil, err
 	}
-	deployStore, err := deploy.NewStore(configStore)
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+
+	deployStore, err := deploy.NewStore(store)
 	if err != nil {
 		return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
 	}
 
 	opts := &showEnvOpts{
 		showEnvVars: vars,
-		store:       configStore,
+		store:       store,
 		w:           log.OutputWriter,
-		sel:         selector.NewConfigSelect(prompt.New(), configStore),
+		sel:         selector.NewConfigSelect(prompt.New(), store),
 	}
 	opts.initEnvDescriber = func() error {
 		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 			App:             opts.appName,
 			Env:             opts.name,
-			ConfigStore:     configStore,
+			ConfigStore:     store,
 			DeployStore:     deployStore,
 			EnableResources: opts.shouldOutputResources,
 		})

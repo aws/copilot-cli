@@ -6,6 +6,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/route53"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -51,14 +54,11 @@ type appUpgradeOpts struct {
 }
 
 func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %v", err)
-	}
 	sess, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	d, err := describe.NewAppDescriber(vars.name)
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)

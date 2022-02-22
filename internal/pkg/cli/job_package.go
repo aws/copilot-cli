@@ -8,6 +8,10 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -49,13 +53,16 @@ type packageJobOpts struct {
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
+	sessProvider := sessions.NewProvider()
+	defaultSess, err := sessProvider.Default()
+	if err != nil {
+		return nil, err
+	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	prompter := prompt.New()
 	opts := &packageJobOpts{
@@ -87,7 +94,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			paramsWriter:     ioutil.Discard,
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
-			sessProvider:     sessions.NewProvider(),
+			sessProvider:     sessProvider,
 			newTplGenerator:  newWkldTplGenerator,
 		}
 	}

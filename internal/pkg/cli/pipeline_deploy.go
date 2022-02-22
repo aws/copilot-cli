@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -77,19 +80,15 @@ type deployPipelineOpts struct {
 }
 
 func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
-	store, err := config.NewStore()
+	defaultSession, err := sessions.NewProvider().Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store client: %w", err)
+		return nil, fmt.Errorf("default session: %w", err)
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 
 	app, err := store.GetApplication(vars.appName)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", vars.appName, err)
-	}
-
-	defaultSession, err := sessions.NewProvider().Default()
-	if err != nil {
-		return nil, fmt.Errorf("default session: %w", err)
 	}
 
 	ws, err := workspace.New()

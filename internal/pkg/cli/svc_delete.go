@@ -9,6 +9,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
@@ -67,25 +71,21 @@ type deleteSvcOpts struct {
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	provider := sessions.NewProvider()
-	defaultSession, err := provider.Default()
+	sessProvider := sessions.NewProvider()
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
-	prompter := prompt.New()
 
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+	prompter := prompt.New()
 	return &deleteSvcOpts{
 		deleteSvcVars: vars,
 
 		store:   store,
 		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompter,
-		sess:    provider,
+		sess:    sessProvider,
 		sel:     selector.NewConfigSelect(prompter, store),
 		appCFN:  cloudformation.New(defaultSession),
 		getSvcCFN: func(session *awssession.Session) wlDeleter {

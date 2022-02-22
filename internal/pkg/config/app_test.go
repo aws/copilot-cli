@@ -113,7 +113,7 @@ func TestStore_ListApplications(t *testing.T) {
 			// GIVEN
 			lastPageInPaginatedResp = false
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -219,14 +219,14 @@ func TestStore_GetApplication(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
-				idClient: mockIdentityService{
+				sts: mockIdentityService{
 					mockIdentityServiceGet: tc.mockIdentityServiceGet,
 				},
-				sessionRegion: "us-west-2",
+				appRegion: "us-west-2",
 			}
 
 			// WHEN
@@ -280,7 +280,7 @@ func TestStore_CreateApplication(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 				},
@@ -329,7 +329,7 @@ func TestStore_UpdateApplication(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 				},
@@ -386,7 +386,7 @@ func TestDeleteApplication(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                   t,
 					mockDeleteParameter: test.mockDeleteParameter,
 				},

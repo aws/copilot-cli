@@ -8,6 +8,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -174,9 +179,10 @@ type initStorageOpts struct {
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.NewProvider()
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store client: %w", err)
+		return nil, err
 	}
 
 	ws, err := workspace.New()
@@ -184,6 +190,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &initStorageOpts{
 		initStorageVars: vars,

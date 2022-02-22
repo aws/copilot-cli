@@ -37,7 +37,7 @@ func (s *Store) CreateApplication(application *Application) error {
 		return fmt.Errorf("serializing application %s: %w", application.Name, err)
 	}
 
-	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssm.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(applicationPath),
 		Description: aws.String("Copilot Application"),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -65,7 +65,7 @@ func (s *Store) UpdateApplication(application *Application) error {
 		return fmt.Errorf("serializing application %s: %w", application.Name, err)
 	}
 
-	if _, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	if _, err = s.ssm.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(applicationPath),
 		Description: aws.String("Copilot Application"),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -80,7 +80,7 @@ func (s *Store) UpdateApplication(application *Application) error {
 // GetApplication fetches an application by name. If it can't be found, return a ErrNoSuchApplication
 func (s *Store) GetApplication(applicationName string) (*Application, error) {
 	applicationPath := fmt.Sprintf(fmtApplicationPath, applicationName)
-	applicationParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+	applicationParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(applicationPath),
 	})
 
@@ -128,7 +128,7 @@ func (s *Store) ListApplications() ([]*Application, error) {
 func (s *Store) DeleteApplication(name string) error {
 	paramName := fmt.Sprintf(fmtApplicationPath, name)
 
-	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+	_, err := s.ssm.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
 

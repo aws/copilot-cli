@@ -55,7 +55,7 @@ func (s *Store) createWorkload(wkld *Workload) error {
 		return fmt.Errorf("serialize data: %w", err)
 	}
 
-	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssm.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(wkldPath),
 		Description: aws.String(fmt.Sprintf("Copilot %s %s", wkld.Type, wkld.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -147,7 +147,7 @@ func (s *Store) GetWorkload(appName, name string) (*Workload, error) {
 
 func (s *Store) getWorkloadParam(appName, name string) ([]byte, error) {
 	wlPath := fmt.Sprintf(fmtWkldParamPath, appName, name)
-	wlParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+	wlParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(wlPath),
 	})
 	if err != nil {
@@ -248,7 +248,7 @@ func (s *Store) DeleteJob(appName, jobName string) error {
 
 func (s *Store) deleteWorkload(appName, wkldName string) error {
 	paramName := fmt.Sprintf(fmtWkldParamPath, appName, wkldName)
-	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+	_, err := s.ssm.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
 

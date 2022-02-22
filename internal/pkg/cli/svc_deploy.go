@@ -6,6 +6,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 
@@ -63,14 +66,18 @@ type deploySvcOpts struct {
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
+
+	sessProvider := sessions.NewProvider()
+	defaultSession, err := sessProvider.Default()
+	if err != nil {
+		return nil, err
+	}
+
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &deploySvcOpts{
 		deployWkldVars: vars,
@@ -83,7 +90,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		prompt:          prompter,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
-		sessProvider:    sessions.NewProvider(),
+		sessProvider:    sessProvider,
 		newSvcDeployer:  newSvcDeployer,
 	}
 	return opts, err
