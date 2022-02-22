@@ -125,6 +125,11 @@ func (o *deleteSvcOpts) Ask() error {
 		}
 	}
 
+	if o.envName != "" {
+		if err := o.validateEnvName(); err != nil {
+			return err
+		}
+	}
 	if o.skipConfirmation {
 		return nil
 	}
@@ -137,9 +142,6 @@ func (o *deleteSvcOpts) Ask() error {
 		// When a customer provides a particular environment,
 		// we'll just delete the service from that environment -
 		// but keep it in the app.
-		if err := o.validateEnvName(); err != nil {
-			return err
-		}
 		deletePrompt = fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, o.name, o.envName)
 		deleteConfirmHelp = fmt.Sprintf(svcDeleteFromEnvConfirmHelp, o.envName)
 	}
