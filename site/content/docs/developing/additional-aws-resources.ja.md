@@ -139,7 +139,7 @@ Parameters:
 
 ```yaml
 Parameters:
-  # AWS Copilotで必要なパラメーター
+  # AWS Copilot で必要なパラメーター
   App:
     Type: String
   Env:
