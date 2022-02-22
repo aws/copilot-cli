@@ -127,7 +127,7 @@ Copilot では、 `App`, `Env` そして `Name` パラメーターがテンプ�
 .
 └── addons/
     ├── template.yml
-    └── addons.parameters.yml # このファイルをaddons/ディレクトリの下に追加します
+    └── addons.parameters.yml # このファイルを addons/ ディレクトリの下に追加します
 ```
 
 以下のように、 `addons.parameters.yml` にワークロードスタックから参照する[パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を定義することができます。
