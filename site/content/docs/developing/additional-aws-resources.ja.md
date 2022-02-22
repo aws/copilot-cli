@@ -130,7 +130,7 @@ Copilot では、 `App`, `Env` そして `Name` パラメーターがテンプ�
     └── addons.parameters.yml # このファイルを addons/ ディレクトリの下に追加します
 ```
 
-以下のように、 `addons.parameters.yml` にワークロードスタックから参照する[パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を定義することができます。
+`addons.parameters.yml` には、Service スタック内の値を参照するパラメーターを例えば以下のように定義できます。
 ```yaml
 Parameters:
   ServiceName: !GetAtt Service.Name
