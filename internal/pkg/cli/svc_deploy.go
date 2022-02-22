@@ -93,11 +93,12 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	var err error
 	var deployer workloadDeployer
 	in := deploy.WorkloadDeployerInput{
-		Name:     o.name,
-		App:      o.targetApp,
-		Env:      o.targetEnv,
-		ImageTag: o.imageTag,
-		Mft:      o.appliedManifest,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             o.targetApp,
+		Env:             o.targetEnv,
+		ImageTag:        o.imageTag,
+		Mft:             o.appliedManifest,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
