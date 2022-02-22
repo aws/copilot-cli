@@ -45,12 +45,12 @@ var initPackageAddonsClient = func(o *packageSvcOpts) error {
 }
 
 type packageSvcVars struct {
-	name            string
-	envName         string
-	appName         string
-	tag             string
-	outputDir       string
-	uploadResources bool
+	name         string
+	envName      string
+	appName      string
+	tag          string
+	outputDir    string
+	uploadAssets bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -301,7 +301,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	uploadOut := clideploy.UploadArtifactsOutput{
 		ImageDigest: aws.String(""),
 	}
-	if o.uploadResources {
+	if o.uploadAssets {
 		out, err := generator.UploadArtifacts()
 		if err != nil {
 			return nil, fmt.Errorf("upload resources required for deployment for %s: %w", o.name, err)
@@ -402,6 +402,6 @@ func buildSvcPackageCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
-	cmd.Flags().BoolVar(&vars.uploadResources, uploadResourcesFlag, false, uploadResourcesFlagDescription)
+	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	return cmd
 }

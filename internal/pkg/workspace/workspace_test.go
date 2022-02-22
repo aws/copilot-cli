@@ -889,6 +889,20 @@ func TestWorkspace_ListDockerfiles(t *testing.T) {
 			err:         nil,
 			dockerfiles: wantedDockerfiles,
 		},
+		"exclude dockerignore files": {
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("frontend", 0755)
+				mockFS.MkdirAll("backend", 0755)
+
+				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "frontend/Dockerfile.dockerignore", []byte("*/temp*"), 0644)
+				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "backend/Dockerfile.dockerignore", []byte("*/temp*"), 0644)
+			},
+			err:         nil,
+			dockerfiles: wantedDockerfiles,
+		},
 		"nonstandard Dockerfile names": {
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("frontend", 0755)
@@ -896,6 +910,7 @@ func TestWorkspace_ListDockerfiles(t *testing.T) {
 				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
 				afero.WriteFile(mockFS, "frontend/dockerfile", []byte("FROM nginx"), 0644)
 				afero.WriteFile(mockFS, "Job.dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "Job.dockerfile.dockerignore", []byte("*/temp*"), 0644)
 			},
 			err:         nil,
 			dockerfiles: []string{"./Dockerfile", "./Job.dockerfile", "frontend/dockerfile"},

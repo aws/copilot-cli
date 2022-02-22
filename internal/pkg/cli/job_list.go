@@ -41,7 +41,7 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 		Store: store,
 		Out:   os.Stdout,
 
-		ShowLocalJobs: vars.shouldOutputJSON,
+		ShowLocalJobs: vars.shouldShowLocalWorkloads,
 		OutputJSON:    vars.shouldOutputJSON,
 	}
 
@@ -53,6 +53,12 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 	}, nil
 }
 
+// Validate is a no-op for this command.
+func (o *listJobOpts) Validate() error {
+	return nil
+}
+
+// Ask asks for fields that are required but not passed in.
 func (o *listJobOpts) Ask() error {
 	if o.appName != "" {
 		return nil
