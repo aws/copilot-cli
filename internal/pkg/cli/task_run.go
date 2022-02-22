@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,8 +81,8 @@ Select %s to run the task in your default VPC instead of any existing environmen
 )
 
 var (
-	taskSecretsPermissionPrompt     = "\nDo you grant permission to the ECS/Fargate agent for these secrets? "
-	taskSecretsPermissionPromptHelp = "Copilot needs permission to access secrets. select yes to grant permission."
+	taskSecretsPermissionPrompt     = "Do you grant permission to the ECS/Fargate agent for these secrets? "
+	taskSecretsPermissionPromptHelp = "ECS/Fargate agent needs the permissions in order to fetch the secrets and inject them into your container."
 )
 
 type runTaskVars struct {
@@ -108,6 +109,8 @@ type runTaskVars struct {
 
 	envVars                  map[string]string
 	secrets                  map[string]string
+	SSMParamSecrets          map[string]string
+	secretsManagerSecrets    map[string]string
 	acknowledgeSecretsAccess bool
 	command                  string
 	entrypoint               string
@@ -383,7 +386,6 @@ func (o *runTaskOpts) Validate() error {
 }
 
 func (o *runTaskOpts) confirmSecretsAccess() error {
-
 	if o.executionRole != "" {
 		return nil
 	}
@@ -392,34 +394,50 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 		return nil
 	}
 
+	o.secretsManagerSecrets = make(map[string]string)
+	o.SSMParamSecrets = make(map[string]string)
+
 	if o.acknowledgeSecretsAccess {
-		return nil
-	}
-
-	log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
-
-	for _, value := range o.secrets {
-		//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
-		if !arn.IsARN(value) || strings.Contains(value, ":ssm:") {
-			log.Infoln("* " + value)
+		for name, value := range o.secrets {
+			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
+			if !template.IsARNFunc(value) || strings.Contains(value, ":ssm:") {
+				o.SSMParamSecrets[name] = value
+			}
 		}
-	}
 
-	log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
-
-	for _, value := range o.secrets {
-		if strings.Contains(value, ":secretsmanager:") {
-			log.Infoln("* " + value)
+		for name, value := range o.secrets {
+			if strings.Contains(value, ":secretsmanager:") {
+				o.secretsManagerSecrets[name] = value
+			}
 		}
-	}
+	} else {
+		log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
 
-	secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
-	if err != nil {
-		return fmt.Errorf("prompt to confirm secrets access: %w", err)
-	}
+		for name, value := range o.secrets {
+			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
+			if !template.IsARNFunc(value) || strings.Contains(value, ":ssm:") {
+				log.Infoln("* " + value)
+				o.SSMParamSecrets[name] = value
+			}
+		}
 
-	if !secretsAccessConfirmed {
-		return errors.New("access to secrets denied")
+		log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+
+		for name, value := range o.secrets {
+			if strings.Contains(value, ":secretsmanager:") {
+				log.Infoln("* " + value)
+				o.secretsManagerSecrets[name] = value
+			}
+		}
+
+		secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
+		if err != nil {
+			return fmt.Errorf("prompt to confirm secrets access: %w", err)
+		}
+
+		if !secretsAccessConfirmed {
+			return errors.New("access to secrets denied")
+		}
 	}
 	return nil
 }
@@ -875,21 +893,23 @@ func (o *runTaskOpts) deploy() error {
 	}
 
 	input := &deploy.CreateTaskResourcesInput{
-		Name:           o.groupName,
-		CPU:            o.cpu,
-		Memory:         o.memory,
-		Image:          o.image,
-		TaskRole:       o.taskRole,
-		ExecutionRole:  o.executionRole,
-		Command:        command,
-		EntryPoint:     entrypoint,
-		EnvVars:        o.envVars,
-		Secrets:        o.secrets,
-		OS:             o.os,
-		Arch:           o.arch,
-		App:            o.appName,
-		Env:            o.env,
-		AdditionalTags: o.resourceTags,
+		Name:                  o.groupName,
+		CPU:                   o.cpu,
+		Memory:                o.memory,
+		Image:                 o.image,
+		TaskRole:              o.taskRole,
+		ExecutionRole:         o.executionRole,
+		Command:               command,
+		EntryPoint:            entrypoint,
+		EnvVars:               o.envVars,
+		Secrets:               o.secrets,
+		SSMParamSecrets:       o.SSMParamSecrets,
+		SecretsManagerSecrets: o.secretsManagerSecrets,
+		OS:                    o.os,
+		Arch:                  o.arch,
+		App:                   o.appName,
+		Env:                   o.env,
+		AdditionalTags:        o.resourceTags,
 	}
 	return o.deployer.DeployTask(os.Stderr, input, deployOpts...)
 }

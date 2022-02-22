@@ -122,32 +122,32 @@ Resources:
                       "secretsmanager:ResourceTag/copilot-environment": !Ref Env
                   Resource:
                     - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
-          - PolicyName: 'PullSecrets'
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-              {{- if isSSMParamFlag .Secrets}}
-                - Effect: 'Allow'
-                  Action:
-                    - ssm:GetParameters
-                  Resource: {{range $name, $valueFrom := .Secrets}}
-                      {{- if isSSMParam $valueFrom }} {{- if isARN $valueFrom }}
-                    - {{$valueFrom}}
-                      {{- else }}
-                    - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter{{$valueFrom}}
-                    {{- end}} {{- end}}
+          - !Ref AWS::NoValue
+
+        - PolicyName: 'PullSecrets'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            {{- if .SSMParamSecrets}}
+              - Effect: 'Allow'
+                Action:
+                  - ssm:GetParameters
+                Resource: {{range $name, $valueFrom := .SSMParamSecrets}}
+                    {{- if not (isARN $valueFrom) }}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter{{$valueFrom}}
+                    {{- else }}
+                  - {{ $valueFrom }}
+                    {{- end}}
+                  {{end}}
+            {{- end }}
+            {{- if .SecretsManagerSecrets }}
+              - Effect: 'Allow'
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: {{range $name, $valueFrom := .SecretsManagerSecrets}}
+                  - {{$valueFrom}}
                     {{end}}
-              {{- end }}
-              {{- if isSecretsManagersSecretsFlag .Secrets }}
-                - Effect: 'Allow'
-                  Action:
-                    - secretsmanager:GetSecretValue
-                  Resource: {{range $name, $valueFrom := .Secrets}}
-                      {{- if isSecretsManagerSecrets $valueFrom }}
-                    - {{$valueFrom}}
-                      {{- end}}
-                      {{end}}
-              {{- end }}
+            {{- end }}
       {{- end }}
   DefaultTaskRole:
     Metadata:

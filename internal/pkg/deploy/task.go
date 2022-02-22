@@ -19,13 +19,15 @@ type CreateTaskResourcesInput struct {
 	CPU    int
 	Memory int
 
-	Image         string
-	TaskRole      string
-	ExecutionRole string
-	Command       []string
-	EntryPoint    []string
-	EnvVars       map[string]string
-	Secrets       map[string]string
+	Image                 string
+	TaskRole              string
+	ExecutionRole         string
+	Command               []string
+	EntryPoint            []string
+	EnvVars               map[string]string
+	Secrets               map[string]string
+	SSMParamSecrets       map[string]string
+	SecretsManagerSecrets map[string]string
 
 	OS   string
 	Arch string

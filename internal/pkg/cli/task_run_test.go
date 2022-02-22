@@ -449,6 +449,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		appName                    string
 		inSecrets                  map[string]string
 		inAcknowledgeSecretsAccess bool
+		inExecutionRole            string
 
 		mockSel    func(m *mocks.MockappEnvSelector)
 		mockPrompt func(m *mocks.Mockprompter)
@@ -657,6 +658,16 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Times(0)
 			},
 		},
+		"secret access permission prompt is skipped when execution-role is provided": {
+			inSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inCluster:       "cluster-1",
+			inExecutionRole: "test-role",
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Times(0)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -686,6 +697,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					cluster:                     tc.inCluster,
 					acknowledgeSecretsAccess:    tc.inAcknowledgeSecretsAccess,
 					secrets:                     tc.inSecrets,
+					executionRole:               tc.inExecutionRole,
 				},
 				sel:    mockSel,
 				prompt: mockPrompter,

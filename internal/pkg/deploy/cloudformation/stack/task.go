@@ -56,21 +56,21 @@ func (t *taskStackConfig) StackName() string {
 }
 
 var cfnFuntion = map[string]interface{}{
-	"isARN":                        template.IsARNFunc,
-	"isSSMParam":                   template.IsSSMParamFunc,
-	"isSecretsManagerSecrets":      template.IsSecretsManagerSecretsFunc,
-	"isSSMParamFlag":               template.IsSSMParamFlagFunc,
-	"isSecretsManagersSecretsFlag": template.IsSecretsManagersSecretsFlagFunc,
+	"isARN": template.IsARNFunc,
 }
 
 // Template returns the task CloudFormation template.
 func (t *taskStackConfig) Template() (string, error) {
 	content, err := t.parser.Parse(taskTemplatePath, struct {
-		EnvVars map[string]string
-		Secrets map[string]string
+		EnvVars               map[string]string
+		Secrets               map[string]string
+		SSMParamSecrets       map[string]string
+		SecretsManagerSecrets map[string]string
 	}{
-		EnvVars: t.EnvVars,
-		Secrets: t.Secrets,
+		EnvVars:               t.EnvVars,
+		Secrets:               t.Secrets,
+		SSMParamSecrets:       t.SSMParamSecrets,
+		SecretsManagerSecrets: t.SecretsManagerSecrets,
 	}, template.WithFuncs(cfnFuntion))
 	if err != nil {
 		return "", fmt.Errorf("read template for task stack: %w", err)
