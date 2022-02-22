@@ -175,7 +175,7 @@ type initEnvOpts struct {
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env init"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

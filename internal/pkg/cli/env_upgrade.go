@@ -70,7 +70,8 @@ type envUpgradeOpts struct {
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
-	defaultSession, err := sessions.NewProvider().Default()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env upgrade"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
@@ -102,14 +103,14 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 			return d, nil
 		},
 		newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
-			sess, err := sessions.NewProvider().FromRole(conf.ManagerRoleARN, conf.Region)
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
 				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
 		},
 		newS3: func(region string) (uploader, error) {
-			sess, err := sessions.NewProvider().DefaultWithRegion(region)
+			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, fmt.Errorf("create session with region %s: %v", region, err)
 			}

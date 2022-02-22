@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -681,6 +683,7 @@ func TestSvcExec_Execute(t *testing.T) {
 				newSvcDescriber:    mockNewSvcDescriber,
 				newCommandExecutor: mockNewCommandExecutor,
 				randInt:            func(i int) int { return 0 },
+				sessProvider:       sessions.NewProvider(),
 			}
 
 			// WHEN

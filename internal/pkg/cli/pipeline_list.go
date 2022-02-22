@@ -42,7 +42,7 @@ type listPipelineOpts struct {
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
-	defaultSession, err := sessions.NewProvider().Default()
+	defaultSession, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline ls")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

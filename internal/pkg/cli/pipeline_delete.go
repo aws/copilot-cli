@@ -60,7 +60,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	defaultSess, err := sessions.NewProvider().Default()
+	defaultSess, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline delete")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

@@ -48,7 +48,7 @@ type deployJobOpts struct {
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("job deploy"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

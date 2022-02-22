@@ -80,7 +80,7 @@ type deployPipelineOpts struct {
 }
 
 func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
-	defaultSession, err := sessions.NewProvider().Default()
+	defaultSession, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline deploy")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

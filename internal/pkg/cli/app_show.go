@@ -44,7 +44,7 @@ type showAppOpts struct {
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
-	defaultSession, err := sessions.NewProvider().Default()
+	defaultSession, err := sessions.NewProvider(sessions.UserAgentExtras("app show")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

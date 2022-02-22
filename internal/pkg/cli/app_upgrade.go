@@ -54,7 +54,7 @@ type appUpgradeOpts struct {
 }
 
 func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.NewProvider(sessions.UserAgentExtras("app upgrade")).Default()
 	if err != nil {
 		return nil, err
 	}

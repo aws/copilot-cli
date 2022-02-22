@@ -64,7 +64,7 @@ type wkldLogOpts struct {
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc logs"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
