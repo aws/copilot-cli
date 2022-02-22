@@ -121,7 +121,7 @@ Outputs:
 
 ### `Parameters` セクションのカスタマイズ
 
-Copilot では、 `App`, `Env` そして `Name` [パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)がテンプレートに定義されている必要があります。もし、 Service スタック内のリソースを参照する[パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を追加したい場合は、 `addons.parameters.yml` ファイルを作成します。
+Copilot では、 `App`, `Env` そして `Name` パラメーターがテンプレートに定義されている必要があります。もし、 Service スタック内のリソースを参照するを追加したい場合は、 `addons.parameters.yml` ファイルを作成します。テンプレート内パラメーターのデータ型やデフォルト値の指定方法については、[CloudFormation テンプレートでのパラメーター定義](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)に準じます。
 
 ```term
 .
