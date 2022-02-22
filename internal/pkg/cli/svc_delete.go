@@ -118,7 +118,6 @@ func (o *deleteSvcOpts) Ask() error {
 		if _, err := o.store.GetService(o.appName, o.name); err != nil {
 			return err
 		}
-
 	} else {
 		if err := o.askSvcName(); err != nil {
 			return err
