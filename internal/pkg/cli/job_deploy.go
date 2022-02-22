@@ -31,7 +31,7 @@ type deployJobOpts struct {
 	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
 	newInterpolator func(app, env string) interpolator
 	cmd             runner
-	sessProvider    sessionProvider
+	sessProvider    *sessions.Provider
 	envUpgradeCmd   actionCommand
 	newJobDeployer  func(*deployJobOpts) (workloadDeployer, error)
 
@@ -76,11 +76,12 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	var err error
 	var deployer workloadDeployer
 	in := deploy.WorkloadDeployerInput{
-		Name:     o.name,
-		App:      o.targetApp,
-		Env:      o.targetEnv,
-		ImageTag: o.imageTag,
-		Mft:      o.appliedManifest,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             o.targetApp,
+		Env:             o.targetEnv,
+		ImageTag:        o.imageTag,
+		Mft:             o.appliedManifest,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.ScheduledJob:
