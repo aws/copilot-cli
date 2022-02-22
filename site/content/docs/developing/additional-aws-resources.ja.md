@@ -146,7 +146,7 @@ Parameters:
     Type: String
   Name:
     Type: String
-  # addons.parameters.ymlで追加したパラメーター
+  # addons.parameters.yml で追加したパラメーター
   ServiceName:
     Type: String
 ```
