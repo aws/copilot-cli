@@ -97,12 +97,12 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 	}, nil
 }
 
-// Validate returns an error if the user inputs are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *deleteSvcOpts) Validate() error {
 	return nil
 }
 
-// Ask prompts the user for any required flags.
+// Ask prompts for and validates any required flags.
 func (o *deleteSvcOpts) Ask() error {
 	if o.appName != "" {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
