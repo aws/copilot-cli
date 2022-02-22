@@ -81,7 +81,7 @@ Select %s to run the task in your default VPC instead of any existing environmen
 )
 
 var (
-	taskSecretsPermissionPrompt     = "Do you grant permission to the ECS/Fargate agent for these secrets? "
+	taskSecretsPermissionPrompt     = "Do you grant permission to the ECS/Fargate agent for these secrets?"
 	taskSecretsPermissionPromptHelp = "ECS/Fargate agent needs the permissions in order to fetch the secrets and inject them into your container."
 )
 
@@ -403,9 +403,6 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 			if !template.IsARNFunc(value) || strings.Contains(value, ":ssm:") {
 				o.SSMParamSecrets[name] = value
 			}
-		}
-
-		for name, value := range o.secrets {
 			if strings.Contains(value, ":secretsmanager:") {
 				o.secretsManagerSecrets[name] = value
 			}
