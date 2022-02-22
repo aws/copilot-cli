@@ -274,8 +274,6 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			mockPrompter := mocks.NewMockprompter(ctrl)
 			mockSel := mocks.NewMockconfigSelector(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
-			// test.mockPrompt(mockPrompter)
-			// test.mockSel(mockSel)
 
 			m := &svcDeleteAskMocks{
 				sel:    mockSel,
