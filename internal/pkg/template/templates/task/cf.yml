@@ -124,6 +124,7 @@ Resources:
                     - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
           - !Ref AWS::NoValue
 
+        {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
         - PolicyName: 'PullSecrets'
           PolicyDocument:
             Version: '2012-10-17'
@@ -148,6 +149,7 @@ Resources:
                   - {{$valueFrom}}
                     {{end}}
             {{- end }}
+        {{- end }}
       {{- end }}
   DefaultTaskRole:
     Metadata:

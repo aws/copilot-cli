@@ -382,6 +382,15 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
+	if len(o.secrets) > 0 {
+		for _, value := range o.secrets {
+			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
+			if template.IsARNFunc(value) && !strings.Contains(value, ":ssm:") && !strings.Contains(value, ":secretsmanager:") {
+				return fmt.Errorf("must specify a valid secrets ARN")
+			}
+		}
+	}
+
 	return nil
 }
 
