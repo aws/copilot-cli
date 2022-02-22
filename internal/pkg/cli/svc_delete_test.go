@@ -18,8 +18,6 @@ import (
 )
 
 func TestDeleteSvcOpts_Validate(t *testing.T) {
-	mockError := errors.New("some error")
-
 	tests := map[string]struct {
 		inAppName  string
 		inEnvName  string
@@ -40,9 +38,6 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(&config.Environment{Name: "test"}, nil)
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Workload{
-					Name: "api",
-				}, nil)
 			},
 			want: nil,
 		},
@@ -56,14 +51,10 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			want: nil,
 		},
 		"with svc flag set": {
-			inAppName: "phonetool",
-			inName:    "api",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Workload{
-					Name: "api",
-				}, nil)
-			},
-			want: nil,
+			inAppName:  "phonetool",
+			inName:     "api",
+			setupMocks: func(m *mocks.Mockstore) {},
+			want:       nil,
 		},
 		"with unknown environment": {
 			inAppName: "phonetool",
@@ -72,14 +63,6 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("unknown env"))
 			},
 			want: errors.New("get environment test from config store: unknown env"),
-		},
-		"should return error if fail to get service name": {
-			inAppName: "phonetool",
-			inName:    "api",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(nil, mockError)
-			},
-			want: errors.New("some error"),
 		},
 	}
 
@@ -111,6 +94,12 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 	}
 }
 
+type svcDeleteAskMocks struct {
+	store  *mocks.Mockstore
+	prompt *mocks.Mockprompter
+	sel    *mocks.MockconfigSelector
+}
+
 func TestDeleteSvcOpts_Ask(t *testing.T) {
 	const (
 		testAppName = "phonetool"
@@ -126,115 +115,150 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 
 		mockSel    func(m *mocks.MockconfigSelector)
 		mockPrompt func(m *mocks.Mockprompter)
+		setUpMocks func(m *svcDeleteAskMocks)
 
 		wantedName  string
 		wantedError error
 	}{
+		"validate app name if passed as a flag": {
+			appName:          testAppName,
+			inName:           testSvcName,
+			skipConfirmation: true,
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.store.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
+				m.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Times(0)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			wantedName: testSvcName,
+		},
+		"error validating app name": {
+			appName:          testAppName,
+			inName:           testSvcName,
+			skipConfirmation: true,
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.store.EXPECT().GetApplication(gomock.Any()).Return(nil, &config.ErrNoSuchApplication{})
+				m.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedError: &config.ErrNoSuchApplication{},
+		},
 		"should ask for app name": {
 			appName:          "",
 			inName:           testSvcName,
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return(testAppName, nil)
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return(testAppName, nil)
+				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {},
-
 			wantedName: testSvcName,
+		},
+		"validate service name if passed as a flag": {
+			appName:          testAppName,
+			inName:           testSvcName,
+			skipConfirmation: true,
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Return(&config.Workload{}, nil)
+				m.sel.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedName: testSvcName,
+		},
+		"error validating service name": {
+			appName:          testAppName,
+			inName:           testSvcName,
+			skipConfirmation: true,
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.store.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("some error"),
 		},
 		"should ask for service name": {
 			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return(testSvcName, nil)
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.sel.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return(testSvcName, nil)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {},
-
 			wantedName: testSvcName,
 		},
 		"returns error if no services found": {
 			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return("", mockError)
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.sel.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return("", mockError)
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {},
-
 			wantedError: fmt.Errorf("select service: %w", mockError),
 		},
 		"returns error if fail to select service": {
 			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return("", mockError)
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.sel.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return("", mockError)
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-			},
-
 			wantedError: fmt.Errorf("select service: %w", mockError),
 		},
 		"should skip confirmation": {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any).Times(0)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {},
-
 			wantedName: testSvcName,
 		},
 		"should wrap error returned from prompter confirmation": {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
 					svcDeleteConfirmHelp,
 					gomock.Any(),
 				).Times(1).Return(true, mockError)
-			},
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 
+			},
 			wantedError: fmt.Errorf("svc delete confirmation prompt: %w", mockError),
 		},
 		"should return error if user does not confirm svc delete": {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
 					svcDeleteConfirmHelp,
 					gomock.Any(),
 				).Times(1).Return(false, nil)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-
 			wantedError: errSvcDeleteCancelled,
 		},
 		"should return error nil if user confirms svc delete": {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
 					svcDeleteConfirmHelp,
 					gomock.Any(),
 				).Times(1).Return(true, nil)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-
 			wantedName: testSvcName,
 		},
 		"should return error nil if user confirms svc delete --env": {
@@ -242,17 +266,15 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           testSvcName,
 			envName:          "test",
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, testSvcName, "test"),
 					fmt.Sprintf(svcDeleteFromEnvConfirmHelp, "test"),
 					gomock.Any(),
 				).Times(1).Return(true, nil)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-
 			wantedName: testSvcName,
 		},
 	}
@@ -264,9 +286,16 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 
 			mockPrompter := mocks.NewMockprompter(ctrl)
 			mockSel := mocks.NewMockconfigSelector(ctrl)
-			test.mockPrompt(mockPrompter)
-			test.mockSel(mockSel)
+			mockStore := mocks.NewMockstore(ctrl)
+			// test.mockPrompt(mockPrompter)
+			// test.mockSel(mockSel)
 
+			m := &svcDeleteAskMocks{
+				sel:    mockSel,
+				prompt: mockPrompter,
+				store:  mockStore,
+			}
+			test.setUpMocks(m)
 			opts := deleteSvcOpts{
 				deleteSvcVars: deleteSvcVars{
 					skipConfirmation: test.skipConfirmation,
@@ -274,8 +303,9 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 					name:             test.inName,
 					envName:          test.envName,
 				},
-				prompt: mockPrompter,
-				sel:    mockSel,
+				prompt: m.prompt,
+				sel:    m.sel,
+				store:  m.store,
 			}
 
 			got := opts.Ask()

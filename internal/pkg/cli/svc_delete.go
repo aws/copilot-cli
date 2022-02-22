@@ -99,11 +99,6 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteSvcOpts) Validate() error {
-	if o.name != "" {
-		if _, err := o.store.GetService(o.appName, o.name); err != nil {
-			return err
-		}
-	}
 	if o.envName != "" {
 		return o.validateEnvName()
 	}
@@ -112,11 +107,25 @@ func (o *deleteSvcOpts) Validate() error {
 
 // Ask prompts the user for any required flags.
 func (o *deleteSvcOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
-		return err
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
 	}
-	if err := o.askSvcName(); err != nil {
-		return err
+
+	if o.name != "" {
+		if _, err := o.store.GetService(o.appName, o.name); err != nil {
+			return err
+		}
+
+	} else {
+		if err := o.askSvcName(); err != nil {
+			return err
+		}
 	}
 
 	if o.skipConfirmation {
@@ -208,10 +217,6 @@ func (o *deleteSvcOpts) targetEnv() (*config.Environment, error) {
 }
 
 func (o *deleteSvcOpts) askAppName() error {
-	if o.appName != "" {
-		return nil
-	}
-
 	name, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
@@ -221,10 +226,6 @@ func (o *deleteSvcOpts) askAppName() error {
 }
 
 func (o *deleteSvcOpts) askSvcName() error {
-	if o.name != "" {
-		return nil
-	}
-
 	name, err := o.sel.Service(svcDeleteNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
