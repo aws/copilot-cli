@@ -32,37 +32,23 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			want:       nil,
 		},
 		"with all flags set": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			inName:    "api",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&config.Environment{Name: "test"}, nil)
-			},
-			want: nil,
+			inAppName:  "phonetool",
+			inEnvName:  "test",
+			inName:     "api",
+			setupMocks: func(m *mocks.Mockstore) {},
+			want:       nil,
 		},
 		"with env flag set": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&config.Environment{Name: "test"}, nil)
-			},
-			want: nil,
+			inAppName:  "phonetool",
+			inEnvName:  "test",
+			setupMocks: func(m *mocks.Mockstore) {},
+			want:       nil,
 		},
 		"with svc flag set": {
 			inAppName:  "phonetool",
 			inName:     "api",
 			setupMocks: func(m *mocks.Mockstore) {},
 			want:       nil,
-		},
-		"with unknown environment": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("unknown env"))
-			},
-			want: errors.New("get environment test from config store: unknown env"),
 		},
 	}
 
@@ -267,6 +253,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			envName:          "test",
 			skipConfirmation: false,
 			setUpMocks: func(m *svcDeleteAskMocks) {
+				m.store.EXPECT().GetEnvironment(testAppName, "test").Return(&config.Environment{}, nil)
 				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, testSvcName, "test"),
 					fmt.Sprintf(svcDeleteFromEnvConfirmHelp, "test"),

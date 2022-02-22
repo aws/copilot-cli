@@ -99,9 +99,6 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteSvcOpts) Validate() error {
-	if o.envName != "" {
-		return o.validateEnvName()
-	}
 	return nil
 }
 
@@ -140,6 +137,9 @@ func (o *deleteSvcOpts) Ask() error {
 		// When a customer provides a particular environment,
 		// we'll just delete the service from that environment -
 		// but keep it in the app.
+		if err := o.validateEnvName(); err != nil {
+			return err
+		}
 		deletePrompt = fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, o.name, o.envName)
 		deleteConfirmHelp = fmt.Sprintf(svcDeleteFromEnvConfirmHelp, o.envName)
 	}
