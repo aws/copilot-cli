@@ -40,7 +40,7 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 		return nil, err
 	}
 
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.NewProvider(sessions.UserAgentExtras("svc ls")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
 	}

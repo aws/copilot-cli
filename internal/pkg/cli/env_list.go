@@ -42,7 +42,7 @@ type listEnvOpts struct {
 }
 
 func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env ls"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

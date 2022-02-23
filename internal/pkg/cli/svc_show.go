@@ -46,7 +46,7 @@ type showSvcOpts struct {
 }
 
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
-	defaultSess, err := sessions.NewProvider().Default()
+	defaultSess, err := sessions.NewProvider(sessions.UserAgentExtras("svc show")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
