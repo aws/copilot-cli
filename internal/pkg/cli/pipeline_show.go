@@ -8,6 +8,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -51,11 +55,6 @@ type showPipelineOpts struct {
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store client: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace client: %w", err)
@@ -66,6 +65,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &showPipelineOpts{
 		showPipelineVars: vars,
@@ -85,7 +85,6 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		opts.describer = describer
 		return nil
 	}
-
 	return opts, nil
 }
 

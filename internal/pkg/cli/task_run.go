@@ -10,6 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/spf13/pflag"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -154,11 +158,13 @@ type runTaskOpts struct {
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.NewProvider()
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
 
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
@@ -166,7 +172,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		store:    store,
 		sel:      selector.NewSelect(prompt.New(), store),
 		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
-		provider: sessions.NewProvider(),
+		provider: sessProvider,
 	}
 
 	opts.configureRuntimeOpts = func() error {

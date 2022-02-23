@@ -10,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -52,15 +55,18 @@ type svcExecOpts struct {
 	newCommandExecutor func(*session.Session) ecsCommandExecutor
 	ssmPluginManager   ssmPluginManager
 	prompter           prompter
+	sessProvider       *sessions.Provider
 	// Override in unit test
 	randInt func(int) int
 }
 
 func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
-	ssmStore, err := config.NewStore()
+	sessProvider := sessions.NewProvider()
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, err
 	}
+	ssmStore := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	deployStore, err := deploy.NewStore(ssmStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
@@ -81,6 +87,7 @@ func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
 		},
 		ssmPluginManager: exec.NewSSMPluginCommand(nil),
 		prompter:         prompt.New(),
+		sessProvider:     sessProvider,
 	}, nil
 }
 
@@ -181,7 +188,7 @@ func (o *svcExecOpts) envSession() (*session.Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", o.envName, err)
 	}
-	return sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	return o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 }
 
 func (o *svcExecOpts) selectTask(tasks []*awsecs.Task) (string, error) {

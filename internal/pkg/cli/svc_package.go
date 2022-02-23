@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/aws-sdk-go/aws"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -87,10 +89,14 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	store, err := config.NewStore()
+
+	sessProvider := sessions.NewProvider()
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	opts := &packageSvcOpts{
 		packageSvcVars:   vars,
@@ -105,7 +111,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		paramsWriter:     ioutil.Discard,
 		addonsWriter:     ioutil.Discard,
 		newInterpolator:  newManifestInterpolator,
-		sessProvider:     sessions.NewProvider(),
+		sessProvider:     sessProvider,
 		newTplGenerator:  newWkldTplGenerator,
 	}
 	return opts, nil
