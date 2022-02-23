@@ -154,7 +154,7 @@ func (o *resumeSvcOpts) askSvcEnvName() error {
 }
 
 func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc resume"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)

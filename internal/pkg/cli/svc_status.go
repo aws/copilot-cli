@@ -45,7 +45,7 @@ type svcStatusOpts struct {
 }
 
 func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
-	defaultSess, err := sessions.NewProvider().Default()
+	defaultSess, err := sessions.NewProvider(sessions.UserAgentExtras("svc status")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
 	}

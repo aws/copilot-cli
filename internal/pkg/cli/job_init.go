@@ -81,7 +81,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	p := sessions.NewProvider()
+	p := sessions.NewProvider(sessions.UserAgentExtras("job init"))
 	sess, err := p.Default()
 	if err != nil {
 		return nil, err

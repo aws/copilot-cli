@@ -90,7 +90,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc package"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)

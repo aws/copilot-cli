@@ -58,7 +58,7 @@ type taskExecOpts struct {
 }
 
 func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("task exec"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)

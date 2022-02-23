@@ -47,7 +47,7 @@ type showEnvOpts struct {
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env show"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

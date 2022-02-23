@@ -49,7 +49,7 @@ func buildAppListCommand() *cobra.Command {
 			opts := listAppOpts{
 				w: os.Stdout,
 			}
-			sess, err := sessions.NewProvider().Default()
+			sess, err := sessions.NewProvider(sessions.UserAgentExtras("app ls")).Default()
 			if err != nil {
 				return fmt.Errorf("default session: %v", err)
 			}

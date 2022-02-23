@@ -59,7 +59,7 @@ type initAppOpts struct {
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.NewProvider(sessions.UserAgentExtras("app init")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

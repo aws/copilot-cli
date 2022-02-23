@@ -38,7 +38,7 @@ type jobLogsOpts struct {
 }
 
 func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("job logs"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

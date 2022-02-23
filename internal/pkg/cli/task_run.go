@@ -158,7 +158,7 @@ type runTaskOpts struct {
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("task run"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)

@@ -77,7 +77,7 @@ type secretInitOpts struct {
 }
 
 func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("secret init"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
