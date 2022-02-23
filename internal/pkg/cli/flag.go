@@ -32,7 +32,7 @@ const (
 	imageTagFlag          = "tag"
 	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
-	uploadResourcesFlag   = "upload-resources"
+	uploadAssetsFlag      = "upload-assets"
 	limitFlag             = "limit"
 	followFlag            = "follow"
 	sinceFlag             = "since"
@@ -201,9 +201,10 @@ const (
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
-	stackOutputDirFlagDescription  = "Optional. Writes the stack template and template configuration to a directory."
-	uploadResourcesFlagDescription = "Optional. Whether to upload dependency resources (e.g., an image that needs to be built and pushed), so that the output of `copilot svc package` can be directly used for deployment."
-	prodEnvFlagDescription         = "If the environment contains production services."
+	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
+	uploadAssetsFlagDescription   = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
+Uploaded asset locations are filled in the template configuration.`
+	prodEnvFlagDescription = "If the environment contains production services."
 
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
 unless any time filtering flags are set.`
