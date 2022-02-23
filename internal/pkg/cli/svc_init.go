@@ -138,15 +138,15 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	p := sessions.NewProvider(sessions.UserAgentExtras("svc init"))
-	sess, err := p.Default()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc init"))
+	sess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	prompter := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
-	deployStore, err := deploy.NewStore(store)
+	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, err
 	}

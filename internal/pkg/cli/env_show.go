@@ -54,7 +54,7 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 	}
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
-	deployStore, err := deploy.NewStore(store)
+	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
 	}
