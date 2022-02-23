@@ -7,6 +7,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -66,14 +70,12 @@ type envUpgradeOpts struct {
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %v", err)
-	}
-	defaultSession, err := sessions.NewProvider().Default()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env upgrade"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	return &envUpgradeOpts{
 		envUpgradeVars: vars,
 
@@ -101,14 +103,14 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 			return d, nil
 		},
 		newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
-			sess, err := sessions.NewProvider().FromRole(conf.ManagerRoleARN, conf.Region)
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
 				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
 		},
 		newS3: func(region string) (uploader, error) {
-			sess, err := sessions.NewProvider().DefaultWithRegion(region)
+			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, fmt.Errorf("create session with region %s: %v", region, err)
 			}

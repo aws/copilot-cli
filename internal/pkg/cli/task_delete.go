@@ -7,6 +7,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -67,25 +70,26 @@ type deleteTaskOpts struct {
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	prompter := prompt.New()
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("task delete"))
+	defaultSess, err := sessProvider.Default()
+	if err != nil {
+		return nil, fmt.Errorf("default session: %v", err)
+	}
+
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	prompter := prompt.New()
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
 
 		store:    store,
 		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:   prompter,
-		provider: sessions.NewProvider(),
+		provider: sessProvider,
 		sel:      selector.NewWorkspaceSelect(prompter, store, ws),
 		newTaskSel: func(session *session.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)

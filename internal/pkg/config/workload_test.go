@@ -113,7 +113,7 @@ func TestStore_ListServices(t *testing.T) {
 			// GIVEN
 			lastPageInPaginatedResp = false
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -193,7 +193,7 @@ func TestStore_ListWorkloads(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			//GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -282,7 +282,7 @@ func TestStore_ListJobs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			//GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -359,7 +359,7 @@ func TestStore_GetService(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
@@ -434,7 +434,7 @@ func TestStore_GetJob(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
@@ -526,7 +526,7 @@ func TestStore_CreateService(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 					mockGetParameter: tc.mockGetParameter,
@@ -582,7 +582,7 @@ func TestDeleteService(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			s := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t: t,
 
 					mockDeleteParameter: test.mockDeleteParam,

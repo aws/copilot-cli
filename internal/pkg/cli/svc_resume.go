@@ -6,6 +6,10 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -150,28 +154,27 @@ func (o *resumeSvcOpts) askSvcEnvName() error {
 }
 
 func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc resume"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
-	deployStore, err := deploy.NewStore(store)
+
+	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	deployStore, err := deploy.NewStore(configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 
 	opts := &resumeSvcOpts{
 		resumeSvcVars: vars,
-		store:         store,
-		sel:           selector.NewDeploySelect(prompt.New(), store, deployStore),
+		store:         configStore,
+		sel:           selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		spinner:       termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	opts.initClients = func() error {
 		var a *apprunner.AppRunner
 		var d *describe.AppRunnerServiceDescriber
-		configStore, err := config.NewStore()
-		if err != nil {
-			return err
-		}
 		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
@@ -182,7 +185,7 @@ func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
 		}
 		switch svc.Type {
 		case manifest.RequestDrivenWebServiceType:
-			sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+			sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return err
 			}

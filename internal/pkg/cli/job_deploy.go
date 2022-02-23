@@ -6,6 +6,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
@@ -31,7 +34,7 @@ type deployJobOpts struct {
 	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
 	newInterpolator func(app, env string) interpolator
 	cmd             runner
-	sessProvider    sessionProvider
+	sessProvider    *sessions.Provider
 	envUpgradeCmd   actionCommand
 	newJobDeployer  func(*deployJobOpts) (workloadDeployer, error)
 
@@ -45,10 +48,12 @@ type deployJobOpts struct {
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("job deploy"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
 	ws, err := workspace.New()
 	if err != nil {
@@ -65,7 +70,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
 		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
-		sessProvider:    sessions.NewProvider(),
+		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
 		newJobDeployer:  newJobDeployer,
@@ -76,11 +81,12 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	var err error
 	var deployer workloadDeployer
 	in := deploy.WorkloadDeployerInput{
-		Name:     o.name,
-		App:      o.targetApp,
-		Env:      o.targetEnv,
-		ImageTag: o.imageTag,
-		Mft:      o.appliedManifest,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             o.targetApp,
+		Env:             o.targetEnv,
+		ImageTag:        o.imageTag,
+		Mft:             o.appliedManifest,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.ScheduledJob:

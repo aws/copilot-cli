@@ -15,6 +15,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -150,11 +153,12 @@ type workloadDeployer struct {
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
 type WorkloadDeployerInput struct {
-	Name     string
-	App      *config.Application
-	Env      *config.Environment
-	ImageTag string
-	Mft      interface{}
+	SessionProvider *sessions.Provider
+	Name            string
+	App             *config.Application
+	Env             *config.Environment
+	ImageTag        string
+	Mft             interface{}
 }
 
 // NewWorkloadDeployer is the constructor for workloadDeployer.
@@ -167,19 +171,18 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get workspace path: %w", err)
 	}
-	sessProvider := sessions.NewProvider()
-	defaultSession, err := sessProvider.Default()
+	defaultSession, err := in.SessionProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("create default: %w", err)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("create env session with region %s: %w", in.Env.Region, err)
 	}
-	envSession, err := sessProvider.FromRole(in.Env.ManagerRoleARN, in.Env.Region)
+	envSession, err := in.SessionProvider.FromRole(in.Env.ManagerRoleARN, in.Env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("create env session with region %s: %w", in.Env.Region, err)
 	}
-	defaultSessEnvRegion, err := sessProvider.DefaultWithRegion(in.Env.Region)
+	defaultSessEnvRegion, err := in.SessionProvider.DefaultWithRegion(in.Env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("create default session with region %s: %w", in.Env.Region, err)
 	}
@@ -194,10 +197,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	endpointGetter, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
 		Env:         in.Env.Name,

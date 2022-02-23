@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -94,22 +95,19 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	ssm, err := config.NewStore()
-	if err != nil {
-		return nil, err
-	}
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("init"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompt := prompt.New()
-	sel := selector.NewWorkspaceSelect(prompt, ssm, ws)
-	deployStore, err := deploy.NewStore(ssm)
+	sel := selector.NewWorkspaceSelect(prompt, configStore, ws)
+	deployStore, err := deploy.NewStore(configStore)
 	if err != nil {
 		return nil, err
 	}
-	snsSel := selector.NewDeploySelect(prompt, ssm, deployStore)
+	snsSel := selector.NewDeploySelect(prompt, configStore, deployStore)
 	spin := termprogress.NewSpinner(log.DiagnosticWriter)
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess)
@@ -120,7 +118,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initAppVars: initAppVars{
 			name: vars.appName,
 		},
-		store:    ssm,
+		store:    configStore,
 		ws:       ws,
 		prompt:   prompt,
 		identity: id,
@@ -136,7 +134,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
-		store:       ssm,
+		store:       configStore,
 		appDeployer: deployer,
 		prog:        spin,
 		prompt:      prompt,
@@ -161,7 +159,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			appName:  vars.appName,
 		},
 
-		store:           ssm,
+		store:           configStore,
 		prompt:          prompt,
 		ws:              ws,
 		newInterpolator: newManifestInterpolator,
@@ -178,7 +176,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			imageTag: vars.imageTag,
 			appName:  vars.appName,
 		},
-		store:           ssm,
+		store:           configStore,
 		ws:              ws,
 		newInterpolator: newManifestInterpolator,
 		unmarshal:       manifest.UnmarshalWorkload,
@@ -203,7 +201,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prompt: prompt,
 
 		setupWorkloadInit: func(o *initOpts, wkldType string) error {
-			wlInitializer := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
+			wlInitializer := &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
 			wkldVars := initWkldVars{
 				appName:        *o.appName,
 				wkldType:       wkldType,
@@ -224,7 +222,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					initJobVars: jobVars,
 
 					fs:           fs,
-					store:        ssm,
+					store:        configStore,
 					init:         wlInitializer,
 					sel:          sel,
 					prompt:       prompt,
@@ -248,7 +246,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					fs:           fs,
 					init:         wlInitializer,
 					sel:          sel,
-					store:        ssm,
+					store:        configStore,
 					topicSel:     snsSel,
 					mftReader:    ws,
 					prompt:       prompt,

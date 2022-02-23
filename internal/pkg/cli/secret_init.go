@@ -9,11 +9,14 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/dustin/go-humanize/english"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsssm "github.com/aws/aws-sdk-go/service/ssm"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -74,11 +77,13 @@ type secretInitOpts struct {
 }
 
 func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("secret init"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, err
 	}
 
+	store := config.NewSSMStore(identity.New(defaultSession), awsssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := secretInitOpts{
 		secretInitVars: vars,
@@ -106,7 +111,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		if err != nil {
 			return err
 		}
-		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}

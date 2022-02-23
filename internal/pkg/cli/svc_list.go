@@ -7,6 +7,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/copilot-cli/internal/pkg/cli/list"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -30,14 +35,17 @@ type listSvcOpts struct {
 }
 
 func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, err
-	}
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, err
 	}
+
+	sess, err := sessions.NewProvider(sessions.UserAgentExtras("svc ls")).Default()
+	if err != nil {
+		return nil, fmt.Errorf("default session: %v", err)
+	}
+
+	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	svcLister := &list.SvcListWriter{
 		Ws:    ws,
 		Store: store,
@@ -53,6 +61,11 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 		list: svcLister,
 		sel:  selector.NewSelect(prompt.New(), store),
 	}, nil
+}
+
+// Validate is a no-op for this command.
+func (o *listSvcOpts) Validate() error {
+	return nil
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -71,7 +84,6 @@ func (o *listSvcOpts) Ask() error {
 
 // Execute lists the services through the prompt.
 func (o *listSvcOpts) Execute() error {
-
 	if err := o.list.Write(o.appName); err != nil {
 		return err
 	}

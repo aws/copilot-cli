@@ -77,7 +77,7 @@ func (s *Store) CreateEnvironment(environment *Environment) error {
 		return fmt.Errorf("serializing environment %s: %w", environment.Name, err)
 	}
 
-	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssm.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(environmentPath),
 		Description: aws.String(fmt.Sprintf("The %s deployment stage", environment.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -99,7 +99,7 @@ func (s *Store) CreateEnvironment(environment *Environment) error {
 // it returns ErrNoSuchEnvironment.
 func (s *Store) GetEnvironment(appName string, environmentName string) (*Environment, error) {
 	environmentPath := fmt.Sprintf(fmtEnvParamPath, appName, environmentName)
-	environmentParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+	environmentParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(environmentPath),
 	})
 
@@ -151,7 +151,7 @@ func (s *Store) ListEnvironments(appName string) ([]*Environment, error) {
 // If the environment does not exist in the store or is successfully deleted then returns nil. Otherwise, returns an error.
 func (s *Store) DeleteEnvironment(appName, environmentName string) error {
 	paramName := fmt.Sprintf(fmtEnvParamPath, appName, environmentName)
-	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+	_, err := s.ssm.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
 

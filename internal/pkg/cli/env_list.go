@@ -10,6 +10,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -37,11 +42,12 @@ type listEnvOpts struct {
 }
 
 func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env ls"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
-
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	return &listEnvOpts{
 		listEnvVars: vars,

@@ -9,6 +9,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
@@ -67,25 +71,21 @@ type deleteSvcOpts struct {
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	provider := sessions.NewProvider()
-	defaultSession, err := provider.Default()
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc delete"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
-	prompter := prompt.New()
 
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+	prompter := prompt.New()
 	return &deleteSvcOpts{
 		deleteSvcVars: vars,
 
 		store:   store,
 		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompter,
-		sess:    provider,
+		sess:    sessProvider,
 		sel:     selector.NewConfigSelect(prompter, store),
 		appCFN:  cloudformation.New(defaultSession),
 		getSvcCFN: func(session *awssession.Session) wlDeleter {
@@ -97,28 +97,38 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 	}, nil
 }
 
-// Validate returns an error if the user inputs are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *deleteSvcOpts) Validate() error {
+	return nil
+}
+
+// Ask prompts for and validates any required flags.
+func (o *deleteSvcOpts) Ask() error {
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
+	}
+
 	if o.name != "" {
 		if _, err := o.store.GetService(o.appName, o.name); err != nil {
 			return err
 		}
+	} else {
+		if err := o.askSvcName(); err != nil {
+			return err
+		}
 	}
+
 	if o.envName != "" {
-		return o.validateEnvName()
+		if err := o.validateEnvName(); err != nil {
+			return err
+		}
 	}
-	return nil
-}
-
-// Ask prompts the user for any required flags.
-func (o *deleteSvcOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
-		return err
-	}
-	if err := o.askSvcName(); err != nil {
-		return err
-	}
-
 	if o.skipConfirmation {
 		return nil
 	}
@@ -208,10 +218,6 @@ func (o *deleteSvcOpts) targetEnv() (*config.Environment, error) {
 }
 
 func (o *deleteSvcOpts) askAppName() error {
-	if o.appName != "" {
-		return nil
-	}
-
 	name, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
@@ -221,10 +227,6 @@ func (o *deleteSvcOpts) askAppName() error {
 }
 
 func (o *deleteSvcOpts) askSvcName() error {
-	if o.name != "" {
-		return nil
-	}
-
 	name, err := o.sel.Service(svcDeleteNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)

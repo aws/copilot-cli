@@ -62,6 +62,16 @@ type SvcListWriter struct {
 	Out   io.Writer // The writer where output will be written.
 }
 
+// ServiceJSONOutput is the output struct for service list.
+type ServiceJSONOutput struct {
+	Services []*config.Workload `json:"services"`
+}
+
+// JobJSONOutput is the output struct for job list.
+type JobJSONOutput struct {
+	Jobs []*config.Workload `json:"jobs"`
+}
+
 // Jobs lists all jobs, either locally or in the workspace, and writes the output to a writer.
 func (l *JobListWriter) Write(appName string) error {
 	if _, err := l.Store.GetApplication(appName); err != nil {
@@ -154,10 +164,7 @@ func humanOutput(wklds []*config.Workload, w io.Writer) {
 }
 
 func (l *SvcListWriter) jsonOutputSvcs(svcs []*config.Workload) (string, error) {
-	type out struct {
-		Services []*config.Workload `json:"services"`
-	}
-	b, err := json.Marshal(out{Services: svcs})
+	b, err := json.Marshal(ServiceJSONOutput{Services: svcs})
 	if err != nil {
 		return "", fmt.Errorf("marshal services: %w", err)
 	}
@@ -165,10 +172,7 @@ func (l *SvcListWriter) jsonOutputSvcs(svcs []*config.Workload) (string, error) 
 }
 
 func (l *JobListWriter) jsonOutputJobs(jobs []*config.Workload) (string, error) {
-	type out struct {
-		Jobs []*config.Workload `json:"jobs"`
-	}
-	b, err := json.Marshal(out{Jobs: jobs})
+	b, err := json.Marshal(JobJSONOutput{Jobs: jobs})
 	if err != nil {
 		return "", fmt.Errorf("marshal jobs: %w", err)
 	}

@@ -7,6 +7,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -64,17 +68,12 @@ type deleteAppOpts struct {
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	provider := sessions.NewProvider()
+	provider := sessions.NewProvider(sessions.UserAgentExtras("app delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
@@ -83,7 +82,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 	return &deleteAppOpts{
 		deleteAppVars: vars,
 		spinner:       termprogress.NewSpinner(log.DiagnosticWriter),
-		store:         store,
+		store:         config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region)),
 		ws:            ws,
 		sessProvider:  provider,
 		cfn:           cloudformation.New(defaultSession),

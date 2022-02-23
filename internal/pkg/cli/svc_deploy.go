@@ -6,6 +6,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 
@@ -63,14 +66,18 @@ type deploySvcOpts struct {
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
+
+	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc deploy"))
+	defaultSession, err := sessProvider.Default()
+	if err != nil {
+		return nil, err
+	}
+
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &deploySvcOpts{
 		deployWkldVars: vars,
@@ -83,7 +90,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		prompt:          prompter,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
-		sessProvider:    sessions.NewProvider(),
+		sessProvider:    sessProvider,
 		newSvcDeployer:  newSvcDeployer,
 	}
 	return opts, err
@@ -93,11 +100,12 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	var err error
 	var deployer workloadDeployer
 	in := deploy.WorkloadDeployerInput{
-		Name:     o.name,
-		App:      o.targetApp,
-		Env:      o.targetEnv,
-		ImageTag: o.imageTag,
-		Mft:      o.appliedManifest,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             o.targetApp,
+		Env:             o.targetEnv,
+		ImageTag:        o.imageTag,
+		Mft:             o.appliedManifest,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
