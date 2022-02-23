@@ -30,8 +30,6 @@ const (
 	taskEntryPointParamKey     = "EntryPoint"
 	taskOSParamKey             = "OS"
 	taskArchParamKey           = "Arch"
-	taskAppParamKey            = "App"
-	taskEnvParamKey            = "Env"
 
 	taskLogRetentionInDays = "1"
 )
@@ -66,11 +64,17 @@ func (t *taskStackConfig) Template() (string, error) {
 		Secrets               map[string]string
 		SSMParamSecrets       map[string]string
 		SecretsManagerSecrets map[string]string
+		App                   string
+		Env                   string
+		ExecutionRole         string
 	}{
 		EnvVars:               t.EnvVars,
 		Secrets:               t.Secrets,
 		SSMParamSecrets:       t.SSMParamSecrets,
 		SecretsManagerSecrets: t.SecretsManagerSecrets,
+		App:                   t.App,
+		Env:                   t.Env,
+		ExecutionRole:         t.ExecutionRole,
 	}, template.WithFuncs(cfnFuntion))
 	if err != nil {
 		return "", fmt.Errorf("read template for task stack: %w", err)
@@ -124,14 +128,6 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(taskArchParamKey),
 			ParameterValue: aws.String(t.Arch),
-		},
-		{
-			ParameterKey:   aws.String(taskAppParamKey),
-			ParameterValue: aws.String(t.App),
-		},
-		{
-			ParameterKey:   aws.String(taskEnvParamKey),
-			ParameterValue: aws.String(t.Env),
 		},
 	}, nil
 }

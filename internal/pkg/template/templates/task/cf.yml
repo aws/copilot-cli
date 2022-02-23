@@ -25,10 +25,6 @@ Parameters:
     Type: String
   Arch:
     Type: String
-  App:
-    Type: String
-  Env:
-    Type: String
 Conditions:
   # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
@@ -43,9 +39,6 @@ Conditions:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
   HasCustomPlatform:
     !Not [!Equals [!Ref OS, ""]]
-  HasAppAndEnv: !And
-    - !Not [ !Equals [ !Ref App, "" ] ]
-    - !Not [ !Equals [ !Ref Env, "" ] ]
 Resources:
   TaskDefinition:
     Metadata:
@@ -96,61 +89,65 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-      {{- if .Secrets }}
-      Policies:
-        - !If
-          - HasAppAndEnv
-          - PolicyName: 'PullSecrets'
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: 'Allow'
-                  Action:
-                    - ssm:GetParameters
-                  Condition:
-                    StringEquals:
-                      "ssm:ResourceTag/copilot-application": !Ref App
-                      "ssm:ResourceTag/copilot-environment": !Ref Env
-                  Resource:
-                    - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
-                - Effect: 'Allow'
-                  Action:
-                    - secretsmanager:GetSecretValue
-                  Condition:
-                    StringEquals:
-                      "secretsmanager:ResourceTag/copilot-application": !Ref App
-                      "secretsmanager:ResourceTag/copilot-environment": !Ref Env
-                  Resource:
-                    - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
-          - !Ref AWS::NoValue
 
-        {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
+      {{- if eq .ExecutionRole "" }}
+      {{- if .Secrets}}
+      Policies:
+      {{- if and .App .Env }}
         - PolicyName: 'PullSecrets'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-            {{- if .SSMParamSecrets}}
+              - Effect: 'Allow'
+                Action:
+                  - ssm:GetParameters
+                Condition:
+                  StringEquals:
+                    "ssm:ResourceTag/copilot-application": {{ .App }}
+                    "ssm:ResourceTag/copilot-environment": {{ .Env }}
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+              - Effect: 'Allow'
+                Action:
+                  - secretsmanager:GetSecretValue
+                Condition:
+                  StringEquals:
+                    "secretsmanager:ResourceTag/copilot-application": {{ .App }}
+                    "secretsmanager:ResourceTag/copilot-environment": {{ .Env }}
+                Resource:
+                  - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
+
+      {{- else if or .SSMParamSecrets .SecretsManagerSecrets }}
+
+        - PolicyName: 'PullSecrets'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              {{- if .SSMParamSecrets }}
               - Effect: 'Allow'
                 Action:
                   - ssm:GetParameters
                 Resource: {{range $name, $valueFrom := .SSMParamSecrets}}
-                    {{- if not (isARN $valueFrom) }}
+                  {{- if not (isARN $valueFrom) }}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter{{$valueFrom}}
                     {{- else }}
                   - {{ $valueFrom }}
-                    {{- end}}
-                  {{end}}
-            {{- end }}
-            {{- if .SecretsManagerSecrets }}
+                    {{- end }}
+                    {{ end }}
+              {{- end }}
+
+              {{- if .SecretsManagerSecrets }}
               - Effect: 'Allow'
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: {{range $name, $valueFrom := .SecretsManagerSecrets}}
                   - {{$valueFrom}}
-                    {{end}}
-            {{- end }}
-        {{- end }}
+                    {{ end }}
+              {{- end }}
       {{- end }}
+      {{- end }}
+      {{- end }}
+
   DefaultTaskRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'

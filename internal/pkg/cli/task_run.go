@@ -109,7 +109,7 @@ type runTaskVars struct {
 
 	envVars                  map[string]string
 	secrets                  map[string]string
-	SSMParamSecrets          map[string]string
+	ssmParamSecrets          map[string]string
 	secretsManagerSecrets    map[string]string
 	acknowledgeSecretsAccess bool
 	command                  string
@@ -385,13 +385,35 @@ func (o *runTaskOpts) Validate() error {
 	if len(o.secrets) > 0 {
 		for _, value := range o.secrets {
 			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
-			if template.IsARNFunc(value) && !strings.Contains(value, ":ssm:") && !strings.Contains(value, ":secretsmanager:") {
+			if !isSSM(value) && !isSecretsManager(value) {
 				return fmt.Errorf("must specify a valid secrets ARN")
 			}
 		}
 	}
 
 	return nil
+}
+
+func isSSM(value string) bool {
+	// For SSM parameter you can specify it as ARN or name if it exists in the same Region as the task you are launching.
+	return !template.IsARNFunc(value) || strings.Contains(value, ":ssm:")
+}
+
+func isSecretsManager(value string) bool {
+	return strings.Contains(value, ":secretsmanager:")
+}
+
+func (o *runTaskOpts) categorizeSecrets() {
+	o.secretsManagerSecrets = make(map[string]string)
+	o.ssmParamSecrets = make(map[string]string)
+	for name, value := range o.secrets {
+		if isSSM(value) {
+			o.ssmParamSecrets[name] = value
+		}
+		if isSecretsManager(value) {
+			o.secretsManagerSecrets[name] = value
+		}
+	}
 }
 
 func (o *runTaskOpts) confirmSecretsAccess() error {
@@ -403,48 +425,31 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 		return nil
 	}
 
-	o.secretsManagerSecrets = make(map[string]string)
-	o.SSMParamSecrets = make(map[string]string)
-
 	if o.acknowledgeSecretsAccess {
-		for name, value := range o.secrets {
-			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
-			if !template.IsARNFunc(value) || strings.Contains(value, ":ssm:") {
-				o.SSMParamSecrets[name] = value
-			}
-			if strings.Contains(value, ":secretsmanager:") {
-				o.secretsManagerSecrets[name] = value
-			}
-		}
-	} else {
-		log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
-
-		for name, value := range o.secrets {
-			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
-			if !template.IsARNFunc(value) || strings.Contains(value, ":ssm:") {
-				log.Infoln("* " + value)
-				o.SSMParamSecrets[name] = value
-			}
-		}
-
-		log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
-
-		for name, value := range o.secrets {
-			if strings.Contains(value, ":secretsmanager:") {
-				log.Infoln("* " + value)
-				o.secretsManagerSecrets[name] = value
-			}
-		}
-
-		secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
-		if err != nil {
-			return fmt.Errorf("prompt to confirm secrets access: %w", err)
-		}
-
-		if !secretsAccessConfirmed {
-			return errors.New("access to secrets denied")
-		}
+		return nil
 	}
+
+	log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
+
+	for _, value := range o.ssmParamSecrets {
+		log.Infoln("* " + value)
+	}
+
+	log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+
+	for _, value := range o.secretsManagerSecrets {
+		log.Infoln("* " + value)
+	}
+
+	secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
+	if err != nil {
+		return fmt.Errorf("prompt to confirm secrets access: %w", err)
+	}
+
+	if !secretsAccessConfirmed {
+		return errors.New("access to secrets denied")
+	}
+
 	return nil
 }
 
@@ -569,6 +574,7 @@ func (o *runTaskOpts) Ask() error {
 		}
 	}
 	if len(o.secrets) > 0 {
+		o.categorizeSecrets()
 		if err := o.confirmSecretsAccess(); err != nil {
 			return err
 		}
@@ -909,7 +915,7 @@ func (o *runTaskOpts) deploy() error {
 		EntryPoint:            entrypoint,
 		EnvVars:               o.envVars,
 		Secrets:               o.secrets,
-		SSMParamSecrets:       o.SSMParamSecrets,
+		SSMParamSecrets:       o.ssmParamSecrets,
 		SecretsManagerSecrets: o.secretsManagerSecrets,
 		OS:                    o.os,
 		Arch:                  o.arch,
