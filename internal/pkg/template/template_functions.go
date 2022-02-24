@@ -26,9 +26,14 @@ func ReplaceDashesFunc(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
 }
 
-// IsArnFunc takes a string value and determines if it's an ARN or not
+// IsArnFunc takes a string value and determines if it's an ARN or not.
 func IsARNFunc(value string) bool {
 	return arn.IsARN(value)
+}
+
+// TrimSlashPrefix takes a string value and removes slash prefix from the string if present.
+func TrimSlashPrefix(value string) string {
+	return strings.TrimPrefix(value, "/")
 }
 
 // DashReplacedLogicalIDToOriginal takes a "sanitized" logical ID

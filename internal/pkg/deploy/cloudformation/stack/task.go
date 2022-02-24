@@ -54,14 +54,14 @@ func (t *taskStackConfig) StackName() string {
 }
 
 var cfnFuntion = map[string]interface{}{
-	"isARN": template.IsARNFunc,
+	"isARN":           template.IsARNFunc,
+	"trimSlashPrefix": template.TrimSlashPrefix,
 }
 
 // Template returns the task CloudFormation template.
 func (t *taskStackConfig) Template() (string, error) {
 	content, err := t.parser.Parse(taskTemplatePath, struct {
 		EnvVars               map[string]string
-		Secrets               map[string]string
 		SSMParamSecrets       map[string]string
 		SecretsManagerSecrets map[string]string
 		App                   string
@@ -69,7 +69,6 @@ func (t *taskStackConfig) Template() (string, error) {
 		ExecutionRole         string
 	}{
 		EnvVars:               t.EnvVars,
-		Secrets:               t.Secrets,
 		SSMParamSecrets:       t.SSMParamSecrets,
 		SecretsManagerSecrets: t.SecretsManagerSecrets,
 		App:                   t.App,

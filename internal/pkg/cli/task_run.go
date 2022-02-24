@@ -113,8 +113,6 @@ type runTaskVars struct {
 
 	envVars                  map[string]string
 	secrets                  map[string]string
-	ssmParamSecrets          map[string]string
-	secretsManagerSecrets    map[string]string
 	acknowledgeSecretsAccess bool
 	command                  string
 	entrypoint               string
@@ -165,6 +163,10 @@ type runTaskOpts struct {
 	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromJob        func(client ecs.JobDescriber, app, env, job string) (*ecs.RunTaskRequest, error)
+
+	// parameters to hold SSM Param and Secrets Manager Secrets
+	ssmParamSecrets       map[string]string
+	secretsManagerSecrets map[string]string
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -389,12 +391,10 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if len(o.secrets) > 0 {
-		for _, value := range o.secrets {
-			//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
-			if !isSSM(value) && !isSecretsManager(value) {
-				return fmt.Errorf("must specify a valid secrets ARN")
-			}
+	for _, value := range o.secrets {
+		//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
+		if !isSSM(value) && !isSecretsManager(value) {
+			return fmt.Errorf("must specify a valid secrets ARN")
 		}
 	}
 
@@ -921,7 +921,6 @@ func (o *runTaskOpts) deploy() error {
 		Command:               command,
 		EntryPoint:            entrypoint,
 		EnvVars:               o.envVars,
-		Secrets:               o.secrets,
 		SSMParamSecrets:       o.ssmParamSecrets,
 		SecretsManagerSecrets: o.secretsManagerSecrets,
 		OS:                    o.os,
