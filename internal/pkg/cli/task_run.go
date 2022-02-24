@@ -407,7 +407,7 @@ func isSSM(value string) bool {
 }
 
 func isSecretsManager(value string) bool {
-	return strings.Contains(value, ":secretsmanager:")
+	return template.IsARNFunc(value) && strings.Contains(value, ":secretsmanager:")
 }
 
 func (o *runTaskOpts) categorizeSecrets() {

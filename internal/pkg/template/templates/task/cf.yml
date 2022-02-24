@@ -15,8 +15,6 @@ Parameters:
     Type: String
   TaskRole:
     Type: String
-  ExecutionRole:
-    Type: String
   Command:
     Type: CommaDelimitedList
   EntryPoint:
@@ -31,8 +29,6 @@ Conditions:
     !Not [!Equals [!Ref ContainerImage, ""]]
   HasTaskRole:
     !Not [!Equals [!Ref TaskRole, ""]]
-  HasExecutionRole:
-    !Not [!Equals [!Ref ExecutionRole, ""]]
   HasCommand:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
   HasEntryPoint:
@@ -62,7 +58,7 @@ Resources:
           Environment:{{range $name, $value := .EnvVars}}
           - Name: {{$name}}
             Value: {{$value}}{{end}}{{end}}
-          {{- if .SSMParamSecrets}}
+          {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
           Secrets:{{range $name, $valueFrom := .SSMParamSecrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}
@@ -120,7 +116,7 @@ Resources:
                 Resource:
                   - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
 
-      {{- else if or .SSMParamSecrets .SecretsManagerSecrets }}
+      {{- else }}
 
         - PolicyName: 'PullSecrets'
           PolicyDocument:

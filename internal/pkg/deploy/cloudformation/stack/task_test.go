@@ -100,10 +100,6 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 			ParameterValue: aws.String("task-role"),
 		},
 		{
-			ParameterKey:   aws.String(taskExecutionRoleParamKey),
-			ParameterValue: aws.String("execution-role"),
-		},
-		{
 			ParameterKey:   aws.String(taskCommandParamKey),
 			ParameterValue: aws.String("echo hooray"),
 		},
@@ -126,11 +122,10 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 		CPU:    256,
 		Memory: 512,
 
-		Image:         "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
-		TaskRole:      "task-role",
-		ExecutionRole: "execution-role",
-		Command:       []string{"echo hooray"},
-		EntryPoint:    []string{"exec", "some command"},
+		Image:      "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
+		TaskRole:   "task-role",
+		Command:    []string{"echo hooray"},
+		EntryPoint: []string{"exec", "some command"},
 	}
 
 	task := &taskStackConfig{
