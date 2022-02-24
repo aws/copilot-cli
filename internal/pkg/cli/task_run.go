@@ -217,7 +217,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 	ecsService := awsecs.New(o.sess)
 
 	if o.env != "" {
-		deployStore, err := deploy.NewStore(o.store)
+		deployStore, err := deploy.NewStore(o.provider, o.store)
 		if err != nil {
 			return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
 		}
