@@ -921,22 +921,16 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "",
-					Secrets: map[string]string{
-						"quiet": "shh",
-					},
+					Name:       inGroupName,
+					Image:      "",
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "uri/repo:latest",
-					Secrets: map[string]string{
-						"quiet": "shh",
-					},
+					Name:       inGroupName,
+					Image:      "uri/repo:latest",
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
