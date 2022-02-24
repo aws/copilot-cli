@@ -97,12 +97,15 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 }
 
 func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
-	var err error
+	targetApp, err := o.getTargetApp()
+	if err != nil {
+		return nil, err
+	}
 	var deployer workloadDeployer
 	in := deploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
 		Name:            o.name,
-		App:             o.targetApp,
+		App:             targetApp,
 		Env:             o.targetEnv,
 		ImageTag:        o.imageTag,
 		Mft:             o.appliedManifest,
@@ -188,13 +191,17 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
 	}
+	targetApp, err := o.getTargetApp()
+	if err != nil {
+		return err
+	}
 	deployRecs, err := deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest: uploadOut.ImageDigest,
 			EnvFileARN:  uploadOut.EnvFileARN,
 			AddonsURL:   uploadOut.AddonsURL,
 			RootUserARN: o.rootUserARN,
-			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
+			Tags:        tags.Merge(targetApp.Tags, o.resourceTags),
 		},
 		ForceNewUpdate: o.forceNewUpdate,
 	})
@@ -270,11 +277,6 @@ func (o *deploySvcOpts) askEnvName() error {
 
 func (o *deploySvcOpts) configureClients() error {
 	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
-	}
-	o.targetApp = app
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
@@ -392,6 +394,18 @@ func (o *deploySvcOpts) publishRecommendedActions() []string {
 			o.name,
 			color.HighlightCode("const {<topicName>} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)")),
 	}
+}
+
+func (o *deploySvcOpts) getTargetApp() (*config.Application, error) {
+	if o.targetApp != nil {
+		return o.targetApp, nil
+	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	}
+	o.targetApp = app
+	return o.targetApp, nil
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
