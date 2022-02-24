@@ -132,30 +132,27 @@ func newManifestInterpolator(app, env string) interpolator {
 	return manifest.NewInterpolator(app, env)
 }
 
-// Validate returns an error if the user inputs are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *deploySvcOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.name != "" {
-		if err := o.validateSvcName(); err != nil {
-			return err
-		}
-	}
-	if o.envName != "" {
-		if err := o.validateEnvName(); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask prompts the user for any required fields that are not provided.
+// Ask prompts for and validates any required flags.
 func (o *deploySvcOpts) Ask() error {
-	if err := o.askSvcName(); err != nil {
+	if o.appName != "" {
+		if _, err := o.getTargetApp(); err != nil {
+			return err
+		}
+	} else {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return errNoAppInWorkspace
+	}
+
+	if err := o.validateAndAskSvcName(); err != nil {
 		return err
 	}
-	if err := o.askEnvName(); err != nil {
+
+	if err := o.validateAndAskEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -249,9 +246,9 @@ func (o *deploySvcOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *deploySvcOpts) askSvcName() error {
+func (o *deploySvcOpts) validateAndAskSvcName() error {
 	if o.name != "" {
-		return nil
+		return o.validateSvcName()
 	}
 
 	name, err := o.sel.Service("Select a service in your workspace", "")
@@ -262,9 +259,9 @@ func (o *deploySvcOpts) askSvcName() error {
 	return nil
 }
 
-func (o *deploySvcOpts) askEnvName() error {
+func (o *deploySvcOpts) validateAndAskEnvName() error {
 	if o.envName != "" {
-		return nil
+		return o.validateEnvName()
 	}
 
 	name, err := o.sel.Environment("Select an environment", "", o.appName)
