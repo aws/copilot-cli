@@ -89,7 +89,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			sess, err := sessions.NewProvider().Default()
+			sess, err := sessions.ImmutableProvider().Default()
 			require.NoError(t, err)
 			cfn := cloudformation.New(sess)
 			tpl := template.New()
@@ -314,7 +314,7 @@ DiscoveryServiceArn:
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			sess, err := sessions.NewProvider().Default()
+			sess, err := sessions.ImmutableProvider().Default()
 			require.NoError(t, err)
 			cfn := cloudformation.New(sess)
 			tpl := template.New()

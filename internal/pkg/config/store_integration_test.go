@@ -25,7 +25,7 @@ func init() {
 }
 
 func Test_SSM_Application_Integration(t *testing.T) {
-	defaultSess, err := sessions.NewProvider().Default()
+	defaultSess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
@@ -54,7 +54,7 @@ func Test_SSM_Application_Integration(t *testing.T) {
 }
 
 func Test_SSM_Environment_Integration(t *testing.T) {
-	defaultSess, err := sessions.NewProvider().Default()
+	defaultSess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
@@ -112,7 +112,7 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 }
 
 func Test_SSM_Service_Integration(t *testing.T) {
-	defaultSess, err := sessions.NewProvider().Default()
+	defaultSess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
