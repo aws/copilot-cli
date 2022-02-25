@@ -47,78 +47,19 @@ func TestSvcExec_Validate(t *testing.T) {
 
 		wantedError error
 	}{
-		"should bubble error if cannot get application configuration": {
-			inputApp: mockApp,
-			setupMocks: func(m execSvcMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, mockErr)
-			},
-
-			wantedError: fmt.Errorf("some error"),
-		},
-		"should bubble error if cannot get environment configuration": {
-			inputApp: mockApp,
-			inputEnv: mockEnv,
-			setupMocks: func(m execSvcMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(nil, mockErr),
-				)
-			},
-
-			wantedError: fmt.Errorf("some error"),
-		},
-		"should bubble error if cannot get service configuration": {
-			inputApp: mockApp,
-			inputEnv: mockEnv,
-			inputSvc: mockSvc,
-			setupMocks: func(m execSvcMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(nil, mockErr),
-				)
-			},
-
-			wantedError: fmt.Errorf("some error"),
-		},
 		"skip without installing/updating if yes flag is set to be false": {
 			inputApp:         mockApp,
 			inputEnv:         mockEnv,
 			inputSvc:         mockSvc,
 			skipConfirmation: aws.Bool(false),
-			setupMocks: func(m execSvcMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
-				)
-			},
+			setupMocks:       func(m execSvcMocks) {},
 		},
 		"should bubble error if cannot validate ssm plugin": {
 			inputApp: mockApp,
 			inputEnv: mockEnv,
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
-					m.ssmPluginManager.EXPECT().ValidateBinary().Return(mockErr),
-				)
+				m.ssmPluginManager.EXPECT().ValidateBinary().Return(mockErr)
 			},
 
 			wantedError: fmt.Errorf("validate ssm plugin: some error"),
@@ -129,16 +70,8 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrSSMPluginNotExist{}),
-					m.prompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).
-						Return(false, mockErr),
+					m.prompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).Return(false, mockErr),
 				)
 			},
 
@@ -150,13 +83,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrSSMPluginNotExist{}),
 					m.prompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).
 						Return(false, nil),
@@ -171,13 +97,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrSSMPluginNotExist{}),
 					m.prompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).
 						Return(true, nil),
@@ -193,13 +112,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrOutdatedSSMPlugin{
 						CurrentVersion: "mockCurrentVersion",
 						LatestVersion:  "mockLatestVersion",
@@ -217,15 +129,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
-						Name: "my-svc",
-					}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrOutdatedSSMPlugin{
 						CurrentVersion: "mockCurrentVersion",
 						LatestVersion:  "mockLatestVersion",
@@ -241,15 +144,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
-						Name: "my-svc",
-					}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrOutdatedSSMPlugin{
 						CurrentVersion: "mockCurrentVersion",
 						LatestVersion:  "mockLatestVersion",
@@ -277,15 +171,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
-						Name: "my-svc",
-					}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(nil),
 				)
 			},
@@ -298,15 +183,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			inputSvc: mockSvc,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
-						Name: "my-svc",
-					}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrSSMPluginNotExist{}),
 					m.prompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).Return(true, nil),
 					m.ssmPluginManager.EXPECT().InstallLatestBinary().Return(nil),
@@ -322,15 +198,6 @@ func TestSvcExec_Validate(t *testing.T) {
 			skipConfirmation: aws.Bool(true),
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
-						Name: "my-svc",
-					}, nil),
 					m.ssmPluginManager.EXPECT().ValidateBinary().Return(&exec.ErrOutdatedSSMPlugin{
 						CurrentVersion: "mockCurrentVersion",
 						LatestVersion:  "mockLatestVersion",
@@ -402,21 +269,75 @@ func TestSvcExec_Ask(t *testing.T) {
 		wantedSvc   string
 		wantedError error
 	}{
-		"with all flags": {
+		"validate app env and svc with all flags passed in": {
 			inputApp: inputApp,
 			inputEnv: inputEnv,
 			inputSvc: inputSvc,
 			setupMocks: func(m execSvcMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+				m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{Name: "my-env"}, nil)
+				m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil)
+				m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: "my-env",
+						Svc: "my-svc",
+					}, nil) // Let prompter handles the case when svc(env) is definite.
+			},
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedSvc: inputSvc,
+		},
+		"prompt for app name": {
+			inputEnv: inputEnv,
+			inputSvc: inputSvc,
+			setupMocks: func(m execSvcMocks) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil)
+				m.storeSvc.EXPECT().GetApplication(gomock.Any()).Times(0)
+				// Don't care about the other calls.
+				m.storeSvc.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.storeSvc.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
+					Env: "my-env",
+					Svc: "my-svc",
+				}, nil).AnyTimes()
+			},
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedSvc: inputSvc,
+		},
+		"returns error when fail to select apps": {
+			setupMocks: func(m execSvcMocks) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("select application: some error"),
+		},
+		"prompt for svc and env": {
+			inputApp: inputApp,
+			setupMocks: func(m execSvcMocks) {
+				m.storeSvc.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.storeSvc.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
 				m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
 						Env: "my-env",
 						Svc: "my-svc",
 					}, nil)
+				// Don't care about the other calls.
+				m.storeSvc.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 			},
-
 			wantedApp: inputApp,
 			wantedEnv: inputEnv,
 			wantedSvc: inputSvc,
+		},
+		"returns error when fail to select services": {
+			inputApp: inputApp,
+			setupMocks: func(m execSvcMocks) {
+				m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("some error"))
+				// Don't care about the other calls.
+				m.storeSvc.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+			},
+
+			wantedError: fmt.Errorf("select deployed service for application my-app: some error"),
 		},
 		"success": {
 			setupMocks: func(m execSvcMocks) {
@@ -429,28 +350,9 @@ func TestSvcExec_Ask(t *testing.T) {
 						}, nil),
 				)
 			},
-
 			wantedApp: inputApp,
 			wantedEnv: inputEnv,
 			wantedSvc: inputSvc,
-		},
-		"returns error when fail to select apps": {
-			setupMocks: func(m execSvcMocks) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("select application: some error"),
-		},
-		"returns error when fail to select services": {
-			setupMocks: func(m execSvcMocks) {
-				gomock.InOrder(
-					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
-					m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
-						Return(nil, fmt.Errorf("some error")),
-				)
-			},
-
-			wantedError: fmt.Errorf("select deployed service for application my-app: some error"),
 		},
 	}
 
