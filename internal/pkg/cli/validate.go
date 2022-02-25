@@ -69,8 +69,6 @@ var (
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
 	errInvalidPubSubTopicName   = errors.New("topic names can only contain letters, numbers, underscores, and hyphens")
 	errSubscribeBadFormat       = errors.New("value must be of the form <serviceName>:<topicName>")
-
-	fmtErrTopicSubscriptionNotAllowed = "SNS topic %s does not exist in environment %s"
 )
 
 const fmtErrValueBadSize = "value must be between %d and %d characters in length"
@@ -154,8 +152,6 @@ var (
 	awsSNSTopicRegexp       = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`) // Validates that an expression contains only letters, numbers, underscores, and hyphens.
 	regexpMatchSubscription = regexp.MustCompile(`^(\S+):(\S+)`)     // Validates that an expression contains the format serviceName:topicName
 )
-
-var resourceNameFormat = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
 
 const regexpFindAllMatches = -1
 
