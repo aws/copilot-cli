@@ -181,12 +181,14 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
-		fs:       &afero.Afero{Fs: afero.NewOsFs()},
-		store:    store,
-		prompt:   prompter,
-		sel:      selector.NewSelect(prompter, store),
-		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
-		provider: sessProvider,
+		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		store:                 store,
+		prompt:                prompter,
+		sel:                   selector.NewSelect(prompter, store),
+		spinner:               termprogress.NewSpinner(log.DiagnosticWriter),
+		provider:              sessProvider,
+		secretsManagerSecrets: make(map[string]string),
+		ssmParamSecrets:       make(map[string]string),
 	}
 
 	opts.configureRuntimeOpts = func() error {
@@ -410,9 +412,11 @@ func isSecretsManager(value string) bool {
 	return template.IsARNFunc(value) && strings.Contains(value, ":secretsmanager:")
 }
 
-func (o *runTaskOpts) categorizeSecrets() {
-	o.secretsManagerSecrets = make(map[string]string)
-	o.ssmParamSecrets = make(map[string]string)
+func (o *runTaskOpts) getCategorizedSecrets() (map[string]string, map[string]string) {
+	if len(o.ssmParamSecrets) > 0 || len(o.secretsManagerSecrets) > 0 {
+		return o.secretsManagerSecrets, o.ssmParamSecrets
+	}
+
 	for name, value := range o.secrets {
 		if isSSM(value) {
 			o.ssmParamSecrets[name] = value
@@ -421,6 +425,7 @@ func (o *runTaskOpts) categorizeSecrets() {
 			o.secretsManagerSecrets[name] = value
 		}
 	}
+	return o.secretsManagerSecrets, o.ssmParamSecrets
 }
 
 func (o *runTaskOpts) confirmSecretsAccess() error {
@@ -436,15 +441,17 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 		return nil
 	}
 
+	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
+
 	log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
 
-	for _, value := range o.ssmParamSecrets {
+	for _, value := range ssmParamSecrets {
 		log.Infoln("* " + value)
 	}
 
 	log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
 
-	for _, value := range o.secretsManagerSecrets {
+	for _, value := range secretsManagerSecrets {
 		log.Infoln("* " + value)
 	}
 
@@ -581,7 +588,6 @@ func (o *runTaskOpts) Ask() error {
 		}
 	}
 	if len(o.secrets) > 0 {
-		o.categorizeSecrets()
 		if err := o.confirmSecretsAccess(); err != nil {
 			return err
 		}
@@ -901,6 +907,8 @@ func (o *runTaskOpts) deploy() error {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
 
+	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
+
 	entrypoint, err := shlex.Split(o.entrypoint)
 	if err != nil {
 		return fmt.Errorf("split entrypoint %s into tokens using shell-style rules: %w", o.entrypoint, err)
@@ -921,8 +929,8 @@ func (o *runTaskOpts) deploy() error {
 		Command:               command,
 		EntryPoint:            entrypoint,
 		EnvVars:               o.envVars,
-		SSMParamSecrets:       o.ssmParamSecrets,
-		SecretsManagerSecrets: o.secretsManagerSecrets,
+		SSMParamSecrets:       ssmParamSecrets,
+		SecretsManagerSecrets: secretsManagerSecrets,
 		OS:                    o.os,
 		Arch:                  o.arch,
 		App:                   o.appName,
