@@ -45,14 +45,14 @@ type Provider struct {
 var instance *Provider
 var once sync.Once
 
-// NewProvider returns a session Provider singleton.
+// NewProvider returns an immutable session Provider with the options applied.
 func NewProvider(options ...func(*Provider)) *Provider {
 	once.Do(func() {
 		instance = &Provider{}
+		for _, option := range options {
+			option(instance)
+		}
 	})
-	for _, option := range options {
-		option(instance)
-	}
 	return instance
 }
 
