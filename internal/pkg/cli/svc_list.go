@@ -68,9 +68,11 @@ func (o *listSvcOpts) Validate() error {
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *listSvcOpts) Ask() error {
 	if o.appName != "" {
+		// NOTE: Skip validating app name here because `Execute` will fail pretty soon with a clear error message.
+		// The validation (config.GetApplication) would only add additional operation time in this particular case.
 		return nil
 	}
 
