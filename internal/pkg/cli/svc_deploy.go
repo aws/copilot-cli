@@ -148,11 +148,11 @@ func (o *deploySvcOpts) Ask() error {
 		return errNoAppInWorkspace
 	}
 
-	if err := o.validateAndAskSvcName(); err != nil {
+	if err := o.validateOrAskSvcName(); err != nil {
 		return err
 	}
 
-	if err := o.validateAndAskEnvName(); err != nil {
+	if err := o.validateOrAskEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -246,7 +246,7 @@ func (o *deploySvcOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *deploySvcOpts) validateAndAskSvcName() error {
+func (o *deploySvcOpts) validateOrAskSvcName() error {
 	if o.name != "" {
 		return o.validateSvcName()
 	}
@@ -259,7 +259,7 @@ func (o *deploySvcOpts) validateAndAskSvcName() error {
 	return nil
 }
 
-func (o *deploySvcOpts) validateAndAskEnvName() error {
+func (o *deploySvcOpts) validateOrAskEnvName() error {
 	if o.envName != "" {
 		return o.validateEnvName()
 	}

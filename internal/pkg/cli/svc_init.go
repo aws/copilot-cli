@@ -398,11 +398,11 @@ func (o *initSvcOpts) askImage() error {
 }
 
 // isDfSelected indicates if any Dockerfile is in use.
-func (o *initSvcOpts) askDockerfile() (err error) {
+func (o *initSvcOpts) askDockerfile() error {
 	if o.dockerfilePath != "" || o.image != "" {
 		return nil
 	}
-	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
+	if err := o.dockerEngine.CheckDockerEngineRunning(); err != nil {
 		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
 		switch {
 		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
