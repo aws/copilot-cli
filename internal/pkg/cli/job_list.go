@@ -33,7 +33,7 @@ type listJobOpts struct {
 }
 
 func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
-	defaultSession, err := sessions.NewProvider(sessions.UserAgentExtras("job ls")).Default()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("job ls")).Default()
 	if err != nil {
 		return nil, err
 	}

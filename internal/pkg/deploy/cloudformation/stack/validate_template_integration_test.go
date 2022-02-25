@@ -37,7 +37,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
 	require.NoError(t, err)
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 	cfn := cloudformation.New(sess)
 
@@ -64,7 +64,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
 
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 	cfn := cloudformation.New(sess)
 
