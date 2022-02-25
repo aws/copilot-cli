@@ -52,6 +52,9 @@ type svcPauseOpts struct {
 	initSvcPause func() error
 	svcARN       string
 	prog         progress
+
+	// cached variables.
+	targetEnv *config.Environment
 }
 
 func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
@@ -75,9 +78,9 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	opts.initSvcPause = func() error {
-		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
+		env, err := opts.getTargetEnv()
 		if err != nil {
-			return fmt.Errorf("get environment: %w", err)
+			return err
 		}
 		wl, err := configStore.GetWorkload(opts.appName, opts.svcName)
 		if err != nil {
@@ -198,6 +201,18 @@ func (o *svcPauseOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtSvcPauseSucceed, o.svcName, o.envName))
 	return nil
+}
+
+func (o *svcPauseOpts) getTargetEnv() (*config.Environment, error) {
+	if o.targetEnv != nil {
+		return o.targetEnv, nil
+	}
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment: %w", err)
+	}
+	o.targetEnv = env
+	return o.targetEnv, nil
 }
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
