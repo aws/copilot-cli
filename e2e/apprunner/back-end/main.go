@@ -6,7 +6,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/julienschmidt/httprouter"
 )
