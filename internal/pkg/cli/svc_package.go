@@ -155,34 +155,25 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	return deployer, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *packageSvcOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.name != "" {
-		names, err := o.ws.ListServices()
-		if err != nil {
-			return fmt.Errorf("list services in the workspace: %w", err)
-		}
-		if !contains(o.name, names) {
-			return fmt.Errorf("service '%s' does not exist in the workspace", o.name)
-		}
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask prompts the user for any missing required fields.
+// Ask prompts for and validates any required flags.
 func (o *packageSvcOpts) Ask() error {
-	if err := o.askSvcName(); err != nil {
+	if o.appName != "" {
+		if _, err := o.getTargetApp(); err != nil {
+			return err
+		}
+	} else {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return errNoAppInWorkspace
+	}
+	if err := o.validateOrAskSvcName(); err != nil {
 		return err
 	}
-	if err := o.askEnvName(); err != nil {
+	if err := o.validateOrAskEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -233,8 +224,15 @@ func (o *packageSvcOpts) Execute() error {
 	return err
 }
 
-func (o *packageSvcOpts) askSvcName() error {
+func (o *packageSvcOpts) validateOrAskSvcName() error {
 	if o.name != "" {
+		names, err := o.ws.ListServices()
+		if err != nil {
+			return fmt.Errorf("list services in the workspace: %w", err)
+		}
+		if !contains(o.name, names) {
+			return fmt.Errorf("service '%s' does not exist in the workspace", o.name)
+		}
 		return nil
 	}
 
@@ -246,9 +244,10 @@ func (o *packageSvcOpts) askSvcName() error {
 	return nil
 }
 
-func (o *packageSvcOpts) askEnvName() error {
+func (o *packageSvcOpts) validateOrAskEnvName() error {
 	if o.envName != "" {
-		return nil
+		_, err := o.getTargetEnv()
+		return err
 	}
 
 	name, err := o.sel.Environment(svcPackageEnvNamePrompt, "", o.appName)
