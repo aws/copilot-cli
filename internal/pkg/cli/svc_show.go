@@ -43,6 +43,9 @@ type showSvcOpts struct {
 	describer     describer
 	sel           configSelector
 	initDescriber func() error // Overridden in tests.
+
+	// Cached variables.
+	targetSvc *config.Workload
 }
 
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
@@ -66,7 +69,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 	}
 	opts.initDescriber = func() error {
 		var d describer
-		svc, err := opts.store.GetService(opts.appName, opts.svcName)
+		svc, err := opts.getTargetSvc()
 		if err != nil {
 			return err
 		}
@@ -125,7 +128,7 @@ func (o *showSvcOpts) Validate() error {
 		return err
 	}
 	if o.svcName != "" {
-		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
+		if _, err := o.getTargetSvc(); err != nil {
 			return err
 		}
 	}
@@ -191,6 +194,18 @@ func (o *showSvcOpts) askSvcName() error {
 	o.svcName = svcName
 
 	return nil
+}
+
+func (o *showSvcOpts) getTargetSvc() (*config.Workload, error) {
+	if o.targetSvc != nil {
+		return o.targetSvc, nil
+	}
+	svc, err := o.store.GetService(o.appName, o.svcName)
+	if err != nil {
+		return nil, err
+	}
+	o.targetSvc = svc
+	return o.targetSvc, nil
 }
 
 // buildSvcShowCmd builds the command for showing services in an application.
