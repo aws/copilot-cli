@@ -118,13 +118,20 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 }
 
 func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
-	var err error
+	targetApp, err := o.getTargetApp()
+	if err != nil {
+		return nil, err
+	}
+	targetEnv, err := o.getTargetEnv()
+	if err != nil {
+		return nil, err
+	}
 	var deployer workloadTemplateGenerator
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
 		Name:            o.name,
-		App:             o.targetApp,
-		Env:             o.targetEnv,
+		App:             targetApp,
+		Env:             targetEnv,
 		ImageTag:        o.tag,
 		Mft:             o.appliedManifest,
 	}
@@ -193,7 +200,11 @@ func (o *packageSvcOpts) Execute() error {
 			return err
 		}
 	}
-	appTemplates, err := o.getSvcTemplates(o.targetEnv)
+	targetEnv, err := o.getTargetEnv()
+	if err != nil {
+		return nil
+	}
+	appTemplates, err := o.getSvcTemplates(targetEnv)
 	if err != nil {
 		return err
 	}
@@ -257,16 +268,6 @@ func (o *packageSvcOpts) getAddonsTemplate() (string, error) {
 
 func (o *packageSvcOpts) configureClients() error {
 	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
-	env, err := o.store.GetEnvironment(o.appName, o.envName)
-	if err != nil {
-		return err
-	}
-	o.targetEnv = env
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
-	}
-	o.targetApp = app
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
@@ -308,6 +309,10 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	uploadOut := clideploy.UploadArtifactsOutput{
 		ImageDigest: aws.String(""),
 	}
+	targetApp, err := o.getTargetApp()
+	if err != nil {
+		return nil, err
+	}
 	if o.uploadAssets {
 		out, err := generator.UploadArtifacts()
 		if err != nil {
@@ -318,7 +323,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN: o.rootUserARN,
-			Tags:        o.targetApp.Tags,
+			Tags:        targetApp.Tags,
 			ImageDigest: uploadOut.ImageDigest,
 			EnvFileARN:  uploadOut.EnvFileARN,
 			AddonsURL:   uploadOut.AddonsURL,
@@ -365,6 +370,30 @@ func (o *packageSvcOpts) setAddonsFileWriter() error {
 	o.addonsWriter = addonsFile
 
 	return nil
+}
+
+func (o *packageSvcOpts) getTargetApp() (*config.Application, error) {
+	if o.targetApp != nil {
+		return o.targetApp, nil
+	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	}
+	o.targetApp = app
+	return o.targetApp, nil
+}
+
+func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
+	if o.targetEnv != nil {
+		return o.targetEnv, nil
+	}
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", o.envName, err)
+	}
+	o.targetEnv = env
+	return o.targetEnv, nil
 }
 
 // RecommendActions is a no-op for this command.

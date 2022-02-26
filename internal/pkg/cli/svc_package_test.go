@@ -357,6 +357,7 @@ count: 1`
 				},
 				rootUserARN: mockARN,
 				targetApp:   &config.Application{},
+				targetEnv:   &config.Environment{},
 			}
 			tc.mockDependencies(ctrl, opts)
 
