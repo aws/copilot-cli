@@ -72,11 +72,9 @@ type deployPipelineOpts struct {
 	newJobListCmd    func(io.Writer) cmd
 
 	// cached variables
-	pipeline                     *workspace.Pipeline
+	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
-
-	// cache variables
-	pipelineMft *manifest.PipelineManifest
+	pipelineMft *manifest.Pipeline
 	svcBuffer   *bytes.Buffer
 	jobBuffer   *bytes.Buffer
 }
@@ -255,7 +253,7 @@ func (o *deployPipelineOpts) askPipelineName() error {
 	return nil
 }
 
-func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error) {
+func (o *deployPipelineOpts) getPipelineMft() (*manifest.Pipeline, error) {
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
@@ -270,6 +268,7 @@ func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error
 	if err := pipelineMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
 	}
+	o.pipelineMft = pipelineMft
 	return pipelineMft, nil
 }
 

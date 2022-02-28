@@ -127,7 +127,7 @@ func TestPipelineShow_Ask(t *testing.T) {
 	testTags := map[string]string{
 		"copilot-application": mockAppName,
 	}
-	mockPipelineManifest := &manifest.PipelineManifest{
+	mockPipelineManifest := &manifest.Pipeline{
 		Name:    mockPipelineName,
 		Version: 1,
 	}

@@ -426,80 +426,42 @@ func (mr *MockWsWorkloadListerMockRecorder) ListWorkloads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockWsWorkloadLister)(nil).ListWorkloads))
 }
 
-// MockwsPipelineLister is a mock of wsPipelineLister interface.
-type MockwsPipelineLister struct {
+// MockWorkspacePipelinesLister is a mock of WorkspacePipelinesLister interface.
+type MockWorkspacePipelinesLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsPipelineListerMockRecorder
+	recorder *MockWorkspacePipelinesListerMockRecorder
 }
 
-// MockwsPipelineListerMockRecorder is the mock recorder for MockwsPipelineLister.
-type MockwsPipelineListerMockRecorder struct {
-	mock *MockwsPipelineLister
+// MockWorkspacePipelinesListerMockRecorder is the mock recorder for MockWorkspacePipelinesLister.
+type MockWorkspacePipelinesListerMockRecorder struct {
+	mock *MockWorkspacePipelinesLister
 }
 
-// NewMockwsPipelineLister creates a new mock instance.
-func NewMockwsPipelineLister(ctrl *gomock.Controller) *MockwsPipelineLister {
-	mock := &MockwsPipelineLister{ctrl: ctrl}
-	mock.recorder = &MockwsPipelineListerMockRecorder{mock}
+// NewMockWorkspacePipelinesLister creates a new mock instance.
+func NewMockWorkspacePipelinesLister(ctrl *gomock.Controller) *MockWorkspacePipelinesLister {
+	mock := &MockWorkspacePipelinesLister{ctrl: ctrl}
+	mock.recorder = &MockWorkspacePipelinesListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockwsPipelineLister) EXPECT() *MockwsPipelineListerMockRecorder {
+func (m *MockWorkspacePipelinesLister) EXPECT() *MockWorkspacePipelinesListerMockRecorder {
 	return m.recorder
 }
 
 // ListPipelines mocks base method.
-func (m *MockwsPipelineLister) ListPipelines() ([]workspace.Pipeline, error) {
+func (m *MockWorkspacePipelinesLister) ListPipelines() ([]workspace.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].([]workspace.Pipeline)
+	ret0, _ := ret[0].([]workspace.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListPipelines indicates an expected call of ListPipelines.
-func (mr *MockwsPipelineListerMockRecorder) ListPipelines() *gomock.Call {
+func (mr *MockWorkspacePipelinesListerMockRecorder) ListPipelines() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockwsPipelineLister)(nil).ListPipelines))
-}
-
-// MockWsPipelineSelector is a mock of WsPipelineSelector interface.
-type MockWsPipelineSelector struct {
-	ctrl     *gomock.Controller
-	recorder *MockWsPipelineSelectorMockRecorder
-}
-
-// MockWsPipelineSelectorMockRecorder is the mock recorder for MockWsPipelineSelector.
-type MockWsPipelineSelectorMockRecorder struct {
-	mock *MockWsPipelineSelector
-}
-
-// NewMockWsPipelineSelector creates a new mock instance.
-func NewMockWsPipelineSelector(ctrl *gomock.Controller) *MockWsPipelineSelector {
-	mock := &MockWsPipelineSelector{ctrl: ctrl}
-	mock.recorder = &MockWsPipelineSelectorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockWsPipelineSelector) EXPECT() *MockWsPipelineSelectorMockRecorder {
-	return m.recorder
-}
-
-// ListPipelines mocks base method.
-func (m *MockWsPipelineSelector) ListPipelines() ([]workspace.Pipeline, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].([]workspace.Pipeline)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListPipelines indicates an expected call of ListPipelines.
-func (mr *MockWsPipelineSelectorMockRecorder) ListPipelines() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockWsPipelineSelector)(nil).ListPipelines))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockWorkspacePipelinesLister)(nil).ListPipelines))
 }
 
 // MockWorkspaceRetriever is a mock of WorkspaceRetriever interface.

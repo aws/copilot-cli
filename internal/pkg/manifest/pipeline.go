@@ -157,9 +157,9 @@ const (
 	Ver1 PipelineSchemaMajorVersion = iota + 1
 )
 
-// PipelineManifest contains information that defines the relationship
+// Pipeline contains information that defines the relationship
 // and deployment ordering of your environments.
-type PipelineManifest struct {
+type Pipeline struct {
 	// Name of the pipeline
 	Name    string                     `yaml:"name"`
 	Version PipelineSchemaMajorVersion `yaml:"version"`
@@ -188,15 +188,15 @@ type PipelineStage struct {
 	TestCommands     []string `yaml:"test_commands,omitempty"`
 }
 
-// NewPipelineManifest returns a pipeline manifest object.
-func NewPipelineManifest(pipelineName string, provider Provider, stages []PipelineStage) (*PipelineManifest, error) {
+// NewPipeline returns a pipeline manifest object.
+func NewPipeline(pipelineName string, provider Provider, stages []PipelineStage) (*Pipeline, error) {
 	// TODO: #221 Do more validations
 	if len(stages) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 			pipelineName)
 	}
 
-	return &PipelineManifest{
+	return &Pipeline{
 		Name:    pipelineName,
 		Version: Ver1,
 		Source: &Source{
@@ -211,7 +211,7 @@ func NewPipelineManifest(pipelineName string, provider Provider, stages []Pipeli
 
 // MarshalBinary serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
-func (m *PipelineManifest) MarshalBinary() ([]byte, error) {
+func (m *Pipeline) MarshalBinary() ([]byte, error) {
 	content, err := m.parser.Parse(pipelineManifestPath, *m)
 	if err != nil {
 		return nil, err
@@ -222,8 +222,8 @@ func (m *PipelineManifest) MarshalBinary() ([]byte, error) {
 // UnmarshalPipeline deserializes the YAML input stream into a pipeline
 // manifest object. It returns an error if any issue occurs during
 // deserialization or the YAML input contains invalid fields.
-func UnmarshalPipeline(in []byte) (*PipelineManifest, error) {
-	pm := PipelineManifest{}
+func UnmarshalPipeline(in []byte) (*Pipeline, error) {
+	pm := Pipeline{}
 	err := yaml.Unmarshal(in, &pm)
 	if err != nil {
 		return nil, err
@@ -253,7 +253,7 @@ func (s Source) IsCodeStarConnection() bool {
 	}
 }
 
-func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
+func validateVersion(pm *Pipeline) (PipelineSchemaMajorVersion, error) {
 	switch pm.Version {
 	case Ver1:
 		return Ver1, nil

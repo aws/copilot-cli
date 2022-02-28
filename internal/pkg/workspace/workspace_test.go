@@ -517,7 +517,7 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 		copilotDir string
 		fs         func() afero.Fs
 
-		wantedPipelines []Pipeline
+		wantedPipelines []PipelineManifest
 		wantedErr       error
 	}{
 		"success finding legacy pipeline (in both copilot/ and copilot/pipelines) and other pipelines, weeding out buildspecs": {
@@ -560,7 +560,7 @@ name: buildspecInPipelinesDir
 				return fs
 			},
 
-			wantedPipelines: []Pipeline{
+			wantedPipelines: []PipelineManifest{
 				{
 					Name: "legacyInCopiDir",
 					Path: "/copilot/pipeline.yml",

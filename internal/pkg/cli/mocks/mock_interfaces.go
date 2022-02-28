@@ -2202,10 +2202,10 @@ func (m *MockwsPipelineManifestReader) EXPECT() *MockwsPipelineManifestReaderMoc
 }
 
 // ReadPipelineManifest mocks base method.
-func (m *MockwsPipelineManifestReader) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
+func (m *MockwsPipelineManifestReader) ReadPipelineManifest(path string) (*manifest.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadPipelineManifest", path)
-	ret0, _ := ret[0].(*manifest.PipelineManifest)
+	ret0, _ := ret[0].(*manifest.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2709,10 +2709,10 @@ func (m *MockwsPipelineReader) EXPECT() *MockwsPipelineReaderMockRecorder {
 }
 
 // ListPipelines mocks base method.
-func (m *MockwsPipelineReader) ListPipelines() ([]workspace.Pipeline, error) {
+func (m *MockwsPipelineReader) ListPipelines() ([]workspace.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].([]workspace.Pipeline)
+	ret0, _ := ret[0].([]workspace.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2754,10 +2754,10 @@ func (mr *MockwsPipelineReaderMockRecorder) PipelineManifestLegacyPath() *gomock
 }
 
 // ReadPipelineManifest mocks base method.
-func (m *MockwsPipelineReader) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
+func (m *MockwsPipelineReader) ReadPipelineManifest(path string) (*manifest.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadPipelineManifest", path)
-	ret0, _ := ret[0].(*manifest.PipelineManifest)
+	ret0, _ := ret[0].(*manifest.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2792,10 +2792,10 @@ func (m *MockwsPipelineGetter) EXPECT() *MockwsPipelineGetterMockRecorder {
 }
 
 // ListPipelines mocks base method.
-func (m *MockwsPipelineGetter) ListPipelines() ([]workspace.Pipeline, error) {
+func (m *MockwsPipelineGetter) ListPipelines() ([]workspace.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
-	ret0, _ := ret[0].([]workspace.Pipeline)
+	ret0, _ := ret[0].([]workspace.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2837,10 +2837,10 @@ func (mr *MockwsPipelineGetterMockRecorder) PipelineManifestLegacyPath() *gomock
 }
 
 // ReadPipelineManifest mocks base method.
-func (m *MockwsPipelineGetter) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
+func (m *MockwsPipelineGetter) ReadPipelineManifest(path string) (*manifest.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadPipelineManifest", path)
-	ret0, _ := ret[0].(*manifest.PipelineManifest)
+	ret0, _ := ret[0].(*manifest.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -5103,10 +5103,10 @@ func (m *MockwsPipelineSelector) EXPECT() *MockwsPipelineSelectorMockRecorder {
 }
 
 // Pipeline mocks base method.
-func (m *MockwsPipelineSelector) Pipeline(prompt, help string) (*workspace.Pipeline, error) {
+func (m *MockwsPipelineSelector) Pipeline(prompt, help string) (*workspace.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Pipeline", prompt, help)
-	ret0, _ := ret[0].(*workspace.Pipeline)
+	ret0, _ := ret[0].(*workspace.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

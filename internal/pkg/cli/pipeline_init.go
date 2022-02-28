@@ -534,7 +534,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		stages = append(stages, stage)
 	}
 
-	manifest, err := manifest.NewPipelineManifest(pipelineName, provider, stages)
+	manifest, err := manifest.NewPipeline(pipelineName, provider, stages)
 	if err != nil {
 		return fmt.Errorf("generate a pipeline manifest: %w", err)
 	}

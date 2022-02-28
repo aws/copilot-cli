@@ -162,15 +162,15 @@ func (ws *Workspace) ListWorkloads() ([]string, error) {
 	})
 }
 
-// Pipeline holds identifying information about a pipeline.
-type Pipeline struct {
-	Name string
-	Path string
+// PipelineManifest holds identifying information about a pipeline manifest file.
+type PipelineManifest struct {
+	Name string // Name of the pipeline inside the manifest file.
+	Path string // Absolute path to the manifest file for the pipeline.
 }
 
 // ListPipelines returns all pipelines in the workspace.
-func (ws *Workspace) ListPipelines() ([]Pipeline, error) {
-	var pipelines []Pipeline
+func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
+	var pipelines []PipelineManifest
 	// Look for legacy pipeline.
 	legacyPath, err := ws.PipelineManifestLegacyPath()
 	if err != nil {
@@ -180,7 +180,7 @@ func (ws *Workspace) ListPipelines() ([]Pipeline, error) {
 	if err != nil {
 		log.Infof("Unable to read pipeline manifest at '%s'", legacyPath)
 	}
-	pipelines = append(pipelines, Pipeline{
+	pipelines = append(pipelines, PipelineManifest{
 		Name: manifest.Name,
 		Path: legacyPath,
 	})
@@ -213,7 +213,7 @@ func (ws *Workspace) ListPipelines() ([]Pipeline, error) {
 			if err != nil {
 				log.Infof("Unable to read pipeline manifest at '%s'", path)
 			}
-			pipelines = append(pipelines, Pipeline{
+			pipelines = append(pipelines, PipelineManifest{
 				Name: manifest.Name,
 				Path: path,
 			})
@@ -274,7 +274,7 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 }
 
 // ReadPipelineManifest returns the contents of the pipeline manifest under the given path.
-func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.PipelineManifest, error) {
+func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.Pipeline, error) {
 	manifestExists, err := ws.fsUtils.Exists(path)
 	if err != nil {
 		return nil, err

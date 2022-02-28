@@ -237,7 +237,7 @@ type workspacePathGetter interface {
 }
 
 type wsPipelineManifestReader interface {
-	ReadPipelineManifest(path string) (*manifest.PipelineManifest, error)
+	ReadPipelineManifest(path string) (*manifest.Pipeline, error)
 }
 
 type wsPipelineWriter interface {
@@ -288,7 +288,7 @@ type wsPipelineReader interface {
 type wsPipelineGetter interface {
 	wsPipelineManifestReader
 	wlLister
-	ListPipelines() ([]workspace.Pipeline, error)
+	ListPipelines() ([]workspace.PipelineManifest, error)
 	PipelineManifestLegacyPath() (string, error)
 }
 
@@ -479,7 +479,7 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
-	Pipeline(prompt, help string) (*workspace.Pipeline, error)
+	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
 }
 
 type wsSelector interface {

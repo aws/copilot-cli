@@ -38,7 +38,7 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 		mockWs         func(m *mocks.MockwsPipelineReader)
 
 		wantedPath     string
-		wantedPipeline *workspace.Pipeline
+		wantedPipeline *workspace.PipelineManifest
 		wantedError    error
 	}{
 		"pipeline doesn't exist": {
@@ -46,7 +46,7 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			inPipelineName: "nonexistentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ListPipelines().Return([]workspace.Pipeline{
+				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{
 					{
 						Name: "existentPipeline",
 						Path: legacyPath,
@@ -60,14 +60,14 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			inPipelineName: "existentPipeline",
 
 			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ListPipelines().Return([]workspace.Pipeline{
+				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{
 					{
 						Name: "existentPipeline",
 						Path: legacyPath,
 					}}, nil)
 			},
 
-			wantedPipeline: &workspace.Pipeline{
+			wantedPipeline: &workspace.PipelineManifest{
 				Name: "existentPipeline",
 				Path: "copilot/pipeline.yml",
 			},
@@ -111,7 +111,7 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 		mockWs         func(m *mocks.MockwsPipelineReader)
 		mockSel        func(m *mocks.MockwsPipelineSelector)
 
-		wantedPipeline *workspace.Pipeline
+		wantedPipeline *workspace.PipelineManifest
 		wantedError    error
 	}{
 		"return nil if pipeline name passed in with flag": {
@@ -124,13 +124,13 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 		"success": {
 			inAppName: "app",
 			mockSel: func(m *mocks.MockwsPipelineSelector) {
-				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(&workspace.Pipeline{
+				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(&workspace.PipelineManifest{
 					Name: "existentPipeline",
 					Path: "copilot/pipeline.yml",
 				}, nil)
 			},
 
-			wantedPipeline: &workspace.Pipeline{
+			wantedPipeline: &workspace.PipelineManifest{
 				Name: "existentPipeline",
 				Path: "copilot/pipeline.yml",
 			},
@@ -139,7 +139,7 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 		"errors if fail to select pipeline": {
 			inAppName: "app",
 			mockSel: func(m *mocks.MockwsPipelineSelector) {
-				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(&workspace.Pipeline{}, errors.New("some error"))
+				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(&workspace.PipelineManifest{}, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("select pipeline: some error"),
@@ -183,7 +183,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 		pipelineName               = "pipepiper"
 		pipelineManifestLegacyPath = "/copilot/pipeline.yml"
 	)
-	mockPipelineManifest := &manifest.PipelineManifest{
+	mockPipelineManifest := &manifest.Pipeline{
 		Name:    "pipepiper",
 		Version: 1,
 		Source: &manifest.Source{
@@ -403,7 +403,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			inAppName: appName,
 			inRegion:  region,
 			callMocks: func(m deployPipelineMocks) {
-				mockBadPipelineManifest := &manifest.PipelineManifest{
+				mockBadPipelineManifest := &manifest.Pipeline{
 					Name:    "12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001",
 					Version: 1,
 					Source: &manifest.Source{
@@ -429,7 +429,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			inAppName: appName,
 			inRegion:  region,
 			callMocks: func(m deployPipelineMocks) {
-				mockBadPipelineManifest := &manifest.PipelineManifest{
+				mockBadPipelineManifest := &manifest.Pipeline{
 					Name:    testPipelineName,
 					Version: 1,
 					Source: &manifest.Source{
@@ -583,7 +583,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			inAppName: appName,
 			inRegion:  region,
 			callMocks: func(m deployPipelineMocks) {
-				mockPipelineManifest := &manifest.PipelineManifest{
+				mockPipelineManifest := &manifest.Pipeline{
 					Name:    "pipepiper",
 					Version: 1,
 					Source: &manifest.Source{
@@ -676,7 +676,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				newJobListCmd: func(w io.Writer) cmd {
 					return mockActionCmd
 				},
-				pipeline: &workspace.Pipeline{
+				pipeline: &workspace.PipelineManifest{
 					Name: "pipepiper",
 					Path: pipelineManifestLegacyPath,
 				},

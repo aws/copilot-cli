@@ -71,7 +71,7 @@ const (
 	taskFinalMsg        = "Task:"
 	workloadFinalMsg    = "Name:"
 	dockerfileFinalMsg  = "Dockerfile:"
-	topicFinalMessage   = "Topic subscriptions:"
+	topicFinalMsg   = "Topic subscriptions:"
 	pipelineFinalMsg    = "Pipeline:"
 )
 
@@ -124,14 +124,9 @@ type WsWorkloadLister interface {
 	ListWorkloads() ([]string, error)
 }
 
-// wsPipelineLister wraps the method to get pipelines in the current workspace.
-type wsPipelineLister interface {
-	ListPipelines() ([]workspace.Pipeline, error)
-}
-
-// WsPipelineSelector is a pipeline selector.
-type WsPipelineSelector interface {
-	wsPipelineLister
+// WorkspacePipelinesLister is a pipeline lister.
+type WorkspacePipelinesLister interface {
+	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -184,7 +179,7 @@ type WorkspaceSelect struct {
 // PipelineSelect is a workspace pipeline selector.
 type PipelineSelect struct {
 	prompt Prompter
-	ws     WsPipelineSelector
+	ws     WorkspacePipelinesLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -267,7 +262,7 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 }
 
 // NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(prompt Prompter, ws WsPipelineSelector) *PipelineSelect {
+func NewWsPipelineSelect(prompt Prompter, ws WorkspacePipelinesLister) *PipelineSelect {
 	return &PipelineSelect{
 		prompt: prompt,
 		ws:     ws,
@@ -699,7 +694,7 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 }
 
 // Pipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *PipelineSelect) Pipeline(msg, help string) (*workspace.Pipeline, error) {
+func (s *PipelineSelect) Pipeline(msg, help string) (*workspace.PipelineManifest, error) {
 	pipelines, err := s.ws.ListPipelines()
 	if err != nil {
 		return nil, err
@@ -713,16 +708,16 @@ func (s *PipelineSelect) Pipeline(msg, help string) (*workspace.Pipeline, error)
 	}
 	if len(pipelineNames) == 1 {
 		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelineNames[0]))
-		return &workspace.Pipeline{
-			Name: pipelineNames[0],
-			Path: s.pipelinePath(pipelines, pipelineNames[0]),
+		return &workspace.PipelineManifest{
+			Name: pipelines[0].Name,
+			Path: pipelines[0].Path,
 		}, nil
 	}
 	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {
 		return nil, fmt.Errorf("select pipeline: %w", err)
 	}
-	return &workspace.Pipeline{
+	return &workspace.PipelineManifest{
 		Name: selectedPipeline,
 		Path: s.pipelinePath(pipelines, selectedPipeline),
 	}, nil
@@ -975,7 +970,7 @@ func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, erro
 		help,
 		topicDescriptions,
 		nil,
-		prompt.WithFinalMessage(topicFinalMessage),
+		prompt.WithFinalMessage(topicFinalMsg),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select SNS topics: %w", err)
@@ -1061,7 +1056,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 	return localWlNames, nil
 }
 
-func (s *PipelineSelect) pipelinePath(pipelines []workspace.Pipeline, name string) string {
+func (s *PipelineSelect) pipelinePath(pipelines []workspace.PipelineManifest, name string) string {
 	for _, pipeline := range pipelines {
 		if pipeline.Name == name {
 			return pipeline.Path

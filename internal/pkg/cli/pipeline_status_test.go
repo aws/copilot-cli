@@ -127,7 +127,7 @@ func TestPipelineStatus_Ask(t *testing.T) {
 	}
 	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
 	mockTestCommands := []string{"make test", "echo 'honk'"}
-	mockPipelineManifest := &manifest.PipelineManifest{
+	mockPipelineManifest := &manifest.Pipeline{
 		Name:    mockPipelineName,
 		Version: 1,
 	}

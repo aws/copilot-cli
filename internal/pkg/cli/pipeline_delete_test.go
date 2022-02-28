@@ -101,7 +101,7 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 }
 
 func TestDeletePipelineOpts_Ask(t *testing.T) {
-	mockPipelineManifest := &manifest.PipelineManifest{
+	mockPipelineManifest := &manifest.Pipeline{
 		Name:    testPipelineName,
 		Version: 1,
 		Source: &manifest.Source{
@@ -113,7 +113,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			},
 		},
 	}
-	mockPipelineManifestWithoutSecret := &manifest.PipelineManifest{
+	mockPipelineManifestWithoutSecret := &manifest.Pipeline{
 		Name:    testPipelineName,
 		Version: 1,
 		Source: &manifest.Source{
