@@ -32,7 +32,7 @@ type PipelineStatus struct {
 
 // NewPipelineStatusDescriber instantiates a new PipelineStatus struct.
 func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, err
 	}

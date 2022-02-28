@@ -295,7 +295,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsFileDeleter(ctrl)
-			mockSession := sessions.NewProvider()
+			mockSession := sessions.ImmutableProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
 
 			mockBucketEmptier := mocks.NewMockbucketEmptier(ctrl)

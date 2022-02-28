@@ -48,6 +48,8 @@ type wkldLogsVars struct {
 type svcLogsOpts struct {
 	wkldLogsVars
 	wkldLogOpts
+	// cached variables.
+	targetEnv *config.Environment
 }
 
 type wkldLogOpts struct {
@@ -60,11 +62,11 @@ type wkldLogOpts struct {
 	deployStore deployedEnvironmentLister
 	sel         deploySelector
 	logsSvc     logEventsWriter
-	initLogsSvc func() error // Overriden in tests.
+	initLogsSvc func() error // Overridden in tests.
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc logs"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc logs"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
@@ -85,7 +87,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		},
 	}
 	opts.initLogsSvc = func() error {
-		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
+		env, err := opts.getTargetEnv()
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
@@ -115,19 +117,8 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the values provided by flags are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *svcLogsOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.configStore.GetApplication(o.appName); err != nil {
-			return err
-		}
-		if o.name != "" {
-			if _, err := o.configStore.GetService(o.appName, o.name); err != nil {
-				return err
-			}
-		}
-	}
-
 	if o.since != 0 && o.humanStartTime != "" {
 		return errors.New("only one of --since or --start-time may be used")
 	}
@@ -167,12 +158,12 @@ func (o *svcLogsOpts) Validate() error {
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *svcLogsOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	return o.askSvcEnvName()
+	return o.validateAndAskSvcEnvName()
 }
 
 // Execute outputs logs of the service.
@@ -202,9 +193,10 @@ func (o *svcLogsOpts) Execute() error {
 	return nil
 }
 
-func (o *svcLogsOpts) askApp() error {
+func (o *svcLogsOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.configStore.GetApplication(o.appName)
+		return err
 	}
 	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
@@ -214,7 +206,20 @@ func (o *svcLogsOpts) askApp() error {
 	return nil
 }
 
-func (o *svcLogsOpts) askSvcEnvName() error {
+func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
+	if o.envName != "" {
+		if _, err := o.getTargetEnv(); err != nil {
+			return err
+		}
+	}
+
+	if o.name != "" {
+		if _, err := o.configStore.GetService(o.appName, o.name); err != nil {
+			return err
+		}
+	}
+	// Note: we let prompter handle the case when there is only option for user to choose from.
+	// This is naturally the case when `o.envName != "" && o.name != ""`.
 	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
@@ -222,6 +227,18 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	o.name = deployedService.Svc
 	o.envName = deployedService.Env
 	return nil
+}
+
+func (o *svcLogsOpts) getTargetEnv() (*config.Environment, error) {
+	if o.targetEnv != nil {
+		return o.targetEnv, nil
+	}
+	env, err := o.configStore.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, err
+	}
+	o.targetEnv = env
+	return o.targetEnv, nil
 }
 
 func parseSince(since time.Duration) *int64 {

@@ -95,7 +95,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("init"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("init"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

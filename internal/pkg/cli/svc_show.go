@@ -43,10 +43,13 @@ type showSvcOpts struct {
 	describer     describer
 	sel           configSelector
 	initDescriber func() error // Overridden in tests.
+
+	// Cached variables.
+	targetSvc *config.Workload
 }
 
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc show"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc show"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
@@ -66,7 +69,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 	}
 	opts.initDescriber = func() error {
 		var d describer
-		svc, err := opts.store.GetService(opts.appName, opts.svcName)
+		svc, err := opts.getTargetSvc()
 		if err != nil {
 			return err
 		}
@@ -116,28 +119,17 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *showSvcOpts) Validate() error {
-	if o.appName == "" {
-		return nil
-	}
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return err
-	}
-	if o.svcName != "" {
-		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *showSvcOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	return o.askSvcName()
+	return o.validateOrAskSvcName()
 }
 
 // Execute shows the services through the prompt.
@@ -166,22 +158,23 @@ func (o *showSvcOpts) Execute() error {
 	return nil
 }
 
-func (o *showSvcOpts) askApp() error {
+func (o *showSvcOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.store.GetApplication(o.appName)
+		return err
 	}
 	appName, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}
 	o.appName = appName
-
 	return nil
 }
 
-func (o *showSvcOpts) askSvcName() error {
+func (o *showSvcOpts) validateOrAskSvcName() error {
 	if o.svcName != "" {
-		return nil
+		_, err := o.getTargetSvc()
+		return err
 	}
 	svcName, err := o.sel.Service(fmt.Sprintf(svcShowSvcNamePrompt, color.HighlightUserInput(o.appName)),
 		svcShowSvcNameHelpPrompt, o.appName)
@@ -191,6 +184,18 @@ func (o *showSvcOpts) askSvcName() error {
 	o.svcName = svcName
 
 	return nil
+}
+
+func (o *showSvcOpts) getTargetSvc() (*config.Workload, error) {
+	if o.targetSvc != nil {
+		return o.targetSvc, nil
+	}
+	svc, err := o.store.GetService(o.appName, o.svcName)
+	if err != nil {
+		return nil, err
+	}
+	o.targetSvc = svc
+	return o.targetSvc, nil
 }
 
 // buildSvcShowCmd builds the command for showing services in an application.

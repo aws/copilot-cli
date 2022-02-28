@@ -90,7 +90,7 @@ type AppDescriber struct {
 
 // NewAppDescriber instantiates an application describer.
 func NewAppDescriber(appName string) (*AppDescriber, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("assume default role for app %s: %w", appName, err)
 	}
