@@ -164,7 +164,7 @@ type runTaskOpts struct {
 	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromJob        func(client ecs.JobDescriber, app, env, job string) (*ecs.RunTaskRequest, error)
 
-	// parameters to hold SSM Param and Secrets Manager Secrets
+	// Cached variables to hold SSM Param and Secrets Manager Secrets
 	ssmParamSecrets       map[string]string
 	secretsManagerSecrets map[string]string
 }
@@ -394,7 +394,6 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	for _, value := range o.secrets {
-		//For Systems Manager Parameter Store parameter you can specify it as name or the ARN if it exists in the same Region as the task you are launching.
 		if !isSSM(value) && !isSecretsManager(value) {
 			return fmt.Errorf("must specify a valid secrets ARN")
 		}
@@ -443,13 +442,21 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 
 	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
 
-	log.Infoln("Looks like you're requesting ssm:GetParameters to the following SSM parameters:")
+	log.Info("Looks like ")
+
+	if len(ssmParamSecrets) > 0 {
+		log.Infoln("you're requesting ssm:GetParameters to the following SSM parameters:")
+	} else {
+		log.Infoln("you're requesting secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	}
 
 	for _, value := range ssmParamSecrets {
 		log.Infoln("* " + value)
 	}
 
-	log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	if len(ssmParamSecrets) > 0 && len(secretsManagerSecrets) > 0 {
+		log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	}
 
 	for _, value := range secretsManagerSecrets {
 		log.Infoln("* " + value)

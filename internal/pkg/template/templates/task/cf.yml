@@ -62,7 +62,7 @@ Resources:
           Secrets:{{range $name, $valueFrom := .SSMParamSecrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}
-          {{- end}}{{- if .SecretsManagerSecrets }}{{range $name, $valueFrom := .SecretsManagerSecrets}}
+          {{range $name, $valueFrom := .SecretsManagerSecrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}
           {{- end}}
@@ -115,9 +115,7 @@ Resources:
                     "secretsmanager:ResourceTag/copilot-environment": {{ .Env }}
                 Resource:
                   - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
-
       {{- else }}
-
         - PolicyName: 'PullSecrets'
           PolicyDocument:
             Version: '2012-10-17'
@@ -134,7 +132,6 @@ Resources:
                     {{- end }}
                     {{ end }}
               {{- end }}
-
               {{- if .SecretsManagerSecrets }}
               - Effect: 'Allow'
                 Action:
