@@ -683,7 +683,7 @@ func TestSvcExec_Execute(t *testing.T) {
 				newSvcDescriber:    mockNewSvcDescriber,
 				newCommandExecutor: mockNewCommandExecutor,
 				randInt:            func(i int) int { return 0 },
-				sessProvider:       sessions.NewProvider(),
+				sessProvider:       sessions.ImmutableProvider(),
 			}
 
 			// WHEN

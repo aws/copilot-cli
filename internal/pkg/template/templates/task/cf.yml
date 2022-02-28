@@ -15,8 +15,6 @@ Parameters:
     Type: String
   TaskRole:
     Type: String
-  ExecutionRole:
-    Type: String
   Command:
     Type: CommaDelimitedList
   EntryPoint:
@@ -25,27 +23,18 @@ Parameters:
     Type: String
   Arch:
     Type: String
-  App:
-    Type: String
-  Env:
-    Type: String
 Conditions:
   # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
     !Not [!Equals [!Ref ContainerImage, ""]]
   HasTaskRole:
     !Not [!Equals [!Ref TaskRole, ""]]
-  HasExecutionRole:
-    !Not [!Equals [!Ref ExecutionRole, ""]]
   HasCommand:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
   HasEntryPoint:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
   HasCustomPlatform:
     !Not [!Equals [!Ref OS, ""]]
-  HasAppAndEnv: !And
-    - !Not [!Equals [!Ref App, ""]]
-    - !Not [!Equals [!Ref Env, ""]]
 Resources:
   TaskDefinition:
     Metadata:
@@ -69,8 +58,11 @@ Resources:
           Environment:{{range $name, $value := .EnvVars}}
           - Name: {{$name}}
             Value: {{$value}}{{end}}{{end}}
-          {{- if .Secrets}}
-          Secrets:{{range $name, $valueFrom := .Secrets}}
+          {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
+          Secrets:{{range $name, $valueFrom := .SSMParamSecrets}}
+          - Name: {{$name}}
+            ValueFrom: {{$valueFrom}}{{end}}
+          {{range $name, $valueFrom := .SecretsManagerSecrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}
           {{- end}}
@@ -81,8 +73,9 @@ Resources:
       NetworkMode: awsvpc
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !GetAtt DefaultExecutionRole.Arn]
+      ExecutionRoleArn: {{- if eq .ExecutionRole "" }} !GetAtt DefaultExecutionRole.Arn {{- else }} {{.ExecutionRole}} {{- end }}
       TaskRoleArn: !If [HasTaskRole, !Ref TaskRole, !GetAtt DefaultTaskRole.Arn]
+  {{- if eq .ExecutionRole "" }}
   DefaultExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
@@ -96,34 +89,61 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-      {{- if .Secrets}}
+
+      {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
       Policies:
-        - !If
-          - HasAppAndEnv
-          - PolicyName: 'PullSecrets'
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: 'Allow'
-                  Action:
+      {{- if and .App .Env }}
+        - PolicyName: 'PullSecrets'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
                   - ssm:GetParameters
-                  Condition:
-                    StringEquals:
-                      "ssm:ResourceTag/copilot-application": !Ref App
-                      "ssm:ResourceTag/copilot-environment": !Ref Env
-                  Resource:
-                    - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
-                - Effect: 'Allow'
-                  Action:
-                    - secretsmanager:GetSecretValue
-                  Condition:
-                    StringEquals:
-                      "secretsmanager:ResourceTag/copilot-application": !Ref App
-                      "secretsmanager:ResourceTag/copilot-environment": !Ref Env
-                  Resource:
-                    - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
-          - !Ref AWS::NoValue
-      {{- end}}
+                Condition:
+                  StringEquals:
+                    "ssm:ResourceTag/copilot-application": {{ .App }}
+                    "ssm:ResourceTag/copilot-environment": {{ .Env }}
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+              - Effect: 'Allow'
+                Action:
+                  - secretsmanager:GetSecretValue
+                Condition:
+                  StringEquals:
+                    "secretsmanager:ResourceTag/copilot-application": {{ .App }}
+                    "secretsmanager:ResourceTag/copilot-environment": {{ .Env }}
+                Resource:
+                  - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
+      {{- else }}
+        - PolicyName: 'PullSecrets'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              {{- if .SSMParamSecrets }}
+              - Effect: 'Allow'
+                Action:
+                  - ssm:GetParameters
+                Resource: {{range $name, $valueFrom := .SSMParamSecrets}}
+                  {{- if not (isARN $valueFrom) }}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/{{ trimSlashPrefix $valueFrom}}
+                    {{- else }}
+                  - {{ $valueFrom }}
+                    {{- end }}
+                    {{ end }}
+              {{- end }}
+              {{- if .SecretsManagerSecrets }}
+              - Effect: 'Allow'
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: {{range $name, $valueFrom := .SecretsManagerSecrets}}
+                  - {{$valueFrom}}
+                    {{ end }}
+              {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+
   DefaultTaskRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'

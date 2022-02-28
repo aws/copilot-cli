@@ -421,7 +421,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockSession := sessions.NewProvider()
+			mockSession := sessions.ImmutableProvider()
 			mockAppCFN := mocks.NewMocksvcRemoverFromApp(ctrl)
 			mockSvcCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)

@@ -60,7 +60,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	defaultSession, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline show")).Default()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline show")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

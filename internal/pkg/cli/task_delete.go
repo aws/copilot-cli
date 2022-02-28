@@ -75,7 +75,7 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("task delete"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task delete"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
