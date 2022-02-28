@@ -448,6 +448,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		inEnv                      string
 		appName                    string
 		inSecrets                  map[string]string
+		inSsmParamSecrets          map[string]string
+		inSecretsManagerSecrets    map[string]string
 		inAcknowledgeSecretsAccess bool
 		inExecutionRole            string
 
@@ -643,6 +645,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inSecrets: map[string]string{
 				"quiet": "shh",
 			},
+			inSsmParamSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inSecretsManagerSecrets: map[string]string{
+				"quiet": "shh",
+			},
 			inCluster: "cluster-1",
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Return(true, nil)
@@ -699,8 +707,10 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					secrets:                     tc.inSecrets,
 					executionRole:               tc.inExecutionRole,
 				},
-				sel:    mockSel,
-				prompt: mockPrompter,
+				sel:                   mockSel,
+				prompt:                mockPrompter,
+				secretsManagerSecrets: tc.inSecretsManagerSecrets,
+				ssmParamSecrets:       tc.inSsmParamSecrets,
 			}
 
 			err := opts.Ask()
@@ -912,9 +922,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 		},
 		"update image to task resource if image is not provided": {
-			inSecrets: map[string]string{
-				"quiet": "shh",
-			},
 			inCommand:    `/bin/sh -c "curl $ECS_CONTAINER_METADATA_URI_V4"`,
 			inEntryPoint: `exec "some command"`,
 			setupMocks: func(m runTaskMocks) {
