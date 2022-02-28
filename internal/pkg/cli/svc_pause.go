@@ -52,6 +52,9 @@ type svcPauseOpts struct {
 	initSvcPause func() error
 	svcARN       string
 	prog         progress
+
+	// cached variables.
+	targetEnv *config.Environment
 }
 
 func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
@@ -75,9 +78,9 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	opts.initSvcPause = func() error {
-		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
+		env, err := opts.getTargetEnv()
 		if err != nil {
-			return fmt.Errorf("get environment: %w", err)
+			return err
 		}
 		wl, err := configStore.GetWorkload(opts.appName, opts.svcName)
 		if err != nil {
@@ -109,33 +112,17 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *svcPauseOpts) Validate() error {
-	if o.appName == "" {
-		return nil
-	}
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return err
-	}
-	if o.svcName != "" {
-		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
-			return err
-		}
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *svcPauseOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	if err := o.askSvcEnvName(); err != nil {
+	if err := o.validateAndAskSvcEnvName(); err != nil {
 		return err
 	}
 
@@ -153,9 +140,10 @@ func (o *svcPauseOpts) Ask() error {
 	return nil
 }
 
-func (o *svcPauseOpts) askApp() error {
+func (o *svcPauseOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.store.GetApplication(o.appName)
+		return err
 	}
 	app, err := o.sel.Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
@@ -165,7 +153,21 @@ func (o *svcPauseOpts) askApp() error {
 	return nil
 }
 
-func (o *svcPauseOpts) askSvcEnvName() error {
+func (o *svcPauseOpts) validateAndAskSvcEnvName() error {
+	if o.envName != "" {
+		if _, err := o.getTargetEnv(); err != nil {
+			return err
+		}
+	}
+
+	if o.svcName != "" {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
+			return err
+		}
+	}
+
+	// Note: we let prompter handle the case when there is only option for user to choose from.
+	// This is naturally the case when `o.envName != "" && o.svcName != ""`.
 	deployedService, err := o.sel.DeployedService(
 		fmt.Sprintf(svcPauseNamePrompt, color.HighlightUserInput(o.appName)),
 		svcPauseSvcNameHelpPrompt,
@@ -198,6 +200,18 @@ func (o *svcPauseOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtSvcPauseSucceed, o.svcName, o.envName))
 	return nil
+}
+
+func (o *svcPauseOpts) getTargetEnv() (*config.Environment, error) {
+	if o.targetEnv != nil {
+		return o.targetEnv, nil
+	}
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment: %w", err)
+	}
+	o.targetEnv = env
+	return o.targetEnv, nil
 }
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
