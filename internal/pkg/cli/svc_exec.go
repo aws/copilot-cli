@@ -61,13 +61,13 @@ type svcExecOpts struct {
 }
 
 func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc exec"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc exec"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
 	ssmStore := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
-	deployStore, err := deploy.NewStore(ssmStore)
+	deployStore, err := deploy.NewStore(sessProvider, ssmStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}

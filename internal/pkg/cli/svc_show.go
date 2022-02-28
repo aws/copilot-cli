@@ -46,13 +46,14 @@ type showSvcOpts struct {
 }
 
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
-	defaultSess, err := sessions.NewProvider(sessions.UserAgentExtras("svc show")).Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc show"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 
 	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	deployStore, err := deploy.NewStore(ssmStore)
+	deployStore, err := deploy.NewStore(sessProvider, ssmStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}

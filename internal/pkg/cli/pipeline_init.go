@@ -117,7 +117,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	p := sessions.NewProvider(sessions.UserAgentExtras("pipeline init"))
+	p := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline init"))
 	defaultSession, err := p.Default()
 	if err != nil {
 		return nil, err

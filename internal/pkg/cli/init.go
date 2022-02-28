@@ -95,7 +95,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("init"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("init"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompt := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompt, configStore, ws)
-	deployStore, err := deploy.NewStore(configStore)
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, err
 	}

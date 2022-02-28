@@ -38,14 +38,14 @@ type jobLogsOpts struct {
 }
 
 func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("job logs"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("job logs"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
-	deployStore, err := deploy.NewStore(configStore)
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}

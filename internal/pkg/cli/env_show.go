@@ -47,14 +47,14 @@ type showEnvOpts struct {
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env show"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env show"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
-	deployStore, err := deploy.NewStore(store)
+	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
 	}

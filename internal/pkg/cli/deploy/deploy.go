@@ -267,7 +267,7 @@ func NewLBDeployer(in *WorkloadDeployerInput) (*lbSvcDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
 	}
-	deployStore, err := deploy.NewStore(svcDeployer.store)
+	deployStore, err := deploy.NewStore(in.SessionProvider, svcDeployer.store)
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
@@ -377,7 +377,7 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	if err != nil {
 		return nil, err
 	}
-	deployStore, err := deploy.NewStore(svcDeployer.store)
+	deployStore, err := deploy.NewStore(in.SessionProvider, svcDeployer.store)
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
 	}

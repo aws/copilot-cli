@@ -71,7 +71,7 @@ type deleteSvcOpts struct {
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc delete"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc delete"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

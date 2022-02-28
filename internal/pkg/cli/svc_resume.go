@@ -154,14 +154,14 @@ func (o *resumeSvcOpts) askSvcEnvName() error {
 }
 
 func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc resume"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc resume"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	deployStore, err := deploy.NewStore(configStore)
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}

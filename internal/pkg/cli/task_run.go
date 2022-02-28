@@ -170,7 +170,7 @@ type runTaskOpts struct {
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("task run"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task run"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
@@ -233,7 +233,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 	ecsService := awsecs.New(o.sess)
 
 	if o.env != "" {
-		deployStore, err := deploy.NewStore(o.store)
+		deployStore, err := deploy.NewStore(o.provider, o.store)
 		if err != nil {
 			return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
 		}

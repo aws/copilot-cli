@@ -55,14 +55,14 @@ type svcPauseOpts struct {
 }
 
 func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc pause"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc pause"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	deployStore, err := deploy.NewStore(configStore)
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
