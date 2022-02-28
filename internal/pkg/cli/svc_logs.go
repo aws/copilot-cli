@@ -48,6 +48,8 @@ type wkldLogsVars struct {
 type svcLogsOpts struct {
 	wkldLogsVars
 	wkldLogOpts
+	// cached variables.
+	targetEnv *config.Environment
 }
 
 type wkldLogOpts struct {
@@ -60,10 +62,7 @@ type wkldLogOpts struct {
 	deployStore deployedEnvironmentLister
 	sel         deploySelector
 	logsSvc     logEventsWriter
-	initLogsSvc func() error // Overriden in tests.
-
-	// cached variables.
-	targetEnv *config.Environment
+	initLogsSvc func() error // Overridden in tests.
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
