@@ -45,7 +45,7 @@ type svcStatusOpts struct {
 }
 
 func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc status"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc status"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)

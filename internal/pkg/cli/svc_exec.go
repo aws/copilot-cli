@@ -61,7 +61,7 @@ type svcExecOpts struct {
 }
 
 func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc exec"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc exec"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

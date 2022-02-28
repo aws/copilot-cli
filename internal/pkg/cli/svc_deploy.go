@@ -71,7 +71,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc deploy"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc deploy"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

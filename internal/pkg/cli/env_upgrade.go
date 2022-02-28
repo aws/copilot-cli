@@ -70,7 +70,7 @@ type envUpgradeOpts struct {
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env upgrade"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env upgrade"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

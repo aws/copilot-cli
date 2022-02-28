@@ -78,7 +78,7 @@ type deleteEnvOpts struct {
 }
 
 func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("env delete"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env delete"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
