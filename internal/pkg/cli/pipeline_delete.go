@@ -206,8 +206,8 @@ func buildPipelineDeleteCmd() *cobra.Command {
 		Short: "Deletes the pipeline associated with your workspace.",
 		Example: `
   Delete the pipeline associated with your workspace.
-  /code $ copilot pipeline delete`,
-
+  /code $ copilot pipeline delete
+`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeletePipelineOpts(vars)
 			if err != nil {

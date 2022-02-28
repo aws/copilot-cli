@@ -71,7 +71,7 @@ const (
 	taskFinalMsg        = "Task:"
 	workloadFinalMsg    = "Name:"
 	dockerfileFinalMsg  = "Dockerfile:"
-	topicFinalMsg   = "Topic subscriptions:"
+	topicFinalMsg       = "Topic subscriptions:"
 	pipelineFinalMsg    = "Pipeline:"
 )
 

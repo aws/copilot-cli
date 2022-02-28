@@ -74,9 +74,9 @@ type deployPipelineOpts struct {
 	// cached variables
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
-	pipelineMft *manifest.Pipeline
-	svcBuffer   *bytes.Buffer
-	jobBuffer   *bytes.Buffer
+	pipelineMft                  *manifest.Pipeline
+	svcBuffer                    *bytes.Buffer
+	jobBuffer                    *bytes.Buffer
 }
 
 func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {

@@ -60,12 +60,14 @@ type Workspace struct {
 	workingDir string
 	copilotDir string
 	fsUtils    *afero.Afero
+	logger     func(format string, args ...interface{})
 }
 
 // New returns a workspace, used for reading and writing to user's local workspace.
 func New() (*Workspace, error) {
 	fs := afero.NewOsFs()
 	fsUtils := &afero.Afero{Fs: fs}
+	logger := log.Infof
 
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -74,6 +76,7 @@ func New() (*Workspace, error) {
 	ws := Workspace{
 		workingDir: workingDir,
 		fsUtils:    fsUtils,
+		logger:     logger,
 	}
 
 	return &ws, nil
@@ -170,17 +173,20 @@ type PipelineManifest struct {
 
 // ListPipelines returns all pipelines in the workspace.
 func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
-	var pipelines []PipelineManifest
+	var pipelineManifests []PipelineManifest
 	// Look for legacy pipeline.
 	legacyPath, err := ws.PipelineManifestLegacyPath()
 	if err != nil {
 		return nil, err
 	}
 	manifest, err := ws.ReadPipelineManifest(legacyPath)
-	if err != nil {
-		log.Infof("Unable to read pipeline manifest at '%s'", legacyPath)
+	if err != nil && !errors.Is(err, ErrNoPipelineInWorkspace) {
+		return nil, err
 	}
-	pipelines = append(pipelines, PipelineManifest{
+	if err != nil {
+		ws.logger("Unable to read pipeline manifest at '%s'", legacyPath)
+	}
+	pipelineManifests = append(pipelineManifests, PipelineManifest{
 		Name: manifest.Name,
 		Path: legacyPath,
 	})
@@ -194,7 +200,7 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 		return nil, fmt.Errorf("check if pipeline manifest exists at %s: %w", pipelinesPath, err)
 	}
 	if !exists {
-		return pipelines, nil
+		return pipelineManifests, nil
 	}
 	// Look through the existent pipelines dir for pipeline manifests.
 	files, err := ws.fsUtils.ReadDir(pipelinesPath)
@@ -211,15 +217,16 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 			path := filepath.Join(pipelinesPath, file.Name())
 			manifest, err := ws.ReadPipelineManifest(path)
 			if err != nil {
-				log.Infof("Unable to read pipeline manifest at '%s'", path)
+				ws.logger("Unable to read pipeline manifest at '%s'", path)
+			} else {
+				pipelineManifests = append(pipelineManifests, PipelineManifest{
+					Name: manifest.Name,
+					Path: path,
+				})
 			}
-			pipelines = append(pipelines, PipelineManifest{
-				Name: manifest.Name,
-				Path: path,
-			})
 		}
 	}
-	return pipelines, nil
+	return pipelineManifests, nil
 }
 
 // listWorkloads returns the name of all workloads (either services or jobs) in the workspace.
@@ -388,8 +395,7 @@ func (ws *Workspace) PipelineManifestLegacyPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pipelineManifestPath := filepath.Join(copilotPath, pipelineFileName)
-	return pipelineManifestPath, nil
+	return filepath.Join(copilotPath, pipelineFileName), nil
 }
 
 func (ws *Workspace) writeSummary(appName string) error {
