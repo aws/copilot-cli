@@ -138,7 +138,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc init"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc init"))
 	sess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

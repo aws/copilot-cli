@@ -73,7 +73,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	provider := sessions.NewProvider(sessions.UserAgentExtras("app delete"))
+	provider := sessions.ImmutableProvider(sessions.UserAgentExtras("app delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)

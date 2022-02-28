@@ -76,7 +76,7 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get environment: %w", err)
 	}
-	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("assume role for environment %s: %w", env.ManagerRoleARN, err)
 	}

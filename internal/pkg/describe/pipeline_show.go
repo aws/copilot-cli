@@ -40,7 +40,7 @@ type PipelineDescriber struct {
 
 // NewPipelineDescriber instantiates a new pipeline describer
 func NewPipelineDescriber(pipelineName string, showResources bool) (*PipelineDescriber, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, err
 	}

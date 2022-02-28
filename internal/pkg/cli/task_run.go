@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,6 +84,11 @@ Select %s to run the task in your default VPC instead of any existing applicatio
 Select %s to run the task in your default VPC instead of any existing environment.`, color.Emphasize(appEnvOptionNone))
 )
 
+var (
+	taskSecretsPermissionPrompt     = "Do you grant permission to the ECS/Fargate agent for these secrets?"
+	taskSecretsPermissionPromptHelp = "ECS/Fargate agent needs the permissions in order to fetch the secrets and inject them into your container."
+)
+
 type runTaskVars struct {
 	count  int
 	cpu    int
@@ -105,11 +111,12 @@ type runTaskVars struct {
 	appName                     string
 	useDefaultSubnetsAndCluster bool
 
-	envVars      map[string]string
-	secrets      map[string]string
-	command      string
-	entrypoint   string
-	resourceTags map[string]string
+	envVars                  map[string]string
+	secrets                  map[string]string
+	acknowledgeSecretsAccess bool
+	command                  string
+	entrypoint               string
+	resourceTags             map[string]string
 
 	follow                bool
 	generateCommandTarget string
@@ -128,6 +135,7 @@ type runTaskOpts struct {
 	store   store
 	sel     appEnvSelector
 	spinner progress
+	prompt  prompter
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
@@ -155,24 +163,32 @@ type runTaskOpts struct {
 	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromJob        func(client ecs.JobDescriber, app, env, job string) (*ecs.RunTaskRequest, error)
+
+	// Cached variables to hold SSM Param and Secrets Manager Secrets
+	ssmParamSecrets       map[string]string
+	secretsManagerSecrets map[string]string
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("task run"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task run"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 
+	prompter := prompt.New()
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
-		fs:       &afero.Afero{Fs: afero.NewOsFs()},
-		store:    store,
-		sel:      selector.NewSelect(prompt.New(), store),
-		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
-		provider: sessProvider,
+		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		store:                 store,
+		prompt:                prompter,
+		sel:                   selector.NewSelect(prompter, store),
+		spinner:               termprogress.NewSpinner(log.DiagnosticWriter),
+		provider:              sessProvider,
+		secretsManagerSecrets: make(map[string]string),
+		ssmParamSecrets:       make(map[string]string),
 	}
 
 	opts.configureRuntimeOpts = func() error {
@@ -377,6 +393,84 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
+	for _, value := range o.secrets {
+		if !isSSM(value) && !isSecretsManager(value) {
+			return fmt.Errorf("must specify a valid secrets ARN")
+		}
+	}
+
+	return nil
+}
+
+func isSSM(value string) bool {
+	// For SSM parameter you can specify it as ARN or name if it exists in the same Region as the task you are launching.
+	return !template.IsARNFunc(value) || strings.Contains(value, ":ssm:")
+}
+
+func isSecretsManager(value string) bool {
+	return template.IsARNFunc(value) && strings.Contains(value, ":secretsmanager:")
+}
+
+func (o *runTaskOpts) getCategorizedSecrets() (map[string]string, map[string]string) {
+	if len(o.ssmParamSecrets) > 0 || len(o.secretsManagerSecrets) > 0 {
+		return o.secretsManagerSecrets, o.ssmParamSecrets
+	}
+
+	for name, value := range o.secrets {
+		if isSSM(value) {
+			o.ssmParamSecrets[name] = value
+		}
+		if isSecretsManager(value) {
+			o.secretsManagerSecrets[name] = value
+		}
+	}
+	return o.secretsManagerSecrets, o.ssmParamSecrets
+}
+
+func (o *runTaskOpts) confirmSecretsAccess() error {
+	if o.executionRole != "" {
+		return nil
+	}
+
+	if o.appName != "" || o.env != "" {
+		return nil
+	}
+
+	if o.acknowledgeSecretsAccess {
+		return nil
+	}
+
+	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
+
+	log.Info("Looks like ")
+
+	if len(ssmParamSecrets) > 0 {
+		log.Infoln("you're requesting ssm:GetParameters to the following SSM parameters:")
+	} else {
+		log.Infoln("you're requesting secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	}
+
+	for _, value := range ssmParamSecrets {
+		log.Infoln("* " + value)
+	}
+
+	if len(ssmParamSecrets) > 0 && len(secretsManagerSecrets) > 0 {
+		log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	}
+
+	for _, value := range secretsManagerSecrets {
+		log.Infoln("* " + value)
+	}
+
+	secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
+	if err != nil {
+		return fmt.Errorf("prompt to confirm secrets access: %w", err)
+	}
+
+	if !secretsAccessConfirmed {
+		return errors.New("access to secrets denied")
+	}
+
 	return nil
 }
 
@@ -497,6 +591,11 @@ func (o *runTaskOpts) Ask() error {
 			return err
 		}
 		if err := o.askEnvName(); err != nil {
+			return err
+		}
+	}
+	if len(o.secrets) > 0 {
+		if err := o.confirmSecretsAccess(); err != nil {
 			return err
 		}
 	}
@@ -815,6 +914,8 @@ func (o *runTaskOpts) deploy() error {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
 
+	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
+
 	entrypoint, err := shlex.Split(o.entrypoint)
 	if err != nil {
 		return fmt.Errorf("split entrypoint %s into tokens using shell-style rules: %w", o.entrypoint, err)
@@ -826,21 +927,22 @@ func (o *runTaskOpts) deploy() error {
 	}
 
 	input := &deploy.CreateTaskResourcesInput{
-		Name:           o.groupName,
-		CPU:            o.cpu,
-		Memory:         o.memory,
-		Image:          o.image,
-		TaskRole:       o.taskRole,
-		ExecutionRole:  o.executionRole,
-		Command:        command,
-		EntryPoint:     entrypoint,
-		EnvVars:        o.envVars,
-		Secrets:        o.secrets,
-		OS:             o.os,
-		Arch:           o.arch,
-		App:            o.appName,
-		Env:            o.env,
-		AdditionalTags: o.resourceTags,
+		Name:                  o.groupName,
+		CPU:                   o.cpu,
+		Memory:                o.memory,
+		Image:                 o.image,
+		TaskRole:              o.taskRole,
+		ExecutionRole:         o.executionRole,
+		Command:               command,
+		EntryPoint:            entrypoint,
+		EnvVars:               o.envVars,
+		SSMParamSecrets:       ssmParamSecrets,
+		SecretsManagerSecrets: secretsManagerSecrets,
+		OS:                    o.os,
+		Arch:                  o.arch,
+		App:                   o.appName,
+		Env:                   o.env,
+		AdditionalTags:        o.resourceTags,
 	}
 	return o.deployer.DeployTask(os.Stderr, input, deployOpts...)
 }
@@ -958,6 +1060,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", taskAppFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringVar(&vars.cluster, clusterFlag, "", clusterFlagDescription)
+	cmd.Flags().BoolVar(&vars.acknowledgeSecretsAccess, acknowledgeSecretsAccessFlag, false, acknowledgeSecretsAccessDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
@@ -1006,6 +1109,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	taskFlags.AddFlag(cmd.Flags().Lookup(archFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(envVarsFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(secretsFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(acknowledgeSecretsAccessFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(commandFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(entrypointFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(resourceTagsFlag))

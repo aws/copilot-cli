@@ -59,7 +59,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	session, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline status")).Default()
+	session, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline status")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("session: %w", err)
 	}
