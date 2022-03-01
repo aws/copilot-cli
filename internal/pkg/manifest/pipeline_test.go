@@ -62,7 +62,7 @@ func TestNewPipelineManifest(t *testing.T) {
 		provider    Provider
 		inputStages []PipelineStage
 
-		expectedManifest *PipelineManifest
+		expectedManifest *Pipeline
 		expectedErr      error
 	}{
 		"errors out when no stage provided": {
@@ -96,7 +96,7 @@ func TestNewPipelineManifest(t *testing.T) {
 					RequiresApproval: true,
 				},
 			},
-			expectedManifest: &PipelineManifest{
+			expectedManifest: &Pipeline{
 				Name:    "pipepiper",
 				Version: Ver1,
 				Source: &Source{
@@ -127,7 +127,7 @@ func TestNewPipelineManifest(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			m, err := NewPipelineManifest(pipelineName, tc.provider, tc.inputStages)
+			m, err := NewPipeline(pipelineName, tc.provider, tc.inputStages)
 
 			// THEN
 			if tc.expectedErr != nil {
@@ -143,13 +143,13 @@ func TestNewPipelineManifest(t *testing.T) {
 
 func TestPipelineManifest_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, manifest *PipelineManifest)
+		mockDependencies func(ctrl *gomock.Controller, manifest *Pipeline)
 
 		wantedBinary []byte
 		wantedError  error
 	}{
 		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *PipelineManifest) {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *Pipeline) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
 				m.EXPECT().Parse(pipelineManifestPath, *manifest).Return(nil, errors.New("some error"))
@@ -158,7 +158,7 @@ func TestPipelineManifest_MarshalBinary(t *testing.T) {
 			wantedError: errors.New("some error"),
 		},
 		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *PipelineManifest) {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *Pipeline) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
 				m.EXPECT().Parse(pipelineManifestPath, *manifest).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
@@ -174,7 +174,7 @@ func TestPipelineManifest_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			manifest := &PipelineManifest{}
+			manifest := &Pipeline{}
 			tc.mockDependencies(ctrl, manifest)
 
 			// WHEN
@@ -190,7 +190,7 @@ func TestPipelineManifest_MarshalBinary(t *testing.T) {
 func TestUnmarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
 		inContent        string
-		expectedManifest *PipelineManifest
+		expectedManifest *Pipeline
 		expectedErr      error
 	}{
 		"invalid pipeline schema version": {
@@ -216,7 +216,7 @@ stages:
 		},
 		"invalid pipeline.yml": {
 			inContent:   `corrupted yaml`,
-			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.PipelineManifest"),
+			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.Pipeline"),
 		},
 		"valid pipeline.yml without build": {
 			inContent: `
@@ -238,7 +238,7 @@ stages:
       name: wings
       test_commands: []
 `,
-			expectedManifest: &PipelineManifest{
+			expectedManifest: &Pipeline{
 				Name:    "pipepiper",
 				Version: Ver1,
 				Source: &Source{
@@ -281,7 +281,7 @@ stages:
       name: chicken
       test_commands: []
 `,
-			expectedManifest: &PipelineManifest{
+			expectedManifest: &Pipeline{
 				Name:    "pipepiper",
 				Version: Ver1,
 				Source: &Source{
