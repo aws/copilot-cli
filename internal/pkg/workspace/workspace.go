@@ -188,10 +188,10 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 			return nil, err
 		}
 	} else {
-			pipelineManifests = append(pipelineManifests, PipelineManifest{
-				Name: manifest.Name,
-				Path: legacyPath,
-			})
+		pipelineManifests = append(pipelineManifests, PipelineManifest{
+			Name: manifest.Name,
+			Path: legacyPath,
+		})
 	}
 	// Look for other pipelines.
 	pipelinesPath, err := ws.pipelinesDirPath()

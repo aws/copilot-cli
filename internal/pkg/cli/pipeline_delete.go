@@ -6,8 +6,12 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -18,6 +22,8 @@ import (
 )
 
 const (
+	pipelineDeleteAppNamePrompt       = "Which application's pipelines would you like to show?"
+	pipelineDeleteAppNameHelpPrompt   = "An application is a collection of related services."
 	pipelineDeleteConfirmPrompt       = "Are you sure you want to delete pipeline %s from application %s?"
 	pipelineDeleteConfirmHelp         = "This will delete the deployment pipeline for the services in the workspace."
 	pipelineSecretDeleteConfirmPrompt = "Are you sure you want to delete the source secret %s associated with pipeline %s?"
@@ -48,9 +54,11 @@ type deletePipelineOpts struct {
 	pipelineDeployer pipelineDeployer
 	codepipeline     pipelineGetter
 	prog             progress
+	sel              appSelector
 	prompt           prompter
 	secretsmanager   secretsManager
 	ws               wsPipelineGetter
+	store            store
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
@@ -63,6 +71,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
+	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
@@ -71,33 +80,39 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		secretsmanager:     secretsmanager.New(defaultSess),
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
+		store:              ssmStore,
 	}
 
 	return opts, nil
 }
 
-// Validate returns an error if the optional flag values passed by the user are invalid.
+// Validate returns an error if the flag values passed by the user are invalid.
 func (o *deletePipelineOpts) Validate() error {
 	return nil
 }
 
-// Ask prompts for fields that are required but not passed in.
+// Ask prompts for and validates required fields.
 func (o *deletePipelineOpts) Ask() error {
-
-	if o.appName == "" {
-		return errNoAppInWorkspace
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
 	}
-
 	if o.name != "" {
 		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
 			return err
 		}
 	}
-	
+	if err := o.getNameAndSecret(); err != nil {
+		return err
+	}
 	if o.skipConfirmation {
 		return nil
 	}
-
 	deleteConfirmed, err := o.prompt.Confirm(
 		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.name, o.appName),
 		pipelineDeleteConfirmHelp,
@@ -110,7 +125,6 @@ func (o *deletePipelineOpts) Ask() error {
 	if !deleteConfirmed {
 		return errPipelineDeleteCancelled
 	}
-
 	return nil
 }
 
@@ -124,6 +138,15 @@ func (o *deletePipelineOpts) Execute() error {
 		return err
 	}
 
+	return nil
+}
+
+func (o *deletePipelineOpts) askAppName() error {
+	app, err := o.sel.Application(pipelineDeleteAppNamePrompt, pipelineDeleteAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("select application: %w", err)
+	}
+	o.appName = app
 	return nil
 }
 
