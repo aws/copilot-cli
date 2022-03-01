@@ -578,8 +578,10 @@ func (o *runTaskOpts) Execute() error {
 
 	tasks, err := o.runTask()
 	if err != nil {
-		if strings.Contains(err.Error(), "ResourceInitializationError") && o.appName != "" && o.env != "" {
-			log.Error("It looks like your task is not able to pull the secrets. Did you tag secrets with \"copilot-application\" and \"copilot-environment\" tags \n")
+		if strings.Contains(err.Error(), "AccessDeniedException") && strings.Contains(err.Error(), "unable to pull secrets") && o.appName != "" && o.env != "" {
+			log.Error(`It looks like your task is not able to pull the secrets.
+Did you tag your secrets with the "copilot-application" and "copilot-environment" tags?
+`)
 		}
 		return err
 	}
