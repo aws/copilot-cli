@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
@@ -72,11 +73,13 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	prompter := prompt.New()
 
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:             prompt.New(),
+		prompt:             prompter,
+		sel:                selector.NewConfigSelect(prompter, ssmStore),
 		secretsmanager:     secretsmanager.New(defaultSess),
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
