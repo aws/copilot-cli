@@ -5,10 +5,11 @@ package describe
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"io"
 	"net/url"
 	"sort"
+
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -262,7 +263,7 @@ func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, err
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
 	}
-	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
+	sess, err := sessions.ImmutableProvider().FromRole(environment.ManagerRoleARN, environment.Region)
 	if err != nil {
 		return nil, err
 	}

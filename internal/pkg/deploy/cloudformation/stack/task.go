@@ -25,13 +25,10 @@ const (
 
 	taskContainerImageParamKey = "ContainerImage"
 	taskTaskRoleParamKey       = "TaskRole"
-	taskExecutionRoleParamKey  = "ExecutionRole"
 	taskCommandParamKey        = "Command"
 	taskEntryPointParamKey     = "EntryPoint"
 	taskOSParamKey             = "OS"
 	taskArchParamKey           = "Arch"
-	taskAppParamKey            = "App"
-	taskEnvParamKey            = "Env"
 
 	taskLogRetentionInDays = "1"
 )
@@ -55,15 +52,28 @@ func (t *taskStackConfig) StackName() string {
 	return string(NameForTask(t.Name))
 }
 
+var cfnFuntion = map[string]interface{}{
+	"isARN":           template.IsARNFunc,
+	"trimSlashPrefix": template.TrimSlashPrefix,
+}
+
 // Template returns the task CloudFormation template.
 func (t *taskStackConfig) Template() (string, error) {
 	content, err := t.parser.Parse(taskTemplatePath, struct {
-		EnvVars map[string]string
-		Secrets map[string]string
+		EnvVars               map[string]string
+		SSMParamSecrets       map[string]string
+		SecretsManagerSecrets map[string]string
+		App                   string
+		Env                   string
+		ExecutionRole         string
 	}{
-		EnvVars: t.EnvVars,
-		Secrets: t.Secrets,
-	})
+		EnvVars:               t.EnvVars,
+		SSMParamSecrets:       t.SSMParamSecrets,
+		SecretsManagerSecrets: t.SecretsManagerSecrets,
+		App:                   t.App,
+		Env:                   t.Env,
+		ExecutionRole:         t.ExecutionRole,
+	}, template.WithFuncs(cfnFuntion))
 	if err != nil {
 		return "", fmt.Errorf("read template for task stack: %w", err)
 	}
@@ -98,10 +108,6 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(t.TaskRole),
 		},
 		{
-			ParameterKey:   aws.String(taskExecutionRoleParamKey),
-			ParameterValue: aws.String(t.ExecutionRole),
-		},
-		{
 			ParameterKey:   aws.String(taskCommandParamKey),
 			ParameterValue: aws.String(strings.Join(t.Command, ",")),
 		},
@@ -116,14 +122,6 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(taskArchParamKey),
 			ParameterValue: aws.String(t.Arch),
-		},
-		{
-			ParameterKey:   aws.String(taskAppParamKey),
-			ParameterValue: aws.String(t.App),
-		},
-		{
-			ParameterKey:   aws.String(taskEnvParamKey),
-			ParameterValue: aws.String(t.Env),
 		},
 	}, nil
 }

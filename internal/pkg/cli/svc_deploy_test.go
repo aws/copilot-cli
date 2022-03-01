@@ -18,64 +18,68 @@ import (
 )
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
+	// There is no validation for svc deploy.
+}
+
+type svcDeployAskMocks struct {
+	store *mocks.Mockstore
+	sel   *mocks.MockwsSelector
+	ws    *mocks.MockwsWlDirReader
+}
+
+func TestSvcDeployOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName string
 		inEnvName string
 		inSvcName string
 
-		mockWs    func(m *mocks.MockwsWlDirReader)
-		mockStore func(m *mocks.Mockstore)
+		setupMocks func(m *svcDeployAskMocks)
 
-		wantedError error
+		wantedSvcName string
+		wantedEnvName string
+		wantedError   error
 	}{
-		"no existing applications": {
-			mockWs:    func(m *mocks.MockwsWlDirReader) {},
-			mockStore: func(m *mocks.Mockstore) {},
-
+		"validate instead of prompting application name, svc name and environment name": {
+			inAppName: "phonetool",
+			inEnvName: "prod-iad",
+			inSvcName: "frontend",
+			setupMocks: func(m *svcDeployAskMocks) {
+				m.store.EXPECT().GetApplication("phonetool")
+				m.store.EXPECT().GetEnvironment("phonetool", "prod-iad").Return(&config.Environment{Name: "prod-iad"}, nil)
+				m.ws.EXPECT().ListServices().Return([]string{"frontend"}, nil)
+				m.sel.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedSvcName: "frontend",
+			wantedEnvName: "prod-iad",
+		},
+		"error instead of prompting for application name if not provided": {
+			setupMocks: func(m *svcDeployAskMocks) {
+				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
+			},
 			wantedError: errNoAppInWorkspace,
 		},
-		"with workspace error": {
+		"prompt for service name": {
+			inAppName: "phonetool",
+			inEnvName: "prod-iad",
+			setupMocks: func(m *svcDeployAskMocks) {
+				m.sel.EXPECT().Service("Select a service in your workspace", "").Return("frontend", nil)
+				m.store.EXPECT().GetApplication(gomock.Any()).Times(1)
+				m.store.EXPECT().GetEnvironment("phonetool", "prod-iad").Return(&config.Environment{Name: "prod-iad"}, nil)
+			},
+			wantedSvcName: "frontend",
+			wantedEnvName: "prod-iad",
+		},
+		"prompt for environment name": {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsWlDirReader) {
-				m.EXPECT().ListServices().Return(nil, errors.New("some error"))
+			setupMocks: func(m *svcDeployAskMocks) {
+				m.sel.EXPECT().Environment(gomock.Any(), gomock.Any(), "phonetool").Return("prod-iad", nil)
+				m.store.EXPECT().GetApplication("phonetool")
+				m.ws.EXPECT().ListServices().Return([]string{"frontend"}, nil)
 			},
-			mockStore: func(m *mocks.Mockstore) {},
-
-			wantedError: errors.New("list services in the workspace: some error"),
-		},
-		"with service not in workspace": {
-			inAppName: "phonetool",
-			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsWlDirReader) {
-				m.EXPECT().ListServices().Return([]string{}, nil)
-			},
-			mockStore: func(m *mocks.Mockstore) {},
-
-			wantedError: errors.New("service frontend not found in the workspace"),
-		},
-		"with unknown environment": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			mockWs:    func(m *mocks.MockwsWlDirReader) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(nil, errors.New("unknown env"))
-			},
-
-			wantedError: errors.New("get environment test configuration: unknown env"),
-		},
-		"successful validation": {
-			inAppName: "phonetool",
-			inSvcName: "frontend",
-			inEnvName: "test",
-			mockWs: func(m *mocks.MockwsWlDirReader) {
-				m.EXPECT().ListServices().Return([]string{"frontend"}, nil)
-			},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&config.Environment{Name: "test"}, nil)
-			},
+			wantedSvcName: "frontend",
+			wantedEnvName: "prod-iad",
 		},
 	}
 
@@ -85,91 +89,21 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWs := mocks.NewMockwsWlDirReader(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			tc.mockWs(mockWs)
-			tc.mockStore(mockStore)
+			m := &svcDeployAskMocks{
+				store: mocks.NewMockstore(ctrl),
+				sel:   mocks.NewMockwsSelector(ctrl),
+				ws:    mocks.NewMockwsWlDirReader(ctrl),
+			}
+			tc.setupMocks(m)
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
 					appName: tc.inAppName,
 					name:    tc.inSvcName,
 					envName: tc.inEnvName,
 				},
-				ws:    mockWs,
-				store: mockStore,
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestSvcDeployOpts_Ask(t *testing.T) {
-	testCases := map[string]struct {
-		inAppName  string
-		inEnvName  string
-		inSvcName  string
-		inImageTag string
-
-		wantedCalls func(m *mocks.MockwsSelector)
-
-		wantedSvcName  string
-		wantedEnvName  string
-		wantedImageTag string
-		wantedError    error
-	}{
-		"prompts for environment name and service names": {
-			inAppName:  "phonetool",
-			inImageTag: "latest",
-			wantedCalls: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Select a service in your workspace", "").Return("frontend", nil)
-				m.EXPECT().Environment("Select an environment", "", "phonetool").Return("prod-iad", nil)
-			},
-
-			wantedSvcName:  "frontend",
-			wantedEnvName:  "prod-iad",
-			wantedImageTag: "latest",
-		},
-		"don't call selector if flags are provided": {
-			inAppName:  "phonetool",
-			inEnvName:  "prod-iad",
-			inSvcName:  "frontend",
-			inImageTag: "latest",
-			wantedCalls: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedSvcName:  "frontend",
-			wantedEnvName:  "prod-iad",
-			wantedImageTag: "latest",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			mockSel := mocks.NewMockwsSelector(ctrl)
-
-			tc.wantedCalls(mockSel)
-			opts := deploySvcOpts{
-				deployWkldVars: deployWkldVars{
-					appName:  tc.inAppName,
-					name:     tc.inSvcName,
-					envName:  tc.inEnvName,
-					imageTag: tc.inImageTag,
-				},
-				sel: mockSel,
+				sel:   m.sel,
+				store: m.store,
+				ws:    m.ws,
 			}
 
 			// WHEN
@@ -180,7 +114,6 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedSvcName, opts.name)
 				require.Equal(t, tc.wantedEnvName, opts.envName)
-				require.Equal(t, tc.wantedImageTag, opts.imageTag)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}

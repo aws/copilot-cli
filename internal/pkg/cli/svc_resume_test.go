@@ -4,121 +4,26 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
 )
 
 func TestResumeSvcOpts_Validate(t *testing.T) {
-	mockError := fmt.Errorf("some error")
+	// NOTE: No optional flag to `copilot svc pause` needs to be validated.
+}
 
-	tests := map[string]struct {
-		inAppName  string
-		inEnvName  string
-		inName     string
-		setupMocks func(m *mocks.Mockstore)
-
-		want error
-	}{
-		"skip validation if app flag is not set": {
-			inEnvName:  "test",
-			inName:     "frontend",
-			setupMocks: func(m *mocks.Mockstore) {},
-		},
-		"with no flag set": {
-			inAppName: "phonetool",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			want: nil,
-		},
-		"with all flags set": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			inName:    "frontend",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&config.Environment{Name: "test"}, nil)
-				m.EXPECT().GetService("phonetool", "frontend").Times(1).Return(&config.Workload{
-					Name: "frontend",
-				}, nil)
-			},
-			want: nil,
-		},
-		"with env flag set": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&config.Environment{Name: "test"}, nil)
-			},
-			want: nil,
-		},
-		"with svc flag set": {
-			inAppName: "phonetool",
-			inName:    "api",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Workload{
-					Name: "api",
-				}, nil)
-			},
-			want: nil,
-		},
-		"with unknown environment": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, mockError)
-			},
-			want: mockError,
-		},
-		"should return error if fail to get service name": {
-			inAppName: "phonetool",
-			inName:    "api",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(nil, mockError)
-			},
-			want: mockError,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			mockstore := mocks.NewMockstore(ctrl)
-
-			test.setupMocks(mockstore)
-
-			opts := resumeSvcOpts{
-				resumeSvcVars: resumeSvcVars{
-					appName: test.inAppName,
-					svcName: test.inName,
-					envName: test.inEnvName,
-				},
-				store: mockstore,
-			}
-
-			err := opts.Validate()
-
-			if test.want != nil {
-				require.EqualError(t, err, test.want.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
+type svcResumeAskMock struct {
+	store *mocks.Mockstore
+	sel   *mocks.MockdeploySelector
 }
 
 func TestResumeSvcOpts_Ask(t *testing.T) {
@@ -131,76 +36,97 @@ func TestResumeSvcOpts_Ask(t *testing.T) {
 
 	tests := map[string]struct {
 		skipConfirmation bool
-		svcName          string
-		envName          string
-		appName          string
+		inputSvc         string
+		inputEnv         string
+		inputApp         string
 
-		mockSel func(m *mocks.MockdeploySelector)
+		setupMocks func(m svcResumeAskMock)
 
-		wantedAppName string
-		wantedEnvName string
-		wantedSvcName string
-		wantedError   error
+		wantedApp   string
+		wantedEnv   string
+		wantedSvc   string
+		wantedError error
 	}{
-		"should ask for app name": {
-			appName:          "",
-			envName:          testEnvName,
-			svcName:          testSvcName,
-			skipConfirmation: true,
-			mockSel: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return(testAppName, nil)
-				m.EXPECT().DeployedService(
-					"Which service of phonetool would you like to resume?",
-					svcResumeSvcNameHelpPrompt,
-					testAppName,
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(&selector.DeployedService{
-					Svc: testSvcName,
-					Env: testEnvName,
-				}, nil)
+		"validate app env and svc with all flags passed in": {
+			inputApp: testAppName,
+			inputSvc: testSvcName,
+			inputEnv: testEnvName,
+			setupMocks: func(m svcResumeAskMock) {
+				gomock.InOrder(
+					m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil),
+					m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test"}, nil),
+					m.store.EXPECT().GetService("phonetool", "api").Return(&config.Workload{}, nil),
+				)
+				m.sel.EXPECT().DeployedService(fmt.Sprintf(svcResumeSvcNamePrompt, testAppName), svcResumeSvcNameHelpPrompt, "phonetool", gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: "test",
+						Svc: "api",
+					}, nil) // Let prompter handles the case when svc(env) is definite.
 			},
-
-			wantedAppName: testAppName,
+			wantedApp: testAppName,
+			wantedEnv: testEnvName,
+			wantedSvc: testSvcName,
 		},
-		"should ask for service name": {
-			appName:          testAppName,
-			envName:          "",
-			svcName:          "",
+		"prompt for app name": {
+			inputEnv:         testEnvName,
+			inputSvc:         testSvcName,
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(
-					"Which service of phonetool would you like to resume?",
-					svcResumeSvcNameHelpPrompt,
-					testAppName,
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(&selector.DeployedService{
-					Svc: testSvcName,
-					Env: testEnvName,
-				}, nil)
+			setupMocks: func(m svcResumeAskMock) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("phonetool", nil)
+				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: testEnvName,
+						Svc: testSvcName,
+					}, nil).AnyTimes()
 			},
-
-			wantedSvcName: testSvcName,
+			wantedApp: testAppName,
+			wantedEnv: testEnvName,
+			wantedSvc: testSvcName,
+		},
+		"errors if failed to select application": {
+			skipConfirmation: true,
+			setupMocks: func(m svcResumeAskMock) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("select application: some error"),
+		},
+		"prompt for service and env": {
+			inputApp:         testAppName,
+			inputEnv:         "",
+			inputSvc:         "",
+			skipConfirmation: true,
+			setupMocks: func(m svcResumeAskMock) {
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService("Which service of phonetool would you like to resume?",
+					svcResumeSvcNameHelpPrompt, testAppName, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: testEnvName,
+						Svc: testSvcName,
+					}, nil)
+			},
+			wantedApp: testAppName,
+			wantedEnv: testEnvName,
+			wantedSvc: testSvcName,
 		},
 		"returns error if fails to select service": {
-			appName:          testAppName,
-			envName:          "",
-			svcName:          "",
+			inputApp:         testAppName,
+			inputEnv:         "",
+			inputSvc:         "",
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(
-					"Which service of phonetool would you like to resume?",
-					svcResumeSvcNameHelpPrompt,
-					testAppName,
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(nil, mockError)
-			},
 
+			setupMocks: func(m svcResumeAskMock) {
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService("Which service of phonetool would you like to resume?",
+					svcResumeSvcNameHelpPrompt, testAppName, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, mockError)
+			},
 			wantedError: fmt.Errorf("select deployed service for application phonetool: %w", mockError),
 		},
 	}
@@ -210,36 +136,31 @@ func TestResumeSvcOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSel := mocks.NewMockdeploySelector(ctrl)
-			test.mockSel(mockSel)
-
+			m := svcResumeAskMock{
+				store: mocks.NewMockstore(ctrl),
+				sel:   mocks.NewMockdeploySelector(ctrl),
+			}
+			test.setupMocks(m)
 			opts := resumeSvcOpts{
 				resumeSvcVars: resumeSvcVars{
-					appName: test.appName,
-					svcName: test.svcName,
-					envName: test.envName,
+					appName: test.inputApp,
+					svcName: test.inputSvc,
+					envName: test.inputEnv,
 				},
-				sel: mockSel,
+				sel:   m.sel,
+				store: m.store,
 			}
 
 			err := opts.Ask()
 
+			// THEN
 			if test.wantedError != nil {
-				require.Equal(t, test.wantedError, err)
+				require.EqualError(t, err, test.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-			}
-
-			if test.wantedAppName != "" {
-				require.Equal(t, test.wantedAppName, opts.appName)
-			}
-
-			if test.wantedEnvName != "" {
-				require.Equal(t, test.wantedEnvName, opts.envName)
-			}
-
-			if test.wantedSvcName != "" {
-				require.Equal(t, test.wantedSvcName, opts.svcName)
+				require.Equal(t, test.wantedApp, opts.appName, "expected app name to match")
+				require.Equal(t, test.wantedSvc, opts.svcName, "expected service name to match")
+				require.Equal(t, test.wantedEnv, opts.envName, "expected service name to match")
 			}
 		})
 	}
@@ -319,7 +240,6 @@ func TestResumeSvcOpts_Execute(t *testing.T) {
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockserviceResumer := mocks.NewMockserviceResumer(ctrl)
 			mockapprunnerDescriber := mocks.NewMockapprunnerServiceDescriber(ctrl)
-			// foo := mocks.NewMock
 
 			mocks := &resumeSvcMocks{
 				store:              mockstore,

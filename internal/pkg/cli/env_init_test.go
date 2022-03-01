@@ -1261,7 +1261,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				tc.expectResourcesUploader(mockResourcesUploader)
 			}
 
-			provider := sessions.NewProvider()
+			provider := sessions.ImmutableProvider()
 			sess, _ := provider.DefaultWithRegion("us-west-2")
 
 			opts := &initEnvOpts{

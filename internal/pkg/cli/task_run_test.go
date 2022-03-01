@@ -444,9 +444,14 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		inSubnets        []string
 		inSecurityGroups []string
 
-		inDefault bool
-		inEnv     string
-		appName   string
+		inDefault                  bool
+		inEnv                      string
+		appName                    string
+		inSecrets                  map[string]string
+		inSsmParamSecrets          map[string]string
+		inSecretsManagerSecrets    map[string]string
+		inAcknowledgeSecretsAccess bool
+		inExecutionRole            string
 
 		mockSel    func(m *mocks.MockappEnvSelector)
 		mockPrompt func(m *mocks.Mockprompter)
@@ -636,6 +641,41 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedError: errors.New("ask for environment: error selecting environment"),
 		},
+		"When secrets are provided without app and env leads to a secret access permission prompt": {
+			inSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inSsmParamSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inSecretsManagerSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inCluster: "cluster-1",
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Return(true, nil)
+			},
+		},
+		"secret access permission prompt is skipped when acknowledge-secret-access flag is provided": {
+			inSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inCluster:                  "cluster-1",
+			inAcknowledgeSecretsAccess: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Times(0)
+			},
+		},
+		"secret access permission prompt is skipped when execution-role is provided": {
+			inSecrets: map[string]string{
+				"quiet": "shh",
+			},
+			inCluster:       "cluster-1",
+			inExecutionRole: "test-role",
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp).Times(0)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -663,8 +703,14 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					subnets:                     tc.inSubnets,
 					securityGroups:              tc.inSecurityGroups,
 					cluster:                     tc.inCluster,
+					acknowledgeSecretsAccess:    tc.inAcknowledgeSecretsAccess,
+					secrets:                     tc.inSecrets,
+					executionRole:               tc.inExecutionRole,
 				},
-				sel: mockSel,
+				sel:                   mockSel,
+				prompt:                mockPrompter,
+				secretsManagerSecrets: tc.inSecretsManagerSecrets,
+				ssmParamSecrets:       tc.inSsmParamSecrets,
 			}
 
 			err := opts.Ask()
@@ -876,31 +922,22 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 		},
 		"update image to task resource if image is not provided": {
-			inSecrets: map[string]string{
-				"quiet": "shh",
-			},
 			inCommand:    `/bin/sh -c "curl $ECS_CONTAINER_METADATA_URI_V4"`,
 			inEntryPoint: `exec "some command"`,
 			setupMocks: func(m runTaskMocks) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "",
-					Secrets: map[string]string{
-						"quiet": "shh",
-					},
+					Name:       inGroupName,
+					Image:      "",
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "uri/repo:latest",
-					Secrets: map[string]string{
-						"quiet": "shh",
-					},
+					Name:       inGroupName,
+					Image:      "uri/repo:latest",
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)

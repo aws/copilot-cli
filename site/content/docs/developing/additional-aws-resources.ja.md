@@ -117,3 +117,36 @@ Outputs:
     
     * `addons/` ディレクトリで定義するポリシーでは[最小限のアクセス権を付与する](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)
     * `addons/` ディレクトリで定義したリソースに対してのみアクセスできるようにポリシーを制限するために [追加セキュリティに対するポリシー条件を使用する](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#use-policy-conditions) 
+
+
+### `Parameters` セクションのカスタマイズ
+
+Copilot では、 `App`, `Env` そして `Name` パラメーターがテンプレートに定義されている必要があります。もし、 Service スタック内のリソースを参照するを追加したい場合は、 `addons.parameters.yml` ファイルを作成します。テンプレート内パラメーターのデータ型やデフォルト値の指定方法については、[CloudFormation テンプレートでのパラメーター定義](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)に準じます。
+
+```term
+.
+└── addons/
+    ├── template.yml
+    └── addons.parameters.yml # このファイルを addons/ ディレクトリの下に追加します
+```
+
+`addons.parameters.yml` には、Service スタック内の値を参照するパラメーターを例えば以下のように定義できます。
+```yaml
+Parameters:
+  ServiceName: !GetAtt Service.Name
+```
+最後に、新しいパラメーターを参照するようにテンプレートファイルを更新しましょう。
+
+```yaml
+Parameters:
+  # AWS Copilot で必要なパラメーター
+  App:
+    Type: String
+  Env:
+    Type: String
+  Name:
+    Type: String
+  # addons.parameters.yml で追加したパラメーター
+  ServiceName:
+    Type: String
+```
