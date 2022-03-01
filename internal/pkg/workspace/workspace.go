@@ -180,16 +180,19 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 		return nil, err
 	}
 	manifest, err := ws.ReadPipelineManifest(legacyPath)
-	if err != nil && !errors.Is(err, ErrNoPipelineInWorkspace) {
-		return nil, err
-	}
 	if err != nil {
-		ws.logger("Unable to read pipeline manifest at '%s'", legacyPath)
+		switch {
+		case errors.Is(err, ErrNoPipelineInWorkspace):
+			ws.logger("Unable to read pipeline manifest at '%s': %w", legacyPath, err)
+		default:
+			return nil, err
+		}
+	} else {
+			pipelineManifests = append(pipelineManifests, PipelineManifest{
+				Name: manifest.Name,
+				Path: legacyPath,
+			})
 	}
-	pipelineManifests = append(pipelineManifests, PipelineManifest{
-		Name: manifest.Name,
-		Path: legacyPath,
-	})
 	// Look for other pipelines.
 	pipelinesPath, err := ws.pipelinesDirPath()
 	if err != nil {
@@ -217,7 +220,12 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 			path := filepath.Join(pipelinesPath, file.Name())
 			manifest, err := ws.ReadPipelineManifest(path)
 			if err != nil {
-				ws.logger("Unable to read pipeline manifest at '%s'", path)
+				switch {
+				case errors.Is(err, ErrNoPipelineInWorkspace):
+					ws.logger("Unable to read pipeline manifest at '%s': %w", legacyPath, err)
+				default:
+					return nil, err
+				}
 			} else {
 				pipelineManifests = append(pipelineManifests, PipelineManifest{
 					Name: manifest.Name,
