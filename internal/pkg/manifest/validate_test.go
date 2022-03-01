@@ -934,12 +934,12 @@ func TestScheduledJob_Validate(t *testing.T) {
 
 func TestPipelineManifest_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		Pipeline PipelineManifest
+		Pipeline Pipeline
 
 		wantedError error
 	}{
 		"error if name exceeds 100 characters": {
-			Pipeline: PipelineManifest{
+			Pipeline: Pipeline{
 				Name: "12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890",
 			},
 			wantedError: errors.New("pipeline name '12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890' must be shorter than 100 characters"),

@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -236,7 +237,7 @@ type workspacePathGetter interface {
 }
 
 type wsPipelineManifestReader interface {
-	ReadPipelineManifest() ([]byte, error)
+	ReadPipelineManifest(path string) (*manifest.Pipeline, error)
 }
 
 type wsPipelineWriter interface {
@@ -281,8 +282,14 @@ type wsWlDirReader interface {
 }
 
 type wsPipelineReader interface {
+	wsPipelineGetter
+}
+
+type wsPipelineGetter interface {
 	wsPipelineManifestReader
 	wlLister
+	ListPipelines() ([]workspace.PipelineManifest, error)
+	PipelineManifestLegacyPath() (string, error)
 }
 
 type wsAppManager interface {
@@ -467,8 +474,12 @@ type deploySelector interface {
 	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
-type pipelineSelector interface {
+type pipelineEnvSelector interface {
 	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
+}
+
+type wsPipelineSelector interface {
+	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
 }
 
 type wsSelector interface {
