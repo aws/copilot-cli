@@ -7,6 +7,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/copilot-cli/internal/pkg/cli/list"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -30,14 +35,17 @@ type listSvcOpts struct {
 }
 
 func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, err
-	}
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, err
 	}
+
+	sess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("svc ls")).Default()
+	if err != nil {
+		return nil, fmt.Errorf("default session: %v", err)
+	}
+
+	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	svcLister := &list.SvcListWriter{
 		Ws:    ws,
 		Store: store,
@@ -60,9 +68,11 @@ func (o *listSvcOpts) Validate() error {
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *listSvcOpts) Ask() error {
 	if o.appName != "" {
+		// NOTE: Skip validating app name here because `Execute` will fail pretty soon with a clear error message.
+		// The validation (config.GetApplication) would only add additional operation time in this particular case.
 		return nil
 	}
 

@@ -7,6 +7,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -73,16 +77,12 @@ type deleteJobOpts struct {
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	provider := sessions.NewProvider()
+	provider := sessions.ImmutableProvider(sessions.UserAgentExtras("job delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &deleteJobOpts{
 		deleteJobVars: vars,

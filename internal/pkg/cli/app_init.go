@@ -7,6 +7,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -56,23 +59,20 @@ type initAppOpts struct {
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app init")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
-	}
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
 	}
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
+	identity := identity.New(sess)
 	return &initAppOpts{
 		initAppVars:      vars,
-		identity:         identity.New(sess),
-		store:            store,
+		identity:         identity,
+		store:            config.NewSSMStore(identity, ssm.New(sess), aws.StringValue(sess.Config.Region)),
 		route53:          route53.New(sess),
 		domainInfoGetter: route53.NewRoute53Domains(sess),
 		ws:               ws,

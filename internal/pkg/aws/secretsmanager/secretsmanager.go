@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 )
 
 type api interface {
@@ -25,19 +26,12 @@ type SecretsManager struct {
 	sessionRegion  string
 }
 
-// New returns a SecretsManager configured with the default session.
-func New() (*SecretsManager, error) {
-	p := sessions.NewProvider()
-	sess, err := p.Default()
-
-	if err != nil {
-		return nil, err
-	}
-
+// New returns a SecretsManager configured against the input session.
+func New(s *session.Session) *SecretsManager {
 	return &SecretsManager{
-		secretsManager: secretsmanager.New(sess),
-		sessionRegion:  *sess.Config.Region,
-	}, nil
+		secretsManager: secretsmanager.New(s),
+		sessionRegion:  *s.Config.Region,
+	}
 }
 
 var secretTags = func() []*secretsmanager.Tag {

@@ -15,9 +15,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 )
 
 // Parameter name formats for resources in an application. Applications are laid out in SSM
@@ -39,31 +37,33 @@ const (
 	fmtWkldParamPath    = "/copilot/applications/%s/components/%s" // path for a workload in an application
 )
 
-type identityGetter interface {
+// IAMIdentityGetter is the interface to get information about the IAM user or role whose credentials are used to make AWS requests.
+type IAMIdentityGetter interface {
 	Get() (identity.Caller, error)
+}
+
+// SSM is the interface for the AWS SSM client.
+type SSM interface {
+	PutParameter(in *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
+	GetParametersByPath(in *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
+	GetParameter(in *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
+	DeleteParameter(in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
 }
 
 // Store is in charge of fetching and creating applications, environment, services and other workloads, and pipeline configuration in SSM.
 type Store struct {
-	idClient      identityGetter
-	ssmClient     ssmiface.SSMAPI
-	sessionRegion string
+	sts       IAMIdentityGetter
+	ssm       SSM
+	appRegion string
 }
 
-// NewStore returns a new store, allowing you to query or create Applications, Environments, Services, and other workloads.
-func NewStore() (*Store, error) {
-	p := sessions.NewProvider()
-	sess, err := p.Default()
-
-	if err != nil {
-		return nil, err
-	}
-
+// NewSSMStore returns a new store, allowing you to query or create Applications, Environments, Services, and other workloads.
+func NewSSMStore(sts IAMIdentityGetter, ssm SSM, appRegion string) *Store {
 	return &Store{
-		idClient:      identity.New(sess),
-		ssmClient:     ssm.New(sess),
-		sessionRegion: *sess.Config.Region,
-	}, nil
+		sts:       sts,
+		ssm:       ssm,
+		appRegion: appRegion,
+	}
 }
 
 func (s *Store) listParams(path string) ([]*string, error) {
@@ -71,7 +71,7 @@ func (s *Store) listParams(path string) ([]*string, error) {
 
 	var nextToken *string
 	for {
-		params, err := s.ssmClient.GetParametersByPath(&ssm.GetParametersByPathInput{
+		params, err := s.ssm.GetParametersByPath(&ssm.GetParametersByPathInput{
 			Path:      aws.String(path),
 			Recursive: aws.Bool(false),
 			NextToken: nextToken,
@@ -96,8 +96,8 @@ func (s *Store) listParams(path string) ([]*string, error) {
 // Retrieves the caller's Account ID with a best effort. If it fails to fetch the Account ID,
 // this returns "unknown".
 func (s *Store) getCallerAccountAndRegion() (string, string) {
-	identity, err := s.idClient.Get()
-	region := s.sessionRegion
+	identity, err := s.sts.Get()
+	region := s.appRegion
 	if err != nil {
 		log.Printf("Failed to get caller's Account ID %v", err)
 		return "unknown", region

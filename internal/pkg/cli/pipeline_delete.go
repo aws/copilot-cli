@@ -60,12 +60,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	secretsmanager, err := secretsmanager.New()
-	if err != nil {
-		return nil, fmt.Errorf("new secrets manager client: %w", err)
-	}
-
-	defaultSess, err := sessions.NewProvider().Default()
+	defaultSess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline delete")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
@@ -74,7 +69,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		deletePipelineVars: vars,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
-		secretsmanager:     secretsmanager,
+		secretsmanager:     secretsmanager.New(defaultSess),
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
 	}

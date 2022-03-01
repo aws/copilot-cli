@@ -66,24 +66,25 @@ const (
 	storageRDSInitialDBFlag      = "initial-db"
 	storageRDSParameterGroupFlag = "parameter-group"
 
-	taskGroupNameFlag   = "task-group-name"
-	countFlag           = "count"
-	cpuFlag             = "cpu"
-	memoryFlag          = "memory"
-	imageFlag           = "image"
-	taskRoleFlag        = "task-role"
-	executionRoleFlag   = "execution-role"
-	clusterFlag         = "cluster"
-	subnetsFlag         = "subnets"
-	securityGroupsFlag  = "security-groups"
-	envVarsFlag         = "env-vars"
-	secretsFlag         = "secrets"
-	commandFlag         = "command"
-	entrypointFlag      = "entrypoint"
-	taskDefaultFlag     = "default"
-	generateCommandFlag = "generate-cmd"
-	osFlag              = "platform-os"
-	archFlag            = "platform-arch"
+	taskGroupNameFlag            = "task-group-name"
+	countFlag                    = "count"
+	cpuFlag                      = "cpu"
+	memoryFlag                   = "memory"
+	imageFlag                    = "image"
+	taskRoleFlag                 = "task-role"
+	executionRoleFlag            = "execution-role"
+	clusterFlag                  = "cluster"
+	acknowledgeSecretsAccessFlag = "acknowledge-secrets-access"
+	subnetsFlag                  = "subnets"
+	securityGroupsFlag           = "security-groups"
+	envVarsFlag                  = "env-vars"
+	secretsFlag                  = "secrets"
+	commandFlag                  = "command"
+	entrypointFlag               = "entrypoint"
+	taskDefaultFlag              = "default"
+	generateCommandFlag          = "generate-cmd"
+	osFlag                       = "platform-os"
+	archFlag                     = "platform-arch"
 
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
@@ -156,6 +157,8 @@ Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
+	acknowledgeSecretsAccessDescription = fmt.Sprintf(`Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag. 
+This flag is useful only when '%s' flag is specified`, secretsFlag)
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.

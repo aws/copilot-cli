@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -75,10 +78,12 @@ type deleteEnvOpts struct {
 }
 
 func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env delete"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to copilot config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
 	prompter := prompt.New()
 	return &deleteEnvOpts{
@@ -94,7 +99,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			if err != nil {
 				return err
 			}
-			sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+			sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
 			}
