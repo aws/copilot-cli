@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	pipelineDeleteAppNamePrompt       = "Which application's pipelines would you like to delete?"
+	pipelineDeleteAppNamePrompt       = "Which application's pipeline would you like to delete?"
 	pipelineDeleteAppNameHelpPrompt   = "An application is a collection of related services."
 	pipelineDeleteConfirmPrompt       = "Are you sure you want to delete pipeline %s from application %s?"
 	pipelineDeleteConfirmHelp         = "This will delete the deployment pipeline for the services in the workspace."
