@@ -77,8 +77,14 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	return opts, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *deletePipelineOpts) Validate() error {
+	return nil
+}
+
+// Ask prompts for fields that are required but not passed in.
+func (o *deletePipelineOpts) Ask() error {
+
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
@@ -87,11 +93,6 @@ func (o *deletePipelineOpts) Validate() error {
 		return err
 	}
 
-	return nil
-}
-
-// Ask prompts for fields that are required but not passed in.
-func (o *deletePipelineOpts) Ask() error {
 	if o.skipConfirmation {
 		return nil
 	}
