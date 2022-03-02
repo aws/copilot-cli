@@ -5255,26 +5255,6 @@ func (m *MockwsPipelineSelector) EXPECT() *MockwsPipelineSelectorMockRecorder {
 	return m.recorder
 }
 
-// Application mocks base method.
-func (m *MockwsPipelineSelector) Application(prompt, help string, additionalOpts ...string) (string, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{prompt, help}
-	for _, a := range additionalOpts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Application", varargs...)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Application indicates an expected call of Application.
-func (mr *MockwsPipelineSelectorMockRecorder) Application(prompt, help interface{}, additionalOpts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{prompt, help}, additionalOpts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockwsPipelineSelector)(nil).Application), varargs...)
-}
-
 // Pipeline mocks base method.
 func (m *MockwsPipelineSelector) Pipeline(prompt, help string) (*workspace.PipelineManifest, error) {
 	m.ctrl.T.Helper()

@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	pipelineSelectPrompt            = "Select a pipeline from your workspace to deploy"
+	pipelineSelectPrompt = "Select a pipeline from your workspace to deploy"
 
 	fmtPipelineDeployResourcesStart    = "Adding pipeline resources to your application: %s"
 	fmtPipelineDeployResourcesFailed   = "Failed to add pipeline resources to your application: %s\n"
@@ -110,7 +110,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		store:              store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
-		sel:                selector.NewWsPipelineSelect(prompter, store, ws),
+		sel:                selector.NewWsPipelineSelect(prompter, ws),
 		codestar:           cs.New(defaultSession),
 		newSvcListCmd: func(w io.Writer) cmd {
 			return &listSvcOpts{

@@ -484,7 +484,6 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
-	appSelector
 	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
 }
 
