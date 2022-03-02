@@ -198,7 +198,7 @@ func (c *CodePipeline) RetryStageExecution(pipelineName, stageName string) error
 	return nil
 }
 
-// GetPipelineByTags retrieves all of pipelines for an application.
+// GetPipelinesByTags retrieves all pipelines for an application.
 func (c *CodePipeline) GetPipelinesByTags(tags map[string]string) ([]*Pipeline, error) {
 	var pipelines []*Pipeline
 	resources, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)

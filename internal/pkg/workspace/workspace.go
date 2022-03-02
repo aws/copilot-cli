@@ -18,6 +18,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -35,6 +36,7 @@ const (
 	SummaryFileName = ".workspace"
 
 	addonsDirName             = "addons"
+	pipelinesDirName          = "pipelines"
 	maximumParentDirsToSearch = 5
 	pipelineFileName          = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
@@ -42,7 +44,7 @@ const (
 
 	ymlFileExtension = ".yml"
 
-	dockerfileName = "dockerfile"
+	dockerfileName   = "dockerfile"
 	dockerignoreName = ".dockerignore"
 )
 
@@ -58,12 +60,14 @@ type Workspace struct {
 	workingDir string
 	copilotDir string
 	fsUtils    *afero.Afero
+	logger     func(format string, args ...interface{})
 }
 
 // New returns a workspace, used for reading and writing to user's local workspace.
 func New() (*Workspace, error) {
 	fs := afero.NewOsFs()
 	fsUtils := &afero.Afero{Fs: fs}
+	logger := log.Infof
 
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -72,6 +76,7 @@ func New() (*Workspace, error) {
 	ws := Workspace{
 		workingDir: workingDir,
 		fsUtils:    fsUtils,
+		logger:     logger,
 	}
 
 	return &ws, nil
@@ -160,6 +165,78 @@ func (ws *Workspace) ListWorkloads() ([]string, error) {
 	})
 }
 
+// PipelineManifest holds identifying information about a pipeline manifest file.
+type PipelineManifest struct {
+	Name string // Name of the pipeline inside the manifest file.
+	Path string // Absolute path to the manifest file for the pipeline.
+}
+
+// ListPipelines returns all pipelines in the workspace.
+func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
+	var pipelineManifests []PipelineManifest
+	// Look for legacy pipeline.
+	legacyPath, err := ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := ws.ReadPipelineManifest(legacyPath)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNoPipelineInWorkspace):
+			ws.logger("Unable to read pipeline manifest at '%s': %w", legacyPath, err)
+		default:
+			return nil, err
+		}
+	} else {
+		pipelineManifests = append(pipelineManifests, PipelineManifest{
+			Name: manifest.Name,
+			Path: legacyPath,
+		})
+	}
+	// Look for other pipelines.
+	pipelinesPath, err := ws.pipelinesDirPath()
+	if err != nil {
+		return nil, err
+	}
+	exists, err := ws.fsUtils.Exists(pipelinesPath)
+	if err != nil {
+		return nil, fmt.Errorf("check if pipeline manifest exists at %s: %w", pipelinesPath, err)
+	}
+	if !exists {
+		return pipelineManifests, nil
+	}
+	// Look through the existent pipelines dir for pipeline manifests.
+	files, err := ws.fsUtils.ReadDir(pipelinesPath)
+	if err != nil {
+		return nil, fmt.Errorf("read directory %s: %w", pipelinesPath, err)
+	}
+	for _, file := range files {
+		// Ignore buildspecs.
+		if strings.HasSuffix(file.Name(), "buildspec.yml") {
+			continue
+		}
+		// Read manifests of moved legacy pipeline and any other pipelines.
+		if strings.HasSuffix(file.Name(), ".yml") {
+			path := filepath.Join(pipelinesPath, file.Name())
+			manifest, err := ws.ReadPipelineManifest(path)
+			if err != nil {
+				switch {
+				case errors.Is(err, ErrNoPipelineInWorkspace):
+					ws.logger("Unable to read pipeline manifest at '%s': %w", legacyPath, err)
+				default:
+					return nil, err
+				}
+			} else {
+				pipelineManifests = append(pipelineManifests, PipelineManifest{
+					Name: manifest.Name,
+					Path: path,
+				})
+			}
+		}
+	}
+	return pipelineManifests, nil
+}
+
 // listWorkloads returns the name of all workloads (either services or jobs) in the workspace.
 func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
 	copilotPath, err := ws.copilotDirPath()
@@ -211,21 +288,24 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 	return mft, nil
 }
 
-// ReadPipelineManifest returns the contents of the pipeline manifest under copilot/pipeline.yml.
-func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
-	pmPath, err := ws.pipelineManifestPath()
-	if err != nil {
-		return nil, err
-	}
-	manifestExists, err := ws.fsUtils.Exists(pmPath)
-
+// ReadPipelineManifest returns the contents of the pipeline manifest under the given path.
+func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.Pipeline, error) {
+	manifestExists, err := ws.fsUtils.Exists(path)
 	if err != nil {
 		return nil, err
 	}
 	if !manifestExists {
 		return nil, ErrNoPipelineInWorkspace
 	}
-	return ws.read(pipelineFileName)
+	data, err := ws.fsUtils.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read pipeline manifest: %w", err)
+	}
+	pipelineManifest, err := manifest.UnmarshalPipeline(data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	}
+	return pipelineManifest, nil
 }
 
 // WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
@@ -317,6 +397,15 @@ func IsInGitRepository(fs FileStat) bool {
 	return !os.IsNotExist(err)
 }
 
+// PipelineManifestLegacyPath returns the path to pipeline manifests before multiple pipelines (and the copilot/pipelines/ dir) were enabled.
+func (ws *Workspace) PipelineManifestLegacyPath() (string, error) {
+	copilotPath, err := ws.copilotDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(copilotPath, pipelineFileName), nil
+}
+
 func (ws *Workspace) writeSummary(appName string) error {
 	summaryPath, err := ws.summaryPath()
 	if err != nil {
@@ -335,13 +424,12 @@ func (ws *Workspace) writeSummary(appName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
-func (ws *Workspace) pipelineManifestPath() (string, error) {
+func (ws *Workspace) pipelinesDirPath() (string, error) {
 	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err
 	}
-	pipelineManifestPath := filepath.Join(copilotPath, pipelineFileName)
-	return pipelineManifestPath, nil
+	return filepath.Join(copilotPath, pipelinesDirName), nil
 }
 
 func (ws *Workspace) summaryPath() (string, error) {
@@ -485,19 +573,6 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	}
 	sort.Strings(dockerfiles)
 	return dockerfiles, nil
-}
-
-// RelPath returns the path relative to the current working directory.
-func RelPath(fullPath string) (string, error) {
-	wkdir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get working directory: %w", err)
-	}
-	path, err := filepath.Rel(wkdir, fullPath)
-	if err != nil {
-		return "", fmt.Errorf("get relative path of file: %w", err)
-	}
-	return path, nil
 }
 
 // WorkloadManifest represents raw local workload manifest.
