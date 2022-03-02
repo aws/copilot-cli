@@ -231,17 +231,16 @@ func (o *initSvcOpts) Ask() error {
 			return err
 		}
 	}
-	if o.name != "" {
-		if err := validateSvcName(o.name, o.wkldType); err != nil {
-			return err
-		}
-		if err := o.validateDuplicateSvc(); err != nil {
-			return err
-		}
-	} else {
+	if o.name == "" {
 		if err := o.askSvcName(); err != nil {
 			return err
 		}
+	}
+	if err := validateSvcName(o.name, o.wkldType); err != nil {
+		return err
+	}
+	if err := o.validateDuplicateSvc(); err != nil {
+		return err
 	}
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err == nil {
@@ -370,9 +369,6 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askSvcName() error {
-	if o.name != "" {
-		return nil
-	}
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "service"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
@@ -384,7 +380,7 @@ func (o *initSvcOpts) askSvcName() error {
 		return fmt.Errorf("get service name: %w", err)
 	}
 	o.name = name
-	return o.validateDuplicateSvc()
+	return nil
 }
 
 func (o *initSvcOpts) askImage() error {
