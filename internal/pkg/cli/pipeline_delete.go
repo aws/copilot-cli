@@ -89,7 +89,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	return opts, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the flag values for optional fields are invalid.
 func (o *deletePipelineOpts) Validate() error {
 	return nil
 }
