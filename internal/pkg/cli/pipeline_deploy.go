@@ -34,8 +34,6 @@ import (
 )
 
 const (
-	pipelineDeployAppNamePrompt     = "Which application's pipeline would you like to deploy?"
-	pipelineDeployAppNameHelpPrompt = "An application is a collection of related services."
 	pipelineSelectPrompt            = "Select a pipeline from your workspace to deploy"
 
 	fmtPipelineDeployResourcesStart    = "Adding pipeline resources to your application: %s"
