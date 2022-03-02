@@ -235,6 +235,16 @@ func TestEnvShow_Execute(t *testing.T) {
 		Name: "testSvc3",
 		Type: "load-balanced",
 	}
+	testJob1 := &config.Workload{
+		App:  "testApp",
+		Name: "testJob1",
+		Type: "Scheduled Job",
+	}
+	testJob2 := &config.Workload{
+		App:  "testApp",
+		Name: "testJob2",
+		Type: "Scheduled Job",
+	}
 	var wantedResources = []*stack.Resource{
 		{
 			Type:       "AWS::IAM::Role",
@@ -249,6 +259,7 @@ func TestEnvShow_Execute(t *testing.T) {
 	mockEnvDescription := describe.EnvDescription{
 		Environment: testEnv,
 		Services:    []*config.Workload{testSvc1, testSvc2, testSvc3},
+		Jobs:        []*config.Workload{testJob1, testJob2},
 		Tags:        mockTags,
 		Resources:   wantedResources,
 	}
@@ -306,6 +317,13 @@ Services
   testSvc2  load-balanced
   testSvc3  load-balanced
 
+Jobs
+
+  Name      Type
+  ----      ----
+  testJob1  Scheduled Job
+  testJob2  Scheduled Job
+
 Tags
 
   Key                  Value
@@ -330,7 +348,7 @@ Resources
 				)
 			},
 
-			wantedContent: "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"copilot-application\":\"testApp\",\"copilot-environment\":\"testEnv\",\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environmentVPC\":{\"id\":\"\",\"publicSubnetIDs\":null,\"privateSubnetIDs\":null}}\n",
+			wantedContent: "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"jobs\":[{\"app\":\"testApp\",\"name\":\"testJob1\",\"type\":\"Scheduled Job\"},{\"app\":\"testApp\",\"name\":\"testJob2\",\"type\":\"Scheduled Job\"}],\"tags\":{\"copilot-application\":\"testApp\",\"copilot-environment\":\"testEnv\",\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environmentVPC\":{\"id\":\"\",\"publicSubnetIDs\":null,\"privateSubnetIDs\":null}}\n",
 		},
 	}
 
