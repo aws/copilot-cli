@@ -142,11 +142,6 @@ func (o *initJobOpts) Validate() error {
 			return err
 		}
 	}
-	if o.schedule != "" {
-		if err := validateSchedule(o.schedule); err != nil {
-			return err
-		}
-	}
 	if o.timeout != "" {
 		if err := validateTimeout(o.timeout); err != nil {
 			return err
@@ -199,9 +194,6 @@ func (o *initJobOpts) Ask() error {
 	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
 		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
-	if err := o.askJobType(); err != nil {
-		return err
-	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
 		return err
@@ -211,7 +203,12 @@ func (o *initJobOpts) Ask() error {
 			return err
 		}
 	}
-	if err := o.askSchedule(); err != nil {
+	if o.schedule == "" {
+		if err := o.askSchedule(); err != nil {
+			return err
+		}
+	}
+	if err := validateSchedule(o.schedule); err != nil {
 		return err
 	}
 	return nil
@@ -373,9 +370,6 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 }
 
 func (o *initJobOpts) askSchedule() error {
-	if o.schedule != "" {
-		return nil
-	}
 	schedule, err := o.sel.Schedule(
 		jobInitSchedulePrompt,
 		jobInitScheduleHelp,

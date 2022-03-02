@@ -39,7 +39,6 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		inImage          string
 		inTimeout        string
 		inRetries        int
-		inSchedule       string
 
 		setupMocks     func(mocks initJobMocks)
 		mockFileSystem func(mockFS afero.Fs)
@@ -67,105 +66,6 @@ func TestJobInitOpts_Validate(t *testing.T) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
 			wantedErr: errors.New("open hello/Dockerfile: file does not exist"),
-		},
-		"invalid schedule; not cron": {
-			inAppName:  "phonetool",
-			inSchedule: "every 56 minutes",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: fmt.Errorf("schedule every 56 minutes is invalid: %s", errScheduleInvalid),
-		},
-		"invalid schedule; cron interval in subseconds": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 75.9s",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: fmt.Errorf("interval @every 75.9s is invalid: %s", errDurationBadUnits),
-		},
-		"invalid schedule; cron interval in milliseconds": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 3ms",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: fmt.Errorf("interval @every 3ms is invalid: %s", errDurationBadUnits),
-		},
-		"invalid schedule; cron interval too frequent": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 30s",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: errors.New("interval @every 30s is invalid: duration must be 1m0s or greater"),
-		},
-		"invalid schedule; cron interval is zero": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 0s",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: errors.New("interval @every 0s is invalid: duration must be 1m0s or greater"),
-		},
-		"invalid schedule; cron interval duration improperly formed": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 5min",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: errors.New("interval @every 5min must include a valid Go duration string (example: @every 1h30m)"),
-		},
-		"valid schedule; crontab": {
-			inAppName:  "phonetool",
-			inSchedule: "* * * * *",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: nil,
-		},
-		"valid schedule; predefined schedule": {
-			inAppName:  "phonetool",
-			inSchedule: "@daily",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: nil,
-		},
-		"valid schedule; interval": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 5m",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: nil,
-		},
-		"valid schedule; interval with 0 for some units": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 1h0m0s",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: nil,
-		},
-		"valid schedule; interval with carryover value for some units": {
-			inAppName:  "phonetool",
-			inSchedule: "@every 0h60m60s",
-
-			setupMocks: func(m initJobMocks) {
-				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
-			},
-			wantedErr: nil,
 		},
 		"invalid timeout duration; incorrect format": {
 			inAppName: "phonetool",
@@ -244,9 +144,8 @@ func TestJobInitOpts_Validate(t *testing.T) {
 						image:          tc.inImage,
 						dockerfilePath: tc.inDockerfilePath,
 					},
-					timeout:  tc.inTimeout,
-					retries:  tc.inRetries,
-					schedule: tc.inSchedule,
+					timeout: tc.inTimeout,
+					retries: tc.inRetries,
 				},
 				store:     mockstore,
 				fs:        &afero.Afero{Fs: afero.NewMemMapFs()},
@@ -575,6 +474,19 @@ type: Scheduled Job`), nil)
 
 			wantedErr: fmt.Errorf("get schedule: some error"),
 		},
+		"valid schedule": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inDockerfilePath: wantedDockerfilePath,
+			inJobSchedule:    wantedCronSchedule,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
+			},
+
+			wantedSchedule: wantedCronSchedule,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -758,6 +670,72 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				require.Equal(t, tc.wantedManifestPath, opts.manifestPath)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
+func Test_ValidateSchedule(t *testing.T) {
+	testCases := map[string]struct {
+		inSchedule string
+
+		wantedErr error
+	}{
+		"invalid schedule; not cron": {
+			inSchedule: "every 56 minutes",
+			wantedErr:  fmt.Errorf("schedule every 56 minutes is invalid: %s", errScheduleInvalid),
+		},
+		"invalid schedule; cron interval in subseconds": {
+			inSchedule: "@every 75.9s",
+			wantedErr:  fmt.Errorf("interval @every 75.9s is invalid: %s", errDurationBadUnits),
+		},
+		"invalid schedule; cron interval in milliseconds": {
+			inSchedule: "@every 3ms",
+			wantedErr:  fmt.Errorf("interval @every 3ms is invalid: %s", errDurationBadUnits),
+		},
+		"invalid schedule; cron interval too frequent": {
+			inSchedule: "@every 30s",
+			wantedErr:  errors.New("interval @every 30s is invalid: duration must be 1m0s or greater"),
+		},
+		"invalid schedule; cron interval is zero": {
+			inSchedule: "@every 0s",
+			wantedErr:  errors.New("interval @every 0s is invalid: duration must be 1m0s or greater"),
+		},
+		"invalid schedule; cron interval duration improperly formed": {
+			inSchedule: "@every 5min",
+			wantedErr:  errors.New("interval @every 5min must include a valid Go duration string (example: @every 1h30m)"),
+		},
+		"valid schedule; crontab": {
+			inSchedule: "* * * * *",
+			wantedErr:  nil,
+		},
+		"valid schedule; predefined schedule": {
+			inSchedule: "@daily",
+			wantedErr:  nil,
+		},
+		"valid schedule; interval": {
+			inSchedule: "@every 5m",
+			wantedErr:  nil,
+		},
+		"valid schedule; interval with 0 for some units": {
+			inSchedule: "@every 1h0m0s",
+			wantedErr:  nil,
+		},
+		"valid schedule; interval with carryover value for some units": {
+			inSchedule: "@every 0h60m60s",
+			wantedErr:  nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			err := validateSchedule(tc.inSchedule)
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
