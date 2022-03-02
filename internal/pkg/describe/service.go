@@ -36,12 +36,14 @@ type ConfigStoreSvc interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	ListServices(appName string) ([]*config.Workload, error)
 	GetWorkload(appName string, name string) (*config.Workload, error)
+	ListJobs(appName string) ([]*config.Workload, error)
 }
 
 // DeployedEnvServicesLister wraps methods of deploy store.
 type DeployedEnvServicesLister interface {
 	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
 	ListDeployedServices(appName string, envName string) ([]string, error)
+	ListDeployedJobs(appName string, envName string) ([]string, error)
 }
 
 type ecsClient interface {
