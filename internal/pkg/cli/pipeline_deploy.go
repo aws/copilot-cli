@@ -77,6 +77,7 @@ type deployPipelineOpts struct {
 	newJobListCmd    func(io.Writer) cmd
 
 	// cached variables
+	wsAppName                    string
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
 	pipelineMft                  *manifest.Pipeline
@@ -145,6 +146,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
+		wsAppName: tryReadingAppName(),
 		svcBuffer: &bytes.Buffer{},
 		jobBuffer: &bytes.Buffer{},
 	}, nil
@@ -152,21 +154,25 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
+	if o.wsAppName == "" {
+		return errNoAppInWorkspace
+	}
+	// The passed-in app name value must be the same as the workspace app name, as we need to be in the correct workspace to read the pipeline manifest.
+	if o.appName != "" {
+		if o.appName != o.wsAppName {
+			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+		}
+		// Validate the app name.
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+		}
+	}
+	o.appName = o.wsAppName
 	return nil
 }
 
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *deployPipelineOpts) Ask() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
-	} else {
-		if err := o.askAppName(); err != nil {
-			return err
-		}
-	}
-
 	if o.name != "" {
 		if err := o.validatePipelineName(); err != nil {
 			return err
@@ -239,15 +245,6 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 
-	return nil
-}
-
-func (o *deployPipelineOpts) askAppName() error {
-	app, err := o.sel.Application(pipelineDeployAppNamePrompt, pipelineDeployAppNameHelpPrompt)
-	if err != nil {
-		return fmt.Errorf("select application: %w", err)
-	}
-	o.appName = app
 	return nil
 }
 
@@ -473,7 +470,7 @@ func buildPipelineDeployCmd() *cobra.Command {
 			return run(opts)
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
