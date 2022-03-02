@@ -126,7 +126,8 @@ type initSvcOpts struct {
 	topics       []manifest.TopicSubscription
 
 	// Cache variables
-	df dockerfileParser
+	wsAppName string
+	df        dockerfileParser
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -169,9 +170,8 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
+		wsAppName:    tryReadingAppName(),
 	}
-	// Override the app flag since we don't only allow running this command within a workspace.
-	opts.appName = tryReadingAppName()
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
 			return opts.df
@@ -185,6 +185,10 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 // Validate returns an error for any invalid optional flags.
 func (o *initSvcOpts) Validate() error {
 	if o.appName != "" {
+		// This command must be run within the app's workspace.
+		if o.appName != o.wsAppName {
+			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+		}
 		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return fmt.Errorf("get application %s configuration: %w", o.appName, err)
 		}

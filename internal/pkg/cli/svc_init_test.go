@@ -52,6 +52,10 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		"fail if not in a workspace": {
 			wantedErr: errNoAppInWorkspace,
 		},
+		"fail if using different app name with the workspace": {
+			inAppName: "demo",
+			wantedErr: fmt.Errorf("cannot specify app demo because the workspace is already registered with app phonetool"),
+		},
 		"fail if cannot validate application": {
 			inAppName:        "phonetool",
 			inDockerfilePath: "mockDockerfile",
@@ -143,8 +147,9 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 					},
 					port: tc.inSvcPort,
 				},
-				store: mockstore,
-				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
+				store:     mockstore,
+				fs:        &afero.Afero{Fs: afero.NewMemMapFs()},
+				wsAppName: "phonetool",
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
