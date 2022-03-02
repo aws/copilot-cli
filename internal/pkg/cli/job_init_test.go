@@ -10,15 +10,14 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
-
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -42,113 +41,201 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		inRetries        int
 		inSchedule       string
 
+		setupMocks     func(mocks initJobMocks)
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
 	}{
-		"invalid app name": {
-			inAppName: "",
-			wantedErr: errNoAppInWorkspace,
+		"fail if using different app name with the workspace": {
+			inAppName: "demo",
+			wantedErr: fmt.Errorf("cannot specify app demo because the workspace is already registered with app phonetool"),
 		},
-		"invalid job name": {
-			inAppName: "phonetool",
-			inJobName: "1234",
-			wantedErr: fmt.Errorf("job name 1234 is invalid: %s", errValueBadFormat),
+		"fail if cannot validate application": {
+			inAppName:        "phonetool",
+			inDockerfilePath: "mockDockerfile",
+			inImage:          "mockImage",
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("get application phonetool configuration: some error"),
 		},
 		"invalid dockerfile directory path": {
 			inAppName:        "phonetool",
 			inDockerfilePath: "./hello/Dockerfile",
-			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New("open hello/Dockerfile: file does not exist"),
 		},
 		"invalid schedule; not cron": {
 			inAppName:  "phonetool",
 			inSchedule: "every 56 minutes",
-			wantedErr:  fmt.Errorf("schedule every 56 minutes is invalid: %s", errScheduleInvalid),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: fmt.Errorf("schedule every 56 minutes is invalid: %s", errScheduleInvalid),
 		},
 		"invalid schedule; cron interval in subseconds": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 75.9s",
-			wantedErr:  fmt.Errorf("interval @every 75.9s is invalid: %s", errDurationBadUnits),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: fmt.Errorf("interval @every 75.9s is invalid: %s", errDurationBadUnits),
 		},
 		"invalid schedule; cron interval in milliseconds": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 3ms",
-			wantedErr:  fmt.Errorf("interval @every 3ms is invalid: %s", errDurationBadUnits),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: fmt.Errorf("interval @every 3ms is invalid: %s", errDurationBadUnits),
 		},
 		"invalid schedule; cron interval too frequent": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 30s",
-			wantedErr:  errors.New("interval @every 30s is invalid: duration must be 1m0s or greater"),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New("interval @every 30s is invalid: duration must be 1m0s or greater"),
 		},
 		"invalid schedule; cron interval is zero": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 0s",
-			wantedErr:  errors.New("interval @every 0s is invalid: duration must be 1m0s or greater"),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New("interval @every 0s is invalid: duration must be 1m0s or greater"),
 		},
 		"invalid schedule; cron interval duration improperly formed": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 5min",
-			wantedErr:  errors.New("interval @every 5min must include a valid Go duration string (example: @every 1h30m)"),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: errors.New("interval @every 5min must include a valid Go duration string (example: @every 1h30m)"),
 		},
 		"valid schedule; crontab": {
 			inAppName:  "phonetool",
 			inSchedule: "* * * * *",
-			wantedErr:  nil,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: nil,
 		},
 		"valid schedule; predefined schedule": {
 			inAppName:  "phonetool",
 			inSchedule: "@daily",
-			wantedErr:  nil,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: nil,
 		},
 		"valid schedule; interval": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 5m",
-			wantedErr:  nil,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: nil,
 		},
 		"valid schedule; interval with 0 for some units": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 1h0m0s",
-			wantedErr:  nil,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: nil,
 		},
 		"valid schedule; interval with carryover value for some units": {
 			inAppName:  "phonetool",
 			inSchedule: "@every 0h60m60s",
-			wantedErr:  nil,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: nil,
 		},
 		"invalid timeout duration; incorrect format": {
 			inAppName: "phonetool",
 			inTimeout: "30 minutes",
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
 			wantedErr: fmt.Errorf("timeout value 30 minutes is invalid: %s", errDurationInvalid),
 		},
 		"invalid timeout duration; subseconds": {
 			inAppName: "phonetool",
 			inTimeout: "30m45.5s",
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
 			wantedErr: fmt.Errorf("timeout value 30m45.5s is invalid: %s", errDurationBadUnits),
 		},
 		"invalid timeout duration; milliseconds": {
 			inAppName: "phonetool",
 			inTimeout: "3ms",
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
 			wantedErr: fmt.Errorf("timeout value 3ms is invalid: %s", errDurationBadUnits),
 		},
 		"invalid timeout; too short": {
 			inAppName: "phonetool",
 			inTimeout: "0s",
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
 			wantedErr: errors.New("timeout value 0s is invalid: duration must be 1s or greater"),
 		},
 		"invalid number of times to retry": {
 			inAppName: "phonetool",
 			inRetries: -3,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
 			wantedErr: errors.New("number of retries must be non-negative"),
 		},
 		"fail if both image and dockerfile are set": {
 			inAppName:        "phonetool",
 			inDockerfilePath: "mockDockerfile",
 			inImage:          "mockImage",
-			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified together"),
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			wantedErr: fmt.Errorf("--dockerfile and --image cannot be specified together"),
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockstore := mocks.NewMockstore(ctrl)
+			mocks := initJobMocks{
+				mockStore: mockstore,
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(mocks)
+			}
 			opts := initJobOpts{
 				initJobVars: initJobVars{
 					initWkldVars: initWkldVars{
@@ -161,7 +248,9 @@ func TestJobInitOpts_Validate(t *testing.T) {
 					retries:  tc.inRetries,
 					schedule: tc.inSchedule,
 				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				store:     mockstore,
+				fs:        &afero.Afero{Fs: afero.NewMemMapFs()},
+				wsAppName: "phonetool",
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
@@ -201,6 +290,15 @@ func TestJobInitOpts_Ask(t *testing.T) {
 		wantedErr      error
 		wantedSchedule string
 	}{
+		"invalid job type": {
+			inJobType: "TestJobType",
+			wantedErr: errors.New(`invalid job type TestJobType: must be one of "Scheduled Job"`),
+		},
+		"invalid job name": {
+			inJobType: wantedJobType,
+			inJobName: "1234",
+			wantedErr: fmt.Errorf("job name 1234 is invalid: %s", errValueBadFormat),
+		},
 		"error if fail to get job name": {
 			inJobType:        wantedJobType,
 			inJobName:        "",
@@ -209,10 +307,10 @@ func TestJobInitOpts_Ask(t *testing.T) {
 
 			setupMocks: func(m initJobMocks) {
 				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
+					Return("", mockError)
 			},
 
-			wantedErr: fmt.Errorf("get job name: some error"),
+			wantedErr: fmt.Errorf("get job name: mock error"),
 		},
 		"returns an error if job already exists": {
 			inJobType:        wantedJobType,
@@ -264,10 +362,22 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobSchedule:    wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, mockError)
 			},
 
 			wantedErr: fmt.Errorf("read manifest file for job cuteness-aggregator: mock error"),
+		},
+		"error if manifest type doesn't match": {
+			inJobType: "Scheduled Job",
+			inJobName: wantedJobName,
+
+			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return([]byte(`
+type: Backend Service`), nil)
+			},
+			wantedErr: fmt.Errorf("manifest file for job cuteness-aggregator exists with a different type Backend Service"),
 		},
 		"skip asking questions if local manifest file exists": {
 			inJobType:        wantedJobType,
@@ -276,6 +386,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobSchedule:    wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return([]byte(`name: cuteness-aggregator
 type: Scheduled Job`), nil)
 			},
@@ -290,6 +401,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule:    wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 			},
 
@@ -301,6 +413,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule: wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockDockerEngine.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
 			},
@@ -313,6 +426,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule: wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
@@ -327,6 +441,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule: wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
@@ -341,6 +456,7 @@ type: Scheduled Job`), nil)
 			inDockerfilePath: "",
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("", mockError)
@@ -363,6 +479,7 @@ type: Scheduled Job`), nil)
 			inDockerfilePath: "",
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
@@ -385,6 +502,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule:    wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(wantedJobName))),
@@ -405,6 +523,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule:    wantedCronSchedule,
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(wantedJobName))),
@@ -425,6 +544,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule:    "",
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrWorkspaceNotFound{})
 				m.mockSel.EXPECT().Schedule(
 					gomock.Eq(jobInitSchedulePrompt),
@@ -443,6 +563,7 @@ type: Scheduled Job`), nil)
 			inJobSchedule:    "",
 
 			setupMocks: func(m initJobMocks) {
+				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockSel.EXPECT().Schedule(
 					gomock.Any(),
@@ -473,7 +594,10 @@ type: Scheduled Job`), nil)
 				mockMftReader:    mockManifestReader,
 				mockStore:        mockStore,
 			}
-			tc.setupMocks(mocks)
+			if tc.setupMocks != nil {
+				tc.setupMocks(mocks)
+			}
+
 			opts := &initJobOpts{
 				initJobVars: initJobVars{
 					initWkldVars: initWkldVars{
