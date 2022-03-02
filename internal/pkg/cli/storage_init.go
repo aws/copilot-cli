@@ -179,7 +179,7 @@ type initStorageOpts struct {
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("storage init"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("storage init"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

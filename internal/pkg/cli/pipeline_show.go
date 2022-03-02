@@ -17,7 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -60,7 +59,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	defaultSession, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline show")).Default()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline show")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
@@ -186,17 +185,16 @@ func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
 }
 
 func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
-	data, err := o.ws.ReadPipelineManifest()
+	path, err := o.ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return "", err
+	}
+	manifest, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
 		return "", err
 	}
 
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-
-	return pipeline.Name, nil
+	return manifest.Name, nil
 }
 
 // Execute shows details about the pipeline.

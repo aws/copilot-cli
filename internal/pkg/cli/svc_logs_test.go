@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
@@ -46,19 +47,6 @@ func TestSvcLogs_Validate(t *testing.T) {
 	}{
 		"with no flag set": {
 			mockstore: func(m *mocks.Mockstore) {},
-		},
-		"skip validation if app flag is not set": {
-			inputSvc:  "frontend",
-			mockstore: func(m *mocks.Mockstore) {},
-		},
-		"invalid app name": {
-			inputApp: "my-app",
-
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("some error"),
 		},
 		"returns error if since and startTime flags are set together": {
 			inputSince:     mockSince,
@@ -151,6 +139,11 @@ func TestSvcLogs_Validate(t *testing.T) {
 }
 
 func TestSvcLogs_Ask(t *testing.T) {
+	const (
+		inputApp = "my-app"
+		inputEnv = "my-env"
+		inputSvc = "my-svc"
+	)
 	testCases := map[string]struct {
 		inputApp     string
 		inputSvc     string
@@ -158,52 +151,47 @@ func TestSvcLogs_Ask(t *testing.T) {
 
 		setupMocks func(mocks svcLogsMock)
 
+		wantedApp   string
+		wantedEnv   string
+		wantedSvc   string
 		wantedError error
 	}{
-		"with all flag set": {
-			inputApp:     "mockApp",
-			inputSvc:     "mockSvc",
-			inputEnvName: "mockEnv",
-
+		"validate app env and svc with all flags passed in": {
+			inputApp:     inputApp,
+			inputSvc:     inputSvc,
+			inputEnvName: inputEnv,
 			setupMocks: func(m svcLogsMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
-						Env: "mockEnv",
-						Svc: "mockSvc",
-					}, nil),
+					m.configStore.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil),
+					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{Name: "my-env"}, nil),
+					m.configStore.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
+					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
+						Return(&selector.DeployedService{
+							Env: "my-env",
+							Svc: "my-svc",
+						}, nil), // Let prompter handles the case when svc(env) is definite.
 				)
 			},
-
-			wantedError: nil,
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedSvc: inputSvc,
 		},
-		"return error if fail to select deployed services": {
-			inputApp:     "mockApp",
-			inputSvc:     "mockSvc",
-			inputEnvName: "mockEnv",
-
+		"prompt for app name": {
+			inputSvc:     inputSvc,
+			inputEnvName: inputEnv,
 			setupMocks: func(m svcLogsMock) {
-				gomock.InOrder(
-					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return(nil, errors.New("some error")),
-				)
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil)
+				m.configStore.EXPECT().GetApplication(gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
+					Env: "my-env",
+					Svc: "my-svc",
+				}, nil).AnyTimes()
 			},
-
-			wantedError: fmt.Errorf("select deployed services for application mockApp: some error"),
-		},
-		"with no flag set": {
-			setupMocks: func(m svcLogsMock) {
-				gomock.InOrder(
-					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("mockApp", nil),
-					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
-						Env: "mockEnv",
-						Svc: "mockSvc",
-					}, nil),
-				)
-			},
-
-			wantedError: nil,
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedSvc: inputSvc,
 		},
 		"returns error if fail to select app": {
 			setupMocks: func(m svcLogsMock) {
@@ -211,8 +199,34 @@ func TestSvcLogs_Ask(t *testing.T) {
 					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error")),
 				)
 			},
-
 			wantedError: fmt.Errorf("select application: some error"),
+		},
+		"prompt for svc and env": {
+			inputApp: "my-app",
+			setupMocks: func(m svcLogsMock) {
+				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: "my-env",
+						Svc: "my-svc",
+					}, nil)
+			},
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedSvc: inputSvc,
+		},
+		"return error if fail to select deployed services": {
+			inputApp: inputApp,
+			setupMocks: func(m svcLogsMock) {
+				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, inputApp, gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("select deployed services for application my-app: some error"),
 		},
 	}
 
@@ -251,6 +265,9 @@ func TestSvcLogs_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedApp, svcLogs.appName, "expected app name to match")
+				require.Equal(t, tc.wantedSvc, svcLogs.name, "expected service name to match")
+				require.Equal(t, tc.wantedEnv, svcLogs.envName, "expected service name to match")
 			}
 		})
 	}

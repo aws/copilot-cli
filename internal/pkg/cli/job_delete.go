@@ -77,7 +77,7 @@ type deleteJobOpts struct {
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
-	provider := sessions.NewProvider(sessions.UserAgentExtras("job delete"))
+	provider := sessions.ImmutableProvider(sessions.UserAgentExtras("job delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, err

@@ -6,11 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -36,6 +34,7 @@ var (
 
 type deletePipelineVars struct {
 	appName            string
+	name               string
 	skipConfirmation   bool
 	shouldDeleteSecret bool
 }
@@ -43,15 +42,15 @@ type deletePipelineVars struct {
 type deletePipelineOpts struct {
 	deletePipelineVars
 
-	PipelineName   string
-	PipelineSecret string
+	ghAccessTokenSecretName string
 
 	// Interfaces to dependencies
 	pipelineDeployer pipelineDeployer
+	codepipeline     pipelineGetter
 	prog             progress
 	prompt           prompter
 	secretsmanager   secretsManager
-	ws               wsPipelineReader
+	ws               wsPipelineGetter
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
@@ -60,7 +59,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	defaultSess, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline delete")).Default()
+	defaultSess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline delete")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
@@ -83,21 +82,25 @@ func (o *deletePipelineOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 
-	if err := o.readPipelineManifest(); err != nil {
-		return err
+	if o.name != "" {
+		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
 // Ask prompts for fields that are required but not passed in.
 func (o *deletePipelineOpts) Ask() error {
+	if err := o.getNameAndSecret(); err != nil {
+		return err
+	}
 	if o.skipConfirmation {
 		return nil
 	}
 
 	deleteConfirmed, err := o.prompt.Confirm(
-		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.appName),
+		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.name, o.appName),
 		pipelineDeleteConfirmHelp,
 		prompt.WithConfirmFinalMessage())
 
@@ -125,37 +128,33 @@ func (o *deletePipelineOpts) Execute() error {
 	return nil
 }
 
-func (o *deletePipelineOpts) readPipelineManifest() error {
-	data, err := o.ws.ReadPipelineManifest()
+func (o *deletePipelineOpts) getNameAndSecret() error {
+	path, err := o.ws.PipelineManifestLegacyPath()
 	if err != nil {
-		if err == workspace.ErrNoPipelineInWorkspace {
-			return err
-		}
+		return fmt.Errorf("get path to pipeline manifest: %w", err)
+	}
+	manifest, err := o.ws.ReadPipelineManifest(path)
+	if err != nil {
 		return fmt.Errorf("read pipeline manifest: %w", err)
 	}
-
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	if o.name == "" {
+		o.name = manifest.Name
 	}
 
-	o.PipelineName = pipeline.Name
-
-	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
-		o.PipelineSecret = secret
+	if secret, ok := (manifest.Source.Properties["access_token_secret"]).(string); ok {
+		o.ghAccessTokenSecretName = secret
 	}
-
 	return nil
 }
 
 func (o *deletePipelineOpts) deleteSecret() error {
-	if o.PipelineSecret == "" {
+	if o.ghAccessTokenSecretName == "" {
 		return nil
 	}
 	// Only pipelines created with GitHubV1 have personal access tokens saved as secrets.
 	if !o.shouldDeleteSecret {
 		confirmDeletion, err := o.prompt.Confirm(
-			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.PipelineSecret, o.PipelineName),
+			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.ghAccessTokenSecretName, o.name),
 			pipelineDeleteSecretConfirmHelp,
 		)
 		if err != nil {
@@ -163,27 +162,27 @@ func (o *deletePipelineOpts) deleteSecret() error {
 		}
 
 		if !confirmDeletion {
-			log.Infof("Skipping deletion of secret %s.\n", o.PipelineSecret)
+			log.Infof("Skipping deletion of secret %s.\n", o.ghAccessTokenSecretName)
 			return nil
 		}
 	}
 
-	if err := o.secretsmanager.DeleteSecret(o.PipelineSecret); err != nil {
+	if err := o.secretsmanager.DeleteSecret(o.ghAccessTokenSecretName); err != nil {
 		return err
 	}
 
-	log.Successf("Deleted secret %s.\n", o.PipelineSecret)
+	log.Successf("Deleted secret %s.\n", o.ghAccessTokenSecretName)
 
 	return nil
 }
 
 func (o *deletePipelineOpts) deleteStack() error {
-	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.appName))
-	if err := o.pipelineDeployer.DeletePipeline(o.PipelineName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.appName, err))
+	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.name, o.appName))
+	if err := o.pipelineDeployer.DeletePipeline(o.name); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.name, o.appName, err))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.appName))
+	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.name, o.appName))
 	return nil
 }
 
@@ -200,8 +199,8 @@ func buildPipelineDeleteCmd() *cobra.Command {
 		Short: "Deletes the pipeline associated with your workspace.",
 		Example: `
   Delete the pipeline associated with your workspace.
-  /code $ copilot pipeline delete`,
-
+  /code $ copilot pipeline delete
+`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeletePipelineOpts(vars)
 			if err != nil {
@@ -211,6 +210,7 @@ func buildPipelineDeleteCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeleteSecret, deleteSecretFlag, false, deleteSecretFlagDescription)
 	return cmd

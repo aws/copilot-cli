@@ -47,7 +47,7 @@ type deployOpts struct {
 }
 
 func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("deploy"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("deploy"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)

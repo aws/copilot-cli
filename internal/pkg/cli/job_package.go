@@ -53,7 +53,7 @@ type packageJobOpts struct {
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("job package"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("job package"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

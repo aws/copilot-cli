@@ -34,6 +34,8 @@ import (
 )
 
 const (
+	pipelineSelectPrompt = "Select a pipeline from your workspace to deploy"
+
 	fmtPipelineDeployResourcesStart    = "Adding pipeline resources to your application: %s"
 	fmtPipelineDeployResourcesFailed   = "Failed to add pipeline resources to your application: %s\n"
 	fmtPipelineDeployResourcesComplete = "Successfully added pipeline resources to your application: %s\n"
@@ -62,6 +64,7 @@ type deployPipelineOpts struct {
 
 	pipelineDeployer pipelineDeployer
 	app              *config.Application
+	sel              wsPipelineSelector
 	prog             progress
 	prompt           prompter
 	region           string
@@ -71,16 +74,16 @@ type deployPipelineOpts struct {
 	newSvcListCmd    func(io.Writer) cmd
 	newJobListCmd    func(io.Writer) cmd
 
+	// cached variables
+	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
-
-	// cache variables
-	pipelineMft *manifest.PipelineManifest
-	svcBuffer   *bytes.Buffer
-	jobBuffer   *bytes.Buffer
+	pipelineMft                  *manifest.Pipeline
+	svcBuffer                    *bytes.Buffer
+	jobBuffer                    *bytes.Buffer
 }
 
 func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error) {
-	defaultSession, err := sessions.NewProvider(sessions.UserAgentExtras("pipeline deploy")).Default()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline deploy")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
@@ -90,6 +93,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", vars.appName, err)
 	}
+	prompter := prompt.New()
 
 	ws, err := workspace.New()
 	if err != nil {
@@ -98,13 +102,14 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 	return &deployPipelineOpts{
 		app:                app,
+		ws:                 ws,
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
 		deployPipelineVars: vars,
 		envStore:           store,
-		ws:                 ws,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:             prompt.New(),
+		prompt:             prompter,
+		sel:                selector.NewWsPipelineSelect(prompter, ws),
 		codestar:           cs.New(defaultSession),
 		newSvcListCmd: func(w io.Writer) cmd {
 			return &listSvcOpts{
@@ -146,20 +151,16 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
 	if o.name != "" {
-		pipeline, err := o.getPipelineMft()
-		if err != nil {
+		if err := o.validatePipelineName(); err != nil {
 			return err
-		}
-		if pipeline.Name != o.name {
-			return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 		}
 	}
 	return nil
 }
 
-// Ask is a no-op for this command.
+// Ask prompts the user for any required fields that are not provided.
 func (o *deployPipelineOpts) Ask() error {
-	return nil
+	return o.askPipelineName()
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
@@ -178,8 +179,6 @@ func (o *deployPipelineOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	// Set pipeline name; if passed in with flag, should be identical.
-	o.name = pipeline.Name
 
 	// If the source has an existing connection, get the correlating ConnectionARN .
 	connection, ok := pipeline.Source.Properties["connection_name"]
@@ -226,23 +225,50 @@ func (o *deployPipelineOpts) Execute() error {
 	return nil
 }
 
-func (o *deployPipelineOpts) getPipelineMft() (*manifest.PipelineManifest, error) {
+func (o *deployPipelineOpts) validatePipelineName() error {
+	pipelines, err := o.ws.ListPipelines()
+	if err != nil {
+		return fmt.Errorf("list pipelines: %w", err)
+	}
+	for _, pipeline := range pipelines {
+		if pipeline.Name == o.name {
+			o.pipeline = &pipeline
+			return nil
+		}
+	}
+	return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
+}
+
+func (o *deployPipelineOpts) askPipelineName() error {
+	if o.name != "" {
+		return nil
+	}
+	pipeline, err := o.sel.Pipeline(pipelineSelectPrompt, "")
+	if err != nil {
+		return fmt.Errorf("select pipeline: %w", err)
+	}
+	o.pipeline = pipeline
+
+	return nil
+}
+
+func (o *deployPipelineOpts) getPipelineMft() (*manifest.Pipeline, error) {
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
-	data, err := o.ws.ReadPipelineManifest()
+	path, err := o.ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return nil, fmt.Errorf("get pipeline manifest path: %w", err)
+	}
+	pipelineMft, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-	if err := pipeline.Validate(); err != nil {
+	if err := pipelineMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
 	}
-	o.pipelineMft = pipeline
-	return pipeline, nil
+	o.pipelineMft = pipelineMft
+	return pipelineMft, nil
 }
 
 func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
@@ -328,7 +354,7 @@ func (o *deployPipelineOpts) shouldUpdate() (bool, error) {
 		return true, nil
 	}
 
-	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.name), "")
+	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, o.pipeline.Name), "")
 	if err != nil {
 		return false, fmt.Errorf("prompt for pipeline deploy: %w", err)
 	}
@@ -347,7 +373,7 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("get bucket name: %w", err)
 	}
 	if !exist {
-		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.name)))
+		o.prog.Start(fmt.Sprintf(fmtPipelineDeployStart, color.HighlightUserInput(o.pipeline.Name)))
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
@@ -368,11 +394,11 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		if err := o.pipelineDeployer.CreatePipeline(in, bucketName); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
-				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.name)))
+				o.prog.Stop(log.Serrorf(fmtPipelineDeployFailed, color.HighlightUserInput(o.pipeline.Name)))
 				return fmt.Errorf("create pipeline: %w", err)
 			}
 		}
-		o.prog.Stop(log.Ssuccessf(fmtPipelineDeployComplete, color.HighlightUserInput(o.name)))
+		o.prog.Stop(log.Ssuccessf(fmtPipelineDeployComplete, color.HighlightUserInput(o.pipeline.Name)))
 		return nil
 	}
 
@@ -384,12 +410,12 @@ func (o *deployPipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	if !shouldUpdate {
 		return nil
 	}
-	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.name)))
+	o.prog.Start(fmt.Sprintf(fmtPipelineDeployProposalStart, color.HighlightUserInput(o.pipeline.Name)))
 	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.name)))
+		o.prog.Stop(log.Serrorf(fmtPipelineDeployProposalFailed, color.HighlightUserInput(o.pipeline.Name)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, color.HighlightUserInput(o.name)))
+	o.prog.Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, color.HighlightUserInput(o.pipeline.Name)))
 	return nil
 }
 

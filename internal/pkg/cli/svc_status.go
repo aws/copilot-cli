@@ -45,7 +45,7 @@ type svcStatusOpts struct {
 }
 
 func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
-	sessProvider := sessions.NewProvider(sessions.UserAgentExtras("svc status"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc status"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
@@ -94,33 +94,17 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 	}, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *svcStatusOpts) Validate() error {
-	if o.appName == "" {
-		return nil
-	}
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return err
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
-		}
-	}
-	if o.svcName != "" {
-		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *svcStatusOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	return o.askSvcEnvName()
+	return o.validateAndAskSvcEnvName()
 }
 
 // Execute displays the status of the service.
@@ -146,9 +130,10 @@ func (o *svcStatusOpts) Execute() error {
 	return nil
 }
 
-func (o *svcStatusOpts) askApp() error {
+func (o *svcStatusOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.store.GetApplication(o.appName)
+		return err
 	}
 	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
@@ -158,7 +143,20 @@ func (o *svcStatusOpts) askApp() error {
 	return nil
 }
 
-func (o *svcStatusOpts) askSvcEnvName() error {
+func (o *svcStatusOpts) validateAndAskSvcEnvName() error {
+	if o.envName != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+			return err
+		}
+	}
+
+	if o.svcName != "" {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
+			return err
+		}
+	}
+	// Note: we let prompter handle the case when there is only option for user to choose from.
+	// This is naturally the case when `o.envName != "" && o.svcName != ""`.
 	deployedService, err := o.sel.DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
