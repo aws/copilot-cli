@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"testing"
 
@@ -30,74 +29,9 @@ type deletePipelineMocks struct {
 	secretsmanager *mocks.MocksecretsManager
 	deployer       *mocks.MockpipelineDeployer
 	ws             *mocks.MockwsPipelineGetter
+	store          *mocks.Mockstore
 	codepipeline   *mocks.MockpipelineGetter
-}
-
-func TestDeletePipelineOpts_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inAppName      string
-		inPipelineName string
-		callMocks      func(m deletePipelineMocks)
-
-		wantedError error
-	}{
-		"happy path with name flag": {
-			inAppName:      testAppName,
-			inPipelineName: testPipelineName,
-			callMocks: func(m deletePipelineMocks) {
-				m.codepipeline.EXPECT().GetPipeline(testPipelineName).Return(&codepipeline.Pipeline{Name: testPipelineName}, nil)
-			},
-			wantedError: nil,
-		},
-
-		"flag-indicated pipeline doesn't exist among deployed pipelines": {
-			inAppName:      testAppName,
-			inPipelineName: testPipelineName,
-			callMocks: func(m deletePipelineMocks) {
-				m.codepipeline.EXPECT().GetPipeline(testPipelineName).Return(nil, errors.New("some error"))
-			},
-
-			wantedError: errors.New("some error"),
-		},
-
-		"application does not exist": {
-			inAppName: "",
-			callMocks: func(m deletePipelineMocks) {},
-
-			wantedError: errNoAppInWorkspace,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
-			mocks := deletePipelineMocks{
-				codepipeline: mockPipelineGetter,
-			}
-
-			tc.callMocks(mocks)
-
-			opts := &deletePipelineOpts{
-				deletePipelineVars: deletePipelineVars{
-					appName: tc.inAppName,
-					name:    tc.inPipelineName,
-				},
-				codepipeline: mockPipelineGetter,
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			}
-		})
-	}
+	sel            *mocks.MockappSelector
 }
 
 func TestDeletePipelineOpts_Ask(t *testing.T) {
@@ -129,20 +63,59 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 		inAppName        string
 		inPipelineName   string
 
-		callMocks func(m deletePipelineMocks)
-
+		callMocks          func(m deletePipelineMocks)
+		wantedAppName      string
 		wantedPipelineName string
 		wantedSecret       string
 		wantedError        error
 	}{
+		"prompts for app name if empty": {
+			skipConfirmation: true,
+
+			callMocks: func(m deletePipelineMocks) {
+				m.sel.EXPECT().Application(pipelineDeleteAppNamePrompt, pipelineDeleteAppNameHelpPrompt).Return(testAppName, nil)
+				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
+				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
+			},
+
+			wantedAppName:      testAppName,
+			wantedPipelineName: testPipelineName,
+			wantedSecret:       "github-token-badgoose-backend",
+			wantedError:        nil,
+		},
+		"errors if passed-in app name invalid": {
+			skipConfirmation: true,
+			inAppName:        "badAppName",
+
+			callMocks: func(m deletePipelineMocks) {
+				m.store.EXPECT().GetApplication("badAppName").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: errors.New("some error"),
+		},
+		"errors if passed-in pipeline name is invalid": {
+			skipConfirmation: true,
+			inAppName:        testAppName,
+			inPipelineName:   "badPipelineName",
+
+			callMocks: func(m deletePipelineMocks) {
+				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
+				m.codepipeline.EXPECT().GetPipeline("badPipelineName").Return(nil, errors.New("some error"))
+			},
+
+			wantedAppName: testAppName,
+			wantedError:   errors.New("some error"),
+		},
 		"gets name of legacy pipeline and secret": {
 			skipConfirmation: true,
 			inAppName:        testAppName,
 
 			callMocks: func(m deletePipelineMocks) {
+				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
 				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
 				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
 			},
+			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
 			wantedSecret:       "github-token-badgoose-backend",
 			wantedError:        nil,
@@ -152,9 +125,12 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			inAppName:        testAppName,
 
 			callMocks: func(m deletePipelineMocks) {
+				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
 				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
 				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifestWithoutSecret, nil)
 			},
+
+			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
 			wantedSecret:       "",
 			wantedError:        nil,
@@ -162,12 +138,14 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 		"skips confirmation works": {
 			skipConfirmation: true,
 			inAppName:        testAppName,
-			inPipelineName:   testPipelineName,
 
 			callMocks: func(m deletePipelineMocks) {
+				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
 				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
 				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
 			},
+
+			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
 			wantedSecret:       "github-token-badgoose-backend",
 			wantedError:        nil,
@@ -176,8 +154,8 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 		"delete confirmation works": {
 			skipConfirmation: false,
 			inAppName:        testAppName,
-			inPipelineName:   testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
+				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
 				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
 				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
 				m.prompt.EXPECT().Confirm(
@@ -186,6 +164,8 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Times(1).Return(true, nil)
 			},
+
+			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
 			wantedSecret:       "github-token-badgoose-backend",
 			wantedError:        nil,
@@ -198,12 +178,18 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineGetter(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
+			mockSel := mocks.NewMockappSelector(ctrl)
 
 			mocks := deletePipelineMocks{
-				prompt: mockPrompt,
-				ws:     mockWorkspace,
+				codepipeline: mockPipelineGetter,
+				prompt:       mockPrompt,
+				ws:           mockWorkspace,
+				store:        mockStore,
+				sel:          mockSel,
 			}
 
 			tc.callMocks(mocks)
@@ -214,8 +200,11 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 					appName:          tc.inAppName,
 					name:             tc.inPipelineName,
 				},
-				prompt: mockPrompt,
-				ws:     mockWorkspace,
+				codepipeline: mockPipelineGetter,
+				prompt:       mockPrompt,
+				ws:           mockWorkspace,
+				store:        mockStore,
+				sel:          mockSel,
 			}
 
 			// WHEN
@@ -226,6 +215,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedAppName, opts.appName, "expected app names to match")
 				require.Equal(t, tc.wantedPipelineName, opts.name, "expected pipeline names to match")
 				require.Equal(t, tc.wantedSecret, opts.ghAccessTokenSecretName, "expected secrets to match")
 			}
