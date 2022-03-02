@@ -257,7 +257,7 @@ func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
 	allJobs, err := d.configStore.ListJobs(d.app)
 	if err != nil {
-		return nil, fmt.Errorf("list services for app %s: %w", d.app, err)
+		return nil, fmt.Errorf("list jobs for app %s: %w", d.app, err)
 	}
 	jobs := make(map[string]*config.Workload)
 	for _, job := range allJobs {
