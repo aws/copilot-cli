@@ -251,6 +251,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					mftReader:    ws,
 					prompt:       prompt,
 					dockerEngine: dockerengine.New(cmd),
+					wsAppName:    tryReadingAppName(),
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {
