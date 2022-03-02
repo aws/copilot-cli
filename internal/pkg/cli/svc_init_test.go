@@ -49,9 +49,6 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
 	}{
-		"fail if not in a workspace": {
-			wantedErr: errNoAppInWorkspace,
-		},
 		"fail if using different app name with the workspace": {
 			inAppName: "demo",
 			wantedErr: fmt.Errorf("cannot specify app demo because the workspace is already registered with app phonetool"),
@@ -109,7 +106,6 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inSvcName:        "frontend",
 			inSvcType:        "Load Balanced Web Service",
 			inDockerfilePath: "./hello/Dockerfile",
-			inAppName:        "phonetool",
 
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)

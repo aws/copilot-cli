@@ -184,17 +184,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 
 // Validate returns an error for any invalid optional flags.
 func (o *initSvcOpts) Validate() error {
-	if o.appName != "" {
-		// This command must be run within the app's workspace.
-		if o.appName != o.wsAppName {
-			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-		}
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return fmt.Errorf("get application %s configuration: %w", o.appName, err)
-		}
-	} else {
+	if o.wsAppName == "" {
 		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
 		return errNoAppInWorkspace
+	}
+	// This command must be run within the app's workspace.
+	if o.appName != "" && o.appName != o.wsAppName {
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+	}
+	o.appName = o.wsAppName
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
