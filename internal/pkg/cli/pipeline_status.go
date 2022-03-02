@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -50,21 +53,17 @@ type pipelineStatusOpts struct {
 }
 
 func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store client: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	session, err := sessions.NewProvider().Default()
+	session, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline status")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("session: %w", err)
 	}
 
+	store := config.NewSSMStore(identity.New(session), ssm.New(session), aws.StringValue(session.Config.Region))
 	prompter := prompt.New()
 	return &pipelineStatusOpts{
 		w:                  log.OutputWriter,
@@ -204,17 +203,16 @@ func (o *pipelineStatusOpts) retrieveAllPipelines() ([]string, error) {
 }
 
 func (o *pipelineStatusOpts) getPipelineNameFromManifest() (string, error) {
-	data, err := o.ws.ReadPipelineManifest()
+	path, err := o.ws.PipelineManifestLegacyPath()
+	if err != nil {
+		return "", err
+	}
+	manifest, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
 		return "", err
 	}
 
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-
-	return pipeline.Name, nil
+	return manifest.Name, nil
 }
 
 // buildPipelineStatusCmd builds the command for showing the status of a deployed pipeline.

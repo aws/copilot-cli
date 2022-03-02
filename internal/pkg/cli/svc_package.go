@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/aws-sdk-go/aws"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -45,12 +47,12 @@ var initPackageAddonsClient = func(o *packageSvcOpts) error {
 }
 
 type packageSvcVars struct {
-	name            string
-	envName         string
-	appName         string
-	tag             string
-	outputDir       string
-	uploadResources bool
+	name         string
+	envName      string
+	appName      string
+	tag          string
+	outputDir    string
+	uploadAssets bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -87,10 +89,14 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	store, err := config.NewStore()
+
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc package"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	opts := &packageSvcOpts{
 		packageSvcVars:   vars,
@@ -105,21 +111,29 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		paramsWriter:     ioutil.Discard,
 		addonsWriter:     ioutil.Discard,
 		newInterpolator:  newManifestInterpolator,
-		sessProvider:     sessions.NewProvider(),
+		sessProvider:     sessProvider,
 		newTplGenerator:  newWkldTplGenerator,
 	}
 	return opts, nil
 }
 
 func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
-	var err error
+	targetApp, err := o.getTargetApp()
+	if err != nil {
+		return nil, err
+	}
+	targetEnv, err := o.getTargetEnv()
+	if err != nil {
+		return nil, err
+	}
 	var deployer workloadTemplateGenerator
 	in := clideploy.WorkloadDeployerInput{
-		Name:     o.name,
-		App:      o.targetApp,
-		Env:      o.targetEnv,
-		ImageTag: o.tag,
-		Mft:      o.appliedManifest,
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             targetApp,
+		Env:             targetEnv,
+		ImageTag:        o.tag,
+		Mft:             o.appliedManifest,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -141,34 +155,25 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	return deployer, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *packageSvcOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.name != "" {
-		names, err := o.ws.ListServices()
-		if err != nil {
-			return fmt.Errorf("list services in the workspace: %w", err)
-		}
-		if !contains(o.name, names) {
-			return fmt.Errorf("service '%s' does not exist in the workspace", o.name)
-		}
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask prompts the user for any missing required fields.
+// Ask prompts for and validates any required flags.
 func (o *packageSvcOpts) Ask() error {
-	if err := o.askSvcName(); err != nil {
+	if o.appName != "" {
+		if _, err := o.getTargetApp(); err != nil {
+			return err
+		}
+	} else {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return errNoAppInWorkspace
+	}
+	if err := o.validateOrAskSvcName(); err != nil {
 		return err
 	}
-	if err := o.askEnvName(); err != nil {
+	if err := o.validateOrAskEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -186,7 +191,11 @@ func (o *packageSvcOpts) Execute() error {
 			return err
 		}
 	}
-	appTemplates, err := o.getSvcTemplates(o.targetEnv)
+	targetEnv, err := o.getTargetEnv()
+	if err != nil {
+		return nil
+	}
+	appTemplates, err := o.getSvcTemplates(targetEnv)
 	if err != nil {
 		return err
 	}
@@ -215,8 +224,15 @@ func (o *packageSvcOpts) Execute() error {
 	return err
 }
 
-func (o *packageSvcOpts) askSvcName() error {
+func (o *packageSvcOpts) validateOrAskSvcName() error {
 	if o.name != "" {
+		names, err := o.ws.ListServices()
+		if err != nil {
+			return fmt.Errorf("list services in the workspace: %w", err)
+		}
+		if !contains(o.name, names) {
+			return fmt.Errorf("service '%s' does not exist in the workspace", o.name)
+		}
 		return nil
 	}
 
@@ -228,9 +244,10 @@ func (o *packageSvcOpts) askSvcName() error {
 	return nil
 }
 
-func (o *packageSvcOpts) askEnvName() error {
+func (o *packageSvcOpts) validateOrAskEnvName() error {
 	if o.envName != "" {
-		return nil
+		_, err := o.getTargetEnv()
+		return err
 	}
 
 	name, err := o.sel.Environment(svcPackageEnvNamePrompt, "", o.appName)
@@ -250,16 +267,6 @@ func (o *packageSvcOpts) getAddonsTemplate() (string, error) {
 
 func (o *packageSvcOpts) configureClients() error {
 	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
-	env, err := o.store.GetEnvironment(o.appName, o.envName)
-	if err != nil {
-		return err
-	}
-	o.targetEnv = env
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
-	}
-	o.targetApp = app
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
@@ -301,7 +308,11 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	uploadOut := clideploy.UploadArtifactsOutput{
 		ImageDigest: aws.String(""),
 	}
-	if o.uploadResources {
+	targetApp, err := o.getTargetApp()
+	if err != nil {
+		return nil, err
+	}
+	if o.uploadAssets {
 		out, err := generator.UploadArtifacts()
 		if err != nil {
 			return nil, fmt.Errorf("upload resources required for deployment for %s: %w", o.name, err)
@@ -311,7 +322,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN: o.rootUserARN,
-			Tags:        o.targetApp.Tags,
+			Tags:        targetApp.Tags,
 			ImageDigest: uploadOut.ImageDigest,
 			EnvFileARN:  uploadOut.EnvFileARN,
 			AddonsURL:   uploadOut.AddonsURL,
@@ -360,6 +371,30 @@ func (o *packageSvcOpts) setAddonsFileWriter() error {
 	return nil
 }
 
+func (o *packageSvcOpts) getTargetApp() (*config.Application, error) {
+	if o.targetApp != nil {
+		return o.targetApp, nil
+	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	}
+	o.targetApp = app
+	return o.targetApp, nil
+}
+
+func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
+	if o.targetEnv != nil {
+		return o.targetEnv, nil
+	}
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", o.envName, err)
+	}
+	o.targetEnv = env
+	return o.targetEnv, nil
+}
+
 // RecommendActions is a no-op for this command.
 func (o *packageSvcOpts) RecommendActions() error {
 	return nil
@@ -402,6 +437,6 @@ func buildSvcPackageCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
-	cmd.Flags().BoolVar(&vars.uploadResources, uploadResourcesFlag, false, uploadResourcesFlagDescription)
+	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	return cmd
 }

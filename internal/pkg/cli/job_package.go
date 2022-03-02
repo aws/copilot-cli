@@ -8,6 +8,10 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -25,12 +29,12 @@ const (
 )
 
 type packageJobVars struct {
-	name            string
-	envName         string
-	appName         string
-	tag             string
-	outputDir       string
-	uploadResources bool
+	name         string
+	envName      string
+	appName      string
+	tag          string
+	outputDir    string
+	uploadAssets bool
 }
 
 type packageJobOpts struct {
@@ -49,13 +53,16 @@ type packageJobOpts struct {
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("job package"))
+	defaultSess, err := sessProvider.Default()
+	if err != nil {
+		return nil, err
+	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	prompter := prompt.New()
 	opts := &packageJobOpts{
@@ -70,12 +77,12 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	opts.newPackageCmd = func(o *packageJobOpts) {
 		opts.packageCmd = &packageSvcOpts{
 			packageSvcVars: packageSvcVars{
-				name:            o.name,
-				envName:         o.envName,
-				appName:         o.appName,
-				tag:             imageTagFromGit(o.runner, o.tag),
-				outputDir:       o.outputDir,
-				uploadResources: o.uploadResources,
+				name:         o.name,
+				envName:      o.envName,
+				appName:      o.appName,
+				tag:          imageTagFromGit(o.runner, o.tag),
+				outputDir:    o.outputDir,
+				uploadAssets: o.uploadAssets,
 			},
 			runner:           o.runner,
 			initAddonsClient: initPackageAddonsClient,
@@ -87,7 +94,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			paramsWriter:     ioutil.Discard,
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
-			sessProvider:     sessions.NewProvider(),
+			sessProvider:     sessProvider,
 			newTplGenerator:  newWkldTplGenerator,
 		}
 	}
@@ -187,6 +194,6 @@ func buildJobPackageCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
-	cmd.Flags().BoolVar(&vars.uploadResources, uploadResourcesFlag, false, uploadResourcesFlagDescription)
+	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
 	return cmd
 }

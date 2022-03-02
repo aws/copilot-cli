@@ -523,6 +523,22 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},
+		"success with selecting two public subnets and zero private subnets": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return([]string{}, nil)
+			},
+		},
 		"success with importing env resources with no flags": {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
@@ -613,6 +629,23 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
+		},
+		"error if no subnets selected": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				ID: "mockVPC",
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return(nil, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return(nil, nil)
+			},
+			wantedError: fmt.Errorf("VPC must have subnets in order to proceed with environment creation"),
 		},
 		"fail to get VPC CIDR": {
 			inAppName: mockApp,
@@ -1228,7 +1261,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				tc.expectResourcesUploader(mockResourcesUploader)
 			}
 
-			provider := sessions.NewProvider()
+			provider := sessions.ImmutableProvider()
 			sess, _ := provider.DefaultWithRegion("us-west-2")
 
 			opts := &initEnvOpts{

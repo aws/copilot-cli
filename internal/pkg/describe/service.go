@@ -5,10 +5,11 @@ package describe
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"io"
 	"net/url"
 	"sort"
+
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -35,12 +36,14 @@ type ConfigStoreSvc interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	ListServices(appName string) ([]*config.Workload, error)
 	GetWorkload(appName string, name string) (*config.Workload, error)
+	ListJobs(appName string) ([]*config.Workload, error)
 }
 
 // DeployedEnvServicesLister wraps methods of deploy store.
 type DeployedEnvServicesLister interface {
 	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
 	ListDeployedServices(appName string, envName string) ([]string, error)
+	ListDeployedJobs(appName string, envName string) ([]string, error)
 }
 
 type ecsClient interface {
@@ -262,7 +265,7 @@ func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, err
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
 	}
-	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
+	sess, err := sessions.ImmutableProvider().FromRole(environment.ManagerRoleARN, environment.Region)
 	if err != nil {
 		return nil, err
 	}

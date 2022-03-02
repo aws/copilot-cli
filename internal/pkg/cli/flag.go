@@ -32,7 +32,7 @@ const (
 	imageTagFlag          = "tag"
 	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
-	uploadResourcesFlag   = "upload-resources"
+	uploadAssetsFlag      = "upload-assets"
 	limitFlag             = "limit"
 	followFlag            = "follow"
 	sinceFlag             = "since"
@@ -66,24 +66,25 @@ const (
 	storageRDSInitialDBFlag      = "initial-db"
 	storageRDSParameterGroupFlag = "parameter-group"
 
-	taskGroupNameFlag   = "task-group-name"
-	countFlag           = "count"
-	cpuFlag             = "cpu"
-	memoryFlag          = "memory"
-	imageFlag           = "image"
-	taskRoleFlag        = "task-role"
-	executionRoleFlag   = "execution-role"
-	clusterFlag         = "cluster"
-	subnetsFlag         = "subnets"
-	securityGroupsFlag  = "security-groups"
-	envVarsFlag         = "env-vars"
-	secretsFlag         = "secrets"
-	commandFlag         = "command"
-	entrypointFlag      = "entrypoint"
-	taskDefaultFlag     = "default"
-	generateCommandFlag = "generate-cmd"
-	osFlag              = "platform-os"
-	archFlag            = "platform-arch"
+	taskGroupNameFlag            = "task-group-name"
+	countFlag                    = "count"
+	cpuFlag                      = "cpu"
+	memoryFlag                   = "memory"
+	imageFlag                    = "image"
+	taskRoleFlag                 = "task-role"
+	executionRoleFlag            = "execution-role"
+	clusterFlag                  = "cluster"
+	acknowledgeSecretsAccessFlag = "acknowledge-secrets-access"
+	subnetsFlag                  = "subnets"
+	securityGroupsFlag           = "security-groups"
+	envVarsFlag                  = "env-vars"
+	secretsFlag                  = "secrets"
+	commandFlag                  = "command"
+	entrypointFlag               = "entrypoint"
+	taskDefaultFlag              = "default"
+	generateCommandFlag          = "generate-cmd"
+	osFlag                       = "platform-os"
+	archFlag                     = "platform-arch"
 
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
@@ -156,6 +157,8 @@ Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
+	acknowledgeSecretsAccessDescription = fmt.Sprintf(`Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag. 
+This flag is useful only when '%s' flag is specified`, secretsFlag)
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
@@ -201,9 +204,10 @@ const (
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
-	stackOutputDirFlagDescription  = "Optional. Writes the stack template and template configuration to a directory."
-	uploadResourcesFlagDescription = "Optional. Whether to upload dependency resources (e.g., an image that needs to be built and pushed), so that the output of `copilot svc package` can be directly used for deployment."
-	prodEnvFlagDescription         = "If the environment contains production services."
+	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
+	uploadAssetsFlagDescription   = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
+Uploaded asset locations are filled in the template configuration.`
+	prodEnvFlagDescription = "If the environment contains production services."
 
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
 unless any time filtering flags are set.`

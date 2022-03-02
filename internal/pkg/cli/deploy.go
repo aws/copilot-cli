@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -43,10 +47,12 @@ type deployOpts struct {
 }
 
 func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("deploy"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
@@ -71,7 +77,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					unmarshal:       manifest.UnmarshalWorkload,
 					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					cmd:             exec.NewCmd(),
-					sessProvider:    sessions.NewProvider(),
+					sessProvider:    sessProvider,
 					newJobDeployer:  newJobDeployer,
 				}
 			case contains(workloadType, manifest.ServiceTypes()):
@@ -86,7 +92,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
-					sessProvider:    sessions.NewProvider(),
+					sessProvider:    sessProvider,
 					newSvcDeployer:  newSvcDeployer,
 				}
 				o.deployWkld = opts

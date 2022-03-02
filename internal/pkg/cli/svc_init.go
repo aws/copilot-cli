@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -130,24 +133,20 @@ type initSvcOpts struct {
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	p := sessions.NewProvider()
-	sess, err := p.Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc init"))
+	sess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	prompter := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
-	deployStore, err := deploy.NewStore(store)
+	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, err
 	}
@@ -248,11 +247,11 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askSvcType(); err != nil {
 		return err
 	}
-	dfSelected, err := o.askDockerfile()
+	err = o.askDockerfile()
 	if err != nil {
 		return err
 	}
-	if !dfSelected {
+	if o.dockerfilePath == "" {
 		if err := o.askImage(); err != nil {
 			return err
 		}
@@ -399,21 +398,21 @@ func (o *initSvcOpts) askImage() error {
 }
 
 // isDfSelected indicates if any Dockerfile is in use.
-func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
+func (o *initSvcOpts) askDockerfile() error {
 	if o.dockerfilePath != "" || o.image != "" {
-		return true, nil
+		return nil
 	}
-	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
+	if err := o.dockerEngine.CheckDockerEngineRunning(); err != nil {
 		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
 		switch {
 		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
 			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
-			return false, nil
+			return nil
 		case errors.As(err, &errDaemon):
 			log.Info("Docker daemon is not responsive; Copilot won't build from a Dockerfile.\n")
-			return false, nil
+			return nil
 		default:
-			return false, fmt.Errorf("check if docker engine is running: %w", err)
+			return fmt.Errorf("check if docker engine is running: %w", err)
 		}
 	}
 	df, err := o.sel.Dockerfile(
@@ -426,13 +425,13 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 		},
 	)
 	if err != nil {
-		return false, fmt.Errorf("select Dockerfile: %w", err)
+		return fmt.Errorf("select Dockerfile: %w", err)
 	}
 	if df == selector.DockerfilePromptUseImage {
-		return false, nil
+		return nil
 	}
 	o.dockerfilePath = df
-	return true, nil
+	return nil
 }
 
 func (o *initSvcOpts) askSvcPort() (err error) {

@@ -10,6 +10,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -87,7 +90,7 @@ type initPipelineOpts struct {
 	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
-	sel            pipelineSelector
+	sel            pipelineEnvSelector
 
 	// Outputs stored on successful actions.
 	secret    string
@@ -114,28 +117,18 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	secretsmanager, err := secretsmanager.New()
-	if err != nil {
-		return nil, fmt.Errorf("new secretsmanager client: %w", err)
-	}
-
-	p := sessions.NewProvider()
+	p := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline init"))
 	defaultSession, err := p.Default()
 	if err != nil {
 		return nil, err
 	}
 
-	ssmStore, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store client: %w", err)
-	}
-
+	ssmStore := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
-
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
-		secretsmanager:   secretsmanager,
+		secretsmanager:   secretsmanager.New(defaultSession),
 		parser:           template.New(),
 		sessProvider:     p,
 		cfnClient:        cloudformation.New(defaultSession),
@@ -534,7 +527,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		stages = append(stages, stage)
 	}
 
-	manifest, err := manifest.NewPipelineManifest(pipelineName, provider, stages)
+	manifest, err := manifest.NewPipeline(pipelineName, provider, stages)
 	if err != nil {
 		return fmt.Errorf("generate a pipeline manifest: %w", err)
 	}
