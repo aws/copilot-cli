@@ -34,6 +34,7 @@ type vpcSubnetLister interface {
 type EnvDescription struct {
 	Environment    *config.Environment `json:"environment"`
 	Services       []*config.Workload  `json:"services"`
+	Jobs           []*config.Workload  `json:"jobs"`
 	Tags           map[string]string   `json:"tags,omitempty"`
 	Resources      []*stack.Resource   `json:"resources,omitempty"`
 	EnvironmentVPC EnvironmentVPC      `json:"environmentVPC"`
@@ -102,6 +103,11 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 		return nil, err
 	}
 
+	jobs, err := d.filterDeployedJobs()
+	if err != nil {
+		return nil, err
+	}
+
 	tags, environmentVPC, err := d.loadStackInfo()
 	if err != nil {
 		return nil, err
@@ -117,6 +123,7 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 	d.description = &EnvDescription{
 		Environment:    d.env,
 		Services:       svcs,
+		Jobs:           jobs,
 		Tags:           tags,
 		Resources:      stackResources,
 		EnvironmentVPC: environmentVPC,
@@ -246,6 +253,27 @@ func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 	return deployedSvcs, nil
 }
 
+// filterDeployedJobs lists the jobs that are deployed on the given app and environment
+func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
+	allJobs, err := d.configStore.ListJobs(d.app)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs for app %s: %w", d.app, err)
+	}
+	jobs := make(map[string]*config.Workload)
+	for _, job := range allJobs {
+		jobs[job.Name] = job
+	}
+	deployedJobNames, err := d.deployStore.ListDeployedJobs(d.app, d.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("list deployed jobs in env %s: %w", d.env.Name, err)
+	}
+	var deployedJobs []*config.Workload
+	for _, deployedJobName := range deployedJobNames {
+		deployedJobs = append(deployedJobs, jobs[deployedJobName])
+	}
+	return deployedJobs, nil
+}
+
 // JSONString returns the stringified EnvDescription struct with json format.
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
@@ -272,6 +300,15 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
+	}
+	writer.Flush()
+	fmt.Fprint(writer, color.Bold.Sprint("\nJobs\n\n"))
+	writer.Flush()
+	jobsHeaders := []string{"Name", "Type"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(jobsHeaders, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(jobsHeaders), "\t"))
+	for _, job := range e.Jobs {
+		fmt.Fprintf(writer, "  %s\t%s\n", job.Name, job.Type)
 	}
 	writer.Flush()
 	if len(e.Tags) != 0 {
