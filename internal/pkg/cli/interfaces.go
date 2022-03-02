@@ -141,6 +141,11 @@ type store interface {
 	wlStore
 }
 
+type appEnvStore interface {
+	applicationStore
+	environmentStore
+}
+
 type deployedEnvironmentLister interface {
 	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
 	ListDeployedServices(appName, envName string) ([]string, error)
@@ -479,6 +484,7 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
+	appSelector
 	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
 }
 

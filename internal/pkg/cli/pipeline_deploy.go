@@ -34,7 +34,9 @@ import (
 )
 
 const (
-	pipelineSelectPrompt = "Select a pipeline from your workspace to deploy"
+	pipelineDeployAppNamePrompt     = "Which application's pipeline would you like to deploy?"
+	pipelineDeployAppNameHelpPrompt = "An application is a collection of related services."
+	pipelineSelectPrompt            = "Select a pipeline from your workspace to deploy"
 
 	fmtPipelineDeployResourcesStart    = "Adding pipeline resources to your application: %s"
 	fmtPipelineDeployResourcesFailed   = "Failed to add pipeline resources to your application: %s\n"
@@ -68,7 +70,7 @@ type deployPipelineOpts struct {
 	prog             progress
 	prompt           prompter
 	region           string
-	envStore         environmentStore
+	store            appEnvStore
 	ws               wsPipelineReader
 	codestar         codestar
 	newSvcListCmd    func(io.Writer) cmd
@@ -106,10 +108,10 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
 		deployPipelineVars: vars,
-		envStore:           store,
+		store:              store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
-		sel:                selector.NewWsPipelineSelect(prompter, ws),
+		sel:                selector.NewWsPipelineSelect(prompter, store, ws),
 		codestar:           cs.New(defaultSession),
 		newSvcListCmd: func(w io.Writer) cmd {
 			return &listSvcOpts{
@@ -148,19 +150,34 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	}, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
+	return nil
+}
+
+// Ask prompts the user for any unprovided required fields and validates them.
+func (o *deployPipelineOpts) Ask() error {
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
+	}
+
 	if o.name != "" {
 		if err := o.validatePipelineName(); err != nil {
 			return err
 		}
+	} else {
+		if err := o.askPipelineName(); err != nil {
+			return err
+		}
 	}
-	return nil
-}
 
-// Ask prompts the user for any required fields that are not provided.
-func (o *deployPipelineOpts) Ask() error {
-	return o.askPipelineName()
+	return nil
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
@@ -225,6 +242,15 @@ func (o *deployPipelineOpts) Execute() error {
 	return nil
 }
 
+func (o *deployPipelineOpts) askAppName() error {
+	app, err := o.sel.Application(pipelineDeployAppNamePrompt, pipelineDeployAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("select application: %w", err)
+	}
+	o.appName = app
+	return nil
+}
+
 func (o *deployPipelineOpts) validatePipelineName() error {
 	pipelines, err := o.ws.ListPipelines()
 	if err != nil {
@@ -278,7 +304,7 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 		return nil, err
 	}
 	for _, stage := range manifestStages {
-		env, err := o.envStore.GetEnvironment(o.appName, stage.Name)
+		env, err := o.store.GetEnvironment(o.appName, stage.Name)
 		if err != nil {
 			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.appName, err)
 		}

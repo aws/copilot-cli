@@ -178,6 +178,7 @@ type WorkspaceSelect struct {
 
 // PipelineSelect is a workspace pipeline selector.
 type PipelineSelect struct {
+	*Select
 	prompt Prompter
 	ws     WorkspacePipelinesLister
 }
@@ -261,9 +262,10 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 	}
 }
 
-// NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(prompt Prompter, ws WorkspacePipelinesLister) *PipelineSelect {
+// NewWsPipelineSelect returns a new selector with applications from the config store, but pipelines from the local workspace.
+func NewWsPipelineSelect(prompt Prompter, store ConfigLister, ws WorkspacePipelinesLister) *PipelineSelect {
 	return &PipelineSelect{
+		Select: NewSelect(prompt, store),
 		prompt: prompt,
 		ws:     ws,
 	}
