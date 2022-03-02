@@ -99,7 +99,8 @@ type initPipelineOpts struct {
 	repoOwner string
 	ccRegion  string
 
-	// Caches variables
+	// Cached variables
+	wsAppName  string
 	fs         *afero.Afero
 	buffer     bytes.Buffer
 	envConfigs []*config.Environment
@@ -137,20 +138,37 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		sel:              selector.NewSelect(prompter, ssmStore),
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
+		wsAppName:        tryReadingAppName(),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
-	if o.appName == "" {
+	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
+	if o.wsAppName == "" {
 		return errNoAppInWorkspace
 	}
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return err
+	if o.appName != "" {
+		if o.appName != o.wsAppName {
+			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+		}
+		// Validate the app name.
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+		}
 	}
+	o.appName = o.wsAppName
+	return nil
+}
 
+// Ask prompts for required fields that are not passed in and validates them.
+func (o *initPipelineOpts) Ask() error {
 	if o.repoURL != "" {
 		if err := o.validateURL(o.repoURL); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askRepository(); err != nil {
 			return err
 		}
 	}
@@ -162,18 +180,10 @@ func (o *initPipelineOpts) Validate() error {
 				return err
 			}
 		}
-		return nil
-	}
-	return nil
-}
-
-// Ask prompts for fields that are required but not passed in.
-func (o *initPipelineOpts) Ask() error {
-	if err := o.askEnvs(); err != nil {
-		return err
-	}
-	if err := o.askRepository(); err != nil {
-		return err
+	} else {
+		if err := o.askEnvs(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -221,15 +231,13 @@ func (o *initPipelineOpts) validateURL(url string) error {
 }
 
 func (o *initPipelineOpts) askEnvs() error {
-	if len(o.environments) == 0 {
-		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.PromptConfig {
-			return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
-		})
-		if err != nil {
-			return fmt.Errorf("select environments: %w", err)
-		}
-		o.environments = envs
+	envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.PromptConfig {
+		return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
+	})
+	if err != nil {
+		return fmt.Errorf("select environments: %w", err)
 	}
+	o.environments = envs
 
 	var envConfigs []*config.Environment
 	for _, environment := range o.environments {
@@ -245,13 +253,9 @@ func (o *initPipelineOpts) askEnvs() error {
 }
 
 func (o *initPipelineOpts) askRepository() error {
-	var err error
-	if o.repoURL == "" {
-		if err = o.selectURL(); err != nil {
-			return err
-		}
+	if err := o.selectURL(); err != nil {
+		return err
 	}
-
 	switch {
 	case strings.Contains(o.repoURL, githubURL):
 		return o.askGitHubRepoDetails()
@@ -706,7 +710,7 @@ func buildPipelineInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVar(&vars.repoURL, githubURLFlag, "", githubURLFlagDescription)
 	_ = cmd.Flags().MarkHidden(githubURLFlag)
 	cmd.Flags().StringVarP(&vars.repoURL, repoURLFlag, repoURLFlagShort, "", repoURLFlagDescription)

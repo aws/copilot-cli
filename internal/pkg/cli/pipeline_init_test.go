@@ -27,83 +27,31 @@ import (
 func TestInitPipelineOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName     string
+		inWsAppName   string
 		inrepoURL     string
 		inEnvs        []string
 		setupMocks    func(m *mocks.Mockstore)
 		expectedError error
 	}{
-		"empty app name": {
-			inAppName:     "",
+		"empty workspace app name": {
+			inWsAppName:     "",
 			setupMocks:    func(m *mocks.Mockstore) {},
 			expectedError: errNoAppInWorkspace,
 		},
 		"invalid app name (not in workspace)": {
+			inWsAppName:   "diff-app",
+			inAppName:     "ghost-app",
+			setupMocks:    func(m *mocks.Mockstore) {},
+			expectedError: errors.New("cannot specify app ghost-app because the workspace is already registered with app diff-app"),
+		},
+		"invalid app name": {
+			inWsAppName: "ghost-app",
 			inAppName: "ghost-app",
 			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("ghost-app").Return(nil, fmt.Errorf("get application ghost-app: some error"))
+				m.EXPECT().GetApplication("ghost-app").Return(nil, errors.New("some error"))
 			},
 
-			expectedError: fmt.Errorf("get application ghost-app: some error"),
-		},
-		"URL to unsupported repo provider": {
-			inAppName: "my-app",
-			inrepoURL: "unsupported.org/repositories/repoName",
-			inEnvs:    []string{"test"},
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
-			},
-
-			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
-		},
-		"invalid environments": {
-			inAppName: "my-app",
-			inrepoURL: "https://github.com/badGoose/chaOS",
-			inEnvs:    []string{"test", "prod"},
-
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
-				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
-			},
-
-			expectedError: errors.New("some error"),
-		},
-		"success with GH repo": {
-			inAppName: "my-app",
-			inEnvs:    []string{"test", "prod"},
-			inrepoURL: "https://github.com/badGoose/chaOS",
-
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
-				m.EXPECT().GetEnvironment("my-app", "test").Return(
-					&config.Environment{
-						Name: "test",
-					}, nil)
-				m.EXPECT().GetEnvironment("my-app", "prod").Return(
-					&config.Environment{
-						Name: "prod",
-					}, nil)
-			},
-
-			expectedError: nil,
-		},
-		"success with CC repo": {
-			inAppName: "my-app",
-			inEnvs:    []string{"test", "prod"},
-			inrepoURL: "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
-
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
-				m.EXPECT().GetEnvironment("my-app", "test").Return(
-					&config.Environment{
-						Name: "test",
-					}, nil)
-				m.EXPECT().GetEnvironment("my-app", "prod").Return(
-					&config.Environment{
-						Name: "prod",
-					}, nil)
-			},
-
-			expectedError: nil,
+			expectedError: fmt.Errorf("get application ghost-app configuration: some error"),
 		},
 	}
 
@@ -124,6 +72,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 					environments: tc.inEnvs,
 				},
 				store: mockStore,
+				wsAppName: tc.inWsAppName,
 			}
 
 			// WHEN
@@ -131,7 +80,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			// THEN
 			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError, err)
+				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -176,13 +125,79 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		expectedCodeCommitRegion  string
 		expectedError             error
 	}{
+		"passed-in URL to unsupported repo provider": {
+			inRepoURL: "unsupported.org/repositories/repoName",
+			inEnvironments:    []string{"test"},
+			mockStore: func(m *mocks.Mockstore) {},
+			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner: func(m *mocks.Mockrunner) {},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
+		},
+		"passed-in invalid environments": {
+			inRepoURL: "https://github.com/badGoose/chaOS",
+			inEnvironments:    []string{"test", "prod"},
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
+			},
+			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner: func(m *mocks.Mockrunner) {},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedError: errors.New("some error"),
+		},
+		"success with GH repo with env and repoURL flags": {
+			inEnvironments:    []string{"test", "prod"},
+			inRepoURL: "https://github.com/badGoose/chaOS",
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+				m.EXPECT().GetEnvironment("my-app", "test").Return(
+					&config.Environment{
+						Name: "test",
+					}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(
+					&config.Environment{
+						Name: "prod",
+					}, nil)
+			},
+
+			expectedError: nil,
+		},
+		"success with CC repo with env and repoURL flags": {
+			inEnvironments:    []string{"test", "prod"},
+			inRepoURL: "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
+				m.EXPECT().GetEnvironment("my-app", "test").Return(
+					&config.Environment{
+						Name: "test",
+					}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(
+					&config.Environment{
+						Name: "prod",
+					}, nil)
+			},
+
+			expectedError: nil,
+		},
 		"no flags, prompts for all input, success case for GitHub": {
 			inEnvironments:      []string{},
 			inRepoURL:           "",
 			inGitHubAccessToken: githubToken,
 			inGitBranch:         "",
 			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
-
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
+			},
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
@@ -195,12 +210,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					Name:   "prod",
 					Region: "us-west-2",
 				}, nil)
-			},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
@@ -1123,7 +1132,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					githubAccessToken: tc.inGitHubToken,
-					appName:           tc.inAppName,
+					appName:           "my-app",
 				},
 
 				secretsmanager: mockSecretsManager,
