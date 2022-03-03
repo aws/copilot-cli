@@ -26,7 +26,7 @@ func TestPipelineList_Ask(t *testing.T) {
 		inputApp string
 
 		mockSelector func(m *mocks.MockconfigSelector)
-		mockStore func(m *mocks.Mockstore)
+		mockStore    func(m *mocks.Mockstore)
 
 		wantedApp string
 		wantedErr error
@@ -59,7 +59,7 @@ func TestPipelineList_Ask(t *testing.T) {
 			wantedErr: fmt.Errorf("select application: some error"),
 		},
 		"error if passed-in app doesn't exist": {
-			inputApp: "my-app",
+			inputApp:     "my-app",
 			mockSelector: func(m *mocks.MockconfigSelector) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
@@ -84,7 +84,7 @@ func TestPipelineList_Ask(t *testing.T) {
 				listPipelineVars: listPipelineVars{
 					appName: tc.inputApp,
 				},
-				sel: mockSelector,
+				sel:   mockSelector,
 				store: mockStore,
 			}
 
