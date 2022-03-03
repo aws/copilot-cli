@@ -101,6 +101,11 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
+	wsAppName := tryReadingAppName()
+	if vars.appName == "" {
+		vars.appName = wsAppName
+	}
+
 	return &deployPipelineOpts{
 		app:                app,
 		ws:                 ws,
@@ -144,7 +149,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
-		wsAppName: tryReadingAppName(),
+		wsAppName: wsAppName,
 		svcBuffer: &bytes.Buffer{},
 		jobBuffer: &bytes.Buffer{},
 	}, nil
@@ -161,9 +166,8 @@ func (o *deployPipelineOpts) Validate() error {
 	}
 	// Validate the app name.
 	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
 	}
-	o.appName = o.wsAppName
 	return nil
 }
 
