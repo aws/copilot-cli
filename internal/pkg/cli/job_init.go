@@ -71,8 +71,7 @@ type initJobOpts struct {
 	manifestPath string
 	platform     *manifest.PlatformString
 
-	// Cache variables
-	wsAppName string
+	wsAppName *string // Cache variable for local app name. Empty if there's no app. Nil if pending creation.
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -116,23 +115,19 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
-		wsAppName: tryReadingAppName(),
+		wsAppName: aws.String(tryReadingAppName()),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
-	if o.wsAppName == "" {
-		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
-		return errNoAppInWorkspace
-	}
-	// This command must be run within the app's workspace.
-	if o.appName != "" && o.appName != o.wsAppName {
-		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-	}
-	o.appName = o.wsAppName
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	// If this app is pending creation, we'll skip validation.
+	if o.wsAppName != nil {
+		appName, err := validateInputApp(aws.StringValue(o.wsAppName), o.appName, o.store)
+		if err != nil {
+			return err
+		}
+		o.appName = appName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)

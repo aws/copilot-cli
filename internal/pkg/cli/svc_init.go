@@ -126,7 +126,7 @@ type initSvcOpts struct {
 	topics       []manifest.TopicSubscription
 
 	// Cache variables
-	wsAppName string
+	wsAppName *string // Cache variable for local app name. Empty if there's no app. Nil if pending creation.
 	df        dockerfileParser
 
 	// Init a Dockerfile parser using fs and input path
@@ -159,18 +159,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
-		fs:           fs,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		init:         initSvc,
 		prompt:       prompter,
 		sel:          sel,
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
-		wsAppName:    tryReadingAppName(),
+		wsAppName:    aws.String(tryReadingAppName()),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -184,17 +183,13 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 
 // Validate returns an error for any invalid optional flags.
 func (o *initSvcOpts) Validate() error {
-	if o.wsAppName == "" {
-		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
-		return errNoAppInWorkspace
-	}
-	// This command must be run within the app's workspace.
-	if o.appName != "" && o.appName != o.wsAppName {
-		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-	}
-	o.appName = o.wsAppName
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	// If this app is pending creation, we'll skip validation.
+	if o.wsAppName != nil {
+		appName, err := validateInputApp(aws.StringValue(o.wsAppName), o.appName, o.store)
+		if err != nil {
+			return err
+		}
+		o.appName = appName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
@@ -562,6 +557,23 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	o.topics = subscriptions
 
 	return nil
+}
+
+func validateInputApp(wsApp, inputApp string, store store) (string, error) {
+	if wsApp == "" {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return "", errNoAppInWorkspace
+	}
+	var appName string
+	// This command must be run within the app's workspace.
+	if inputApp != "" && inputApp != wsApp {
+		return "", fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", inputApp, wsApp)
+	}
+	appName = wsApp
+	if _, err := store.GetApplication(appName); err != nil {
+		return "", fmt.Errorf("get application %s configuration: %w", appName, err)
+	}
+	return appName, nil
 }
 
 // parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"
