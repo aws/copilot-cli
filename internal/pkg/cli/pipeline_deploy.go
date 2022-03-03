@@ -156,14 +156,12 @@ func (o *deployPipelineOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	// The passed-in app name value must be the same as the workspace app name, as we need to be in the correct workspace to read the pipeline manifest.
-	if o.appName != "" {
-		if o.appName != o.wsAppName {
+	if o.appName != "" && o.appName != o.wsAppName {
 			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-		}
-		// Validate the app name.
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return fmt.Errorf("get application %s configuration: %w", o.appName, err)
-		}
+	}
+	// Validate the app name.
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
 	}
 	o.appName = o.wsAppName
 	return nil
