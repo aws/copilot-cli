@@ -34,7 +34,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		expectedError error
 	}{
 		"empty workspace app name": {
-			inWsAppName:     "",
+			inWsAppName:   "",
 			setupMocks:    func(m *mocks.Mockstore) {},
 			expectedError: errNoAppInWorkspace,
 		},
@@ -46,7 +46,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		},
 		"invalid app name": {
 			inWsAppName: "ghost-app",
-			inAppName: "ghost-app",
+			inAppName:   "ghost-app",
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("ghost-app").Return(nil, errors.New("some error"))
 			},
@@ -71,7 +71,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 					repoURL:      tc.inrepoURL,
 					environments: tc.inEnvs,
 				},
-				store: mockStore,
+				store:     mockStore,
 				wsAppName: tc.inWsAppName,
 			}
 
@@ -126,33 +126,33 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		expectedError             error
 	}{
 		"passed-in URL to unsupported repo provider": {
-			inRepoURL: "unsupported.org/repositories/repoName",
-			inEnvironments:    []string{"test"},
-			mockStore: func(m *mocks.Mockstore) {},
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockRunner: func(m *mocks.Mockrunner) {},
-			mockPrompt: func(m *mocks.Mockprompter) {},
+			inRepoURL:        "unsupported.org/repositories/repoName",
+			inEnvironments:   []string{"test"},
+			mockStore:        func(m *mocks.Mockstore) {},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
 		},
 		"passed-in invalid environments": {
-			inRepoURL: "https://github.com/badGoose/chaOS",
-			inEnvironments:    []string{"test", "prod"},
+			inRepoURL:      "https://github.com/badGoose/chaOS",
+			inEnvironments: []string{"test", "prod"},
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
 			},
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockRunner: func(m *mocks.Mockrunner) {},
-			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedError: errors.New("some error"),
 		},
 		"success with GH repo with env and repoURL flags": {
-			inEnvironments:    []string{"test", "prod"},
-			inRepoURL: "https://github.com/badGoose/chaOS",
+			inEnvironments: []string{"test", "prod"},
+			inRepoURL:      "https://github.com/badGoose/chaOS",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "test").Return(
@@ -167,14 +167,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-			mockSelector: func(m *mocks.MockpipelineEnvSelector){},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 
 			expectedEnvironments: []string{"test", "prod"},
-			expectedError: nil,
+			expectedError:        nil,
 		},
 		"success with CC repo with env and repoURL flags": {
-			inEnvironments:    []string{"test", "prod"},
-			inRepoURL: "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
+			inEnvironments: []string{"test", "prod"},
+			inRepoURL:      "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "test").Return(
@@ -186,13 +186,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 						Name: "prod",
 					}, nil)
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 
 			expectedEnvironments: []string{"test", "prod"},
-			expectedError: nil,
+			expectedError:        nil,
 		},
 		"no flags, prompts for all input, success case for GitHub": {
 			inEnvironments:      []string{},
@@ -293,7 +293,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore:    func(m *mocks.Mockstore) {},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -302,15 +302,15 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments:      []string{"test", "prod"},
-			expectedError:             fmt.Errorf("select URL: some error"),
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        fmt.Errorf("select URL: some error"),
 		},
 		"returns error if fail to parse GitHub URL": {
-			inEnvironments:      []string{},
-			buffer:              *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\nhunter\treallyevenworseGoosegithub.comNotEvenAURL (fetch)\n"),
+			inEnvironments: []string{},
+			buffer:         *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\nhunter\treallyevenworseGoosegithub.comNotEvenAURL (fetch)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore:    func(m *mocks.Mockstore) {},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -319,8 +319,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments:      []string{"test", "prod"},
-			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
+			expectedEnvironments: []string{"test", "prod"},
+			expectedError:        fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
 		},
 		"returns error if fail to parse repo name out of CodeCommit URL": {
 			inEnvironments:      []string{},
@@ -328,7 +328,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer:              *bytes.NewBufferString(""),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore:    func(m *mocks.Mockstore) {},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -345,7 +345,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer: *bytes.NewBufferString(""),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore:    func(m *mocks.Mockstore) {},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -365,7 +365,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer: *bytes.NewBufferString(""),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore:    func(m *mocks.Mockstore) {},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -384,7 +384,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer: *bytes.NewBufferString(""),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore: func(m *mocks.Mockstore) {},
+			mockStore:    func(m *mocks.Mockstore) {},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
