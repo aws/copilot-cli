@@ -1067,7 +1067,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					githubAccessToken: tc.inGitHubToken,
-					appName:           "my-app",
+					appName:           tc.inAppName,
 				},
 
 				secretsmanager: mockSecretsManager,

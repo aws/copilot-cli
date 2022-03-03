@@ -142,7 +142,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	}, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
 	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
 	if o.wsAppName == "" {
