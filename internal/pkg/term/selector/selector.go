@@ -178,7 +178,6 @@ type WorkspaceSelect struct {
 
 // PipelineSelect is a workspace pipeline selector.
 type PipelineSelect struct {
-	*Select
 	prompt Prompter
 	ws     WorkspacePipelinesLister
 }
