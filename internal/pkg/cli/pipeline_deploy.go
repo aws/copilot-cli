@@ -160,7 +160,7 @@ func (o *deployPipelineOpts) Validate() error {
 			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
 	}
 	// Validate the app name.
-	if _, err := o.store.GetApplication(o.appName); err != nil {
+	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
 		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
 	}
 	o.appName = o.wsAppName
