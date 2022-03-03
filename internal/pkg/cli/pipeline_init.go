@@ -126,6 +126,12 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 
 	ssmStore := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
+
+	wsAppName := tryReadingAppName()
+	if vars.appName == "" {
+		vars.appName = wsAppName
+	}
+
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
@@ -138,7 +144,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		sel:              selector.NewSelect(prompter, ssmStore),
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
-		wsAppName:        tryReadingAppName(),
+		wsAppName:        wsAppName,
 	}, nil
 }
 
@@ -148,16 +154,13 @@ func (o *initPipelineOpts) Validate() error {
 	if o.wsAppName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.appName != "" {
-		if o.appName != o.wsAppName {
+	if o.appName != "" && o.appName != o.wsAppName {
 			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
 		}
-		// Validate the app name.
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return fmt.Errorf("get application %s configuration: %w", o.appName, err)
-		}
+	// Validate the app name.
+	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
 	}
-	o.appName = o.wsAppName
 	return nil
 }
 
