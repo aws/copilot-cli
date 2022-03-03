@@ -173,7 +173,7 @@ func (o *initPipelineOpts) Ask() error {
 		}
 	}
 
-	if o.environments != nil {
+	if len(o.environments) > 0 {
 		for _, env := range o.environments {
 			_, err := o.store.GetEnvironment(o.appName, env)
 			if err != nil {
