@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
@@ -150,7 +149,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 				},
 				store:     mockstore,
 				fs:        &afero.Afero{Fs: afero.NewMemMapFs()},
-				wsAppName: aws.String("phonetool"),
+				wsAppName: "phonetool",
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)

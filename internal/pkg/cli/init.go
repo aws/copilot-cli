@@ -187,10 +187,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()
-	wsAppName := aws.String(tryReadingAppName())
-	if aws.StringValue(wsAppName) == "" {
-		wsAppName = nil
-	}
 	return &initOpts{
 		initVars:     vars,
 		ShouldDeploy: vars.shouldDeploy,
@@ -225,14 +221,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initJobOpts{
 					initJobVars: jobVars,
 
-					fs:           fs,
-					store:        configStore,
-					init:         wlInitializer,
-					sel:          sel,
-					prompt:       prompt,
-					mftReader:    ws,
-					dockerEngine: dockerengine.New(cmd),
-					wsAppName:    wsAppName,
+					fs:                fs,
+					store:             configStore,
+					init:              wlInitializer,
+					sel:               sel,
+					prompt:            prompt,
+					mftReader:         ws,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
 					},
@@ -248,15 +244,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
 
-					fs:           fs,
-					init:         wlInitializer,
-					sel:          sel,
-					store:        configStore,
-					topicSel:     snsSel,
-					mftReader:    ws,
-					prompt:       prompt,
-					dockerEngine: dockerengine.New(cmd),
-					wsAppName:    wsAppName,
+					fs:                fs,
+					init:              wlInitializer,
+					sel:               sel,
+					store:             configStore,
+					topicSel:          snsSel,
+					mftReader:         ws,
+					prompt:            prompt,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {

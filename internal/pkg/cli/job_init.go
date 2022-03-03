@@ -71,7 +71,9 @@ type initJobOpts struct {
 	manifestPath string
 	platform     *manifest.PlatformString
 
-	wsAppName *string // Cache variable for local app name. Empty if there's no app. Nil if pending creation.
+	// For workspace validation.
+	wsPendingCreation bool
+	wsAppName         string
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
@@ -115,19 +117,18 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
-		wsAppName: aws.String(tryReadingAppName()),
+		wsAppName: tryReadingAppName(),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
 	// If this app is pending creation, we'll skip validation.
-	if o.wsAppName != nil {
-		appName, err := validateInputApp(aws.StringValue(o.wsAppName), o.appName, o.store)
-		if err != nil {
+	if !o.wsPendingCreation {
+		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
-		o.appName = appName
+		o.appName = o.wsAppName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)

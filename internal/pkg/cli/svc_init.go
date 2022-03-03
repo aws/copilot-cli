@@ -125,9 +125,12 @@ type initSvcOpts struct {
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
 
+	// For workspace validation.
+	wsAppName         string
+	wsPendingCreation bool
+
 	// Cache variables
-	wsAppName *string // Cache variable for local app name. Empty if there's no app. Nil if pending creation.
-	df        dockerfileParser
+	df dockerfileParser
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -169,7 +172,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
-		wsAppName:    aws.String(tryReadingAppName()),
+		wsAppName:    tryReadingAppName(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -184,12 +187,11 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 // Validate returns an error for any invalid optional flags.
 func (o *initSvcOpts) Validate() error {
 	// If this app is pending creation, we'll skip validation.
-	if o.wsAppName != nil {
-		appName, err := validateInputApp(aws.StringValue(o.wsAppName), o.appName, o.store)
-		if err != nil {
+	if !o.wsPendingCreation {
+		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
-		o.appName = appName
+		o.appName = o.wsAppName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
@@ -559,21 +561,19 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	return nil
 }
 
-func validateInputApp(wsApp, inputApp string, store store) (string, error) {
+func validateInputApp(wsApp, inputApp string, store store) error {
 	if wsApp == "" {
 		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
-		return "", errNoAppInWorkspace
+		return errNoAppInWorkspace
 	}
-	var appName string
 	// This command must be run within the app's workspace.
 	if inputApp != "" && inputApp != wsApp {
-		return "", fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", inputApp, wsApp)
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", inputApp, wsApp)
 	}
-	appName = wsApp
-	if _, err := store.GetApplication(appName); err != nil {
-		return "", fmt.Errorf("get application %s configuration: %w", appName, err)
+	if _, err := store.GetApplication(wsApp); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", wsApp, err)
 	}
-	return appName, nil
+	return nil
 }
 
 // parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"

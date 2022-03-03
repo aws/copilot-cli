@@ -145,7 +145,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				},
 				store:     mockstore,
 				fs:        &afero.Afero{Fs: afero.NewMemMapFs()},
-				wsAppName: aws.String("phonetool"),
+				wsAppName: "phonetool",
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
