@@ -5,6 +5,8 @@ package manifest
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/regions"
 	"strings"
 	"time"
 
@@ -326,4 +328,8 @@ func (e *Alias) ToString() string {
 		return aws.StringValue(e.String)
 	}
 	return strings.Join(e.StringSlice, ",")
+}
+
+func (s *LoadBalancedWebService) IsServiceAvailableInRegion(region string) (bool, error) {
+	return regions.IsServiceAvailable(ecs.EndpointsID, region)
 }

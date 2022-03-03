@@ -175,6 +175,8 @@ func (o *deploySvcOpts) Execute() error {
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
+		targetEnv:    o.targetEnv,
+		svcType:      o.svcType,
 	})
 	if err != nil {
 		return err
@@ -317,6 +319,8 @@ type workloadManifestInput struct {
 	ws           wsWlDirReader
 	interpolator interpolator
 	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
+	targetEnv    *config.Environment
+	svcType      string
 }
 
 func workloadManifest(in *workloadManifestInput) (interface{}, error) {
@@ -336,6 +340,16 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
 	}
+	serviceInRegion, err := mft.IsServiceAvailableInRegion(in.targetEnv.Region)
+	if err != nil {
+		return nil, fmt.Errorf("%s available for region %s: %w ", in.svcType, in.targetEnv.Region, err)
+	}
+
+	if !serviceInRegion {
+		log.Warningf(`%s might not be available in region %s, proceed with caution
+`, in.svcType, in.targetEnv.Region)
+	}
+
 	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
 	}

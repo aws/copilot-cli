@@ -146,6 +146,8 @@ func (o *deployJobOpts) Execute() error {
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
+		targetEnv:    o.targetEnv,
+		svcType:      "Scheduled Jobs",
 	})
 	if err != nil {
 		return err

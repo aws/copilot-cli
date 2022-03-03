@@ -55,6 +55,7 @@ func WorkloadTypes() []string {
 type WorkloadManifest interface {
 	ApplyEnv(envName string) (WorkloadManifest, error)
 	Validate() error
+	IsServiceAvailableInRegion(region string) (bool, error)
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.

@@ -1253,3 +1253,41 @@ func TestSQSQueueOrBool_UnmarshalYAML(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkerSvc_IsServiceAvailableInRegion(t *testing.T) {
+	testCases := map[string]struct {
+		in      *WorkerService
+		region  string
+		want    bool
+		wantErr error
+	}{
+		"region exist": {
+			region:  "us-west-2",
+			want:    true,
+			wantErr: nil,
+		},
+		"region doesn't exist": {
+			region:  "us-west-3",
+			want:    false,
+			wantErr: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			manifest := &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{},
+			}
+
+			// WHEN
+			got, gotErr := manifest.IsServiceAvailableInRegion(tc.region)
+
+			// THEN
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}

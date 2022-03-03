@@ -5,6 +5,8 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/regions"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -158,4 +160,8 @@ func newDefaultBackendService() *BackendService {
 			},
 		},
 	}
+}
+
+func (s *BackendService) IsServiceAvailableInRegion(region string) (bool, error) {
+	return regions.IsServiceAvailable(ecs.EndpointsID, region)
 }

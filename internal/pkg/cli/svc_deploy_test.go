@@ -245,3 +245,7 @@ func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, e
 func (m *mockWorkloadMft) Validate() error {
 	return nil
 }
+
+func (m *mockWorkloadMft) IsServiceAvailableInRegion(region string) (bool, error) {
+	return false, nil
+}
