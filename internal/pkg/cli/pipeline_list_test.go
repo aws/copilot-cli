@@ -26,27 +26,47 @@ func TestPipelineList_Ask(t *testing.T) {
 		inputApp string
 
 		mockSelector func(m *mocks.MockconfigSelector)
+		mockStore    func(m *mocks.Mockstore)
 
 		wantedApp string
 		wantedErr error
 	}{
-		"with no flags set": {
+		"success with no flags set": {
 			mockSelector: func(m *mocks.MockconfigSelector) {
 				m.EXPECT().Application(pipelineListAppNamePrompt, pipelineListAppNameHelper).Return("my-app", nil)
 			},
+			mockStore: func(m *mocks.Mockstore) {},
 			wantedApp: "my-app",
+			wantedErr: nil,
 		},
-		"with pipeline flags set": {
+		"success with app flag set": {
 			inputApp:     "my-app",
-			wantedApp:    "my-app",
 			mockSelector: func(m *mocks.MockconfigSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(nil, nil)
+			},
+
+			wantedApp: "my-app",
+			wantedErr: nil,
 		},
 		"error if fail to select app": {
 			mockSelector: func(m *mocks.MockconfigSelector) {
 				m.EXPECT().Application(pipelineListAppNamePrompt, pipelineListAppNameHelper).Return("", errors.New("some error"))
 			},
+			mockStore: func(m *mocks.Mockstore) {},
+
 			wantedApp: "my-app",
 			wantedErr: fmt.Errorf("select application: some error"),
+		},
+		"error if passed-in app doesn't exist": {
+			inputApp:     "my-app",
+			mockSelector: func(m *mocks.MockconfigSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
+			},
+
+			wantedApp: "",
+			wantedErr: errors.New("validate application: some error"),
 		},
 	}
 
@@ -56,13 +76,16 @@ func TestPipelineList_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSelector := mocks.NewMockconfigSelector(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockSelector(mockSelector)
+			tc.mockStore(mockStore)
 
 			listPipelines := &listPipelineOpts{
 				listPipelineVars: listPipelineVars{
 					appName: tc.inputApp,
 				},
-				sel: mockSelector,
+				sel:   mockSelector,
+				store: mockStore,
 			}
 
 			err := listPipelines.Ask()
