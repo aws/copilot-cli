@@ -163,27 +163,6 @@ func (cs *changeSet) describe() (*ChangeSetDescription, error) {
 	}, nil
 }
 
-func (cs *changeSet) checkExecutionStatus() error {
-	descr, err := cs.describe()
-	if err != nil {
-		return err
-	}
-	if descr.ExecutionStatus != cloudformation.ExecutionStatusAvailable {
-		// Ignore execute request if the change set does not contain any modifications.
-		if descr.StatusReason == noChangesReason {
-			return nil
-		}
-		if descr.StatusReason == noUpdatesReason {
-			return nil
-		}
-		return &ErrChangeSetNotExecutable{
-			cs:    cs,
-			descr: descr,
-		}
-	}
-	return nil
-}
-
 // execute executes a created change set.
 func (cs *changeSet) execute() error {
 	descr, err := cs.describe()
