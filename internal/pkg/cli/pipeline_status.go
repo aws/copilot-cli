@@ -36,7 +36,7 @@ const (
 type pipelineStatusVars struct {
 	appName          string
 	shouldOutputJSON bool
-	pipelineName     string
+	name             string
 }
 
 type pipelineStatusOpts struct {
@@ -45,7 +45,7 @@ type pipelineStatusOpts struct {
 	w             io.Writer
 	ws            wsPipelineReader
 	store         store
-	pipelineSvc   pipelineGetter
+	codepipeline  pipelineGetter
 	describer     describer
 	sel           appSelector
 	prompt        prompter
@@ -70,11 +70,11 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		pipelineStatusVars: vars,
 		ws:                 ws,
 		store:              store,
-		pipelineSvc:        codepipeline.New(session),
+		codepipeline:       codepipeline.New(session),
 		sel:                selector.NewSelect(prompter, store),
 		prompt:             prompter,
 		initDescriber: func(o *pipelineStatusOpts) error {
-			d, err := describe.NewPipelineStatusDescriber(o.pipelineName)
+			d, err := describe.NewPipelineStatusDescriber(o.name)
 			if err != nil {
 				return fmt.Errorf("new pipeline status describer: %w", err)
 			}
@@ -84,27 +84,34 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 	}, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error if the optional flag values provided by the user are invalid.
 func (o *pipelineStatusOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
-	}
-	if o.pipelineName != "" {
-		if _, err := o.pipelineSvc.GetPipeline(o.pipelineName); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask prompts for fields that are required but not passed in.
+// Ask prompts fields that are required but not passed in, and validates those that are.
 func (o *pipelineStatusOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
-		return err
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return fmt.Errorf("validate app name: %w", err)
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
 	}
-	return o.askPipelineName()
+
+	if o.name != "" {
+		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askPipelineName(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Execute displays the status of the pipeline.
@@ -132,9 +139,6 @@ func (o *pipelineStatusOpts) Execute() error {
 }
 
 func (o *pipelineStatusOpts) askAppName() error {
-	if o.appName != "" {
-		return nil
-	}
 	name, err := o.sel.Application(pipelineStatusAppNamePrompt, pipelineStatusAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
@@ -144,15 +148,10 @@ func (o *pipelineStatusOpts) askAppName() error {
 }
 
 func (o *pipelineStatusOpts) askPipelineName() error {
-	// return if pipeline name is set by flag
-	if o.pipelineName != "" {
-		return nil
-	}
-
 	// return pipelineName from manifest if found
 	pipelineName, err := o.getPipelineNameFromManifest()
 	if err == nil {
-		o.pipelineName = pipelineName
+		o.name = pipelineName
 		return nil
 	}
 
@@ -173,7 +172,7 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 	if len(pipelineNames) == 1 {
 		pipelineName = pipelineNames[0]
 		log.Infof("Found pipeline: %s\n", color.HighlightUserInput(pipelineName))
-		o.pipelineName = pipelineName
+		o.name = pipelineName
 
 		return nil
 	}
@@ -188,12 +187,12 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 	if err != nil {
 		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
 	}
-	o.pipelineName = pipelineName
+	o.name = pipelineName
 	return nil
 }
 
 func (o *pipelineStatusOpts) retrieveAllPipelines() ([]string, error) {
-	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
+	pipelines, err := o.codepipeline.ListPipelineNamesByTags(map[string]string{
 		deploy.AppTagKey: o.appName,
 	})
 	if err != nil {
@@ -234,7 +233,7 @@ Shows status of the pipeline "pipeline-myapp-myrepo".
 			return run(opts)
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.pipelineName, nameFlag, nameFlagShort, "", pipelineFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 
