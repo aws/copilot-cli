@@ -548,6 +548,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			},
 		},
 		"success": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
