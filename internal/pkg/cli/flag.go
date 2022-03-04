@@ -203,9 +203,8 @@ const (
 	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
 	noRollbackFlagDescription = `Optional. 
 Disable automatic stack rollback in case 
-of a failure during the deployment. 
-We do NOT recommend using this flag if 
-you are deploying to a prod environment.`
+of a deployment failure. We do not recommend 
+using this flag for a production environment.`
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
