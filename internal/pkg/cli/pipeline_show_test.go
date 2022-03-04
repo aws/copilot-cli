@@ -23,14 +23,13 @@ type showPipelineMocks struct {
 	store       *mocks.Mockstore
 	ws          *mocks.MockwsPipelineReader
 	prompt      *mocks.Mockprompter
-	pipelineSvc *mocks.MockpipelineGetter
+	codepipeline *mocks.MockpipelineGetter
 	sel         *mocks.MockappSelector
 }
 
 func TestPipelineShow_Validate(t *testing.T) {
 	const (
 		mockAppName      = "dinder"
-		mockPipelineName = "pipeline-dinder-badgoose-repo"
 	)
 	mockError := errors.New("mock error")
 	testCases := map[string]struct {
@@ -38,43 +37,46 @@ func TestPipelineShow_Validate(t *testing.T) {
 		inPipelineName string
 		setupMocks     func(mocks showPipelineMocks)
 
+		expectedApp string
 		expectedErr error
 	}{
-		"with valid application name and pipeline name": {
+		"with valid application name via flag": {
 			inAppName:      mockAppName,
-			inPipelineName: mockPipelineName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "dinder",
 					}, nil),
-					mocks.pipelineSvc.EXPECT().GetPipeline(mockPipelineName).Return(nil, nil),
 				)
 			},
+			expectedApp: mockAppName,
 			expectedErr: nil,
 		},
 		"with invalid app name": {
 			inAppName:      mockAppName,
-			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(nil, mockError),
 				)
 			},
-			expectedErr: mockError,
+			expectedApp: "",
+			expectedErr: fmt.Errorf("validate application name: %w", mockError),
 		},
-		"with invalid pipeline name": {
-			inAppName:      mockAppName,
-			inPipelineName: "bad-pipeline",
+		"prompt if no app name": {
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
-						Name: "dinder",
-					}, nil),
-					mocks.pipelineSvc.EXPECT().GetPipeline("bad-pipeline").Return(nil, mockError),
-				)
+					mocks.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Return(mockAppName, nil))
+},
+expectedApp: mockAppName,
+expectedErr: nil,
+		},
+		"error if problem selecting app": {
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Return("", mockError))
 			},
-			expectedErr: mockError,
+			expectedApp: "",
+			expectedErr: fmt.Errorf("select application: %w", mockError),
 		},
 	}
 
@@ -85,11 +87,11 @@ func TestPipelineShow_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
-			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
+			mockSel := mocks.NewMockappSelector(ctrl)
 
 			mocks := showPipelineMocks{
 				store:       mockStoreReader,
-				pipelineSvc: mockPipelineGetter,
+				sel: mockSel,
 			}
 
 			tc.setupMocks(mocks)
@@ -97,10 +99,9 @@ func TestPipelineShow_Validate(t *testing.T) {
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
 					appName:      tc.inAppName,
-					pipelineName: tc.inPipelineName,
 				},
 				store:       mockStoreReader,
-				pipelineSvc: mockPipelineGetter,
+				sel: mockSel,
 			}
 
 			// WHEN
@@ -111,6 +112,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.expectedApp, opts.appName)
 			}
 		})
 	}
@@ -118,7 +120,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 
 func TestPipelineShow_Ask(t *testing.T) {
 	const (
-		mockAppName                = "dinder"
+		mockAppName = "dinder"
 		mockPipelineName           = "pipeline-dinder-badgoose-repo"
 		pipelineManifestLegacyPath = "copilot/pipeline.yml"
 	)
@@ -133,115 +135,93 @@ func TestPipelineShow_Ask(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inAppName      string
 		inPipelineName string
 		setupMocks     func(mocks showPipelineMocks)
 
-		expectedApp      string
 		expectedPipeline string
 		expectedErr      error
 	}{
 		// happy paths
-		"with application and pipeline flags": {
-			inAppName:      mockAppName,
+		"with pipeline flag": {
 			inPipelineName: mockPipelineName,
 
-			setupMocks: func(mocks showPipelineMocks) {},
+			setupMocks: func(mocks showPipelineMocks) {
+				mocks.codepipeline.EXPECT().GetPipeline(mockPipelineName).Return(nil, nil)
+			},
 
-			expectedApp:      mockAppName,
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
 
 		"reads pipeline name from manifest": {
-			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
 					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
 				)
 			},
-			expectedApp:      mockAppName,
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
 		"retrieves pipeline name from remote if no manifest found": {
-			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
 					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
+					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return(mockPipelineName, nil),
 				)
 			},
-			expectedApp:      mockAppName,
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
 		"skips selecting if only one pipeline found": {
-			inAppName:      mockAppName,
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
 					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{mockPipelineName}, nil),
+					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{mockPipelineName}, nil),
 				)
 			},
-			expectedApp:      mockAppName,
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
 		"does not error when no pipelines found at all": {
-			inAppName:      mockAppName,
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
 					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{}, nil),
+					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{}, nil),
 				)
 			},
 
-			expectedApp:      mockAppName,
 			expectedPipeline: "",
 			expectedErr:      nil,
-		},
-		"wraps error when no applications selected": {
-			inAppName: "",
-			setupMocks: func(mocks showPipelineMocks) {
-				gomock.InOrder(
-					mocks.sel.EXPECT().Application(pipelineShowAppNamePrompt, pipelineShowAppNameHelpPrompt).Return("", mockError),
-				)
-			},
-			expectedErr: fmt.Errorf("select application: %w", mockError),
 		},
 
 		// askPipeline errors
 		"wraps error when fails to retrieve pipelines": {
-			inAppName:      mockAppName,
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
 					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(nil, mockError),
+					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return(nil, mockError),
 				)
 			},
 			expectedErr: fmt.Errorf("list pipelines: %w", mockError),
 		},
 		"wraps error when no pipelines selected": {
-			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
 					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
+					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineShowPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return("", mockError),
 				)
 			},
-			expectedApp:      mockAppName,
 			expectedPipeline: mockPipelineName,
 			expectedErr:      fmt.Errorf("select pipeline for application %s: %w", mockAppName, mockError),
 		},
@@ -257,27 +237,24 @@ func TestPipelineShow_Ask(t *testing.T) {
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockPipelineSvc := mocks.NewMockpipelineGetter(ctrl)
-			mockSel := mocks.NewMockappSelector(ctrl)
 
 			mocks := showPipelineMocks{
 				store:       mockStoreReader,
 				ws:          mockWorkspace,
 				prompt:      mockPrompt,
-				pipelineSvc: mockPipelineSvc,
-				sel:         mockSel,
+				codepipeline: mockPipelineSvc,
 			}
 
 			tc.setupMocks(mocks)
 
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
-					appName:      tc.inAppName,
-					pipelineName: tc.inPipelineName,
+					appName:      mockAppName,
+					name: tc.inPipelineName,
 				},
 				store:       mockStoreReader,
 				ws:          mockWorkspace,
-				pipelineSvc: mockPipelineSvc,
-				sel:         mockSel,
+				codepipeline: mockPipelineSvc,
 				prompt:      mockPrompt,
 			}
 
@@ -289,8 +266,7 @@ func TestPipelineShow_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedApp, opts.appName, "expected application names to match")
-				require.Equal(t, tc.expectedPipeline, opts.pipelineName, "expected pipeline name to match")
+				require.Equal(t, tc.expectedPipeline, opts.name, "expected pipeline name to match")
 			}
 		})
 	}
@@ -361,7 +337,7 @@ func TestPipelineShow_Execute(t *testing.T) {
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
-					pipelineName:     tc.inPipelineName,
+					name:     tc.inPipelineName,
 				},
 				describer:     mockDescriber,
 				initDescriber: func(bool) error { return nil },

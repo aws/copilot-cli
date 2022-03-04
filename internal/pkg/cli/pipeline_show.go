@@ -34,9 +34,9 @@ const (
 
 type showPipelineVars struct {
 	appName               string
+	name          string
 	shouldOutputJSON      bool
 	shouldOutputResources bool
-	pipelineName          string
 }
 
 type showPipelineOpts struct {
@@ -46,7 +46,7 @@ type showPipelineOpts struct {
 	w             io.Writer
 	ws            wsPipelineReader
 	store         applicationStore
-	pipelineSvc   pipelineGetter
+	codepipeline   pipelineGetter
 	describer     describer
 	initDescriber func(bool) error
 	sel           appSelector
@@ -70,13 +70,13 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		showPipelineVars: vars,
 		ws:               ws,
 		store:            store,
-		pipelineSvc:      codepipeline.New(defaultSession),
+		codepipeline:      codepipeline.New(defaultSession),
 		sel:              selector.NewSelect(prompter, store),
 		prompt:           prompter,
 		w:                log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
-		describer, err := describe.NewPipelineDescriber(opts.pipelineName, enableResources)
+		describer, err := describe.NewPipelineDescriber(opts.name, enableResources)
 		if err != nil {
 			return fmt.Errorf("new pipeline describer: %w", err)
 		}
@@ -87,34 +87,35 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *showPipelineOpts) Validate() error {
 	if o.appName != "" {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return fmt.Errorf("validate application name: %w", err)
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
 			return err
 		}
 	}
-	if o.pipelineName != "" {
-		if _, err := o.pipelineSvc.GetPipeline(o.pipelineName); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-// Ask prompts for fields that are required but not passed in.
+// Ask prompts for fields that are required but not passed in, and validates those that are.
 func (o *showPipelineOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
-		return err
+	if o.name != "" {
+		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askPipelineName(); err != nil {
+			return err
+		}
 	}
-	return o.askPipelineName()
+	return nil
 }
 
 func (o *showPipelineOpts) askAppName() error {
-	if o.appName != "" {
-		return nil
-	}
 	name, err := o.sel.Application(pipelineShowAppNamePrompt, pipelineShowAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
@@ -124,15 +125,10 @@ func (o *showPipelineOpts) askAppName() error {
 }
 
 func (o *showPipelineOpts) askPipelineName() error {
-	// return if pipeline name is set by flag
-	if o.pipelineName != "" {
-		return nil
-	}
-
 	// return pipelineName from manifest if found
 	pipelineName, err := o.getPipelineNameFromManifest()
 	if err == nil {
-		o.pipelineName = pipelineName
+		o.name = pipelineName
 		return nil
 	}
 
@@ -154,7 +150,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	if len(pipelineNames) == 1 {
 		pipelineName = pipelineNames[0]
 		log.Infof("Found pipeline: %s.\n", color.HighlightUserInput(pipelineName))
-		o.pipelineName = pipelineName
+		o.name = pipelineName
 
 		return nil
 	}
@@ -169,13 +165,13 @@ func (o *showPipelineOpts) askPipelineName() error {
 	if err != nil {
 		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
 	}
-	o.pipelineName = pipelineName
+	o.name = pipelineName
 	return nil
 
 }
 
 func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
-	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
+	pipelines, err := o.codepipeline.ListPipelineNamesByTags(map[string]string{
 		deploy.AppTagKey: o.appName,
 	})
 	if err != nil {
@@ -199,7 +195,7 @@ func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
 
 // Execute shows details about the pipeline.
 func (o *showPipelineOpts) Execute() error {
-	if o.pipelineName == "" {
+	if o.name == "" {
 		return nil
 	}
 	err := o.initDescriber(o.shouldOutputResources)
@@ -209,7 +205,7 @@ func (o *showPipelineOpts) Execute() error {
 
 	pipeline, err := o.describer.Describe()
 	if err != nil {
-		return fmt.Errorf("describe pipeline %s: %w", o.pipelineName, err)
+		return fmt.Errorf("describe pipeline %s: %w", o.name, err)
 	}
 
 	if o.shouldOutputJSON {
@@ -243,7 +239,7 @@ func buildPipelineShowCmd() *cobra.Command {
 			return run(opts)
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.pipelineName, nameFlag, nameFlagShort, "", pipelineFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, pipelineResourcesFlagDescription)
