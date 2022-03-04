@@ -15,11 +15,12 @@ type Stack struct {
 }
 
 type stackConfig struct {
-	TemplateBody string
-	TemplateURL  string
-	Parameters   []*cloudformation.Parameter
-	Tags         []*cloudformation.Tag
-	RoleARN      *string
+	TemplateBody    string
+	TemplateURL     string
+	Parameters      []*cloudformation.Parameter
+	Tags            []*cloudformation.Tag
+	RoleARN         *string
+	DisableRollback bool
 }
 
 // StackOption allows you to initialize a Stack with additional properties.

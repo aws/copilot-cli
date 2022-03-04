@@ -163,8 +163,7 @@ func (cs *changeSet) describe() (*ChangeSetDescription, error) {
 	}, nil
 }
 
-// execute executes a created change set.
-func (cs *changeSet) execute() error {
+func (cs *changeSet) checkExecutionStatus() error {
 	descr, err := cs.describe()
 	if err != nil {
 		return err
@@ -182,9 +181,33 @@ func (cs *changeSet) execute() error {
 			descr: descr,
 		}
 	}
-	_, err = cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+	return nil
+}
+
+// execute executes a created change set.
+func (cs *changeSet) execute() error {
+	if err := cs.checkExecutionStatus(); err != nil {
+		return err
+	}
+	_, err := cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
 		ChangeSetName: aws.String(cs.name),
 		StackName:     aws.String(cs.stackName),
+	})
+	if err != nil {
+		return fmt.Errorf("execute %s: %w", cs, err)
+	}
+	return nil
+}
+
+// executeWithNoRollback executes a created change set without automatic stack rollback.
+func (cs *changeSet) executeWithNoRollback() error {
+	if err := cs.checkExecutionStatus(); err != nil {
+		return err
+	}
+	_, err := cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+		ChangeSetName:   aws.String(cs.name),
+		StackName:       aws.String(cs.stackName),
+		DisableRollback: aws.Bool(true),
 	})
 	if err != nil {
 		return fmt.Errorf("execute %s: %w", cs, err)
@@ -214,6 +237,9 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 			}
 		}
 		return fmt.Errorf("%w: %s", err, descr.StatusReason)
+	}
+	if conf.DisableRollback {
+		return cs.executeWithNoRollback()
 	}
 	return cs.execute()
 }
