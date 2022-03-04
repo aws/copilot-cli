@@ -162,7 +162,7 @@ func (o *deployPipelineOpts) Validate() error {
 	}
 	// The passed-in app name value must be the same as the workspace app name, as we need to be in the correct workspace to read the pipeline manifest.
 	if o.appName != "" && o.appName != o.wsAppName {
-			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
 	}
 	// Validate the app name.
 	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
@@ -174,16 +174,10 @@ func (o *deployPipelineOpts) Validate() error {
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *deployPipelineOpts) Ask() error {
 	if o.name != "" {
-		if err := o.validatePipelineName(); err != nil {
-			return err
-		}
-	} else {
-		if err := o.askPipelineName(); err != nil {
-			return err
-		}
+		return o.validatePipelineName()
 	}
 
-	return nil
+	return o.askPipelineName()
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.

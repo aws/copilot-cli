@@ -155,8 +155,8 @@ func (o *initPipelineOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	if o.appName != "" && o.appName != o.wsAppName {
-			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-		}
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+	}
 	// Validate the app name.
 	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
 		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
