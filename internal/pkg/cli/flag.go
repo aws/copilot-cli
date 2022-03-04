@@ -14,18 +14,19 @@ import (
 // Long flag names.
 const (
 	// Common flags.
-	nameFlag     = "name"
-	appFlag      = "app"
-	envFlag      = "env"
-	workloadFlag = "workload"
-	svcTypeFlag  = "svc-type"
-	jobTypeFlag  = "job-type"
-	typeFlag     = "type"
-	profileFlag  = "profile"
-	yesFlag      = "yes"
-	jsonFlag     = "json"
-	allFlag      = "all"
-	forceFlag    = "force"
+	nameFlag       = "name"
+	appFlag        = "app"
+	envFlag        = "env"
+	workloadFlag   = "workload"
+	svcTypeFlag    = "svc-type"
+	jobTypeFlag    = "job-type"
+	typeFlag       = "type"
+	profileFlag    = "profile"
+	yesFlag        = "yes"
+	jsonFlag       = "json"
+	allFlag        = "all"
+	forceFlag      = "force"
+	noRollbackFlag = "no-rollback"
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -188,18 +189,23 @@ Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
 )
 
 const (
-	appFlagDescription      = "Name of the application."
-	envFlagDescription      = "Name of the environment."
-	svcFlagDescription      = "Name of the service."
-	jobFlagDescription      = "Name of the job."
-	workloadFlagDescription = "Name of the service or job."
-	nameFlagDescription     = "Name of the service, job, or task group."
-	pipelineFlagDescription = "Name of the pipeline."
-	profileFlagDescription  = "Name of the profile."
-	yesFlagDescription      = "Skips confirmation prompt."
-	execYesFlagDescription  = "Optional. Whether to update the Session Manager Plugin."
-	jsonFlagDescription     = "Optional. Outputs in JSON format."
-	forceFlagDescription    = "Optional. Force a new service deployment using the existing image."
+	appFlagDescription        = "Name of the application."
+	envFlagDescription        = "Name of the environment."
+	svcFlagDescription        = "Name of the service."
+	jobFlagDescription        = "Name of the job."
+	workloadFlagDescription   = "Name of the service or job."
+	nameFlagDescription       = "Name of the service, job, or task group."
+	pipelineFlagDescription   = "Name of the pipeline."
+	profileFlagDescription    = "Name of the profile."
+	yesFlagDescription        = "Skips confirmation prompt."
+	execYesFlagDescription    = "Optional. Whether to update the Session Manager Plugin."
+	jsonFlagDescription       = "Optional. Outputs in JSON format."
+	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
+	noRollbackFlagDescription = `Optional. 
+Disable automatic stack rollback in case 
+of a failure during the deployment. 
+We do NOT recommend using this flag if 
+you are deploying to a prod environment.`
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.

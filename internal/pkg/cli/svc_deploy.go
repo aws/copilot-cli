@@ -29,12 +29,13 @@ import (
 )
 
 type deployWkldVars struct {
-	appName        string
-	name           string
-	envName        string
-	imageTag       string
-	resourceTags   map[string]string
-	forceNewUpdate bool
+	appName         string
+	name            string
+	envName         string
+	imageTag        string
+	resourceTags    map[string]string
+	forceNewUpdate  bool
+	disableRollback bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -200,7 +201,10 @@ func (o *deploySvcOpts) Execute() error {
 			RootUserARN: o.rootUserARN,
 			Tags:        tags.Merge(targetApp.Tags, o.resourceTags),
 		},
-		ForceNewUpdate: o.forceNewUpdate,
+		DeployOptions: deploy.DeployOptions{
+			ForceNewUpdate:  o.forceNewUpdate,
+			DisableRollback: o.disableRollback,
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
@@ -431,6 +435,7 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 
 	return cmd
 }

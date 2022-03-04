@@ -89,6 +89,13 @@ func WithRoleARN(roleARN string) StackOption {
 	}
 }
 
+// WithDisableRollback disables CloudFormation's automatic stack rollback upon failure for the stack.
+func WithDisableRollback() StackOption {
+	return func(s *Stack) {
+		s.DisableRollback = true
+	}
+}
+
 // StackEvent is an alias the SDK's StackEvent type.
 type StackEvent cloudformation.StackEvent
 
