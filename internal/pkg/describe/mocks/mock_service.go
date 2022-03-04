@@ -82,6 +82,21 @@ func (mr *MockConfigStoreSvcMockRecorder) ListEnvironments(appName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListEnvironments), appName)
 }
 
+// ListJobs mocks base method.
+func (m *MockConfigStoreSvc) ListJobs(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobs", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListJobs indicates an expected call of ListJobs.
+func (mr *MockConfigStoreSvcMockRecorder) ListJobs(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListJobs), appName)
+}
+
 // ListServices mocks base method.
 func (m *MockConfigStoreSvc) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
@@ -95,20 +110,6 @@ func (m *MockConfigStoreSvc) ListServices(appName string) ([]*config.Workload, e
 func (mr *MockConfigStoreSvcMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListServices), appName)
-}
-
-// ListJobs mocks base method.
-func (m *MockConfigStoreSvc) ListJobs(appName string) ([]*config.Workload, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListJobs", appName)
-	ret0, _ := ret[0].([]*config.Workload)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (mr *MockConfigStoreSvcMockRecorder) ListJobs(appName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListJobs), appName)
 }
 
 // MockDeployedEnvServicesLister is a mock of DeployedEnvServicesLister interface.
@@ -134,21 +135,6 @@ func (m *MockDeployedEnvServicesLister) EXPECT() *MockDeployedEnvServicesListerM
 	return m.recorder
 }
 
-// ListDeployedServices mocks base method.
-func (m *MockDeployedEnvServicesLister) ListDeployedServices(appName, envName string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDeployedServices indicates an expected call of ListDeployedServices.
-func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedServices), appName, envName)
-}
-
 // ListDeployedJobs mocks base method.
 func (m *MockDeployedEnvServicesLister) ListDeployedJobs(appName, envName string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -162,6 +148,21 @@ func (m *MockDeployedEnvServicesLister) ListDeployedJobs(appName, envName string
 func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedJobs(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedJobs), appName, envName)
+}
+
+// ListDeployedServices mocks base method.
+func (m *MockDeployedEnvServicesLister) ListDeployedServices(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedServices indicates an expected call of ListDeployedServices.
+func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedServices), appName, envName)
 }
 
 // ListEnvironmentsDeployedTo mocks base method.
