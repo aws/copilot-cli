@@ -614,7 +614,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 
 			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInput{
-				DeployOptions: DeployOptions{
+				Options: Options{
 					ForceNewUpdate:  tc.inForceDeploy,
 					DisableRollback: tc.inDisableRollback,
 				},

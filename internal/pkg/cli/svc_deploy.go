@@ -202,7 +202,7 @@ func (o *deploySvcOpts) Execute() error {
 			RootUserARN: o.rootUserARN,
 			Tags:        tags.Merge(targetApp.Tags, o.resourceTags),
 		},
-		DeployOptions: deploy.DeployOptions{
+		Options: deploy.Options{
 			ForceNewUpdate:  o.forceNewUpdate,
 			DisableRollback: o.disableRollback,
 		},

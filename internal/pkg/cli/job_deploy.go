@@ -167,7 +167,7 @@ func (o *deployJobOpts) Execute() error {
 			RootUserARN: o.rootUserARN,
 			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
 		},
-		DeployOptions: deploy.DeployOptions{
+		Options: deploy.Options{
 			ForceNewUpdate: o.forceNewUpdate,
 		},
 	}); err != nil {

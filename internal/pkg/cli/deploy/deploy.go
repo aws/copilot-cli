@@ -414,11 +414,11 @@ type StackRuntimeConfiguration struct {
 // DeployWorkloadInput is the input of DeployWorkload.
 type DeployWorkloadInput struct {
 	StackRuntimeConfiguration
-	DeployOptions
+	Options
 }
 
-// DeployOptions specifies options for the deployment.
-type DeployOptions struct {
+// Options specifies options for the deployment.
+type Options struct {
 	ForceNewUpdate  bool
 	DisableRollback bool
 }
@@ -472,7 +472,7 @@ func (d *lbSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommend
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.DeployOptions, *stackConfigOutput); err != nil {
+	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -494,7 +494,7 @@ func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionReco
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.DeployOptions, *stackConfigOutput); err != nil {
+	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -529,7 +529,7 @@ func (d *rdwsDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommende
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.DeployOptions, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
 		return nil, err
 	}
 	return &rdwsDeployOutput{
@@ -583,7 +583,7 @@ func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecom
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deploy(in.DeployOptions, stackConfigOutput.svcStackConfigurationOutput); err != nil {
+	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
 		return nil, err
 	}
 	return &workerSvcDeployOutput{
@@ -629,7 +629,7 @@ func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) 
 	}, nil
 }
 
-func (d *svcDeployer) deploy(deployOptions DeployOptions, stackConfigOutput svcStackConfigurationOutput) error {
+func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) error {
 	opts := []awscloudformation.StackOption{
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
 	}
