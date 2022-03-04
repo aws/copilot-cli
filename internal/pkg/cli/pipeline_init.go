@@ -151,15 +151,8 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
 	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
-	if o.wsAppName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.appName != "" && o.appName != o.wsAppName {
-		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-	}
-	// Validate the app name.
-	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
+	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+		return err
 	}
 	return nil
 }
