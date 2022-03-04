@@ -177,14 +177,15 @@ func (o *initPipelineOpts) Ask() error {
 	}
 
 	if len(o.environments) > 0 {
-		for _, env := range o.environments {
-			_, err := o.store.GetEnvironment(o.appName, env)
-			if err != nil {
-				return err
-			}
+		if err := o.validateEnvsAndGetConfigs(); err != nil {
+			return err
 		}
+
 	} else {
 		if err := o.askEnvs(); err != nil {
+			return err
+		}
+		if err := o.getEnvConfigs(); err != nil {
 			return err
 		}
 	}
@@ -233,6 +234,20 @@ func (o *initPipelineOpts) validateURL(url string) error {
 	return nil
 }
 
+// To avoid duplicating calls to GetEnvironment, validate and get config in the same step.
+func (o *initPipelineOpts) validateEnvsAndGetConfigs() error {
+	var envConfigs []*config.Environment
+	for _, env := range o.environments {
+		config, err := o.store.GetEnvironment(o.appName, env)
+		if err != nil {
+			return fmt.Errorf("validate environment %s: %w", env, err)
+		}
+		envConfigs = append(envConfigs, config)
+	}
+	o.envConfigs = envConfigs
+	return nil
+}
+
 func (o *initPipelineOpts) askEnvs() error {
 	envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.PromptConfig {
 		return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
@@ -240,18 +255,21 @@ func (o *initPipelineOpts) askEnvs() error {
 	if err != nil {
 		return fmt.Errorf("select environments: %w", err)
 	}
-	o.environments = envs
 
+	o.environments = envs
+	return nil
+}
+
+func (o *initPipelineOpts) getEnvConfigs() error {
 	var envConfigs []*config.Environment
 	for _, environment := range o.environments {
 		envConfig, err := o.store.GetEnvironment(o.appName, environment)
 		if err != nil {
-			return fmt.Errorf("get config of environment: %w", err)
+			return fmt.Errorf("get config of environment %s: %w", environment, err)
 		}
 		envConfigs = append(envConfigs, envConfig)
 	}
 	o.envConfigs = envConfigs
-
 	return nil
 }
 

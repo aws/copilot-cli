@@ -103,6 +103,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 	codecommitBadURL := "git-codecommitus-west-2amazonaws.com"
 	codecommitBadRegion := "codecommit::us-mess-2://repo-man"
 	codecommitRegion := "us-west-2"
+	mockEnvConfigs := []*config.Environment{
+		{
+			Name: "test",
+		},
+		{
+			Name: "prod",
+		},
+	}
 	testCases := map[string]struct {
 		inEnvironments      []string
 		inRepoURL           string
@@ -117,6 +125,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		buffer           bytes.Buffer
 
 		expectedEnvironments      []string
+		expectedEnvConfigs        []*config.Environment
 		expectedRepoURL           string
 		expectedRepoName          string
 		expectedRepoBranch        string
@@ -148,7 +157,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedError: errors.New("some error"),
+			expectedError: errors.New("validate environment test: some error"),
 		},
 		"success with GH repo with env and repoURL flags": {
 			inEnvironments: []string{"test", "prod"},
@@ -170,6 +179,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 
 			expectedEnvironments: []string{"test", "prod"},
+			expectedEnvConfigs: mockEnvConfigs,
 			expectedError:        nil,
 		},
 		"success with CC repo with env and repoURL flags": {
@@ -192,6 +202,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 
 			expectedEnvironments: []string{"test", "prod"},
+			expectedEnvConfigs: mockEnvConfigs,
 			expectedError:        nil,
 		},
 		"no flags, prompts for all input, success case for GitHub": {
@@ -227,6 +238,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubAccessToken: githubToken,
 			expectedRepoBranch:        "main",
 			expectedEnvironments:      []string{"test", "prod"},
+			expectedEnvConfigs: mockEnvConfigs,
 			expectedError:             nil,
 		},
 		"no flags, success case for CodeCommit": {
@@ -266,6 +278,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedRepoBranch:       "main",
 			expectedCodeCommitRegion: codecommitRegion,
 			expectedEnvironments:     []string{"test", "prod"},
+			expectedEnvConfigs: mockEnvConfigs,
 			expectedError:            nil,
 		},
 		"returns error if fail to list environments": {
@@ -304,6 +317,37 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedEnvironments: []string{"test", "prod"},
 			expectedError:        fmt.Errorf("select URL: some error"),
+		},
+		"returns error if fail to get env config": {
+			inRepoURL:      "",
+			inEnvironments: []string{},
+			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
+
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
+			},
+			mockSelector: func(m *mocks.MockpipelineEnvSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(nil, errors.New("some error"))
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+
+			expectedEnvironments: []string{"test"},
+			expectedEnvConfigs: []*config.Environment{
+				{
+					Name: "test",
+				},
+			},
+			expectedError:        fmt.Errorf("get config of environment prod: some error"),
 		},
 		"returns error if fail to parse GitHub URL": {
 			inEnvironments: []string{},
