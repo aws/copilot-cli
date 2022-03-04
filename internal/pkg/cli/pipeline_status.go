@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
@@ -148,17 +147,6 @@ func (o *pipelineStatusOpts) askAppName() error {
 }
 
 func (o *pipelineStatusOpts) askPipelineName() error {
-	// return pipelineName from manifest if found
-	pipelineName, err := o.getPipelineNameFromManifest()
-	if err == nil {
-		o.name = pipelineName
-		return nil
-	}
-
-	if errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-		log.Infof("No pipeline manifest in workspace for application %s, looking for deployed pipelines.\n", color.HighlightUserInput(o.appName))
-	}
-
 	// find deployed pipelines
 	pipelineNames, err := o.retrieveAllPipelines()
 	if err != nil {
@@ -170,7 +158,7 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 1 {
-		pipelineName = pipelineNames[0]
+		pipelineName := pipelineNames[0]
 		log.Infof("Found pipeline: %s\n", color.HighlightUserInput(pipelineName))
 		o.name = pipelineName
 
@@ -178,7 +166,7 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 	}
 
 	// select from list of deployed pipelines
-	pipelineName, err = o.prompt.SelectOne(
+	pipelineName, err := o.prompt.SelectOne(
 		fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(o.appName)),
 		pipelineStatusPipelineNameHelpPrompt,
 		pipelineNames,

@@ -7,13 +7,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +29,6 @@ func TestPipelineStatus_Ask(t *testing.T) {
 	const (
 		mockAppName                = "dinder"
 		mockPipelineName           = "pipeline-dinder-badgoose-repo"
-		pipelineManifestLegacyPath = "copilot/pipeline.yml"
 	)
 	mockError := errors.New("mock error")
 	testTags := map[string]string{
@@ -39,10 +36,6 @@ func TestPipelineStatus_Ask(t *testing.T) {
 	}
 	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
 	mockTestCommands := []string{"make test", "echo 'honk'"}
-	mockPipelineManifest := &manifest.Pipeline{
-		Name:    mockPipelineName,
-		Version: 1,
-	}
 
 	testCases := map[string]struct {
 		testAppName      string
@@ -120,8 +113,6 @@ func TestPipelineStatus_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{mockPipelineName}, nil),
 				)
 			},
@@ -129,31 +120,13 @@ func TestPipelineStatus_Ask(t *testing.T) {
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
-		"reads pipeline name and test commands from manifest": {
+		"retrieves pipeline name from remote": {
 			testAppName: mockAppName,
 			setupMocks: func(mocks pipelineStatusMocks) {
 				gomock.InOrder(
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
-				)
-			},
-			expectedApp:          mockAppName,
-			expectedPipeline:     mockPipelineName,
-			expectedTestCommands: mockTestCommands,
-			expectedErr:          nil,
-		},
-		"retrieves pipeline name from remote if no manifest found": {
-			testAppName: mockAppName,
-			setupMocks: func(mocks pipelineStatusMocks) {
-				gomock.InOrder(
-					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineStatusPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return(mockPipelineName, nil),
 				)
@@ -169,8 +142,6 @@ func TestPipelineStatus_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{}, nil),
 				)
 			},
@@ -186,8 +157,6 @@ func TestPipelineStatus_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return(nil, mockError),
 				)
 			},
@@ -201,8 +170,6 @@ func TestPipelineStatus_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					mocks.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, workspace.ErrNoPipelineInWorkspace),
 					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(mockAppName)), pipelineStatusPipelineNameHelpPrompt, mockPipelines, gomock.Any()).Return("", mockError),
 				)
