@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/spf13/cobra"
 
@@ -207,6 +208,19 @@ func (o *deploySvcOpts) Execute() error {
 		},
 	})
 	if err != nil {
+		if o.disableRollback {
+			stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+			svcLogsCmd := "copilot svc logs"
+			awsCLIRollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
+			svcDeployCmd := "copilot svc deploy"
+			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can:
+* Run %s to inspect the service log.
+* Visit AWS console to inspect the errors.
+After fixing the deployment, you can:
+1. Run %s to rollback the deployment.
+2. Run %s to make a new deployment.
+`, color.HighlightCode(svcLogsCmd), color.HighlightCode(awsCLIRollbackCmd), color.HighlightCode(svcDeployCmd))
+		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
 	}
 	o.deployRecs = deployRecs
