@@ -71,6 +71,10 @@ type initJobOpts struct {
 	manifestPath string
 	platform     *manifest.PlatformString
 
+	// For workspace validation.
+	wsPendingCreation bool
+	wsAppName         string
+
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
 }
@@ -113,37 +117,24 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
+		wsAppName: tryReadingAppName(),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.wkldType != "" {
-		if err := validateJobType(o.wkldType); err != nil {
+	// If this app is pending creation, we'll skip validation.
+	if !o.wsPendingCreation {
+		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
-	}
-	if o.name != "" {
-		if err := validateJobName(o.name); err != nil {
-			return err
-		}
-		if err := o.validateDuplicateJob(); err != nil {
-			return err
-		}
+		o.appName = o.wsAppName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
 	}
 	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
-			return err
-		}
-	}
-	if o.schedule != "" {
-		if err := validateSchedule(o.schedule); err != nil {
 			return err
 		}
 	}
@@ -160,7 +151,24 @@ func (o *initJobOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initJobOpts) Ask() error {
-	if err := o.askJobName(); err != nil {
+	if o.wkldType != "" {
+		if err := validateJobType(o.wkldType); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askJobType(); err != nil {
+			return err
+		}
+	}
+	if o.name == "" {
+		if err := o.askJobName(); err != nil {
+			return err
+		}
+	}
+	if err := validateJobName(o.name); err != nil {
+		return err
+	}
+	if err := o.validateDuplicateJob(); err != nil {
 		return err
 	}
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
@@ -169,7 +177,9 @@ func (o *initJobOpts) Ask() error {
 		if err != nil {
 			return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
 		}
-		o.wkldType = jobType
+		if o.wkldType != jobType {
+			return fmt.Errorf("manifest file for job %s exists with a different type %s", o.name, jobType)
+		}
 		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
 		return nil
 	}
@@ -180,9 +190,6 @@ func (o *initJobOpts) Ask() error {
 	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
 		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
-	if err := o.askJobType(); err != nil {
-		return err
-	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
 		return err
@@ -192,7 +199,12 @@ func (o *initJobOpts) Ask() error {
 			return err
 		}
 	}
-	if err := o.askSchedule(); err != nil {
+	if o.schedule == "" {
+		if err := o.askSchedule(); err != nil {
+			return err
+		}
+	}
+	if err := validateSchedule(o.schedule); err != nil {
 		return err
 	}
 	return nil
@@ -300,7 +312,7 @@ func (o *initJobOpts) askJobName() error {
 		return fmt.Errorf("get job name: %w", err)
 	}
 	o.name = name
-	return o.validateDuplicateJob()
+	return nil
 }
 
 func (o *initJobOpts) askImage() error {
@@ -354,9 +366,6 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 }
 
 func (o *initJobOpts) askSchedule() error {
-	if o.schedule != "" {
-		return nil
-	}
 	schedule, err := o.sel.Schedule(
 		jobInitSchedulePrompt,
 		jobInitScheduleHelp,
