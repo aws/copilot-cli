@@ -256,11 +256,10 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 	mockError := errors.New("some error")
 	const (
-		mockAppName   = "mockApp"
-		mockEnvName   = "mockEnv"
-		mockName      = "mockWkld"
-		mockAddonsURL = "mockAddonsURL"
-		mockS3Bucket  = "mockBucket"
+		mockAppName  = "mockApp"
+		mockEnvName  = "mockEnv"
+		mockName     = "mockWkld"
+		mockS3Bucket = "mockBucket"
 	)
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
@@ -269,11 +268,12 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 	mockBeforeTime := time.Unix(1494505743, 0)
 	mockAfterTime := time.Unix(1494505756, 0)
 	tests := map[string]struct {
-		inAliases     manifest.Alias
-		inNLB         manifest.NetworkLoadBalancerConfiguration
-		inApp         *config.Application
-		inEnvironment *config.Environment
-		inForceDeploy bool
+		inAliases         manifest.Alias
+		inNLB             manifest.NetworkLoadBalancerConfiguration
+		inApp             *config.Application
+		inEnvironment     *config.Environment
+		inForceDeploy     bool
+		inDisableRollback bool
 
 		mock func(m *deployMocks)
 
@@ -614,7 +614,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 
 			_, gotErr := deployer.DeployWorkload(&DeployWorkloadInput{
-				ForceNewUpdate: tc.inForceDeploy,
+				DeployOptions: DeployOptions{
+					ForceNewUpdate:  tc.inForceDeploy,
+					DisableRollback: tc.inDisableRollback,
+				},
 			})
 
 			if tc.wantErr != nil {
