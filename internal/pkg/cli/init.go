@@ -221,13 +221,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initJobOpts{
 					initJobVars: jobVars,
 
-					fs:           fs,
-					store:        configStore,
-					init:         wlInitializer,
-					sel:          sel,
-					prompt:       prompt,
-					mftReader:    ws,
-					dockerEngine: dockerengine.New(cmd),
+					fs:                fs,
+					store:             configStore,
+					init:              wlInitializer,
+					sel:               sel,
+					prompt:            prompt,
+					mftReader:         ws,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
 					},
@@ -243,14 +244,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
 
-					fs:           fs,
-					init:         wlInitializer,
-					sel:          sel,
-					store:        configStore,
-					topicSel:     snsSel,
-					mftReader:    ws,
-					prompt:       prompt,
-					dockerEngine: dockerengine.New(cmd),
+					fs:                fs,
+					init:              wlInitializer,
+					sel:               sel,
+					store:             configStore,
+					topicSel:          snsSel,
+					mftReader:         ws,
+					prompt:            prompt,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {

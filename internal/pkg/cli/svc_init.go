@@ -125,6 +125,10 @@ type initSvcOpts struct {
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
 
+	// For workspace validation.
+	wsAppName         string
+	wsPendingCreation bool
+
 	// Cache variables
 	df dockerfileParser
 
@@ -158,17 +162,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
-		fs:           fs,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		init:         initSvc,
 		prompt:       prompter,
 		sel:          sel,
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
+		wsAppName:    tryReadingAppName(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -180,23 +184,14 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *initSvcOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.wkldType != "" {
-		if err := validateSvcType(o.wkldType); err != nil {
+	// If this app is pending creation, we'll skip validation.
+	if !o.wsPendingCreation {
+		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
-	}
-	if o.name != "" {
-		if err := validateSvcName(o.name, o.wkldType); err != nil {
-			return err
-		}
-		if err := o.validateDuplicateSvc(); err != nil {
-			return err
-		}
+		o.appName = o.wsAppName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
@@ -222,9 +217,26 @@ func (o *initSvcOpts) Validate() error {
 	return nil
 }
 
-// Ask prompts for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *initSvcOpts) Ask() error {
-	if err := o.askSvcName(); err != nil {
+	if o.wkldType != "" {
+		if err := validateSvcType(o.wkldType); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askSvcType(); err != nil {
+			return err
+		}
+	}
+	if o.name == "" {
+		if err := o.askSvcName(); err != nil {
+			return err
+		}
+	}
+	if err := validateSvcName(o.name, o.wkldType); err != nil {
+		return err
+	}
+	if err := o.validateDuplicateSvc(); err != nil {
 		return err
 	}
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
@@ -233,7 +245,9 @@ func (o *initSvcOpts) Ask() error {
 		if err != nil {
 			return fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
 		}
-		o.wkldType = svcType
+		if o.wkldType != svcType {
+			return fmt.Errorf("manifest file for service %s exists with a different type %s", o.name, svcType)
+		}
 		log.Infof("Manifest file for service %s already exists. Skipping configuration.\n", o.name)
 		return nil
 	}
@@ -243,9 +257,6 @@ func (o *initSvcOpts) Ask() error {
 	)
 	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
 		return fmt.Errorf("read manifest file for service %s: %w", o.name, err)
-	}
-	if err := o.askSvcType(); err != nil {
-		return err
 	}
 	err = o.askDockerfile()
 	if err != nil {
@@ -355,9 +366,6 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askSvcName() error {
-	if o.name != "" {
-		return nil
-	}
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "service"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
@@ -369,7 +377,7 @@ func (o *initSvcOpts) askSvcName() error {
 		return fmt.Errorf("get service name: %w", err)
 	}
 	o.name = name
-	return o.validateDuplicateSvc()
+	return nil
 }
 
 func (o *initSvcOpts) askImage() error {
@@ -553,6 +561,21 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	return nil
 }
 
+func validateInputApp(wsApp, inputApp string, store store) error {
+	if wsApp == "" {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return errNoAppInWorkspace
+	}
+	// This command must be run within the app's workspace.
+	if inputApp != "" && inputApp != wsApp {
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", inputApp, wsApp)
+	}
+	if _, err := store.GetApplication(wsApp); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", wsApp, err)
+	}
+	return nil
+}
+
 // parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"
 func parseSerializedSubscription(input string) (manifest.TopicSubscription, error) {
 	attrs := regexpMatchSubscription.FindStringSubmatch(input)
@@ -628,7 +651,7 @@ This command is also run as part of "copilot init".`,
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, typeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)

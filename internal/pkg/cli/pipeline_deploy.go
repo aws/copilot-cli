@@ -68,13 +68,14 @@ type deployPipelineOpts struct {
 	prog             progress
 	prompt           prompter
 	region           string
-	envStore         environmentStore
+	store            appEnvStore
 	ws               wsPipelineReader
 	codestar         codestar
 	newSvcListCmd    func(io.Writer) cmd
 	newJobListCmd    func(io.Writer) cmd
 
 	// cached variables
+	wsAppName                    string
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
 	pipelineMft                  *manifest.Pipeline
@@ -100,13 +101,18 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
+	wsAppName := tryReadingAppName()
+	if vars.appName == "" {
+		vars.appName = wsAppName
+	}
+
 	return &deployPipelineOpts{
 		app:                app,
 		ws:                 ws,
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
 		deployPipelineVars: vars,
-		envStore:           store,
+		store:              store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
 		sel:                selector.NewWsPipelineSelect(prompter, ws),
@@ -143,24 +149,41 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
+		wsAppName: wsAppName,
 		svcBuffer: &bytes.Buffer{},
 		jobBuffer: &bytes.Buffer{},
 	}, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
-	if o.name != "" {
-		if err := o.validatePipelineName(); err != nil {
-			return err
-		}
+	if o.wsAppName == "" {
+		return errNoAppInWorkspace
+	}
+	// The passed-in app name value must be the same as the workspace app name, as we need to be in the correct workspace to read the pipeline manifest.
+	if o.appName != "" && o.appName != o.wsAppName {
+			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+	}
+	// Validate the app name.
+	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
 	}
 	return nil
 }
 
-// Ask prompts the user for any required fields that are not provided.
+// Ask prompts the user for any unprovided required fields and validates them.
 func (o *deployPipelineOpts) Ask() error {
-	return o.askPipelineName()
+	if o.name != "" {
+		if err := o.validatePipelineName(); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askPipelineName(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
@@ -278,7 +301,7 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 		return nil, err
 	}
 	for _, stage := range manifestStages {
-		env, err := o.envStore.GetEnvironment(o.appName, stage.Name)
+		env, err := o.store.GetEnvironment(o.appName, stage.Name)
 		if err != nil {
 			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.appName, err)
 		}
@@ -447,7 +470,7 @@ func buildPipelineDeployCmd() *cobra.Command {
 			return run(opts)
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
