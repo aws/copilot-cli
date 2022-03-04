@@ -186,10 +186,24 @@ func (cs *changeSet) checkExecutionStatus() error {
 
 // execute executes a created change set.
 func (cs *changeSet) execute() error {
-	if err := cs.checkExecutionStatus(); err != nil {
+	descr, err := cs.describe()
+	if err != nil {
 		return err
 	}
-	_, err := cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+	if descr.ExecutionStatus != cloudformation.ExecutionStatusAvailable {
+		// Ignore execute request if the change set does not contain any modifications.
+		if descr.StatusReason == noChangesReason {
+			return nil
+		}
+		if descr.StatusReason == noUpdatesReason {
+			return nil
+		}
+		return &ErrChangeSetNotExecutable{
+			cs:    cs,
+			descr: descr,
+		}
+	}
+	_, err = cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
 		ChangeSetName: aws.String(cs.name),
 		StackName:     aws.String(cs.stackName),
 	})
@@ -201,10 +215,24 @@ func (cs *changeSet) execute() error {
 
 // executeWithNoRollback executes a created change set without automatic stack rollback.
 func (cs *changeSet) executeWithNoRollback() error {
-	if err := cs.checkExecutionStatus(); err != nil {
+	descr, err := cs.describe()
+	if err != nil {
 		return err
 	}
-	_, err := cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+	if descr.ExecutionStatus != cloudformation.ExecutionStatusAvailable {
+		// Ignore execute request if the change set does not contain any modifications.
+		if descr.StatusReason == noChangesReason {
+			return nil
+		}
+		if descr.StatusReason == noUpdatesReason {
+			return nil
+		}
+		return &ErrChangeSetNotExecutable{
+			cs:    cs,
+			descr: descr,
+		}
+	}
+	_, err = cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
 		ChangeSetName:   aws.String(cs.name),
 		StackName:       aws.String(cs.stackName),
 		DisableRollback: aws.Bool(true),

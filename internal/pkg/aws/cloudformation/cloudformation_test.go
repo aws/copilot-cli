@@ -32,10 +32,12 @@ var (
 
 func TestCloudFormation_Create(t *testing.T) {
 	testCases := map[string]struct {
+		inStack    *Stack
 		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"fail if checking the stack description fails": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{
@@ -46,6 +48,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			wantedErr: fmt.Errorf("describe stack %s: %w", mockStack.Name, errors.New("some unexpected error")),
 		},
 		"fail if a stack exists that's already in progress": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -62,6 +65,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			},
 		},
 		"fail if a successfully created stack already exists": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -81,6 +85,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			},
 		},
 		"creates the stack if it doesn't exist": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
@@ -88,7 +93,57 @@ func TestCloudFormation_Create(t *testing.T) {
 				return m
 			},
 		},
+		"creates the stack with automatic stack rollback disabled": {
+			inStack: NewStack("id", "template", WithDisableRollback()),
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
+				m.EXPECT().CreateChangeSet(&cloudformation.CreateChangeSetInput{
+					ChangeSetName:       aws.String(mockChangeSetName),
+					StackName:           aws.String(mockStack.Name),
+					ChangeSetType:       aws.String(cloudformation.ChangeSetTypeCreate),
+					TemplateBody:        aws.String(mockStack.TemplateBody),
+					Parameters:          nil,
+					Tags:                nil,
+					RoleARN:             nil,
+					IncludeNestedStacks: aws.Bool(true),
+					Capabilities: aws.StringSlice([]string{
+						cloudformation.CapabilityCapabilityIam,
+						cloudformation.CapabilityCapabilityNamedIam,
+						cloudformation.CapabilityCapabilityAutoExpand,
+					}),
+				}).Return(&cloudformation.CreateChangeSetOutput{
+					Id:      aws.String(mockChangeSetID),
+					StackId: aws.String(mockStack.Name),
+				}, nil)
+				m.EXPECT().WaitUntilChangeSetCreateCompleteWithContext(gomock.Any(), &cloudformation.DescribeChangeSetInput{
+					ChangeSetName: aws.String(mockChangeSetID),
+				}, gomock.Any())
+				m.EXPECT().DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
+					ChangeSetName: aws.String(mockChangeSetID),
+					StackName:     aws.String(mockStack.Name),
+				}).Return(&cloudformation.DescribeChangeSetOutput{
+					Changes: []*cloudformation.Change{
+						{
+							ResourceChange: &cloudformation.ResourceChange{
+								ResourceType: aws.String("ecs service"),
+							},
+							Type: aws.String(cloudformation.ChangeTypeResource),
+						},
+					},
+					ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+					StatusReason:    aws.String("some reason"),
+				}, nil)
+				m.EXPECT().ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+					ChangeSetName:   aws.String(mockChangeSetID),
+					StackName:       aws.String(mockStack.Name),
+					DisableRollback: aws.Bool(true),
+				})
+				return m
+			},
+		},
 		"creates the stack with templateURL": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
@@ -97,6 +152,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			},
 		},
 		"creates the stack after cleaning the previously failed execution": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -132,7 +188,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			}
 
 			// WHEN
-			id, err := c.Create(mockStack)
+			id, err := c.Create(tc.inStack)
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -259,10 +315,12 @@ func TestCloudFormation_Update(t *testing.T) {
 		mockChangeSetName = "copilot-31323334-3536-4738-b930-313233333435"
 	)
 	testCases := map[string]struct {
+		inStack    *Stack
 		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"fail if the stack is already in progress": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -275,6 +333,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			},
 		},
 		"error if fail to create the changeset because of random issue": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -291,6 +350,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			wantedErr: fmt.Errorf("create change set copilot-31323334-3536-4738-b930-313233333435 for stack id: some error: some other reason"),
 		},
 		"error if fail to wait until the changeset creation complete": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -311,6 +371,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			wantedErr: fmt.Errorf("wait for creation of change set copilot-31323334-3536-4738-b930-313233333435 for stack id: some error: some reason"),
 		},
 		"error if fail to describe change set after creation failed": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -331,6 +392,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			wantedErr: fmt.Errorf("check if changeset is empty: create change set copilot-31323334-3536-4738-b930-313233333435 for stack id: some error: describe change set copilot-31323334-3536-4738-b930-313233333435 for stack id: some error"),
 		},
 		"delete change set and throw ErrChangeSetEmpty if failed to create the change set because it is empty": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -351,6 +413,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			wantedErr: fmt.Errorf("change set with name copilot-31323334-3536-4738-b930-313233333435 for stack id has no changes"),
 		},
 		"error if creation succeed but failed to describe change set": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -369,6 +432,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			wantedErr: fmt.Errorf("describe change set copilot-31323334-3536-4738-b930-313233333435 for stack id: some error"),
 		},
 		"ignore execute request if the change set does not contain any modifications": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -402,6 +466,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			},
 		},
 		"error if change set is not executable": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -423,6 +488,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			wantedErr: fmt.Errorf("execute change set copilot-31323334-3536-4738-b930-313233333435 for stack id because status is UNAVAILABLE with reason some other reason"),
 		},
 		"error if fail to execute change set": {
+			inStack: mockStack,
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
@@ -442,6 +508,44 @@ func TestCloudFormation_Update(t *testing.T) {
 				return m
 			},
 			wantedErr: fmt.Errorf("execute change set copilot-31323334-3536-4738-b930-313233333435 for stack id: some error"),
+		},
+		"updates the stack with automatic stack rollback disabled": {
+			inStack: NewStack("id", "template", WithDisableRollback()),
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{{StackStatus: aws.String(cloudformation.StackStatusUpdateComplete)}},
+				}, nil)
+				m.EXPECT().CreateChangeSet(&cloudformation.CreateChangeSetInput{
+					ChangeSetName:       aws.String(mockChangeSetName),
+					StackName:           aws.String(mockStackName),
+					ChangeSetType:       aws.String("UPDATE"),
+					IncludeNestedStacks: aws.Bool(true),
+					Capabilities: aws.StringSlice([]string{
+						cloudformation.CapabilityCapabilityIam,
+						cloudformation.CapabilityCapabilityNamedIam,
+						cloudformation.CapabilityCapabilityAutoExpand,
+					}),
+					TemplateBody: aws.String("template"),
+				}).Return(&cloudformation.CreateChangeSetOutput{
+					Id: aws.String(mockChangeSetName),
+				}, nil)
+				m.EXPECT().WaitUntilChangeSetCreateCompleteWithContext(gomock.Any(), &cloudformation.DescribeChangeSetInput{
+					ChangeSetName: aws.String(mockChangeSetName),
+				}, gomock.Any()).Return(nil)
+				m.EXPECT().DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
+					ChangeSetName: aws.String(mockChangeSetName),
+					StackName:     aws.String(mockStackName)}).
+					Return(&cloudformation.DescribeChangeSetOutput{
+						ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+					}, nil)
+				m.EXPECT().ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+					ChangeSetName:   aws.String(mockChangeSetName),
+					StackName:       aws.String(mockStackName),
+					DisableRollback: aws.Bool(true),
+				}).Return(&cloudformation.ExecuteChangeSetOutput{}, nil)
+				return m
+			},
 		},
 		"success": {
 			createMock: func(ctrl *gomock.Controller) client {
@@ -495,7 +599,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			}
 
 			// WHEN
-			id, err := c.Update(mockStack)
+			id, err := c.Update(tc.inStack)
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -1080,6 +1184,7 @@ func TestCloudFormation_ErrorEvents(t *testing.T) {
 		})
 	}
 }
+
 func TestCloudFormation_Events(t *testing.T) {
 	testCases := map[string]struct {
 		createMock   func(ctrl *gomock.Controller) client
