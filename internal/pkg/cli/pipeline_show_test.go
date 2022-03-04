@@ -20,16 +20,16 @@ import (
 )
 
 type showPipelineMocks struct {
-	store       *mocks.Mockstore
-	ws          *mocks.MockwsPipelineReader
-	prompt      *mocks.Mockprompter
+	store        *mocks.Mockstore
+	ws           *mocks.MockwsPipelineReader
+	prompt       *mocks.Mockprompter
 	codepipeline *mocks.MockpipelineGetter
-	sel         *mocks.MockappSelector
+	sel          *mocks.MockappSelector
 }
 
 func TestPipelineShow_Validate(t *testing.T) {
 	const (
-		mockAppName      = "dinder"
+		mockAppName = "dinder"
 	)
 	mockError := errors.New("mock error")
 	testCases := map[string]struct {
@@ -41,7 +41,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 		expectedErr error
 	}{
 		"with valid application name via flag": {
-			inAppName:      mockAppName,
+			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
@@ -53,7 +53,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			expectedErr: nil,
 		},
 		"with invalid app name": {
-			inAppName:      mockAppName,
+			inAppName: mockAppName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(nil, mockError),
@@ -66,9 +66,9 @@ func TestPipelineShow_Validate(t *testing.T) {
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Return(mockAppName, nil))
-},
-expectedApp: mockAppName,
-expectedErr: nil,
+			},
+			expectedApp: mockAppName,
+			expectedErr: nil,
 		},
 		"error if problem selecting app": {
 			setupMocks: func(mocks showPipelineMocks) {
@@ -90,18 +90,18 @@ expectedErr: nil,
 			mockSel := mocks.NewMockappSelector(ctrl)
 
 			mocks := showPipelineMocks{
-				store:       mockStoreReader,
-				sel: mockSel,
+				store: mockStoreReader,
+				sel:   mockSel,
 			}
 
 			tc.setupMocks(mocks)
 
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
-					appName:      tc.inAppName,
+					appName: tc.inAppName,
 				},
-				store:       mockStoreReader,
-				sel: mockSel,
+				store: mockStoreReader,
+				sel:   mockSel,
 			}
 
 			// WHEN
@@ -120,7 +120,7 @@ expectedErr: nil,
 
 func TestPipelineShow_Ask(t *testing.T) {
 	const (
-		mockAppName = "dinder"
+		mockAppName                = "dinder"
 		mockPipelineName           = "pipeline-dinder-badgoose-repo"
 		pipelineManifestLegacyPath = "copilot/pipeline.yml"
 	)
@@ -239,9 +239,9 @@ func TestPipelineShow_Ask(t *testing.T) {
 			mockPipelineSvc := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := showPipelineMocks{
-				store:       mockStoreReader,
-				ws:          mockWorkspace,
-				prompt:      mockPrompt,
+				store:        mockStoreReader,
+				ws:           mockWorkspace,
+				prompt:       mockPrompt,
 				codepipeline: mockPipelineSvc,
 			}
 
@@ -249,13 +249,13 @@ func TestPipelineShow_Ask(t *testing.T) {
 
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
-					appName:      mockAppName,
-					name: tc.inPipelineName,
+					appName: mockAppName,
+					name:    tc.inPipelineName,
 				},
-				store:       mockStoreReader,
-				ws:          mockWorkspace,
+				store:        mockStoreReader,
+				ws:           mockWorkspace,
 				codepipeline: mockPipelineSvc,
-				prompt:      mockPrompt,
+				prompt:       mockPrompt,
 			}
 
 			// WHEN
@@ -337,7 +337,7 @@ func TestPipelineShow_Execute(t *testing.T) {
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
-					name:     tc.inPipelineName,
+					name:             tc.inPipelineName,
 				},
 				describer:     mockDescriber,
 				initDescriber: func(bool) error { return nil },

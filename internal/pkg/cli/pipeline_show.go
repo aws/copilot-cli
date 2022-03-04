@@ -34,7 +34,7 @@ const (
 
 type showPipelineVars struct {
 	appName               string
-	name          string
+	name                  string
 	shouldOutputJSON      bool
 	shouldOutputResources bool
 }
@@ -46,7 +46,7 @@ type showPipelineOpts struct {
 	w             io.Writer
 	ws            wsPipelineReader
 	store         applicationStore
-	codepipeline   pipelineGetter
+	codepipeline  pipelineGetter
 	describer     describer
 	initDescriber func(bool) error
 	sel           appSelector
@@ -70,7 +70,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		showPipelineVars: vars,
 		ws:               ws,
 		store:            store,
-		codepipeline:      codepipeline.New(defaultSession),
+		codepipeline:     codepipeline.New(defaultSession),
 		sel:              selector.NewSelect(prompter, store),
 		prompt:           prompter,
 		w:                log.OutputWriter,
