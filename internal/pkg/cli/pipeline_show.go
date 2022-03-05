@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
@@ -93,10 +92,6 @@ func (o *showPipelineOpts) Validate() error {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return fmt.Errorf("validate application name: %w", err)
 		}
-	} else {
-		if err := o.askAppName(); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -108,6 +103,12 @@ func (o *showPipelineOpts) Ask() error {
 			return err
 		}
 	} else {
+		// Validate presence of appName in order to fetch pipelines.
+		if o.appName == "" {
+			if err := o.askAppName(); err != nil {
+				return err
+			}
+		}
 		if err := o.askPipelineName(); err != nil {
 			return err
 		}
@@ -125,17 +126,6 @@ func (o *showPipelineOpts) askAppName() error {
 }
 
 func (o *showPipelineOpts) askPipelineName() error {
-	// return pipelineName from manifest if found
-	pipelineName, err := o.getPipelineNameFromManifest()
-	if err == nil {
-		o.name = pipelineName
-		return nil
-	}
-
-	if errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-		log.Infof("No pipeline manifest in workspace for application %s; looking for deployed pipelines.\n", color.HighlightUserInput(o.appName))
-	}
-
 	// find deployed pipelines
 	pipelineNames, err := o.retrieveAllPipelines()
 	if err != nil {
@@ -143,12 +133,12 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
+		log.Infof("No deployed pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
 		return nil
 	}
 
 	if len(pipelineNames) == 1 {
-		pipelineName = pipelineNames[0]
+		pipelineName := pipelineNames[0]
 		log.Infof("Found pipeline: %s.\n", color.HighlightUserInput(pipelineName))
 		o.name = pipelineName
 
@@ -156,7 +146,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	// select from list of deployed pipelines
-	pipelineName, err = o.prompt.SelectOne(
+	pipelineName, err := o.prompt.SelectOne(
 		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.appName)),
 		pipelineShowPipelineNameHelpPrompt,
 		pipelineNames,
