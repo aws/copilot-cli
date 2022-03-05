@@ -99,11 +99,12 @@ func (o *showPipelineOpts) Validate() error {
 // Ask prompts for fields that are required but not passed in, and validates those that are.
 func (o *showPipelineOpts) Ask() error {
 	if o.name != "" {
+		// Validate the passed-in pipeline name.
 		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
-			return err
+			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
 		}
 	} else {
-		// Validate presence of appName in order to fetch pipelines.
+		// Check presence of appName in order to fetch pipelines.
 		if o.appName == "" {
 			if err := o.askAppName(); err != nil {
 				return err
@@ -113,6 +114,31 @@ func (o *showPipelineOpts) Ask() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// Execute shows details about the pipeline.
+func (o *showPipelineOpts) Execute() error {
+	err := o.initDescriber(o.shouldOutputResources)
+	if err != nil {
+		return err
+	}
+
+	pipeline, err := o.describer.Describe()
+	if err != nil {
+		return fmt.Errorf("describe pipeline %s: %w", o.name, err)
+	}
+
+	if o.shouldOutputJSON {
+		data, err := pipeline.JSONString()
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(o.w, data)
+	} else {
+		fmt.Fprint(o.w, pipeline.HumanString())
+	}
+
 	return nil
 }
 
@@ -133,7 +159,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No deployed pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
+		return fmt.Errorf("No deployed pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
 		return nil
 	}
 
@@ -168,31 +194,6 @@ func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
 		return nil, fmt.Errorf("list pipelines: %w", err)
 	}
 	return pipelines, nil
-}
-
-// Execute shows details about the pipeline.
-func (o *showPipelineOpts) Execute() error {
-	err := o.initDescriber(o.shouldOutputResources)
-	if err != nil {
-		return err
-	}
-
-	pipeline, err := o.describer.Describe()
-	if err != nil {
-		return fmt.Errorf("describe pipeline %s: %w", o.name, err)
-	}
-
-	if o.shouldOutputJSON {
-		data, err := pipeline.JSONString()
-		if err != nil {
-			return err
-		}
-		fmt.Fprint(o.w, data)
-	} else {
-		fmt.Fprint(o.w, pipeline.HumanString())
-	}
-
-	return nil
 }
 
 // buildPipelineShowCmd build the command for deploying a new pipeline or updating an existing pipeline.

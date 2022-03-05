@@ -115,7 +115,6 @@ func TestPipelineShow_Ask(t *testing.T) {
 		expectedPipeline string
 		expectedErr      error
 	}{
-		// happy paths
 		"with pipeline flag": {
 			inPipelineName: mockPipelineName,
 			inAppName:      mockAppName,
@@ -123,7 +122,6 @@ func TestPipelineShow_Ask(t *testing.T) {
 			setupMocks: func(mocks showPipelineMocks) {
 				mocks.codepipeline.EXPECT().GetPipeline(mockPipelineName).Return(nil, nil)
 			},
-
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
@@ -149,6 +147,15 @@ func TestPipelineShow_Ask(t *testing.T) {
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
+		"error if invalid name passed in": {
+			inPipelineName: "dander",
+			inAppName:      mockAppName,
+
+			setupMocks: func(mocks showPipelineMocks) {
+				mocks.codepipeline.EXPECT().GetPipeline("dander").Return(nil, errors.New("some error"))
+			},
+			expectedErr: errors.New("validate pipeline name dander: some error"),
+		},
 		"error if problem selecting app": {
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
@@ -167,20 +174,6 @@ func TestPipelineShow_Ask(t *testing.T) {
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
-		"does not error when no pipelines found at all": {
-			inAppName:      mockAppName,
-			inPipelineName: "",
-			setupMocks: func(mocks showPipelineMocks) {
-				gomock.InOrder(
-					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{}, nil),
-				)
-			},
-
-			expectedPipeline: "",
-			expectedErr:      nil,
-		},
-
-		// askPipeline errors
 		"wraps error when fails to retrieve pipelines": {
 			inAppName:      mockAppName,
 			inPipelineName: "",
@@ -210,14 +203,14 @@ func TestPipelineShow_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockPipelineSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockSel := mocks.NewMockappSelector(ctrl)
 
 			mocks := showPipelineMocks{
-				store:        mockStoreReader,
+				store:        mockStore,
 				ws:           mockWorkspace,
 				prompt:       mockPrompt,
 				codepipeline: mockPipelineSvc,
@@ -231,7 +224,7 @@ func TestPipelineShow_Ask(t *testing.T) {
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
 				},
-				store:        mockStoreReader,
+				store:        mockStore,
 				ws:           mockWorkspace,
 				codepipeline: mockPipelineSvc,
 				prompt:       mockPrompt,
