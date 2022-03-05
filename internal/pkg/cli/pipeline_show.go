@@ -160,7 +160,6 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 	if len(pipelineNames) == 0 {
 		return fmt.Errorf("No deployed pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
-		return nil
 	}
 
 	if len(pipelineNames) == 1 {
