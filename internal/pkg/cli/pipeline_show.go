@@ -195,9 +195,6 @@ func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
 
 // Execute shows details about the pipeline.
 func (o *showPipelineOpts) Execute() error {
-	if o.name == "" {
-		return nil
-	}
 	err := o.initDescriber(o.shouldOutputResources)
 	if err != nil {
 		return err
