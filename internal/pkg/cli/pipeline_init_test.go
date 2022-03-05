@@ -179,7 +179,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 
 			expectedEnvironments: []string{"test", "prod"},
-			expectedEnvConfigs: mockEnvConfigs,
+			expectedEnvConfigs:   mockEnvConfigs,
 			expectedError:        nil,
 		},
 		"success with CC repo with env and repoURL flags": {
@@ -202,7 +202,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 
 			expectedEnvironments: []string{"test", "prod"},
-			expectedEnvConfigs: mockEnvConfigs,
+			expectedEnvConfigs:   mockEnvConfigs,
 			expectedError:        nil,
 		},
 		"no flags, prompts for all input, success case for GitHub": {
@@ -238,7 +238,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubAccessToken: githubToken,
 			expectedRepoBranch:        "main",
 			expectedEnvironments:      []string{"test", "prod"},
-			expectedEnvConfigs: mockEnvConfigs,
+			expectedEnvConfigs:        mockEnvConfigs,
 			expectedError:             nil,
 		},
 		"no flags, success case for CodeCommit": {
@@ -278,7 +278,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedRepoBranch:       "main",
 			expectedCodeCommitRegion: codecommitRegion,
 			expectedEnvironments:     []string{"test", "prod"},
-			expectedEnvConfigs: mockEnvConfigs,
+			expectedEnvConfigs:       mockEnvConfigs,
 			expectedError:            nil,
 		},
 		"returns error if fail to list environments": {
@@ -347,7 +347,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					Name: "test",
 				},
 			},
-			expectedError:        fmt.Errorf("get config of environment prod: some error"),
+			expectedError: fmt.Errorf("get config of environment prod: some error"),
 		},
 		"returns error if fail to parse GitHub URL": {
 			inEnvironments: []string{},

@@ -170,15 +170,12 @@ func (o *initPipelineOpts) Ask() error {
 	}
 
 	if len(o.environments) > 0 {
-		if err := o.validateEnvsAndGetConfigs(); err != nil {
+		if err := o.validateEnvs(); err != nil {
 			return err
 		}
 
 	} else {
 		if err := o.askEnvs(); err != nil {
-			return err
-		}
-		if err := o.getEnvConfigs(); err != nil {
 			return err
 		}
 	}
@@ -228,7 +225,7 @@ func (o *initPipelineOpts) validateURL(url string) error {
 }
 
 // To avoid duplicating calls to GetEnvironment, validate and get config in the same step.
-func (o *initPipelineOpts) validateEnvsAndGetConfigs() error {
+func (o *initPipelineOpts) validateEnvs() error {
 	var envConfigs []*config.Environment
 	for _, env := range o.environments {
 		config, err := o.store.GetEnvironment(o.appName, env)
@@ -248,12 +245,8 @@ func (o *initPipelineOpts) askEnvs() error {
 	if err != nil {
 		return fmt.Errorf("select environments: %w", err)
 	}
-
 	o.environments = envs
-	return nil
-}
 
-func (o *initPipelineOpts) getEnvConfigs() error {
 	var envConfigs []*config.Environment
 	for _, environment := range o.environments {
 		envConfig, err := o.store.GetEnvironment(o.appName, environment)
