@@ -68,7 +68,7 @@ type deployPipelineOpts struct {
 	prog             progress
 	prompt           prompter
 	region           string
-	store            appEnvStore
+	store            store
 	ws               wsPipelineReader
 	codestar         codestar
 	newSvcListCmd    func(io.Writer) cmd
@@ -157,16 +157,8 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
-	if o.wsAppName == "" {
-		return errNoAppInWorkspace
-	}
-	// The passed-in app name value must be the same as the workspace app name, as we need to be in the correct workspace to read the pipeline manifest.
-	if o.appName != "" && o.appName != o.wsAppName {
-			return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-	}
-	// Validate the app name.
-	if _, err := o.store.GetApplication(o.wsAppName); err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
+	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+		return err
 	}
 	return nil
 }
@@ -174,16 +166,10 @@ func (o *deployPipelineOpts) Validate() error {
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *deployPipelineOpts) Ask() error {
 	if o.name != "" {
-		if err := o.validatePipelineName(); err != nil {
-			return err
-		}
-	} else {
-		if err := o.askPipelineName(); err != nil {
-			return err
-		}
+		return o.validatePipelineName()
 	}
 
-	return nil
+	return o.askPipelineName()
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
