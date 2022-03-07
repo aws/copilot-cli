@@ -149,8 +149,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
-
-			expectedError: nil,
 		},
 		"success with CC repo with env and repoURL flags": {
 			inEnvironments: []string{"test", "prod"},
@@ -170,8 +168,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
-
-			expectedError: nil,
 		},
 		"no flags, prompts for all input, success case for selecting URL": {
 			inEnvironments:      []string{},
@@ -199,8 +195,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
-			expectedError: nil,
 		},
 		"returns error if fail to list environments": {
 			inEnvironments: []string{},
@@ -285,8 +279,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).Times(0)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
-			expectedError: nil,
 		},
 	}
 
@@ -864,7 +856,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("write buildspec to workspace: some error"),
 		},
-		"returns error when repository URL is not from a support git provider": {
+		"returns error when repository URL is not from a supported git provider": {
 			inRepoURL:     "https://gitlab.company.com/group/project.git",
 			inBranch:      "main",
 			inAppName:     "demo",
@@ -1038,14 +1030,12 @@ fed	codecommit::us-west-2://aws-sample (fetch)
 ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
 bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)`,
 
-			expectedURLs:  []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
-			expectedError: nil,
+			expectedURLs: []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
 		},
 		"don't add to URL list if it is not a GitHub or CodeCommit or Bitbucket URL": {
 			inRemoteResult: `badgoose	verybad@gitlab.com/whatever (fetch)`,
 
-			expectedURLs:  []string{},
-			expectedError: nil,
+			expectedURLs: []string{},
 		},
 	}
 
@@ -1080,7 +1070,6 @@ func TestInitPipelineGHRepoURL_parse(t *testing.T) {
 				name:  "cli",
 				owner: "badgoose",
 			},
-			expectedError: nil,
 		},
 		"successfully parses repo name with .git suffix": {
 			inRepoURL: "https://github.com/koke/grit.git",
@@ -1089,7 +1078,6 @@ func TestInitPipelineGHRepoURL_parse(t *testing.T) {
 				name:  "grit",
 				owner: "koke",
 			},
-			expectedError: nil,
 		},
 		"returns an error if it is not a github URL": {
 			inRepoURL: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever",
@@ -1127,7 +1115,6 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 				name:   "aws-sample",
 				region: "sa-east-1",
 			},
-			expectedError: nil,
 		},
 		"successfully parses ssh url": {
 			inRepoURL: "ssh://git-codecommit.us-east-2.amazonaws.com/v1/repos/aws-sample",
@@ -1136,7 +1123,6 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 				name:   "aws-sample",
 				region: "us-east-2",
 			},
-			expectedError: nil,
 		},
 		"successfully parses federated (GRC) url": {
 			inRepoURL: "codecommit::us-gov-west-1://aws-sample",
@@ -1145,7 +1131,6 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 				name:   "aws-sample",
 				region: "us-gov-west-1",
 			},
-			expectedError: nil,
 		},
 	}
 
@@ -1178,7 +1163,6 @@ func TestInitPipelineBBRepoURL_parse(t *testing.T) {
 				name:  "aws-copilot-sample-service",
 				owner: "huanjani",
 			},
-			expectedError: nil,
 		},
 		"successfully parses ssh url": {
 			inRepoURL: "ssh://git@bitbucket.org:huanjani/aws-copilot-sample-service",
@@ -1187,7 +1171,6 @@ func TestInitPipelineBBRepoURL_parse(t *testing.T) {
 				name:  "aws-copilot-sample-service",
 				owner: "huanjani",
 			},
-			expectedError: nil,
 		},
 	}
 
