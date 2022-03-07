@@ -167,7 +167,9 @@ func (o *deployJobOpts) Execute() error {
 			RootUserARN: o.rootUserARN,
 			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
 		},
-		ForceNewUpdate: o.forceNewUpdate,
+		Options: deploy.Options{
+			ForceNewUpdate: o.forceNewUpdate,
+		},
 	}); err != nil {
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
 	}

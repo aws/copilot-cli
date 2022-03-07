@@ -15,11 +15,12 @@ type Stack struct {
 }
 
 type stackConfig struct {
-	TemplateBody string
-	TemplateURL  string
-	Parameters   []*cloudformation.Parameter
-	Tags         []*cloudformation.Tag
-	RoleARN      *string
+	TemplateBody    string
+	TemplateURL     string
+	Parameters      []*cloudformation.Parameter
+	Tags            []*cloudformation.Tag
+	RoleARN         *string
+	DisableRollback bool
 }
 
 // StackOption allows you to initialize a Stack with additional properties.
@@ -85,6 +86,13 @@ func WithTags(tags map[string]string) StackOption {
 func WithRoleARN(roleARN string) StackOption {
 	return func(s *Stack) {
 		s.RoleARN = aws.String(roleARN)
+	}
+}
+
+// WithDisableRollback disables CloudFormation's automatic stack rollback upon failure for the stack.
+func WithDisableRollback() StackOption {
+	return func(s *Stack) {
+		s.DisableRollback = true
 	}
 }
 
