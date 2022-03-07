@@ -29,9 +29,9 @@ When you first create a new environment, no services are deployed to it. To depl
 
 ### VPC and Networking
 
-Each environment gets its own multi-AZ VPC. Your VPC is the network boundary of your environment, allowing the traffic you expect in and out, and blocking the rest. The VPCs Copilot creates are spread across two availability zones to help balance availability and cost - with each AZ getting a public and private subnet.
+Each environment gets its own multi-AZ VPC. Your VPC is the network boundary of your environment, allowing the traffic you expect in and out, and blocking the rest. The VPCs Copilot creates are spread across two availability zones, with each AZ getting a public and private subnet, following [AWS best practices](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html). Your services are launched by default in the public subnets while limiting ingress to only other services in your environment for security. Tasks are placed in public subnets to help manage costs by allowing egress to the internet without requiring a NAT gateway.
 
-Your services are launched in the public subnets but can be reached only through your load balancer.
+Workload subnet placement can be modified using the [`network.vpc.placement`](../manifest/lb-web-service.en.md#network-vpc-placement) field in the manifest.
 
 ###  Load Balancers and DNS
 
