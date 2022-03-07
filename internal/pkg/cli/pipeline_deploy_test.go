@@ -22,7 +22,7 @@ import (
 )
 
 type deployPipelineMocks struct {
-	store     *mocks.MockappEnvStore
+	store     *mocks.Mockstore
 	prompt    *mocks.Mockprompter
 	prog      *mocks.Mockprogress
 	deployer  *mocks.MockpipelineDeployer
@@ -35,27 +35,27 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 		inAppName      string
 		inWsAppName    string
 		inPipelineName string
-		mockStore      func(m *mocks.MockappEnvStore)
+		mockStore      func(m *mocks.Mockstore)
 
 		wantedAppName string
 		wantedError   error
 	}{
 		"return error if can't read app name from workspace file": {
 			inWsAppName: "",
-			mockStore:   func(m *mocks.MockappEnvStore) {},
+			mockStore:   func(m *mocks.Mockstore) {},
 			wantedError: errNoAppInWorkspace,
 		},
 		"return error if passed-in app name doesn't match workspace app": {
 			inAppName:   "badAppName",
 			inWsAppName: testAppName,
-			mockStore:   func(m *mocks.MockappEnvStore) {},
+			mockStore:   func(m *mocks.Mockstore) {},
 
 			wantedError: errors.New("cannot specify app badAppName because the workspace is already registered with app badgoose"),
 		},
 		"return error if passed-in app name can't be validated": {
 			inWsAppName: testAppName,
 			inAppName:   testAppName,
-			mockStore: func(m *mocks.MockappEnvStore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication(testAppName).Return(nil, errors.New("some error"))
 			},
 
@@ -64,7 +64,7 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 		"success with app flag": {
 			inWsAppName: testAppName,
 			inAppName:   testAppName,
-			mockStore: func(m *mocks.MockappEnvStore) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication(testAppName).Return(nil, nil)
 			},
 
@@ -78,7 +78,7 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockappEnvStore(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockStore(mockStore)
 			opts := deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
@@ -648,14 +648,14 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPipelineDeployer := mocks.NewMockpipelineDeployer(ctrl)
-			mockAppEnvStore := mocks.NewMockappEnvStore(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
 
 			mocks := deployPipelineMocks{
-				store:     mockAppEnvStore,
+				store:     mockStore,
 				prompt:    mockPrompt,
 				prog:      mockProgress,
 				deployer:  mockPipelineDeployer,
@@ -674,7 +674,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				ws:               mockWorkspace,
 				app:              tc.inApp,
 				region:           tc.inRegion,
-				store:            mockAppEnvStore,
+				store:            mockStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
 				newSvcListCmd: func(w io.Writer) cmd {
@@ -828,11 +828,11 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockAppEnvStore := mocks.NewMockappEnvStore(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
 			mocks := deployPipelineMocks{
-				store:     mockAppEnvStore,
+				store:     mockStore,
 				ws:        mockWorkspace,
 				actionCmd: mockActionCmd,
 			}
@@ -843,7 +843,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
 				},
-				store: mockAppEnvStore,
+				store: mockStore,
 				ws:    mockWorkspace,
 				newSvcListCmd: func(w io.Writer) cmd {
 					return mockActionCmd

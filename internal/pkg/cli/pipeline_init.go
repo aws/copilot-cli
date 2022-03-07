@@ -99,7 +99,8 @@ type initPipelineOpts struct {
 	repoOwner string
 	ccRegion  string
 
-	// Caches variables
+	// Cached variables
+	wsAppName  string
 	fs         *afero.Afero
 	buffer     bytes.Buffer
 	envConfigs []*config.Environment
@@ -125,6 +126,12 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 
 	ssmStore := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
+
+	wsAppName := tryReadingAppName()
+	if vars.appName == "" {
+		vars.appName = wsAppName
+	}
+
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
@@ -137,43 +144,40 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		sel:              selector.NewSelect(prompter, ssmStore),
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
+		wsAppName:        wsAppName,
 	}, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if _, err := o.store.GetApplication(o.appName); err != nil {
+	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
+	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 		return err
-	}
-
-	if o.repoURL != "" {
-		if err := o.validateURL(o.repoURL); err != nil {
-			return err
-		}
-	}
-
-	if o.environments != nil {
-		for _, env := range o.environments {
-			_, err := o.store.GetEnvironment(o.appName, env)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
 	}
 	return nil
 }
 
-// Ask prompts for fields that are required but not passed in.
+// Ask prompts for required fields that are not passed in and validates them.
 func (o *initPipelineOpts) Ask() error {
-	if err := o.askEnvs(); err != nil {
-		return err
+	if o.repoURL != "" {
+		if err := o.validateURL(o.repoURL); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askRepository(); err != nil {
+			return err
+		}
 	}
-	if err := o.askRepository(); err != nil {
-		return err
+
+	if len(o.environments) > 0 {
+		if err := o.validateEnvs(); err != nil {
+			return err
+		}
+
+	} else {
+		if err := o.askEnvs(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -220,38 +224,45 @@ func (o *initPipelineOpts) validateURL(url string) error {
 	return nil
 }
 
-func (o *initPipelineOpts) askEnvs() error {
-	if len(o.environments) == 0 {
-		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.PromptConfig {
-			return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
-		})
+// To avoid duplicating calls to GetEnvironment, validate and get config in the same step.
+func (o *initPipelineOpts) validateEnvs() error {
+	var envConfigs []*config.Environment
+	for _, env := range o.environments {
+		config, err := o.store.GetEnvironment(o.appName, env)
 		if err != nil {
-			return fmt.Errorf("select environments: %w", err)
+			return fmt.Errorf("validate environment %s: %w", env, err)
 		}
-		o.environments = envs
+		envConfigs = append(envConfigs, config)
 	}
+	o.envConfigs = envConfigs
+	return nil
+}
+
+func (o *initPipelineOpts) askEnvs() error {
+	envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.PromptConfig {
+		return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
+	})
+	if err != nil {
+		return fmt.Errorf("select environments: %w", err)
+	}
+	o.environments = envs
 
 	var envConfigs []*config.Environment
 	for _, environment := range o.environments {
 		envConfig, err := o.store.GetEnvironment(o.appName, environment)
 		if err != nil {
-			return fmt.Errorf("get config of environment: %w", err)
+			return fmt.Errorf("get config of environment %s: %w", environment, err)
 		}
 		envConfigs = append(envConfigs, envConfig)
 	}
 	o.envConfigs = envConfigs
-
 	return nil
 }
 
 func (o *initPipelineOpts) askRepository() error {
-	var err error
-	if o.repoURL == "" {
-		if err = o.selectURL(); err != nil {
-			return err
-		}
+	if err := o.selectURL(); err != nil {
+		return err
 	}
-
 	switch {
 	case strings.Contains(o.repoURL, githubURL):
 		return o.askGitHubRepoDetails()
@@ -706,7 +717,7 @@ func buildPipelineInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVar(&vars.repoURL, githubURLFlag, "", githubURLFlagDescription)
 	_ = cmd.Flags().MarkHidden(githubURLFlag)
 	cmd.Flags().StringVarP(&vars.repoURL, repoURLFlag, repoURLFlagShort, "", repoURLFlagDescription)
