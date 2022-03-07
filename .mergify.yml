@@ -66,3 +66,12 @@ pull_request_rules:
           {{ title }} (#{{ number }})
 
           {{ body }}
+  - name: Ask Japanese docs reviews
+    conditions:
+      - files~=\.ja.md$
+      - -closed
+    actions:
+      request_reviews:
+        users:
+          - toricls
+          - hkford
