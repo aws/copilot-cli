@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
@@ -69,6 +71,11 @@ const (
 var (
 	// Filled in via the -ldflags flag at compile time to support pipeline buildspec CLI pulling.
 	binaryS3BucketPath string
+)
+
+// Pipeline init errors.
+var (
+	fmtErrInvalidPipelineProvider = "repository %s must be from a supported provider: %s"
 )
 
 type initPipelineVars struct {
@@ -164,7 +171,7 @@ func (o *initPipelineOpts) Ask() error {
 			return err
 		}
 	} else {
-		if err := o.askRepository(); err != nil {
+		if err := o.selectURL(); err != nil {
 			return err
 		}
 	}
@@ -187,7 +194,9 @@ func (o *initPipelineOpts) Execute() error {
 	if o.repoBranch == "" {
 		o.getBranch()
 	}
-
+	if err := o.parseRepoDetails(); err != nil {
+		return err
+	}
 	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
@@ -219,7 +228,7 @@ func (o *initPipelineOpts) validateURL(url string) error {
 	// Note: no longer calling `validateDomainName` because if users use git-remote-codecommit
 	// (the HTTPS (GRC) protocol) to connect to CodeCommit, the url does not have any periods.
 	if !strings.Contains(url, githubURL) && !strings.Contains(url, ccIdentifier) && !strings.Contains(url, bbURL) {
-		return fmt.Errorf("must be a URL to a supported provider (%s)", strings.Join(manifest.PipelineProviders, ", "))
+		return fmt.Errorf(fmtErrInvalidPipelineProvider, url, english.WordSeries(manifest.PipelineProviders, "or"))
 	}
 	return nil
 }
@@ -259,10 +268,7 @@ func (o *initPipelineOpts) askEnvs() error {
 	return nil
 }
 
-func (o *initPipelineOpts) askRepository() error {
-	if err := o.selectURL(); err != nil {
-		return err
-	}
+func (o *initPipelineOpts) parseRepoDetails() error {
 	switch {
 	case strings.Contains(o.repoURL, githubURL):
 		return o.parseGitHubRepoDetails()
@@ -270,8 +276,26 @@ func (o *initPipelineOpts) askRepository() error {
 		return o.parseCodeCommitRepoDetails()
 	case strings.Contains(o.repoURL, bbURL):
 		return o.parseBitbucketRepoDetails()
+	default:
+		return fmt.Errorf(fmtErrInvalidPipelineProvider, o.repoURL, english.WordSeries(manifest.PipelineProviders, "or"))
 	}
-	return nil
+}
+
+// getBranch fetches the user's current branch as a best-guess of which branch they want their pipeline to follow. If err, insert default branch name.
+func (o *initPipelineOpts) getBranch() {
+	// Fetches local git branch.
+	err := o.runner.Run("git", []string{"rev-parse", "--abbrev-ref", "HEAD"}, exec.Stdout(&o.buffer))
+	o.repoBranch = strings.TrimSpace(o.buffer.String())
+	if err != nil {
+		o.repoBranch = defaultBranch
+	}
+	if strings.TrimSpace(o.buffer.String()) == "" {
+		o.repoBranch = defaultBranch
+	}
+	o.buffer.Reset()
+	log.Infof(`Your pipeline will follow branch '%s'.
+You may make changes in the pipeline manifest before deployment.
+`, color.HighlightUserInput(o.repoBranch))
 }
 
 func (o *initPipelineOpts) parseGitHubRepoDetails() error {
@@ -290,23 +314,6 @@ func (o *initPipelineOpts) parseGitHubRepoDetails() error {
 	o.repoOwner = repoDetails.owner
 
 	return nil
-}
-
-// getBranch fetches the user's current branch as a best-guess of which branch they want their pipeline to follow. If err, insert default branch name.
-func (o *initPipelineOpts) getBranch() {
-	// Fetches local git branch.
-	err := o.runner.Run("git", []string{"rev-parse", "--abbrev-ref", "HEAD"}, exec.Stdout(&o.buffer))
-	o.repoBranch = strings.TrimSpace(o.buffer.String())
-	if err != nil {
-		o.repoBranch = defaultBranch
-	}
-	if strings.TrimSpace(o.buffer.String()) == "" {
-		o.repoBranch = defaultBranch
-	}
-	o.buffer.Reset()
-	log.Infof(`Your pipeline will follow branch '%s'.
-You may make changes in the pipeline manifest before deployment.
-`, color.HighlightUserInput(o.repoBranch))
 }
 
 func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
