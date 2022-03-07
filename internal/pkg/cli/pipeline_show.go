@@ -100,21 +100,19 @@ func (o *showPipelineOpts) Validate() error {
 func (o *showPipelineOpts) Ask() error {
 	if o.name != "" {
 		// Validate the passed-in pipeline name.
-		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
+		_, err := o.codepipeline.GetPipeline(o.name)
+		if err != nil {
 			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
 		}
-	} else {
-		// Check presence of appName in order to fetch pipelines.
-		if o.appName == "" {
-			if err := o.askAppName(); err != nil {
-				return err
-			}
-		}
-		if err := o.askPipelineName(); err != nil {
+		return nil
+	}
+	// Check presence of appName in order to fetch pipelines.
+	if o.appName == "" {
+		if err := o.askAppName(); err != nil {
 			return err
 		}
 	}
-	return nil
+	return o.askPipelineName()
 }
 
 // Execute shows details about the pipeline.
