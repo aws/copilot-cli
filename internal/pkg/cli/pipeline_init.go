@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
@@ -69,6 +71,11 @@ const (
 var (
 	// Filled in via the -ldflags flag at compile time to support pipeline buildspec CLI pulling.
 	binaryS3BucketPath string
+)
+
+// Pipeline init errors.
+var (
+	fmtErrInvalidPipelineProvider = "repository %s must be from a supported provider: %s"
 )
 
 type initPipelineVars struct {
@@ -164,7 +171,7 @@ func (o *initPipelineOpts) Ask() error {
 			return err
 		}
 	} else {
-		if err := o.askRepository(); err != nil {
+		if err := o.selectURL(); err != nil {
 			return err
 		}
 	}
@@ -187,7 +194,9 @@ func (o *initPipelineOpts) Execute() error {
 	if o.repoBranch == "" {
 		o.getBranch()
 	}
-
+	if err := o.parseRepoDetails(); err != nil {
+		return err
+	}
 	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
@@ -219,7 +228,7 @@ func (o *initPipelineOpts) validateURL(url string) error {
 	// Note: no longer calling `validateDomainName` because if users use git-remote-codecommit
 	// (the HTTPS (GRC) protocol) to connect to CodeCommit, the url does not have any periods.
 	if !strings.Contains(url, githubURL) && !strings.Contains(url, ccIdentifier) && !strings.Contains(url, bbURL) {
-		return fmt.Errorf("must be a URL to a supported provider (%s)", strings.Join(manifest.PipelineProviders, ", "))
+		return fmt.Errorf(fmtErrInvalidPipelineProvider, url, english.WordSeries(manifest.PipelineProviders, "or"))
 	}
 	return nil
 }
@@ -259,37 +268,17 @@ func (o *initPipelineOpts) askEnvs() error {
 	return nil
 }
 
-func (o *initPipelineOpts) askRepository() error {
-	if err := o.selectURL(); err != nil {
-		return err
-	}
+func (o *initPipelineOpts) parseRepoDetails() error {
 	switch {
 	case strings.Contains(o.repoURL, githubURL):
-		return o.askGitHubRepoDetails()
+		return o.parseGitHubRepoDetails()
 	case strings.Contains(o.repoURL, ccIdentifier):
 		return o.parseCodeCommitRepoDetails()
 	case strings.Contains(o.repoURL, bbURL):
 		return o.parseBitbucketRepoDetails()
+	default:
+		return fmt.Errorf(fmtErrInvalidPipelineProvider, o.repoURL, english.WordSeries(manifest.PipelineProviders, "or"))
 	}
-	return nil
-}
-
-func (o *initPipelineOpts) askGitHubRepoDetails() error {
-	// If the user uses a flag to specify a GitHub access token,
-	// GitHub version 1 (not CSC) is the provider.
-	o.provider = manifest.GithubProviderName
-	if o.githubAccessToken != "" {
-		o.provider = manifest.GithubV1ProviderName
-	}
-
-	repoDetails, err := ghRepoURL(o.repoURL).parse()
-	if err != nil {
-		return err
-	}
-	o.repoName = repoDetails.name
-	o.repoOwner = repoDetails.owner
-
-	return nil
 }
 
 // getBranch fetches the user's current branch as a best-guess of which branch they want their pipeline to follow. If err, insert default branch name.
@@ -307,6 +296,24 @@ func (o *initPipelineOpts) getBranch() {
 	log.Infof(`Your pipeline will follow branch '%s'.
 You may make changes in the pipeline manifest before deployment.
 `, color.HighlightUserInput(o.repoBranch))
+}
+
+func (o *initPipelineOpts) parseGitHubRepoDetails() error {
+	// If the user uses a flag to specify a GitHub access token,
+	// GitHub version 1 (not CSC) is the provider.
+	o.provider = manifest.GithubProviderName
+	if o.githubAccessToken != "" {
+		o.provider = manifest.GithubV1ProviderName
+	}
+
+	repoDetails, err := ghRepoURL(o.repoURL).parse()
+	if err != nil {
+		return err
+	}
+	o.repoName = repoDetails.name
+	o.repoOwner = repoDetails.owner
+
+	return nil
 }
 
 func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
