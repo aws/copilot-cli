@@ -202,7 +202,7 @@ const (
 	jsonFlagDescription       = "Optional. Outputs in JSON format."
 	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
 	noRollbackFlagDescription = `Optional. Disable automatic stack 
-rollback in case of a deployment failure.
+rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
 
