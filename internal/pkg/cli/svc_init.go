@@ -125,9 +125,12 @@ type initSvcOpts struct {
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
 
+	// For workspace validation.
+	wsAppName         string
+	wsPendingCreation bool
+
 	// Cache variables
-	wsAppName string
-	df        dockerfileParser
+	df dockerfileParser
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -159,11 +162,10 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
-		fs:           fs,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		init:         initSvc,
 		prompt:       prompter,
 		sel:          sel,
@@ -184,17 +186,12 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 
 // Validate returns an error for any invalid optional flags.
 func (o *initSvcOpts) Validate() error {
-	if o.wsAppName == "" {
-		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
-		return errNoAppInWorkspace
-	}
-	// This command must be run within the app's workspace.
-	if o.appName != "" && o.appName != o.wsAppName {
-		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
-	}
-	o.appName = o.wsAppName
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	// If this app is pending creation, we'll skip validation.
+	if !o.wsPendingCreation {
+		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+			return err
+		}
+		o.appName = o.wsAppName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
@@ -561,6 +558,21 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	}
 	o.topics = subscriptions
 
+	return nil
+}
+
+func validateInputApp(wsApp, inputApp string, store store) error {
+	if wsApp == "" {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return errNoAppInWorkspace
+	}
+	// This command must be run within the app's workspace.
+	if inputApp != "" && inputApp != wsApp {
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", inputApp, wsApp)
+	}
+	if _, err := store.GetApplication(wsApp); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", wsApp, err)
+	}
 	return nil
 }
 
