@@ -213,7 +213,7 @@ func (o *deploySvcOpts) Execute() error {
 			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
 			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can:
 * Run %s to inspect the service log.
-* Visit AWS console to inspect the errors.
+* Visit the AWS console to inspect the errors.
 After fixing the deployment, you can:
 1. Run %s to rollback the deployment.
 2. Run %s to make a new deployment.
