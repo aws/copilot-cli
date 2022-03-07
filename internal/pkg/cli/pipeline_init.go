@@ -265,7 +265,7 @@ func (o *initPipelineOpts) askRepository() error {
 	}
 	switch {
 	case strings.Contains(o.repoURL, githubURL):
-		return o.askGitHubRepoDetails()
+		return o.parseGitHubRepoDetails()
 	case strings.Contains(o.repoURL, ccIdentifier):
 		return o.parseCodeCommitRepoDetails()
 	case strings.Contains(o.repoURL, bbURL):
@@ -274,7 +274,7 @@ func (o *initPipelineOpts) askRepository() error {
 	return nil
 }
 
-func (o *initPipelineOpts) askGitHubRepoDetails() error {
+func (o *initPipelineOpts) parseGitHubRepoDetails() error {
 	// If the user uses a flag to specify a GitHub access token,
 	// GitHub version 1 (not CSC) is the provider.
 	o.provider = manifest.GithubProviderName
