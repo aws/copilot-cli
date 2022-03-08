@@ -35,7 +35,7 @@ type deployWkldVars struct {
 	envName         string
 	imageTag        string
 	resourceTags    map[string]string
-	forceNewUpdate  bool
+	forceNewUpdate  bool // NOTE: this variable is not applicable for a job workload currently.
 	disableRollback bool
 
 	// To facilitate unit tests.
