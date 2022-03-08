@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -261,6 +262,41 @@ func (c *CommandOverride) ToStringSlice() ([]string, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+type stringOrInterface struct {
+	String    *string
+	Interface map[string]interface{}
+}
+
+func unmarshalYAMLToStringOrInterface(s *stringOrInterface, value *yaml.Node) error {
+	if err := value.Decode(&s.Interface); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+	if s.Interface != nil {
+		s.String = nil
+		return nil
+	}
+	return value.Decode(&s.String)
+}
+
+func (s *stringOrInterface) toJSONString() (string, error) {
+	if s.String != nil {
+		return *s.String, nil
+	}
+	if s.Interface == nil {
+		return "", nil
+	}
+	bytes, err := json.Marshal(s.Interface)
+	if err != nil {
+		return "", fmt.Errorf("marshal into JSON string: %w", err)
+	}
+	return string(bytes), nil
 }
 
 type stringSliceOrString struct {

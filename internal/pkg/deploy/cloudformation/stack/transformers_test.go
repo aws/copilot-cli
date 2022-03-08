@@ -1314,6 +1314,9 @@ func Test_convertSubscribe(t *testing.T) {
 	env := "env"
 	svc := "svc"
 	duration111Seconds := 111 * time.Second
+	mockStruct := map[string]interface{}{
+		"store": []string{"example_corp"},
+	}
 	testCases := map[string]struct {
 		inSubscribe manifest.SubscribeConfig
 
@@ -1329,6 +1332,9 @@ func Test_convertSubscribe(t *testing.T) {
 					{
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
+						FilterPolicy: manifest.FilterPolicy{
+							String: aws.String(`{"store": ["example_corp"]}`),
+						},
 					},
 				},
 				Queue: manifest.SQSQueue{
@@ -1343,8 +1349,9 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
+						Name:         aws.String("name"),
+						Service:      aws.String("svc"),
+						FilterPolicy: aws.String(`{"store": ["example_corp"]}`),
 					},
 				},
 				Queue: &template.SQSQueue{
@@ -1366,6 +1373,9 @@ func Test_convertSubscribe(t *testing.T) {
 						Queue: manifest.SQSQueueOrBool{
 							Enabled: aws.Bool(true),
 						},
+						FilterPolicy: manifest.FilterPolicy{
+							Interface: mockStruct,
+						},
 					},
 				},
 				Queue: manifest.SQSQueue{},
@@ -1373,9 +1383,10 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue:   &template.SQSQueue{},
+						Name:         aws.String("name"),
+						Service:      aws.String("svc"),
+						Queue:        &template.SQSQueue{},
+						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
 				Queue: nil,

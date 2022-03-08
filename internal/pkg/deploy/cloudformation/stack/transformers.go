@@ -658,26 +658,49 @@ func convertSubscribe(s manifest.SubscribeConfig, accountID, region, app, env, s
 	}
 	var subscriptions template.SubscribeOpts
 	for _, sb := range s.Topics {
-		ts := convertTopicSubscription(sb, sqsEndpoint.URL, accountID, app, env, svc)
+		ts, err := convertTopicSubscription(sb, sqsEndpoint.URL, accountID, app, env, svc)
+		if err != nil {
+			return nil, err
+		}
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
 	subscriptions.Queue = convertQueue(s.Queue)
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app, env, svc string) *template.TopicSubscription {
+func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app, env, svc string) (
+	*template.TopicSubscription, error) {
+	filterPolicy, err := convertFilterPolicy(t.FilterPolicy)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(*filterPolicy)
 	if aws.BoolValue(t.Queue.Enabled) {
 		return &template.TopicSubscription{
-			Name:    t.Name,
-			Service: t.Service,
-			Queue:   &template.SQSQueue{},
-		}
+			Name:         t.Name,
+			Service:      t.Service,
+			Queue:        &template.SQSQueue{},
+			FilterPolicy: filterPolicy,
+		}, nil
 	}
 	return &template.TopicSubscription{
-		Name:    t.Name,
-		Service: t.Service,
-		Queue:   convertQueue(t.Queue.Advanced),
+		Name:         t.Name,
+		Service:      t.Service,
+		Queue:        convertQueue(t.Queue.Advanced),
+		FilterPolicy: filterPolicy,
+	}, nil
+}
+
+func convertFilterPolicy(filterPolicy manifest.FilterPolicy) (*string, error) {
+	convertedFilterPolicy, err := filterPolicy.ToJSONString()
+	if err != nil {
+		return nil, fmt.Errorf(`convert "filter_policy" to a JSON string: %w`, err)
 	}
+	var out *string
+	if convertedFilterPolicy != "" {
+		out = aws.String(convertedFilterPolicy)
+	}
+	return out, nil
 }
 
 func convertQueue(q manifest.SQSQueue) *template.SQSQueue {

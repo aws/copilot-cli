@@ -1253,3 +1253,86 @@ func TestSQSQueueOrBool_UnmarshalYAML(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterPolicy_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct FilterPolicy
+		wantedError  error
+	}{
+		"FilterPolicy specified in string": {
+			inContent: []byte(`filter_policy: '{"store":["example_corp"],"event":[{"anything-but":"order_cancelled"}],"customer_interests":["rugby","football","baseball"],"price_usd":[{"numeric":[">=",100]}]}'`),
+			wantedStruct: FilterPolicy{
+				String:    aws.String(`{"store":["example_corp"],"event":[{"anything-but":"order_cancelled"}],"customer_interests":["rugby","football","baseball"],"price_usd":[{"numeric":[">=",100]}]}`),
+				Interface: nil,
+			},
+		},
+		"FilterPolicy specified in slice of strings": {
+			inContent: []byte(`filter_policy:
+  store:
+    - example_corp`),
+			wantedStruct: FilterPolicy{
+				String: nil,
+				Interface: map[string]interface{}{
+					"store": []interface{}{"example_corp"},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			s := TopicSubscription{}
+
+			err := yaml.Unmarshal(tc.inContent, &s)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.Interface, s.FilterPolicy.Interface)
+				require.Equal(t, tc.wantedStruct.String, s.FilterPolicy.String)
+			}
+		})
+	}
+}
+
+func TestFilterPolicy_ToJSONString(t *testing.T) {
+	testCases := map[string]struct {
+		inFilterPolicy FilterPolicy
+
+		wantedJSONString string
+		wantedError      error
+	}{
+		"Both fields are empty": {
+			inFilterPolicy: FilterPolicy{
+				String:    nil,
+				Interface: nil,
+			},
+			wantedJSONString: "",
+		},
+		"Given a string": {
+			inFilterPolicy: FilterPolicy{
+				String: aws.String(`{"store":["example_corp"]}`),
+			},
+			wantedJSONString: `{"store":["example_corp"]}`,
+		},
+		"Given an interface": {
+			inFilterPolicy: FilterPolicy{
+				Interface: map[string]interface{}{
+					"store": []interface{}{"example_corp"},
+				},
+			},
+			wantedJSONString: `{"store":["example_corp"]}`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out, err := tc.inFilterPolicy.ToJSONString()
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedJSONString, out)
+		})
+	}
+}

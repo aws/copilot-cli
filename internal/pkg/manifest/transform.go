@@ -19,6 +19,7 @@ var defaultTransformers = []mergo.Transformers{
 	imageTransformer{},
 	buildArgsOrStringTransformer{},
 	stringSliceOrStringTransformer{},
+	stringOrInterfaceTransformer{},
 	platformArgsOrStringTransformer{},
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
@@ -114,6 +115,33 @@ func (t stringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, 
 		}
 
 		if srcStruct.StringSlice != nil {
+			dstStruct.String = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct).Convert(typ))
+		}
+		return nil
+	}
+}
+
+type stringOrInterfaceTransformer struct{}
+
+// Transformer returns custom merge logic for stringOrInterfaceTransformer's fields.
+func (t stringOrInterfaceTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if !typ.ConvertibleTo(reflect.TypeOf(stringOrInterface{})) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct := dst.Convert(reflect.TypeOf(stringOrInterface{})).Interface().(stringOrInterface)
+		srcStruct := src.Convert(reflect.TypeOf(stringOrInterface{})).Interface().(stringOrInterface)
+
+		if srcStruct.String != nil {
+			dstStruct.Interface = nil
+		}
+
+		if srcStruct.Interface != nil {
 			dstStruct.String = nil
 		}
 

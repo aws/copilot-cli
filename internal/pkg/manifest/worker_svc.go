@@ -18,7 +18,8 @@ const (
 )
 
 var (
-	errUnmarshalQueueOpts = errors.New(`cannot unmarshal "queue" field into bool or map`)
+	errUnmarshalQueueOpts        = errors.New(`cannot unmarshal "queue" field into bool or map`)
+	errUnmarshalFilterPolicyOpts = errors.New(`cannot unmarshal "filter_policy" field into string or any interface`)
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -62,12 +63,36 @@ func (s *SubscribeConfig) IsEmpty() bool {
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
-	Name    *string        `yaml:"name"`
-	Service *string        `yaml:"service"`
-	Queue   SQSQueueOrBool `yaml:"queue"`
+	Name         *string        `yaml:"name"`
+	Service      *string        `yaml:"service"`
+	FilterPolicy FilterPolicy   `yaml:"filter_policy"`
+	Queue        SQSQueueOrBool `yaml:"queue"`
 }
 
-// SQSQueueOrBool contains custom unmarshaling logic for the `queue` field in the manifest.
+// FilterPolicy is a custom type which supports unmarshalling "filter_policy" yaml which
+// can either be of type string or any interface.
+type FilterPolicy stringOrInterface
+
+// UnmarshalYAML implements the yaml(v3) interface. It allows FilterPolicy to be specified as a
+// string or any interface alternately.
+func (f *FilterPolicy) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToStringOrInterface((*stringOrInterface)(f), value); err != nil {
+		return errUnmarshalFilterPolicyOpts
+	}
+	return nil
+}
+
+// ToJSONString converts an FilterPolicy to a JSON string.
+func (f *FilterPolicy) ToJSONString() (string, error) {
+	out, err := (*stringOrInterface)(f).toJSONString()
+	if err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
+// SQSQueueOrBool is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type SQSQueue.
 type SQSQueueOrBool struct {
 	Advanced SQSQueue
 	Enabled  *bool
@@ -78,7 +103,7 @@ func (q *SQSQueueOrBool) IsEmpty() bool {
 	return q.Advanced.IsEmpty() && q.Enabled == nil
 }
 
-// UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueue to be specified as a
+// UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueueOrBool to be specified as a
 // string or a struct alternately.
 func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&q.Advanced); err != nil {
