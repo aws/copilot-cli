@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
@@ -159,6 +160,15 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
+	if o.disableRollback {
+		stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+		rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
+		log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can visit the AWS console to inspect the errors.
+After fixing the deployment, you can:
+1. Run %s to rollback the deployment.
+2. Run %s to make a new deployment.
+`, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
+	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest: uploadOut.ImageDigest,
@@ -167,8 +177,19 @@ func (o *deployJobOpts) Execute() error {
 			RootUserARN: o.rootUserARN,
 			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
 		},
-		Options: deploy.Options{},
+		Options: deploy.Options{
+			DisableRollback: o.disableRollback,
+		},
 	}); err != nil {
+		if o.disableRollback {
+			stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
+			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can visit the AWS console to inspect the errors.
+After fixing the deployment, you can:
+1. Run %s to rollback the deployment.
+2. Run %s to make a new deployment.
+`, color.HighlightCode("copilot job logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
+		}
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
 	}
 	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
@@ -289,6 +310,7 @@ func buildJobDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 
 	return cmd
 }
