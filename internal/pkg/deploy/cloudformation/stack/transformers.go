@@ -687,12 +687,12 @@ func convertTopicSubscription(t manifest.TopicSubscription) (
 }
 
 func convertFilterPolicy(filterPolicy map[string]interface{}) (*string, error) {
+	if len(filterPolicy) == 0 {
+		return nil, nil
+	}
 	bytes, err := json.Marshal(filterPolicy)
 	if err != nil {
 		return nil, fmt.Errorf(`convert "filter_policy" to a JSON string: %w`, err)
-	}
-	if string(bytes) == "null" {
-		return nil, nil
 	}
 	return aws.String(string(bytes)), nil
 }
