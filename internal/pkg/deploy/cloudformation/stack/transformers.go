@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/crc32"
 	"strconv"
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -648,17 +648,13 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	return &publishers, nil
 }
 
-func convertSubscribe(s manifest.SubscribeConfig, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
+func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, error) {
 	if s.Topics == nil {
 		return nil, nil
 	}
-	sqsEndpoint, err := endpoints.DefaultResolver().EndpointFor(endpoints.SqsServiceID, region)
-	if err != nil {
-		return nil, err
-	}
 	var subscriptions template.SubscribeOpts
 	for _, sb := range s.Topics {
-		ts, err := convertTopicSubscription(sb, sqsEndpoint.URL, accountID, app, env, svc)
+		ts, err := convertTopicSubscription(sb)
 		if err != nil {
 			return nil, err
 		}
@@ -668,7 +664,7 @@ func convertSubscribe(s manifest.SubscribeConfig, accountID, region, app, env, s
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app, env, svc string) (
+func convertTopicSubscription(t manifest.TopicSubscription) (
 	*template.TopicSubscription, error) {
 	filterPolicy, err := convertFilterPolicy(t.FilterPolicy)
 	if err != nil {
@@ -690,16 +686,15 @@ func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app,
 	}, nil
 }
 
-func convertFilterPolicy(filterPolicy manifest.FilterPolicy) (*string, error) {
-	convertedFilterPolicy, err := filterPolicy.ToJSONString()
+func convertFilterPolicy(filterPolicy map[string]interface{}) (*string, error) {
+	bytes, err := json.Marshal(filterPolicy)
 	if err != nil {
 		return nil, fmt.Errorf(`convert "filter_policy" to a JSON string: %w`, err)
 	}
-	var out *string
-	if convertedFilterPolicy != "" {
-		out = aws.String(convertedFilterPolicy)
+	if string(bytes) == "null" {
+		return nil, nil
 	}
-	return out, nil
+	return aws.String(string(bytes)), nil
 }
 
 func convertQueue(q manifest.SQSQueue) *template.SQSQueue {

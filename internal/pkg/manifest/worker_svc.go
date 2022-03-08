@@ -63,32 +63,10 @@ func (s *SubscribeConfig) IsEmpty() bool {
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
-	Name         *string        `yaml:"name"`
-	Service      *string        `yaml:"service"`
-	FilterPolicy FilterPolicy   `yaml:"filter_policy"`
-	Queue        SQSQueueOrBool `yaml:"queue"`
-}
-
-// FilterPolicy is a custom type which supports unmarshalling "filter_policy" yaml which
-// can either be of type string or any interface.
-type FilterPolicy stringOrInterface
-
-// UnmarshalYAML implements the yaml(v3) interface. It allows FilterPolicy to be specified as a
-// string or any interface alternately.
-func (f *FilterPolicy) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringOrInterface((*stringOrInterface)(f), value); err != nil {
-		return errUnmarshalFilterPolicyOpts
-	}
-	return nil
-}
-
-// ToJSONString converts an FilterPolicy to a JSON string.
-func (f *FilterPolicy) ToJSONString() (string, error) {
-	out, err := (*stringOrInterface)(f).toJSONString()
-	if err != nil {
-		return "", err
-	}
-	return out, nil
+	Name         *string                `yaml:"name"`
+	Service      *string                `yaml:"service"`
+	FilterPolicy map[string]interface{} `yaml:"filter_policy"`
+	Queue        SQSQueueOrBool         `yaml:"queue"`
 }
 
 // SQSQueueOrBool is a custom type which supports unmarshaling yaml which

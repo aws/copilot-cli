@@ -333,59 +333,6 @@ func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 	}
 }
 
-func TestStringOrInterfaceTransformer_Transformer(t *testing.T) {
-	mockStruct := map[string]interface{}{}
-	testCases := map[string]struct {
-		original func(s *stringOrInterface)
-		override func(s *stringOrInterface)
-		wanted   func(s *stringOrInterface)
-	}{
-		"string set to empty if string slice is not nil": {
-			original: func(s *stringOrInterface) {
-				s.String = aws.String("mockString")
-			},
-			override: func(s *stringOrInterface) {
-				s.Interface = mockStruct
-			},
-			wanted: func(s *stringOrInterface) {
-				s.Interface = mockStruct
-			},
-		},
-		"string slice set to empty if string is not nil": {
-			original: func(s *stringOrInterface) {
-				s.Interface = mockStruct
-			},
-			override: func(s *stringOrInterface) {
-				s.String = aws.String("mockString")
-			},
-			wanted: func(s *stringOrInterface) {
-				s.String = aws.String("mockString")
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted stringOrInterface
-
-			tc.original(&dst)
-			tc.override(&override)
-			tc.wanted(&wanted)
-
-			// Perform default merge.
-			err := mergo.Merge(&dst, override, mergo.WithOverride)
-			require.NoError(t, err)
-
-			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(stringOrInterfaceTransformer{}))
-			require.NoError(t, err)
-
-			require.NoError(t, err)
-			require.Equal(t, wanted, dst)
-		})
-	}
-}
-
 func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 	mockPlatformStr := PlatformString("mockString")
 	testCases := map[string]struct {

@@ -1235,17 +1235,9 @@ func (t TopicSubscription) Validate() error {
 	if !isValidSubSvcName(svcName) {
 		return fmt.Errorf("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 	}
-	if err := t.FilterPolicy.Validate(); err != nil {
-		return fmt.Errorf(`validate "filter_policy": %w`, err)
-	}
 	if err := t.Queue.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue": %w`, err)
 	}
-	return nil
-}
-
-// Validate is a no-op for FilterPolicy.
-func (f FilterPolicy) Validate() error {
 	return nil
 }
 
