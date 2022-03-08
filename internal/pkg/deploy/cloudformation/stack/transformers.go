@@ -674,7 +674,6 @@ func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(*filterPolicy)
 	if aws.BoolValue(t.Queue.Enabled) {
 		return &template.TopicSubscription{
 			Name:         t.Name,
