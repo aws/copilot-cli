@@ -85,28 +85,26 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 
 // Validate returns an error if the optional flag values provided by the user are invalid.
 func (o *pipelineStatusOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return fmt.Errorf("validate application name: %w", err)
-		}
-	}
 	return nil
 }
 
 // Ask prompts for fields that are required but not passed in, and validates those that are.
 func (o *pipelineStatusOpts) Ask() error {
-	if o.name != "" {
-		_, err := o.codepipeline.GetPipeline(o.name)
-		if err != nil {
-			return err
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return fmt.Errorf("validate application name: %w", err)
 		}
-		return nil
-	}
-	// The app name is needed to fetch pipelines.
-	if o.appName == "" {
+	} else {
 		if err := o.askAppName(); err != nil {
 			return err
 		}
+	}
+	if o.name != "" {
+		_, err := o.codepipeline.GetPipeline(o.name)
+		if err != nil {
+			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
+		}
+		return nil
 	}
 	return o.askPipelineName()
 }
