@@ -18,8 +18,7 @@ const (
 )
 
 var (
-	errUnmarshalQueueOpts        = errors.New(`cannot unmarshal "queue" field into bool or map`)
-	errUnmarshalFilterPolicyOpts = errors.New(`cannot unmarshal "filter_policy" field into string or any interface`)
+	errUnmarshalQueueOpts = errors.New(`cannot unmarshal "queue" field into bool or map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
