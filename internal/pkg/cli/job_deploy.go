@@ -61,9 +61,6 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
-	if err != nil {
-		return nil, err
-	}
 	return &deployJobOpts{
 		deployWkldVars: vars,
 
