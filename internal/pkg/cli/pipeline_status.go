@@ -187,19 +187,6 @@ func (o *pipelineStatusOpts) retrieveAllPipelines() ([]string, error) {
 	return pipelines, nil
 }
 
-func (o *pipelineStatusOpts) getPipelineNameFromManifest() (string, error) {
-	path, err := o.ws.PipelineManifestLegacyPath()
-	if err != nil {
-		return "", err
-	}
-	manifest, err := o.ws.ReadPipelineManifest(path)
-	if err != nil {
-		return "", err
-	}
-
-	return manifest.Name, nil
-}
-
 // buildPipelineStatusCmd builds the command for showing the status of a deployed pipeline.
 func buildPipelineStatusCmd() *cobra.Command {
 	vars := pipelineStatusVars{}
