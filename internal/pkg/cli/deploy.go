@@ -68,7 +68,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
 			case contains(workloadType, manifest.JobTypes()):
-				o.deployWkld = &deployJobOpts{
+				opts := &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
 					store:           o.store,
@@ -78,8 +78,11 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
-					newJobDeployer:  newJobDeployer,
 				}
+				opts.newJobDeployer = func() (workloadDeployer, error) {
+					return newJobDeployer(opts)
+				}
+				o.deployWkld = opts
 			case contains(workloadType, manifest.ServiceTypes()):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,

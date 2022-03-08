@@ -185,7 +185,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sel:             sel,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
-		newJobDeployer:  newJobDeployer,
+	}
+	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
+		return newJobDeployer(deployJobCmd)
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()

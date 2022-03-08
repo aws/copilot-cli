@@ -37,7 +37,7 @@ type deployJobOpts struct {
 	cmd             runner
 	sessProvider    *sessions.Provider
 	envUpgradeCmd   actionCommand
-	newJobDeployer  func(*deployJobOpts) (workloadDeployer, error)
+	newJobDeployer  func() (workloadDeployer, error)
 
 	sel wsSelector
 
@@ -61,7 +61,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
-	return &deployJobOpts{
+	opts := &deployJobOpts{
 		deployWkldVars: vars,
 
 		store:           store,
@@ -71,8 +71,12 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
-		newJobDeployer:  newJobDeployer,
-	}, nil
+	}
+	opts.newJobDeployer = func() (workloadDeployer, error) {
+		// NOTE: Defined as a struct member to facilitate unit testing.
+		return newJobDeployer(opts)
+	}
+	return opts, nil
 }
 
 func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
@@ -149,7 +153,7 @@ func (o *deployJobOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
-	deployer, err := o.newJobDeployer(o)
+	deployer, err := o.newJobDeployer()
 	if err != nil {
 		return err
 	}
