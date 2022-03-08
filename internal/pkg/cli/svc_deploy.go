@@ -52,7 +52,7 @@ type deploySvcOpts struct {
 	cmd             runner
 	envUpgradeCmd   actionCommand
 	sessProvider    *sessions.Provider
-	newSvcDeployer  func(*deploySvcOpts) (workloadDeployer, error)
+	newSvcDeployer  func() (workloadDeployer, error)
 
 	spinner progress
 	sel     wsSelector
@@ -93,7 +93,10 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
-		newSvcDeployer:  newSvcDeployer,
+	}
+	opts.newSvcDeployer = func() (workloadDeployer, error) {
+		// NOTE: Defined as a struct member to facilitate unit testing.
+		return newSvcDeployer(opts)
 	}
 	return opts, err
 }
@@ -182,7 +185,7 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
-	deployer, err := o.newSvcDeployer(o)
+	deployer, err := o.newSvcDeployer()
 	if err != nil {
 		return err
 	}

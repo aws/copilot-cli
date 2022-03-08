@@ -93,7 +93,9 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
-					newSvcDeployer:  newSvcDeployer,
+				}
+				opts.newSvcDeployer = func() (workloadDeployer, error) {
+					return newSvcDeployer(opts)
 				}
 				o.deployWkld = opts
 			}

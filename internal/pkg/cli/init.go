@@ -168,7 +168,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
-		newSvcDeployer:  newSvcDeployer,
+	}
+	deploySvcCmd.newSvcDeployer = func() (workloadDeployer, error) {
+		return newSvcDeployer(deploySvcCmd)
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
