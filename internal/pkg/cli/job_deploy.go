@@ -185,7 +185,7 @@ After fixing the deployment, you can:
 After fixing the deployment, you can:
 1. Run %s to rollback the deployment.
 2. Run %s to make a new deployment.
-`, color.HighlightCode("copilot job logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
+`, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
 		}
 		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
 	}
