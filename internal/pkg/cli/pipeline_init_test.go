@@ -89,28 +89,8 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 }
 
 func TestInitPipelineOpts_Ask(t *testing.T) {
-	githubOwner := "goodGoose"
-	githubAnotherRepoName := "bhaOS"
 	githubAnotherURL := "git@github.com:goodGoose/bhaOS.git"
-	githubReallyBadURL := "reallybadGoosegithub.comNotEvenAURL"
 	githubToken := "hunter2"
-	codecommitRepoName := "repo-man"
-	codecommitAnotherRepoName := "repo-woman"
-	codecommitHTTPSURL := "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man"
-	codecommitSSHURL := "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman"
-	codecommitFedURL := "codecommit::us-west-2://repo-man"
-	codecommitShortURL := "codecommit://repo-man"
-	codecommitBadURL := "git-codecommitus-west-2amazonaws.com"
-	codecommitBadRegion := "codecommit::us-mess-2://repo-man"
-	codecommitRegion := "us-west-2"
-	mockEnvConfigs := []*config.Environment{
-		{
-			Name: "test",
-		},
-		{
-			Name: "prod",
-		},
-	}
 	testCases := map[string]struct {
 		inEnvironments      []string
 		inRepoURL           string
@@ -124,15 +104,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		mockStore        func(m *mocks.Mockstore)
 		buffer           bytes.Buffer
 
-		expectedEnvironments      []string
-		expectedEnvConfigs        []*config.Environment
-		expectedRepoURL           string
-		expectedRepoName          string
-		expectedRepoBranch        string
-		expectedGitHubOwner       string
-		expectedGitHubAccessToken string
-		expectedCodeCommitRegion  string
-		expectedError             error
+		expectedError error
 	}{
 		"passed-in URL to unsupported repo provider": {
 			inRepoURL:        "unsupported.org/repositories/repoName",
@@ -143,7 +115,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedError: errors.New("must be a URL to a supported provider (GitHub, CodeCommit, Bitbucket)"),
+			expectedError: errors.New("repository unsupported.org/repositories/repoName must be from a supported provider: GitHub, CodeCommit or Bitbucket"),
 		},
 		"passed-in invalid environments": {
 			inRepoURL:      "https://github.com/badGoose/chaOS",
@@ -177,10 +149,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
-
-			expectedEnvironments: []string{"test", "prod"},
-			expectedEnvConfigs:   mockEnvConfigs,
-			expectedError:        nil,
 		},
 		"success with CC repo with env and repoURL flags": {
 			inEnvironments: []string{"test", "prod"},
@@ -200,12 +168,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
-
-			expectedEnvironments: []string{"test", "prod"},
-			expectedEnvConfigs:   mockEnvConfigs,
-			expectedError:        nil,
 		},
-		"no flags, prompts for all input, success case for GitHub": {
+		"no flags, prompts for all input, success case for selecting URL": {
 			inEnvironments:      []string{},
 			inRepoURL:           "",
 			inGitHubAccessToken: githubToken,
@@ -231,55 +195,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
-			expectedRepoURL:           githubAnotherURL,
-			expectedGitHubOwner:       githubOwner,
-			expectedRepoName:          githubAnotherRepoName,
-			expectedGitHubAccessToken: githubToken,
-			expectedRepoBranch:        "main",
-			expectedEnvironments:      []string{"test", "prod"},
-			expectedEnvConfigs:        mockEnvConfigs,
-			expectedError:             nil,
-		},
-		"no flags, success case for CodeCommit": {
-			inEnvironments: []string{},
-			inRepoURL:      "",
-			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\narcher\tssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
-
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {
-				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
-			},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-					Name:   "test",
-					Region: "us-west-2",
-				}, nil)
-				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
-					Name:   "prod",
-					Region: "us-west-2",
-				}, nil)
-			},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitSSHURL, nil).Times(1)
-			},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {
-				m.EXPECT().Default().Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-west-2"),
-					},
-				}, nil)
-			},
-
-			expectedRepoURL:          codecommitSSHURL,
-			expectedRepoName:         codecommitAnotherRepoName,
-			expectedRepoBranch:       "main",
-			expectedCodeCommitRegion: codecommitRegion,
-			expectedEnvironments:     []string{"test", "prod"},
-			expectedEnvConfigs:       mockEnvConfigs,
-			expectedError:            nil,
 		},
 		"returns error if fail to list environments": {
 			inEnvironments: []string{},
@@ -296,8 +211,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockStore:        func(m *mocks.Mockstore) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments: []string{},
-			expectedError:        fmt.Errorf("select environments: some error"),
+			expectedError: fmt.Errorf("select environments: some error"),
 		},
 
 		"returns error if fail to select URL": {
@@ -315,8 +229,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments: []string{"test", "prod"},
-			expectedError:        fmt.Errorf("select URL: some error"),
+			expectedError: fmt.Errorf("select URL: some error"),
 		},
 		"returns error if fail to get env config": {
 			inRepoURL:      "",
@@ -341,111 +254,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedEnvironments: []string{"test"},
-			expectedEnvConfigs: []*config.Environment{
-				{
-					Name: "test",
-				},
-			},
 			expectedError: fmt.Errorf("get config of environment prod: some error"),
-		},
-		"returns error if fail to parse GitHub URL": {
-			inEnvironments: []string{},
-			buffer:         *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\nhunter\treallyevenworseGoosegithub.comNotEvenAURL (fetch)\n"),
-
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore:    func(m *mocks.Mockstore) {},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubReallyBadURL, nil).Times(1)
-			},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
-			expectedEnvironments: []string{"test", "prod"},
-			expectedError:        fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoosegithub.comNotEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
-		},
-		"returns error if fail to parse repo name out of CodeCommit URL": {
-			inEnvironments:      []string{},
-			inGitHubAccessToken: "",
-			buffer:              *bytes.NewBufferString(""),
-
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore:    func(m *mocks.Mockstore) {},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadURL, nil).Times(1)
-			},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
-			expectedRepoName:     "",
-			expectedEnvironments: []string{"test", "prod"},
-			expectedError:        fmt.Errorf("unknown CodeCommit URL format: git-codecommitus-west-2amazonaws.com"),
-		},
-		"returns error if fail to parse region out of CodeCommit URL": {
-			buffer: *bytes.NewBufferString(""),
-
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore:    func(m *mocks.Mockstore) {},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitBadRegion, nil).Times(1)
-			},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
-			expectedRepoURL:          codecommitHTTPSURL,
-			expectedRepoName:         codecommitRepoName,
-			expectedRepoBranch:       "",
-			expectedCodeCommitRegion: "",
-			expectedEnvironments:     []string{"test", "prod"},
-			expectedError:            fmt.Errorf("unable to parse the AWS region from %s", codecommitBadRegion),
-		},
-		"returns error if fail to retrieve default session": {
-			buffer: *bytes.NewBufferString(""),
-
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore:    func(m *mocks.Mockstore) {},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitShortURL, nil).Times(1)
-			},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {
-				m.EXPECT().Default().Return(nil, errors.New("some error"))
-			},
-
-			expectedRepoName:     "",
-			expectedEnvironments: []string{},
-			expectedError:        fmt.Errorf("retrieve default session: some error"),
-		},
-		"returns error if repo region is not app's region": {
-			buffer: *bytes.NewBufferString(""),
-
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore:    func(m *mocks.Mockstore) {},
-			mockRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
-			},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {
-				m.EXPECT().Default().Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-east-1"),
-					},
-				}, nil)
-			},
-
-			expectedRepoName:     "",
-			expectedEnvironments: []string{},
-			expectedError:        fmt.Errorf("repository repo-man is in us-west-2, but app my-app is in us-east-1; they must be in the same region"),
 		},
 		"skip selector prompt if only one repo URL": {
 			buffer: *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
@@ -470,13 +279,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).Times(0)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
-			expectedRepoURL:      githubAnotherURL,
-			expectedGitHubOwner:  githubOwner,
-			expectedRepoName:     githubAnotherRepoName,
-			expectedRepoBranch:   "main",
-			expectedEnvironments: []string{"test", "prod"},
-			expectedError:        nil,
 		},
 	}
 
@@ -521,11 +323,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedRepoName, opts.repoName)
-				require.Equal(t, tc.expectedGitHubOwner, opts.repoOwner)
-				require.Equal(t, tc.expectedGitHubAccessToken, opts.githubAccessToken)
-				require.Equal(t, tc.expectedCodeCommitRegion, opts.ccRegion)
-				require.ElementsMatch(t, tc.expectedEnvironments, opts.environments)
 			}
 		})
 	}
@@ -535,11 +332,10 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	buildspecExistsErr := &workspace.ErrFileExists{FileName: "/buildspec.yml"}
 	manifestExistsErr := &workspace.ErrFileExists{FileName: "/pipeline.yml"}
 	testCases := map[string]struct {
-		inProvider     string
 		inEnvironments []string
 		inEnvConfigs   []*config.Environment
 		inGitHubToken  string
-		inRepoName     string
+		inRepoURL      string
 		inBranch       string
 		inAppName      string
 
@@ -550,20 +346,20 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockRegionalResourcesGetter func(m *mocks.MockappResourcesGetter)
 		mockStoreSvc                func(m *mocks.Mockstore)
 		mockRunner                  func(m *mocks.Mockrunner)
+		mockSessProvider            func(m *mocks.MocksessionProvider)
 		buffer                      bytes.Buffer
 
 		expectedBranch string
 		expectedError  error
 	}{
 		"successfully detects local branch and sets it": {
-			inProvider: "GitHub",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
 				},
 			},
-			inRepoName: "goose",
-			inAppName:  "badgoose",
+			inRepoURL: "git@github.com:badgoose/goose.git",
+			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
@@ -598,14 +394,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError:  nil,
 		},
 		"sets 'main' as branch name if error fetching it": {
-			inProvider: "GitHub",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
 				},
 			},
-			inRepoName: "goose",
-			inAppName:  "badgoose",
+			inRepoURL: "git@github.com:badgoose/goose.git",
+			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
@@ -639,16 +434,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError:  nil,
 		},
 		"creates secret and writes manifest and buildspec for GHV1 provider": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -685,16 +477,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for GH(v2) provider": {
-			inProvider: "GitHub",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
-			inRepoName: "goose",
-			inBranch:   "main",
-			inAppName:  "badgoose",
+			inRepoURL: "git@github.com:badgoose/goose.git",
+			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
@@ -728,16 +517,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for CC provider": {
-			inProvider: "CodeCommit",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
-			inRepoName: "goose",
-			inBranch:   "main",
-			inAppName:  "badgoose",
+			inRepoURL: "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/goose",
+			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
@@ -767,20 +553,24 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
+			},
 			expectedError:  nil,
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for BB provider": {
-			inProvider: "Bitbucket",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
-			inRepoName: "goose",
-			inBranch:   "dev",
-			inAppName:  "badgoose",
+			inRepoURL: "https://huanjani@bitbucket.org/badgoose/goose.git",
+			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
@@ -814,16 +604,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"does not return an error if secret already exists": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -861,7 +648,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"returns an error if can't write manifest": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -869,8 +655,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -888,16 +673,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: errors.New("write pipeline manifest to workspace: some error"),
 		},
 		"returns an error if application cannot be retrieved": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -917,16 +699,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: errors.New("get application badgoose: some error"),
 		},
 		"returns an error if can't get regional application resources": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -952,16 +731,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: fmt.Errorf("get regional application resources: some error"),
 		},
 		"returns an error if buildspec cannot be parsed": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -995,16 +771,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: errors.New("some error"),
 		},
 		"does not return an error if buildspec and manifest already exists": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -1041,7 +814,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"returns an error if can't write buildspec": {
-			inProvider: "GitHubV1",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -1049,8 +821,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				},
 			},
 			inGitHubToken: "hunter2",
-			inRepoName:    "goose",
-			inBranch:      "dev",
+			inRepoURL:     "git@github.com:badgoose/goose.git",
 			inAppName:     "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
@@ -1085,6 +856,49 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("write buildspec to workspace: some error"),
 		},
+		"returns error when repository URL is not from a supported git provider": {
+			inRepoURL:     "https://gitlab.company.com/group/project.git",
+			inBranch:      "main",
+			inAppName:     "demo",
+			expectedError: errors.New("repository https://gitlab.company.com/group/project.git must be from a supported provider: GitHub, CodeCommit or Bitbucket"),
+		},
+		"returns error when GitHub repository URL is of unknown format": {
+			inRepoURL:     "thisisnotevenagithub.comrepository",
+			inBranch:      "main",
+			inAppName:     "demo",
+			expectedError: errors.New("unable to parse the GitHub repository owner and name from thisisnotevenagithub.comrepository: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
+		},
+		"returns error when CodeCommit repository URL is of unknown format": {
+			inRepoURL:     "git-codecommitus-west-2amazonaws.com",
+			inBranch:      "main",
+			inAppName:     "demo",
+			expectedError: errors.New("unknown CodeCommit URL format: git-codecommitus-west-2amazonaws.com"),
+		},
+		"returns error when CodeCommit repository contains unknown region": {
+			inRepoURL:     "codecommit::us-mess-2://repo-man",
+			inBranch:      "main",
+			inAppName:     "demo",
+			expectedError: errors.New("unable to parse the AWS region from codecommit::us-mess-2://repo-man"),
+		},
+		"returns error when CodeCommit repository region does not match pipeline's region": {
+			inRepoURL: "codecommit::us-west-2://repo-man",
+			inBranch:  "main",
+			inAppName: "demo",
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-east-1"),
+					},
+				}, nil)
+			},
+			expectedError: errors.New("repository repo-man is in us-west-2, but app demo is in us-east-1; they must be in the same region"),
+		},
+		"returns error when Bitbucket repository URL is of unknown format": {
+			inRepoURL:     "bitbucket.org",
+			inBranch:      "main",
+			inAppName:     "demo",
+			expectedError: errors.New("unable to parse the Bitbucket repository name from bitbucket.org"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -1099,23 +913,42 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockRegionalResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
 			mockstore := mocks.NewMockstore(ctrl)
 			mockRunner := mocks.NewMockrunner(ctrl)
+			mockSessProvider := mocks.NewMocksessionProvider(ctrl)
 
-			tc.mockSecretsManager(mockSecretsManager)
-			tc.mockWsWriter(mockWriter)
-			tc.mockParser(mockParser)
-			tc.mockRegionalResourcesGetter(mockRegionalResourcesGetter)
-			tc.mockStoreSvc(mockstore)
-			tc.mockRunner(mockRunner)
+			if tc.mockSecretsManager != nil {
+				tc.mockSecretsManager(mockSecretsManager)
+			}
+			if tc.mockWsWriter != nil {
+				tc.mockWsWriter(mockWriter)
+			}
+			if tc.mockParser != nil {
+				tc.mockParser(mockParser)
+			}
+			if tc.mockRegionalResourcesGetter != nil {
+				tc.mockRegionalResourcesGetter(mockRegionalResourcesGetter)
+			}
+			if tc.mockStoreSvc != nil {
+				tc.mockStoreSvc(mockstore)
+			}
+			if tc.mockRunner != nil {
+				tc.mockRunner(mockRunner)
+			}
+			if tc.mockSessProvider != nil {
+				tc.mockSessProvider(mockSessProvider)
+			}
 			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					githubAccessToken: tc.inGitHubToken,
 					appName:           tc.inAppName,
+					repoBranch:        tc.inBranch,
+					repoURL:           tc.inRepoURL,
 				},
 
 				secretsmanager: mockSecretsManager,
 				cfnClient:      mockRegionalResourcesGetter,
+				sessProvider:   mockSessProvider,
 				store:          mockstore,
 				workspace:      mockWriter,
 				parser:         mockParser,
@@ -1123,8 +956,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				fs:             memFs,
 				buffer:         tc.buffer,
 				envConfigs:     tc.inEnvConfigs,
-				provider:       tc.inProvider,
-				repoName:       tc.inRepoName,
 			}
 
 			// WHEN
@@ -1199,14 +1030,12 @@ fed	codecommit::us-west-2://aws-sample (fetch)
 ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
 bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)`,
 
-			expectedURLs:  []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
-			expectedError: nil,
+			expectedURLs: []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
 		},
 		"don't add to URL list if it is not a GitHub or CodeCommit or Bitbucket URL": {
 			inRemoteResult: `badgoose	verybad@gitlab.com/whatever (fetch)`,
 
-			expectedURLs:  []string{},
-			expectedError: nil,
+			expectedURLs: []string{},
 		},
 	}
 
@@ -1241,7 +1070,6 @@ func TestInitPipelineGHRepoURL_parse(t *testing.T) {
 				name:  "cli",
 				owner: "badgoose",
 			},
-			expectedError: nil,
 		},
 		"successfully parses repo name with .git suffix": {
 			inRepoURL: "https://github.com/koke/grit.git",
@@ -1250,7 +1078,6 @@ func TestInitPipelineGHRepoURL_parse(t *testing.T) {
 				name:  "grit",
 				owner: "koke",
 			},
-			expectedError: nil,
 		},
 		"returns an error if it is not a github URL": {
 			inRepoURL: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever",
@@ -1288,7 +1115,6 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 				name:   "aws-sample",
 				region: "sa-east-1",
 			},
-			expectedError: nil,
 		},
 		"successfully parses ssh url": {
 			inRepoURL: "ssh://git-codecommit.us-east-2.amazonaws.com/v1/repos/aws-sample",
@@ -1297,7 +1123,6 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 				name:   "aws-sample",
 				region: "us-east-2",
 			},
-			expectedError: nil,
 		},
 		"successfully parses federated (GRC) url": {
 			inRepoURL: "codecommit::us-gov-west-1://aws-sample",
@@ -1306,7 +1131,6 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 				name:   "aws-sample",
 				region: "us-gov-west-1",
 			},
-			expectedError: nil,
 		},
 	}
 
@@ -1339,7 +1163,6 @@ func TestInitPipelineBBRepoURL_parse(t *testing.T) {
 				name:  "aws-copilot-sample-service",
 				owner: "huanjani",
 			},
-			expectedError: nil,
 		},
 		"successfully parses ssh url": {
 			inRepoURL: "ssh://git@bitbucket.org:huanjani/aws-copilot-sample-service",
@@ -1348,7 +1171,6 @@ func TestInitPipelineBBRepoURL_parse(t *testing.T) {
 				name:  "aws-copilot-sample-service",
 				owner: "huanjani",
 			},
-			expectedError: nil,
 		},
 	}
 
