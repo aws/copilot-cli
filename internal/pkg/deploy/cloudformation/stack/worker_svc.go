@@ -108,7 +108,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	subscribe, err := convertSubscribe(s.manifest.Subscribe, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	subscribe, err := convertSubscribe(s.manifest.Subscribe)
 	if err != nil {
 		return "", err
 	}
