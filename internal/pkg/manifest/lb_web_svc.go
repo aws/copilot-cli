@@ -5,8 +5,8 @@ package manifest
 
 import (
 	"errors"
-	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/regions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"strings"
 	"time"
 
@@ -330,6 +330,7 @@ func (e *Alias) ToString() string {
 	return strings.Join(e.StringSlice, ",")
 }
 
+// IsServiceAvailableInRegion checks if service type exist in the given region.
 func (s *LoadBalancedWebService) IsServiceAvailableInRegion(region string) (bool, error) {
-	return regions.IsServiceAvailable(ecs.EndpointsID, region)
+	return partitions.IsAvailableInRegion(ecs.EndpointsID, region)
 }

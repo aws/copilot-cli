@@ -19,3 +19,16 @@ func (r Region) Partition() (endpoints.Partition, error) {
 	}
 	return partition, nil
 }
+
+// IsServiceAvailable returns true if the service ID is available in the given region.
+func IsAvailableInRegion(sID string, region string) (bool, error) {
+	partition, err := Region(region).Partition()
+	if err != nil {
+		return false, err
+	}
+	regions, _ := endpoints.RegionsForService(endpoints.DefaultPartitions(), partition.ID(), sID)
+	if _, exist := regions[region]; exist {
+		return true, nil
+	}
+	return false, nil
+}

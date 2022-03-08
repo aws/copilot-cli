@@ -35,3 +35,45 @@ func TestRegion_Partition(t *testing.T) {
 		})
 	}
 }
+
+func TestRegion_IsAvailableInRegion(t *testing.T) {
+	testCases := map[string]struct {
+		sID       string
+		region    string
+		want      bool
+		wantedErr error
+	}{
+		"ecs service exist in the given region": {
+			region: "us-west-2",
+			sID:    "ecs",
+			want:   true,
+		},
+		"ecs service does not exist in the given region": {
+			region: "us-west-3",
+			sID:    "ecs",
+			want:   false,
+		},
+		"apprunner service exist in the given region": {
+			region: "us-west-2",
+			sID:    "ecs",
+			want:   true,
+		},
+		"apprunner service does not exist in the given region": {
+			region: "us-west-3",
+			sID:    "ecs",
+			want:   false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := IsAvailableInRegion(tc.sID, tc.region)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}

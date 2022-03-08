@@ -30,6 +30,7 @@ const (
 	// App Runner ImageRepositoryTypes
 	repositoryTypeECR       = "ECR"
 	repositoryTypeECRPublic = "ECR_PUBLIC"
+	EndpointsID             = apprunner.EndpointsID
 )
 
 type api interface {

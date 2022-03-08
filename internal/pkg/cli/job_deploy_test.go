@@ -281,6 +281,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				envUpgradeCmd: m.mockEnvUpgrader,
 
 				targetApp: &config.Application{},
+				targetEnv: &config.Environment{},
 			}
 
 			// WHEN

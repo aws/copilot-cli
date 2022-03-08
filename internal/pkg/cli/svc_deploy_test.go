@@ -221,6 +221,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 					return &mockWorkloadMft{}, nil
 				},
 				targetApp: &config.Application{},
+				targetEnv: &config.Environment{},
 			}
 
 			// WHEN

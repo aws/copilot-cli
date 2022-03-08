@@ -342,11 +342,11 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 	}
 	serviceInRegion, err := mft.IsServiceAvailableInRegion(in.targetEnv.Region)
 	if err != nil {
-		return nil, fmt.Errorf("%s available for region %s: %w ", in.svcType, in.targetEnv.Region, err)
+		return nil, fmt.Errorf("check if %s is available in region %s: %w", in.svcType, in.targetEnv.Region, err)
 	}
 
 	if !serviceInRegion {
-		log.Warningf(`%s might not be available in region %s, proceed with caution
+		log.Warningf(`%s might not be available in region %s; proceed with caution.
 `, in.svcType, in.targetEnv.Region)
 	}
 
