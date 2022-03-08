@@ -99,8 +99,8 @@ func TestPipelineStatus_Validate(t *testing.T) {
 
 func TestPipelineStatus_Ask(t *testing.T) {
 	const (
-		mockAppName                = "dinder"
-		mockPipelineName           = "pipeline-dinder-badgoose-repo"
+		mockAppName      = "dinder"
+		mockPipelineName = "pipeline-dinder-badgoose-repo"
 	)
 	mockError := errors.New("mock error")
 	testTags := map[string]string{
