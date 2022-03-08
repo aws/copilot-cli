@@ -580,6 +580,7 @@ Resources:
     Properties:
       TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-givesdogs']]
       Protocol: 'sqs'
+      FilterPolicy: {"cutomer_interests": ["rugby", "football", "baseball"], "event": [{"anything-but": "order_cancelled"}], "price_usd": [{"numeric": [">=", 100]}], "store": ["example_corp"]}
       Endpoint: !GetAtt EventsQueue.Arn
   dogsvcgiveshuskiesSNSTopicSubscription:
     Metadata:
