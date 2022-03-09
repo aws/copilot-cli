@@ -44,10 +44,10 @@ nlb:
 ヘルスチェックのリクエストが送信されるポート。ヘルスチェックが、コンテナターゲットポートとは異なるポートで実行される必要がある場合に指定します。
 
 <span class="parent-field">nlb.healthcheck.</span><a id="nlb-healthcheck-healthy-threshold" href="#nlb-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
-unhealthy なターゲットを healthy とみなすために必要な、連続したヘルスチェックの成功回数を指定します。デフォルト値は 3 で、設定可能な範囲は、2 〜 １0 です。
+unhealthy なターゲットを healthy とみなすために必要な、連続したヘルスチェックの成功回数を指定します。デフォルト値は 3 で、設定可能な範囲は、2 〜 10 です。
 
 <span class="parent-field">nlb.healthcheck.</span><a id="nlb-healthcheck-unhealthy-threshold" href="#nlb-healthcheck-unhealthy-threshold" class="field">`unhealthy_threshold`</a> <span class="type">Integer</span>  
-ターゲットが unhealthy であると判断するまでに必要な、連続したヘルスチェックの失敗回数を指定します。デフォルト値は 3 で、設定可能な範囲は、2 〜 １0 です。
+ターゲットが unhealthy であると判断するまでに必要な、連続したヘルスチェックの失敗回数を指定します。デフォルト値は 3 で、設定可能な範囲は、2 〜 10 です。
 
 !!! info
     この説明を書いている時点では、[ドキュメント](https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/network/target-group-health-checks.html)によると、Network Load Balancer の 'unhealthy threshold' は 'healthy threshold' と同じである必要があるとされています。
