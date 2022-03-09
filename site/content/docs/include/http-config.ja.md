@@ -66,7 +66,7 @@ http:
 ```
 
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings</span>  
-サービスの HTTPS ドメインエイリアス
+Service の HTTPS ドメインエイリアス
 ```yaml
 # 文字列で指定する場合
 http:
