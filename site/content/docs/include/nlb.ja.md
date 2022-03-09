@@ -73,10 +73,10 @@ unhealthy なターゲットを healthy とみなすために必要な、連続�
 <span class="parent-field">nlb.</span><a id="nlb-alias" href="#nlb-alias" class="field">`alias`</a> <span class="type">String or Array of Strings</span>  
 Service のドメインエイリアス
 ```yaml
-# String version.
+# 文字列で指定する場合
 nlb:
   alias: example.com
-# Alteratively, as an array of strings.
+# 別の方法として、文字列配列の場合
 nlb:
   alias: ["example.com", "v1.example.com"]
 ```
