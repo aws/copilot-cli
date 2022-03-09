@@ -77,5 +77,5 @@ http:
 ```
 
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
-HTTP(S) のプロトコルバージョン。'grpc', 'http1', 'http2' のいずれかである必要があります。省略された場合は、'http1' とみなされます。
+HTTP(S) のプロトコルバージョン。'grpc', 'http1', 'http2' のいずれかである必要があります。省略した場合は、'http1' とみなされます。
 gRPC を使用する場合、Application にドメインが関連付けられなければならないことに注意してください。
