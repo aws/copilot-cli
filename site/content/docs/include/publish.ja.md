@@ -9,14 +9,12 @@ publish:
     - name: orderEvents
 ```
 
-上記の例では、この Manifest は、`orderEvents` という名前の SNS トピックを定義しています。Copilot の Environment にデプロイされた、他の Worker Service は `order-events` トピックをサブスクライブできます。
-上記の例では、この Manifest は、Copilot の Environment にデプロイされた他の Worker Service がサブスクライブできる `orderEvents` という名前の SNS トピックを定義しています。`COPILOT_SNS_TOPIC_ARNS` という名前の環境変数が、JSON 文字列としてワークロードに設定されます。
+上記の例では、この Manifest は、Copilot の Environment にデプロイされた他の Worker Service がサブスクライブできる `orderEvents` という名前の SNS トピックを定義しています。`COPILOT_SNS_TOPIC_ARNS` という名前の環境変数が、JSON 文字列としてワークロードに設定されます。  
 
-JavaScriptでは、次のように記述できます：
+JavaScriptでは、次のように記述できます。
 ```js
 const {orderEvents} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)
 ```
-For more details, see the [pub/sub](../developing/publish-subscribe.en.md) page.
 詳しくは、[パブリッシュ / サブスクライブ](../developing/publish-subscribe.ja.md)のページをご覧ください。
 
 <span class="parent-field">publish.</span><a id="publish-topics" href="#publish-topics" class="field">`topics`</a> <span class="type">Array of topics</span>  
