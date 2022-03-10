@@ -86,6 +86,7 @@ func (o *listSvcOpts) Ask() error {
 
 // Execute lists the services through the prompt.
 func (o *listSvcOpts) Execute() error {
+	fmt.Println("app name in svc list: ", o.appName)
 	if err := o.list.Write(o.appName); err != nil {
 		return err
 	}

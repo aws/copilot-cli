@@ -63,7 +63,6 @@ type deployPipelineOpts struct {
 	deployPipelineVars
 
 	pipelineDeployer pipelineDeployer
-	app              *config.Application
 	sel              wsPipelineSelector
 	prog             progress
 	prompt           prompter
@@ -76,6 +75,7 @@ type deployPipelineOpts struct {
 
 	// cached variables
 	wsAppName                    string
+	app              			 *config.Application
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
 	pipelineMft                  *manifest.Pipeline
@@ -90,10 +90,6 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 
-	app, err := store.GetApplication(vars.appName)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", vars.appName, err)
-	}
 	prompter := prompt.New()
 
 	ws, err := workspace.New()
@@ -101,13 +97,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	wsAppName := tryReadingAppName()
-	if vars.appName == "" {
-		vars.appName = wsAppName
-	}
-
 	return &deployPipelineOpts{
-		app:                app,
 		ws:                 ws,
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
@@ -149,7 +139,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
-		wsAppName: wsAppName,
+		wsAppName: tryReadingAppName(),
 		svcBuffer: &bytes.Buffer{},
 		jobBuffer: &bytes.Buffer{},
 	}, nil
@@ -160,6 +150,13 @@ func (o *deployPipelineOpts) Validate() error {
 	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 		return err
 	}
+	fmt.Println("setting app name: ", o.wsAppName)
+	o.appName = o.wsAppName
+
+	if err := o.getTargetApp(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -175,6 +172,7 @@ func (o *deployPipelineOpts) Ask() error {
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
 func (o *deployPipelineOpts) Execute() error {
 	// bootstrap pipeline resources
+	fmt.Println("sending this app name: ", o.appName)
 	o.prog.Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, color.HighlightUserInput(o.appName)))
 	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
 	if err != nil {
@@ -258,6 +256,16 @@ func (o *deployPipelineOpts) askPipelineName() error {
 	}
 	o.pipeline = pipeline
 
+	return nil
+}
+
+func (o *deployPipelineOpts) getTargetApp() (error) {
+	appConfig, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
+	}
+	fmt.Println("setting appconfig: ", appConfig)
+	o.app = appConfig
 	return nil
 }
 
