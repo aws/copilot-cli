@@ -641,7 +641,7 @@ network:
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
-					Placement:      PlacementP("public"),
+					Placement:      placementP("public"),
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},
 			},

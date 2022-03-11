@@ -134,7 +134,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: PlacementP(PublicSubnetPlacement),
+					Placement: placementP(PublicSubnetPlacement),
 				},
 			},
 		},

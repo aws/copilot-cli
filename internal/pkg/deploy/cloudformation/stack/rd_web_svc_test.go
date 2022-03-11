@@ -21,6 +21,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	testPublicPlacement  = manifest.PublicSubnetPlacement
+	testPrivatePlacement = manifest.PrivateSubnetPlacement
+)
+
 var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 	Workload: manifest.Workload{
 		Name: aws.String(testServiceName),
@@ -221,7 +226,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 	}{
 		"should throw an error if env controller cannot be parsed": {
 			inManifest: func(mft manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
-				mft.Network.VPC.Placement = (*manifest.RequestDrivenWebServicePlacement)(manifest.PlacementP(manifest.PrivateSubnetPlacement))
+				mft.Network.VPC.Placement = (*manifest.RequestDrivenWebServicePlacement)(&testPrivatePlacement)
 				return mft
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
@@ -243,7 +248,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		"should be able to parse custom resource URLs when alias is enabled": {
 			inManifest: func(mft manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
 				mft.Alias = aws.String("convex.domain.com")
-				mft.Network.VPC.Placement = (*manifest.RequestDrivenWebServicePlacement)(manifest.PlacementP(manifest.PrivateSubnetPlacement))
+				mft.Network.VPC.Placement = (*manifest.RequestDrivenWebServicePlacement)(&testPrivatePlacement)
 				return mft
 			},
 			inCustomResourceURLs: map[string]string{

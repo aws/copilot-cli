@@ -72,7 +72,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: PlacementP(PublicSubnetPlacement),
+							Placement: placementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -146,7 +146,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: PlacementP(PublicSubnetPlacement),
+							Placement: placementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -454,7 +454,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      PlacementP(PublicSubnetPlacement),
+							Placement:      placementP(PublicSubnetPlacement),
 							SecurityGroups: []string{"sg-123"},
 						},
 					},
@@ -615,7 +615,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      PlacementP(PublicSubnetPlacement),
+							Placement:      placementP(PublicSubnetPlacement),
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -686,7 +686,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      PlacementP(PublicSubnetPlacement),
+							Placement:      placementP(PublicSubnetPlacement),
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -710,7 +710,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      PlacementP(PublicSubnetPlacement),
+							Placement:      placementP(PublicSubnetPlacement),
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},

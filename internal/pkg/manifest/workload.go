@@ -24,12 +24,12 @@ const (
 
 const (
 	// AWS VPC subnet placement options.
-	PublicSubnetPlacement  = "public"
-	PrivateSubnetPlacement = "private"
+	PublicSubnetPlacement  = Placement("public")
+	PrivateSubnetPlacement = Placement("private")
 )
 
 // All placement options.
-var subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
+var subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 
 // Error definitions.
 var (
@@ -73,7 +73,6 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	switch typeVal {
 	case LoadBalancedWebServiceType:
 		m = newDefaultLoadBalancedWebService()
-
 	case RequestDrivenWebServiceType:
 		m = newDefaultRequestDrivenWebService()
 	case BackendServiceType:
@@ -531,15 +530,6 @@ func DockerfileBuildRequired(svc interface{}) (bool, error) {
 	return required, nil
 }
 
-// PlacementP converts a string to a `Placement` type and returns its pointer.
-func PlacementP(p string) *Placement {
-	if p == "" {
-		return nil
-	}
-	placement := Placement(p)
-	return &placement
-}
-
 func stringP(s string) *string {
 	if s == "" {
 		return nil
@@ -552,4 +542,12 @@ func uint16P(n uint16) *uint16 {
 		return nil
 	}
 	return &n
+}
+
+func placementP(p Placement) *Placement {
+	if p == "" {
+		return nil
+	}
+	placement := p
+	return &placement
 }
