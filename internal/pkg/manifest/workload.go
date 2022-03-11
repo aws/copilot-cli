@@ -22,8 +22,8 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
-// AWS VPC subnet placement options.
 const (
+	// AWS VPC subnet placement options.
 	PublicSubnetPlacement  = "public"
 	PrivateSubnetPlacement = "private"
 )
