@@ -55,6 +55,7 @@ const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connec
 
 type deployPipelineVars struct {
 	appName          string
+	wsAppName        string
 	name             string
 	skipConfirmation bool
 }
@@ -74,7 +75,6 @@ type deployPipelineOpts struct {
 	newJobListCmd    func(io.Writer) cmd
 
 	// cached variables
-	wsAppName                    string
 	app              			 *config.Application
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
@@ -96,6 +96,12 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	if err != nil {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
+
+	wsAppName := tryReadingAppName()
+	if vars.appName == "" {
+		vars.appName = wsAppName
+	}
+	vars.wsAppName = wsAppName
 
 	return &deployPipelineOpts{
 		ws:                 ws,
@@ -139,7 +145,6 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
-		wsAppName: tryReadingAppName(),
 		svcBuffer: &bytes.Buffer{},
 		jobBuffer: &bytes.Buffer{},
 	}, nil
@@ -150,7 +155,6 @@ func (o *deployPipelineOpts) Validate() error {
 	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 		return err
 	}
-	fmt.Println("setting app name: ", o.wsAppName)
 	o.appName = o.wsAppName
 
 	if err := o.getTargetApp(); err != nil {
@@ -172,7 +176,6 @@ func (o *deployPipelineOpts) Ask() error {
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
 func (o *deployPipelineOpts) Execute() error {
 	// bootstrap pipeline resources
-	fmt.Println("sending this app name: ", o.appName)
 	o.prog.Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, color.HighlightUserInput(o.appName)))
 	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
 	if err != nil {
@@ -259,12 +262,14 @@ func (o *deployPipelineOpts) askPipelineName() error {
 	return nil
 }
 
-func (o *deployPipelineOpts) getTargetApp() (error) {
+func (o *deployPipelineOpts) getTargetApp() error {
+	if o.app != nil {
+		return nil
+	}
 	appConfig, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return fmt.Errorf("get application %s configuration: %w", o.appName, err)
 	}
-	fmt.Println("setting appconfig: ", appConfig)
 	o.app = appConfig
 	return nil
 }

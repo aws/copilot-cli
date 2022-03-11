@@ -65,7 +65,7 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			inWsAppName: testAppName,
 			inAppName:   testAppName,
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication(testAppName).Return(nil, nil)
+				m.EXPECT().GetApplication(testAppName).Return(nil, nil).Times(2)
 			},
 
 			wantedAppName: testAppName,
@@ -84,9 +84,10 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
+					wsAppName: tc.inWsAppName,
+
 				},
 				store:     mockStore,
-				wsAppName: tc.inWsAppName,
 			}
 
 			// WHEN
