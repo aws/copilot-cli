@@ -250,6 +250,11 @@ func newSvcDeployer(in *WorkloadDeployerInput) (*svcDeployer, error) {
 	}, nil
 }
 
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (lbSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(partitions.ECSEndpointsID, region)
+}
+
 type lbSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
@@ -297,6 +302,11 @@ type backendSvcDeployer struct {
 	backendMft *manifest.BackendService
 }
 
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (backendSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(partitions.ECSEndpointsID, region)
+}
+
 // NewBackendDeployer is the constructor for backendSvcDeployer.
 func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) {
 	svcDeployer, err := newSvcDeployer(in)
@@ -316,6 +326,11 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 type jobDeployer struct {
 	*workloadDeployer
 	jobMft *manifest.ScheduledJob
+}
+
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (jobDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(partitions.ECSEndpointsID, region)
 }
 
 // NewJobDeployer is the constructor for jobDeployer.
@@ -340,6 +355,11 @@ type rdwsDeployer struct {
 	customResourceS3Client uploader
 	appVersionGetter       versionGetter
 	rdwsMft                *manifest.RequestDrivenWebService
+}
+
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (rdwsDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(partitions.AppRunnerEndpointsID, region)
 }
 
 // NewRDWSDeployer is the constructor for RDWSDeployer.
@@ -369,6 +389,11 @@ type workerSvcDeployer struct {
 	*svcDeployer
 	topicLister snsTopicsLister
 	wsMft       *manifest.WorkerService
+}
+
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (workerSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(partitions.ECSEndpointsID, region)
 }
 
 // NewWorkerSvcDeployer is the constructor for workerSvcDeployer.

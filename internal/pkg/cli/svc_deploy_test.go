@@ -181,6 +181,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
 
 			wantedError: fmt.Errorf("deploy service frontend to environment prod-iad: some error"),
@@ -245,8 +246,4 @@ func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, e
 
 func (m *mockWorkloadMft) Validate() error {
 	return nil
-}
-
-func (m *mockWorkloadMft) IsServiceAvailableInRegion(region string) (bool, error) {
-	return false, nil
 }

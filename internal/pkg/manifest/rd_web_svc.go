@@ -5,8 +5,6 @@ package manifest
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -179,9 +177,4 @@ func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 			},
 		},
 	}
-}
-
-// IsServiceAvailableInRegion checks if service type exist in the given region.
-func (s *RequestDrivenWebService) IsServiceAvailableInRegion(region string) (bool, error) {
-	return partitions.IsAvailableInRegion(apprunner.EndpointsID, region)
 }

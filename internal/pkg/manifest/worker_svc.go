@@ -5,8 +5,6 @@ package manifest
 
 import (
 	"errors"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -244,9 +242,4 @@ func newDefaultWorkerService() *WorkerService {
 			},
 		},
 	}
-}
-
-// IsServiceAvailableInRegion checks if service type exist in the given region.
-func (s *WorkerService) IsServiceAvailableInRegion(region string) (bool, error) {
-	return partitions.IsAvailableInRegion(ecs.EndpointsID, region)
 }

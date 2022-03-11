@@ -175,8 +175,6 @@ func (o *deploySvcOpts) Execute() error {
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
-		targetEnv:    o.targetEnv,
-		svcType:      o.svcType,
 	})
 	if err != nil {
 		return err
@@ -189,6 +187,15 @@ func (o *deploySvcOpts) Execute() error {
 	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
+	}
+	serviceInRegion, err := deployer.IsServiceAvailableInRegion(o.targetEnv.Region)
+	if err != nil {
+		return fmt.Errorf("check if %s is available in region %s: %w", o.svcType, o.targetEnv.Region, err)
+	}
+
+	if !serviceInRegion {
+		log.Warningf(`%s might not be available in region %s; proceed with caution.
+`, o.svcType, o.targetEnv.Region)
 	}
 	targetApp, err := o.getTargetApp()
 	if err != nil {
@@ -319,8 +326,6 @@ type workloadManifestInput struct {
 	ws           wsWlDirReader
 	interpolator interpolator
 	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
-	targetEnv    *config.Environment
-	svcType      string
 }
 
 func workloadManifest(in *workloadManifestInput) (interface{}, error) {
@@ -339,15 +344,6 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 	envMft, err := mft.ApplyEnv(in.envName)
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
-	}
-	serviceInRegion, err := mft.IsServiceAvailableInRegion(in.targetEnv.Region)
-	if err != nil {
-		return nil, fmt.Errorf("check if %s is available in region %s: %w", in.svcType, in.targetEnv.Region, err)
-	}
-
-	if !serviceInRegion {
-		log.Warningf(`%s might not be available in region %s; proceed with caution.
-`, in.svcType, in.targetEnv.Region)
 	}
 
 	if err := envMft.Validate(); err != nil {

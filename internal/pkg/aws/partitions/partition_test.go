@@ -45,22 +45,22 @@ func TestRegion_IsAvailableInRegion(t *testing.T) {
 	}{
 		"ecs service exist in the given region": {
 			region: "us-west-2",
-			sID:    "ecs",
+			sID:    ECSEndpointsID,
 			want:   true,
 		},
 		"ecs service does not exist in the given region": {
 			region: "us-west-3",
-			sID:    "ecs",
+			sID:    ECSEndpointsID,
 			want:   false,
 		},
 		"apprunner service exist in the given region": {
 			region: "us-west-2",
-			sID:    "ecs",
+			sID:    AppRunnerEndpointsID,
 			want:   true,
 		},
 		"apprunner service does not exist in the given region": {
 			region: "us-west-3",
-			sID:    "ecs",
+			sID:    AppRunnerEndpointsID,
 			want:   false,
 		},
 	}

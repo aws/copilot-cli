@@ -146,8 +146,6 @@ func (o *deployJobOpts) Execute() error {
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
-		targetEnv:    o.targetEnv,
-		svcType:      "Scheduled Jobs",
 	})
 	if err != nil {
 		return err
@@ -160,6 +158,15 @@ func (o *deployJobOpts) Execute() error {
 	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
+	}
+	serviceInRegion, err := deployer.IsServiceAvailableInRegion(o.targetEnv.Region)
+	if err != nil {
+		return fmt.Errorf("check if Scheduled Job(s) is available in region %s: %w", o.targetEnv.Region, err)
+	}
+
+	if !serviceInRegion {
+		log.Warningf(`Scheduled Job(s) might not be available in region %s; proceed with caution.
+`, o.targetEnv.Region)
 	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{

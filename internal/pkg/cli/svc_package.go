@@ -296,8 +296,6 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
-		targetEnv:    o.targetEnv,
-		svcType:      "",
 	})
 	if err != nil {
 		return nil, err

@@ -5,11 +5,20 @@ package partitions
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/apprunner"
+	"github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 type Region string
+
+const (
+	//App Runner EndpointsID
+	AppRunnerEndpointsID = apprunner.EndpointsID
+	//ECS EndpointsID
+	ECSEndpointsID = ecs.EndpointsID
+)
 
 // Partition returns the first partition which includes the region passed in, from a list of the partitions the SDK is bundled with.
 func (r Region) Partition() (endpoints.Partition, error) {
@@ -20,15 +29,16 @@ func (r Region) Partition() (endpoints.Partition, error) {
 	return partition, nil
 }
 
-// IsServiceAvailable returns true if the service ID is available in the given region.
+// IsAvailableInRegion returns true if the service ID is available in the given region.
 func IsAvailableInRegion(sID string, region string) (bool, error) {
 	partition, err := Region(region).Partition()
 	if err != nil {
 		return false, err
 	}
-	regions, _ := endpoints.RegionsForService(endpoints.DefaultPartitions(), partition.ID(), sID)
-	if _, exist := regions[region]; exist {
-		return true, nil
+	regionServices, existInPartition := endpoints.RegionsForService(endpoints.DefaultPartitions(), partition.ID(), sID)
+	if !existInPartition {
+		return false, nil
 	}
-	return false, nil
+	_, existInRegion := regionServices[region]
+	return existInRegion, nil
 }
