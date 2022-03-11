@@ -381,27 +381,6 @@ func (c *NetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
-// UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
-// If the user specified a placement that's not valid then throw an error.
-func (c *NetworkConfig) UnmarshalYAML(value *yaml.Node) error {
-	type networkWithDefaults NetworkConfig
-	publicPlacement := Placement(PublicSubnetPlacement)
-	defaultVPCConf := vpcConfig{
-		Placement: &publicPlacement,
-	}
-	conf := networkWithDefaults{
-		VPC: defaultVPCConf,
-	}
-	if err := value.Decode(&conf); err != nil {
-		return err
-	}
-	if conf.VPC.isEmpty() { // If after unmarshalling the user did not specify VPC configuration then reset it to public.
-		conf.VPC = defaultVPCConf
-	}
-	*c = NetworkConfig(conf)
-	return nil
-}
-
 // Placement represents where to place tasks (public or private subnets).
 type Placement string
 
