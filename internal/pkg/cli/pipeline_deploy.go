@@ -157,15 +157,15 @@ func (o *deployPipelineOpts) Validate() error {
 	}
 	o.appName = o.wsAppName
 
-	if err := o.getTargetApp(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *deployPipelineOpts) Ask() error {
+	if err := o.getTargetApp(); err != nil {
+		return err
+	}
+
 	if o.name != "" {
 		return o.validatePipelineName()
 	}
