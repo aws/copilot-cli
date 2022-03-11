@@ -395,7 +395,7 @@ func (c *NetworkConfig) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&conf); err != nil {
 		return err
 	}
-	if conf.VPC.isEmpty() { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
+	if conf.VPC.isEmpty() { // If after unmarshalling the user did not specify VPC configuration then reset it to public.
 		conf.VPC = defaultVPCConf
 	}
 	*c = NetworkConfig(conf)
