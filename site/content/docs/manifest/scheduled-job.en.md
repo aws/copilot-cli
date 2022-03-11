@@ -2,7 +2,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
 
 ???+ note "Sample manifest for a report generator cronjob"
 
-    ```yaml
+```yaml
     # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
     name: report-generator
     type: Scheduled Job
@@ -29,7 +29,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
       prod:
         cpu: 2048               # Larger CPU value for prod environment
         memory: 4096
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your job.
