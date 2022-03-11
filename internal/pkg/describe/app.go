@@ -70,12 +70,6 @@ func (a *App) HumanString() string {
 	for _, svc := range a.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
-	writer.Flush()
-	fmt.Fprint(writer, color.Bold.Sprint("\nJobs\n\n"))
-	writer.Flush()
-	jobsHeaders := []string{"Name", "Type"}
-	fmt.Fprintf(writer, "  %s\n", strings.Join(jobsHeaders, "\t"))
-	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(jobsHeaders), "\t"))
 	for _, job := range a.Jobs {
 		fmt.Fprintf(writer, "  %s\t%s\n", job.Name, job.Type)
 	}

@@ -268,11 +268,6 @@ Services
   Name    Type
   ----    ----
   my-svc  lb-web-svc
-
-Jobs
-
-  Name    Type
-  ----    ----
   my-job  Scheduled Job
 
 Pipelines
@@ -340,11 +335,6 @@ Services
   Name    Type
   ----    ----
   my-svc  lb-web-svc
-
-Jobs
-
-  Name    Type
-  ----    ----
   my-job  Scheduled Job
 
 Pipelines
