@@ -20,6 +20,7 @@ image:
 
 variables:
   LOG_LEVEL: info
+env_file: log.env
 secrets:
   GITHUB_TOKEN: GITHUB_TOKEN
 
@@ -48,11 +49,15 @@ Job をトリガするイベントの設定。
 定期的に Job をトリガする頻度を指定できます。
 サポートする頻度は:
 
-* `"@yearly"`
-* `"@monthly"`
-* `"@weekly"`
-* `"@daily"`
-* `"@hourly"`
+
+| 頻度         | 以下と同一              | 実行タイミングを `UTC` を用いた可読表記すると          |
+| ------------ | --------------------- | --------------------------------------------- |
+| `"@yearly"`  | `"cron(0 * * * ? *)"` | 1 月 1 日の午前 0 時                            |
+| `"@monthly"` | `"cron(0 0 1 * ? *)"` | 毎月 1 日の午前 0 時                            |
+| `"@weekly"`  | `"cron(0 0 ? * 1 *)"` | 毎週日曜日の午前 0 時                            |
+| `"@daily"`   | `"cron(0 0 * * ? *)"` | 毎日午前 0 時                                   |
+| `"@hourly"`  | `"cron(0 * * * ? *)"` | 毎時 0 分                                      |
+
 * `"@every {duration}"` (例: "1m", "5m")
 * `"rate({duration})"` CloudWatch の[rate 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions) の形式
 
@@ -101,7 +106,18 @@ command: ["ps", "au"]
 <div class="separator"></div>
 
 <a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定） 例えば、`linux/arm64` や `windows/x86_64` といった値です。デフォルトは `linux/x86_64` です。
+
+生成された文字列を上書きして、有効な異なる `osfamily` や `architecture` を指定してビルドすることができます。例えば Windows ユーザーの場合は、
+```yaml
+platform: windows/x86_64
+```
+とするとデフォルトは `WINDOWS_SERVER_2019_CORE` ですが、以下のような値を使用できます：
+```yaml
+platform:
+  osfamily: windows_server_2019_full
+  architecture: x86_64
+```
 
 <div class="separator"></div>
 
