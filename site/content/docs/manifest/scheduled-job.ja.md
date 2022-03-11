@@ -108,11 +108,11 @@ command: ["ps", "au"]
 <a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
 `docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定） 例えば、`linux/arm64` や `windows/x86_64` といった値です。デフォルトは `linux/x86_64` です。
 
-生成された文字列を上書きして、有効な異なる `osfamily` や `architecture` を指定してビルドすることができます。例えば Windows ユーザーの場合は、
+生成された文字列を上書きして、有効な異なる `osfamily` や `architecture` を明示的に指定してビルドすることができます。例えば Windows ユーザーの場合は、
 ```yaml
 platform: windows/x86_64
 ```
-とするとデフォルトは `WINDOWS_SERVER_2019_CORE` ですが、以下のような値を使用できます：
+とするとデフォルトは `WINDOWS_SERVER_2019_CORE` が利用されますが、 Map を使って以下のように指定できます：
 ```yaml
 platform:
   osfamily: windows_server_2019_full
