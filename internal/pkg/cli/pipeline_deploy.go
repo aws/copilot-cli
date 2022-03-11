@@ -75,7 +75,7 @@ type deployPipelineOpts struct {
 	newJobListCmd    func(io.Writer) cmd
 
 	// cached variables
-	app              			 *config.Application
+	app                          *config.Application
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
 	pipelineMft                  *manifest.Pipeline

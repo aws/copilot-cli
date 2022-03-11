@@ -82,12 +82,11 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			tc.mockStore(mockStore)
 			opts := deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
-					appName: tc.inAppName,
-					name:    tc.inPipelineName,
+					appName:   tc.inAppName,
+					name:      tc.inPipelineName,
 					wsAppName: tc.inWsAppName,
-
 				},
-				store:     mockStore,
+				store: mockStore,
 			}
 
 			// WHEN
