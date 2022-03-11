@@ -531,6 +531,15 @@ func DockerfileBuildRequired(svc interface{}) (bool, error) {
 	return required, nil
 }
 
+// PlacementP converts a string to a `Placement` type and returns its pointer.
+func PlacementP(p string) *Placement {
+	if p == "" {
+		return nil
+	}
+	placement := Placement(p)
+	return &placement
+}
+
 func stringP(s string) *string {
 	if s == "" {
 		return nil
@@ -543,12 +552,4 @@ func uint16P(n uint16) *uint16 {
 		return nil
 	}
 	return &n
-}
-
-func PlacementP(p string) *Placement {
-	if p == "" {
-		return nil
-	}
-	placement := Placement(p)
-	return &placement
 }
