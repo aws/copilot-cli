@@ -192,6 +192,36 @@ func (cs *changeSet) execute() error {
 	return nil
 }
 
+// executeWithNoRollback executes a created change set without automatic stack rollback.
+func (cs *changeSet) executeWithNoRollback() error {
+	descr, err := cs.describe()
+	if err != nil {
+		return err
+	}
+	if descr.ExecutionStatus != cloudformation.ExecutionStatusAvailable {
+		// Ignore execute request if the change set does not contain any modifications.
+		if descr.StatusReason == noChangesReason {
+			return nil
+		}
+		if descr.StatusReason == noUpdatesReason {
+			return nil
+		}
+		return &ErrChangeSetNotExecutable{
+			cs:    cs,
+			descr: descr,
+		}
+	}
+	_, err = cs.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+		ChangeSetName:   aws.String(cs.name),
+		StackName:       aws.String(cs.stackName),
+		DisableRollback: aws.Bool(true),
+	})
+	if err != nil {
+		return fmt.Errorf("execute %s: %w", cs, err)
+	}
+	return nil
+}
+
 // createAndExecute calls create and then execute.
 // If the change set is empty, returns a ErrChangeSetEmpty.
 func (cs *changeSet) createAndExecute(conf *stackConfig) error {
@@ -214,6 +244,9 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 			}
 		}
 		return fmt.Errorf("%w: %s", err, descr.StatusReason)
+	}
+	if conf.DisableRollback {
+		return cs.executeWithNoRollback()
 	}
 	return cs.execute()
 }

@@ -6,10 +6,11 @@ package template
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws/arn"
 
 	"github.com/aws/aws-sdk-go/aws"
 )

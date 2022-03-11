@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/spf13/cobra"
 
@@ -29,12 +30,13 @@ import (
 )
 
 type deployWkldVars struct {
-	appName        string
-	name           string
-	envName        string
-	imageTag       string
-	resourceTags   map[string]string
-	forceNewUpdate bool
+	appName         string
+	name            string
+	envName         string
+	imageTag        string
+	resourceTags    map[string]string
+	forceNewUpdate  bool
+	disableRollback bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -200,9 +202,23 @@ func (o *deploySvcOpts) Execute() error {
 			RootUserARN: o.rootUserARN,
 			Tags:        tags.Merge(targetApp.Tags, o.resourceTags),
 		},
-		ForceNewUpdate: o.forceNewUpdate,
+		Options: deploy.Options{
+			ForceNewUpdate:  o.forceNewUpdate,
+			DisableRollback: o.disableRollback,
+		},
 	})
 	if err != nil {
+		if o.disableRollback {
+			stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
+			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can:
+* Run %s to inspect the service log.
+* Visit the AWS console to inspect the errors.
+After fixing the deployment, you can:
+1. Run %s to rollback the deployment.
+2. Run %s to make a new deployment.
+`, color.HighlightCode("copilot svc logs"), color.HighlightCode(rollbackCmd), color.HighlightCode("copilot svc deploy"))
+		}
 		return fmt.Errorf("deploy service %s to environment %s: %w", o.name, o.envName, err)
 	}
 	o.deployRecs = deployRecs
@@ -431,6 +447,7 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 
 	return cmd
 }

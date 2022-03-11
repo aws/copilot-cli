@@ -62,12 +62,14 @@ func (s *SubscribeConfig) IsEmpty() bool {
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
-	Name    *string        `yaml:"name"`
-	Service *string        `yaml:"service"`
-	Queue   SQSQueueOrBool `yaml:"queue"`
+	Name         *string                `yaml:"name"`
+	Service      *string                `yaml:"service"`
+	FilterPolicy map[string]interface{} `yaml:"filter_policy"`
+	Queue        SQSQueueOrBool         `yaml:"queue"`
 }
 
-// SQSQueueOrBool contains custom unmarshaling logic for the `queue` field in the manifest.
+// SQSQueueOrBool is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type SQSQueue.
 type SQSQueueOrBool struct {
 	Advanced SQSQueue
 	Enabled  *bool
@@ -78,7 +80,7 @@ func (q *SQSQueueOrBool) IsEmpty() bool {
 	return q.Advanced.IsEmpty() && q.Enabled == nil
 }
 
-// UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueue to be specified as a
+// UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueueOrBool to be specified as a
 // string or a struct alternately.
 func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&q.Advanced); err != nil {
