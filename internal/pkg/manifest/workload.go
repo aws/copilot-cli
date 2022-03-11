@@ -23,13 +23,13 @@ const (
 )
 
 // AWS VPC subnet placement options.
-var (
-	PublicSubnetPlacement  = Placement("public")
-	PrivateSubnetPlacement = Placement("private")
-
-	// All placement options.
-	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
+const (
+	PublicSubnetPlacement  = "public"
+	PrivateSubnetPlacement = "private"
 )
+
+// All placement options.
+var subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 // Error definitions.
 var (
@@ -543,4 +543,12 @@ func uint16P(n uint16) *uint16 {
 		return nil
 	}
 	return &n
+}
+
+func PlacementP(p string) *Placement {
+	if p == "" {
+		return nil
+	}
+	placement := Placement(p)
+	return &placement
 }

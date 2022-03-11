@@ -237,7 +237,7 @@ func newDefaultWorkerService() *WorkerService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: &PublicSubnetPlacement,
+					Placement: PlacementP(PublicSubnetPlacement),
 				},
 			},
 		},

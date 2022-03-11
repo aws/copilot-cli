@@ -153,7 +153,7 @@ func newDefaultBackendService() *BackendService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: &PublicSubnetPlacement,
+					Placement: PlacementP(PublicSubnetPlacement),
 				},
 			},
 		},
