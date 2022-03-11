@@ -71,7 +71,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: &PublicSubnetPlacement,
+							Placement: PlacementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -112,7 +112,7 @@ func TestNewWorkerSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: &PublicSubnetPlacement,
+							Placement: PlacementP(PublicSubnetPlacement),
 						},
 					},
 				},

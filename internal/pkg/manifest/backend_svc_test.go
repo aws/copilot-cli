@@ -56,7 +56,7 @@ func TestNewBackendSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: &PublicSubnetPlacement,
+							Placement: PlacementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -102,7 +102,7 @@ func TestNewBackendSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: &PublicSubnetPlacement,
+							Placement: PlacementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -152,7 +152,7 @@ func TestNewBackendSvc(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: &PublicSubnetPlacement,
+							Placement: PlacementP(PublicSubnetPlacement),
 						},
 					},
 				},
