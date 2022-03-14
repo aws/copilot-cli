@@ -22,7 +22,6 @@ import (
 )
 
 var (
-	testPublicPlacement  = manifest.PublicSubnetPlacement
 	testPrivatePlacement = manifest.PrivateSubnetPlacement
 )
 
