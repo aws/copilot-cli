@@ -309,18 +309,13 @@ func TestEnvShow_Execute(t *testing.T) {
   Region      us-west-2
   Account ID  123456789012
 
-Services
+Workload
 
   Name      Type
   ----      ----
   testSvc1  load-balanced
   testSvc2  load-balanced
   testSvc3  load-balanced
-
-Jobs
-
-  Name      Type
-  ----      ----
   testJob1  Scheduled Job
   testJob2  Scheduled Job
 
