@@ -5,6 +5,8 @@ package partitions
 
 import (
 	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,22 +47,22 @@ func TestRegion_IsAvailableInRegion(t *testing.T) {
 	}{
 		"ecs service exist in the given region": {
 			region: "us-west-2",
-			sID:    ECSEndpointsID,
+			sID:    ecs.EndpointsID,
 			want:   true,
 		},
 		"ecs service does not exist in the given region": {
 			region: "us-west-3",
-			sID:    ECSEndpointsID,
+			sID:    ecs.EndpointsID,
 			want:   false,
 		},
 		"apprunner service exist in the given region": {
 			region: "us-west-2",
-			sID:    AppRunnerEndpointsID,
+			sID:    apprunner.EndpointsID,
 			want:   true,
 		},
 		"apprunner service does not exist in the given region": {
 			region: "us-west-1",
-			sID:    AppRunnerEndpointsID,
+			sID:    apprunner.EndpointsID,
 			want:   false,
 		},
 	}

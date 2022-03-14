@@ -5,20 +5,10 @@ package partitions
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/apprunner"
-	"github.com/aws/aws-sdk-go/service/ecs"
-
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 type Region string
-
-const (
-	//App Runner EndpointsID
-	AppRunnerEndpointsID = apprunner.EndpointsID
-	//ECS EndpointsID
-	ECSEndpointsID = ecs.EndpointsID
-)
 
 // Partition returns the first partition which includes the region passed in, from a list of the partitions the SDK is bundled with.
 func (r Region) Partition() (endpoints.Partition, error) {
