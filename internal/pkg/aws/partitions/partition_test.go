@@ -59,7 +59,7 @@ func TestRegion_IsAvailableInRegion(t *testing.T) {
 			want:   true,
 		},
 		"apprunner service does not exist in the given region": {
-			region: "us-west-3",
+			region: "us-west-1",
 			sID:    AppRunnerEndpointsID,
 			want:   false,
 		},
