@@ -1308,12 +1308,10 @@ func Test_convertPublish(t *testing.T) {
 }
 
 func Test_convertSubscribe(t *testing.T) {
-	accountId := "123456789123"
-	region := "us-west-2"
-	app := "app"
-	env := "env"
-	svc := "svc"
 	duration111Seconds := 111 * time.Second
+	mockStruct := map[string]interface{}{
+		"store": []string{"example_corp"},
+	}
 	testCases := map[string]struct {
 		inSubscribe manifest.SubscribeConfig
 
@@ -1366,6 +1364,7 @@ func Test_convertSubscribe(t *testing.T) {
 						Queue: manifest.SQSQueueOrBool{
 							Enabled: aws.Bool(true),
 						},
+						FilterPolicy: mockStruct,
 					},
 				},
 				Queue: manifest.SQSQueue{},
@@ -1373,9 +1372,10 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue:   &template.SQSQueue{},
+						Name:         aws.String("name"),
+						Service:      aws.String("svc"),
+						Queue:        &template.SQSQueue{},
+						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
 				Queue: nil,
@@ -1384,7 +1384,7 @@ func Test_convertSubscribe(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertSubscribe(tc.inSubscribe, accountId, region, app, env, svc)
+			got, err := convertSubscribe(tc.inSubscribe)
 			require.Equal(t, tc.wanted, got)
 			require.NoError(t, err)
 		})
