@@ -627,9 +627,7 @@ network:
   vpc:
 `,
 			wantedConfig: &NetworkConfig{
-				VPC: vpcConfig{
-					Placement: &PublicSubnetPlacement,
-				},
+				VPC: vpcConfig{},
 			},
 		},
 		"unmarshals successfully for public placement with security groups": {
@@ -643,7 +641,7 @@ network:
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
-					Placement:      &PublicSubnetPlacement,
+					Placement:      placementP("public"),
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},
 			},
