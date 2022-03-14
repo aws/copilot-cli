@@ -7,10 +7,14 @@
 //  .
 //  ├── copilot                        (application directory)
 //  │   ├── .workspace                 (workspace summary)
-//  │   └── my-service
+//  │   ├── my-service
 //  │   │   └── manifest.yml           (service manifest)
-//  │   ├── buildspec.yml              (buildspec for the pipeline's build stage)
-//  │   └── pipeline.yml               (pipeline manifest)
+//  │   ├── buildspec.yml              (legacy buildspec for the pipeline's build stage)
+//  │   ├── pipeline.yml               (legacy pipeline manifest)
+//  │   ├── pipelines
+//  │   │   ├── pipeline-app-beta
+//  │   │   │   ├── buildspec.yml      (buildspec for the pipeline 'pipeline-app-beta')
+//  │   ┴   ┴   └── manifest.yml       (pipeline manifest for the pipeline 'pipeline-app-beta')
 //  └── my-service-src                 (customer service code)
 package workspace
 
@@ -18,11 +22,12 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
@@ -38,7 +43,7 @@ const (
 	addonsDirName             = "addons"
 	pipelinesDirName          = "pipelines"
 	maximumParentDirsToSearch = 5
-	pipelineFileName          = "pipeline.yml"
+	legacyPipelineFileName    = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
 
@@ -173,68 +178,64 @@ type PipelineManifest struct {
 
 // ListPipelines returns all pipelines in the workspace.
 func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
-	var pipelineManifests []PipelineManifest
-	// Look for legacy pipeline.
+	var manifests []PipelineManifest
+
+	addManifest := func(manifestPath string) {
+		manifest, err := ws.ReadPipelineManifest(manifestPath)
+		switch {
+		case errors.Is(err, ErrNoPipelineInWorkspace):
+			// no file at manifestPath, ignore it
+			return
+		case err != nil:
+			ws.logger("Unable to read pipeline manifest at '%s': %s", manifestPath, err)
+			return
+		}
+
+		manifests = append(manifests, PipelineManifest{
+			Name: manifest.Name,
+			Path: manifestPath,
+		})
+	}
+
+	// add the legacy pipeline
 	legacyPath, err := ws.PipelineManifestLegacyPath()
 	if err != nil {
 		return nil, err
 	}
-	manifest, err := ws.ReadPipelineManifest(legacyPath)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrNoPipelineInWorkspace):
-			ws.logger("Unable to read pipeline manifest at '%s': %w", legacyPath, err)
-		default:
-			return nil, err
-		}
-	} else {
-		pipelineManifests = append(pipelineManifests, PipelineManifest{
-			Name: manifest.Name,
-			Path: legacyPath,
-		})
-	}
-	// Look for other pipelines.
-	pipelinesPath, err := ws.pipelinesDirPath()
+	addManifest(legacyPath)
+
+	// add each file that matches pipelinesDir/*/manifest.yml
+	pipelinesDir, err := ws.pipelinesDirPath()
 	if err != nil {
 		return nil, err
 	}
-	exists, err := ws.fsUtils.Exists(pipelinesPath)
+
+	exists, err := ws.fsUtils.Exists(pipelinesDir)
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("check if pipelines directory exists at %q: %w", pipelinesDir, err)
+	case !exists:
+		// there is at most 1 manifest (the legacy one), so we don't need to sort
+		return manifests, nil
+	}
+
+	files, err := ws.fsUtils.ReadDir(pipelinesDir)
 	if err != nil {
-		return nil, fmt.Errorf("check if pipeline manifest exists at %s: %w", pipelinesPath, err)
+		return nil, fmt.Errorf("read directory %q: %w", pipelinesDir, err)
 	}
-	if !exists {
-		return pipelineManifests, nil
-	}
-	// Look through the existent pipelines dir for pipeline manifests.
-	files, err := ws.fsUtils.ReadDir(pipelinesPath)
-	if err != nil {
-		return nil, fmt.Errorf("read directory %s: %w", pipelinesPath, err)
-	}
-	for _, file := range files {
-		// Ignore buildspecs.
-		if strings.HasSuffix(file.Name(), "buildspec.yml") {
-			continue
-		}
-		// Read manifests of moved legacy pipeline and any other pipelines.
-		if strings.HasSuffix(file.Name(), ".yml") {
-			path := filepath.Join(pipelinesPath, file.Name())
-			manifest, err := ws.ReadPipelineManifest(path)
-			if err != nil {
-				switch {
-				case errors.Is(err, ErrNoPipelineInWorkspace):
-					ws.logger("Unable to read pipeline manifest at '%s': %w", legacyPath, err)
-				default:
-					return nil, err
-				}
-			} else {
-				pipelineManifests = append(pipelineManifests, PipelineManifest{
-					Name: manifest.Name,
-					Path: path,
-				})
-			}
+
+	for _, dir := range files {
+		if dir.IsDir() {
+			addManifest(filepath.Join(pipelinesDir, dir.Name(), manifestFileName))
 		}
 	}
-	return pipelineManifests, nil
+
+	// sort manifests alphabetically by Name
+	sort.Slice(manifests, func(i, j int) bool {
+		return manifests[i].Name < manifests[j].Name
+	})
+
+	return manifests, nil
 }
 
 // listWorkloads returns the name of all workloads (either services or jobs) in the workspace.
@@ -343,7 +344,7 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 	if err != nil {
 		return "", fmt.Errorf("marshal pipeline manifest to binary: %w", err)
 	}
-	return ws.write(data, pipelineFileName)
+	return ws.write(data, legacyPipelineFileName)
 }
 
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
@@ -403,7 +404,7 @@ func (ws *Workspace) PipelineManifestLegacyPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(copilotPath, pipelineFileName), nil
+	return filepath.Join(copilotPath, legacyPipelineFileName), nil
 }
 
 func (ws *Workspace) writeSummary(appName string) error {

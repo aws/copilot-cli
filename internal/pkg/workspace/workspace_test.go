@@ -520,11 +520,13 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 		wantedPipelines []PipelineManifest
 		wantedErr       error
 	}{
-		"success finding legacy pipeline (in both copilot/ and copilot/pipelines) and other pipelines, weeding out buildspecs": {
+		"success finding legacy pipeline (copilot/pipeline.yml) and pipelines (copilot/pipelines/*/manifest.yml)": {
 			copilotDir: "/copilot",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
+
 				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
 				legacyInCopiDirManifest, _ := fs.Create("/copilot/pipeline.yml")
 				defer legacyInCopiDirManifest.Close()
 				legacyInCopiDirManifest.Write([]byte(`
@@ -532,50 +534,120 @@ name: legacyInCopiDir
 version: 1
 `))
 
-				fs.Create("/copilot/buildspec.yml")
-
 				fs.Mkdir("/copilot/pipelines", 0755)
-				legacyInPipelinesDirManifest, _ := fs.Create("/copilot/pipelines/pipeline.yml")
-				defer legacyInPipelinesDirManifest.Close()
-				legacyInPipelinesDirManifest.Write([]byte(`
-name: legacyInPipelinesDir
+				fs.Create("/copilot/pipelines/randomFileToIgnore.yml")
+
+				fs.Create("/copilot/pipelines/beta/buildspec.yml")
+				betaPipelineManifest, _ := fs.Create("/copilot/pipelines/beta/manifest.yml")
+				defer betaPipelineManifest.Close()
+				betaPipelineManifest.Write([]byte(`
+name: betaManifest
 version: 1
 `))
 
-				fs.Create("/copilot/pipelines/buildspec.yml")
-
-				otherInPipelinesDirManifest, _ := fs.Create("/copilot/pipelines/other.yml")
-				defer otherInPipelinesDirManifest.Close()
-				otherInPipelinesDirManifest.Write([]byte(`
-name: otherInPipelinesDir
+				fs.Create("/copilot/pipelines/prod/buildspec.yml")
+				prodPipelineManifest, _ := fs.Create("/copilot/pipelines/prod/manifest.yml")
+				defer prodPipelineManifest.Close()
+				prodPipelineManifest.Write([]byte(`
+name: prodManifest
 version: 1
-`))
-
-				otherInPipelinesDirBuildspec, _ := fs.Create("/copilot/pipelines/other.buildspec.yml")
-				defer otherInPipelinesDirBuildspec.Close()
-				otherInPipelinesDirBuildspec.Write([]byte(`
-name: buildspecInPipelinesDir
 `))
 
 				return fs
 			},
-
 			wantedPipelines: []PipelineManifest{
+				{
+					Name: "betaManifest",
+					Path: "/copilot/pipelines/beta/manifest.yml",
+				},
 				{
 					Name: "legacyInCopiDir",
 					Path: "/copilot/pipeline.yml",
 				},
 				{
-					Name: "otherInPipelinesDir",
-					Path: "/copilot/pipelines/other.yml",
-				},
-				{
-					Name: "legacyInPipelinesDir",
-					Path: "/copilot/pipelines/pipeline.yml",
+					Name: "prodManifest",
+					Path: "/copilot/pipelines/prod/manifest.yml",
 				},
 			},
 
 			wantedErr: nil,
+		},
+		"success finding legacy pipeline if it is the only pipeline": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+
+				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
+				legacyInCopiDirManifest, _ := fs.Create("/copilot/pipeline.yml")
+				defer legacyInCopiDirManifest.Close()
+				legacyInCopiDirManifest.Write([]byte(`
+name: legacyInCopiDir
+version: 1
+`))
+
+				return fs
+			},
+			wantedPipelines: []PipelineManifest{
+				{
+					Name: "legacyInCopiDir",
+					Path: "/copilot/pipeline.yml",
+				},
+			},
+			wantedErr: nil,
+		},
+		"success finding pipelines without any legacy pipelines": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+
+				fs.Mkdir("/copilot", 0755)
+				fs.Mkdir("/copilot/pipelines", 0755)
+
+				fs.Create("/copilot/pipelines/beta/buildspec.yml")
+				betaPipelineManifest, _ := fs.Create("/copilot/pipelines/beta/manifest.yml")
+				defer betaPipelineManifest.Close()
+				betaPipelineManifest.Write([]byte(`
+name: betaManifest
+version: 1
+`))
+
+				fs.Create("/copilot/pipelines/prod/buildspec.yml")
+				prodPipelineManifest, _ := fs.Create("/copilot/pipelines/prod/manifest.yml")
+				defer prodPipelineManifest.Close()
+				prodPipelineManifest.Write([]byte(`
+name: prodManifest
+version: 1
+`))
+
+				return fs
+			},
+			wantedPipelines: []PipelineManifest{
+				{
+					Name: "betaManifest",
+					Path: "/copilot/pipelines/beta/manifest.yml",
+				},
+				{
+					Name: "prodManifest",
+					Path: "/copilot/pipelines/prod/manifest.yml",
+				},
+			},
+			wantedErr: nil,
+		},
+		"ignores missing manifest files": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+
+				fs.Mkdir("/copilot", 0755)
+				fs.Mkdir("/copilot/pipelines", 0755)
+				fs.Mkdir("/copilot/pipelines/beta", 0755)
+				fs.Mkdir("/copilot/pipelines/prod", 0755)
+
+				return fs
+			},
+			wantedPipelines: nil,
+			wantedErr:       nil,
 		},
 	}
 
@@ -592,6 +664,7 @@ name: buildspecInPipelinesDir
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedPipelines, pipelines)
 			}
 		})
@@ -1011,7 +1084,7 @@ func TestWorkspace_write(t *testing.T) {
 			wantedPath: "/copilot/webhook/addons/policy.yml",
 		},
 		"create file under copilot directory": {
-			elems:      []string{pipelineFileName},
+			elems:      []string{legacyPipelineFileName},
 			wantedPath: "/copilot/pipeline.yml",
 		},
 		"return ErrFileExists if file already exists": {
