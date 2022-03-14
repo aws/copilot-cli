@@ -385,9 +385,10 @@ func (s *SubscribeOpts) HasTopicQueues() bool {
 
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
-	Name    *string
-	Service *string
-	Queue   *SQSQueue
+	Name         *string
+	Service      *string
+	FilterPolicy *string
+	Queue        *SQSQueue
 }
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
