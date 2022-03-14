@@ -14,7 +14,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/imdario/mergo v0.3.12
 	github.com/lnquy/cron v1.1.1
-	github.com/moby/buildkit v0.9.3
+	github.com/moby/buildkit v0.10.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
 	github.com/robfig/cron/v3 v3.0.1
@@ -37,6 +37,7 @@ require (
 	github.com/docker/docker v20.10.7+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
+	github.com/docker/libnetwork v0.5.6 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -48,10 +49,12 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.2-0.20211117181255-693428a734f5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
