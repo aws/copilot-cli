@@ -269,7 +269,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 					clientConfigured: true,
 				},
 				ws: m.mockWsReader,
-				newJobDeployer: func(djo *deployJobOpts) (workloadDeployer, error) {
+				newJobDeployer: func() (workloadDeployer, error) {
 					return m.mockDeployer, nil
 				},
 				newInterpolator: func(app, env string) interpolator {
