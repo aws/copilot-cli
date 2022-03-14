@@ -161,15 +161,6 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
-	if o.disableRollback {
-		stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
-		rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
-		log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can visit the AWS console to inspect the errors.
-After fixing the deployment, you can:
-1. Run %s to rollback the deployment.
-2. Run %s to make a new deployment.
-`, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
-	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest: uploadOut.ImageDigest,
