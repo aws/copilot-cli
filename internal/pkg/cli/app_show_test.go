@@ -263,7 +263,7 @@ Environments
   test    123456789  us-west-2
   prod    123456789  us-west-1
 
-Services
+Workload
 
   Name    Type
   ----    ----
@@ -330,7 +330,7 @@ Environments
   test    123456789  us-west-2
   prod    123456789  us-west-1
 
-Services
+Workload
 
   Name    Type
   ----    ----
