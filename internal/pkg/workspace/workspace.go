@@ -187,7 +187,7 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 			// no file at manifestPath, ignore it
 			return
 		case err != nil:
-			ws.logger("Unable to read pipeline manifest at '%s': %s", manifestPath, err)
+			ws.logger("Unable to read pipeline manifest at '%s': %s\n", manifestPath, err)
 			return
 		}
 

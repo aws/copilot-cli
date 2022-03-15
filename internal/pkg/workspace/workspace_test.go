@@ -519,6 +519,7 @@ func TestWorkspace_ListPipelines(t *testing.T) {
 
 		wantedPipelines []PipelineManifest
 		wantedErr       error
+		wantedLog       string
 	}{
 		"success finding legacy pipeline (copilot/pipeline.yml) and pipelines (copilot/pipelines/*/manifest.yml)": {
 			copilotDir: "/copilot",
@@ -649,15 +650,69 @@ version: 1
 			wantedPipelines: nil,
 			wantedErr:       nil,
 		},
+		"ignores pipeline manifest with invalid version": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+
+				fs.Mkdir("/copilot", 0755)
+				fs.Mkdir("/copilot/pipelines", 0755)
+				fs.Mkdir("/copilot/pipelines/beta", 0755)
+				fs.Create("/copilot/pipelines/beta/buildspec.yml")
+				betaPipelineManifest, _ := fs.Create("/copilot/pipelines/beta/manifest.yml")
+				defer betaPipelineManifest.Close()
+				betaPipelineManifest.Write([]byte(`
+name: betaManifest
+version: invalidVersionShouldBe~int
+`))
+
+				fs.Mkdir("/copilot/pipelines/prod", 0755)
+				fs.Create("/copilot/pipelines/prod/buildspec.yml")
+				prodPipelineManifest, _ := fs.Create("/copilot/pipelines/prod/manifest.yml")
+				defer prodPipelineManifest.Close()
+				prodPipelineManifest.Write([]byte(`
+name: prodManifest
+version: 1
+`))
+
+				return fs
+			},
+			wantedPipelines: []PipelineManifest{
+				{
+					Name: "prodManifest",
+					Path: "/copilot/pipelines/prod/manifest.yml",
+				},
+			},
+			wantedErr: nil,
+			wantedLog: "Unable to read pipeline manifest at '/copilot/pipelines/beta/manifest.yml': unmarshal pipeline manifest: yaml: unmarshal errors:\n  line 3: cannot unmarshal !!str `invalid...` into manifest.PipelineSchemaMajorVersion\n",
+		},
+		"handles missing copilot directory error": {
+			copilotDir: "",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+			wantedPipelines: nil,
+			wantedErr: &ErrWorkspaceNotFound{
+				ManifestDirectoryName: CopilotDirName,
+				NumberOfLevelsChecked: maximumParentDirsToSearch,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
+		var log string
+		logCollector := func(format string, a ...interface{}) {
+			log += fmt.Sprintf(format, a...)
+		}
+
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
 				fsUtils: &afero.Afero{
 					Fs: tc.fs(),
 				},
+				logger: logCollector,
 			}
 
 			pipelines, err := ws.ListPipelines()
@@ -667,6 +722,7 @@ version: 1
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedPipelines, pipelines)
 			}
+			require.Equal(t, tc.wantedLog, log)
 		})
 	}
 }
