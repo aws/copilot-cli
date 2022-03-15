@@ -44,6 +44,8 @@ type RunTaskRequest struct {
 
 	executionRole string
 	taskRole      string
+	appName       string
+	envName       string
 	cluster       string
 
 	containerInfo
@@ -96,16 +98,17 @@ func RunTaskRequestFromECSService(client ECSServiceDescriber, cluster, service s
 	}, nil
 }
 
-// RunTaskRequestFromECSService populates a RunTaskRequest with information from a Copilot service.
+// RunTaskRequestFromService populates a RunTaskRequest with information from a Copilot service.
 func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*RunTaskRequest, error) {
 	networkConfig, err := client.NetworkConfiguration(app, env, svc)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s: %w", svc, err)
 	}
 
-	cluster, err := client.ClusterARN(app, env)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve cluster ARN created for environment %s in application %s: %w", env, app, err)
+	// --subnets flag isn't supported when passing --app/--env, instead the subnet config
+	// will be read and applied during run.
+	if networkConfig != nil {
+		networkConfig.Subnets = nil
 	}
 
 	taskDef, err := client.TaskDefinition(app, env, svc)
@@ -124,7 +127,8 @@ func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*
 		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
 		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
 		containerInfo:        *containerInfo,
-		cluster:              cluster,
+		appName:              app,
+		envName:              env,
 	}, nil
 }
 
@@ -135,9 +139,10 @@ func RunTaskRequestFromJob(client JobDescriber, app, env, job string) (*RunTaskR
 		return nil, fmt.Errorf("retrieve network configuration for job %s: %w", job, err)
 	}
 
-	cluster, err := client.ClusterARN(app, env)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve cluster ARN created for environment %s in application %s: %w", env, app, err)
+	// --subnets flag isn't supported when passing --app/--env, instead the subnet config
+	// will be read and applied during run.
+	if config != nil {
+		config.Subnets = nil
 	}
 
 	taskDef, err := client.TaskDefinition(app, env, job)
@@ -156,7 +161,8 @@ func RunTaskRequestFromJob(client JobDescriber, app, env, job string) (*RunTaskR
 		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
 		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
 		containerInfo:        *containerInfo,
-		cluster:              cluster,
+		appName:              app,
+		envName:              env,
 	}, nil
 }
 
@@ -197,6 +203,14 @@ func (r RunTaskRequest) CLIString() string {
 
 	if r.networkConfiguration.SecurityGroups != nil && len(r.networkConfiguration.SecurityGroups) != 0 {
 		output = append(output, fmt.Sprintf("--security-groups %s", strings.Join(r.networkConfiguration.SecurityGroups, ",")))
+	}
+
+	if r.appName != "" {
+		output = append(output, fmt.Sprintf("--app %s", r.appName))
+	}
+
+	if r.envName != "" {
+		output = append(output, fmt.Sprintf("--env %s", r.envName))
 	}
 
 	if r.cluster != "" {

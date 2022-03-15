@@ -209,17 +209,18 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				}, nil)
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("kamura-village", nil)
 			},
 			wantedRunTaskRequest: &RunTaskRequest{
 				networkConfiguration: ecs.NetworkConfiguration{
 					AssignPublicIp: "1.2.3.4",
-					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				},
 
 				executionRole: "execution-role",
 				taskRole:      "task-role",
+
+				appName: testApp,
+				envName: testEnv,
 
 				containerInfo: containerInfo{
 					image:      "beautiful-image",
@@ -233,8 +234,6 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 						"truth": "go-ask-the-wise",
 					},
 				},
-
-				cluster: "kamura-village",
 			},
 		},
 		"unable to retrieve task definition": {
@@ -252,14 +251,6 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			wantedError: errors.New("retrieve network configuration for service svc: some error"),
-		},
-		"unable to obtain cluster ARN": {
-			setUpMock: func(m *mocks.MockServiceDescriber) {
-				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
-			},
-			wantedError: errors.New("retrieve cluster ARN created for environment env in application app: some error"),
 		},
 	}
 
@@ -332,17 +323,18 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				}, nil)
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("kamura-village", nil)
 			},
 			wantedRunTaskRequest: &RunTaskRequest{
 				networkConfiguration: ecs.NetworkConfiguration{
 					AssignPublicIp: "1.2.3.4",
-					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				},
 
 				executionRole: "execution-role",
 				taskRole:      "task-role",
+
+				appName: testApp,
+				envName: testEnv,
 
 				containerInfo: containerInfo{
 					image:      "beautiful-image",
@@ -356,8 +348,6 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 						"truth": "go-ask-the-wise",
 					},
 				},
-
-				cluster: "kamura-village",
 			},
 		},
 		"unable to retrieve task definition": {
@@ -375,14 +365,6 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			wantedError: errors.New("retrieve network configuration for job test-job: some error"),
-		},
-		"unable to obtain cluster ARN": {
-			setUpMock: func(m *mocks.MockJobDescriber) {
-				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().NetworkConfigurationForJob(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
-			},
-			wantedError: errors.New("retrieve cluster ARN created for environment test-env in application test-app: some error"),
 		},
 	}
 
