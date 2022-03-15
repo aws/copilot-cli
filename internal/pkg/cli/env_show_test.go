@@ -309,7 +309,7 @@ func TestEnvShow_Execute(t *testing.T) {
   Region      us-west-2
   Account ID  123456789012
 
-Workload
+Workloads
 
   Name      Type
   ----      ----

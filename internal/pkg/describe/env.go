@@ -293,7 +293,7 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
-	fmt.Fprint(writer, color.Bold.Sprint("\nWorkload\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
 	headers := []string{"Name", "Type"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
