@@ -184,10 +184,6 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	uploadOut, err := deployer.UploadArtifacts()
-	if err != nil {
-		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
-	}
 	serviceInRegion, err := deployer.IsServiceAvailableInRegion(o.targetEnv.Region)
 	if err != nil {
 		return fmt.Errorf("check if %s is available in region %s: %w", o.svcType, o.targetEnv.Region, err)
@@ -196,6 +192,10 @@ func (o *deploySvcOpts) Execute() error {
 	if !serviceInRegion {
 		log.Warningf(`%s might not be available in region %s; proceed with caution.
 `, o.svcType, o.targetEnv.Region)
+	}
+	uploadOut, err := deployer.UploadArtifacts()
+	if err != nil {
+		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
 	}
 	targetApp, err := o.getTargetApp()
 	if err != nil {

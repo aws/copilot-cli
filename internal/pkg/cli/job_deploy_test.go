@@ -228,6 +228,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(nil, mockError)
 			},
 

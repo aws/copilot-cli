@@ -25,10 +25,10 @@ func IsAvailableInRegion(sID string, region string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	regionServices, existInPartition := endpoints.RegionsForService(endpoints.DefaultPartitions(), partition.ID(), sID)
-	if !existInPartition {
+	regions, partitionOrServiceExists := endpoints.RegionsForService(endpoints.DefaultPartitions(), partition.ID(), sID)
+	if !partitionOrServiceExists {
 		return false, nil
 	}
-	_, existInRegion := regionServices[region]
+	_, existInRegion := regions[region]
 	return existInRegion, nil
 }
