@@ -53,10 +53,10 @@ unhealthy なターゲットを healthy とみなすために必要な、連続�
     この説明を書いている時点では、[ドキュメント](https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/network/target-group-health-checks.html)によると、Network Load Balancer の 'unhealthy threshold' は 'healthy threshold' と同じである必要があるとされています。
 
 <span class="parent-field">nlb.healthcheck.</span><a id="nlb-healthcheck-interval" href="#nlb-healthcheck-interval" class="field">`interval`</a> <span class="type">Duration</span>  
-個々のターゲットへのヘルスチェックを行う際の、おおよその間隔を秒単位で指定します。設定可能な値は 10 秒 (10s) または 30 秒 (30s) で、デフォルト値は 30 秒 (30s) です。
+個々のターゲットへのヘルスチェックを行う際の、おおよその間隔を秒単位で指定します。設定可能な値は 10s (10 秒) または 30s (30 秒) で、デフォルト値は 30s です。
 
 <span class="parent-field">nlb.healthcheck.</span><a id="nlb-healthcheck-timeout" href="#nlb-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
-ターゲットからの応答がない場合、ヘルスチェックが失敗したとみなすまでの時間を秒単位で指定します。デフォルト値は 10 秒 (10s) です。
+ターゲットからの応答がない場合、ヘルスチェックが失敗したとみなすまでの時間を秒単位で指定します。デフォルト値は 10s (10 秒)です。
 
 <span class="parent-field">nlb.</span><a id="nlb-target-container" href="#nlb-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサからのリクエストを受け取れます。
