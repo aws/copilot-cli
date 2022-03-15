@@ -134,11 +134,7 @@ func convertAdvancedCount(a manifest.AdvancedCount) (*template.AdvancedCount, er
 // convertCapacityProviders transforms the manifest fields into a format
 // parsable by the templates pkg.
 func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProviderStrategy {
-	if a.IsEmpty() {
-		return nil
-	}
-	// return if autoscaling range specified without spot scaling
-	if !a.Range.IsEmpty() && a.Range.Value != nil {
+	if a.Spot == nil && a.Range.RangeConfig.SpotFrom == nil {
 		return nil
 	}
 	var cps []*template.CapacityProviderStrategy
@@ -147,27 +143,25 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 		Weight:           aws.Int(1),
 		CapacityProvider: capacityProviderFargateSpot,
 	})
+	rc := a.Range.RangeConfig
 	// Return if only spot is specifed as count
-	if a.Range.IsEmpty() {
+	if rc.SpotFrom == nil {
 		return cps
 	}
 	// Scaling with spot
-	rc := a.Range.RangeConfig
-	if !rc.IsEmpty() {
-		spotFrom := aws.IntValue(rc.SpotFrom)
-		min := aws.IntValue(rc.Min)
-		// If spotFrom value is not equal to the autoscaling min, then
-		// the base value on the Fargate Capacity provider must be set
-		// to one less than spotFrom
-		if spotFrom > min {
-			base := spotFrom - 1
-			fgCapacity := &template.CapacityProviderStrategy{
-				Base:             aws.Int(base),
-				Weight:           aws.Int(0),
-				CapacityProvider: capacityProviderFargate,
-			}
-			cps = append(cps, fgCapacity)
+	spotFrom := aws.IntValue(rc.SpotFrom)
+	min := aws.IntValue(rc.Min)
+	// If spotFrom value is not equal to the autoscaling min, then
+	// the base value on the Fargate Capacity provider must be set
+	// to one less than spotFrom
+	if spotFrom > min {
+		base := spotFrom - 1
+		fgCapacity := &template.CapacityProviderStrategy{
+			Base:             aws.Int(base),
+			Weight:           aws.Int(0),
+			CapacityProvider: capacityProviderFargate,
 		}
+		cps = append(cps, fgCapacity)
 	}
 	return cps
 }
