@@ -2,7 +2,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
 
 ???+ note "Sample manifest for a frontend service"
 
-    ```yaml
+```yaml
     # Your service name will be used in naming your resources like log groups, ECS services, etc.
     name: frontend
     type: Load Balanced Web Service
@@ -62,7 +62,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           spot: 2
       production:
         count: 2
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.

@@ -68,7 +68,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
 			case contains(workloadType, manifest.JobTypes()):
-				o.deployWkld = &deployJobOpts{
+				opts := &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
 					store:           o.store,
@@ -78,8 +78,11 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
-					newJobDeployer:  newJobDeployer,
 				}
+				opts.newJobDeployer = func() (workloadDeployer, error) {
+					return newJobDeployer(opts)
+				}
+				o.deployWkld = opts
 			case contains(workloadType, manifest.ServiceTypes()):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
@@ -93,7 +96,9 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
-					newSvcDeployer:  newSvcDeployer,
+				}
+				opts.newSvcDeployer = func() (workloadDeployer, error) {
+					return newSvcDeployer(opts)
 				}
 				o.deployWkld = opts
 			}
@@ -185,6 +190,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

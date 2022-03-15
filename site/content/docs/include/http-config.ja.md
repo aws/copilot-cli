@@ -1,7 +1,10 @@
 <div class="separator"></div>
 
-<a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>   
+<a id="http" href="#http" class="field">`http`</a> <span class="type">Boolean or Map</span>   
 http セクションは Service と Application Load Balancer の連携に関するパラメーターを含みます。
+
+Application Load Balancer を無効にするには、`http: false` を指定します。Load-Balanced Web Service では、
+Application Load Balancer または Network Load Balancer の少なくともどちらかが有効である必要があることに注意してください。
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 このパスに対するリクエストが Service に転送されます。各 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) は、ユニークなパスでリッスンする必要があります。
@@ -63,7 +66,7 @@ http:
 ```
 
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings</span>  
-サービスの HTTPS ドメインエイリアス
+Service の HTTPS ドメインエイリアス
 ```yaml
 # 文字列で指定する場合
 http:
@@ -72,3 +75,7 @@ http:
 http:
   alias: ["example.com", "v1.example.com"]
 ```
+
+<span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
+HTTP(S) のプロトコルバージョン。'grpc', 'http1', 'http2' のいずれかである必要があります。省略した場合は、'http1' とみなされます。
+gRPC を使用する場合、Application にドメインが関連付けられなければならないことに注意してください。
