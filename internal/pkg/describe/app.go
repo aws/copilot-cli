@@ -62,7 +62,7 @@ func (a *App) HumanString() string {
 	for _, env := range a.Envs {
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", env.Name, env.AccountID, env.Region)
 	}
-	fmt.Fprint(writer, color.Bold.Sprint("\nWorkload\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
 	headers = []string{"Name", "Type"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
