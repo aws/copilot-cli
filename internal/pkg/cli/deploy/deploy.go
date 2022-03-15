@@ -603,11 +603,17 @@ func (d *jobDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationT
 
 // DeployWorkload deploys a job using CloudFormation.
 func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+	opts := []awscloudformation.StackOption{
+		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
+	}
+	if in.DisableRollback {
+		opts = append(opts, awscloudformation.WithDisableRollback())
+	}
 	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket, awscloudformation.WithRoleARN(d.env.ExecutionRoleARN)); err != nil {
+	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
 	return nil, nil

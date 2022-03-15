@@ -43,15 +43,17 @@ const (
 type CmdClient struct {
 	runner Cmd
 	// Override in unit tests.
-	buf      *bytes.Buffer
-	homePath string
+	buf       *bytes.Buffer
+	homePath  string
+	lookupEnv func(string) (string, bool)
 }
 
 // New returns CmdClient to make requests against the Docker daemon via external commands.
 func New(cmd Cmd) CmdClient {
 	return CmdClient{
-		runner:   cmd,
-		homePath: userHomeDirectory(),
+		runner:    cmd,
+		homePath:  userHomeDirectory(),
+		lookupEnv: os.LookupEnv,
 	}
 }
 
@@ -102,8 +104,12 @@ func (c CmdClient) Build(in *BuildArguments) error {
 		args = append(args, "--platform", in.Platform)
 	}
 
-	// Add the "args:" override section from manifest to the docker build call.
+	// Plain display if we're in a CI environment.
+	if ci, _ := c.lookupEnv("CI"); ci == "true" {
+		args = append(args, "--progress", "plain")
+	}
 
+	// Add the "args:" override section from manifest to the docker build call.
 	// Collect the keys in a slice to sort for test stability.
 	var keys []string
 	for k := range in.Args {
@@ -145,9 +151,13 @@ func (c CmdClient) Push(uri string, tags ...string) (digest string, err error) {
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
 	}
+	var args []string
+	if ci, _ := c.lookupEnv("CI"); ci == "true" {
+		args = append(args, "--quiet")
+	}
 
 	for _, img := range images {
-		if err := c.runner.Run("docker", []string{"push", img}); err != nil {
+		if err := c.runner.Run("docker", append([]string{"push", img}, args...)); err != nil {
 			return "", fmt.Errorf("docker push %s: %w", img, err)
 		}
 	}
