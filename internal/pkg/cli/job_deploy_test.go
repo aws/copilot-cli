@@ -228,6 +228,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(nil, mockError)
 			},
 
@@ -240,6 +241,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
 
 			wantedError: fmt.Errorf("deploy job upload to environment prod-iad: some error"),
@@ -281,6 +283,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				envUpgradeCmd: m.mockEnvUpgrader,
 
 				targetApp: &config.Application{},
+				targetEnv: &config.Environment{},
 			}
 
 			// WHEN

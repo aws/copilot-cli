@@ -189,6 +189,15 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	serviceInRegion, err := deployer.IsServiceAvailableInRegion(o.targetEnv.Region)
+	if err != nil {
+		return fmt.Errorf("check if %s is available in region %s: %w", o.svcType, o.targetEnv.Region, err)
+	}
+
+	if !serviceInRegion {
+		log.Warningf(`%s might not be available in region %s; proceed with caution.
+`, o.svcType, o.targetEnv.Region)
+	}
 	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for service %s: %w", o.name, err)
@@ -355,6 +364,7 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
 	}
+
 	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
 	}

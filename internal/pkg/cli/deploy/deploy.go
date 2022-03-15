@@ -26,8 +26,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
+	awsapprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -250,6 +252,11 @@ func newSvcDeployer(in *WorkloadDeployerInput) (*svcDeployer, error) {
 	}, nil
 }
 
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (lbSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
+}
+
 type lbSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
@@ -297,6 +304,11 @@ type backendSvcDeployer struct {
 	backendMft *manifest.BackendService
 }
 
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (backendSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
+}
+
 // NewBackendDeployer is the constructor for backendSvcDeployer.
 func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) {
 	svcDeployer, err := newSvcDeployer(in)
@@ -316,6 +328,11 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 type jobDeployer struct {
 	*workloadDeployer
 	jobMft *manifest.ScheduledJob
+}
+
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (jobDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
 }
 
 // NewJobDeployer is the constructor for jobDeployer.
@@ -340,6 +357,11 @@ type rdwsDeployer struct {
 	customResourceS3Client uploader
 	appVersionGetter       versionGetter
 	rdwsMft                *manifest.RequestDrivenWebService
+}
+
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (rdwsDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(awsapprunner.EndpointsID, region)
 }
 
 // NewRDWSDeployer is the constructor for RDWSDeployer.
@@ -369,6 +391,11 @@ type workerSvcDeployer struct {
 	*svcDeployer
 	topicLister snsTopicsLister
 	wsMft       *manifest.WorkerService
+}
+
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (workerSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
 }
 
 // NewWorkerSvcDeployer is the constructor for workerSvcDeployer.

@@ -157,6 +157,15 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	serviceInRegion, err := deployer.IsServiceAvailableInRegion(o.targetEnv.Region)
+	if err != nil {
+		return fmt.Errorf("check if Scheduled Job(s) is available in region %s: %w", o.targetEnv.Region, err)
+	}
+
+	if !serviceInRegion {
+		log.Warningf(`Scheduled Job might not be available in region %s; proceed with caution.
+`, o.targetEnv.Region)
+	}
 	uploadOut, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
