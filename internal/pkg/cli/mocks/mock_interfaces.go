@@ -6474,6 +6474,21 @@ func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
 }
 
+// IsServiceAvailableInRegion mocks base method.
+func (m *MockworkloadDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsServiceAvailableInRegion", region)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsServiceAvailableInRegion indicates an expected call of UploadArtifacts.
+func (mr *MockworkloadDeployerMockRecorder) IsServiceAvailableInRegion(region string) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceAvailableInRegion", reflect.TypeOf((*MockworkloadDeployer)(nil).IsServiceAvailableInRegion), region)
+}
+
 // MockworkloadTemplateGenerator is a mock of workloadTemplateGenerator interface.
 type MockworkloadTemplateGenerator struct {
 	ctrl     *gomock.Controller

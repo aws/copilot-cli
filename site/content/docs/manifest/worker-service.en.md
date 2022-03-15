@@ -2,7 +2,7 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
 
 ???+ note "Sample manifest for a worker service"
 
-    ```yaml
+```yaml
     # Your service name will be used in naming your resources like log groups, ECS services, etc.
     name: orders-worker
     type: Worker Service
@@ -43,7 +43,7 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
           queue_delay:
             acceptable_latency: 1m
             msg_processing_time: 250ms
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>
 The name of your service.
