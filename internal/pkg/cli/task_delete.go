@@ -7,6 +7,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -49,11 +52,11 @@ type deleteTaskOpts struct {
 	deleteTaskVars
 
 	// Dependencies to interact with other modules
-	store   store
-	prompt  prompter
-	spinner progress
-	sess    sessionProvider
-	sel     wsSelector
+	store    store
+	prompt   prompter
+	spinner  progress
+	provider sessionProvider
+	sel      wsSelector
 
 	// Generators for env-specific clients
 	newTaskSel      func(session *session.Session) cfTaskSelector
@@ -67,28 +70,27 @@ type deleteTaskOpts struct {
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	provider := sessions.NewProvider()
-
-	prompter := prompt.New()
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task delete"))
+	defaultSess, err := sessProvider.Default()
+	if err != nil {
+		return nil, fmt.Errorf("default session: %v", err)
+	}
+
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	prompter := prompt.New()
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
 
-		store:   store,
-		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:  prompter,
-		sess:    provider,
-		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
+		store:    store,
+		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
+		prompt:   prompter,
+		provider: sessProvider,
+		sel:      selector.NewWorkspaceSelect(prompter, store, ws),
 		newTaskSel: func(session *session.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
@@ -261,7 +263,8 @@ func (o *deleteTaskOpts) Ask() error {
 
 	deleteConfirmed, err := o.prompt.Confirm(
 		deletePrompt,
-		taskDeleteConfirmHelp)
+		taskDeleteConfirmHelp,
+		prompt.WithConfirmFinalMessage())
 
 	if err != nil {
 		return fmt.Errorf("task delete confirmation prompt: %w", err)
@@ -277,7 +280,7 @@ func (o *deleteTaskOpts) getSession() (*session.Session, error) {
 		return o.session, nil
 	}
 	if o.defaultCluster {
-		sess, err := o.sess.Default()
+		sess, err := o.provider.Default()
 		if err != nil {
 			return nil, err
 		}
@@ -289,7 +292,7 @@ func (o *deleteTaskOpts) getSession() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess, err := o.sess.FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := o.provider.FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +336,6 @@ func (o *deleteTaskOpts) Execute() error {
 	if err := o.deleteStack(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -375,7 +377,7 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 		if err != nil {
 			return err
 		}
-		defaultSess, err = o.sess.DefaultWithRegion(aws.StringValue(regionalSession.Config.Region))
+		defaultSess, err = o.provider.DefaultWithRegion(aws.StringValue(regionalSession.Config.Region))
 		if err != nil {
 			return fmt.Errorf("get default session for ECR deletion: %s", err)
 		}
@@ -442,7 +444,7 @@ func (o *deleteTaskOpts) deleteStack() error {
 	return nil
 }
 
-func (o *deleteTaskOpts) RecommendedActions() []string {
+func (o *deleteTaskOpts) RecommendActions() error {
 	return nil
 }
 
@@ -466,25 +468,7 @@ func BuildTaskDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			if len(opts.RecommendedActions()) == 0 {
-				return nil
-			}
-
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 

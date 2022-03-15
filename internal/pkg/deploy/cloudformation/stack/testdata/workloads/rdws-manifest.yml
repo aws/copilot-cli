@@ -1,0 +1,52 @@
+# The manifest for the "apprunner" service.
+# Read the full specification for the "Request-Driven Web Service" type at:
+# https://aws.github.io/copilot-cli/docs/manifest/rd-web-service/
+
+# Your service name will be used in naming your resources like log groups, App Runner services, etc.
+name: frontend
+# The "architecture" of the service you're running.
+type: Request-Driven Web Service
+
+image:
+  # Docker build arguments.
+  # For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/rd-web-service/#image-build
+  build: frontend/Dockerfile
+  # Port exposed through your container to route traffic to it.
+  port: 8080
+
+#http:
+#  healthcheck:
+#    path: /
+#    healthy_threshold: 3
+#    unhealthy_threshold: 5
+#    interval: 10s
+#    timeout: 5s
+
+# Number of CPU units for the task.
+cpu: 1024
+# Amount of memory in MiB used by the task.
+memory: 2048
+command: "shine on you"
+
+publish:
+  topics:
+    - name: customers
+
+network:
+  vpc:
+    placement: private
+
+# Optional fields for more advanced use-cases.
+#
+# variables:                    # Pass environment variables as key value pairs.
+#   LOG_LEVEL: info
+#
+# tags:                         # Pass tags as key value pairs.
+#   project: project-name
+
+# You can override any of the values defined above by environment.
+environments:
+  test:
+    command: crazy diamond
+    variables:
+      LOG_LEVEL: debug        # Log level for the "test" environment.

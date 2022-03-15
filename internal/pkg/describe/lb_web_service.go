@@ -14,54 +14,25 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/dustin/go-humanize/english"
 )
 
 const (
 	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
 	envOutputSubdomain                 = "EnvironmentSubdomain"
+	svcParamHTTPSEnabled               = "HTTPSEnabled"
+
+	svcStackResourceALBTargetGroupLogicalID = "TargetGroup"
+	svcStackResourceNLBTargetGroupLogicalID = "NLBTargetGroup"
+	svcOutputPublicNLBDNSName               = "PublicNetworkLoadBalancerDNSName"
 )
-
-var fmtSvcDiscoveryEndpointWithPort = "%s.%s:%s" // Format string of the form {svc}.{endpoint}:{port}
-
-// LBWebServiceURI represents the unique identifier to access a load balanced web service.
-type LBWebServiceURI struct {
-	HTTPS    bool
-	DNSNames []string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public load balancer's DNS.
-	Path     string   // Empty if the service is served on HTTPS. Otherwise, the pattern used to match the service.
-}
-
-func (u *LBWebServiceURI) String() string {
-	var uris []string
-	for _, dnsName := range u.DNSNames {
-		protocol := "http://"
-		if u.HTTPS {
-			protocol = "https://"
-		}
-		path := ""
-		if u.Path != "/" {
-			path = fmt.Sprintf("/%s", u.Path)
-		}
-		uris = append(uris, fmt.Sprintf("%s%s%s", protocol, dnsName, path))
-	}
-	return english.OxfordWordSeries(uris, "or")
-}
-
-type serviceDiscovery struct {
-	Service  string
-	Endpoint string
-	Port     string
-}
-
-func (s *serviceDiscovery) String() string {
-	return fmt.Sprintf(fmtSvcDiscoveryEndpointWithPort, s.Service, s.Endpoint, s.Port)
-}
 
 type envDescriber interface {
 	ServiceDiscoveryEndpoint() (string, error)
@@ -75,37 +46,30 @@ type LBWebServiceDescriber struct {
 	svc             string
 	enableResources bool
 
-	store         DeployedEnvServicesLister
-	svcDescriber  map[string]ecsSvcDescriber
-	envDescriber  map[string]envDescriber
-	initDescriber func(string) error
+	store                DeployedEnvServicesLister
+	initClients          func(string) error
+	ecsServiceDescribers map[string]ecsDescriber
+	envDescriber         map[string]envDescriber
 
 	// cache only last svc paramerters
 	svcParams map[string]string
 }
 
-// NewLBWebServiceConfig contains fields that initiates WebServiceDescriber struct.
-type NewLBWebServiceConfig struct {
-	NewServiceConfig
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
-}
-
 // NewLBWebServiceDescriber instantiates a load balanced service describer.
-func NewLBWebServiceDescriber(opt NewLBWebServiceConfig) (*LBWebServiceDescriber, error) {
+func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, error) {
 	describer := &LBWebServiceDescriber{
-		app:             opt.App,
-		svc:             opt.Svc,
-		enableResources: opt.EnableResources,
-		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]ecsSvcDescriber),
-		envDescriber:    make(map[string]envDescriber),
+		app:                  opt.App,
+		svc:                  opt.Svc,
+		enableResources:      opt.EnableResources,
+		store:                opt.DeployStore,
+		ecsServiceDescribers: make(map[string]ecsDescriber),
+		envDescriber:         make(map[string]envDescriber),
 	}
-	describer.initDescriber = func(env string) error {
-		if _, ok := describer.svcDescriber[env]; ok {
+	describer.initClients = func(env string) error {
+		if _, ok := describer.ecsServiceDescribers[env]; ok {
 			return nil
 		}
-		svcDescr, err := NewServiceDescriber(NewServiceConfig{
+		svcDescr, err := NewECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
 			Env:         env,
 			Svc:         opt.Svc,
@@ -114,7 +78,7 @@ func NewLBWebServiceDescriber(opt NewLBWebServiceConfig) (*LBWebServiceDescriber
 		if err != nil {
 			return err
 		}
-		describer.svcDescriber[env] = svcDescr
+		describer.ecsServiceDescribers[env] = svcDescr
 		envDescr, err := NewEnvDescriber(NewEnvDescriberConfig{
 			App:         opt.App,
 			Env:         env,
@@ -142,7 +106,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
-		err := d.initDescriber(env)
+		err := d.initClients(env)
 		if err != nil {
 			return nil, err
 		}
@@ -154,12 +118,21 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Environment: env,
 			URL:         webServiceURI,
 		})
+		containerPlatform, err := d.ecsServiceDescribers[env].Platform()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve platform: %w", err)
+		}
+		webSvcEnvVars, err := d.ecsServiceDescribers[env].EnvVars()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve environment variables: %w", err)
+		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
 				Port:        d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 				CPU:         d.svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      d.svcParams[cfnstack.WorkloadTaskMemoryParamKey],
+				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
 			},
 			Tasks: d.svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
@@ -172,12 +145,8 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
-		webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve environment variables: %w", err)
-		}
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
-		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		webSvcSecrets, err := d.ecsServiceDescribers[env].Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
 		}
@@ -186,11 +155,11 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {
 		for _, env := range environments {
-			err := d.initDescriber(env)
+			err := d.initClients(env)
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			stackResources, err := d.ecsServiceDescribers[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
@@ -211,50 +180,6 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 		environments: environments,
 	}, nil
-}
-
-// URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
-func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
-	err := d.initDescriber(envName)
-	if err != nil {
-		return "", err
-	}
-
-	envParams, err := d.envDescriber[envName].Params()
-	if err != nil {
-		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
-	}
-	envOutputs, err := d.envDescriber[envName].Outputs()
-	if err != nil {
-		return "", fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
-	}
-	svcParams, err := d.svcDescriber[envName].Params()
-	if err != nil {
-		return "", fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
-	}
-
-	uri := &LBWebServiceURI{
-		DNSNames: []string{envOutputs[envOutputPublicLoadBalancerDNSName]},
-		Path:     svcParams[cfnstack.LBWebServiceRulePathParamKey],
-	}
-	_, isHTTPS := envOutputs[envOutputSubdomain]
-	if isHTTPS {
-		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[envOutputSubdomain])
-		uri.DNSNames = []string{dnsName}
-		uri.HTTPS = true
-	}
-	aliases := envParams[cfnstack.EnvParamAliasesKey]
-	if aliases != "" {
-		value := make(map[string][]string)
-		if err := json.Unmarshal([]byte(aliases), &value); err != nil {
-			return "", err
-		}
-		if value[d.svc] != nil {
-			uri.DNSNames = value[d.svc]
-		}
-	}
-	d.svcParams = svcParams
-	return uri.String(), nil
 }
 
 type secret struct {

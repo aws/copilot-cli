@@ -1,4 +1,6 @@
+//go:build integration
 // +build integration
+
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -18,14 +20,14 @@ import (
 )
 
 func TestAutoscalingIntegration_Validate(t *testing.T) {
-	path := filepath.Join("testdata", "autoscaling", manifestPath)
+	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
-	serializer, err := stack.NewHTTPSLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
+	serializer, err := stack.NewLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
 		Image: &stack.ECRImage{
 			RepoURL:  imageURL,
 			ImageTag: imageTag,
@@ -35,7 +37,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
 	require.NoError(t, err)
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 	cfn := cloudformation.New(sess)
 
@@ -62,7 +64,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
 
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 	cfn := cloudformation.New(sess)
 

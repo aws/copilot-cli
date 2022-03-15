@@ -6,7 +6,10 @@ package task
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -49,11 +52,32 @@ type Task struct {
 
 const (
 	startedBy = "copilot-task"
+
+	// Platform options.
+	osLinux             = template.OSLinux
+	osWindowsServerFull = template.OSWindowsServerFull
+	osWindowsServerCore = template.OSWindowsServerCore
+
+	archX86   = template.ArchX86
+	archARM64 = template.ArchARM64
 )
 
 var (
+	ValidWindowsOSs   = []string{osWindowsServerCore, osWindowsServerFull}
+	ValidCFNPlatforms = []string{dockerengine.PlatformString(osWindowsServerCore, archX86), dockerengine.PlatformString(osWindowsServerFull, archX86), dockerengine.PlatformString(osLinux, archX86), dockerengine.PlatformString(osLinux, archARM64)}
+
 	fmtTaskFamilyName = "copilot-%s"
 )
+
+// IsValidWindowsOS determines if the OS value is an accepted CFN Windows value.
+func IsValidWindowsOS(os string) bool {
+	for _, validWindowsOS := range ValidWindowsOSs {
+		if os == validWindowsOS {
+			return true
+		}
+	}
+	return false
+}
 
 func taskFamilyName(groupName string) string {
 	return fmt.Sprintf(fmtTaskFamilyName, groupName)

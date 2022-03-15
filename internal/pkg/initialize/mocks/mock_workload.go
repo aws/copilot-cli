@@ -182,19 +182,19 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 	return m.recorder
 }
 
-// CopilotDirPath mocks base method.
-func (m *MockWorkspace) CopilotDirPath() (string, error) {
+// Path mocks base method.
+func (m *MockWorkspace) Path() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret := m.ctrl.Call(m, "Path")
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CopilotDirPath indicates an expected call of CopilotDirPath.
-func (mr *MockWorkspaceMockRecorder) CopilotDirPath() *gomock.Call {
+// Path indicates an expected call of Path.
+func (mr *MockWorkspaceMockRecorder) Path() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockWorkspace)(nil).CopilotDirPath))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockWorkspace)(nil).Path))
 }
 
 // WriteJobManifest mocks base method.

@@ -6,20 +6,31 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
+	"github.com/spf13/pflag"
+
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -73,6 +84,11 @@ Select %s to run the task in your default VPC instead of any existing applicatio
 Select %s to run the task in your default VPC instead of any existing environment.`, color.Emphasize(appEnvOptionNone))
 )
 
+var (
+	taskSecretsPermissionPrompt     = "Do you grant permission to the ECS/Fargate agent for these secrets?"
+	taskSecretsPermissionPromptHelp = "ECS/Fargate agent needs the permissions in order to fetch the secrets and inject them into your container."
+)
+
 type runTaskVars struct {
 	count  int
 	cpu    int
@@ -80,9 +96,10 @@ type runTaskVars struct {
 
 	groupName string
 
-	image          string
-	dockerfilePath string
-	imageTag       string
+	image                 string
+	dockerfilePath        string
+	dockerfileContextPath string
+	imageTag              string
 
 	taskRole      string
 	executionRole string
@@ -94,14 +111,18 @@ type runTaskVars struct {
 	appName                     string
 	useDefaultSubnetsAndCluster bool
 
-	envVars      map[string]string
-	secrets      map[string]string
-	command      string
-	entrypoint   string
-	resourceTags map[string]string
+	envVars                  map[string]string
+	secrets                  map[string]string
+	acknowledgeSecretsAccess bool
+	command                  string
+	entrypoint               string
+	resourceTags             map[string]string
 
 	follow                bool
 	generateCommandTarget string
+
+	os   string
+	arch string
 }
 
 type runTaskOpts struct {
@@ -114,6 +135,7 @@ type runTaskOpts struct {
 	store   store
 	sel     appEnvSelector
 	spinner progress
+	prompt  prompter
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
@@ -123,6 +145,7 @@ type runTaskOpts struct {
 	defaultClusterGetter defaultClusterGetter
 	publicIPGetter       publicIPGetter
 
+	provider          sessionProvider
 	sess              *session.Session
 	targetEnvironment *config.Environment
 
@@ -132,25 +155,40 @@ type runTaskOpts struct {
 	// NOTE: configureEventsWriter is only called when tailing logs (i.e. --follow is specified)
 	configureEventsWriter func(tasks []*task.Task)
 
+	configureECSServiceDescriber func(session *session.Session) ecs.ECSServiceDescriber
+	configureServiceDescriber    func(session *session.Session) ecs.ServiceDescriber
+	configureJobDescriber        func(session *session.Session) ecs.JobDescriber
+
 	// Functions to generate a task run command.
 	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromJob        func(client ecs.JobDescriber, app, env, job string) (*ecs.RunTaskRequest, error)
+
+	// Cached variables to hold SSM Param and Secrets Manager Secrets
+	ssmParamSecrets       map[string]string
+	secretsManagerSecrets map[string]string
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task run"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
 
+	prompter := prompt.New()
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
-		fs:      &afero.Afero{Fs: afero.NewOsFs()},
-		store:   store,
-		sel:     selector.NewSelect(prompt.New(), store),
-		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
+		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		store:                 store,
+		prompt:                prompter,
+		sel:                   selector.NewSelect(prompter, store),
+		spinner:               termprogress.NewSpinner(log.DiagnosticWriter),
+		provider:              sessProvider,
+		secretsManagerSecrets: make(map[string]string),
+		ssmParamSecrets:       make(map[string]string),
 	}
 
 	opts.configureRuntimeOpts = func() error {
@@ -166,17 +204,22 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	opts.configureRepository = func() error {
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
-		registry := ecr.New(opts.sess)
-		repo, err := repository.New(repoName, registry)
-		if err != nil {
-			return fmt.Errorf("initialize repository %s: %w", repoName, err)
-		}
-		opts.repository = repo
+		opts.repository = repository.New(ecr.New(opts.sess), repoName)
 		return nil
 	}
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
 		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
+	}
+
+	opts.configureECSServiceDescriber = func(session *session.Session) ecs.ECSServiceDescriber {
+		return awsecs.New(session)
+	}
+	opts.configureServiceDescriber = func(session *session.Session) ecs.ServiceDescriber {
+		return ecs.New(session)
+	}
+	opts.configureJobDescriber = func(session *session.Session) ecs.JobDescriber {
+		return ecs.New(session)
 	}
 
 	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
@@ -190,7 +233,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 	ecsService := awsecs.New(o.sess)
 
 	if o.env != "" {
-		deployStore, err := deploy.NewStore(o.store)
+		deployStore, err := deploy.NewStore(o.provider, o.store)
 		if err != nil {
 			return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
 		}
@@ -213,13 +256,14 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			App: o.appName,
 			Env: o.env,
 
+			OS: o.os,
+
 			VPCGetter:            vpcGetter,
 			ClusterGetter:        ecs.New(o.sess),
 			Starter:              ecsService,
 			EnvironmentDescriber: d,
 		}, nil
 	}
-
 	return &task.ConfigRunner{
 		Count:     o.count,
 		GroupName: o.groupName,
@@ -227,6 +271,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		Cluster:        o.cluster,
 		Subnets:        o.subnets,
 		SecurityGroups: o.securityGroups,
+		OS:             o.os,
 
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
@@ -239,21 +284,20 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 	var sess *session.Session
 	var env *config.Environment
 
-	provider := sessions.NewProvider()
 	if o.env != "" {
 		var err error
-		env, err = o.targetEnv()
+		env, err = o.targetEnv(o.appName, o.env)
 		if err != nil {
 			return err
 		}
 
-		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
+		sess, err = o.provider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
 	} else {
 		var err error
-		sess, err = provider.Default()
+		sess, err = o.provider.Default()
 		if err != nil {
 			return fmt.Errorf("get default session: %w", err)
 		}
@@ -276,14 +320,6 @@ func (o *runTaskOpts) Validate() error {
 		return errNumNotPositive
 	}
 
-	if o.cpu <= 0 {
-		return errCPUNotPositive
-	}
-
-	if o.memory <= 0 {
-		return errMemNotPositive
-	}
-
 	if o.groupName != "" {
 		if err := basicNameValidation(o.groupName); err != nil {
 			return err
@@ -294,10 +330,35 @@ func (o *runTaskOpts) Validate() error {
 		return errors.New("cannot specify both `--image` and `--dockerfile`")
 	}
 
+	if o.image != "" && o.dockerfileContextPath != "" {
+		return errors.New("cannot specify both `--image` and `--build-context`")
+	}
+
 	if o.isDockerfileSet {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
-			return err
+			return fmt.Errorf("invalid `--dockerfile` path: %w", err)
 		}
+	}
+
+	if o.dockerfileContextPath != "" {
+		if _, err := o.fs.Stat(o.dockerfileContextPath); err != nil {
+			return fmt.Errorf("invalid `--build-context` path: %w", err)
+		}
+	}
+
+	if noOS, noArch := o.os == "", o.arch == ""; noOS != noArch {
+		return fmt.Errorf("must specify either both `--%s` and `--%s` or neither", osFlag, archFlag)
+	}
+	if err := o.validatePlatform(); err != nil {
+		return err
+	}
+
+	if o.cpu <= 0 {
+		return errCPUNotPositive
+	}
+
+	if o.memory <= 0 {
+		return errMemNotPositive
 	}
 
 	if err := o.validateFlagsWithCluster(); err != nil {
@@ -316,6 +377,10 @@ func (o *runTaskOpts) Validate() error {
 		return err
 	}
 
+	if err := o.validateFlagsWithWindows(); err != nil {
+		return err
+	}
+
 	if o.appName != "" {
 		if err := o.validateAppName(); err != nil {
 			return err
@@ -328,7 +393,100 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
+	for _, value := range o.secrets {
+		if !isSSM(value) && !isSecretsManager(value) {
+			return fmt.Errorf("must specify a valid secrets ARN")
+		}
+	}
+
 	return nil
+}
+
+func isSSM(value string) bool {
+	// For SSM parameter you can specify it as ARN or name if it exists in the same Region as the task you are launching.
+	return !template.IsARNFunc(value) || strings.Contains(value, ":ssm:")
+}
+
+func isSecretsManager(value string) bool {
+	return template.IsARNFunc(value) && strings.Contains(value, ":secretsmanager:")
+}
+
+func (o *runTaskOpts) getCategorizedSecrets() (map[string]string, map[string]string) {
+	if len(o.ssmParamSecrets) > 0 || len(o.secretsManagerSecrets) > 0 {
+		return o.secretsManagerSecrets, o.ssmParamSecrets
+	}
+
+	for name, value := range o.secrets {
+		if isSSM(value) {
+			o.ssmParamSecrets[name] = value
+		}
+		if isSecretsManager(value) {
+			o.secretsManagerSecrets[name] = value
+		}
+	}
+	return o.secretsManagerSecrets, o.ssmParamSecrets
+}
+
+func (o *runTaskOpts) confirmSecretsAccess() error {
+	if o.executionRole != "" {
+		return nil
+	}
+
+	if o.appName != "" || o.env != "" {
+		return nil
+	}
+
+	if o.acknowledgeSecretsAccess {
+		return nil
+	}
+
+	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
+
+	log.Info("Looks like ")
+
+	if len(ssmParamSecrets) > 0 {
+		log.Infoln("you're requesting ssm:GetParameters to the following SSM parameters:")
+	} else {
+		log.Infoln("you're requesting secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	}
+
+	for _, value := range ssmParamSecrets {
+		log.Infoln("* " + value)
+	}
+
+	if len(ssmParamSecrets) > 0 && len(secretsManagerSecrets) > 0 {
+		log.Infoln("\nand secretsmanager:GetSecretValue to the following Secrets Manager secrets:")
+	}
+
+	for _, value := range secretsManagerSecrets {
+		log.Infoln("* " + value)
+	}
+
+	secretsAccessConfirmed, err := o.prompt.Confirm(taskSecretsPermissionPrompt, taskSecretsPermissionPromptHelp)
+	if err != nil {
+		return fmt.Errorf("prompt to confirm secrets access: %w", err)
+	}
+
+	if !secretsAccessConfirmed {
+		return errors.New("access to secrets denied")
+	}
+
+	return nil
+}
+
+func (o *runTaskOpts) validatePlatform() error {
+	if o.os == "" {
+		return nil
+	}
+	o.os = strings.ToUpper(o.os)
+	o.arch = strings.ToUpper(o.arch)
+	validPlatforms := task.ValidCFNPlatforms
+	for _, validPlatform := range validPlatforms {
+		if dockerengine.PlatformString(o.os, o.arch) == validPlatform {
+			return nil
+		}
+	}
+	return fmt.Errorf("platform %s is invalid; %s: %s", dockerengine.PlatformString(o.os, o.arch), english.PluralWord(len(validPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validPlatforms, "and"))
 }
 
 func (o *runTaskOpts) validateFlagsWithCluster() error {
@@ -406,6 +564,23 @@ func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
 	return nil
 }
 
+func (o *runTaskOpts) validateFlagsWithWindows() error {
+	if !isWindowsOS(o.os) {
+		return nil
+	}
+	if o.cpu < manifest.MinWindowsTaskCPU {
+		return fmt.Errorf("CPU is %d, but it must be at least %d for a Windows-based task", o.cpu, manifest.MinWindowsTaskCPU)
+	}
+	if o.memory < manifest.MinWindowsTaskMemory {
+		return fmt.Errorf("memory is %d, but it must be at least %d for a Windows-based task", o.memory, manifest.MinWindowsTaskMemory)
+	}
+	return nil
+}
+
+func isWindowsOS(os string) bool {
+	return task.IsValidWindowsOS(os)
+}
+
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
 	if o.generateCommandTarget != "" {
@@ -416,6 +591,11 @@ func (o *runTaskOpts) Ask() error {
 			return err
 		}
 		if err := o.askEnvName(); err != nil {
+			return err
+		}
+	}
+	if len(o.secrets) > 0 {
+		if err := o.confirmSecretsAccess(); err != nil {
 			return err
 		}
 	}
@@ -491,7 +671,11 @@ func (o *runTaskOpts) Execute() error {
 		if o.imageTag != "" {
 			tag = o.imageTag
 		}
-		o.image = fmt.Sprintf(fmtImageURI, o.repository.URI(), tag)
+		uri, err := o.repository.URI()
+		if err != nil {
+			return fmt.Errorf("get ECR repository URI: %w", err)
+		}
+		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
@@ -499,6 +683,11 @@ func (o *runTaskOpts) Execute() error {
 
 	tasks, err := o.runTask()
 	if err != nil {
+		if strings.Contains(err.Error(), "AccessDeniedException") && strings.Contains(err.Error(), "unable to pull secrets") && o.appName != "" && o.env != "" {
+			log.Error(`It looks like your task is not able to pull the secrets.
+Did you tag your secrets with the "copilot-application" and "copilot-environment" tags?
+`)
+		}
 		return err
 	}
 
@@ -524,29 +713,39 @@ func (o *runTaskOpts) generateCommand() error {
 
 func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
 	var cmd cliStringer
-	sess, err := sessions.NewProvider().Default()
-	if err != nil {
-		return nil, fmt.Errorf("get default session: %s", err)
-	}
-
 	if arn.IsARN(o.generateCommandTarget) {
 		clusterName, serviceName, err := o.parseARN()
 		if err != nil {
 			return nil, err
 		}
+		sess, err := o.provider.Default()
+		if err != nil {
+			return nil, fmt.Errorf("get default session: %s", err)
+		}
 		return o.runTaskCommandFromECSService(sess, clusterName, serviceName)
 	}
-
 	parts := strings.Split(o.generateCommandTarget, "/")
 	switch len(parts) {
 	case 2:
 		clusterName, serviceName := parts[0], parts[1]
+		sess, err := o.provider.Default()
+		if err != nil {
+			return nil, fmt.Errorf("get default session: %s", err)
+		}
 		cmd, err = o.runTaskCommandFromECSService(sess, clusterName, serviceName)
 		if err != nil {
 			return nil, err
 		}
 	case 3:
 		appName, envName, workloadName := parts[0], parts[1], parts[2]
+		env, err := o.targetEnv(appName, envName)
+		if err != nil {
+			return nil, err
+		}
+		sess, err := o.provider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, fmt.Errorf("get environment session: %s", err)
+		}
 		cmd, err = o.runTaskCommandFromWorkload(sess, appName, envName, workloadName)
 		if err != nil {
 			return nil, err
@@ -572,7 +771,7 @@ func (o *runTaskOpts) parseARN() (string, string, error) {
 }
 
 func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, clusterName, serviceName string) (cliStringer, error) {
-	cmd, err := o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+	cmd, err := o.runTaskRequestFromECSService(o.configureECSServiceDescriber(sess), clusterName, serviceName)
 	if err != nil {
 		var errMultipleContainers *ecs.ErrMultipleContainersInTaskDef
 		if errors.As(err, &errMultipleContainers) {
@@ -592,12 +791,12 @@ func (o *runTaskOpts) runTaskCommandFromWorkload(sess *session.Session, appName,
 	var cmd cliStringer
 	switch workloadType {
 	case workloadTypeJob:
-		cmd, err = o.runTaskRequestFromJob(ecs.New(sess), appName, envName, workloadName)
+		cmd, err = o.runTaskRequestFromJob(o.configureJobDescriber(sess), appName, envName, workloadName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from job %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
 		}
 	case workloadTypeSvc:
-		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, workloadName)
+		cmd, err = o.runTaskRequestFromService(o.configureServiceDescriber(sess), appName, envName, workloadName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
 		}
@@ -686,9 +885,13 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if _, err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
+	ctx := filepath.Dir(o.dockerfilePath)
+	if o.dockerfileContextPath != "" {
+		ctx = o.dockerfileContextPath
+	}
+	if _, err := o.repository.BuildAndPush(dockerengine.New(exec.NewCmd()), &dockerengine.BuildArguments{
 		Dockerfile: o.dockerfilePath,
-		Context:    filepath.Dir(o.dockerfilePath),
+		Context:    ctx,
 		Tags:       append([]string{imageTagLatest}, additionalTags...),
 	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
@@ -716,6 +919,8 @@ func (o *runTaskOpts) deploy() error {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
 
+	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
+
 	entrypoint, err := shlex.Split(o.entrypoint)
 	if err != nil {
 		return fmt.Errorf("split entrypoint %s into tokens using shell-style rules: %w", o.entrypoint, err)
@@ -727,19 +932,22 @@ func (o *runTaskOpts) deploy() error {
 	}
 
 	input := &deploy.CreateTaskResourcesInput{
-		Name:           o.groupName,
-		CPU:            o.cpu,
-		Memory:         o.memory,
-		Image:          o.image,
-		TaskRole:       o.taskRole,
-		ExecutionRole:  o.executionRole,
-		Command:        command,
-		EntryPoint:     entrypoint,
-		EnvVars:        o.envVars,
-		Secrets:        o.secrets,
-		App:            o.appName,
-		Env:            o.env,
-		AdditionalTags: o.resourceTags,
+		Name:                  o.groupName,
+		CPU:                   o.cpu,
+		Memory:                o.memory,
+		Image:                 o.image,
+		TaskRole:              o.taskRole,
+		ExecutionRole:         o.executionRole,
+		Command:               command,
+		EntryPoint:            entrypoint,
+		EnvVars:               o.envVars,
+		SSMParamSecrets:       ssmParamSecrets,
+		SecretsManagerSecrets: secretsManagerSecrets,
+		OS:                    o.os,
+		Arch:                  o.arch,
+		App:                   o.appName,
+		Env:                   o.env,
+		AdditionalTags:        o.resourceTags,
 	}
 	return o.deployer.DeployTask(os.Stderr, input, deployOpts...)
 }
@@ -753,7 +961,7 @@ func (o *runTaskOpts) validateAppName() error {
 
 func (o *runTaskOpts) validateEnvName() error {
 	if o.appName != "" {
-		if _, err := o.targetEnv(); err != nil {
+		if _, err := o.targetEnv(o.appName, o.env); err != nil {
 			return err
 		}
 	} else {
@@ -805,8 +1013,8 @@ func (o *runTaskOpts) askEnvName() error {
 	return nil
 }
 
-func (o *runTaskOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.appName, o.env)
+func (o *runTaskOpts) targetEnv(appName, envName string) (*config.Environment, error) {
+	env, err := o.store.GetEnvironment(appName, envName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s config: %w", o.env, err)
 	}
@@ -820,19 +1028,19 @@ func BuildTaskRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-Run a task using your local Dockerfile and display log streams after the task is running. 
-You will be prompted to specify an environment for the tasks to run in.
-/code $ copilot task run
-Run a task named "db-migrate" in the "test" environment under the current workspace.
-/code $ copilot task run -n db-migrate --env test
-Run 4 tasks with 2GB memory, an existing image, and a custom task role.
-/code $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role
-Run a task with environment variables.
-/code $ copilot task run --env-vars name=myName,user=myUser
-Run a task using the current workspace with specific subnets and security groups.
-/code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
-Run a task with a command.
-/code $ copilot task run --command "python migrate-script.py"`,
+  Run a task using your local Dockerfile and display log streams after the task is running. 
+  You will be prompted to specify an environment for the tasks to run in.
+  /code $ copilot task run
+  Run a task named "db-migrate" in the "test" environment under the current workspace.
+  /code $ copilot task run -n db-migrate --env test
+  Run 4 tasks with 2GB memory, an existing image, and a custom task role.
+  /code $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role
+  Run a task with environment variables.
+  /code $ copilot task run --env-vars name=myName,user=myUser
+  Run a task using the current workspace with specific subnets and security groups.
+  /code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
+  Run a task with a command.
+  /code $ copilot task run --command "python migrate-script.py"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
 			if err != nil {
@@ -842,42 +1050,33 @@ Run a task with a command.
 			if cmd.Flags().Changed(dockerFileFlag) {
 				opts.isDockerfileSet = true
 			}
-
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 
-	cmd.Flags().IntVar(&vars.count, countFlag, 1, countFlagDescription)
-	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
-	cmd.Flags().IntVar(&vars.memory, memoryFlag, 512, memoryFlagDescription)
-
+	// add flags to comments.
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
-	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, defaultDockerfilePath, dockerFileFlagDescription)
+	cmd.Flags().StringVar(&vars.dockerfileContextPath, dockerFileContextFlag, "", dockerFileContextFlagDescription)
+	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
-
-	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
-	cmd.Flags().StringVar(&vars.executionRole, executionRoleFlag, "", executionRoleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", taskAppFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringVar(&vars.cluster, clusterFlag, "", clusterFlagDescription)
+	cmd.Flags().BoolVar(&vars.acknowledgeSecretsAccess, acknowledgeSecretsAccessFlag, false, acknowledgeSecretsAccessDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
 
+	cmd.Flags().IntVar(&vars.count, countFlag, 1, countFlagDescription)
+	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
+	cmd.Flags().IntVar(&vars.memory, memoryFlag, 512, memoryFlagDescription)
+	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
+	cmd.Flags().StringVar(&vars.executionRole, executionRoleFlag, "", executionRoleFlagDescription)
+	cmd.Flags().StringVar(&vars.os, osFlag, "", osFlagDescription)
+	cmd.Flags().StringVar(&vars.arch, archFlag, "", archFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.secrets, secretsFlag, nil, secretsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
@@ -887,5 +1086,75 @@ Run a task with a command.
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().StringVar(&vars.generateCommandTarget, generateCommandFlag, "", generateCommandFlagDescription)
 
+	// group flags.
+	nameFlags := pflag.NewFlagSet("Name", pflag.ContinueOnError)
+	nameFlags.AddFlag(cmd.Flags().Lookup(taskGroupNameFlag))
+
+	buildFlags := pflag.NewFlagSet("Build", pflag.ContinueOnError)
+	buildFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+	buildFlags.AddFlag(cmd.Flags().Lookup(dockerFileContextFlag))
+	buildFlags.AddFlag(cmd.Flags().Lookup(imageFlag))
+	buildFlags.AddFlag(cmd.Flags().Lookup(imageTagFlag))
+
+	placementFlags := pflag.NewFlagSet("Placement", pflag.ContinueOnError)
+	placementFlags.AddFlag(cmd.Flags().Lookup(appFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(envFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(clusterFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(subnetsFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(securityGroupsFlag))
+	placementFlags.AddFlag(cmd.Flags().Lookup(taskDefaultFlag))
+
+	taskFlags := pflag.NewFlagSet("Task", pflag.ContinueOnError)
+	taskFlags.AddFlag(cmd.Flags().Lookup(countFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(cpuFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(memoryFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(taskRoleFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(executionRoleFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(osFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(archFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(envVarsFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(secretsFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(acknowledgeSecretsAccessFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(commandFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(entrypointFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(resourceTagsFlag))
+
+	utilityFlags := pflag.NewFlagSet("Utility", pflag.ContinueOnError)
+	utilityFlags.AddFlag(cmd.Flags().Lookup(followFlag))
+	utilityFlags.AddFlag(cmd.Flags().Lookup(generateCommandFlag))
+
+	// prettify help menu.
+	cmd.Annotations = map[string]string{
+		"name":      nameFlags.FlagUsages(),
+		"build":     buildFlags.FlagUsages(),
+		"placement": placementFlags.FlagUsages(),
+		"task":      taskFlags.FlagUsages(),
+		"utility":   utilityFlags.FlagUsages(),
+	}
+	cmd.SetUsageTemplate(`{{h1 "Usage"}}
+{{- if .Runnable}}
+{{.UseLine}}
+{{- end }}
+
+{{h1 "Name Flags"}}
+{{(index .Annotations "name") | trimTrailingWhitespaces}}
+
+{{h1 "Build Flags"}}
+{{(index .Annotations "build") | trimTrailingWhitespaces}}
+
+{{h1 "Placement Flags"}}
+{{(index .Annotations "placement") | trimTrailingWhitespaces}}
+
+{{h1 "Task Configuration Flags"}}
+{{(index .Annotations "task") | trimTrailingWhitespaces}}
+
+{{h1 "Utility Flags"}}
+{{(index .Annotations "utility") | trimTrailingWhitespaces}}
+
+{{if .HasExample }}
+{{- h1 "Examples"}}
+{{- code .Example}}
+{{- end}}
+`)
 	return cmd
 }

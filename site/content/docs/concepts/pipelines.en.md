@@ -2,6 +2,10 @@ Having an automated release process is one of the most important parts of softwa
 
 In this section, we'll talk about using Copilot to set up a CodePipeline that automatically builds your service code when you push to your GitHub, Bitbucket or AWS CodeCommit repository, deploys to your environments, and runs automated testing.
 
+!!! Attention
+    AWS CodePipeline is not supported for services with Windows as the OS Family.
+    CodePipeline uses Linux-based AWS CodeBuild for the 'build' stage, so for now, Copilot pipelines cannot build Windows containers.
+
 ## Why?
 
 We won't get too philosophical about releasing software, but what's the point of having a release pipeline? With `copilot deploy` you can deploy your service directly from your computer to ECS, so why add a middleman? That's a great question. For some apps, manually using `deploy` is enough, but as your release process gets more complicated (as you add more environments or add automated testing, for example) you want to offload the boring work of repeatedly orchestrating that process to a service. With two services, each having two environments (test and production, say), running integration tests after you deploy to your test environment becomes surprisingly cumbersome to do by hand.
@@ -32,7 +36,7 @@ Follow the three steps below, from your workspace root:
 ```bash
 $ copilot pipeline init
 $ git add copilot/pipeline.yml copilot/buildspec.yml copilot/.workspace && git commit -m "Adding pipeline artifacts" && git push
-$ copilot pipeline update
+$ copilot pipeline deploy
 ```
 
 ✨ And you'll have a new pipeline configured in your application account. Want to understand a little bit more what's going on? Read on!
@@ -50,6 +54,8 @@ This won't create your pipeline, but it will create some local files that will b
 * __Release order__: You'll be prompted for environments you want to deploy to - select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
 
 * __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
+
+* __Tracking branch__: After you've selected the repository, Copilot will designate your current local branch as the branch your pipeline will follow. This can be changed in Step 2.
 
 ### Step 2: Updating the Pipeline manifest (optional)
 
@@ -91,7 +97,7 @@ stages:
 ```
 You can see every available configuration option for `pipeline.yml` on the [pipeline manifest](../manifest/pipeline.en.md) page.
 
-There are 3 main parts of this file: the `name` field, which is the name of your CodePipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must run `copilot pipeline update` afterwards.
+There are 3 main parts of this file: the `name` field, which is the name of your CodePipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must run `copilot pipeline deploy` afterwards.
 
 Typically, you'll update this file if you add new environments you want to deploy to, or want to track a different branch. If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here. The pipeline manifest is also where you may add a manual approval step before deployment or commands to run tests (see "Adding Tests," below) after deployment.
 
@@ -109,7 +115,7 @@ Now that your `pipeline.yml`, `buildspec.yml`, and `.workspace` files have been 
 
 Here's the fun part! Run:
 
-`copilot pipeline update`
+`copilot pipeline deploy`
 
 This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your application and kicks off a pipeline execution. Log into the AWS Console to watch your pipeline go, or run `copilot pipeline status` to check in on its execution.
 

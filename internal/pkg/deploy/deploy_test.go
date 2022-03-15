@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -536,6 +537,151 @@ func Test_IsJobDeployed(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.Equal(t, deployed, tc.wantedDeployed)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestStore_ListSNSTopics(t *testing.T) {
+	testCases := map[string]struct {
+		inputApp   string
+		inputEnv   string
+		setupMocks func(mocks storeMock)
+
+		wantedError  error
+		wantedTopics []Topic
+	}{
+		"return error if fail to get resources by tag": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(snsResourceType, map[string]string{
+						AppTagKey: "mockApp",
+						EnvTagKey: "mockEnv",
+					}).Return(nil, errors.New("some error")),
+				)
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
+		"return nil if no topics are found": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(snsResourceType, map[string]string{
+						AppTagKey: "mockApp",
+						EnvTagKey: "mockEnv",
+					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{}}}, nil),
+				)
+			},
+
+			wantedTopics: nil,
+		},
+		"return nil if the only topic doesn't have workload tag": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(snsResourceType, map[string]string{
+						AppTagKey: "mockApp",
+						EnvTagKey: "mockEnv",
+					}).Return([]*rg.Resource{
+						{
+							ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc1-topic",
+							Tags: map[string]string{},
+						},
+					}, nil),
+				)
+			},
+			wantedTopics: []Topic{},
+		},
+		"success": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+
+			setupMocks: func(m storeMock) {
+				m.rgGetter.EXPECT().GetResourcesByTags(
+					snsResourceType,
+					map[string]string{
+						AppTagKey: "mockApp",
+						EnvTagKey: "mockEnv",
+					},
+				).Return(
+					[]*rg.Resource{
+						{
+							ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc1-topic",
+							Tags: map[string]string{ServiceTagKey: "mockSvc1"},
+						}, {
+							ARN:  "arn:aws:sns:us-west-2:012345678912:mockApp-mockEnv-mockSvc2-events",
+							Tags: map[string]string{ServiceTagKey: "mockSvc2"},
+						},
+					},
+					nil,
+				)
+			},
+			wantedTopics: []Topic{
+				{
+					awsARN: arn.ARN{
+						Partition: "aws",
+						Region:    "us-west-2",
+						Service:   "sns",
+						AccountID: "012345678912",
+						Resource:  "mockApp-mockEnv-mockSvc1-topic",
+					},
+					prefix: "mockApp-mockEnv-mockSvc1-",
+					wkld:   "mockSvc1",
+					name:   "topic",
+				},
+				{
+					awsARN: arn.ARN{
+						Partition: "aws",
+						Region:    "us-west-2",
+						Service:   "sns",
+						AccountID: "012345678912",
+						Resource:  "mockApp-mockEnv-mockSvc2-events",
+					},
+					prefix: "mockApp-mockEnv-mockSvc2-",
+					wkld:   "mockSvc2",
+					name:   "events",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+
+			mocks := storeMock{
+				rgGetter:    mockRgGetter,
+				configStore: mockConfigStore,
+			}
+
+			tc.setupMocks(mocks)
+
+			store := &Store{
+				configStore:        mockConfigStore,
+				newRgClientFromIDs: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
+			}
+
+			// WHEN
+			topics, err := store.ListSNSTopics(tc.inputApp, tc.inputEnv)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+				require.ElementsMatch(t, topics, tc.wantedTopics)
 			} else {
 				require.NoError(t, err)
 			}

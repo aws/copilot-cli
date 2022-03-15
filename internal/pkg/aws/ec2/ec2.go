@@ -36,6 +36,7 @@ type api interface {
 	DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error)
 	DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error)
 	DescribeRouteTables(input *ec2.DescribeRouteTablesInput) (*ec2.DescribeRouteTablesOutput, error)
+	DescribeAvailabilityZones(input *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -73,7 +74,11 @@ type VPC struct {
 // Subnet contains the ID and name of a subnet.
 type Subnet struct {
 	Resource
+	CIDRBlock string
 }
+
+// AZ represents an availability zone.
+type AZ Resource
 
 // String formats the elements of a VPC into a display-ready string.
 // For example: VPCResource{"ID": "vpc-0576efeea396efee2", "Name": "video-store-test"}
@@ -182,6 +187,33 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 	return vpcs, nil
 }
 
+// ListAZs returns the list of opted-in and available availability zones.
+func (c *EC2) ListAZs() ([]AZ, error) {
+	resp, err := c.client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("zone-type"),
+				Values: aws.StringSlice([]string{"availability-zone"}),
+			},
+			{
+				Name:   aws.String("state"),
+				Values: aws.StringSlice([]string{"available"}),
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe availability zones: %w", err)
+	}
+	var out []AZ
+	for _, az := range resp.AvailabilityZones {
+		out = append(out, AZ{
+			ID:   aws.StringValue(az.ZoneId),
+			Name: aws.StringValue(az.ZoneName),
+		})
+	}
+	return out, nil
+}
+
 // HasDNSSupport returns if DNS resolution is enabled for the VPC.
 func (c *EC2) HasDNSSupport(vpcID string) (bool, error) {
 	resp, err := c.client.DescribeVpcAttribute(&ec2.DescribeVpcAttributeInput{
@@ -208,25 +240,12 @@ func (c *EC2) ListVPCSubnets(vpcID string) (*VPCSubnets, error) {
 		Name:   "vpc-id",
 		Values: []string{vpcID},
 	}
-	respRouteTables, err := c.routeTables(vpcFilter)
+	routeTables, err := c.routeTables(vpcFilter)
 	if err != nil {
 		return nil, err
 	}
-	publicSubnetMap := make(map[string]bool)
-	for _, routeTable := range respRouteTables {
-		var igwAttached bool
-		for _, route := range routeTable.Routes {
-			if strings.HasPrefix(aws.StringValue(route.GatewayId), internetGatewayIDPrefix) {
-				igwAttached = true
-				break
-			}
-		}
-		if igwAttached {
-			for _, association := range routeTable.Associations {
-				publicSubnetMap[aws.StringValue(association.SubnetId)] = true
-			}
-		}
-	}
+	rtIndex := indexRouteTables(routeTables)
+
 	var publicSubnets, privateSubnets []Subnet
 	respSubnets, err := c.subnets(vpcFilter)
 	if err != nil {
@@ -244,8 +263,9 @@ func (c *EC2) ListVPCSubnets(vpcID string) (*VPCSubnets, error) {
 				ID:   aws.StringValue(subnet.SubnetId),
 				Name: name,
 			},
+			CIDRBlock: aws.StringValue(subnet.CidrBlock),
 		}
-		if _, ok := publicSubnetMap[s.ID]; ok {
+		if rtIndex.IsPublicSubnet(s.ID) {
 			publicSubnets = append(publicSubnets, s)
 		} else {
 			privateSubnets = append(privateSubnets, s)
@@ -343,4 +363,77 @@ func toEC2Filter(filters []Filter) []*ec2.Filter {
 		})
 	}
 	return ec2Filter
+}
+
+type routeTable ec2.RouteTable
+
+// IsMain returns true if the route table is the default route table for the VPC.
+// If a subnet is not associated with a particular route table, then it will default to the main route table.
+func (rt *routeTable) IsMain() bool {
+	for _, association := range rt.Associations {
+		if aws.BoolValue(association.Main) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasIGW returns true if the route table has a route to an internet gateway.
+func (rt *routeTable) HasIGW() bool {
+	for _, route := range rt.Routes {
+		if strings.HasPrefix(aws.StringValue(route.GatewayId), internetGatewayIDPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// AssociatedSubnets returns the list of subnet IDs associated with the route table.
+func (rt *routeTable) AssociatedSubnets() []string {
+	var subnetIDs []string
+	for _, association := range rt.Associations {
+		if association.SubnetId == nil {
+			continue
+		}
+		subnetIDs = append(subnetIDs, aws.StringValue(association.SubnetId))
+	}
+	return subnetIDs
+}
+
+// routeTableIndex holds cached data to quickly return information about route tables in a VPC.
+type routeTableIndex struct {
+	// Route table that subnets default to. There is always one main table in the VPC.
+	mainTable *routeTable
+
+	// Explicit route table association for a subnet. A subnet can only be associated to one route table.
+	routeTableForSubnet map[string]*routeTable
+}
+
+func indexRouteTables(tables []*ec2.RouteTable) *routeTableIndex {
+	index := &routeTableIndex{
+		routeTableForSubnet: make(map[string]*routeTable),
+	}
+	for _, table := range tables { // Index all properties in a single pass.
+		table := (*routeTable)(table)
+
+		for _, subnetID := range table.AssociatedSubnets() {
+			index.routeTableForSubnet[subnetID] = table
+		}
+
+		if table.IsMain() {
+			index.mainTable = table
+		}
+	}
+	return index
+}
+
+// IsPublicSubnet returns true if the subnet has a route to an internet gateway.
+// We consider the subnet to have internet access if there is an explicit route in the route table to an internet gateway.
+// Or if there is an implicit route, where the subnet defaults to the main route table with an internet gateway.
+func (idx *routeTableIndex) IsPublicSubnet(subnetID string) bool {
+	rt, ok := idx.routeTableForSubnet[subnetID]
+	if ok {
+		return rt.HasIGW()
+	}
+	return idx.mainTable.HasIGW()
 }

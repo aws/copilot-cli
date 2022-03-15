@@ -9,6 +9,10 @@ import (
 	"net"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -32,17 +36,21 @@ type initEnvMocks struct {
 	selCreds     *mocks.MockcredsSelector
 	ec2Client    *mocks.Mockec2Client
 	selApp       *mocks.MockappSelector
+	store        *mocks.Mockstore
 }
 
 func TestInitEnvOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inEnvName     string
-		inAppName     string
-		inDefault     bool
-		inVPCID       string
-		inPublicIDs   []string
-		inPrivateIDs  []string
+		inEnvName string
+		inAppName string
+		inDefault bool
+
+		inVPCID      string
+		inPublicIDs  []string
+		inPrivateIDs []string
+
 		inVPCCIDR     net.IPNet
+		inAZs         []string
 		inPublicCIDRs []string
 
 		inProfileName     string
@@ -50,17 +58,31 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		inSecretAccessKey string
 		inSessionToken    string
 
+		setupMocks func(m initEnvMocks)
+
 		wantedErrMsg string
 	}{
 		"valid environment creation": {
 			inEnvName: "test-pdx",
 			inAppName: "phonetool",
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 		},
 		"invalid environment name": {
 			inEnvName: "123env",
 			inAppName: "phonetool",
 
 			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
+		},
+		"should error if environment already exists": {
+			inEnvName: "test-pdx",
+			inAppName: "phonetool",
+
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, nil)
+			},
+			wantedErrMsg: "environment test-pdx already exists",
 		},
 		"cannot specify both vpc resources importing flags and configuring flags": {
 			inEnvName:     "test-pdx",
@@ -73,6 +95,10 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			},
 			inVPCID: "mockID",
 
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
+
 			wantedErrMsg: "cannot specify both import vpc flags and configure vpc flags",
 		},
 		"cannot import or configure resources if use default flag is set": {
@@ -80,7 +106,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inDefault: true,
 			inVPCID:   "mockID",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", defaultConfigFlag),
 		},
 		"should err if both profile and access key id are set": {
@@ -88,7 +116,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:     "test",
 			inProfileName: "default",
 			inAccessKeyID: "AKIAIOSFODNN7EXAMPLE",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: "cannot specify both --profile and --aws-access-key-id",
 		},
 		"should err if both profile and secret access key are set": {
@@ -96,7 +126,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:         "test",
 			inProfileName:     "default",
 			inSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: "cannot specify both --profile and --aws-secret-access-key",
 		},
 		"should err if both profile and session token are set": {
@@ -104,14 +136,10 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:      "test",
 			inProfileName:  "default",
 			inSessionToken: "verylongtoken",
-
+			setupMocks: func(m initEnvMocks) {
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
+			},
 			wantedErrMsg: "cannot specify both --profile and --aws-session-token",
-		},
-		"should err if only one public subnet is set": {
-			inVPCID:     "mockID",
-			inPublicIDs: []string{"mockID"},
-
-			wantedErrMsg: "at least two public subnets must be imported to enable Load Balancing",
 		},
 		"should err if fewer than two private subnets are set:": {
 			inVPCID:      "mockID",
@@ -119,6 +147,17 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inPrivateIDs: []string{"mockID"},
 
 			wantedErrMsg: "at least two private subnets must be imported",
+		},
+		"should err if fewer than two availability zones are provided": {
+			inAZs: []string{"us-east-1a"},
+
+			wantedErrMsg: "at least two availability zones must be provided to enable Load Balancing",
+		},
+		"invalid VPC resource import (no VPC, 1 public, 2 private)": {
+			inPublicIDs:  []string{"mockID"},
+			inPrivateIDs: []string{"mockID", "anotherMockID"},
+
+			wantedErrMsg: "at least two public subnets must be imported to enable Load Balancing",
 		},
 		"valid VPC resource import (0 public, 3 private)": {
 			inVPCID:      "mockID",
@@ -134,12 +173,22 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := initEnvMocks{
+				store: mocks.NewMockstore(ctrl),
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(m)
+			}
+
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
 					name:          tc.inEnvName,
 					defaultConfig: tc.inDefault,
 					adjustVPC: adjustVPCVars{
+						AZs:               tc.inAZs,
 						PublicSubnetCIDRs: tc.inPublicCIDRs,
 						CIDR:              tc.inVPCCIDR,
 					},
@@ -156,6 +205,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 						SessionToken:    tc.inSessionToken,
 					},
 				},
+				store: m.store,
 			}
 
 			// WHEN
@@ -185,6 +235,18 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		Config: &aws.Config{
 			Region: aws.String(mockRegion),
 		},
+	}
+	mockPublicSubnetInput := selector.SubnetsInput{
+		Msg:      envInitPublicSubnetsSelectPrompt,
+		Help:     "",
+		VPCID:    "mockVPC",
+		IsPublic: true,
+	}
+	mockPrivateSubnetInput := selector.SubnetsInput{
+		Msg:      envInitPrivateSubnetsSelectPrompt,
+		Help:     "",
+		VPCID:    "mockVPC",
+		IsPublic: false,
 	}
 
 	testCases := map[string]struct {
@@ -236,11 +298,23 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			setupMocks: func(m initEnvMocks) {
 				gomock.InOrder(
 					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
+						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).
 						Return("", mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get environment name: some error"),
+		},
+		"should error if environment already exists": {
+			inAppName: mockApp,
+			setupMocks: func(m initEnvMocks) {
+				gomock.InOrder(
+					m.prompt.EXPECT().
+						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any(), gomock.Any()).
+						Return("test", nil),
+					m.store.EXPECT().GetEnvironment(mockApp, mockEnv).Return(nil, nil),
+				)
+			},
+			wantedError: errors.New("environment test already exists"),
 		},
 		"should create a session from a named profile if flag is provided": {
 			inAppName: mockApp,
@@ -284,7 +358,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(&session.Session{
 					Config: &aws.Config{},
 				}, nil)
-				m.prompt.EXPECT().Get("Which region?", gomock.Any(), nil, gomock.Any()).Return("us-west-2", nil)
+				m.prompt.EXPECT().Get("Which region?", gomock.Any(), nil, gomock.Any(), gomock.Any()).Return("us-west-2", nil)
 			},
 		},
 		"should skip prompting for region if flag is provided": {
@@ -297,7 +371,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(&session.Session{
 					Config: &aws.Config{},
 				}, nil)
-				m.prompt.EXPECT().Get("Which region?", gomock.Any(), nil, gomock.Any()).Times(0)
+				m.prompt.EXPECT().Get("Which region?", gomock.Any(), nil, gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		"should not prompt for configuring environment if default config flag is true": {
@@ -307,7 +381,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inDefault: true,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		"fail to select whether to adjust or import resources": {
@@ -316,7 +390,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("select adjusting or importing resources: some error"),
@@ -327,7 +401,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitDefaultConfigSelectOption, nil)
 			},
 		},
@@ -337,7 +411,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("", mockErr)
 			},
@@ -349,7 +423,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(false, mockErr)
@@ -362,7 +436,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(false, nil)
@@ -375,11 +449,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
 					Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("select public subnets: some error"),
@@ -390,11 +464,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
 					Return([]string{"mockPublicSubnet"}, nil)
 			},
 			wantedError: fmt.Errorf("select public subnets: at least two public subnets must be selected to enable Load Balancing"),
@@ -405,13 +479,13 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
 					Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("select private subnets: some error"),
@@ -422,13 +496,13 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
 					Return([]string{"mockPrivateSubnet"}, nil)
 			},
 			wantedError: fmt.Errorf("select private subnets: at least two private subnets must be selected"),
@@ -439,14 +513,30 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
 					Return([]string{}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
+			},
+		},
+		"success with selecting two public subnets and zero private subnets": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return([]string{}, nil)
 			},
 		},
 		"success with importing env resources with no flags": {
@@ -455,13 +545,13 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},
@@ -476,9 +566,86 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPCID").Return(true, nil)
 			},
+		},
+		"prompt for subnets if only VPC passed with flag": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				ID: "mockVPC",
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
+			},
+		},
+		"prompt for VPC if only subnets passed with flags": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				PrivateSubnetIDs: []string{"mockPrivateSubnetID", "anotherMockPrivateSubnetID"},
+				PublicSubnetIDs:  []string{"mockPublicSubnetID", "anotherMockPublicSubnetID"},
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+			},
+		},
+		"prompt for public subnets if only private subnets and VPC passed with flags": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				ID:               "mockVPC",
+				PrivateSubnetIDs: []string{"mockPrivateSubnetID", "anotherMockPrivateSubnetID"},
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
+			},
+		},
+		"prompt for private subnets if only public subnets and VPC passed with flags": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				ID:              "mockVPC",
+				PublicSubnetIDs: []string{"mockPublicSubnetID", "anotherMockPublicSubnetID"},
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
+			},
+		},
+		"error if no subnets selected": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				ID: "mockVPC",
+			},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return(nil, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return(nil, nil)
+			},
+			wantedError: fmt.Errorf("VPC must have subnets in order to proceed with environment creation"),
 		},
 		"fail to get VPC CIDR": {
 			inAppName: mockApp,
@@ -486,12 +653,44 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitAdjustEnvResourcesSelectOption, nil)
 				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("get VPC CIDR: some error"),
+		},
+		"should return err when failed to retrieve list of AZs to adjust": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("list availability zones for region %s: some error", mockRegion),
+		},
+		"should return err if the number of available AZs does not meet the minimum": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+				}, nil)
+			},
+			wantedError: fmt.Errorf("requires at least 2 availability zones (us-east-1a) in region %s", mockRegion),
 		},
 		"fail to get public subnet CIDRs": {
 			inAppName: mockApp,
@@ -499,10 +698,20 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(envInitAdjustEnvResourcesSelectOption, nil)
-				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+					{
+						Name: "us-east-1b",
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect(envInitAdjustAZPrompt, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]string{"us-east-1a", "us-east-1b"}, nil)
 				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
 					Return("", mockErr)
 			},
@@ -514,13 +723,23 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(envInitAdjustEnvResourcesSelectOption, nil)
-				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(mockVPCCIDR, nil)
-				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+					{
+						Name: "us-east-1b",
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect(envInitAdjustAZPrompt, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]string{"us-east-1a", "us-east-1b"}, nil)
+				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(mockSubnetCIDRs, nil)
-				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
+				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("get private subnet CIDRs: some error"),
@@ -531,10 +750,20 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes, gomock.Any()).
 					Return(envInitAdjustEnvResourcesSelectOption, nil)
 				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 					Return(mockVPCCIDR, nil)
+				m.ec2Client.EXPECT().ListAZs().Return([]ec2.AZ{
+					{
+						Name: "us-east-1a",
+					},
+					{
+						Name: "us-east-1b",
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect(envInitAdjustAZPrompt, gomock.Any(), []string{"us-east-1a", "us-east-1b"}, gomock.Any(), gomock.Any()).
+					Return([]string{"us-east-1a", "us-east-1b"}, nil)
 				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
 					Return(mockSubnetCIDRs, nil)
 				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
@@ -550,12 +779,13 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					IP:   net.IP{10, 1, 232, 0},
 					Mask: net.IPMask{255, 255, 255, 0},
 				},
-				PrivateSubnetCIDRs: []string{"mockPrivateCIDR"},
-				PublicSubnetCIDRs:  []string{"mockPublicCIDR"},
+				AZs:                []string{"us-east-1a", "us-east-1b"},
+				PrivateSubnetCIDRs: []string{"mockPrivateCIDR1", "mockPrivateCIDR2"},
+				PublicSubnetCIDRs:  []string{"mockPublicCIDR1", "mockPublicCIDR2"},
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 	}
@@ -572,6 +802,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				selCreds:     mocks.NewMockcredsSelector(ctrl),
 				ec2Client:    mocks.NewMockec2Client(ctrl),
 				selApp:       mocks.NewMockappSelector(ctrl),
+				store:        mocks.NewMockstore(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -593,6 +824,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				ec2Client:    mocks.ec2Client,
 				prompt:       mocks.prompt,
 				selApp:       mocks.selApp,
+				store:        mocks.store,
 			}
 
 			// WHEN
@@ -611,7 +843,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 func TestInitEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inProd bool
+		enableContainerInsights bool
 
 		expectStore             func(m *mocks.Mockstore)
 		expectDeployer          func(m *mocks.Mockdeployer)
@@ -766,12 +998,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{
 					Name: "phonetool",
 				}, nil)
-				m.EXPECT().CreateEnvironment(&config.Environment{
-					App:       "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
-				}).Return(errors.New("some create error"))
+				m.EXPECT().CreateEnvironment(gomock.Any()).Return(errors.New("some create error"))
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
@@ -810,7 +1037,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "store environment: some create error",
 		},
 		"success": {
-			inProd: true,
+			enableContainerInsights: true,
 
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -818,8 +1045,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					App:       "phonetool",
 					Name:      "test",
 					AccountID: "1234",
-					Prod:      true,
 					Region:    "mars-1",
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: true,
+					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -843,7 +1072,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
-					Prod:      false,
 					App:       "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
@@ -866,6 +1094,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: false,
+					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -891,7 +1122,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						AccountPrincipalARN: "some arn",
 					},
 					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
-					Version:             deploy.LatestEnvTemplateVersion,
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: false,
+					},
+					Version:              deploy.LatestEnvTemplateVersion,
+					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
+					ArtifactBucketKeyARN: "mockKMS",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
@@ -904,7 +1140,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
 					Return(&stack.AppRegionalResources{
-						S3Bucket: "mockBucket",
+						S3Bucket:  "mockBucket",
+						KMSKeyARN: "mockKMS",
 					}, nil)
 			},
 			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
@@ -935,6 +1172,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					AccountID: "4567",
 					Region:    "us-west-2",
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: false,
+					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -995,7 +1235,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			mockIAM := mocks.NewMockroleManager(ctrl)
 			mockCFN := mocks.NewMockstackExistChecker(ctrl)
 			mockResourcesUploader := mocks.NewMockcustomResourcesUploader(ctrl)
-			mockUploader := mocks.NewMockzipAndUploader(ctrl)
+			mockUploader := mocks.NewMockuploader(ctrl)
 			if tc.expectStore != nil {
 				tc.expectStore(mockStore)
 			}
@@ -1021,14 +1261,16 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				tc.expectResourcesUploader(mockResourcesUploader)
 			}
 
-			provider := sessions.NewProvider()
+			provider := sessions.ImmutableProvider()
 			sess, _ := provider.DefaultWithRegion("us-west-2")
 
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					name:         "test",
-					appName:      "phonetool",
-					isProduction: tc.inProd,
+					name:    "test",
+					appName: "phonetool",
+					telemetry: telemetryVars{
+						EnableContainerInsights: tc.enableContainerInsights,
+					},
 				},
 				store:       mockStore,
 				envDeployer: mockDeployer,
@@ -1041,7 +1283,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				sess:        sess,
 				appCFN:      mockAppCFN,
 				uploader:    mockResourcesUploader,
-				newS3: func(region string) (zipAndUploader, error) {
+				newS3: func(region string) (uploader, error) {
 					return mockUploader, nil
 				},
 			}

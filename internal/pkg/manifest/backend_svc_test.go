@@ -33,8 +33,8 @@ func TestNewBackendSvc(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
@@ -54,9 +54,9 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
-							Placement: stringP("public"),
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: placementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -68,7 +68,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Name:  "subscribers",
 					Image: "mockImage",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Port: 8080,
@@ -79,14 +79,14 @@ func TestNewBackendSvc(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Location: aws.String("mockImage"),
 							},
 							Port: aws.Uint16(8080),
 						},
-						HealthCheck: &ContainerHealthCheck{
+						HealthCheck: ContainerHealthCheck{
 							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
@@ -100,9 +100,59 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
-							Placement: stringP("public"),
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: placementP(PublicSubnetPlacement),
+						},
+					},
+				},
+			},
+		},
+		"with windows platform": {
+			inProps: BackendServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "subscribers",
+					Dockerfile: "./subscribers/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+			},
+			wantedManifest: &BackendService{
+				Workload: Workload{
+					Name: aws.String("subscribers"),
+					Type: aws.String(BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./subscribers/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(1024),
+						Memory: aws.Int(2048),
+						Platform: PlatformArgsOrString{
+							PlatformString: (*PlatformString)(aws.String("windows/amd64")),
+							PlatformArgs: PlatformArgs{
+								OSFamily: nil,
+								Arch:     nil,
+							},
+						},
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: placementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -137,6 +187,13 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
+				},
 			},
 			wantedTestdata: "backend-svc-nohealthcheck.yml",
 		},
@@ -146,7 +203,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 					Name:  "subscribers",
 					Image: "flask-sample",
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
 					Interval:    durationp(6 * time.Second),
 					Retries:     aws.Int(0),
@@ -177,15 +234,93 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 	}
 }
 
+func TestBackendService_Port(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wantedPort uint16
+		wantedOK   bool
+	}{
+		"sets ok to false if no port is exposed": {
+			mft: &BackendService{},
+		},
+		"returns the port value and sets ok to true if a port is exposed": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: uint16P(80),
+						},
+					},
+				},
+			},
+			wantedPort: 80,
+			wantedOK:   true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, ok := tc.mft.Port()
+
+			// THEN
+			require.Equal(t, tc.wantedOK, ok)
+			require.Equal(t, tc.wantedPort, actual)
+		})
+	}
+}
+
+func TestBackendService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &BackendService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
+		})
+	}
+}
+
 func TestBackendSvc_ApplyEnv(t *testing.T) {
+	mockPercentage := Percentage(70)
 	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
 						Build: BuildArgsOrString{
 							BuildArgs: DockerBuildArgs{
@@ -195,7 +330,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 					Port: aws.Uint16(8080),
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
 					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),
@@ -214,8 +349,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithNilEnvironment := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Port: aws.Uint16(80),
 				},
 			},
@@ -226,16 +361,16 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithMinimalOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Port: aws.Uint16(80),
 				},
 			},
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
+				ImageConfig: ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: ImageWithOptionalPort{
 						Port: aws.Uint16(5000),
 					},
 				},
@@ -244,8 +379,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithAllOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Port: aws.Uint16(80),
 					Image: Image{
 						DockerLabels: map[string]string{
@@ -268,7 +403,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
-			Logging: &Logging{
+			Logging: Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
@@ -277,8 +412,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
+				ImageConfig: ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
 							DockerLabels: map[string]string{
 								"com.amazonaws.ecs.copilot.description": "Overridden!",
@@ -289,7 +424,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					Count: Count{
 						AdvancedCount: AdvancedCount{
-							CPU: aws.Int(70),
+							CPU: &mockPercentage,
 						},
 					},
 					CPU: aws.Int(512),
@@ -302,7 +437,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						CredsParam: aws.String("some arn"),
 					},
 				},
-				Logging: &Logging{
+				Logging: Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
@@ -317,8 +452,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
 						Build: BuildArgsOrString{
 							BuildArgs: DockerBuildArgs{
@@ -331,8 +466,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
+				ImageConfig: ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
 							Location: aws.String("env-override location"),
 						},
@@ -347,8 +482,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
 						Location: aws.String("original location"),
 					},
@@ -357,8 +492,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
+				ImageConfig: ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
 							Location: aws.String("env-override location"),
 						},
@@ -373,8 +508,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
 						Build: BuildArgsOrString{
 							BuildArgs: DockerBuildArgs{
@@ -388,8 +523,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
+				ImageConfig: ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildString: aws.String("env overridden dockerfile"),
@@ -406,8 +541,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: ImageWithPortAndHealthcheck{
-				ImageWithPort: ImageWithPort{
+			ImageConfig: ImageWithHealthcheckAndOptionalPort{
+				ImageWithOptionalPort: ImageWithOptionalPort{
 					Image: Image{
 						Location: aws.String("original location"),
 					},
@@ -416,8 +551,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: ImageWithPortAndHealthcheck{
-					ImageWithPort: ImageWithPort{
+				ImageConfig: ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: ImageWithOptionalPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildString: aws.String("env overridden dockerfile"),
@@ -455,8 +590,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Port: aws.Uint16(5000),
 						},
 					},
@@ -470,8 +605,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Port: aws.Uint16(80),
 							Image: Image{
 								DockerLabels: map[string]string{
@@ -485,7 +620,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(256),
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								CPU: aws.Int(70),
+								CPU: &mockPercentage,
 							},
 						},
 						Variables: map[string]string{
@@ -499,7 +634,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",
@@ -520,8 +655,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Location: aws.String("env-override location"),
 							},
@@ -541,8 +676,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Location: aws.String("env-override location"),
 							},
@@ -561,8 +696,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildString: aws.String("env overridden dockerfile"),
@@ -583,8 +718,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: ImageWithPortAndHealthcheck{
-						ImageWithPort: ImageWithPort{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildString: aws.String("env overridden dockerfile"),
@@ -612,6 +747,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
+	mockPercentage := Percentage(80)
 	testCases := map[string]struct {
 		svcCount Count
 		envCount Count
@@ -621,8 +757,8 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"empty env advanced count override": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
-					CPU:   aws.Int(80),
+					Range: Range{Value: &mockRange},
+					CPU:   &mockPercentage,
 				},
 			},
 			envCount: Count{},
@@ -631,8 +767,8 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								Range: Range{Value: &mockRange},
+								CPU:   &mockPercentage,
 							},
 						},
 					},
@@ -672,7 +808,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by spot count": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
@@ -695,12 +831,12 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by range config": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(2),
 							Max: aws.Int(8),
@@ -713,7 +849,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{
+								Range: Range{
 									RangeConfig: RangeConfig{
 										Min: aws.Int(2),
 										Max: aws.Int(8),

@@ -19,11 +19,12 @@ type Environment struct {
 	Name             string        `json:"name"`                   // Name of the environment, must be unique within a App.
 	Region           string        `json:"region"`                 // Name of the region this environment is stored in.
 	AccountID        string        `json:"accountID"`              // Account ID of the account this environment is stored in.
-	Prod             bool          `json:"prod"`                   // Whether or not this environment is a production environment.
+	Prod             bool          `json:"prod"`                   // Deprecated. Whether or not this environment is a production environment.
 	RegistryURL      string        `json:"registryURL"`            // URL For ECR Registry for this environment.
 	ExecutionRoleARN string        `json:"executionRoleARN"`       // ARN used by CloudFormation to make modification to the environment stack.
 	ManagerRoleARN   string        `json:"managerRoleARN"`         // ARN for the manager role assumed to manipulate the environment and its services.
 	CustomConfig     *CustomizeEnv `json:"customConfig,omitempty"` // Custom environment configuration by users.
+	Telemetry        *Telemetry    `json:"telemetry,omitempty"`    // Optional environment telemetry features.
 }
 
 // CustomizeEnv represents the custom environment config.
@@ -53,8 +54,14 @@ type ImportVPC struct {
 // AdjustVPC holds the fields to adjust default VPC resources.
 type AdjustVPC struct {
 	CIDR               string   `json:"cidr"` // CIDR range for the VPC.
+	AZs                []string `json:"availabilityZoneNames"`
 	PublicSubnetCIDRs  []string `json:"publicSubnetCIDRs"`
 	PrivateSubnetCIDRs []string `json:"privateSubnetCIDRs"`
+}
+
+// Telemetry represents optional observability and monitoring configuration.
+type Telemetry struct {
+	EnableContainerInsights bool `json:"containerInsights"`
 }
 
 // CreateEnvironment instantiates a new environment within an existing App. Skip if
@@ -70,7 +77,7 @@ func (s *Store) CreateEnvironment(environment *Environment) error {
 		return fmt.Errorf("serializing environment %s: %w", environment.Name, err)
 	}
 
-	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssm.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(environmentPath),
 		Description: aws.String(fmt.Sprintf("The %s deployment stage", environment.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -92,7 +99,7 @@ func (s *Store) CreateEnvironment(environment *Environment) error {
 // it returns ErrNoSuchEnvironment.
 func (s *Store) GetEnvironment(appName string, environmentName string) (*Environment, error) {
 	environmentPath := fmt.Sprintf(fmtEnvParamPath, appName, environmentName)
-	environmentParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+	environmentParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(environmentPath),
 	})
 
@@ -144,7 +151,7 @@ func (s *Store) ListEnvironments(appName string) ([]*Environment, error) {
 // If the environment does not exist in the store or is successfully deleted then returns nil. Otherwise, returns an error.
 func (s *Store) DeleteEnvironment(appName, environmentName string) error {
 	paramName := fmt.Sprintf(fmtEnvParamPath, appName, environmentName)
-	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+	_, err := s.ssm.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
 

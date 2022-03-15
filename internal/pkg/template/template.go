@@ -6,54 +6,49 @@ package template
 
 import (
 	"bytes"
-	"crypto/sha256"
+	"embed"
 	"fmt"
+	"io/fs"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/templates"
-	"github.com/gobuffalo/packd"
 )
 
+//go:embed templates
+var templateFS embed.FS
+
+// File names under "templates/".
 const (
+	DNSCertValidatorFileName            = "dns-cert-validator"
+	DNSDelegationFileName               = "dns-delegation"
+	CustomDomainFileName                = "custom-domain"
+	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
+	NLBCertValidatorLambdaFileName      = "nlb-cert-validator"
+	NLBCustomDomainLambdaFileName       = "nlb-custom-domain"
+
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
 	scriptDirName                  = "scripts"
-	layerDirName                   = "layers"
 )
 
-// Environment custom resource file names.
-const (
-	DNSCertValidatorFileName = "dns-cert-validator"
-	DNSDelegationFileName    = "dns-delegation"
-	EnableLongARNsFileName   = "enable-long-arns"
-	CustomDomainFileName     = "custom-domain"
+// Groups of files that belong to the same stack.
+var (
+	envCustomResourceFiles = []string{
+		DNSCertValidatorFileName,
+		DNSDelegationFileName,
+		CustomDomainFileName,
+	}
+	rdWkldCustomResourceFiles = []string{
+		AppRunnerCustomDomainLambdaFileName,
+	}
+	nlbWkldCustomResourceFiles = []string{
+		NLBCertValidatorLambdaFileName,
+		NLBCustomDomainLambdaFileName,
+	}
 )
-
-// AppRunnerCustomDomainLambdaFileName is the file name for app runner custom domaing lambda.
-const AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
-
-// AWSSDKLayerFileName is the file name for AWS-SDK lambda layer.
-const AWSSDKLayerFileName = "aws-sdk-layer"
-
-var box = templates.Box()
-
-var envCustomResourceFiles = []string{
-	DNSCertValidatorFileName,
-	DNSDelegationFileName,
-	EnableLongARNsFileName,
-	CustomDomainFileName,
-}
-
-var rdWkldCustomResourceFiles = []string{
-	AppRunnerCustomDomainLambdaFileName,
-}
-
-var rdWkldCustomResourceLayers = []string{
-	AWSSDKLayerFileName,
-}
 
 // Parser is the interface that wraps the Parse method.
 type Parser interface {
@@ -90,13 +85,13 @@ type fileToCompress struct {
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
 type Template struct {
-	box packd.Box
+	fs fs.ReadFileFS
 }
 
 // New returns a Template object that can be used to parse files under the "/templates/" directory.
 func New() *Template {
 	return &Template{
-		box: box,
+		fs: templateFS,
 	}
 }
 
@@ -129,32 +124,14 @@ func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadF
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
-//UploadRequestDrivenWebServiceCustomResources uploads the request driven web service custom resource scripts.
+// UploadRequestDrivenWebServiceCustomResources uploads the request driven web service custom resource scripts.
 func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
 }
 
-// UploadRequestDrivenWebServiceLayers uploads already-zipped layers for a request driven web service.
-func (t *Template) UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error) {
-	urls := make(map[string]string)
-	for _, layerName := range rdWkldCustomResourceLayers {
-		content, err := t.Read(path.Join(customResourceRootPath, fmt.Sprintf("%s.zip", layerName)))
-		if err != nil {
-			return nil, err
-		}
-		name := path.Join(layerDirName, layerName)
-		url, err := upload(fmt.Sprintf("%s/%x", name, sha256.Sum256(content.Bytes())), Uploadable{
-			name:    layerName,
-			content: content.Bytes(),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("upload %s: %w", name, err)
-		}
-
-		urls[layerName] = url
-	}
-
-	return urls, nil
+// UploadLoadBalancedWebServiceNLBCustomResources uploads the network load-balanced web service custom resource scripts.
+func (t *Template) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
+	return t.uploadCustomResources(upload, nlbWkldCustomResourceFiles)
 }
 
 func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {
@@ -192,7 +169,7 @@ func (t *Template) uploadFileToCompress(upload s3.CompressAndUploadFunc, file fi
 	// Suffix with a SHA256 checksum of the fileToCompress so that
 	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
 	// same content then the URL generated will be identical.
-	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), nameBinaries...)
+	url, err := upload(s3.MkdirSHA256(file.name, contents), nameBinaries...)
 	if err != nil {
 		return "", fmt.Errorf("upload %s: %w", file.name, err)
 	}
@@ -241,11 +218,11 @@ func newTextTemplate(name string) *template.Template {
 }
 
 func (t *Template) read(path string) (string, error) {
-	s, err := t.box.FindString(path)
+	dat, err := t.fs.ReadFile(filepath.ToSlash(filepath.Join("templates", path))) // We need to use "/" even on Windows with go:embed.
 	if err != nil {
 		return "", fmt.Errorf("read template %s: %w", path, err)
 	}
-	return s, nil
+	return string(dat), nil
 }
 
 // parse reads the file at path and returns a parsed text/template object with the given name.

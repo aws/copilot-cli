@@ -14,6 +14,172 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
+// MockConfigStoreSvc is a mock of ConfigStoreSvc interface.
+type MockConfigStoreSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockConfigStoreSvcMockRecorder
+}
+
+// MockConfigStoreSvcMockRecorder is the mock recorder for MockConfigStoreSvc.
+type MockConfigStoreSvcMockRecorder struct {
+	mock *MockConfigStoreSvc
+}
+
+// NewMockConfigStoreSvc creates a new mock instance.
+func NewMockConfigStoreSvc(ctrl *gomock.Controller) *MockConfigStoreSvc {
+	mock := &MockConfigStoreSvc{ctrl: ctrl}
+	mock.recorder = &MockConfigStoreSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockConfigStoreSvc) EXPECT() *MockConfigStoreSvcMockRecorder {
+	return m.recorder
+}
+
+// GetEnvironment mocks base method.
+func (m *MockConfigStoreSvc) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnvironment", appName, environmentName)
+	ret0, _ := ret[0].(*config.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEnvironment indicates an expected call of GetEnvironment.
+func (mr *MockConfigStoreSvcMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockConfigStoreSvc)(nil).GetEnvironment), appName, environmentName)
+}
+
+// GetWorkload mocks base method.
+func (m *MockConfigStoreSvc) GetWorkload(appName, name string) (*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkload", appName, name)
+	ret0, _ := ret[0].(*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkload indicates an expected call of GetWorkload.
+func (mr *MockConfigStoreSvcMockRecorder) GetWorkload(appName, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkload", reflect.TypeOf((*MockConfigStoreSvc)(nil).GetWorkload), appName, name)
+}
+
+// ListEnvironments mocks base method.
+func (m *MockConfigStoreSvc) ListEnvironments(appName string) ([]*config.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironments", appName)
+	ret0, _ := ret[0].([]*config.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironments indicates an expected call of ListEnvironments.
+func (mr *MockConfigStoreSvcMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListEnvironments), appName)
+}
+
+// ListJobs mocks base method.
+func (m *MockConfigStoreSvc) ListJobs(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobs", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListJobs indicates an expected call of ListJobs.
+func (mr *MockConfigStoreSvcMockRecorder) ListJobs(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListJobs), appName)
+}
+
+// ListServices mocks base method.
+func (m *MockConfigStoreSvc) ListServices(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListServices", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListServices indicates an expected call of ListServices.
+func (mr *MockConfigStoreSvcMockRecorder) ListServices(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListServices), appName)
+}
+
+// MockDeployedEnvServicesLister is a mock of DeployedEnvServicesLister interface.
+type MockDeployedEnvServicesLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockDeployedEnvServicesListerMockRecorder
+}
+
+// MockDeployedEnvServicesListerMockRecorder is the mock recorder for MockDeployedEnvServicesLister.
+type MockDeployedEnvServicesListerMockRecorder struct {
+	mock *MockDeployedEnvServicesLister
+}
+
+// NewMockDeployedEnvServicesLister creates a new mock instance.
+func NewMockDeployedEnvServicesLister(ctrl *gomock.Controller) *MockDeployedEnvServicesLister {
+	mock := &MockDeployedEnvServicesLister{ctrl: ctrl}
+	mock.recorder = &MockDeployedEnvServicesListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDeployedEnvServicesLister) EXPECT() *MockDeployedEnvServicesListerMockRecorder {
+	return m.recorder
+}
+
+// ListDeployedJobs mocks base method.
+func (m *MockDeployedEnvServicesLister) ListDeployedJobs(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedJobs", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedJobs indicates an expected call of ListDeployedJobs.
+func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedJobs(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedJobs), appName, envName)
+}
+
+// ListDeployedServices mocks base method.
+func (m *MockDeployedEnvServicesLister) ListDeployedServices(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedServices indicates an expected call of ListDeployedServices.
+func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedServices), appName, envName)
+}
+
+// ListEnvironmentsDeployedTo mocks base method.
+func (m *MockDeployedEnvServicesLister) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironmentsDeployedTo", appName, svcName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironmentsDeployedTo indicates an expected call of ListEnvironmentsDeployedTo.
+func (mr *MockDeployedEnvServicesListerMockRecorder) ListEnvironmentsDeployedTo(appName, svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListEnvironmentsDeployedTo), appName, svcName)
+}
+
 // MockecsClient is a mock of ecsClient interface.
 type MockecsClient struct {
 	ctrl     *gomock.Controller
@@ -90,144 +256,31 @@ func (mr *MockapprunnerClientMockRecorder) DescribeService(svcArn interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerClient)(nil).DescribeService), svcArn)
 }
 
-// MockapprunnerSvcDescriber is a mock of apprunnerSvcDescriber interface.
-type MockapprunnerSvcDescriber struct {
+// MockworkloadStackDescriber is a mock of workloadStackDescriber interface.
+type MockworkloadStackDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockapprunnerSvcDescriberMockRecorder
+	recorder *MockworkloadStackDescriberMockRecorder
 }
 
-// MockapprunnerSvcDescriberMockRecorder is the mock recorder for MockapprunnerSvcDescriber.
-type MockapprunnerSvcDescriberMockRecorder struct {
-	mock *MockapprunnerSvcDescriber
+// MockworkloadStackDescriberMockRecorder is the mock recorder for MockworkloadStackDescriber.
+type MockworkloadStackDescriberMockRecorder struct {
+	mock *MockworkloadStackDescriber
 }
 
-// NewMockapprunnerSvcDescriber creates a new mock instance.
-func NewMockapprunnerSvcDescriber(ctrl *gomock.Controller) *MockapprunnerSvcDescriber {
-	mock := &MockapprunnerSvcDescriber{ctrl: ctrl}
-	mock.recorder = &MockapprunnerSvcDescriberMockRecorder{mock}
+// NewMockworkloadStackDescriber creates a new mock instance.
+func NewMockworkloadStackDescriber(ctrl *gomock.Controller) *MockworkloadStackDescriber {
+	mock := &MockworkloadStackDescriber{ctrl: ctrl}
+	mock.recorder = &MockworkloadStackDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockapprunnerSvcDescriber) EXPECT() *MockapprunnerSvcDescriberMockRecorder {
+func (m *MockworkloadStackDescriber) EXPECT() *MockworkloadStackDescriberMockRecorder {
 	return m.recorder
-}
-
-// Params mocks base method.
-func (m *MockapprunnerSvcDescriber) Params() (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Params")
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Params indicates an expected call of Params.
-func (mr *MockapprunnerSvcDescriberMockRecorder) Params() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockapprunnerSvcDescriber)(nil).Params))
-}
-
-// Service mocks base method.
-func (m *MockapprunnerSvcDescriber) Service() (*apprunner.Service, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Service")
-	ret0, _ := ret[0].(*apprunner.Service)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Service indicates an expected call of Service.
-func (mr *MockapprunnerSvcDescriberMockRecorder) Service() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockapprunnerSvcDescriber)(nil).Service))
-}
-
-// ServiceARN mocks base method.
-func (m *MockapprunnerSvcDescriber) ServiceARN() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceARN")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ServiceARN indicates an expected call of ServiceARN.
-func (mr *MockapprunnerSvcDescriberMockRecorder) ServiceARN() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceARN", reflect.TypeOf((*MockapprunnerSvcDescriber)(nil).ServiceARN))
-}
-
-// ServiceStackResources mocks base method.
-func (m *MockapprunnerSvcDescriber) ServiceStackResources() ([]*stack.Resource, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceStackResources")
-	ret0, _ := ret[0].([]*stack.Resource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ServiceStackResources indicates an expected call of ServiceStackResources.
-func (mr *MockapprunnerSvcDescriberMockRecorder) ServiceStackResources() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceStackResources", reflect.TypeOf((*MockapprunnerSvcDescriber)(nil).ServiceStackResources))
-}
-
-// ServiceURL mocks base method.
-func (m *MockapprunnerSvcDescriber) ServiceURL() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceURL")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ServiceURL indicates an expected call of ServiceURL.
-func (mr *MockapprunnerSvcDescriberMockRecorder) ServiceURL() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceURL", reflect.TypeOf((*MockapprunnerSvcDescriber)(nil).ServiceURL))
-}
-
-// MockecsSvcDescriber is a mock of ecsSvcDescriber interface.
-type MockecsSvcDescriber struct {
-	ctrl     *gomock.Controller
-	recorder *MockecsSvcDescriberMockRecorder
-}
-
-// MockecsSvcDescriberMockRecorder is the mock recorder for MockecsSvcDescriber.
-type MockecsSvcDescriberMockRecorder struct {
-	mock *MockecsSvcDescriber
-}
-
-// NewMockecsSvcDescriber creates a new mock instance.
-func NewMockecsSvcDescriber(ctrl *gomock.Controller) *MockecsSvcDescriber {
-	mock := &MockecsSvcDescriber{ctrl: ctrl}
-	mock.recorder = &MockecsSvcDescriberMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockecsSvcDescriber) EXPECT() *MockecsSvcDescriberMockRecorder {
-	return m.recorder
-}
-
-// EnvVars mocks base method.
-func (m *MockecsSvcDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvVars")
-	ret0, _ := ret[0].([]*ecs.ContainerEnvVar)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvVars indicates an expected call of EnvVars.
-func (mr *MockecsSvcDescriberMockRecorder) EnvVars() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockecsSvcDescriber)(nil).EnvVars))
 }
 
 // Outputs mocks base method.
-func (m *MockecsSvcDescriber) Outputs() (map[string]string, error) {
+func (m *MockworkloadStackDescriber) Outputs() (map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Outputs")
 	ret0, _ := ret[0].(map[string]string)
@@ -236,13 +289,13 @@ func (m *MockecsSvcDescriber) Outputs() (map[string]string, error) {
 }
 
 // Outputs indicates an expected call of Outputs.
-func (mr *MockecsSvcDescriberMockRecorder) Outputs() *gomock.Call {
+func (mr *MockworkloadStackDescriberMockRecorder) Outputs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockecsSvcDescriber)(nil).Outputs))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockworkloadStackDescriber)(nil).Outputs))
 }
 
 // Params mocks base method.
-func (m *MockecsSvcDescriber) Params() (map[string]string, error) {
+func (m *MockworkloadStackDescriber) Params() (map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Params")
 	ret0, _ := ret[0].(map[string]string)
@@ -251,28 +304,13 @@ func (m *MockecsSvcDescriber) Params() (map[string]string, error) {
 }
 
 // Params indicates an expected call of Params.
-func (mr *MockecsSvcDescriberMockRecorder) Params() *gomock.Call {
+func (mr *MockworkloadStackDescriberMockRecorder) Params() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockecsSvcDescriber)(nil).Params))
-}
-
-// Secrets mocks base method.
-func (m *MockecsSvcDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Secrets")
-	ret0, _ := ret[0].([]*ecs.ContainerSecret)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Secrets indicates an expected call of Secrets.
-func (mr *MockecsSvcDescriberMockRecorder) Secrets() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockecsSvcDescriber)(nil).Secrets))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockworkloadStackDescriber)(nil).Params))
 }
 
 // ServiceStackResources mocks base method.
-func (m *MockecsSvcDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+func (m *MockworkloadStackDescriber) ServiceStackResources() ([]*stack.Resource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ServiceStackResources")
 	ret0, _ := ret[0].([]*stack.Resource)
@@ -281,143 +319,233 @@ func (m *MockecsSvcDescriber) ServiceStackResources() ([]*stack.Resource, error)
 }
 
 // ServiceStackResources indicates an expected call of ServiceStackResources.
-func (mr *MockecsSvcDescriberMockRecorder) ServiceStackResources() *gomock.Call {
+func (mr *MockworkloadStackDescriberMockRecorder) ServiceStackResources() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceStackResources", reflect.TypeOf((*MockecsSvcDescriber)(nil).ServiceStackResources))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceStackResources", reflect.TypeOf((*MockworkloadStackDescriber)(nil).ServiceStackResources))
 }
 
-// MockConfigStoreSvc is a mock of ConfigStoreSvc interface.
-type MockConfigStoreSvc struct {
+// MockecsDescriber is a mock of ecsDescriber interface.
+type MockecsDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockConfigStoreSvcMockRecorder
+	recorder *MockecsDescriberMockRecorder
 }
 
-// MockConfigStoreSvcMockRecorder is the mock recorder for MockConfigStoreSvc.
-type MockConfigStoreSvcMockRecorder struct {
-	mock *MockConfigStoreSvc
+// MockecsDescriberMockRecorder is the mock recorder for MockecsDescriber.
+type MockecsDescriberMockRecorder struct {
+	mock *MockecsDescriber
 }
 
-// NewMockConfigStoreSvc creates a new mock instance.
-func NewMockConfigStoreSvc(ctrl *gomock.Controller) *MockConfigStoreSvc {
-	mock := &MockConfigStoreSvc{ctrl: ctrl}
-	mock.recorder = &MockConfigStoreSvcMockRecorder{mock}
+// NewMockecsDescriber creates a new mock instance.
+func NewMockecsDescriber(ctrl *gomock.Controller) *MockecsDescriber {
+	mock := &MockecsDescriber{ctrl: ctrl}
+	mock.recorder = &MockecsDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockConfigStoreSvc) EXPECT() *MockConfigStoreSvcMockRecorder {
+func (m *MockecsDescriber) EXPECT() *MockecsDescriberMockRecorder {
 	return m.recorder
 }
 
-// GetEnvironment mocks base method.
-func (m *MockConfigStoreSvc) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
+// EnvVars mocks base method.
+func (m *MockecsDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEnvironment", appName, environmentName)
-	ret0, _ := ret[0].(*config.Environment)
+	ret := m.ctrl.Call(m, "EnvVars")
+	ret0, _ := ret[0].([]*ecs.ContainerEnvVar)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetEnvironment indicates an expected call of GetEnvironment.
-func (mr *MockConfigStoreSvcMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
+// EnvVars indicates an expected call of EnvVars.
+func (mr *MockecsDescriberMockRecorder) EnvVars() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockConfigStoreSvc)(nil).GetEnvironment), appName, environmentName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockecsDescriber)(nil).EnvVars))
 }
 
-// GetWorkload mocks base method.
-func (m *MockConfigStoreSvc) GetWorkload(appName, name string) (*config.Workload, error) {
+// Outputs mocks base method.
+func (m *MockecsDescriber) Outputs() (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWorkload", appName, name)
-	ret0, _ := ret[0].(*config.Workload)
+	ret := m.ctrl.Call(m, "Outputs")
+	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetWorkload indicates an expected call of GetWorkload.
-func (mr *MockConfigStoreSvcMockRecorder) GetWorkload(appName, name interface{}) *gomock.Call {
+// Outputs indicates an expected call of Outputs.
+func (mr *MockecsDescriberMockRecorder) Outputs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkload", reflect.TypeOf((*MockConfigStoreSvc)(nil).GetWorkload), appName, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockecsDescriber)(nil).Outputs))
 }
 
-// ListEnvironments mocks base method.
-func (m *MockConfigStoreSvc) ListEnvironments(appName string) ([]*config.Environment, error) {
+// Params mocks base method.
+func (m *MockecsDescriber) Params() (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEnvironments", appName)
-	ret0, _ := ret[0].([]*config.Environment)
+	ret := m.ctrl.Call(m, "Params")
+	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListEnvironments indicates an expected call of ListEnvironments.
-func (mr *MockConfigStoreSvcMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
+// Params indicates an expected call of Params.
+func (mr *MockecsDescriberMockRecorder) Params() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListEnvironments), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockecsDescriber)(nil).Params))
 }
 
-// ListServices mocks base method.
-func (m *MockConfigStoreSvc) ListServices(appName string) ([]*config.Workload, error) {
+// Platform mocks base method.
+func (m *MockecsDescriber) Platform() (*ecs.ContainerPlatform, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListServices", appName)
-	ret0, _ := ret[0].([]*config.Workload)
+	ret := m.ctrl.Call(m, "Platform")
+	ret0, _ := ret[0].(*ecs.ContainerPlatform)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListServices indicates an expected call of ListServices.
-func (mr *MockConfigStoreSvcMockRecorder) ListServices(appName interface{}) *gomock.Call {
+// Platform indicates an expected call of Platform.
+func (mr *MockecsDescriberMockRecorder) Platform() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListServices), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Platform", reflect.TypeOf((*MockecsDescriber)(nil).Platform))
 }
 
-// MockDeployedEnvServicesLister is a mock of DeployedEnvServicesLister interface.
-type MockDeployedEnvServicesLister struct {
+// Secrets mocks base method.
+func (m *MockecsDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Secrets")
+	ret0, _ := ret[0].([]*ecs.ContainerSecret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Secrets indicates an expected call of Secrets.
+func (mr *MockecsDescriberMockRecorder) Secrets() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockecsDescriber)(nil).Secrets))
+}
+
+// ServiceStackResources mocks base method.
+func (m *MockecsDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceStackResources")
+	ret0, _ := ret[0].([]*stack.Resource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceStackResources indicates an expected call of ServiceStackResources.
+func (mr *MockecsDescriberMockRecorder) ServiceStackResources() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceStackResources", reflect.TypeOf((*MockecsDescriber)(nil).ServiceStackResources))
+}
+
+// MockapprunnerDescriber is a mock of apprunnerDescriber interface.
+type MockapprunnerDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockDeployedEnvServicesListerMockRecorder
+	recorder *MockapprunnerDescriberMockRecorder
 }
 
-// MockDeployedEnvServicesListerMockRecorder is the mock recorder for MockDeployedEnvServicesLister.
-type MockDeployedEnvServicesListerMockRecorder struct {
-	mock *MockDeployedEnvServicesLister
+// MockapprunnerDescriberMockRecorder is the mock recorder for MockapprunnerDescriber.
+type MockapprunnerDescriberMockRecorder struct {
+	mock *MockapprunnerDescriber
 }
 
-// NewMockDeployedEnvServicesLister creates a new mock instance.
-func NewMockDeployedEnvServicesLister(ctrl *gomock.Controller) *MockDeployedEnvServicesLister {
-	mock := &MockDeployedEnvServicesLister{ctrl: ctrl}
-	mock.recorder = &MockDeployedEnvServicesListerMockRecorder{mock}
+// NewMockapprunnerDescriber creates a new mock instance.
+func NewMockapprunnerDescriber(ctrl *gomock.Controller) *MockapprunnerDescriber {
+	mock := &MockapprunnerDescriber{ctrl: ctrl}
+	mock.recorder = &MockapprunnerDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockDeployedEnvServicesLister) EXPECT() *MockDeployedEnvServicesListerMockRecorder {
+func (m *MockapprunnerDescriber) EXPECT() *MockapprunnerDescriberMockRecorder {
 	return m.recorder
 }
 
-// ListDeployedServices mocks base method.
-func (m *MockDeployedEnvServicesLister) ListDeployedServices(appName, envName string) ([]string, error) {
+// Outputs mocks base method.
+func (m *MockapprunnerDescriber) Outputs() (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "Outputs")
+	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListDeployedServices indicates an expected call of ListDeployedServices.
-func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
+// Outputs indicates an expected call of Outputs.
+func (mr *MockapprunnerDescriberMockRecorder) Outputs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedServices), appName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockapprunnerDescriber)(nil).Outputs))
 }
 
-// ListEnvironmentsDeployedTo mocks base method.
-func (m *MockDeployedEnvServicesLister) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
+// Params mocks base method.
+func (m *MockapprunnerDescriber) Params() (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEnvironmentsDeployedTo", appName, svcName)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "Params")
+	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListEnvironmentsDeployedTo indicates an expected call of ListEnvironmentsDeployedTo.
-func (mr *MockDeployedEnvServicesListerMockRecorder) ListEnvironmentsDeployedTo(appName, svcName interface{}) *gomock.Call {
+// Params indicates an expected call of Params.
+func (mr *MockapprunnerDescriberMockRecorder) Params() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListEnvironmentsDeployedTo), appName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockapprunnerDescriber)(nil).Params))
+}
+
+// Service mocks base method.
+func (m *MockapprunnerDescriber) Service() (*apprunner.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service")
+	ret0, _ := ret[0].(*apprunner.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockapprunnerDescriberMockRecorder) Service() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockapprunnerDescriber)(nil).Service))
+}
+
+// ServiceARN mocks base method.
+func (m *MockapprunnerDescriber) ServiceARN() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceARN")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceARN indicates an expected call of ServiceARN.
+func (mr *MockapprunnerDescriberMockRecorder) ServiceARN() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceARN", reflect.TypeOf((*MockapprunnerDescriber)(nil).ServiceARN))
+}
+
+// ServiceStackResources mocks base method.
+func (m *MockapprunnerDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceStackResources")
+	ret0, _ := ret[0].([]*stack.Resource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceStackResources indicates an expected call of ServiceStackResources.
+func (mr *MockapprunnerDescriberMockRecorder) ServiceStackResources() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceStackResources", reflect.TypeOf((*MockapprunnerDescriber)(nil).ServiceStackResources))
+}
+
+// ServiceURL mocks base method.
+func (m *MockapprunnerDescriber) ServiceURL() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceURL")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceURL indicates an expected call of ServiceURL.
+func (mr *MockapprunnerDescriberMockRecorder) ServiceURL() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceURL", reflect.TypeOf((*MockapprunnerDescriber)(nil).ServiceURL))
 }

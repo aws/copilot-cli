@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"gopkg.in/yaml.v3"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"gopkg.in/yaml.v3"
 )
 
 // DeployedAppMetadata wraps the Metadata field of a deployed
@@ -156,6 +157,13 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	}, nil
 }
 
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *AppStackConfig) SerializedParameters() (string, error) {
+	// No-op for now.
+	return "", nil
+}
+
 // Tags returns the tags that should be applied to the Application CloudFormation stack.
 func (c *AppStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(c.AdditionalTags, map[string]string{
@@ -185,9 +193,9 @@ func (c *AppStackConfig) stackSetAdminRoleName() string {
 // StackSetAdminRoleARN returns the role ARN of the role used to administer the Application
 // StackSet.
 func (c *AppStackConfig) StackSetAdminRoleARN(region string) (string, error) {
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return "", fmt.Errorf("find the partition for region %s", region)
+	partition, err := partitions.Region(region).Partition()
+	if err != nil {
+		return "", err
 	}
 	return fmt.Sprintf(fmtStackSetAdminRoleARN, partition.ID(), c.AccountID, c.stackSetAdminRoleName()), nil
 }

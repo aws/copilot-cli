@@ -38,9 +38,12 @@ type EnvOpts struct {
 	EnableLongARNFormatLambda string
 	CustomDomainLambda        string
 	ScriptBucketName          string
+	ArtifactBucketARN         string
+	ArtifactBucketKeyARN      string
 
 	ImportVPC *config.ImportVPC
 	VPCConfig *config.AdjustVPC
+	Telemetry *config.Telemetry
 
 	LatestVersion string
 }

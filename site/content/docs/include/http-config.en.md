@@ -1,7 +1,10 @@
 <div class="separator"></div>
 
-<a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
-The http section contains parameters related to integrating your service with an Application Load Balancer.
+<a id="http" href="#http" class="field">`http`</a> <span class="type">Boolean or Map</span>  
+The http section contains parameters related to integrating your service with an Application Load Balancer. 
+
+To disable the Application Load Balancer, specify `http: false`. Note that for a Load-Balanced Web Service,
+at least one of Application Load Balancer or Network Load Balancer must be enabled.
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each Load Balanced Web Service should listen on a unique path.
@@ -62,5 +65,17 @@ http:
   allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
 ```
 
-<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings</span>  
 HTTPS domain alias of your service.
+```yaml
+# String version.
+http:
+  alias: example.com
+# Alteratively, as an array of strings.
+http:
+  alias: ["example.com", "v1.example.com"]
+```
+
+<span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
+The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.    
+If using gRPC, please note that a domain must be associated with your application.

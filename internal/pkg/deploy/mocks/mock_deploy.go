@@ -7,6 +7,7 @@ package mocks
 import (
 	reflect "reflect"
 
+	session "github.com/aws/aws-sdk-go/aws/session"
 	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	gomock "github.com/golang/mock/gomock"
@@ -146,4 +147,42 @@ func (m *MockConfigStoreClient) ListWorkloads(appName string) ([]*config.Workloa
 func (mr *MockConfigStoreClientMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockConfigStoreClient)(nil).ListWorkloads), appName)
+}
+
+// MockSessionProvider is a mock of SessionProvider interface.
+type MockSessionProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MockSessionProviderMockRecorder
+}
+
+// MockSessionProviderMockRecorder is the mock recorder for MockSessionProvider.
+type MockSessionProviderMockRecorder struct {
+	mock *MockSessionProvider
+}
+
+// NewMockSessionProvider creates a new mock instance.
+func NewMockSessionProvider(ctrl *gomock.Controller) *MockSessionProvider {
+	mock := &MockSessionProvider{ctrl: ctrl}
+	mock.recorder = &MockSessionProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSessionProvider) EXPECT() *MockSessionProviderMockRecorder {
+	return m.recorder
+}
+
+// FromRole mocks base method.
+func (m *MockSessionProvider) FromRole(roleARN, region string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromRole", roleARN, region)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromRole indicates an expected call of FromRole.
+func (mr *MockSessionProviderMockRecorder) FromRole(roleARN, region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MockSessionProvider)(nil).FromRole), roleARN, region)
 }

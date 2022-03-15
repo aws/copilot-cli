@@ -6,6 +6,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -49,15 +52,19 @@ type taskExecOpts struct {
 	newTaskSel         func(*session.Session) runningTaskSelector
 	configSel          appEnvSelector
 	newCommandExecutor func(*session.Session) ecsCommandExecutor
+	provider           sessionProvider
 
 	task *awsecs.Task
 }
 
 func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
-	ssmStore, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task exec"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+
+	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	return &taskExecOpts{
 		taskExecVars:     vars,
@@ -71,6 +78,7 @@ func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
 		newCommandExecutor: func(s *session.Session) ecsCommandExecutor {
 			return awsecs.New(s)
 		},
+		provider: sessProvider,
 	}, nil
 }
 
@@ -83,10 +91,10 @@ func (o *taskExecOpts) Validate() error {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
+		if o.envName != "" {
+			if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+				return err
+			}
 		}
 	}
 	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
@@ -147,7 +155,7 @@ func (o *taskExecOpts) Execute() error {
 }
 
 func (o *taskExecOpts) selectTaskInDefaultCluster() error {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := o.provider.Default()
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
@@ -165,7 +173,7 @@ func (o *taskExecOpts) selectTaskInAppEnvCluster() error {
 	if err != nil {
 		return fmt.Errorf("get environment %s: %w", o.envName, err)
 	}
-	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := o.provider.FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
@@ -179,15 +187,14 @@ func (o *taskExecOpts) selectTaskInAppEnvCluster() error {
 }
 
 func (o *taskExecOpts) configSession() (*session.Session, error) {
-	sessProvider := sessions.NewProvider()
 	if o.useDefault {
-		return sessProvider.Default()
+		return o.provider.Default()
 	}
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", o.envName, err)
 	}
-	return sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	return o.provider.FromRole(env.ManagerRoleARN, env.Region)
 }
 
 // buildTaskExecCmd builds the command for execute a running container in a one-off task.
@@ -215,13 +222,7 @@ func buildTaskExecCmd() *cobra.Command {
 					opts.skipConfirmation = aws.Bool(true)
 				}
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

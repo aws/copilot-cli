@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Parameter logical IDs for a backend service.
@@ -51,11 +52,13 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  mft.ImageConfig,
+				image:  mft.ImageConfig.Image,
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			logRetention:        mft.Logging.Retention,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: mft,
 
@@ -73,29 +76,24 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-	outputs, err := s.addonsOutputs()
+	addonsParams, err := s.addonsParameters()
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: s.manifest.Sidecars,
-		imageConfig:   &s.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(s.manifest.Name),
+	addonsOutputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
 	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
-	}
-	publishers, err := convertPublish(s.manifest.Publish, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	publishers, err := convertPublish(s.manifest.Publish(), s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 
-	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
+	advancedCount, err := convertAdvancedCount(s.manifest.Count.AdvancedCount)
 	if err != nil {
 		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
 	}
@@ -109,10 +107,6 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
-	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
-	}
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -123,32 +117,38 @@ func (s *BackendService) Template() (string, error) {
 	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:                s.manifest.BackendServiceConfig.Variables,
-		Secrets:                  s.manifest.BackendServiceConfig.Secrets,
-		NestedStack:              outputs,
+		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		Autoscaling:              autoscaling,
 		CapacityProviders:        capacityProviders,
 		DesiredCountOnSpot:       desiredCountOnSpot,
 		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:             manifest.BackendServiceType,
-		HealthCheck:              s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
+		HealthCheck:              convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(s.manifest.Logging),
-		DockerLabels:             s.manifest.ImageConfig.DockerLabels,
+		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
 		DesiredCountLambda:       desiredCountLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
-		Storage:                  storage,
+		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                dependencies,
-		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Credentials),
+		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
+		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
 	}
-	return content.String(), nil
+	overridenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
@@ -165,6 +165,10 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String(containerPort),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
 	}...), nil
 }

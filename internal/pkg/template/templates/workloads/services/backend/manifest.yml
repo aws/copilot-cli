@@ -1,0 +1,58 @@
+# The manifest for the "{{.Name}}" service.
+# Read the full specification for the "{{.Type}}" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/backend-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: {{.Name}}
+type: {{.Type}}
+{{if .ImageConfig.Port}}
+# Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.ImageConfig.Port}}" but is not public.
+{{- else}}
+# Your service does not allow any traffic.
+{{- end}}
+
+# Configuration for your containers and service.
+image:
+{{- if .ImageConfig.Image.Build.BuildArgs.Dockerfile}}
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  build: {{.ImageConfig.Image.Build.BuildArgs.Dockerfile}}
+{{- end}}
+{{- if .ImageConfig.Image.Location}}
+  location: {{.ImageConfig.Image.Location}}
+{{- end}}
+{{- if .ImageConfig.Port}}
+  # Port exposed through your container to route traffic to it.
+  port: {{.ImageConfig.Port}}
+{{- end}}
+{{- if not .ImageConfig.HealthCheck.IsEmpty}}
+  healthcheck:
+    # Container health checks: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-healthcheck
+    command: {{fmtSlice (quoteSlice .ImageConfig.HealthCheck.Command)}}
+    interval: {{.ImageConfig.HealthCheck.Interval}}
+    retries: {{.ImageConfig.HealthCheck.Retries}}
+    timeout: {{.ImageConfig.HealthCheck.Timeout}}
+    start_period: {{.ImageConfig.HealthCheck.StartPeriod}}
+{{- end}}
+
+cpu: {{.CPU}}       # Number of CPU units for the task.
+memory: {{.Memory}}    # Amount of memory in MiB used by the task.
+{{- if .Platform.PlatformString}}
+platform: {{.Platform.PlatformString}}     # See https://aws.github.io/copilot-cli/docs/manifest/backend-service/#platform
+{{- end}}
+count: {{.Count.Value}}       # Number of tasks that should be running in your service.
+{{- if not .TaskConfig.IsWindows }}
+exec: true     # Enable running commands in your container.
+{{- end}}
+
+# Optional fields for more advanced use-cases.
+#
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.

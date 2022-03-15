@@ -54,13 +54,19 @@ Pipeline をトリガーするための GitHub アクセストークンを保持
     Copilot v1.4.0 から GitHub リポジトリをソースにする場合のアクセストークンは不要になりました。代わりに Copilot は [AWS CodeStar の GitHub への接続](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/update-github-action-connections.html)を使って Pipeline をトリガーします。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
-Pipeline をトリガーするリポジトリのブランチ名。 GitHub と CodeCommit の場合デフォルトは `main` で Bitbucket の場合デフォルトは `master` です。
+Pipeline をトリガーするリポジトリのブランチ名。 Copilot は、このフィールドに現在のローカルブランチを自動的に入力します。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-repository" href="#source-properties-repository" class="field">`repository`</a> <span class="type">String</span>  
 リポジトリの URL 。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-connection-name" href="#source-properties-connection-name" class="field">`connection_name`</a> <span class="type">String</span>  
 既存の CodeStar Connections の接続名。指定しない場合 Copilot は接続を作成します。
+
+<span class="parent-field">source.properties.</span><a id="source-properties-output-artifact-format" href="#source-properties-output-artifact-format" class="field">`output_artifact_format`</a> <span class="type">String</span>
+任意項目。アーティファクトの出力形式です。`CODEBUILD_CLONE_REF` または `CODE_ZIP` を指定します。省略した場合、デフォルトの `CODE_ZIP` が利用されます。
+
+!!! info
+    このプロパティは、`access_token_secret` を使用する[GitHub version 1](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/appendix-github-oauth.html) ソースアクションでは利用できません。
 
 <div class="separator"></div>
 

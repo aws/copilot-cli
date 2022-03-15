@@ -9,6 +9,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/dustin/go-humanize/english"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -93,4 +98,44 @@ func relPath(fullPath string) (string, error) {
 		return "", fmt.Errorf("get relative path of file: %w", err)
 	}
 	return path, nil
+}
+
+func run(cmd cmd) error {
+	if err := cmd.Validate(); err != nil {
+		return err
+	}
+	if err := cmd.Ask(); err != nil {
+		return err
+	}
+	if err := cmd.Execute(); err != nil {
+		return err
+	}
+	if actionCmd, ok := cmd.(actionCommand); ok {
+		if err := actionCmd.RecommendActions(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func logRecommendedActions(actions []string) {
+	if len(actions) == 0 {
+		return
+	}
+	log.Infoln(fmt.Sprintf("Recommended follow-up %s:", english.PluralWord(len(actions), "action", "actions")))
+	for _, followup := range actions {
+		log.Infof("%s\n", indentListItem(followup))
+	}
+}
+
+func indentListItem(multiline string) string {
+	var prefixedLines []string
+	for i, line := range strings.Split(multiline, "\n") {
+		prefix := "    "
+		if i == 0 {
+			prefix = "  - "
+		}
+		prefixedLines = append(prefixedLines, fmt.Sprintf("%s%s", prefix, line))
+	}
+	return strings.Join(prefixedLines, "\n")
 }

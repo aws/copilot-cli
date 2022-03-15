@@ -12,10 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/robfig/cron/v3"
 
 	"github.com/spf13/afero"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -57,9 +60,15 @@ var (
 
 	// Aurora-Serverless-specific errors.
 	errInvalidRDSNameCharacters    = errors.New("value must start with a letter")
+	errRDWSNotConnectedToVPC       = fmt.Errorf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType)
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
+
+	// Topic subscription errors.
+	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
+	errInvalidPubSubTopicName   = errors.New("topic names can only contain letters, numbers, underscores, and hyphens")
+	errSubscribeBadFormat       = errors.New("value must be of the form <serviceName>:<topicName>")
 )
 
 const fmtErrValueBadSize = "value must be between %d and %d characters in length"
@@ -139,6 +148,11 @@ var (
 // https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html#systemsmanager-PutParameter-request-Name
 var secretParameterNameRegExp = regexp.MustCompile("^[a-zA-Z0-9_.-]+$")
 
+var (
+	awsSNSTopicRegexp       = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`) // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	regexpMatchSubscription = regexp.MustCompile(`^(\S+):(\S+)`)     // Validates that an expression contains the format serviceName:topicName
+)
+
 const regexpFindAllMatches = -1
 
 func validateAppName(val interface{}) error {
@@ -175,7 +189,7 @@ func validateSvcType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(svcType, manifest.ServiceTypes, service)
+	return validateWorkloadType(svcType, manifest.ServiceTypes(), service)
 }
 
 func validateWorkloadType(wkldType string, validTypes []string, errFlavor string) error {
@@ -193,7 +207,7 @@ func validateJobType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(jobType, manifest.JobTypes, job)
+	return validateWorkloadType(jobType, manifest.JobTypes(), job)
 }
 
 func validateJobName(val interface{}) error {
@@ -264,17 +278,51 @@ func validatePath(fs afero.Fs, val interface{}) error {
 	return nil
 }
 
-func validateStorageType(val interface{}) error {
+type validateStorageTypeOpts struct {
+	ws           manifestReader
+	workloadName string
+}
+
+func validateStorageType(val interface{}, opts validateStorageTypeOpts) error {
 	storageType, ok := val.(string)
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range storageTypes {
-		if storageType == validType {
-			return nil
-		}
+	if !contains(storageType, storageTypes) {
+		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
 	}
-	return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
+
+	if storageType == rdsStorageType {
+		return validateAuroraStorageType(opts.ws, opts.workloadName)
+	}
+	return nil
+}
+
+func validateAuroraStorageType(ws manifestReader, workloadName string) error {
+	if workloadName == "" {
+		return nil // Workload not yet selected while validating storage type flag.
+	}
+	mft, err := ws.ReadWorkloadManifest(workloadName)
+	if err != nil {
+		return fmt.Errorf("invalid storage type %s: read manifest file for %s: %w", rdsStorageType, workloadName, err)
+	}
+	mftType, err := mft.WorkloadType()
+	if err != nil {
+		return fmt.Errorf("invalid storage type %s: read type of workload from manifest file for %s: %w", rdsStorageType, workloadName, err)
+	}
+	if mftType != manifest.RequestDrivenWebServiceType {
+		return nil
+	}
+	data := struct {
+		Network manifest.RequestDrivenWebServiceNetworkConfig `yaml:"network"`
+	}{}
+	if err := yaml.Unmarshal(mft, &data); err != nil {
+		return fmt.Errorf("invalid storage type %s: unmarshal manifest for %s to read network config: %w", rdsStorageType, workloadName, err)
+	}
+	if data.Network.IsEmpty() {
+		return fmt.Errorf("invalid storage type %s: %w", rdsStorageType, errRDWSNotConnectedToVPC)
+	}
+	return nil
 }
 
 func validateMySQLDBName(val interface{}) error {
@@ -626,6 +674,67 @@ func validateLSIs(val interface{}) error {
 	return nil
 }
 
+func validateSubscribe(noSubscription bool, subscribeTags []string) error {
+	// --no-subscriptions and --subscribe are mutually exclusive.
+	if noSubscription && len(subscribeTags) != 0 {
+		return fmt.Errorf("validate subscribe configuration: cannot specify both --%s and --%s", noSubscriptionFlag, subscribeTopicsFlag)
+	}
+	if len(subscribeTags) != 0 {
+		if err := validateSubscriptions(subscribeTags); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateSubscriptions(val interface{}) error {
+	s, ok := val.([]string)
+	if !ok {
+		return errValueNotAStringSlice
+	}
+	for _, sub := range s {
+		err := validateSubscriptionKey(sub)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateSubscriptionKey(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	sub, err := parseSerializedSubscription(s)
+	if err != nil {
+		return errSubscribeBadFormat
+	}
+	if err := validatePubSubName(aws.StringValue(sub.Name)); err != nil {
+		return fmt.Errorf("invalid topic subscription topic name `%s`: %w", aws.StringValue(sub.Name), err)
+	}
+	if err = basicNameValidation(aws.StringValue(sub.Service)); err != nil {
+		return fmt.Errorf("invalid topic subscription service name `%s`: %w", aws.StringValue(sub.Service), err)
+	}
+	return nil
+}
+
+// ValidatePubSubName validates naming is correct for topics in publishing/subscribing cases, such as naming for a
+// SNS Topic intended for a publisher.
+func validatePubSubName(name string) error {
+	if len(name) == 0 {
+		return errMissingPublishTopicField
+	}
+
+	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	if !awsSNSTopicRegexp.MatchString(name) {
+		return errInvalidPubSubTopicName
+	}
+
+	return nil
+}
+
 func prettify(inputStrings []string) string {
 	prettyTypes := template.QuoteSliceFunc(inputStrings)
 	return strings.Join(prettyTypes, ", ")
@@ -641,6 +750,32 @@ func validateCIDR(val interface{}) error {
 		return errValueNotAnIPNet
 	}
 	return nil
+}
+
+func validatePublicSubnetsCIDR(numAZs int) func(v interface{}) error {
+	return func(v interface{}) error {
+		s, ok := v.(string)
+		if !ok {
+			return errValueNotAString
+		}
+		if numCIDRs := len(strings.Split(s, ",")); numCIDRs != numAZs {
+			return fmt.Errorf("number of public subnet CIDRs (%d) does not match number of AZs (%d)", numCIDRs, numAZs)
+		}
+		return validateCIDRSlice(v)
+	}
+}
+
+func validatePrivateSubnetsCIDR(numAZs int) func(v interface{}) error {
+	return func(v interface{}) error {
+		s, ok := v.(string)
+		if !ok {
+			return errValueNotAString
+		}
+		if numCIDRs := len(strings.Split(s, ",")); numCIDRs != numAZs {
+			return fmt.Errorf("number of private subnet CIDRs (%d) does not match number of AZs (%d)", numCIDRs, numAZs)
+		}
+		return validateCIDRSlice(v)
+	}
 }
 
 func validateCIDRSlice(val interface{}) error {

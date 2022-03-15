@@ -240,8 +240,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -267,12 +267,16 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 								ID: "abc",
 							},
 						},
+						Telemetry: &config.Telemetry{
+							EnableContainerInsights: true,
+						},
 					}, nil)
 				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
 				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
 					Return(&stack.AppRegionalResources{
-						S3Bucket: "mockBucket",
+						S3Bucket:  "mockBucket",
+						KMSKeyARN: "mockKMS",
 					}, nil)
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
@@ -289,6 +293,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					CFNServiceRoleARN:   "execARN",
 					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
+					Telemetry: &config.Telemetry{
+						EnableContainerInsights: true,
+					},
+					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
+					ArtifactBucketKeyARN: "mockKMS",
 				}).Return(nil)
 
 				return &envUpgradeOpts{
@@ -306,8 +315,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -345,7 +354,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
 				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
 					Return(&stack.AppRegionalResources{
-						S3Bucket: "mockBucket",
+						S3Bucket:  "mockBucket",
+						KMSKeyARN: "mockKMS",
 					}, nil)
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
@@ -360,9 +370,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					App: deploy.AppInformation{
 						Name: "phonetool",
 					},
-					Name:                "test",
-					CFNServiceRoleARN:   "execARN",
-					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
+					Name:                 "test",
+					CFNServiceRoleARN:    "execARN",
+					CustomResourcesURLs:  map[string]string{"mockCustomResource": "mockURL"},
+					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
+					ArtifactBucketKeyARN: "mockKMS",
 				}, "frontend").Return(nil)
 
 				return &envUpgradeOpts{
@@ -381,8 +393,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -452,8 +464,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},
@@ -508,8 +520,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
-					newS3: func(region string) (zipAndUploader, error) {
-						return mocks.NewMockzipAndUploader(ctrl), nil
+					newS3: func(region string) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
 					},
 				}
 			},

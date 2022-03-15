@@ -133,6 +133,21 @@ func (mr *MockecsClientMockRecorder) RunningTasksInFamily(cluster, family interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasksInFamily", reflect.TypeOf((*MockecsClient)(nil).RunningTasksInFamily), cluster, family)
 }
 
+// Service mocks base method.
+func (m *MockecsClient) Service(clusterName, serviceName string) (*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", clusterName, serviceName)
+	ret0, _ := ret[0].(*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
+}
+
 // ServiceRunningTasks mocks base method.
 func (m *MockecsClient) ServiceRunningTasks(clusterName, serviceName string) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
@@ -195,6 +210,25 @@ func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition,
 func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
+}
+
+// UpdateService mocks base method.
+func (m *MockecsClient) UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{clusterName, serviceName}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateService", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateService indicates an expected call of UpdateService.
+func (mr *MockecsClientMockRecorder) UpdateService(clusterName, serviceName interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{clusterName, serviceName}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateService", reflect.TypeOf((*MockecsClient)(nil).UpdateService), varargs...)
 }
 
 // MockstepFunctionsClient is a mock of stepFunctionsClient interface.

@@ -6,6 +6,10 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -47,32 +51,17 @@ type resumeSvcOpts struct {
 	initClients        resumeSvcInitClients
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *resumeSvcOpts) Validate() error {
-	if o.appName != "" {
-		if err := o.validateAppName(); err != nil {
-			return err
-		}
-	}
-	if o.envName != "" {
-		if err := o.validateEnvName(); err != nil {
-			return err
-		}
-	}
-	if o.svcName != "" {
-		if err := o.validateSvcName(); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *resumeSvcOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	return o.askSvcEnvName()
+	return o.validateAndAskSvcEnvName()
 }
 
 // Execute resumes the service through the prompt.
@@ -97,41 +86,34 @@ func (o *resumeSvcOpts) Execute() error {
 	return nil
 }
 
-func (o *resumeSvcOpts) validateAppName() error {
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *resumeSvcOpts) validateEnvName() error {
-	if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *resumeSvcOpts) validateSvcName() error {
-	if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *resumeSvcOpts) askApp() error {
+func (o *resumeSvcOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.store.GetApplication(o.appName)
+		return err
 	}
 	appName, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
-		return fmt.Errorf("select application name: %w", err)
+		return fmt.Errorf("select application: %w", err)
 	}
 	o.appName = appName
 
 	return nil
 }
 
-func (o *resumeSvcOpts) askSvcEnvName() error {
+func (o *resumeSvcOpts) validateAndAskSvcEnvName() error {
+	if o.envName != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+			return err
+		}
+	}
+
+	if o.svcName != "" {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
+			return err
+		}
+	}
+	// Note: we let prompter handle the case when there is only option for user to choose from.
+	// This is naturally the case when `o.envName != "" && o.svcName != ""`.
 	deployedService, err := o.sel.DeployedService(
 		fmt.Sprintf(svcResumeSvcNamePrompt, color.HighlightUserInput(o.appName)),
 		svcResumeSvcNameHelpPrompt,
@@ -149,28 +131,27 @@ func (o *resumeSvcOpts) askSvcEnvName() error {
 }
 
 func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc resume"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
-	deployStore, err := deploy.NewStore(store)
+
+	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 
 	opts := &resumeSvcOpts{
 		resumeSvcVars: vars,
-		store:         store,
-		sel:           selector.NewDeploySelect(prompt.New(), store, deployStore),
+		store:         configStore,
+		sel:           selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		spinner:       termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	opts.initClients = func() error {
 		var a *apprunner.AppRunner
 		var d *describe.AppRunnerServiceDescriber
-		configStore, err := config.NewStore()
-		if err != nil {
-			return err
-		}
 		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
@@ -181,7 +162,7 @@ func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
 		}
 		switch svc.Type {
 		case manifest.RequestDrivenWebServiceType:
-			sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+			sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return err
 			}
@@ -224,13 +205,7 @@ func buildSvcResumeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/aws-sdk-go/aws"
 )
 
@@ -23,6 +25,16 @@ const (
 // not permitted in ecs-cli generated resource names).
 func ReplaceDashesFunc(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
+}
+
+// IsArnFunc takes a string value and determines if it's an ARN or not.
+func IsARNFunc(value string) bool {
+	return arn.IsARN(value)
+}
+
+// TrimSlashPrefix takes a string value and removes slash prefix from the string if present.
+func TrimSlashPrefix(value string) string {
+	return strings.TrimPrefix(value, "/")
 }
 
 // DashReplacedLogicalIDToOriginal takes a "sanitized" logical ID
@@ -90,20 +102,6 @@ func QuoteSliceFunc(elems []string) []string {
 	return quotedElems
 }
 
-// QuotePSliceFunc places quotation marks around all
-// dereferenced elements of elems and returns a []string slice.
-func QuotePSliceFunc(elems []*string) []string {
-	var quotedElems []string
-	if len(elems) == 0 {
-		return quotedElems
-	}
-	quotedElems = make([]string, len(elems))
-	for i, el := range elems {
-		quotedElems[i] = strconv.Quote(*el)
-	}
-	return quotedElems
-}
-
 // generateMountPointJSON turns a list of MountPoint objects into a JSON string:
 // `{"myEFSVolume": "/var/www", "myEBSVolume": "/usr/data"}`
 // This function must be called on an array of correctly constructed MountPoint objects.
@@ -155,15 +153,13 @@ func generateSNSJSON(topics []*Topic) string {
 }
 
 // generateQueueURIJSON turns a list of Topic Subscription objects into a JSON string of their corresponding queues:
-// `{"eventsQueue": "${mainURL}", "svcTopicEventsQueue": "${svctopicURL}"}`
+// `{"svcTopicEventsQueue": "${svctopicURL}"}`
 // This function must be called on an array of correctly constructed Topic objects.
 func generateQueueURIJSON(ts []*TopicSubscription) string {
 	if ts == nil {
 		return ""
 	}
 	urlMap := make(map[string]string)
-	urlMap["eventsQueue"] = "${mainURL}"
-
 	for _, sub := range ts {
 		// TopicSubscriptions with no name, service, or queue will not be included in the json
 		if sub.Name == nil || sub.Service == nil || sub.Queue == nil {

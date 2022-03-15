@@ -2,10 +2,9 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
 
 ???+ note "Sample manifest for a frontend service"
 
-    ```yaml
+```yaml
     # Your service name will be used in naming your resources like log groups, App Runner services, etc.
     name: frontend
-    # The "architecture" of the service you're running.
     type: Request-Driven Web Service
 
     http:
@@ -21,9 +20,12 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
     image:
       build: ./frontend/Dockerfile
       port: 80
-
     cpu: 1024
     memory: 2048
+
+    network:
+      vpc:
+        placement: 'private'
 
     variables:
       LOG_LEVEL: info
@@ -34,7 +36,7 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
     environments:
       test:
         LOG_LEVEL: debug
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.
@@ -120,7 +122,7 @@ All paths are relative to your workspace root.
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).
 
 !!! note
-    Only public images stored in [Amazon ECR Public](https://docs.aws.amazon.com/AmazonECR/latest/public/public-repositories.html) is available with AWS App Runner.
+    Only public images stored in [Amazon ECR Public](https://docs.aws.amazon.com/AmazonECR/latest/public/public-repositories.html) are available with AWS App Runner.
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
@@ -137,13 +139,38 @@ Amount of memory in MiB reserved for each instance of your service. See the [AWS
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
+The `network` section contains parameters for connecting the service to AWS resources in the environment's VPC.  
+By connecting the service to a VPC, you can use [service discovery](../developing/service-discovery.en.md) to communicate with other services
+in your environment, or connect to a database in your VPC such as Amazon Aurora with [`storage init`](../commands/storage-init.en.md).
+
+<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
+Subnets in the VPC to route egress traffic from the service.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
+The only valid option today is `'private'`. If you prefer the service not to be connected to a VPC, you can remove the `network` field.
+
+When the placement is `'private'`, the App Runner service routes egress traffic through the private subnets of the VPC.  
+If you use a Copilot-generated VPC, Copilot will automatically add NAT Gateways to your environment for internet connectivity. (See [pricing](https://aws.amazon.com/vpc/pricing/).)
+Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints 
+for isolated workloads. See our [custom environment resources](../developing/custom-environment-resources.en.md) page for more.
+
+<div class="separator"></div>
+
+<a id="command" href="#command" class="field">`command`</a> <span class="type">String</span>  
+Optional. Override the default command in the image.
 
 <div class="separator"></div>
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
+
+{% include 'publish.en.md' %}
+
+<div class="separator"></div>
+
+<a id="variables" href="#variables" class="field">`tags`</a> <span class="type">Map</span>  
+Key-value pairs representing AWS tags that are passed down to your AWS App Runner resources.
 
 <div class="separator"></div>
 

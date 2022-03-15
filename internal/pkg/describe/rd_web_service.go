@@ -21,28 +21,22 @@ type RDWebServiceDescriber struct {
 	svc             string
 	enableResources bool
 
-	store                DeployedEnvServicesLister
-	envSvcDescribers     map[string]apprunnerSvcDescriber
-	initServiceDescriber func(string) error
-}
-
-// NewRDWebServiceConfig contains fields that initiates RDWebServiceDescriber struct.
-type NewRDWebServiceConfig struct {
-	NewServiceConfig
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
+	store            DeployedEnvServicesLister
+	initClients      func(string) error
+	envSvcDescribers map[string]apprunnerDescriber
 }
 
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
-func NewRDWebServiceDescriber(opt NewRDWebServiceConfig) (*RDWebServiceDescriber, error) {
+func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, error) {
 	describer := &RDWebServiceDescriber{
-		app:              opt.App,
-		svc:              opt.Svc,
-		enableResources:  opt.EnableResources,
-		store:            opt.DeployStore,
-		envSvcDescribers: make(map[string]apprunnerSvcDescriber),
+		app:             opt.App,
+		svc:             opt.Svc,
+		enableResources: opt.EnableResources,
+		store:           opt.DeployStore,
+
+		envSvcDescribers: make(map[string]apprunnerDescriber),
 	}
-	describer.initServiceDescriber = func(env string) error {
+	describer.initClients = func(env string) error {
 		if _, ok := describer.envSvcDescribers[env]; ok {
 			return nil
 		}
@@ -73,16 +67,14 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars envVars
 	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
-		err := d.initServiceDescriber(env)
+		err := d.initClients(env)
 		if err != nil {
 			return nil, err
 		}
-
 		service, err := d.envSvcDescribers[env].Service()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service configuration: %w", err)
 		}
-
 		webServiceURI := formatAppRunnerUrl(service.ServiceURL)
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
@@ -113,43 +105,27 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	return &rdWebSvcDesc{
-		Service:        d.svc,
-		Type:           manifest.RequestDrivenWebServiceType,
-		App:            d.app,
-		Configurations: configs,
-		Routes:         routes,
-		Variables:      envVars,
-		Resources:      resources,
+		Service:                 d.svc,
+		Type:                    manifest.RequestDrivenWebServiceType,
+		App:                     d.app,
+		AppRunnerConfigurations: configs,
+		Routes:                  routes,
+		Variables:               envVars,
+		Resources:               resources,
 
 		environments: environments,
 	}, nil
 }
 
-// URI returns the WebServiceURI to identify this service uniquely given an environment name.
-func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
-
-	err := d.initServiceDescriber(envName)
-	if err != nil {
-		return "", err
-	}
-
-	serviceURL, err := d.envSvcDescribers[envName].ServiceURL()
-	if err != nil {
-		return "", fmt.Errorf("get outputs for service %s: %w", d.svc, err)
-	}
-
-	return serviceURL, nil
-}
-
 // rdWebSvcDesc contains serialized parameters for a web service.
 type rdWebSvcDesc struct {
-	Service        string               `json:"service"`
-	Type           string               `json:"type"`
-	App            string               `json:"application"`
-	Configurations configurations       `json:"configurations"`
-	Routes         []*WebServiceRoute   `json:"routes"`
-	Variables      envVars              `json:"variables"`
-	Resources      deployedSvcResources `json:"resources,omitempty"`
+	Service                 string                  `json:"service"`
+	Type                    string                  `json:"type"`
+	App                     string                  `json:"application"`
+	AppRunnerConfigurations appRunnerConfigurations `json:"configurations"`
+	Routes                  []*WebServiceRoute      `json:"routes"`
+	Variables               envVars                 `json:"variables"`
+	Resources               deployedSvcResources    `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -174,7 +150,7 @@ func (w *rdWebSvcDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
-	w.Configurations.humanString(writer)
+	w.AppRunnerConfigurations.humanString(writer)
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	headers := []string{"Environment", "URL"}

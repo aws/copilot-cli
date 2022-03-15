@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -40,14 +44,11 @@ type showAppOpts struct {
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-	defaultSession, err := sessions.NewProvider().Default()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app show")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	return &showAppOpts{
 		showAppVars: vars,
 		store:       store,
@@ -116,6 +117,10 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list services in application %s: %w", o.name, err)
 	}
+	jobs, err := o.store.ListJobs(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs in application %s: %w", o.name, err)
+	}
 
 	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.name,
@@ -141,6 +146,13 @@ func (o *showAppOpts) description() (*describe.App, error) {
 			Type: svc.Type,
 		})
 	}
+	var trimmedJobs []*config.Workload
+	for _, job := range jobs {
+		trimmedJobs = append(trimmedJobs, &config.Workload{
+			Name: job.Name,
+			Type: job.Type,
+		})
+	}
 	versionGetter, err := o.newVersionGetter(o.name)
 	if err != nil {
 		return nil, err
@@ -155,6 +167,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		URI:       app.Domain,
 		Envs:      trimmedEnvs,
 		Services:  trimmedSvcs,
+		Jobs:      trimmedJobs,
 		Pipelines: pipelines,
 	}, nil
 }
@@ -186,17 +199,7 @@ func buildAppShowCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			return nil
+			return run(opts)
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})

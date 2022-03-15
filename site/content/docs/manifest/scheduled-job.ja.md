@@ -8,7 +8,7 @@ name: report-generator
 type: Scheduled Job
 
 on:
-  schedule: @daily
+  schedule: "@daily"
 cpu: 256
 memory: 512
 retries: 3
@@ -20,8 +20,15 @@ image:
 
 variables:
   LOG_LEVEL: info
+env_file: log.env
 secrets:
   GITHUB_TOKEN: GITHUB_TOKEN
+
+# You can override any of the values defined above by environment.
+environments:
+  prod:
+    cpu: 2048               # Larger CPU value for prod environment
+    memory: 4096
 ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
@@ -42,11 +49,15 @@ Job をトリガするイベントの設定。
 定期的に Job をトリガする頻度を指定できます。
 サポートする頻度は:
 
-* `"@yearly"`
-* `"@monthly"`
-* `"@weekly"`
-* `"@daily"`
-* `"@hourly"`
+
+| 頻度         | 以下と同一              | `UTC` を用いた可読表記による実行タイミング             |
+| ------------ | --------------------- | --------------------------------------------- |
+| `"@yearly"`  | `"cron(0 * * * ? *)"` | 1 月 1 日の午前 0 時                            |
+| `"@monthly"` | `"cron(0 0 1 * ? *)"` | 毎月 1 日の午前 0 時                            |
+| `"@weekly"`  | `"cron(0 0 ? * 1 *)"` | 毎週日曜日の午前 0 時                            |
+| `"@daily"`   | `"cron(0 0 * * ? *)"` | 毎日午前 0 時                                   |
+| `"@hourly"`  | `"cron(0 * * * ? *)"` | 毎時 0 分                                      |
+
 * `"@every {duration}"` (例: "1m", "5m")
 * `"rate({duration})"` CloudWatch の[rate 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions) の形式
 
@@ -56,46 +67,7 @@ Job をトリガするイベントの設定。
 * `"cron({fields})"` 6 つフィールドからなる CloudWatch の[cron 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) を利用する
 <div class="separator"></div>
 
-<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
-image セクションは Docker の build に関するパラメータを持ちます。
-
-<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
-String 型を設定した場合、Copilot はそれを Dockerfile へのパスと解釈します。指定したディレクトリがビルドコンテキストとなります。下記の Manifest を指定した場合:
-```yaml
-image:
-  build: path/to/dockerfile
-```
-このコマンドを実行した場合と同じ結果になります。  
-`$ docker build --file path/to/dockerfile path/to` 
-
-Map 型も指定できます:
-
-```yaml
-image:
-  build:
-    dockerfile: path/to/dockerfile
-    context: context/dir
-    target: build-stage
-    cache_from:
-      - image:tag
-    args:
-      key: value
-```
-
-この場合、Copilot は指定したコンテキストディレクトリを使用します。また、args で指定した key-value のペアで `--build-arg` を上書きします。これは下記の docker コマンドの実行と同等です。
-
-`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
-
-フィールドは省略できます。その場合、Copilot は可能な限り意図を汲み取ろうと試みます。例えば、`context` を指定しても、`dockerfile`を指定しなかった場合、Copilot はコンテキストディレクトリで Docker を実行し、”Dockerfile”という名前のファイルを Dockerfile とみなします。逆に、`dockerfile`を指定し、`context`を指定しなかった場合、Copilot は `dockerfile` が配置されたディレクトリで Docker を実行したいのだと推測します。
-
-全てのパスはワークスペースをルートとした相対パスで記述できます。
-
-<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
-Dockerfile からコンテナイメージをビルドする代わりに、既存のコンテナイメージ名の指定も可能です。`image.location` と [`image.build`](#image-build) の同時利用はできません。
-`location` フィールドの制約を含む指定方法は Amazon ECS タスク定義の [`image` パラメータ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image)のそれに従います。
-
-<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>  
-コンテナに付与したい [Docker ラベル](https://docs.docker.com/config/labels-custom-metadata/)を key/value の Map で指定できます。これは任意設定項目です。
+{% include 'image-config.ja.md' %}
 
 <div class="separator"></div>
 
@@ -130,6 +102,22 @@ command: ["ps", "au"]
 
 <a id="memory" href="#memory" class="field">`memory`</a> <span class="type">Integer</span>  
 タスクに割り当てるメモリ量（MiB）。指定可能な値については [Amazon ECS ドキュメント](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task-cpu-memory-error.html)をご覧ください。
+
+<div class="separator"></div>
+
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
+`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定） 例えば、`linux/arm64` や `windows/x86_64` といった値です。デフォルトは `linux/x86_64` です。
+
+生成された文字列を上書きして、有効な異なる `osfamily` や `architecture` を明示的に指定してビルドすることができます。例えば Windows ユーザーの場合は、
+```yaml
+platform: windows/x86_64
+```
+とするとデフォルトは `WINDOWS_SERVER_2019_CORE` が利用されますが、 Map を使って以下のように指定できます：
+```yaml
+platform:
+  osfamily: windows_server_2019_full
+  architecture: x86_64
+```
 
 <div class="separator"></div>
 
@@ -212,6 +200,29 @@ EFS の高度な認可の設定を指定します。
 <span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
 任意項目。デフォルトでは `""` が設定されます。接続する EFS アクセスポイントの ID です。アクセスポイントを利用する場合、`root_dir` は空か `/` であり、`auth.iam` が `true` である必要があります。
 
+<div class="separator"></div>
+
+<a id="logging" href="#logging" class="field">`logging`</a> <span class="type">Map</span>  
+logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
+
+<span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
+任意項目。使用する Fluent Bit のイメージ。デフォルト値は `public.ecr.aws/aws-observability/aws-for-fluent-bit:latest`。
+
+<span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
+任意項目。Firelens ログドライバーにログを送信するときの設定。
+
+<span class="parent-field">logging.</span><a id="logging-enableMetadata" href="#logging-enableMetadata" class="field">`enableMetadata`</a> <span class="type">Map</span>  
+任意項目。ログに ECS メタデータを含むかどうか。デフォルトは `true`。
+
+<span class="parent-field">logging.</span><a id="logging-secretOptions" href="#logging-secretOptions" class="field">`secretOptions`</a> <span class="type">Map</span>  
+任意項目。ログの設定に渡す秘密情報です。
+
+<span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
+任意項目。カスタムの Fluent Bit イメージ内の設定ファイルのフルパス。
+
+{% include 'publish.ja.md' %}
+
+<div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 environments セクションは Environment の設定を Manifest で指定した値によって上書きできるようにします。

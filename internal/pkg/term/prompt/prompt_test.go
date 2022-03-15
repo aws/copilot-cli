@@ -178,7 +178,7 @@ func TestPrompt_MultiSelect(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotValue, gotError := tc.inPrompt.MultiSelect(mockMessage, "", tc.inOpts, WithFinalMessage(mockFinalMessage))
+			gotValue, gotError := tc.inPrompt.MultiSelect(mockMessage, "", tc.inOpts, nil, WithFinalMessage(mockFinalMessage))
 
 			require.Equal(t, tc.wantValue, gotValue)
 			require.Equal(t, tc.wantError, gotError)

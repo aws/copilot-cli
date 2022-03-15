@@ -3,12 +3,13 @@
     "AppName": "my-app",
     "EnvName": "test",
     "WorkloadName": "dogworker",
-    "ContainerImage": "",
+    "ContainerImage": "amazon/ecs-example",
     "AddonsTemplateURL": "",
     "TaskCPU": "256",
     "TaskMemory": "512",
     "TaskCount": "1",
-    "LogRetention": "30"
+    "LogRetention": "30",
+    "EnvFileARN": ""
   },
   "Tags": { 
     "copilot-application": "my-app",

@@ -1,0 +1,67 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a scheduled job on Amazon ECS. 
+Parameters: 
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  WorkloadName:
+    Type: String
+  Schedule:
+    Type: String
+  ContainerImage:
+    Type: String
+  TaskCPU:
+    Type: String
+  TaskMemory:
+    Type: String
+  TaskCount:
+    Type: Number
+  LogRetention:
+    Type: Number
+  AddonsTemplateURL:
+    Description: 'URL of the addons nested stack template within the S3 bucket.'
+    Type: String
+    Default: ""
+  EnvFileARN:
+    Description: 'URL of the environment file.'
+    Type: String
+    Default: ""
+Conditions: 
+  HasAddons: # If a bucket URL is specified, that means the template exists.
+    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasEnvFile:
+    !Not [!Equals [!Ref EnvFileARN, ""]]
+Resources: 
+{{include "loggroup" . | indent 2}}
+
+{{include "env-controller" . | indent 2}}
+
+  TaskDefinition:
+    Metadata:
+      'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: LogGroup
+    Properties:
+{{include "fargate-taskdef-base-properties" . | indent 6}}
+      ContainerDefinitions:
+{{include "workload-container" . | indent 8}}
+{{include "sidecars" . | indent 8}}
+{{- if .Storage -}}
+{{include "volumes" . | indent 6}}
+{{- end}}
+{{include "executionrole" . | indent 2}}
+
+{{include "taskrole" . | indent 2}}
+
+{{include "eventrule" . | indent 2}}
+
+{{include "state-machine" . | indent 2}}
+
+{{include "efs-access-point" . | indent 2}}
+
+{{include "addons" . | indent 2}}
+
+{{include "publish" . | indent 2}}

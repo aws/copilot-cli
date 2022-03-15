@@ -14,6 +14,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func newMockSQSQueueOrBool() SQSQueueOrBool {
+	return SQSQueueOrBool{
+		Advanced: newMockSQSQueue(),
+	}
+}
+
+func newMockSQSQueue() SQSQueue {
+	duration111Seconds := 111 * time.Second
+	return SQSQueue{
+		Retention:  &duration111Seconds,
+		Delay:      &duration111Seconds,
+		Timeout:    &duration111Seconds,
+		DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+	}
+}
+
 func TestNewWorkerSvc(t *testing.T) {
 	testCases := map[string]struct {
 		inProps WorkerServiceProps
@@ -42,7 +58,7 @@ func TestNewWorkerSvc(t *testing.T) {
 							},
 						},
 					},
-					Subscribe: &SubscribeConfig{},
+					Subscribe: SubscribeConfig{},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
@@ -53,9 +69,9 @@ func TestNewWorkerSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
-							Placement: stringP("public"),
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: placementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -83,7 +99,7 @@ func TestNewWorkerSvc(t *testing.T) {
 							},
 						},
 					},
-					Subscribe: &SubscribeConfig{},
+					Subscribe: SubscribeConfig{},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
@@ -94,9 +110,9 @@ func TestNewWorkerSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: &NetworkConfig{
-						VPC: &vpcConfig{
-							Placement: stringP("public"),
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: placementP(PublicSubnetPlacement),
 						},
 					},
 				},
@@ -131,6 +147,13 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
 				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
+				},
 			},
 			wantedTestdata: "worker-svc-nosubscribe.yml",
 		},
@@ -140,14 +163,21 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
 				},
-				Topics: &[]TopicSubscription{
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
+				},
+				Topics: []TopicSubscription{
 					{
-						Name:    "testTopic",
-						Service: "service4TestTopic",
+						Name:    aws.String("testTopic"),
+						Service: aws.String("service4TestTopic"),
 					},
 					{
-						Name:    "testTopic2",
-						Service: "service4TestTopic2",
+						Name:    aws.String("testTopic2"),
+						Service: aws.String("service4TestTopic2"),
 					},
 				},
 			},
@@ -174,6 +204,7 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 }
 
 func TestWorkerSvc_ApplyEnv(t *testing.T) {
+	mockPerc := Percentage(70)
 	mockWorkerServiceWithNoEnvironments := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
@@ -188,7 +219,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
-				HealthCheck: &ContainerHealthCheck{
+				HealthCheck: ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
 					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),
@@ -252,17 +283,17 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
-			Logging: &Logging{
+			Logging: Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
 				},
 			},
-			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+			Subscribe: SubscribeConfig{
+				Topics: []TopicSubscription{
 					{
-						Name:    "topicName",
-						Service: "bestService",
+						Name:    aws.String("topicName"),
+						Service: aws.String("bestService"),
 					},
 				},
 			},
@@ -279,7 +310,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					Count: Count{
 						AdvancedCount: AdvancedCount{
-							CPU: aws.Int(70),
+							CPU: &mockPerc,
 						},
 					},
 					CPU: aws.Int(512),
@@ -292,17 +323,17 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						CredsParam: aws.String("some arn"),
 					},
 				},
-				Logging: &Logging{
+				Logging: Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
 					},
 				},
-				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+				Subscribe: SubscribeConfig{
+					Topics: []TopicSubscription{
 						{
-							Name:    "topicName2",
-							Service: "bestService2",
+							Name:    aws.String("topicName2"),
+							Service: aws.String("bestService2"),
 						},
 					},
 				},
@@ -410,32 +441,25 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			},
 		},
 	}
-	duration111Seconds := 111 * time.Second
 	mockWorkerServiceWithSubscribeNilOverride := WorkerService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+			Subscribe: SubscribeConfig{
+				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-						},
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: nil,
+				Subscribe: SubscribeConfig{},
 			},
 		},
 	}
@@ -445,22 +469,16 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: nil,
+			Subscribe: SubscribeConfig{},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+				Subscribe: SubscribeConfig{
+					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-							},
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -473,25 +491,19 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+			Subscribe: SubscribeConfig{
+				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-						},
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{},
+				Subscribe: SubscribeConfig{},
 			},
 		},
 	}
@@ -501,24 +513,18 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
+			Subscribe: SubscribeConfig{
 				Topics: nil,
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+				Subscribe: SubscribeConfig{
+					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-							},
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -531,25 +537,19 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{
+			Subscribe: SubscribeConfig{
+				Topics: []TopicSubscription{
 					{
-						Name:    "name",
-						Service: "svc",
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-						},
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue:   newMockSQSQueueOrBool(),
 					},
 				},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
+				Subscribe: SubscribeConfig{
 					Topics: nil,
 				},
 			},
@@ -561,24 +561,18 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
-				Topics: &[]TopicSubscription{},
+			Subscribe: SubscribeConfig{
+				Topics: []TopicSubscription{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
-					Topics: &[]TopicSubscription{
+				Subscribe: SubscribeConfig{
+					Topics: []TopicSubscription{
 						{
-							Name:    "name",
-							Service: "svc",
-							Queue: &SQSQueue{
-								Retention:  &duration111Seconds,
-								Delay:      &duration111Seconds,
-								Timeout:    &duration111Seconds,
-								DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-								FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-							},
+							Name:    aws.String("name"),
+							Service: aws.String("svc"),
+							Queue:   newMockSQSQueueOrBool(),
 						},
 					},
 				},
@@ -591,20 +585,14 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
-				Queue: nil,
+			Subscribe: SubscribeConfig{
+				Queue: SQSQueue{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
-					Queue: &SQSQueue{
-						Retention:  &duration111Seconds,
-						Delay:      &duration111Seconds,
-						Timeout:    &duration111Seconds,
-						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-						FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-					},
+				Subscribe: SubscribeConfig{
+					Queue: newMockSQSQueue(),
 				},
 			},
 		},
@@ -615,20 +603,14 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
-				Queue: &SQSQueue{
-					Retention:  &duration111Seconds,
-					Delay:      &duration111Seconds,
-					Timeout:    &duration111Seconds,
-					DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-					FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-				},
+			Subscribe: SubscribeConfig{
+				Queue: newMockSQSQueue(),
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
-					Queue: nil,
+				Subscribe: SubscribeConfig{
+					Queue: SQSQueue{},
 				},
 			},
 		},
@@ -639,20 +621,14 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(WorkerServiceType),
 		},
 		WorkerServiceConfig: WorkerServiceConfig{
-			Subscribe: &SubscribeConfig{
-				Queue: &SQSQueue{},
+			Subscribe: SubscribeConfig{
+				Queue: SQSQueue{},
 			},
 		},
 		Environments: map[string]*WorkerServiceConfig{
 			"test-sub": {
-				Subscribe: &SubscribeConfig{
-					Queue: &SQSQueue{
-						Retention:  &duration111Seconds,
-						Delay:      &duration111Seconds,
-						Timeout:    &duration111Seconds,
-						DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-						FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-					},
+				Subscribe: SubscribeConfig{
+					Queue: newMockSQSQueue(),
 				},
 			},
 		},
@@ -709,7 +685,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(256),
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								CPU: aws.Int(70),
+								CPU: &mockPerc,
 							},
 						},
 						Variables: map[string]string{
@@ -723,18 +699,18 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 							CredsParam: aws.String("some arn"),
 						},
 					},
-					Logging: &Logging{
+					Logging: Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",
 							"exclude-pattern": "fe/",
 						},
 					},
-					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
 							{
-								Name:    "topicName2",
-								Service: "bestService2",
+								Name:    aws.String("topicName2"),
+								Service: aws.String("bestService2"),
 							},
 						},
 					},
@@ -829,18 +805,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -858,18 +828,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -890,18 +854,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{},
 					},
-					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -919,18 +877,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -948,18 +900,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -980,18 +926,12 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{},
 					},
-					Subscribe: &SubscribeConfig{
-						Topics: &[]TopicSubscription{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
 							{
-								Name:    "name",
-								Service: "svc",
-								Queue: &SQSQueue{
-									Retention:  &duration111Seconds,
-									Delay:      &duration111Seconds,
-									Timeout:    &duration111Seconds,
-									DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-									FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-								},
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
 							},
 						},
 					},
@@ -1009,14 +949,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-						},
+					Subscribe: SubscribeConfig{
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1032,21 +966,15 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(WorkerServiceType),
 				},
 				WorkerServiceConfig: WorkerServiceConfig{
-					Subscribe: &SubscribeConfig{
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-						},
+					Subscribe: SubscribeConfig{
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
 
 			original: &mockWorkerServiceWithSubscribeQueueNilOverride,
 		},
-		"with empty subscribe queue overriden by full subscribe queue": {
+		"with empty subscribe queue overridden by full subscribe queue": {
 			svc:       &mockWorkerServiceWithSubscribeQueueEmptyOverride,
 			inEnvName: "test-sub",
 			wanted: &WorkerService{
@@ -1058,14 +986,8 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: ImageWithHealthcheck{
 						Image: Image{},
 					},
-					Subscribe: &SubscribeConfig{
-						Queue: &SQSQueue{
-							Retention:  &duration111Seconds,
-							Delay:      &duration111Seconds,
-							Timeout:    &duration111Seconds,
-							DeadLetter: &DeadLetterQueue{Tries: aws.Uint16(10)},
-							FIFO:       &FIFOOrBool{Enabled: aws.Bool(true)},
-						},
+					Subscribe: SubscribeConfig{
+						Queue: newMockSQSQueue(),
 					},
 				},
 			},
@@ -1088,6 +1010,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 
 func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
+	mockPerc := Percentage(80)
 	testCases := map[string]struct {
 		svcCount Count
 		envCount Count
@@ -1097,8 +1020,8 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"empty env advanced count override": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
-					CPU:   aws.Int(80),
+					Range: Range{Value: &mockRange},
+					CPU:   &mockPerc,
 				},
 			},
 			envCount: Count{},
@@ -1107,8 +1030,8 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{Value: &mockRange},
-								CPU:   aws.Int(80),
+								Range: Range{Value: &mockRange},
+								CPU:   &mockPerc,
 							},
 						},
 					},
@@ -1148,7 +1071,7 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by spot count": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
@@ -1171,12 +1094,12 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		"with range overriden by range config": {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{Value: &mockRange},
+					Range: Range{Value: &mockRange},
 				},
 			},
 			envCount: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &Range{
+					Range: Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(2),
 							Max: aws.Int(8),
@@ -1189,7 +1112,7 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Range: &Range{
+								Range: Range{
 									RangeConfig: RangeConfig{
 										Min: aws.Int(2),
 										Max: aws.Int(8),
@@ -1246,59 +1169,86 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	}
 }
 
-type testFIFO struct {
-	FIFO *FIFOOrBool `yaml:"fifo"`
+func TestDeadLetterQueue_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     DeadLetterQueue
+		wanted bool
+	}{
+		"empty dead letter queue": {
+			in:     DeadLetterQueue{},
+			wanted: true,
+		},
+		"non empty dead letter queue": {
+			in: DeadLetterQueue{
+				Tries: aws.Uint16(3),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
 }
 
-func Test_UnmarshalFifo(t *testing.T) {
+func TestSQSQueueOrBool_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
-		manifest []byte
-		want     testFIFO
-		wantErr  error
+		inContent []byte
+
+		wantedStruct SQSQueueOrBool
+		wantedError  error
 	}{
-		"fifo specified": {
-			manifest: []byte(`
-fifo:
-  high_throughput: true`),
-			want: testFIFO{
-				FIFO: &FIFOOrBool{
-					FIFO: FIFOQueue{
-						HighThroughput: aws.Bool(true),
+		"with boolean": {
+			inContent: []byte(`queue: true`),
+
+			wantedStruct: SQSQueueOrBool{
+				Enabled: aws.Bool(true),
+			},
+		},
+		"with advanced case": {
+			inContent: []byte(`queue:
+  retention: 5s
+  delay: 1m
+  timeout: 5m
+  dead_letter:
+    tries: 10`),
+
+			wantedStruct: SQSQueueOrBool{
+				Advanced: SQSQueue{
+					Retention: durationp(5 * time.Second),
+					Delay:     durationp(1 * time.Minute),
+					Timeout:   durationp(5 * time.Minute),
+					DeadLetter: DeadLetterQueue{
+						Tries: uint16P(10),
 					},
 				},
 			},
 		},
-		"enabled": {
-			manifest: []byte(`
-fifo: true`),
-			want: testFIFO{
-				FIFO: &FIFOOrBool{
-					Enabled: aws.Bool(true),
-				},
-			},
-		},
-		"invalid input": {
-			manifest: []byte(`
-fifo: xyz`),
-			wantErr: errUnmarshalFIFO,
+		"invalid type": {
+			inContent: []byte(`queue: 10`),
+
+			wantedError: errUnmarshalQueueOpts,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			v := testFIFO{
-				FIFO: &FIFOOrBool{},
-			}
-
-			// WHEN
-			err := yaml.Unmarshal(tc.manifest, &v)
-			// THEN
-			if tc.wantErr == nil {
-				require.NoError(t, err)
-				require.Equal(t, tc.want.FIFO.Enabled, v.FIFO.Enabled)
-				require.Equal(t, tc.want.FIFO.FIFO.HighThroughput, v.FIFO.FIFO.HighThroughput)
+			var sc TopicSubscription
+			err := yaml.Unmarshal(tc.inContent, &sc)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.EqualError(t, err, tc.wantErr.Error())
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.Enabled, sc.Queue.Enabled)
+				require.Equal(t, tc.wantedStruct.Advanced.DeadLetter, sc.Queue.Advanced.DeadLetter)
+				require.Equal(t, tc.wantedStruct.Advanced.Delay, sc.Queue.Advanced.Delay)
+				require.Equal(t, tc.wantedStruct.Advanced.Retention, sc.Queue.Advanced.Retention)
+				require.Equal(t, tc.wantedStruct.Advanced.Timeout, sc.Queue.Advanced.Timeout)
 			}
 		})
 	}

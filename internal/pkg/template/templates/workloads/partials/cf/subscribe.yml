@@ -1,0 +1,232 @@
+EventsKMSKey:
+  Metadata:
+    'aws:copilot:description': 'A KMS key to encrypt messages in your queues'
+  Type: AWS::KMS::Key
+  Properties:
+    KeyPolicy:
+      Version: '2012-10-17'
+      Statement:
+        - Sid: "Allow key use"
+          Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+          Action:
+            - "kms:Create*"
+            - "kms:Describe*"
+            - "kms:Enable*"
+            - "kms:List*"
+            - "kms:Put*"
+            - "kms:Update*"
+            - "kms:Revoke*"
+            - "kms:Disable*"
+            - "kms:Get*"
+            - "kms:Delete*"
+            - "kms:ScheduleKeyDeletion"
+            - "kms:CancelKeyDeletion"
+            - "kms:Tag*"
+            - "kms:UntagResource"
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+            - "kms:ReEncrypt*"
+            - "kms:GenerateDataKey*"
+          Resource: '*'
+        - Sid: "Allow SNS encryption"
+          Effect: "Allow"
+          Principal:
+            Service: sns.amazonaws.com
+          Action:
+            - "kms:Decrypt"
+            - "kms:GenerateDataKey*"
+          Resource: '*'
+        - Sid: "Allow SQS encryption"
+          Effect: "Allow"
+          Principal:
+            Service: sqs.amazonaws.com
+          Action:
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+            - "kms:ReEncrypt*"
+            - "kms:GenerateDataKey*"
+          Resource: '*'
+        - Sid: "Allow task role encrypt/decrypt"
+          Effect: "Allow"
+          Principal:
+            AWS:
+              - !GetAtt TaskRole.Arn
+          Action:
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+          Resource: '*'
+
+EventsQueue:
+  Metadata:
+    'aws:copilot:description': 'An events SQS queue to buffer messages'
+  Type: AWS::SQS::Queue
+  Properties:
+    KmsMasterKeyId: !Ref EventsKMSKey
+{{- if .Subscribe}}
+  {{- if .Subscribe.Queue}}
+    {{- if .Subscribe.Queue.Retention}}
+    MessageRetentionPeriod: {{.Subscribe.Queue.Retention}}
+    {{- end}}
+    {{- if .Subscribe.Queue.Delay}}
+    DelaySeconds: {{.Subscribe.Queue.Delay}}
+    {{- end}}
+    {{- if .Subscribe.Queue.Timeout}}
+    VisibilityTimeout: {{.Subscribe.Queue.Timeout}}
+    {{- end}}
+    {{- if .Subscribe.Queue.DeadLetter}}
+    RedrivePolicy:
+      deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+      maxReceiveCount: {{.Subscribe.Queue.DeadLetter.Tries}}
+    {{- end}}
+  {{- end}}
+
+{{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
+DeadLetterQueue:
+  Metadata:
+    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the events queue'
+  Type: AWS::SQS::Queue
+  Properties:
+    KmsMasterKeyId: !Ref EventsKMSKey
+    MessageRetentionPeriod: 1209600 # 14 days
+
+DeadLetterPolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref 'DeadLetterQueue']
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Effect: Allow
+          Principal:
+            AWS: 
+              - !GetAtt TaskRole.Arn
+          Action: 
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt DeadLetterQueue.Arn
+{{- end}}{{- end}}
+
+{{- end }}{{/* endif .Subscribe */}}
+
+QueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref 'EventsQueue']
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            AWS: 
+              - !GetAtt TaskRole.Arn
+          Action: 
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt EventsQueue.Arn
+{{- if .Subscribe }}
+        {{- range $topic := .Subscribe.Topics}}
+        {{- if not $topic.Queue}}
+        - Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:SendMessage
+          Resource: !GetAtt EventsQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{$topic.Name}}']]
+        {{- end}}
+        {{- end}}
+
+{{- range $topic := .Subscribe.Topics}}
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}SNSTopicSubscription:
+  Metadata:
+    'aws:copilot:description': 'A SNS subscription to topic {{$topic.Name}} from service {{$topic.Service}}'
+  Type: AWS::SNS::Subscription
+  Properties:
+    TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{$topic.Name}}']]
+    Protocol: 'sqs'
+    {{- if $topic.FilterPolicy}}
+    FilterPolicy: {{$topic.FilterPolicy}}
+    {{- end}}
+    {{- if $topic.Queue}}
+    Endpoint: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
+    {{- else}}
+    Endpoint: !GetAtt EventsQueue.Arn
+    {{- end}}
+
+{{- if $topic.Queue}}
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
+  Metadata:
+    'aws:copilot:description': 'A SQS queue to buffer messages from the topic {{$topic.Name}}'
+  Type: AWS::SQS::Queue
+  Properties:
+    KmsMasterKeyId: !Ref EventsKMSKey
+    {{- if $topic.Queue.Retention}}
+    MessageRetentionPeriod: {{$topic.Queue.Retention}}
+    {{- end}}
+    {{- if $topic.Queue.Delay}}
+    DelaySeconds: {{$topic.Queue.Delay}}
+    {{- end}}
+    {{- if $topic.Queue.Timeout}}
+    VisibilityTimeout: {{$topic.Queue.Timeout}}
+    {{- end}}
+    {{- if $topic.Queue.DeadLetter}}
+    RedrivePolicy:
+      deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
+      maxReceiveCount: {{$topic.Queue.DeadLetter.Tries}}
+    {{- end}}
+
+{{- if $topic.Queue.DeadLetter}}
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
+  Metadata:
+    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the topic {{$topic.Name}}'
+  Type: AWS::SQS::Queue
+  Properties:
+    KmsMasterKeyId: !Ref EventsKMSKey
+    MessageRetentionPeriod: 1209600 # 14 days
+
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref '{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue']
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Effect: Allow
+          Principal:
+            AWS: 
+              - !GetAtt TaskRole.Arn
+          Action: 
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
+{{- end}}
+
+{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}QueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues: [!Ref '{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue']
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            AWS: 
+              - !GetAtt TaskRole.Arn
+          Action: 
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
+        - Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action: 
+            - sqs:SendMessage
+          Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
+{{- end}}{{- end}}{{- end}}

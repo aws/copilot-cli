@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -39,6 +42,14 @@ const (
 	DisablePublicIP         = "DISABLED"
 	PublicSubnetsPlacement  = "PublicSubnets"
 	PrivateSubnetsPlacement = "PrivateSubnets"
+
+	// RuntimePlatform configuration.
+	OSLinux             = "LINUX"
+	OSWindowsServerFull = "WINDOWS_SERVER_2019_FULL"
+	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
+
+	ArchX86   = "X86_64"
+	ArchARM64 = "ARM64"
 )
 
 // Constants for ARN options.
@@ -50,7 +61,8 @@ var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
 		"loggroup",
-		"envvars",
+		"envvars-container",
+		"envvars-common",
 		"secrets",
 		"executionrole",
 		"taskrole",
@@ -74,6 +86,13 @@ var (
 		"accessrole",
 		"publish",
 		"subscribe",
+		"nlb",
+		"vpc-connector",
+	}
+
+	// Operating systems to determine Fargate platform versions.
+	osFamiliesForPV100 = []string{
+		OSWindowsServerFull, OSWindowsServerCore,
 	}
 )
 
@@ -96,12 +115,18 @@ type SidecarOpts struct {
 	Protocol     *string
 	CredsParam   *string
 	Variables    map[string]string
-	Secrets      map[string]string
-	MountPoints  []*MountPoint
+	Secrets      map[string]Secret
+	Storage      SidecarStorageOpts
 	DockerLabels map[string]string
 	DependsOn    map[string]string
 	EntryPoint   []string
 	Command      []string
+	HealthCheck  *ContainerHealthCheck
+}
+
+// SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
+type SidecarStorageOpts struct {
+	MountPoints []*MountPoint
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -164,8 +189,10 @@ type LogConfigOpts struct {
 	Image          *string
 	Destination    map[string]string
 	EnableMetadata *string
-	SecretOptions  map[string]string
+	SecretOptions  map[string]Secret
 	ConfigFile     *string
+	Variables      map[string]string
+	Secrets        map[string]Secret
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
@@ -180,12 +207,109 @@ type HTTPHealthCheckOpts struct {
 	GracePeriod         *int64
 }
 
+// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
+type Secret interface {
+	RequiresSub() bool
+	ValueFrom() string
+}
+
+// ssmOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
+type ssmOrSecretARN struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s ssmOrSecretARN) RequiresSub() bool {
+	return false
+}
+
+// ValueFrom returns the valueFrom field for the secret.
+func (s ssmOrSecretARN) ValueFrom() string {
+	return s.value
+}
+
+// SecretFromSSMOrARN returns a Secret that refers to an SSM parameter or a secret ARN.
+func SecretFromSSMOrARN(value string) ssmOrSecretARN {
+	return ssmOrSecretARN{
+		value: value,
+	}
+}
+
+// secretsManagerName is a Secret that can be referred by a SecretsManager secret name.
+type secretsManagerName struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s secretsManagerName) RequiresSub() bool {
+	return true
+}
+
+// ValueFrom returns the resource ID of the SecretsManager secret for populating the ARN.
+func (s secretsManagerName) ValueFrom() string {
+	return fmt.Sprintf("secret:%s", s.value)
+}
+
+// Service returns the name of the SecretsManager service for populating the ARN.
+func (s secretsManagerName) Service() string {
+	return secretsmanager.ServiceName
+}
+
+// SecretFromSecretsManager returns a Secret that refers to SecretsManager secret name.
+func SecretFromSecretsManager(value string) secretsManagerName {
+	return secretsManagerName{
+		value: value,
+	}
+}
+
+// NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
+type NetworkLoadBalancerListener struct {
+	// The port and protocol that the Network Load Balancer listens to.
+	Port     string
+	Protocol string
+
+	// The target container and port to which the traffic is routed to from the Network Load Balancer.
+	TargetContainer string
+	TargetPort      string
+
+	SSLPolicy *string // The SSL policy applied when using TLS protocol.
+
+	Aliases     []string
+	Stickiness  *bool
+	HealthCheck NLBHealthCheck
+}
+
+// NLBHealthCheck holds configuration for Network Load Balancer health check.
+type NLBHealthCheck struct {
+	Port               string // The port to which health check requests made from Network Load Balancer are routed to.
+	HealthyThreshold   *int64
+	UnhealthyThreshold *int64
+	Timeout            *int64
+	Interval           *int64
+}
+
+// NetworkLoadBalancer holds configuration that's needed for a Network Load Balancer.
+type NetworkLoadBalancer struct {
+	PublicSubnetCIDRs []string
+	Listener          NetworkLoadBalancerListener
+	MainContainerPort string
+}
+
 // AdvancedCount holds configuration for autoscaling and capacity provider
 // parameters.
 type AdvancedCount struct {
 	Spot        *int
 	Autoscaling *AutoscalingOpts
 	Cps         []*CapacityProviderStrategy
+}
+
+// ContainerHealthCheck holds configuration for container health check.
+type ContainerHealthCheck struct {
+	Command     []string
+	Interval    *int64
+	Retries     *int64
+	StartPeriod *int64
+	Timeout     *int64
 }
 
 // CapacityProviderStrategy holds the configuration needed for a
@@ -204,6 +328,17 @@ type AutoscalingOpts struct {
 	Memory       *float64
 	Requests     *float64
 	ResponseTime *float64
+	QueueDelay   *AutoscalingQueueDelayOpts
+}
+
+// AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
+type AutoscalingQueueDelayOpts struct {
+	AcceptableBacklogPerTask int
+}
+
+// ObservabilityOpts holds configurations for observability.
+type ObservabilityOpts struct {
+	Tracing string // The name of the vendor used for tracing.
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
@@ -220,10 +355,9 @@ type PublishOpts struct {
 	Topics []*Topic
 }
 
-// Topics holds information needed to render a SNSTopic in a container definition.
+// Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name           *string
-	AllowedWorkers []string
+	Name *string
 
 	Region    string
 	Partition string
@@ -239,11 +373,22 @@ type SubscribeOpts struct {
 	Queue  *SQSQueue
 }
 
+// HasTopicQueues returns true if any individual subscription has a dedicated queue.
+func (s *SubscribeOpts) HasTopicQueues() bool {
+	for _, t := range s.Topics {
+		if t.Queue != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
-	Name    *string
-	Service *string
-	Queue   *SQSQueue
+	Name         *string
+	Service      *string
+	FilterPolicy *string
+	Queue        *SQSQueue
 }
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
@@ -252,17 +397,11 @@ type SQSQueue struct {
 	Delay      *int64
 	Timeout    *int64
 	DeadLetter *DeadLetterQueue
-	FIFO       *FIFOQueue
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
 type DeadLetterQueue struct {
 	Tries *uint16
-}
-
-// FIFOQueue holds information needed to specify a SQS Queue as FIFO in a container definition.
-type FIFOQueue struct {
-	HighThroughput bool
 }
 
 // NetworkOpts holds AWS networking configuration for the workloads.
@@ -272,29 +411,55 @@ type NetworkOpts struct {
 	SecurityGroups []string
 }
 
-func defaultNetworkOpts() *NetworkOpts {
-	return &NetworkOpts{
-		AssignPublicIP: EnablePublicIP,
-		SubnetsType:    PublicSubnetsPlacement,
+// RuntimePlatformOpts holds configuration needed for Platform configuration.
+type RuntimePlatformOpts struct {
+	OS   string
+	Arch string
+}
+
+// IsDefault returns true if the platform matches the default docker image platform of "linux/amd64".
+func (p RuntimePlatformOpts) IsDefault() bool {
+	if p.isEmpty() {
+		return true
 	}
+	if p.OS == OSLinux && p.Arch == ArchX86 {
+		return true
+	}
+	return false
+}
+
+// Version returns the Fargate platform version based on the selected os family.
+func (p RuntimePlatformOpts) Version() string {
+	for _, os := range osFamiliesForPV100 {
+		if p.OS == os {
+			return "1.0.0"
+		}
+	}
+	return "LATEST"
+}
+
+func (p RuntimePlatformOpts) isEmpty() bool {
+	return p.OS == "" && p.Arch == ""
 }
 
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
 	Variables                map[string]string
-	Secrets                  map[string]string
+	Secrets                  map[string]Secret
 	Aliases                  []string
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.
 	Sidecars                 []*SidecarOpts
 	LogConfig                *LogConfigOpts
 	Autoscaling              *AutoscalingOpts
 	CapacityProviders        []*CapacityProviderStrategy
 	DesiredCountOnSpot       *int
 	Storage                  *StorageOpts
-	Network                  *NetworkOpts
+	Network                  NetworkOpts
 	ExecuteCommand           *ExecuteCommandOpts
+	Platform                 RuntimePlatformOpts
 	EntryPoint               []string
 	Command                  []string
 	DomainAlias              string
@@ -302,34 +467,34 @@ type WorkloadOpts struct {
 	DependsOn                map[string]string
 	Publish                  *PublishOpts
 	ServiceDiscoveryEndpoint string
+	HTTPVersion              *string
+	ALBEnabled               bool
 
 	// Additional options for service templates.
-	WorkloadType         string
-	HealthCheck          *ecs.HealthCheck
-	HTTPHealthCheck      HTTPHealthCheckOpts
-	DeregistrationDelay  *int64
-	AllowedSourceIps     []string
-	RulePriorityLambda   string
-	DesiredCountLambda   string
-	EnvControllerLambda  string
-	CredentialsParameter string
+	WorkloadType        string
+	HealthCheck         *ContainerHealthCheck
+	HTTPHealthCheck     HTTPHealthCheckOpts
+	DeregistrationDelay *int64
+	AllowedSourceIps    []string
+	NLB                 *NetworkLoadBalancer
+
+	// Lambda functions.
+	RulePriorityLambda             string
+	DesiredCountLambda             string
+	EnvControllerLambda            string
+	CredentialsParameter           string
+	BacklogPerTaskCalculatorLambda string
+	NLBCertValidatorFunctionLambda string
+	NLBCustomDomainFunctionLambda  string
 
 	// Additional options for job templates.
 	ScheduleExpression string
 	StateMachine       *StateMachineOpts
 
-	// Additional options for worker service templates.
-	Subscribe *SubscribeOpts
-}
-
-// ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
-type ParseRequestDrivenWebServiceInput struct {
-	Variables           map[string]string
-	Tags                map[string]string        // Used by App Runner workloads to tag App Runner service resources
-	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	EnableHealthCheck   bool
-	EnvControllerLambda string
-	Publish             *PublishOpts
+	// Additional options for request driven web service templates.
+	StartCommand      *string
+	EnableHealthCheck bool
+	Observability     ObservabilityOpts
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
@@ -338,44 +503,37 @@ type ParseRequestDrivenWebServiceInput struct {
 	AWSSDKLayer          *string
 	AppDNSDelegationRole *string
 	AppDNSName           *string
+
+	// Additional options for worker service templates.
+	Subscribe *SubscribeOpts
+
+	FeatureFlags []string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseRequestDrivenWebService parses a request-driven web service's CloudFormation template
 // with the specified data object and returns its content.
-func (t *Template) ParseRequestDrivenWebService(data ParseRequestDrivenWebServiceInput) (*Content, error) {
+func (t *Template) ParseRequestDrivenWebService(data WorkloadOpts) (*Content, error) {
 	return t.parseSvc(rdWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseWorkerService parses a worker service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseWorkerService(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseSvc(workerSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
 func (t *Template) ParseScheduledJob(data WorkloadOpts) (*Content, error) {
-	if data.Network == nil {
-		data.Network = defaultNetworkOpts()
-	}
 	return t.parseJob(scheduledJobTplName, data, withSvcParsingFuncs())
 }
 
@@ -417,13 +575,16 @@ func withSvcParsingFuncs() ParseOption {
 			"toSnakeCase":         ToSnakeCaseFunc,
 			"hasSecrets":          hasSecrets,
 			"fmtSlice":            FmtSliceFunc,
-			"quoteSlice":          QuotePSliceFunc,
+			"quoteSlice":          QuoteSliceFunc,
 			"randomUUID":          randomUUIDFunc,
 			"jsonMountPoints":     generateMountPointJSON,
 			"jsonSNSTopics":       generateSNSJSON,
 			"jsonQueueURIs":       generateQueueURIJSON,
 			"envControllerParams": envControllerParameters,
 			"logicalIDSafe":       StripNonAlphaNumFunc,
+			"wordSeries":          english.WordSeries,
+			"pluralWord":          english.PluralWord,
+			"contains":            contains,
 		})
 	}
 }
@@ -450,15 +611,27 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		parameters = append(parameters, []string{"ALBWorkloads,", "Aliases,"}...) // YAML needs the comma separator; resolved in EnvContr.
+		if o.ALBEnabled {
+			parameters = append(parameters, "ALBWorkloads,")
+		}
+		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
-		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+		parameters = append(parameters, "NATWorkloads,")
 	}
 	if o.Storage != nil && o.Storage.requiresEFSCreation() {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+func contains(list []string, s string) bool {
+	for _, item := range list {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }
 
 // ARN determines the arn for a topic using the SNSTopic name and account information

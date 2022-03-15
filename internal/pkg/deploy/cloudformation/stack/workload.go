@@ -6,7 +6,6 @@ package stack
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
 // Template rendering configuration common across workloads.
@@ -39,6 +39,7 @@ const (
 	WorkloadTaskMemoryParamKey   = "TaskMemory"
 	WorkloadTaskCountParamKey    = "TaskCount"
 	WorkloadLogRetentionParamKey = "LogRetention"
+	WorkloadEnvFileARNParamKey   = "EnvFileARN"
 )
 
 // Parameter logical IDs for workloads on App Runner.
@@ -54,26 +55,22 @@ const (
 	RDWkldHealthCheckUnhealthyThresholdParamKey = "HealthCheckUnhealthyThreshold"
 )
 
-// Matches alphanumeric characters and -._
-var pathRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
-
-// Max path length in EFS is 255 bytes.
-// https://docs.aws.amazon.com/efs/latest/ug/troubleshooting-efs-fileop-errors.html#filenametoolong
-const maxEFSPathLength = 255
-
-// In docker containers, max path length is 242.
-// https://github.com/moby/moby/issues/1413
-const maxDockerContainerPathLength = 242
+const (
+	ecsWkldLogRetentionDefault = 30
+)
 
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	Image                    *ECRImage         // Optional. Image location in an ECR repository.
-	AddonsTemplateURL        string            // Optional. S3 object URL for the addons template.
-	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources in the workload stack.
-	ServiceDiscoveryEndpoint string            // Endpoint for the service discovery namespace in the environment.
-	AccountID                string            // Account ID for constructing ARNs
-	Region                   string            // Region for constructing ARNs
+	Image             *ECRImage         // Optional. Image location in an ECR repository.
+	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
+	EnvFileARN        string            // Optional. S3 object ARN for the env file.
+	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the workload stack.
+
+	// The target environment metadata.
+	ServiceDiscoveryEndpoint string // Endpoint for the service discovery namespace in the environment.
+	AccountID                string
+	Region                   string
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
@@ -98,8 +95,9 @@ func (i ECRImage) GetLocation() string {
 	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
-type templater interface {
+type addons interface {
 	Template() (string, error)
+	Parameters() (string, error)
 }
 
 type location interface {
@@ -116,7 +114,7 @@ type wkld struct {
 	image location
 
 	parser template.Parser
-	addons templater
+	addons addons
 }
 
 // StackName returns the name of the stack.
@@ -214,6 +212,18 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	}, nil
 }
 
+func (w *wkld) addonsParameters() (string, error) {
+	params, err := w.addons.Parameters()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return "", fmt.Errorf("parse addons parameters for %s: %w", w.name, err)
+		}
+		return "", nil
+	}
+	return params, nil
+}
+
 func securityGroupOutputNames(outputs []addon.Output) []string {
 	var securityGroups []string
 	for _, out := range outputs {
@@ -256,7 +266,11 @@ func envVarOutputNames(outputs []addon.Output) []string {
 
 type ecsWkld struct {
 	*wkld
-	tc manifest.TaskConfig
+	tc           manifest.TaskConfig
+	logRetention *int
+
+	// Overriden in unit tests.
+	taskDefOverrideFunc func(overrideRules []override.Rule, origTemp []byte) ([]byte, error)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
@@ -268,6 +282,10 @@ func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	desiredCount, err := w.tc.Count.Desired()
 	if err != nil {
 		return nil, err
+	}
+	logRetention := ecsWkldLogRetentionDefault
+	if w.logRetention != nil {
+		logRetention = aws.IntValue(w.logRetention)
 	}
 	return append(wkldParameters, []*cloudformation.Parameter{
 		{
@@ -284,7 +302,7 @@ func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
-			ParameterValue: aws.String("30"),
+			ParameterValue: aws.String(strconv.Itoa(logRetention)),
 		},
 	}...), nil
 }
@@ -312,7 +330,19 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
 	if err != nil {
-		return nil, fmt.Errorf("determining image repository type: %w", err)
+		return nil, fmt.Errorf("determine image repository type: %w", err)
+	}
+
+	if w.imageConfig.Port == nil {
+		return nil, fmt.Errorf("field `image.port` is required for Request Driven Web Services")
+	}
+
+	if w.instanceConfig.CPU == nil {
+		return nil, fmt.Errorf("field `cpu` is required for Request Driven Web Services")
+	}
+
+	if w.instanceConfig.Memory == nil {
+		return nil, fmt.Errorf("field `memory` is required for Request Driven Web Services")
 	}
 
 	appRunnerParameters := []*cloudformation.Parameter{
@@ -322,15 +352,15 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.imageConfig.Port))),
+			ParameterValue: aws.String(strconv.Itoa(int(aws.Uint16Value(w.imageConfig.Port)))),
 		},
 		{
 			ParameterKey:   aws.String(RDWkldInstanceCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.CPU)),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.CPU))),
 		},
 		{
 			ParameterKey:   aws.String(RDWkldInstanceMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.Memory)),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.Memory))),
 		},
 	}
 

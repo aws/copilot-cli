@@ -19,6 +19,7 @@ Service デプロイの手順は以下の通りです。
 
 ```bash
   -e, --env string                     Name of the environment.
+      --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.

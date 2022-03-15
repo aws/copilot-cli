@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -27,6 +28,10 @@ const (
 const (
 	jobWlType = "job"
 	svcWlType = "service"
+)
+
+const (
+	commonGRPCPort = uint16(50051)
 )
 
 var fmtErrUnrecognizedWlType = "unrecognized workload type %s"
@@ -48,7 +53,7 @@ type WorkloadAdder interface {
 
 // Workspace contains the methods needed to manipulate a Copilot workspace.
 type Workspace interface {
-	CopilotDirPath() (string, error)
+	Path() (string, error)
 	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, serviceName string) (string, error)
 }
@@ -66,14 +71,15 @@ type WorkloadProps struct {
 	Name           string
 	DockerfilePath string
 	Image          string
-	Platform       *string
+	Platform       manifest.PlatformArgsOrString
+	Topics         []manifest.TopicSubscription
 }
 
 // JobProps contains the information needed to represent a Job.
 type JobProps struct {
 	WorkloadProps
 	Schedule    string
-	HealthCheck *manifest.ContainerHealthCheck
+	HealthCheck manifest.ContainerHealthCheck
 	Timeout     string
 	Retries     int
 }
@@ -82,7 +88,7 @@ type JobProps struct {
 type ServiceProps struct {
 	WorkloadProps
 	Port        uint16
-	HealthCheck *manifest.ContainerHealthCheck
+	HealthCheck manifest.ContainerHealthCheck
 	appDomain   *string
 }
 
@@ -270,6 +276,7 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 				Image:      i.Image,
 			},
 			HealthCheck: i.HealthCheck,
+			Platform:    i.Platform,
 			Schedule:    i.Schedule,
 			Timeout:     i.Timeout,
 			Retries:     i.Retries,
@@ -288,21 +295,31 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 		return w.newRequestDrivenWebServiceManifest(i), nil
 	case manifest.BackendServiceType:
 		return newBackendServiceManifest(i)
+	case manifest.WorkerServiceType:
+		return newWorkerServiceManifest(i)
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", i.Type)
 	}
 }
 
 func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps) (*manifest.LoadBalancedWebService, error) {
+	var httpVersion string
+	if i.Port == commonGRPCPort {
+		log.Infof("Detected port %s, setting HTTP protocol version to %s in the manifest.\n",
+			color.HighlightUserInput(strconv.Itoa(int(i.Port))), color.HighlightCode(manifest.GRPCProtocol))
+		httpVersion = manifest.GRPCProtocol
+	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       i.Name,
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:        i.Port,
-		HealthCheck: i.HealthCheck,
 		Path:        "/",
+		Port:        i.Port,
+		HTTPVersion: httpVersion,
+		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {
@@ -326,7 +343,8 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port: i.Port,
+		Port:     i.Port,
+		Platform: i.Platform,
 	}
 	return manifest.NewRequestDrivenWebService(props)
 }
@@ -340,16 +358,29 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 		},
 		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
+	}), nil
+}
+
+func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) {
+	return manifest.NewWorkerService(manifest.WorkerServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
+			Name:       i.Name,
+			Dockerfile: i.DockerfilePath,
+			Image:      i.Image,
+		},
+		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
+		Topics:      i.Topics,
 	}), nil
 }
 
 // relativeDockerfilePath returns the path from the workspace root to the Dockerfile.
 func relativeDockerfilePath(ws Workspace, path string) (string, error) {
-	copilotDirPath, err := ws.CopilotDirPath()
+	wsRoot, err := ws.Path()
 	if err != nil {
-		return "", fmt.Errorf("get copilot directory: %w", err)
+		return "", fmt.Errorf("get workspace path: %w", err)
 	}
-	wsRoot := filepath.Dir(copilotDirPath)
 	absDfPath, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("get absolute path: %v", err)

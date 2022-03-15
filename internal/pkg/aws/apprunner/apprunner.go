@@ -30,14 +30,17 @@ const (
 	// App Runner ImageRepositoryTypes
 	repositoryTypeECR       = "ECR"
 	repositoryTypeECRPublic = "ECR_PUBLIC"
+	// App Runner EndpointsID
+	EndpointsID = apprunner.EndpointsID
 )
 
 type api interface {
 	DescribeService(input *apprunner.DescribeServiceInput) (*apprunner.DescribeServiceOutput, error)
+	ListOperations(input *apprunner.ListOperationsInput) (*apprunner.ListOperationsOutput, error)
 	ListServices(input *apprunner.ListServicesInput) (*apprunner.ListServicesOutput, error)
 	PauseService(input *apprunner.PauseServiceInput) (*apprunner.PauseServiceOutput, error)
 	ResumeService(input *apprunner.ResumeServiceInput) (*apprunner.ResumeServiceOutput, error)
-	ListOperations(input *apprunner.ListOperationsInput) (*apprunner.ListOperationsOutput, error)
+	StartDeployment(input *apprunner.StartDeploymentInput) (*apprunner.StartDeploymentOutput, error)
 }
 
 // AppRunner wraps an AWS AppRunner client.
@@ -119,7 +122,7 @@ func (a *AppRunner) PauseService(svcARN string) error {
 	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusPaused {
 		return nil
 	}
-	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
+	if err := a.WaitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
 		return err
 	}
 	return nil
@@ -136,10 +139,21 @@ func (a *AppRunner) ResumeService(svcARN string) error {
 	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusRunning {
 		return nil
 	}
-	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
+	if err := a.WaitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
 		return err
 	}
 	return nil
+}
+
+// StartDeployment initiates a manual deployment to an AWS App Runner service.
+func (a *AppRunner) StartDeployment(svcARN string) (string, error) {
+	out, err := a.client.StartDeployment(&apprunner.StartDeploymentInput{
+		ServiceArn: aws.String(svcARN),
+	})
+	if err != nil {
+		return "", fmt.Errorf("start new deployment: %w", err)
+	}
+	return aws.StringValue(out.OperationId), nil
 }
 
 // DescribeOperation return OperationSummary for given OperationId and ServiceARN.
@@ -166,7 +180,8 @@ func (a *AppRunner) DescribeOperation(operationId, svcARN string) (*apprunner.Op
 	return nil, fmt.Errorf("no operation found %s", operationId)
 }
 
-func (a *AppRunner) waitForOperation(operationId, svcARN string) error {
+// WaitForOperation waits for a service operation.
+func (a *AppRunner) WaitForOperation(operationId, svcARN string) error {
 	for {
 		resp, err := a.DescribeOperation(operationId, svcARN)
 		if err != nil {
@@ -176,7 +191,9 @@ func (a *AppRunner) waitForOperation(operationId, svcARN string) error {
 		case opStatusSucceeded:
 			return nil
 		case opStatusFailed:
-			return fmt.Errorf("operation failed %s", operationId)
+			return &ErrWaitServiceOperationFailed{
+				operationId: operationId,
+			}
 		}
 		time.Sleep(3 * time.Second)
 	}

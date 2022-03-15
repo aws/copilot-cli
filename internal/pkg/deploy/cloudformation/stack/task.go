@@ -25,9 +25,10 @@ const (
 
 	taskContainerImageParamKey = "ContainerImage"
 	taskTaskRoleParamKey       = "TaskRole"
-	taskExecutionRoleParamKey  = "ExecutionRole"
 	taskCommandParamKey        = "Command"
 	taskEntryPointParamKey     = "EntryPoint"
+	taskOSParamKey             = "OS"
+	taskArchParamKey           = "Arch"
 
 	taskLogRetentionInDays = "1"
 )
@@ -51,15 +52,28 @@ func (t *taskStackConfig) StackName() string {
 	return string(NameForTask(t.Name))
 }
 
+var cfnFuntion = map[string]interface{}{
+	"isARN":           template.IsARNFunc,
+	"trimSlashPrefix": template.TrimSlashPrefix,
+}
+
 // Template returns the task CloudFormation template.
 func (t *taskStackConfig) Template() (string, error) {
 	content, err := t.parser.Parse(taskTemplatePath, struct {
-		EnvVars map[string]string
-		Secrets map[string]string
+		EnvVars               map[string]string
+		SSMParamSecrets       map[string]string
+		SecretsManagerSecrets map[string]string
+		App                   string
+		Env                   string
+		ExecutionRole         string
 	}{
-		EnvVars: t.EnvVars,
-		Secrets: t.Secrets,
-	})
+		EnvVars:               t.EnvVars,
+		SSMParamSecrets:       t.SSMParamSecrets,
+		SecretsManagerSecrets: t.SecretsManagerSecrets,
+		App:                   t.App,
+		Env:                   t.Env,
+		ExecutionRole:         t.ExecutionRole,
+	}, template.WithFuncs(cfnFuntion))
 	if err != nil {
 		return "", fmt.Errorf("read template for task stack: %w", err)
 	}
@@ -94,10 +108,6 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(t.TaskRole),
 		},
 		{
-			ParameterKey:   aws.String(taskExecutionRoleParamKey),
-			ParameterValue: aws.String(t.ExecutionRole),
-		},
-		{
 			ParameterKey:   aws.String(taskCommandParamKey),
 			ParameterValue: aws.String(strings.Join(t.Command, ",")),
 		},
@@ -105,7 +115,22 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(taskEntryPointParamKey),
 			ParameterValue: aws.String(strings.Join(t.EntryPoint, ",")),
 		},
+		{
+			ParameterKey:   aws.String(taskOSParamKey),
+			ParameterValue: aws.String(t.OS),
+		},
+		{
+			ParameterKey:   aws.String(taskArchParamKey),
+			ParameterValue: aws.String(t.Arch),
+		},
 	}, nil
+}
+
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *taskStackConfig) SerializedParameters() (string, error) {
+	// No-op for now.
+	return "", nil
 }
 
 // Tags returns the tags that should be applied to the task CloudFormation.

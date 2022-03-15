@@ -1,0 +1,91 @@
+{{if .LogConfig}}
+- Name: firelens_log_router
+  Image: {{ .LogConfig.Image }}
+  Environment:
+{{include "envvars-common" . | indent 2}}
+{{if .LogConfig.Variables}}{{range $name, $value := .LogConfig.Variables}}
+  - Name: {{$name}}
+    Value: {{$value | printf "%q"}}{{end}}{{end}}
+{{- if .LogConfig.Secrets}}
+  Secrets:
+  {{- range $name, $secret := .LogConfig.Secrets}}
+  - Name: {{$name}}
+    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
+  {{- end}}
+{{- end}}
+  FirelensConfiguration:
+    Type: fluentbit
+    Options:
+      enable-ecs-log-metadata: {{.LogConfig.EnableMetadata}}{{if .LogConfig.ConfigFile}}
+      config-file-type: file
+      config-file-value: {{.LogConfig.ConfigFile}}{{end}}
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogs-region: !Ref AWS::Region
+      awslogs-group: !Ref LogGroup
+      awslogs-stream-prefix: copilot
+{{- end}}
+{{- range $sidecar := .Sidecars}}
+- Name: {{$sidecar.Name}}
+  Image: {{$sidecar.Image}}
+{{- if $sidecar.Essential}}
+  Essential: {{$sidecar.Essential}}
+{{- end}}
+{{- if $sidecar.Port}}
+{{include "image-overrides" . | indent 2}}
+  PortMappings:
+    - ContainerPort: {{$sidecar.Port}}
+    {{- if $sidecar.Protocol}}
+      Protocol: {{$sidecar.Protocol}}
+    {{- end}}
+{{- end}}
+{{- if $sidecar.HealthCheck}}
+  HealthCheck:
+    Command: {{quoteSlice $sidecar.HealthCheck.Command | fmtSlice}}
+    Interval: {{$sidecar.HealthCheck.Interval}}
+    Retries: {{$sidecar.HealthCheck.Retries}}
+    StartPeriod: {{$sidecar.HealthCheck.StartPeriod}}
+    Timeout: {{$sidecar.HealthCheck.Timeout}}
+{{- end}}
+  Environment:
+{{/* "$" denotes the parent WorkloadOpts, whereas "." is the individual container. */}}
+{{include "envvars-common" $ | indent 2}}
+{{include "envvars-container" . | indent 2}}
+{{- if $sidecar.Secrets}}
+  Secrets:
+  {{- range $name, $secret := $sidecar.Secrets}}
+  - Name: {{$name}}
+    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
+  {{- end}}
+{{- end}}
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogs-region: !Ref AWS::Region
+      awslogs-group: !Ref LogGroup
+      awslogs-stream-prefix: copilot
+{{- if $sidecar.DockerLabels}}
+  DockerLabels:{{range $name, $value := $sidecar.DockerLabels}}
+    {{$name | printf "%q"}}: {{$value | printf "%q"}}{{end}}
+{{- end -}}
+{{- if $sidecar.DependsOn}}
+  DependsOn:
+  {{- range $name, $conditionFrom := $sidecar.DependsOn}}
+    - Condition: {{$conditionFrom}}
+      ContainerName: {{$name}}
+  {{- end}}
+{{- end}}
+{{- if $sidecar.CredsParam}}
+  RepositoryCredentials:
+    CredentialsParameter: {{$sidecar.CredsParam}}
+{{- end}}
+{{- if $sidecar.Storage.MountPoints}}
+  MountPoints:
+  {{- range $mp := $sidecar.Storage.MountPoints}}
+    - SourceVolume: {{$mp.SourceVolume}}
+      ReadOnly: {{$mp.ReadOnly}}
+      ContainerPath: '{{$mp.ContainerPath}}'
+  {{- end}}
+{{- end}}
+{{- end}}

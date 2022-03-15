@@ -7,6 +7,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -60,21 +64,16 @@ type deleteAppOpts struct {
 	jobDeleteExecutor    func(jobName string) (executor, error)
 	envDeleteExecutor    func(envName string) (executeAsker, error)
 	taskDeleteExecutor   func(envName, taskName string) (executor, error)
-	deletePipelineRunner func() (deletePipelineRunner, error)
+	deletePipelineRunner func() (cmd, error)
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	provider := sessions.NewProvider()
+	provider := sessions.ImmutableProvider(sessions.UserAgentExtras("app delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
@@ -83,7 +82,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 	return &deleteAppOpts{
 		deleteAppVars: vars,
 		spinner:       termprogress.NewSpinner(log.DiagnosticWriter),
-		store:         store,
+		store:         config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region)),
 		ws:            ws,
 		sessProvider:  provider,
 		cfn:           cloudformation.New(defaultSession),
@@ -136,7 +135,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		deletePipelineRunner: func() (deletePipelineRunner, error) {
+		deletePipelineRunner: func() (cmd, error) {
 			opts, err := newDeletePipelineOpts(deletePipelineVars{
 				appName:            vars.name,
 				skipConfirmation:   true,
@@ -167,7 +166,8 @@ func (o *deleteAppOpts) Ask() error {
 	manualConfirm, err := o.prompt.Confirm(
 		fmt.Sprintf(fmtDeleteAppConfirmPrompt, o.name),
 		deleteAppConfirmHelp,
-		prompt.WithTrueDefault())
+		prompt.WithTrueDefault(),
+		prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("confirm app deletion: %w", err)
 	}
@@ -324,7 +324,7 @@ func (o *deleteAppOpts) deletePipeline() error {
 	if err != nil {
 		return err
 	}
-	return cmd.Run()
+	return run(cmd)
 }
 
 func (o *deleteAppOpts) deleteAppResources() error {
@@ -371,14 +371,7 @@ func buildAppDeleteCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 

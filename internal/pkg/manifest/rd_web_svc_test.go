@@ -17,10 +17,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func durationPointer(d time.Duration) *time.Duration {
-	return &d
-}
-
 func TestNewRequestDrivenWebService(t *testing.T) {
 	testCases := map[string]struct {
 		input *RequestDrivenWebServiceProps
@@ -216,8 +212,8 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 								Path:               aws.String("/healthcheck"),
 								HealthyThreshold:   aws.Int64(3),
 								UnhealthyThreshold: aws.Int64(5),
-								Interval:           durationPointer(10 * time.Second),
-								Timeout:            durationPointer(5 * time.Second),
+								Interval:           durationp(10 * time.Second),
+								Timeout:            durationp(5 * time.Second),
 							},
 						},
 						Alias: aws.String("convex.domain.com"),
@@ -298,6 +294,104 @@ func TestRequestDrivenWebService_MarshalBinary(t *testing.T) {
 
 			require.Equal(t, tc.wantedError, err)
 			require.Equal(t, tc.wantedBinary, b)
+		})
+	}
+}
+
+func TestRequestDrivenWebService_Port(t *testing.T) {
+	// GIVEN
+	mft := RequestDrivenWebService{
+		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+			ImageConfig: ImageWithPort{
+				Port: uint16P(80),
+			},
+		},
+	}
+
+	// WHEN
+	actual, ok := mft.Port()
+
+	// THEN
+	require.True(t, ok)
+	require.Equal(t, uint16(80), actual)
+}
+
+func TestRequestDrivenWebService_ContainerPlatform(t *testing.T) {
+	t.Run("should return platform string with values found in args", func(t *testing.T) {
+		// GIVEN
+		mft := RequestDrivenWebService{
+			RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+				InstanceConfig: AppRunnerInstanceConfig{
+					Platform: PlatformArgsOrString{
+						PlatformArgs: PlatformArgs{
+							OSFamily: aws.String("ososos"),
+							Arch:     aws.String("arch"),
+						},
+					},
+				},
+			},
+		}
+		// WHEN
+		actual := mft.ContainerPlatform()
+
+		// THEN
+		require.Equal(t, "ososos/arch", actual)
+	})
+	t.Run("should return default platform if platform field empty", func(t *testing.T) {
+		// GIVEN
+		mft := RequestDrivenWebService{
+			RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+				InstanceConfig: AppRunnerInstanceConfig{
+					Platform: PlatformArgsOrString{
+						PlatformString: nil,
+					},
+				},
+			},
+		}
+		// WHEN
+		actual := mft.ContainerPlatform()
+
+		// THEN
+		require.Equal(t, "linux/amd64", actual)
+
+	})
+}
+func TestRequestDrivenWebService_Publish(t *testing.T) {
+	testCases := map[string]struct {
+		mft *RequestDrivenWebService
+
+		wantedTopics []Topic
+	}{
+		"returns nil if there are no topics set": {
+			mft: &RequestDrivenWebService{},
+		},
+		"returns the list of topics if manifest publishes notifications": {
+			mft: &RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{
+								Name: stringP("hello"),
+							},
+						},
+					},
+				},
+			},
+			wantedTopics: []Topic{
+				{
+					Name: stringP("hello"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.Publish()
+
+			// THEN
+			require.Equal(t, tc.wantedTopics, actual)
 		})
 	}
 }

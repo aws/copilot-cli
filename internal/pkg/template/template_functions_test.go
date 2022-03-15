@@ -225,13 +225,6 @@ func TestQuoteSliceFunc(t *testing.T) {
 	}
 }
 
-func TestQuotePSliceFunc(t *testing.T) {
-	require.Equal(t, []string(nil), QuotePSliceFunc(nil))
-	require.Equal(t, []string(nil), QuotePSliceFunc([]*string{}))
-	require.Equal(t, []string{`"a"`}, QuotePSliceFunc(aws.StringSlice([]string{"a"})))
-	require.Equal(t, []string{`"a"`, `"b"`, `"c"`}, QuotePSliceFunc(aws.StringSlice([]string{"a", "b", "c"})))
-}
-
 func TestGenerateMountPointJSON(t *testing.T) {
 	require.Equal(t, `{"myEFSVolume":"/var/www"}`, generateMountPointJSON([]*MountPoint{{ContainerPath: aws.String("/var/www"), SourceVolume: aws.String("myEFSVolume")}}), "JSON should render correctly")
 	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{}), "nil list of arguments should render ")
@@ -285,10 +278,9 @@ func TestGenerateSNSJSON(t *testing.T) {
 
 func TestGenerateQueueURIJSON(t *testing.T) {
 	testCases := map[string]struct {
-		in               []*TopicSubscription
-		wanted           string
-		wantedSubstring  string
-		wantedSubstring2 string
+		in              []*TopicSubscription
+		wanted          string
+		wantedSubstring string
 	}{
 		"JSON should render correctly": {
 			in: []*TopicSubscription{
@@ -300,8 +292,7 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 					},
 				},
 			},
-			wantedSubstring:  `"eventsQueue":"${mainURL}"`,
-			wantedSubstring2: `"bestsvcTestsEventsQueue":"${bestsvctestsURL}"`,
+			wantedSubstring: `"bestsvcTestsEventsQueue":"${bestsvctestsURL}"`,
 		},
 		"Topics with no names show empty but main queue still populates": {
 			in: []*TopicSubscription{
@@ -309,11 +300,7 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 					Service: aws.String("bestSvc"),
 				},
 			},
-			wanted: `{"eventsQueue":"${mainURL}"}`,
-		},
-		"nil list of arguments should render with main queue": {
-			in:     []*TopicSubscription{},
-			wanted: `{"eventsQueue":"${mainURL}"}`,
+			wanted: `{}`,
 		},
 	}
 
@@ -323,7 +310,6 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 				require.Equal(t, generateQueueURIJSON(tc.in), tc.wanted)
 			} else {
 				require.Contains(t, generateQueueURIJSON(tc.in), tc.wantedSubstring)
-				require.Contains(t, generateQueueURIJSON(tc.in), tc.wantedSubstring2)
 			}
 		})
 	}

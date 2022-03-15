@@ -106,7 +106,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -133,7 +133,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -157,7 +157,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -181,7 +181,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -205,7 +205,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -231,7 +231,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -257,7 +257,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -328,7 +328,7 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			wantedErr: nil,
@@ -341,7 +341,7 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			},
 			createS3Mock: func(ctrl *gomock.Controller) s3Client {
 				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 				return m
 			},
 			wantedErr: fmt.Errorf("upload pipeline template to S3 bucket %s: some error", "BitterBucket"),

@@ -11,12 +11,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -28,16 +28,30 @@ const (
 	testImageTag     = "manual-bf3678c"
 )
 
-type mockTemplater struct {
-	tpl string
-	err error
+type mockAddons struct {
+	tpl    string
+	tplErr error
+
+	params    string
+	paramsErr error
 }
 
-func (m mockTemplater) Template() (string, error) {
-	if m.err != nil {
-		return "", m.err
+func (m mockAddons) Template() (string, error) {
+	if m.tplErr != nil {
+		return "", m.tplErr
 	}
 	return m.tpl, nil
+}
+
+func (m mockAddons) Parameters() (string, error) {
+	if m.paramsErr != nil {
+		return "", m.paramsErr
+	}
+	return m.params, nil
+}
+
+var mockCloudFormationOverrideFunc = func(overrideRules []override.Rule, origTemp []byte) ([]byte, error) {
+	return origTemp, nil
 }
 
 func TestLoadBalancedWebService_StackName(t *testing.T) {
@@ -87,8 +101,8 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
-	var overridenContainerHealthCheck = ecs.HealthCheck{
-		Command:     []*string{aws.String("CMD-SHELL"), aws.String("curl -f http://localhost/ || exit 1")},
+	var overridenContainerHealthCheck = template.ContainerHealthCheck{
+		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 		Interval:    aws.Int64(10),
 		StartPeriod: aws.Int64(0),
 		Timeout:     aws.Int64(5),
@@ -102,15 +116,15 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
-	testLBWebServiceManifest.ImageConfig.HealthCheck = &manifest.ContainerHealthCheck{
+	testLBWebServiceManifest.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 		Retries: aws.Int(5),
 	}
-	testLBWebServiceManifest.Alias = aws.String("mockAlias")
-	testLBWebServiceManifest.EntryPoint = &manifest.EntryPointOverride{
+	testLBWebServiceManifest.RoutingRule.Alias = manifest.Alias{String: aws.String("mockAlias")}
+	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
 	}
-	testLBWebServiceManifest.Command = &manifest.CommandOverride{
+	testLBWebServiceManifest.Command = manifest.CommandOverride{
 		String:      nil,
 		StringSlice: []string{"world"},
 	}
@@ -150,18 +164,29 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedError:    fmt.Errorf("read env controller lambda: some error"),
 		},
-		"unexpected addons parsing error": {
+		"unexpected addons template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				addons := mockTemplater{err: errors.New("some error")}
+				addons := mockAddons{tplErr: errors.New("some error")}
 				c.parser = m
 				c.wkld.addons = addons
 			},
-			wantedTemplate: "",
-			wantedError:    fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
+			wantedError: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
+		},
+		"unexpected addons parameter parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				addons := mockAddons{paramsErr: errors.New("some error")}
+				c.parser = m
+				c.wkld.addons = addons
+			},
+			wantedError: fmt.Errorf("parse addons parameters for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
@@ -170,7 +195,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -203,15 +228,16 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
+					ALBEnabled: true,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				c.parser = m
 				c.wkld.addons = addons
 			},
@@ -231,7 +257,8 @@ Outputs:
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					WorkloadType: manifest.LoadBalancedWebServiceType,
+					AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
+					WorkloadType:      manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 						GracePeriod:     aws.Int64(60),
@@ -241,14 +268,15 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
+					ALBEnabled: true,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockTemplater{
+				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -274,6 +302,7 @@ Outputs:
     Value: !Ref MySecret
   Hello:
     Value: hello`,
+					params: "ServiceName: !GetAtt Service.Name",
 				}
 				c.parser = m
 				c.addons = addons
@@ -302,6 +331,7 @@ Outputs:
 							Region:    "us-west-2",
 						},
 					},
+					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
 				manifest: testLBWebServiceManifest,
 			}
@@ -330,49 +360,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	}
-	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestRange := manifest.IntRangeBand("2-100")
-	testLBWebServiceManifest.Count = manifest.Count{
-		Value: aws.Int(1),
-		AdvancedCount: manifest.AdvancedCount{
-			Range: &manifest.Range{
-				Value: &testLBWebServiceManifestRange,
-			},
-		},
-	}
-	testLBWebServiceManifestWithBadCount := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadCountRange := manifest.IntRangeBand("badCount")
-	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
-		AdvancedCount: manifest.AdvancedCount{
-			Range: &manifest.Range{
-				Value: &testLBWebServiceManifestWithBadCountRange,
-			},
-		},
-	}
-	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
-	testLBWebServiceManifestWithSidecar.Sidecars = map[string]*manifest.SidecarConfig{
-		"xray": {
-			Port: aws.String("5000"),
-		},
-	}
-	testLBWebServiceManifestWithStickiness := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
-	testLBWebServiceManifestWithExecEnabled := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithExecEnabled.ExecuteCommand = manifest.ExecuteCommand{
-		Enable: aws.Bool(false),
-		Config: manifest.ExecuteCommandConfig{
-			Enable: aws.Bool(true),
-		},
-	}
-	testLBWebServiceManifestWithBadSidecarName := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadSidecarName.TargetContainer = aws.String("xray")
-
-	testLBWebServiceManifestWithBadSidecarPort := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadSidecarPort.TargetContainer = aws.String("xray")
-	testLBWebServiceManifestWithBadSidecarPort.Sidecars = map[string]*manifest.SidecarConfig{
-		"xray": {},
-	}
 	expectedParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadAppNameParamKey),
@@ -395,10 +382,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("80"),
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-			ParameterValue: aws.String("frontend"),
-		},
-		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
@@ -414,17 +397,32 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(""),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(""),
+		},
 	}
 	testCases := map[string]struct {
-		httpsEnabled bool
-		manifest     *manifest.LoadBalancedWebService
+		httpsEnabled         bool
+		dnsDelegationEnabled bool
+		setupManifest        func(*manifest.LoadBalancedWebService)
 
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error
 	}{
 		"HTTPS Enabled": {
 			httpsEnabled: true,
-			manifest:     testLBWebServiceManifest,
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				countRange := manifest.IntRangeBand("2-100")
+				service.Count = manifest.Count{
+					Value: aws.Int(1),
+					AdvancedCount: manifest.AdvancedCount{
+						Range: manifest.Range{
+							Value: &countRange,
+						},
+					},
+				}
+			},
 
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
@@ -444,16 +442,37 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("2"),
 				},
 				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
 				},
 			}...),
 		},
 		"HTTPS Not Enabled": {
 			httpsEnabled: false,
-			manifest:     testLBWebServiceManifest,
-
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				countRange := manifest.IntRangeBand("2-100")
+				service.Count = manifest.Count{
+					Value: aws.Int(1),
+					AdvancedCount: manifest.AdvancedCount{
+						Range: manifest.Range{
+							Value: &countRange,
+						},
+					},
+				}
+			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("false"),
@@ -474,13 +493,27 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			}...),
 		},
 		"with sidecar container": {
 			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithSidecar,
-
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.RoutingRule.TargetContainer = aws.String("xray")
+				service.Sidecars = map[string]*manifest.SidecarConfig{
+					"xray": {
+						Port: aws.String("5000"),
+					},
+				}
+			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("true"),
@@ -501,13 +534,22 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
+				},
 			}...),
 		},
 		"Stickiness enabled": {
 			httpsEnabled: false,
-			manifest:     testLBWebServiceManifestWithStickiness,
-
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.RoutingRule.Stickiness = aws.Bool(true)
+			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("false"),
@@ -528,13 +570,27 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("true"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			}...),
 		},
 		"exec enabled": {
 			httpsEnabled: false,
-			manifest:     testLBWebServiceManifestWithExecEnabled,
-
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.ExecuteCommand = manifest.ExecuteCommand{
+					Enable: aws.Bool(false),
+					Config: manifest.ExecuteCommandConfig{
+						Enable: aws.Bool(true),
+					},
+				}
+			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String("false"),
@@ -555,35 +611,198 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			}...),
 		},
-		"with bad sidecar container": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadSidecarName,
+		"dns delegation enabled": {
+			httpsEnabled:         false,
+			dnsDelegationEnabled: true,
 
-			expectedErr: fmt.Errorf("target container xray doesn't exist"),
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.ExecuteCommand = manifest.ExecuteCommand{
+					Enable: aws.Bool(false),
+					Config: manifest.ExecuteCommandConfig{
+						Enable: aws.Bool(true),
+					},
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("true"),
+				},
+			}...),
 		},
-		"with target sidecar container with empty port": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadSidecarPort,
-
-			expectedErr: fmt.Errorf("target container xray doesn't expose any port"),
+		"nlb enabled": {
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
+					Port: aws.String("443/tcp"),
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBPortParamKey),
+					ParameterValue: aws.String("443"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBAliasesParamKey),
+					ParameterValue: aws.String(""),
+				},
+			}...),
+		},
+		"nlb alias enabled": {
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
+					Aliases: manifest.Alias{
+						StringSlice: []string{"example.com", "v1.example.com"},
+					},
+					Port: aws.String("443/tcp"),
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBPortParamKey),
+					ParameterValue: aws.String("443"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceNLBAliasesParamKey),
+					ParameterValue: aws.String("example.com,v1.example.com"),
+				},
+			}...),
+		},
+		"do not render http params when disabled": {
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				service.RoutingRule = manifest.RoutingRuleConfigOrBool{
+					Enabled: aws.Bool(false),
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+			}...),
 		},
 		"with bad count": {
 			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadCount,
-
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				badCountRange := manifest.IntRangeBand("badCount")
+				service.Count = manifest.Count{
+					AdvancedCount: manifest.AdvancedCount{
+						Range: manifest.Range{
+							Value: &badCountRange,
+						},
+					},
+				}
+			},
 			expectedErr: fmt.Errorf("parse task count value badCount: invalid range value badCount. Should be in format of ${min}-${max}"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			testManifest := manifest.NewLoadBalancedWebService(baseProps)
+			tc.setupManifest(testManifest)
 
 			// GIVEN
 			conf := &LoadBalancedWebService{
 				ecsWkld: &ecsWkld{
 					wkld: &wkld{
-						name: aws.StringValue(tc.manifest.Name),
+						name: aws.StringValue(testManifest.Name),
 						env:  testEnvName,
 						app:  testAppName,
 						rc: RuntimeConfig{
@@ -593,10 +812,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 							},
 						},
 					},
-					tc: tc.manifest.TaskConfig,
+					tc: testManifest.TaskConfig,
 				},
-				manifest:     tc.manifest,
-				httpsEnabled: tc.httpsEnabled,
+				manifest:             testManifest,
+				httpsEnabled:         tc.httpsEnabled,
+				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}
 
 			// WHEN

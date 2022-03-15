@@ -24,10 +24,17 @@ Parameters:
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
+  DNSDelegated:
+    Type: String
+    AllowedValues: [true, false]
   LogRetention:
     Type: Number
   AddonsTemplateURL:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
+    Type: String
+    Default: ""
+  EnvFileARN:
+    Description: 'URL of the environment file.'
     Type: String
     Default: ""
   TargetContainer:
@@ -43,8 +50,12 @@ Conditions:
       - !Condition HTTPSLoadBalancer
   HTTPSLoadBalancer:
     !Equals [!Ref HTTPSEnabled, true]
+  HasAssociatedDomain:
+    !Equals [!Ref DNSDelegated, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasEnvFile:
+    !Not [!Equals [!Ref EnvFileARN, ""]]
   IsDefaultRootPath: # If we're using path based routing and use the root path, we have some special logic
     !Equals [!Ref RulePath, "/"]
 Resources:
@@ -68,8 +79,8 @@ Resources:
         - FARGATE
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
-      TaskRoleArn: !Ref TaskRole
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
@@ -86,15 +97,20 @@ Resources:
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
-          - Name: LOG_LEVEL
-            Value: "info"
-          - Name: COPILOT_MOUNT_POINTS
-            Value: '{"persistence":"/etc/scratch"}'
           - Name: COPILOT_SNS_TOPIC_ARNS
             Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-staging-fe-givesdogs"}'
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-          
+          - Name: LOG_LEVEL
+            Value: "info"
+          - Name: COPILOT_MOUNT_POINTS
+            Value: '{"persistence":"/etc/scratch"}'
+          EnvironmentFiles:
+          - !If
+            - HasEnvFile
+            - Type: s3
+              Value: !Ref EnvFileARN
+            - !Ref AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -151,6 +167,28 @@ Resources:
                   - 'kms:Decrypt'
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+        - !If
+          - HasEnvFile
+          - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicy]]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetObject'
+                  Resource:
+                    - !Ref EnvFileARN
+                - Effect: 'Allow'
+                  Action:
+                    - 's3:GetBucketLocation'
+                  Resource:
+                    - !Join
+                      - ''
+                      - - 'arn:'
+                        - !Ref AWS::Partition
+                        - ':s3:::'
+                        - !Select [0, !Split ['/', !Select [5, !Split [':', !Ref EnvFileARN]]]]
+          - !Ref AWS::NoValue
       ManagedPolicyArns:
         - 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   
@@ -280,7 +318,8 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
-    DependsOn: WaitUntilListenerRuleIsCreated
+    DependsOn:
+      - WaitUntilListenerRuleIsCreated
     Properties:
       Cluster:
         Fn::ImportValue:
@@ -293,6 +332,7 @@ Resources:
           Rollback: true
         MinimumHealthyPercent: 100
         MaximumPercent: 200
+      PlatformVersion: LATEST
       PropagateTags: SERVICE
       CapacityProviderStrategy:
         - CapacityProvider: FARGATE_SPOT
@@ -514,34 +554,31 @@ Resources:
         !Ref AddonsTemplateURL
 
   givesdogsSNSTopic:
-      Type: AWS::SNS::Topic
-      Properties:
-        TopicName: ${AWS::StackName}-givesdogs
-        KmsMasterKeyId: 'alias/aws/sns'
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast givesdogs events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ${AWS::StackName}-givesdogs
+      KmsMasterKeyId: 'alias/aws/sns'
     
   givesdogsSNSTopicPolicy:
-      Type: AWS::SNS::TopicPolicy
-      DependsOn: givesdogsSNSTopic
-      Properties:
-        Topics: 
-          - !Ref givesdogsSNSTopic
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service: sqs.amazonaws.com
-              Action: 
-                - sns:Subscribe
-              Resource: !Sub 'arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:*'
-              Condition:
-                StringEquals:
-                  'sqs:ResourceTag/copilot-application': !Sub '${AppName}'
-                  'sqs:ResourceTag/copilot-environment': !Sub '${EnvName}'
-                ForAnyValue:StringEquals:
-                  'sqs:ResourceTag/copilot-service':
-                      - 'takes-dogs'
-                      - 'takes-animals'
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: givesdogsSNSTopic
+    Properties:
+      Topics:
+        - !Ref givesdogsSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref givesdogsSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
 
 Outputs:
   DiscoveryServiceARN:

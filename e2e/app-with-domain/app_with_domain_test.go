@@ -6,6 +6,8 @@ package app_with_domain_test
 import (
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,26 +49,58 @@ var _ = Describe("App With Domain", func() {
 	})
 
 	Context("when creating new environments", func() {
-		var envInitErr error
+		fatalErrors := make(chan error)
+		wgDone := make(chan bool)
+		It("env init should succeed for creating test and prod environments", func() {
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.EnvInit(&client.EnvInitRequest{
+						AppName: appName,
+						EnvName: "test",
+						Profile: "default",
+						Prod:    false,
+					})
+					if err == nil {
+						break
+					}
+					if !isStackSetOperationInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.EnvInit(&client.EnvInitRequest{
+						AppName: appName,
+						EnvName: "prod",
+						Profile: prodEnvironmentProfile,
+						Prod:    false,
+					})
+					if err == nil {
+						break
+					}
+					if !isStackSetOperationInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				wg.Wait()
+				close(wgDone)
+				close(fatalErrors)
+			}()
 
-		It("env init should succeed for creating the test environment", func() {
-			_, envInitErr = cli.EnvInit(&client.EnvInitRequest{
-				AppName: appName,
-				EnvName: "test",
-				Profile: "default",
-				Prod:    false,
-			})
-			Expect(envInitErr).NotTo(HaveOccurred())
-		})
-
-		It("env init should succeed for creating the prod environment", func() {
-			_, envInitErr = cli.EnvInit(&client.EnvInitRequest{
-				AppName: appName,
-				EnvName: "prod",
-				Profile: prodEnvironmentProfile,
-				Prod:    false,
-			})
-			Expect(envInitErr).NotTo(HaveOccurred())
+			select {
+			case <-wgDone:
+			case err := <-fatalErrors:
+				Expect(err).NotTo(HaveOccurred())
+			}
 		})
 	})
 
@@ -95,33 +129,76 @@ var _ = Describe("App With Domain", func() {
 	})
 
 	Context("when deploying a Load Balanced Web Service", func() {
-		var deployErr error
+		It("deployments should succeed", func() {
+			fatalErrors := make(chan error)
+			wgDone := make(chan bool)
+			var wg sync.WaitGroup
+			wg.Add(3)
+			// deploy hello to test.
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.SvcDeploy(&client.SvcDeployInput{
+						Name:     "hello",
+						EnvName:  "test",
+						ImageTag: "hello",
+					})
+					if err == nil {
+						break
+					}
+					if !isStackSetOperationInProgress(content) && !isImagePushingToECRInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			// deploy frontend to test.
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.SvcDeploy(&client.SvcDeployInput{
+						Name:     "frontend",
+						EnvName:  "test",
+						ImageTag: "frontend",
+					})
+					if err == nil {
+						break
+					}
+					if !isStackSetOperationInProgress(content) && !isImagePushingToECRInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			// deploy hello to prod.
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.SvcDeploy(&client.SvcDeployInput{
+						Name:     "hello",
+						EnvName:  "prod",
+						ImageTag: "hello",
+					})
+					if err == nil {
+						break
+					}
+					if !isStackSetOperationInProgress(content) && !isImagePushingToECRInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				wg.Wait()
+				close(wgDone)
+				close(fatalErrors)
+			}()
 
-		It("deploy hello to test should succeed", func() {
-			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "hello",
-				EnvName:  "test",
-				ImageTag: "hello",
-			})
-			Expect(deployErr).NotTo(HaveOccurred())
-		})
-
-		It("deploy frontend to test should succeed", func() {
-			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "frontend",
-				EnvName:  "test",
-				ImageTag: "frontend",
-			})
-			Expect(deployErr).NotTo(HaveOccurred())
-		})
-
-		It("deploy hello to prod should succeed", func() {
-			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "hello",
-				EnvName:  "prod",
-				ImageTag: "hello",
-			})
-			Expect(deployErr).NotTo(HaveOccurred())
+			select {
+			case <-wgDone:
+			case err := <-fatalErrors:
+				Expect(err).NotTo(HaveOccurred())
+			}
 		})
 
 		It("svc show should contain the expected domain and the request should succeed", func() {
@@ -163,7 +240,7 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 			wantedURLs = map[string]string{
-				"test": "https://frontend.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://frontend.copilot-e2e-tests.ecs.aws.dev or https://copilot-e2e-tests.ecs.aws.dev",
 			}
 			// Validate route has the expected HTTPS endpoint.
 			route := svc.Routes[0]
@@ -172,15 +249,18 @@ var _ = Describe("App With Domain", func() {
 			// Make sure the response is OK.
 			var resp *http.Response
 			var fetchErr error
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(route.URL)
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
-			// HTTP should route to HTTPS.
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(strings.Replace(route.URL, "https", "http", 1))
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
+			urls := strings.Split(route.URL, " or ")
+			for _, url := range urls {
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(url)
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				// HTTP should route to HTTPS.
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(strings.Replace(url, "https", "http", 1))
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+			}
 		})
 	})
 })

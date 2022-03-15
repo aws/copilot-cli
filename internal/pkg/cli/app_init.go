@@ -7,6 +7,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+
+	"github.com/spf13/cobra"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/route53"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -18,7 +23,6 @@ import (
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -44,6 +48,7 @@ type initAppOpts struct {
 	identity             identityService
 	store                applicationStore
 	route53              domainHostedZoneGetter
+	domainInfoGetter     domainInfoGetter
 	ws                   wsAppManager
 	cfn                  appDeployer
 	prompt               prompter
@@ -54,28 +59,26 @@ type initAppOpts struct {
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app init")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
-	}
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
 	}
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
+	identity := identity.New(sess)
 	return &initAppOpts{
-		initAppVars: vars,
-		identity:    identity.New(sess),
-		store:       store,
-		route53:     route53.New(sess),
-		ws:          ws,
-		cfn:         cloudformation.New(sess),
-		prompt:      prompt.New(),
-		prog:        termprogress.NewSpinner(log.DiagnosticWriter),
+		initAppVars:      vars,
+		identity:         identity,
+		store:            config.NewSSMStore(identity, ssm.New(sess), aws.StringValue(sess.Config.Region)),
+		route53:          route53.New(sess),
+		domainInfoGetter: route53.NewRoute53Domains(sess),
+		ws:               ws,
+		cfn:              cloudformation.New(sess),
+		prompt:           prompt.New(),
+		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
@@ -93,6 +96,9 @@ func (o *initAppOpts) Validate() error {
 		if err := validateDomainName(o.domainName); err != nil {
 			return fmt.Errorf("domain name %s is invalid: %w", o.domainName, err)
 		}
+		if err := o.isDomainOwned(); err != nil {
+			return err
+		}
 		id, err := o.domainHostedZoneID(o.domainName)
 		if err != nil {
 			return err
@@ -104,7 +110,12 @@ func (o *initAppOpts) Validate() error {
 
 // Ask prompts the user for any required arguments that they didn't provide.
 func (o *initAppOpts) Ask() error {
-	if ok, _ := o.isSessionFromEnvVars(); ok { // Ignore the error, we do not want to crash for a warning.
+	ok, err := o.isSessionFromEnvVars()
+	if err != nil {
+		return err
+	}
+
+	if ok {
 		log.Warningln(`Looks like you're creating an application using credentials set by environment variables.
 Copilot will store your application metadata in this account.
 We recommend using credentials from named profiles. To learn more:
@@ -123,13 +134,18 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 			return nil
 		}
 		if o.name != summary.Application {
+			summaryPath, _ := relPath(summary.Path)
+			if summaryPath == "" {
+				summaryPath = summary.Path
+			}
+
 			log.Errorf(`Workspace is already registered with application %s instead of %s.
-If you'd like to delete the application locally, you can remove the %s directory.
+If you'd like to delete the application locally, you can delete the file at %s.
 If you'd like to delete the application and all of its resources, run %s.
 `,
 				summary.Application,
 				o.name,
-				workspace.CopilotDirName,
+				summaryPath,
 				color.HighlightCode("copilot app delete"))
 			return fmt.Errorf("workspace already registered with %s", summary.Application)
 		}
@@ -189,13 +205,18 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.name)))
 
-	return o.store.CreateApplication(&config.Application{
+	if err := o.store.CreateApplication(&config.Application{
 		AccountID:          caller.Account,
 		Name:               o.name,
 		Domain:             o.domainName,
 		DomainHostedZoneID: hostedZoneID,
 		Tags:               o.resourceTags,
-	})
+	}); err != nil {
+		return err
+	}
+	log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(o.name))
+	log.Infoln()
+	return nil
 }
 
 func (o *initAppOpts) validateAppName(name string) error {
@@ -216,6 +237,25 @@ func (o *initAppOpts) validateAppName(name string) error {
 	return nil
 }
 
+func (o *initAppOpts) isDomainOwned() error {
+	err := o.domainInfoGetter.IsRegisteredDomain(o.domainName)
+	if err == nil {
+		return nil
+	}
+	var errDomainNotFound *route53.ErrDomainNotFound
+	if errors.As(err, &errDomainNotFound) {
+		log.Warningf(`The account does not seem to own the domain that you entered.
+Please make sure that %s is registered with Route53 in your account, or that your hosted zone has the appropriate NS records.
+To transfer domain registration in Route53, see:
+https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html
+To update the NS records in your hosted zone, see:
+https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/SOA-NSrecords.html#NSrecords
+`, o.domainName)
+		return nil
+	}
+	return fmt.Errorf("check if domain is owned by the account: %w", err)
+}
+
 func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
 	if o.cachedHostedZoneID != "" {
 		return o.cachedHostedZoneID, nil
@@ -227,11 +267,12 @@ func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
 	return hostedZoneID, nil
 }
 
-// RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
-func (o *initAppOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns a list of suggested additional commands users can run after successfully executing this command.
+func (o *initAppOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Run %s to add a new service or job to your application.", color.HighlightCode("copilot init")),
-	}
+	})
+	return nil
 }
 
 func (o *initAppOpts) askAppName(formatMsg string) error {
@@ -288,22 +329,7 @@ An application is a collection of containerized services that operate together.`
 			if len(args) == 1 {
 				opts.name = args[0]
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(opts.name))
-			log.Infoln()
-			log.Infoln("Recommended follow-up actions:")
-			for _, followUp := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followUp)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVar(&vars.domainName, domainNameFlag, "", domainNameFlagDescription)

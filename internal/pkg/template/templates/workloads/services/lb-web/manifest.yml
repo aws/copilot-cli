@@ -1,0 +1,53 @@
+# The manifest for the "{{.Name}}" service.
+# Read the full specification for the "{{.Type}}" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: {{.Name}}
+type: {{.Type}}
+
+# Distribute traffic to your service.
+http:
+  {{- if .RoutingRule.ProtocolVersion }}
+  version: {{.RoutingRule.ProtocolVersion}}
+  {{- end }}
+  # Requests to this path will be forwarded to your service.
+  # To match all requests you can use the "/" path.
+  path: '{{.RoutingRule.Path}}'
+  # You can specify a custom health check path. The default is "/".
+  # healthcheck: '{{.RoutingRule.HealthCheck.HealthCheckPath}}'
+
+# Configuration for your containers and service.
+image:
+{{- if .ImageConfig.Image.Build.BuildArgs.Dockerfile}}
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
+  build: {{.ImageConfig.Image.Build.BuildArgs.Dockerfile}}
+{{- end}}
+{{- if .ImageConfig.Image.Location}}
+  location: {{.ImageConfig.Image.Location}}
+{{- end}}
+  # Port exposed through your container to route traffic to it.
+  port: {{.ImageConfig.Port}}
+
+cpu: {{.CPU}}       # Number of CPU units for the task.
+memory: {{.Memory}}    # Amount of memory in MiB used by the task.
+{{- if .Platform.PlatformString}}
+platform: {{.Platform.PlatformString}}  # See https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#platform
+{{- end}}
+count: {{.Count.Value}}       # Number of tasks that should be running in your service.
+{{- if not .TaskConfig.IsWindows}}
+exec: true     # Enable running commands in your container.
+{{- end}}
+
+# Optional fields for more advanced use-cases.
+#
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.

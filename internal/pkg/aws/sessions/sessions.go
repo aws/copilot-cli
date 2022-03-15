@@ -21,81 +21,98 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
+// Timeout settings.
 const (
-	userAgentHeader = "User-Agent"
-
 	maxRetriesOnRecoverableFailures = 8 // Default provided by SDK is 3 which means requests are retried up to only 2 seconds.
 	credsTimeout                    = 10 * time.Second
 	clientTimeout                   = 30 * time.Second
+)
+
+// User-Agent settings.
+const (
+	userAgentProductName = "aws-copilot"
 )
 
 // Provider provides methods to create sessions.
 // Once a session is created, it's cached locally so that the same session is not re-created.
 type Provider struct {
 	defaultSess *session.Session
+
+	// Metadata associated with the provider.
+	userAgentExtras []string
 }
 
 var instance *Provider
 var once sync.Once
 
-// NewProvider returns a session Provider singleton.
-func NewProvider() *Provider {
+// ImmutableProvider returns an immutable session Provider with the options applied.
+func ImmutableProvider(options ...func(*Provider)) *Provider {
 	once.Do(func() {
 		instance = &Provider{}
+		for _, option := range options {
+			option(instance)
+		}
 	})
 	return instance
 }
 
-// Default returns a session configured against the "default" AWS profile.
-func (p *Provider) Default() (*session.Session, error) {
-	if p.defaultSess != nil {
-		return p.defaultSess, nil
+// UserAgentExtras augments a session provider with additional User-Agent extras.
+func UserAgentExtras(extras ...string) func(*Provider) {
+	return func(p *Provider) {
+		p.userAgentExtras = append(p.userAgentExtras, extras...)
 	}
+}
 
-	sess, err := session.NewSessionWithOptions(session.Options{
-		Config:            *newConfig(),
-		SharedConfigState: session.SharedConfigEnable,
-	})
+// Default returns a session configured against the "default" AWS profile.
+// Default assumes that a region must be present with a session, otherwise it returns an error.
+func (p *Provider) Default() (*session.Session, error) {
+	sess, err := p.defaultSession()
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(userAgentHandler())
-	p.defaultSess = sess
+	if aws.StringValue(sess.Config.Region) == "" {
+		return nil, &errMissingRegion{}
+	}
 	return sess, nil
 }
 
 // DefaultWithRegion returns a session configured against the "default" AWS profile and the input region.
 func (p *Provider) DefaultWithRegion(region string) (*session.Session, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
-		Config:            *newConfig().WithRegion(region),
-		SharedConfigState: session.SharedConfigEnable,
+		Config:                  *newConfig().WithRegion(region),
+		SharedConfigState:       session.SharedConfigEnable,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
 	})
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(userAgentHandler())
+	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	return sess, nil
 }
 
 // FromProfile returns a session configured against the input profile name.
 func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
-		Config:            *newConfig(),
-		SharedConfigState: session.SharedConfigEnable,
-		Profile:           name,
+		Config:                  *newConfig(),
+		SharedConfigState:       session.SharedConfigEnable,
+		Profile:                 name,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
 	})
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(userAgentHandler())
+	if aws.StringValue(sess.Config.Region) == "" {
+		return nil, &errMissingRegion{}
+	}
+	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	return sess, nil
 }
 
 // FromRole returns a session configured against the input role and region.
 func (p *Provider) FromRole(roleARN string, region string) (*session.Session, error) {
-	defaultSession, err := p.Default()
+	defaultSession, err := p.defaultSession()
 	if err != nil {
-		return nil, fmt.Errorf("error creating default session: %w", err)
+		return nil, fmt.Errorf("create default session: %w", err)
 	}
 
 	creds := stscreds.NewCredentials(defaultSession, roleARN)
@@ -107,7 +124,7 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(userAgentHandler())
+	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	return sess, nil
 }
 
@@ -121,7 +138,25 @@ func (p *Provider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken st
 	if err != nil {
 		return nil, fmt.Errorf("create session from static credentials: %w", err)
 	}
-	sess.Handlers.Build.PushBackNamed(userAgentHandler())
+	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
+	return sess, nil
+}
+
+func (p *Provider) defaultSession() (*session.Session, error) {
+	if p.defaultSess != nil {
+		return p.defaultSess, nil
+	}
+
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config:                  *newConfig(),
+		SharedConfigState:       session.SharedConfigEnable,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+	})
+	if err != nil {
+		return nil, err
+	}
+	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
+	p.defaultSess = sess
 	return sess, nil
 }
 
@@ -158,14 +193,12 @@ func newConfig() *aws.Config {
 		WithMaxRetries(maxRetriesOnRecoverableFailures)
 }
 
-// userAgentHandler returns a http request handler that sets a custom user agent to all aws requests.
-func userAgentHandler() request.NamedHandler {
+// userAgentHandler returns a http request handler that sets the AWS Copilot custom user agent to all aws requests.
+// The User-Agent is of the format "product/version (extra1; extra2; ...; extraN)".
+func (p *Provider) userAgentHandler() request.NamedHandler {
+	extras := append([]string{runtime.GOOS}, p.userAgentExtras...)
 	return request.NamedHandler{
 		Name: "UserAgentHandler",
-		Fn: func(r *request.Request) {
-			userAgent := r.HTTPRequest.Header.Get(userAgentHeader)
-			r.HTTPRequest.Header.Set(userAgentHeader,
-				fmt.Sprintf("aws-ecs-cli-v2/%s (%s) %s", version.Version, runtime.GOOS, userAgent))
-		},
+		Fn:   request.MakeAddToUserAgentHandler(userAgentProductName, version.Version, extras...),
 	}
 }

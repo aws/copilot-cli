@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -75,10 +78,12 @@ type deleteEnvOpts struct {
 }
 
 func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env delete"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to copilot config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
 	prompter := prompt.New()
 	return &deleteEnvOpts{
@@ -94,7 +99,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			if err != nil {
 				return err
 			}
-			sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+			sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
 			}
@@ -127,7 +132,7 @@ func (o *deleteEnvOpts) Ask() error {
 	if o.skipConfirmation {
 		return nil
 	}
-	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.name, o.appName), "")
+	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.name, o.appName), "", prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("confirm to delete environment %s: %w", o.name, err)
 	}
@@ -173,8 +178,8 @@ func (o *deleteEnvOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *deleteEnvOpts) RecommendedActions() []string {
+// RecommendActions is a no-op for this command.
+func (o *deleteEnvOpts) RecommendActions() error {
 	return nil
 }
 
@@ -386,13 +391,7 @@ func buildEnvDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

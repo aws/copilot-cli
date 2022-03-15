@@ -5,12 +5,18 @@ package app_with_domain_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+)
+
+const (
+	waitingInterval = 60 * time.Second
 )
 
 var cli *client.CLI
@@ -19,7 +25,7 @@ var prodEnvironmentProfile string
 
 func TestAppWithDomain(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Multiple Svc Suite (one workspace)")
+	RunSpecs(t, "Custom Domain Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -43,4 +49,16 @@ func BeforeAll(fn func()) {
 			first = false
 		}
 	})
+}
+
+// isStackSetOperationInProgress returns if the current stack set is in operation.
+func isStackSetOperationInProgress(s string) bool {
+	return strings.Contains(s, cloudformation.ErrCodeOperationInProgressException)
+}
+
+// isImagePushingToECRInProgress returns if we are pushing images to ECR. Pushing images concurrently would fail because
+// of credential verification issue.
+func isImagePushingToECRInProgress(s string) bool {
+	return strings.Contains(s, "denied: Your authorization token has expired. Reauthenticate and try again.") ||
+		strings.Contains(s, "no basic auth credentials")
 }

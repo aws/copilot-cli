@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
@@ -33,14 +34,16 @@ type resourceGetter interface {
 }
 
 type ecsClient interface {
-	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
-	RunningTasks(cluster string) ([]*ecs.Task, error)
-	ServiceRunningTasks(clusterName, serviceName string) ([]*ecs.Task, error)
 	DefaultCluster() (string, error)
+	Service(clusterName, serviceName string) (*ecs.Service, error)
+	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
+	RunningTasks(cluster string) ([]*ecs.Task, error)
+	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
+	ServiceRunningTasks(clusterName, serviceName string) ([]*ecs.Task, error)
+	StoppedServiceTasks(cluster, service string) ([]*ecs.Task, error)
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
-	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
-	StoppedServiceTasks(cluster, service string) ([]*ecs.Task, error)
+	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
 }
 
 type stepFunctionsClient interface {
@@ -76,24 +79,20 @@ func (c Client) ClusterARN(app, env string) (string, error) {
 	return c.clusterARN(app, env)
 }
 
-// ServiceARN returns the ARN of an ECS service created with Copilot.
-func (c Client) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
-	return c.serviceARN(app, env, svc)
+// ForceUpdateService forces a new update for an ECS service given Copilot service info.
+func (c Client) ForceUpdateService(app, env, svc string) error {
+	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
+	if err != nil {
+		return err
+	}
+	return c.ecsClient.UpdateService(clusterName, serviceName, ecs.WithForceUpdate())
 }
 
 // DescribeService returns the description of an ECS service given Copilot service info.
 func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
-	svcARN, err := c.ServiceARN(app, env, svc)
+	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
 	if err != nil {
 		return nil, err
-	}
-	clusterName, err := svcARN.ClusterName()
-	if err != nil {
-		return nil, fmt.Errorf("get cluster name: %w", err)
-	}
-	serviceName, err := svcARN.ServiceName()
-	if err != nil {
-		return nil, fmt.Errorf("get service name: %w", err)
 	}
 	tasks, err := c.ecsClient.ServiceRunningTasks(clusterName, serviceName)
 	if err != nil {
@@ -110,6 +109,19 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 		Tasks:        tasks,
 		StoppedTasks: stoppedTasks,
 	}, nil
+}
+
+// LastUpdatedAt returns the last updated time of the ECS service.
+func (c Client) LastUpdatedAt(app, env, svc string) (time.Time, error) {
+	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
+	if err != nil {
+		return time.Time{}, err
+	}
+	detail, err := c.ecsClient.Service(clusterName, serviceName)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("get ECS service %s: %w", serviceName, err)
+	}
+	return aws.TimeValue(detail.Deployments[0].UpdatedAt), nil
 }
 
 // ListActiveAppEnvTasksOpts contains the parameters for ListActiveAppEnvTasks.
@@ -384,6 +396,22 @@ func (c Client) clusterARN(app, env string) (string, error) {
 		return "", fmt.Errorf("more than one cluster is found in environment %s", env)
 	}
 	return clusters[0].ARN, nil
+}
+
+func (c Client) fetchAndParseServiceARN(app, env, svc string) (cluster, service string, err error) {
+	svcARN, err := c.serviceARN(app, env, svc)
+	if err != nil {
+		return "", "", err
+	}
+	clusterName, err := svcARN.ClusterName()
+	if err != nil {
+		return "", "", fmt.Errorf("get cluster name: %w", err)
+	}
+	serviceName, err := svcARN.ServiceName()
+	if err != nil {
+		return "", "", fmt.Errorf("get service name: %w", err)
+	}
+	return clusterName, serviceName, nil
 }
 
 func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {

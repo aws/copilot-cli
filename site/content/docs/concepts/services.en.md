@@ -25,13 +25,26 @@ When you're setting up a service, Copilot will ask you about what kind of servic
 If you want your service to serve internet traffic then you have two options:
 
 * "Request-Driven Web Service" will provision an AWS App Runner Service to run your service. 
-* "Load Balanced Web Service" will provision an Application Load Balancer, security groups, an ECS service on Fargate to run your service.
+* "Load Balanced Web Service" will provision an Application Load Balancer, a Network Load Balancer or both, along with 
+  security groups, an ECS service on Fargate to run your service.
 
 #### Request-Driven Web Service
-An AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes.
+An AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. 
+This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes.
+
+Unlike ECS, App Runner services are not connected by default to a VPC. In order to route egress traffic through a VPC, 
+you can configure the [`network`](../manifest/rd-web-service.en.md#network) field in the manifest.
 
 #### Load Balanced Web Service
-An ECS Service running tasks on Fargate with an Application Load Balancer as ingress. This option is suitable for HTTP services with steady request volumes that need to access resources in a VPC or require advanced configuration.
+An ECS Service running tasks on Fargate with an Application Load Balancer, a Network Load Balancer or both, as ingress. 
+This option is suitable for HTTP or TCP services with steady request volumes that need to access resources in a VPC or 
+require advanced configuration. 
+
+Note that an Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Services
+within the environment. To learn more, go [here](environments.en.md#load-balancers-and-dns). In contrast, a Network Load Balancer 
+is a service-level resource, and hence is not shared across services.
+
+Below is a diagram for a Load Balanced Web Service that involves an Application Load Balancer only.
 
 ![lb-web-service-infra](https://user-images.githubusercontent.com/879348/86045951-39762880-ba01-11ea-9a47-fc9278600154.png)
 
@@ -40,6 +53,16 @@ If you want a service that can't be accessed externally, but only from other ser
 
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
 
+### Worker Service
+__Worker Services__ allow you to implement asynchronous service-to-service communication with [pub/sub architectures](https://aws.amazon.com/pub-sub-messaging/). 
+Your microservices in your application can `publish` events to [Amazon SNS topics](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) that can then be consumed by a "Worker Service".  
+
+A Worker Service is composed of:  
+
+  * One or more [Amazon SQS queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html) to process notifications published to the topics, as well as [dead-letter queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html) to handle failures. 
+  * An Amazon ECS service on AWS Fargate that has permission to poll the SQS queues and process the messages asynchronously.
+
+![worker-service-infra](https://user-images.githubusercontent.com/25392995/131420719-c48efae4-bb9d-410d-ac79-6fbcc64ead3d.png)
 
 ## Config and the Manifest
 

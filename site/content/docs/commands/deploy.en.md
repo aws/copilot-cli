@@ -3,7 +3,7 @@
 $ copilot deploy
 ```
 
-## What does it do? 
+## What does it do?
 
 This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot job deploy`](../commands/job-deploy.en.md) under the hood. The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
 
@@ -18,12 +18,22 @@ This command is used to run either [`copilot svc deploy`](../commands/svc-deploy
 ```bash
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
+      --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service or job.
+      --no-rollback bool               Optional. Disable automatic stack
+                                       rollback in case of deployment failure.
+                                       We do not recommend using this flag for a
+                                       production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --tag string                     Optional. The container image tag.
 ```
+
+!!!info
+The `--no-rollback` flag is **not** recommended while deploying to a production environment as it may introduce service downtime.
+If the deployment fails when automatic stack rollback is disabled, you may be required to manually start the stack
+rollback of the stack via the AWS console or AWS CLI before the next deployment.
 
 ## Examples
 

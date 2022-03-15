@@ -4,89 +4,102 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
-	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/spf13/cobra"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/cobra"
 )
 
 type deployJobOpts struct {
 	deployWkldVars
 
-	store              store
-	ws                 wsJobDirReader
-	unmarshal          func(in []byte) (manifest.WorkloadManifest, error)
-	cmd                runner
-	addons             templater
-	appCFN             appResourcesGetter
-	jobCFN             cloudformation.CloudFormation
-	imageBuilderPusher imageBuilderPusher
-	sessProvider       sessionProvider
-	s3                 artifactUploader
-	envUpgradeCmd      actionCommand
-	endpointGetter     endpointGetter
+	store           store
+	ws              wsWlDirReader
+	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
+	newInterpolator func(app, env string) interpolator
+	cmd             runner
+	sessProvider    *sessions.Provider
+	envUpgradeCmd   actionCommand
+	newJobDeployer  func() (workloadDeployer, error)
 
-	spinner progress
-	sel     wsSelector
-	prompt  prompter
+	sel wsSelector
 
-	targetApp         *config.Application
-	targetEnvironment *config.Environment
-	targetJob         *config.Workload
-	imageDigest       string
-	buildRequired     bool
+	// cached variables
+	targetApp       *config.Application
+	targetEnv       *config.Environment
+	appliedManifest interface{}
+	rootUserARN     string
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("job deploy"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
-	if err != nil {
-		return nil, err
-	}
-	return &deployJobOpts{
+	opts := &deployJobOpts{
 		deployWkldVars: vars,
 
-		store:        store,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:       prompter,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessions.NewProvider(),
-	}, nil
+		store:           store,
+		ws:              ws,
+		unmarshal:       manifest.UnmarshalWorkload,
+		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
+		sessProvider:    sessProvider,
+		newInterpolator: newManifestInterpolator,
+		cmd:             exec.NewCmd(),
+	}
+	opts.newJobDeployer = func() (workloadDeployer, error) {
+		// NOTE: Defined as a struct member to facilitate unit testing.
+		return newJobDeployer(opts)
+	}
+	return opts, nil
+}
+
+func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
+	var err error
+	var deployer workloadDeployer
+	in := deploy.WorkloadDeployerInput{
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             o.targetApp,
+		Env:             o.targetEnv,
+		ImageTag:        o.imageTag,
+		Mft:             o.appliedManifest,
+	}
+	switch t := o.appliedManifest.(type) {
+	case *manifest.ScheduledJob:
+		deployer, err = deploy.NewJobDeployer(&in)
+	default:
+		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("initiate workload deployer: %w", err)
+	}
+	return deployer, nil
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -120,258 +133,115 @@ func (o *deployJobOpts) Ask() error {
 
 // Execute builds and pushes the container image for the job.
 func (o *deployJobOpts) Execute() error {
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
-	env, err := targetEnv(o.store, o.appName, o.envName)
+	if !o.clientConfigured {
+		if err := o.configureClients(); err != nil {
+			return err
+		}
+	}
+	if err := o.envUpgradeCmd.Execute(); err != nil {
+		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.envName, err)
+	}
+	mft, err := workloadManifest(&workloadManifestInput{
+		name:         o.name,
+		appName:      o.appName,
+		envName:      o.envName,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		ws:           o.ws,
+		unmarshal:    o.unmarshal,
+	})
 	if err != nil {
 		return err
 	}
-	o.targetEnvironment = env
+	o.appliedManifest = mft
+	deployer, err := o.newJobDeployer()
+	if err != nil {
+		return err
+	}
+	serviceInRegion, err := deployer.IsServiceAvailableInRegion(o.targetEnv.Region)
+	if err != nil {
+		return fmt.Errorf("check if Scheduled Job(s) is available in region %s: %w", o.targetEnv.Region, err)
+	}
 
+	if !serviceInRegion {
+		log.Warningf(`Scheduled Job might not be available in region %s; proceed with caution.
+`, o.targetEnv.Region)
+	}
+	uploadOut, err := deployer.UploadArtifacts()
+	if err != nil {
+		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
+	}
+	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
+		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
+			ImageDigest: uploadOut.ImageDigest,
+			EnvFileARN:  uploadOut.EnvFileARN,
+			AddonsURL:   uploadOut.AddonsURL,
+			RootUserARN: o.rootUserARN,
+			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
+		},
+		Options: deploy.Options{
+			DisableRollback: o.disableRollback,
+		},
+	}); err != nil {
+		if o.disableRollback {
+			stackName := stack.NameForService(o.targetApp.Name, o.targetEnv.Name, o.name)
+			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
+			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment. To debug, you can visit the AWS console to inspect the errors.
+After fixing the deployment, you can:
+1. Run %s to rollback the deployment.
+2. Run %s to make a new deployment.
+`, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot job deploy"))
+		}
+		return fmt.Errorf("deploy job %s to environment %s: %w", o.name, o.envName, err)
+	}
+	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
+	return nil
+}
+
+func (o *deployJobOpts) configureClients() error {
+	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return err
+	}
+	o.targetEnv = env
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return err
 	}
 	o.targetApp = app
 
-	job, err := o.store.GetJob(o.appName, o.name)
-	if err != nil {
-		return fmt.Errorf("get job configuration: %w", err)
-	}
-	o.targetJob = job
-
-	if err := o.configureClients(); err != nil {
-		return err
-	}
-
-	if err := o.envUpgradeCmd.Execute(); err != nil {
-		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.targetEnvironment.Name, err)
-	}
-
-	if err := o.configureContainerImage(); err != nil {
-		return err
-	}
-
-	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
-	if err != nil {
-		return err
-	}
-
-	return o.deployJob(addonsURL)
-}
-
-// pushAddonsTemplateToS3Bucket generates the addons template for the job and pushes it to S3.
-// If the job doesn't have any addons, it returns the empty string and no errors.
-// If the job has addons, it returns the URL of the S3 object storing the addons template.
-func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() (string, error) {
-	template, err := o.addons.Template()
-	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if errors.As(err, &notFoundErr) {
-			// addons doesn't exist for job, the url is empty.
-			return "", nil
-		}
-		return "", fmt.Errorf("retrieve addons template: %w", err)
-	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return "", fmt.Errorf("get app resources: %w", err)
-	}
-
-	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
-	if err != nil {
-		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
-	}
-	return url, nil
-}
-
-func (o *deployJobOpts) configureClients() error {
-	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
-	if err != nil {
-		return fmt.Errorf("create ECR session with region %s: %w", o.targetEnvironment.Region, err)
-	}
-
-	envSession, err := o.sessProvider.FromRole(o.targetEnvironment.ManagerRoleARN, o.targetEnvironment.Region)
-	if err != nil {
-		return fmt.Errorf("assuming environment manager role: %w", err)
-	}
-
-	// ECR client against tools account profile AND target environment region
-	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
-	registry := ecr.New(defaultSessEnvRegion)
-	o.imageBuilderPusher, err = repository.New(repoName, registry)
-	if err != nil {
-		return fmt.Errorf("initiate image builder pusher: %w", err)
-	}
-
-	o.s3 = s3.New(defaultSessEnvRegion)
-
-	// CF client against env account profile AND target environment region
-	o.jobCFN = cloudformation.New(envSession)
-	o.endpointGetter, err = describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-		App:         o.appName,
-		Env:         o.envName,
-		ConfigStore: o.store,
-	})
-	if err != nil {
-		return fmt.Errorf("initiate environment describer: %w", err)
-	}
-
-	addonsSvc, err := addon.New(o.name)
-	if err != nil {
-		return fmt.Errorf("initiate addons service: %w", err)
-	}
-	o.addons = addonsSvc
-
 	// client to retrieve an application's resources created with CloudFormation
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
-	o.appCFN = cloudformation.New(defaultSess)
 
 	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
 		appName: o.appName,
-		name:    o.targetEnvironment.Name,
+		name:    env.Name,
 	})
 	if err != nil {
 		return fmt.Errorf("new env upgrade command: %v", err)
 	}
 	o.envUpgradeCmd = cmd
+
+	// client to retrieve caller identity.
+	caller, err := identity.New(defaultSess).Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+	o.rootUserARN = caller.RootUserARN
+
 	return nil
 }
 
-func (o *deployJobOpts) configureContainerImage() error {
-	job, err := o.manifest()
-	if err != nil {
-		return err
-	}
-	required, err := manifest.JobDockerfileBuildRequired(job)
-	if err != nil {
-		return err
-	}
-	if !required {
-		return nil
-	}
-	// If it is built from local Dockerfile, build and push to the ECR repo.
-	buildArg, err := o.dfBuildArgs(job)
-	if err != nil {
-		return err
-	}
-	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
-	if err != nil {
-		return fmt.Errorf("build and push image: %w", err)
-	}
-	o.imageDigest = digest
-	o.buildRequired = true
-	return nil
-}
-
-func (o *deployJobOpts) dfBuildArgs(job interface{}) (*exec.BuildArguments, error) {
-	copilotDir, err := o.ws.CopilotDirPath()
-	if err != nil {
-		return nil, fmt.Errorf("get copilot directory: %w", err)
-	}
-	return buildArgs(o.name, o.imageTag, copilotDir, job)
-}
-
-func (o *deployJobOpts) deployJob(addonsURL string) error {
-	conf, err := o.stackConfiguration(addonsURL)
-	if err != nil {
-		return err
-	}
-	if err := o.jobCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
-		return fmt.Errorf("deploy job: %w", err)
-	}
-	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
-	return nil
-}
-
-func (o *deployJobOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
-	mft, err := o.manifest()
-	if err != nil {
-		return nil, err
-	}
-	rc, err := o.runtimeConfig(addonsURL)
-	if err != nil {
-		return nil, err
-	}
-	var conf cloudformation.StackConfiguration
-	switch t := mft.(type) {
-	case *manifest.ScheduledJob:
-		conf, err = stack.NewScheduledJob(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
-	default:
-		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
-	}
-	return conf, nil
-}
-
-func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
-	endpoint, err := o.endpointGetter.ServiceDiscoveryEndpoint()
-	if err != nil {
-		return nil, err
-	}
-	if !o.buildRequired {
-		return &stack.RuntimeConfig{
-			AddonsTemplateURL:        addonsURL,
-			AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
-			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                o.targetApp.AccountID,
-			Region:                   o.targetEnvironment.Region,
-		}, nil
-	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
-	}
-	repoURL, ok := resources.RepositoryURLs[o.name]
-	if !ok {
-		return nil, &errRepoNotFound{
-			wlName:       o.name,
-			envRegion:    o.targetEnvironment.Region,
-			appAccountID: o.targetApp.AccountID,
-		}
-	}
-	return &stack.RuntimeConfig{
-		Image: &stack.ECRImage{
-			RepoURL:  repoURL,
-			ImageTag: o.imageTag,
-			Digest:   o.imageDigest,
-		},
-		AddonsTemplateURL:        addonsURL,
-		AdditionalTags:           tags.Merge(o.targetApp.Tags, o.resourceTags),
-		ServiceDiscoveryEndpoint: endpoint,
-		AccountID:                o.targetApp.AccountID,
-		Region:                   o.targetEnvironment.Region,
-	}, nil
-}
-
-func (o *deployJobOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadJobManifest(o.name)
-	if err != nil {
-		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
-	}
-	mft, err := o.unmarshal(raw)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal job %s manifest: %w", o.name, err)
-	}
-	envMft, err := mft.ApplyEnv(o.envName)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
-	}
-	return envMft, nil
-}
-
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deployJobOpts) RecommendedActions() []string {
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *deployJobOpts) RecommendActions() error {
 	return nil
 }
 
 func (o *deployJobOpts) validateJobName() error {
-	names, err := o.ws.JobNames()
+	names, err := o.ws.ListJobs()
 	if err != nil {
 		return fmt.Errorf("list jobs in the workspace: %w", err)
 	}
@@ -384,8 +254,8 @@ func (o *deployJobOpts) validateJobName() error {
 }
 
 func (o *deployJobOpts) validateEnvName() error {
-	if _, err := targetEnv(o.store, o.appName, o.envName); err != nil {
-		return err
+	if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
 	return nil
 }
@@ -433,16 +303,7 @@ func buildJobDeployCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
@@ -450,6 +311,7 @@ func buildJobDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 
 	return cmd
 }

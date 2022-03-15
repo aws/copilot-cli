@@ -1,0 +1,449 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodePipeline for {{$.AppName}}
+Resources:
+  {{- if isCodeStarConnection .Source}}
+  {{if eq .Source.ConnectionARN ""}}
+  SourceConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: {{.Source.ConnectionName}}
+      ProviderType: {{.Source.ProviderName}}
+  {{- end}}
+  {{- end}}
+  BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            {{- range $stage := .Stages}}
+            - Effect: Allow
+              Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
+              Action:
+              - sts:AssumeRole
+            {{- end }}
+  BuildProjectPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: BuildProjectRole
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodeBuildPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - codebuild:CreateReportGroup
+              - codebuild:CreateReport
+              - codebuild:UpdateReport
+              - codebuild:BatchPutTestCases
+              - codebuild:BatchPutCodeCoverages
+            Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-{{$.AppName}}-*
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+            # TODO: This might not be necessary. We may only need the bucket
+            # that is in the same region as the pipeline.
+            # Loop through all the artifact buckets created in the stackset
+            Resource:{{range .ArtifactBuckets}}
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+          - Effect: Allow
+            Action:
+              # TODO: scope this down if possible
+              - kms:*
+            # TODO: This might not be necessary. We may only need the KMS key
+            # that is in the same region as the pipeline.
+            # Loop through all the KMS keys used to en/decrypt artifacts
+            # across (cross-regional) pipeline stages, with each stage
+            # backed by a (regional) S3 bucket.
+            Resource:{{range .ArtifactBuckets}}
+              - {{.KeyArn}}{{end}}
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - ecr:GetAuthorizationToken
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - ecr:DescribeImageScanFindings
+              - ecr:GetLifecyclePolicyPreview
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:DescribeImages
+              - ecr:ListTagsForResource
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetLifecyclePolicy
+              - ecr:GetRepositoryPolicy
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+            Resource: '*'
+            Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.AppName}}}}
+          {{- if ne .Source.ProviderName "GitHubV1" }} {{- if eq .Source.OutputArtifactFormat "CODEBUILD_CLONE_REF" }}
+          # Add the policy needed to use CODEBUILD_CLONE_REF.
+          {{- if eq .Source.ProviderName "CodeCommit" }}
+          - Effect: Allow
+            Action:
+              - codecommit:GitPull
+            Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:{{.Source.Repository}}'
+          {{- else if isCodeStarConnection .Source }}
+          - Effect: Allow
+            Action:
+              - codestar-connections:UseConnection
+            {{- if eq .Source.ConnectionARN ""}}
+            Resource: !Ref SourceConnection
+            {{- else}}
+            Resource: {{$.Source.Connection}}
+            {{- end }} {{/* endif eq .Source.ConnectionARN "" */}}
+          {{- end }} {{/* if eq .Source.ProviderName "CodeCommit" */}}
+          {{- end }} {{/* endif ne .Source.OutputArtifactFormat "" */}}{{- end }} {{/* endif ne .Source.ProviderName "GitHubV1" */}}
+      Roles:
+        - !Ref BuildProjectRole
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-BuildProject
+      Description: !Sub Build for ${AWS::StackName}
+      # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
+      # created in the same region as this pipeline.
+      EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      {{- if eq .Build.EnvironmentType "LINUX_CONTAINER"}}
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      {{- else }}
+      Cache:
+        Type: "NO_CACHE"
+      {{- end }}
+      Environment:
+        Type: {{.Build.EnvironmentType}}
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: {{.Build.Image}}
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: copilot/buildspec.yml
+      TimeoutInMinutes: 60
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  PipelineRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodepipelinePolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - codepipeline:*
+              - codecommit:GetBranch
+              - codecommit:GetCommit
+              - codecommit:UploadArchive
+              - codecommit:GetUploadArchiveStatus
+              - codecommit:CancelUploadArchive
+{{- if eq .Source.ProviderName "CodeCommit" }}
+{{- if ne .Source.OutputArtifactFormat "" }}
+              - codecommit:GetRepository
+{{- end }}
+{{- end }}
+              - iam:ListRoles
+              - cloudformation:Describe*
+              - cloudFormation:List*
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:SetStackPolicy
+              - cloudformation:ValidateTemplate
+              - iam:PassRole
+              - s3:ListAllMyBuckets
+              - s3:GetBucketLocation
+            Resource:
+              - "*"
+          {{- if isCodeStarConnection .Source}}
+          - Effect: Allow
+            Action:
+              - codestar-connections:CreateConnection
+              - codestar-connections:DeleteConnection
+              - codestar-connections:GetConnection
+              - codestar-connections:ListConnections
+              - codestar-connections:GetIndividualAccessToken
+              - codestar-connections:GetInstallationUrl
+              - codestar-connections:ListInstallationTargets
+              - codestar-connections:StartOAuthHandshake
+              - codestar-connections:UpdateConnectionInstallation
+              - codestar-connections:UseConnection
+              - codestar-connections:RegisterAppCode
+              - codestar-connections:StartAppRegistrationHandshake
+              - codestar-connections:StartUploadArchiveToS3
+              - codestar-connections:GetUploadArchiveToS3Status
+              - codestar-connections:PassConnection
+              - codestar-connections:PassedToService
+            Resource:
+              {{- if eq .Source.ConnectionARN ""}}
+              - !Ref SourceConnection
+              {{- else}}
+              - {{$.Source.Connection}}
+              {{- end}}
+          {{- end}}
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:{{range .ArtifactBuckets}}
+              - {{.KeyArn}}{{end}}
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+              {{- if isCodeStarConnection .Source}}
+              - s3:PutObjectAcl
+              - s3:GetObjectAcl
+              {{- end}}
+            Resource:{{range .ArtifactBuckets}}
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource:{{range $stage := .Stages}}
+              - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
+      Roles:
+        - !Ref PipelineRole
+{{- range $index, $stage := .Stages}}
+  {{- if $stage.TestCommands}}
+  BuildTestCommands{{logicalIDSafe $stage.Name}}:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+                runtime-versions:
+                  docker: 18
+            build:
+              commands:
+              {{- range $index, $command := $stage.TestCommands}}
+                - {{$command}}
+              {{- end}}
+  {{- end}}
+{{- end}}
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - PipelineRole
+      - PipelineRolePolicy
+    Properties:
+      ArtifactStores:{{range .ArtifactBuckets}}
+        - Region: {{.Region}}
+          ArtifactStore:
+            Type: S3
+            Location: {{.BucketName}}
+            EncryptionKey:
+              Id: {{.KeyArn}}
+              Type: KMS{{end}}
+      RoleArn: !GetAtt PipelineRole.Arn
+      Name: !Ref AWS::StackName
+      Stages:
+        {{- if eq .Source.ProviderName "GitHubV1"}}
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-{{$.AppName}}
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                Owner: {{$.Source.Owner}}
+                Repo: {{$.Source.Repository}}
+                Branch: {{$.Source.Branch}}
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
+                # Use the *entire* SecretString with version AWSCURRENT
+                OAuthToken: !Sub
+                  - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
+                  - SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}}
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        {{- else if isCodeStarConnection .Source}}
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-{{$.AppName}}
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeStarSourceConnection
+              Configuration:
+                ConnectionArn:
+                {{- if eq .Source.ConnectionARN ""}}
+                  !Ref SourceConnection
+                {{- else}}
+                  {{$.Source.Connection}}
+                {{- end}}
+                FullRepositoryId: {{$.Source.Repository}}
+                BranchName: {{$.Source.Branch}}
+                {{- if ne .Source.OutputArtifactFormat "" }}
+                OutputArtifactFormat: {{$.Source.OutputArtifactFormat}}
+                {{- end}}
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        {{- else if eq .Source.ProviderName "CodeCommit"}}
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-{{$.AppName}}
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeCommit
+              Configuration:
+                RepositoryName: {{$.Source.Repository}}
+                BranchName: {{$.Source.Branch}}
+                {{- if ne .Source.OutputArtifactFormat "" }}
+                OutputArtifactFormat: {{$.Source.OutputArtifactFormat}}
+                {{- end}}
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        {{- end }}
+        - Name: Build
+          Actions:
+          - Name: Build
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref BuildProject
+            RunOrder: 1
+            InputArtifacts:
+              - Name: SCCheckoutArtifact
+            OutputArtifacts:
+              - Name: BuildOutput
+        {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$numWorkloads := len $stage.LocalWorkloads}}{{if gt $numWorkloads 0}}
+        - Name: DeployTo-{{$stage.Name}}
+          Actions:{{if $stage.RequiresApproval }}
+            - Name: ApprovePromotionTo-{{$stage.Name}}
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              RunOrder: 1{{end}}{{range $workload := $stage.LocalWorkloads}}
+            - Name: CreateOrUpdate-{{$workload}}-{{$stage.Name}}
+              Region: {{$stage.Region}}
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
+                ChangeSetName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
+                ActionMode: CREATE_UPDATE
+                StackName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+                TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $workload}}
+                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $workload}}
+                # The ARN of the IAM role (in the env account) that
+                # AWS CloudFormation assumes when it operates on resources
+                # in a stack in an environment account.
+                RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+              # The ARN of the environment manager IAM role (in the env
+              # account) that performs the declared action. This is assumed
+              # through the roleArn for the pipeline.
+              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{if $stage.TestCommands}}
+            - Name: TestCommands
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref BuildTestCommands{{logicalIDSafe $stage.Name}}
+              RunOrder: 3
+              InputArtifacts:
+                - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
+{{- if isCodeStarConnection .Source}}
+Outputs:
+  PipelineConnectionARN:
+    Description: "ARN of CodeStar Connections connection"
+    Value:
+    {{- if eq .Source.ConnectionARN ""}}
+      !Ref SourceConnection
+    {{- else}}
+      {{$.Source.Connection}}
+    {{- end}}
+{{- end}}

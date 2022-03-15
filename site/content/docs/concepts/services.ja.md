@@ -40,9 +40,22 @@ Service でインターネット側からのリクエストを捌きたいです
 ### Backend Service
 
 VPC 外部からアクセスさせる必要はないが、Application 内の他の Service からはアクセスできる必要があるという場合は、 __Backend Service__ を
-作りましょう。Copilot は AWS Fargate で実行される ECS サービスを作成しますが、インターネットに向けて解放されたエンドポイントを作成することはありません。
+作りましょう。Copilot は AWS Fargate で実行される ECS サービスを作成しますが、インターネットに向けて開放されたエンドポイントを作成することはありません。
 
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
+
+### Worker Service
+__Worker Services__ は [pub/sub アーキテクチャ](https://aws.amazon.com/pub-sub-messaging/)による非同期のサービス間通信を実装することができます。
+
+アプリケーション内のマイクロサービスはイベントを [Amazon SNS トピック](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) に `パブリッシュ` することができ、それを "Worker Service" がサブスクライバーとして受け取ることができます。
+
+Worker Service は次の要素で構成されます。
+
+  * トピックにパブリッシュされた通知を処理する 1 つまたは複数の [Amazon SQS キュー](https://docs.aws.amazon.com/ja_jp/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html)と、失敗した通知を処理する [デッドレターキュー](https://docs.aws.amazon.com/ja_jp/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html)
+  * SQS キューをポーリングし、メッセージを非同期で処理する権限を持つ AWS Fargate 上の Amazon ECS サービス
+
+
+![worker-service-infra](https://user-images.githubusercontent.com/25392995/131420719-c48efae4-bb9d-410d-ac79-6fbcc64ead3d.png)
 
 ## Manifest と設定
 <!-- textlint-disable ja-technical-writing/ja-no-weak-phrase -->

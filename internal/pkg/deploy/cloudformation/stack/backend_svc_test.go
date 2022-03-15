@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -72,9 +71,19 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{err: errors.New("some error")}
+				svc.addons = mockAddons{tplErr: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
+		},
+		"unexpected addons parameter parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
+				svc.addons = mockAddons{paramsErr: errors.New("some error")}
+			},
+			wantedErr: fmt.Errorf("parse addons parameters for %s: %w", testServiceName, errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
 			setUpManifest: func(svc *BackendService) {
@@ -91,7 +100,7 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -108,7 +117,7 @@ Outputs:
 				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
 				badRange := manifest.IntRangeBand("badRange")
 				testBackendSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
-					Range: &manifest.Range{
+					Range: manifest.Range{
 						Value: &badRange,
 					},
 				}
@@ -119,7 +128,7 @@ Outputs:
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -141,7 +150,7 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   AdditionalResourcesPolicy:
@@ -161,7 +170,7 @@ Outputs:
 						Dockerfile: testDockerfile,
 					},
 					Port: 8080,
-					HealthCheck: &manifest.ContainerHealthCheck{
+					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    &testInterval,
 						Retries:     &testRetries,
@@ -169,11 +178,11 @@ Outputs:
 						StartPeriod: &testStartPeriod,
 					},
 				})
-				svc.manifest.EntryPoint = &manifest.EntryPointOverride{
+				svc.manifest.EntryPoint = manifest.EntryPointOverride{
 					String:      nil,
 					StringSlice: []string{"enter", "from"},
 				}
-				svc.manifest.Command = &manifest.CommandOverride{
+				svc.manifest.Command = manifest.CommandOverride{
 					String:      nil,
 					StringSlice: []string{"here"},
 				}
@@ -185,8 +194,8 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.WorkloadOpts{
 					WorkloadType: manifest.BackendServiceType,
-					HealthCheck: &ecs.HealthCheck{
-						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
+					HealthCheck: &template.ContainerHealthCheck{
+						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 						Interval:    aws.Int64(5),
 						Retries:     aws.Int64(3),
 						StartPeriod: aws.Int64(0),
@@ -199,7 +208,7 @@ Outputs:
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},
 					},
-					Network: &template.NetworkOpts{
+					Network: template.NetworkOpts{
 						AssignPublicIP: template.DisablePublicIP,
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},
@@ -208,7 +217,7 @@ Outputs:
 					Command:    []string{"here"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
-				svc.addons = mockTemplater{
+				svc.addons = mockAddons{
 					tpl: `
 Resources:
   MyTable:
@@ -216,6 +225,7 @@ Resources:
 Outputs:
   MyTable:
     Value: !Ref MyTable`,
+					params: "",
 				}
 			},
 			wantedTemplate: "template",
@@ -240,12 +250,14 @@ Outputs:
 							},
 						},
 					},
+					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
 			}
 
 			if tc.setUpManifest != nil {
 				tc.setUpManifest(conf)
-				conf.manifest.Network.VPC.Placement = aws.String(manifest.PrivateSubnetPlacement)
+				privatePlacement := manifest.Placement(manifest.PrivateSubnetPlacement)
+				conf.manifest.Network.VPC.Placement = &privatePlacement
 				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
 
@@ -272,7 +284,7 @@ func TestBackendService_Parameters(t *testing.T) {
 			Dockerfile: testDockerfile,
 		},
 		Port: 8080,
-		HealthCheck: &manifest.ContainerHealthCheck{
+		HealthCheck: manifest.ContainerHealthCheck{
 			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 			Interval:    &testInterval,
 			Retries:     &testRetries,
@@ -339,6 +351,10 @@ func TestBackendService_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(""),
 		},
 	}, params)

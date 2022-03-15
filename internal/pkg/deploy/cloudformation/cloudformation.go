@@ -28,8 +28,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
-	"github.com/aws/copilot-cli/templates"
-	"github.com/gobuffalo/packd"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -48,6 +46,7 @@ type StackConfiguration interface {
 	Template() (string, error)
 	Parameters() ([]*sdkcloudformation.Parameter, error)
 	Tags() []*sdkcloudformation.Tag
+	SerializedParameters() (string, error)
 }
 
 type ecsClient interface {
@@ -87,7 +86,7 @@ type codePipelineClient interface {
 }
 
 type s3Client interface {
-	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
+	Upload(bucket, fileName string, data io.Reader) (string, error)
 }
 
 type stackSetClient interface {
@@ -108,7 +107,6 @@ type CloudFormation struct {
 	ecsClient      ecsClient
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient
-	box            packd.Box
 	s3Client       s3Client
 	region         string
 }
@@ -126,7 +124,6 @@ func New(sess *session.Session) CloudFormation {
 			}))
 		},
 		appStackSet: stackset.New(sess),
-		box:         templates.Box(),
 		s3Client:    s3.New(sess),
 		region:      aws.StringValue(sess.Config.Region),
 	}

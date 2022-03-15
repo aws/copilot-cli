@@ -10,12 +10,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -49,6 +52,8 @@ const (
 
 	envInitVPCCIDRPrompt         = "What VPC CIDR would you like to use?"
 	envInitVPCCIDRPromptHelp     = "CIDR used for your VPC. For example: 10.1.0.0/16"
+	envInitAdjustAZPrompt        = "Which availability zones would you like to use?"
+	envInitAdjustAZPromptHelp    = "Availability zone names that span your resources. For example: us-east-1a,us-east1b,us-east-1c"
 	envInitPublicCIDRPrompt      = "What CIDR would you like to use for your public subnets?"
 	envInitPublicCIDRPromptHelp  = "CIDRs used for your public subnets. For example: 10.1.0.0/24,10.1.1.0/24"
 	envInitPrivateCIDRPrompt     = "What CIDR would you like to use for your private subnets?"
@@ -72,7 +77,7 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 var (
 	envInitAppNamePrompt                  = fmt.Sprintf("In which %s would you like to create the environment?", color.Emphasize("application"))
 	envInitDefaultConfigSelectOption      = "Yes, use default."
-	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges)."
+	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges, AZs)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
 	envInitCustomizedEnvTypes             = []string{envInitDefaultConfigSelectOption, envInitAdjustEnvResourcesSelectOption, envInitImportEnvResourcesSelectOption}
 )
@@ -92,6 +97,7 @@ func (v importVPCVars) isSet() bool {
 
 type adjustVPCVars struct {
 	CIDR               net.IPNet
+	AZs                []string
 	PublicSubnetCIDRs  []string
 	PrivateSubnetCIDRs []string
 }
@@ -100,7 +106,12 @@ func (v adjustVPCVars) isSet() bool {
 	if v.CIDR.String() != emptyIPNet.String() {
 		return true
 	}
-	return len(v.PublicSubnetCIDRs) != 0 || len(v.PrivateSubnetCIDRs) != 0
+	for _, arr := range [][]string{v.AZs, v.PublicSubnetCIDRs, v.PrivateSubnetCIDRs} {
+		if len(arr) != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 type tempCredsVars struct {
@@ -113,6 +124,16 @@ func (v tempCredsVars) isSet() bool {
 	return v.AccessKeyID != "" && v.SecretAccessKey != ""
 }
 
+type telemetryVars struct {
+	EnableContainerInsights bool
+}
+
+func (v telemetryVars) toConfig() *config.Telemetry {
+	return &config.Telemetry{
+		EnableContainerInsights: v.EnableContainerInsights,
+	}
+}
+
 type initEnvVars struct {
 	appName       string
 	name          string // Name for the environment.
@@ -122,6 +143,7 @@ type initEnvVars struct {
 
 	importVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
 	adjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+	telemetry telemetryVars // Configure observability and monitoring settings.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -146,22 +168,20 @@ type initEnvOpts struct {
 	selCreds     credsSelector
 	selApp       appSelector
 	appCFN       appResourcesGetter
-	newS3        func(string) (zipAndUploader, error)
+	newS3        func(string) (uploader, error)
 	uploader     customResourcesUploader
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, err
-	}
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env init"))
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("read named profiles: %w", err)
@@ -184,7 +204,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		selApp:   selector.NewSelect(prompt.New(), store),
 		uploader: template.New(),
 		appCFN:   deploycfn.New(defaultSession),
-		newS3: func(region string) (zipAndUploader, error) {
+		newS3: func(region string) (uploader, error) {
 			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, err
@@ -198,6 +218,9 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 func (o *initEnvOpts) Validate() error {
 	if o.name != "" {
 		if err := validateEnvironmentName(o.name); err != nil {
+			return err
+		}
+		if err := o.validateDuplicateEnv(); err != nil {
 			return err
 		}
 	}
@@ -279,7 +302,15 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 4. Start creating the CloudFormation stack for the environment.
-	if err := o.deployEnv(app, urls); err != nil {
+	if resources.S3Bucket == "" {
+		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app %s. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion, app.Name)
+		return fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
+	}
+	partition, err := partitions.Region(envRegion).Partition()
+	if err != nil {
+		return err
+	}
+	if err := o.deployEnv(app, s3.FormatARN(partition.ID(), resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
 		return err
 	}
 
@@ -290,6 +321,7 @@ func (o *initEnvOpts) Execute() error {
 	}
 	env.Prod = o.isProduction
 	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
+	env.Telemetry = o.telemetry.toConfig()
 
 	// 6. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {
@@ -300,8 +332,8 @@ func (o *initEnvOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initEnvOpts) RecommendedActions() []string {
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initEnvOpts) RecommendActions() error {
 	return nil
 }
 
@@ -329,13 +361,17 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
 	if o.importVPC.isSet() {
-		// We allow 0 or 2+ public subnets.
+		// Allow passing in VPC without subnets, but error out early for too few subnets-- we won't prompt the user to select more of one type if they pass in any.
 		if len(o.importVPC.PublicSubnetIDs) == 1 {
-			return fmt.Errorf("at least two public subnets must be imported to enable Load Balancing")
+			return errors.New("at least two public subnets must be imported to enable Load Balancing")
 		}
-		// We require 2+ private subnets.
-		if len(o.importVPC.PrivateSubnetIDs) < 2 {
+		if len(o.importVPC.PrivateSubnetIDs) == 1 {
 			return fmt.Errorf("at least two private subnets must be imported")
+		}
+	}
+	if o.adjustVPC.isSet() {
+		if len(o.adjustVPC.AZs) == 1 {
+			return errors.New("at least two availability zones must be provided to enable Load Balancing")
 		}
 	}
 	return nil
@@ -359,12 +395,12 @@ func (o *initEnvOpts) askEnvName() error {
 		return nil
 	}
 
-	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
+	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName, prompt.WithFinalMessage("Environment name:"))
 	if err != nil {
 		return fmt.Errorf("get environment name: %w", err)
 	}
 	o.name = envName
-	return nil
+	return o.validateDuplicateEnv()
 }
 
 func (o *initEnvOpts) askEnvSession() error {
@@ -398,7 +434,7 @@ func (o *initEnvOpts) askEnvRegion() error {
 		region = o.region
 	}
 	if region == "" {
-		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption))
+		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption), prompt.WithFinalMessage("Region:"))
 		if err != nil {
 			return fmt.Errorf("get environment region: %w", err)
 		}
@@ -420,7 +456,8 @@ func (o *initEnvOpts) askCustomizedResources() error {
 	}
 	adjustOrImport, err := o.prompt.SelectOne(
 		envInitDefaultEnvConfirmPrompt, "",
-		envInitCustomizedEnvTypes)
+		envInitCustomizedEnvTypes,
+		prompt.WithFinalMessage("Default environment configuration?"))
 	if err != nil {
 		return fmt.Errorf("select adjusting or importing resources: %w", err)
 	}
@@ -467,11 +504,15 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		return fmt.Errorf("VPC %s has no DNS support enabled", o.importVPC.ID)
 	}
 	if o.importVPC.PublicSubnetIDs == nil {
-		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.importVPC.ID)
+		publicSubnets, err := o.selVPC.Subnets(selector.SubnetsInput{
+			Msg:      envInitPublicSubnetsSelectPrompt,
+			Help:     "",
+			VPCID:    o.importVPC.ID,
+			IsPublic: true,
+		})
 		if err != nil {
-			if err == selector.ErrSubnetsNotFound {
+			if errors.Is(err, selector.ErrSubnetsNotFound) {
 				log.Warningf(`No existing public subnets were found in VPC %s.
-If you proceed without at least two public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
 `, o.importVPC.ID)
 			} else {
 				return fmt.Errorf("select public subnets: %w", err)
@@ -480,22 +521,42 @@ If you proceed without at least two public subnets, you will not be able to depl
 		if len(publicSubnets) == 1 {
 			return errors.New("select public subnets: at least two public subnets must be selected to enable Load Balancing")
 		}
+		if len(publicSubnets) == 0 {
+			log.Warningf(`If you proceed without public subnets, you will not be able to deploy 
+Load Balanced Web Services in this environment, and will need to specify 'private' 
+network placement in your workload manifest(s). See the manifest documentation 
+specific to your workload type(s) (https://aws.github.io/copilot-cli/docs/manifest/overview/).
+`)
+		}
 		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
 	if o.importVPC.PrivateSubnetIDs == nil {
-		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.importVPC.ID)
+		privateSubnets, err := o.selVPC.Subnets(selector.SubnetsInput{
+			Msg:      envInitPrivateSubnetsSelectPrompt,
+			Help:     "",
+			VPCID:    o.importVPC.ID,
+			IsPublic: false,
+		})
 		if err != nil {
-			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
-- Create new private subnets and then import them.
-- Use the default Copilot environment configuration.`, o.importVPC.ID)
+			if errors.Is(err, selector.ErrSubnetsNotFound) {
+				log.Warningf(`No existing private subnets were found in VPC %s. 
+`, o.importVPC.ID)
+			} else {
+				return fmt.Errorf("select private subnets: %w", err)
 			}
-			return fmt.Errorf("select private subnets: %w", err)
 		}
 		if len(privateSubnets) == 1 {
 			return errors.New("select private subnets: at least two private subnets must be selected")
 		}
+		if len(privateSubnets) == 0 {
+			log.Warningf(`If you proceed without private subnets, you will not 
+be able to add them after this environment is created.
+`)
+		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
+	}
+	if len(o.importVPC.PublicSubnetIDs)+len(o.importVPC.PrivateSubnetIDs) == 0 {
+		return errors.New("VPC must have subnets in order to proceed with environment creation")
 	}
 	return nil
 }
@@ -503,7 +564,7 @@ If you proceed without at least two public subnets, you will not be able to depl
 func (o *initEnvOpts) askAdjustResources() error {
 	if o.adjustVPC.CIDR.String() == emptyIPNet.String() {
 		vpcCIDRString, err := o.prompt.Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, validateCIDR,
-			prompt.WithDefaultInput(stack.DefaultVPCCIDR))
+			prompt.WithDefaultInput(stack.DefaultVPCCIDR), prompt.WithFinalMessage("VPC CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get VPC CIDR: %w", err)
 		}
@@ -513,21 +574,84 @@ func (o *initEnvOpts) askAdjustResources() error {
 		}
 		o.adjustVPC.CIDR = *vpcCIDR
 	}
+	azs, err := o.askAZs()
+	if err != nil {
+		return err
+	}
+	o.adjustVPC.AZs = azs
 	if o.adjustVPC.PublicSubnetCIDRs == nil {
-		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, validateCIDRSlice,
-			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs))
+		publicCIDR, err := o.prompt.Get(
+			envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp,
+			validatePublicSubnetsCIDR(len(o.adjustVPC.AZs)),
+			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs), prompt.WithFinalMessage("Public subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get public subnet CIDRs: %w", err)
 		}
 		o.adjustVPC.PublicSubnetCIDRs = strings.Split(publicCIDR, ",")
 	}
 	if o.adjustVPC.PrivateSubnetCIDRs == nil {
-		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, validateCIDRSlice,
-			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs))
+		privateCIDR, err := o.prompt.Get(
+			envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp,
+			validatePrivateSubnetsCIDR(len(o.adjustVPC.AZs)),
+			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs), prompt.WithFinalMessage("Private subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
 		}
 		o.adjustVPC.PrivateSubnetCIDRs = strings.Split(privateCIDR, ",")
+	}
+	return nil
+}
+
+func (o *initEnvOpts) askAZs() ([]string, error) {
+	if o.adjustVPC.AZs != nil {
+		return o.adjustVPC.AZs, nil
+	}
+	if o.ec2Client == nil {
+		o.ec2Client = ec2.New(o.sess)
+	}
+	azs, err := o.ec2Client.ListAZs()
+	if err != nil {
+		return nil, fmt.Errorf("list availability zones for region %s: %v", aws.StringValue(o.sess.Config.Region), err)
+	}
+
+	var options []string
+	for _, az := range azs {
+		options = append(options, az.Name)
+	}
+	const minAZs = 2
+	if len(options) < minAZs {
+		return nil, fmt.Errorf("requires at least %d availability zones (%s) in region %s", minAZs, strings.Join(options, ", "), aws.StringValue(o.sess.Config.Region))
+	}
+	defaultOptions := make([]string, minAZs)
+	for i := 0; i < minAZs; i += 1 {
+		defaultOptions[i] = azs[i].Name
+	}
+	selected, err := o.prompt.MultiSelect(
+		envInitAdjustAZPrompt, envInitAdjustAZPromptHelp, options,
+		prompt.RequireMinItems(minAZs),
+		prompt.WithDefaultSelections(defaultOptions), prompt.WithFinalMessage("AZs:"))
+	if err != nil {
+		return nil, fmt.Errorf("select availability zones: %v", err)
+	}
+	return selected, nil
+}
+
+func (o *initEnvOpts) validateDuplicateEnv() error {
+	_, err := o.store.GetEnvironment(o.appName, o.name)
+	if err == nil {
+		log.Errorf(`It seems like you are trying to init an environment that already exists.
+To recreate the environment, please run:
+1. %s
+2. And then %s
+`,
+			color.HighlightCode(fmt.Sprintf("copilot env delete --name %s", o.name)),
+			color.HighlightCode(fmt.Sprintf("copilot env init --name %s", o.name)))
+		return fmt.Errorf("environment %s already exists", color.HighlightUserInput(o.name))
+	}
+
+	var errNoSuchEnvironment *config.ErrNoSuchEnvironment
+	if !errors.As(err, &errNoSuchEnvironment) {
+		return fmt.Errorf("validate if environment exists: %w", err)
 	}
 	return nil
 }
@@ -549,12 +673,14 @@ func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
 	}
 	return &config.AdjustVPC{
 		CIDR:               o.adjustVPC.CIDR.String(),
+		AZs:                o.adjustVPC.AZs,
 		PrivateSubnetCIDRs: o.adjustVPC.PrivateSubnetCIDRs,
 		PublicSubnetCIDRs:  o.adjustVPC.PublicSubnetCIDRs,
 	}
 }
 
-func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map[string]string) error {
+func (o *initEnvOpts) deployEnv(app *config.Application,
+	artifactBucketARN, artifactBucketKeyARN string, customResourcesURLs map[string]string) error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
@@ -566,12 +692,15 @@ func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map
 			DNSName:             app.Domain,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
-		Prod:                o.isProduction,
-		AdditionalTags:      app.Tags,
-		CustomResourcesURLs: customResourcesURLs,
-		AdjustVPCConfig:     o.adjustVPCConfig(),
-		ImportVPCConfig:     o.importVPCConfig(),
-		Version:             deploy.LatestEnvTemplateVersion,
+		Prod:                 o.isProduction,
+		AdditionalTags:       app.Tags,
+		CustomResourcesURLs:  customResourcesURLs,
+		ArtifactBucketARN:    artifactBucketARN,
+		ArtifactBucketKeyARN: artifactBucketKeyARN,
+		AdjustVPCConfig:      o.adjustVPCConfig(),
+		ImportVPCConfig:      o.importVPCConfig(),
+		Telemetry:            o.telemetry.toConfig(),
+		Version:              deploy.LatestEnvTemplateVersion,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
@@ -676,19 +805,20 @@ func buildEnvInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new environment in your application.",
 		Example: `
-  Creates a test environment in your "default" AWS profile using default configuration.
+  Creates a test environment using your "default" AWS profile and default configuration.
   /code $ copilot env init --name test --profile default --default-config
 
-  Creates a prod-iad environment using your "prod-admin" AWS profile.
-  /code $ copilot env init --name prod-iad --profile prod-admin --prod
+  Creates a prod-iad environment using your "prod-admin" AWS profile and enables container insights.
+  /code $ copilot env init --name prod-iad --profile prod-admin --container-insights
 
   Creates an environment with imported VPC resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
-  /code --import-public-subnets subnet-013e8b691862966cf,subnet -014661ebb7ab8681a \
+  /code --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
   /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
 
-  Creates an environment with overridden CIDRs.
+  Creates an environment with overridden CIDRs and AZs.
   /code $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
+  /code --override-az-names us-west-2b,us-west-2c \
   /code --override-public-cidrs 10.1.0.0/24,10.1.1.0/24 \
   /code --override-private-cidrs 10.1.2.0/24,10.1.3.0/24`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
@@ -696,13 +826,7 @@ func buildEnvInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
@@ -713,16 +837,18 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.tempCreds.SessionToken, sessionTokenFlag, "", sessionTokenFlagDescription)
 	cmd.Flags().StringVar(&vars.region, regionFlag, "", envRegionTokenFlagDescription)
 
-	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription)
+	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription) // Deprecated. Use telemetry flags instead.
+	cmd.Flags().BoolVar(&vars.telemetry.EnableContainerInsights, enableContainerInsightsFlag, false, enableContainerInsightsFlagDescription)
 
 	cmd.Flags().StringVar(&vars.importVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
 
-	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
+	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, overrideVPCCIDRFlag, net.IPNet{}, overrideVPCCIDRFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.AZs, overrideAZsFlag, nil, overrideAZsFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
-	cmd.Flags().StringSliceVar(&vars.adjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.adjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.PublicSubnetCIDRs, overridePublicSubnetCIDRsFlag, nil, overridePublicSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.PrivateSubnetCIDRs, overridePrivateSubnetCIDRsFlag, nil, overridePrivateSubnetCIDRsFlagDescription)
 	cmd.Flags().BoolVar(&vars.defaultConfig, defaultConfigFlag, false, defaultConfigFlagDescription)
 
 	flags := pflag.NewFlagSet("Common", pflag.ContinueOnError)
@@ -734,24 +860,28 @@ func buildEnvInitCmd() *cobra.Command {
 	flags.AddFlag(cmd.Flags().Lookup(sessionTokenFlag))
 	flags.AddFlag(cmd.Flags().Lookup(regionFlag))
 	flags.AddFlag(cmd.Flags().Lookup(defaultConfigFlag))
-	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
 
-	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
-	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
-	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
-	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
+	resourcesImportFlags := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 
-	resourcesConfigFlag := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(vpcCIDRFlag))
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(publicSubnetCIDRsFlag))
-	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(privateSubnetCIDRsFlag))
+	resourcesConfigFlags := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideAZsFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overridePublicSubnetCIDRsFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overridePrivateSubnetCIDRsFlag))
+
+	telemetryFlags := pflag.NewFlagSet("Telemetry", pflag.ContinueOnError)
+	telemetryFlags.AddFlag(cmd.Flags().Lookup(enableContainerInsightsFlag))
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":                    "Common,Import Existing Resources,Configure Default Resources",
+		"sections":                    "Common,Import Existing Resources,Configure Default Resources,Telemetry",
 		"Common":                      flags.FlagUsages(),
-		"Import Existing Resources":   resourcesImportFlag.FlagUsages(),
-		"Configure Default Resources": resourcesConfigFlag.FlagUsages(),
+		"Import Existing Resources":   resourcesImportFlags.FlagUsages(),
+		"Configure Default Resources": resourcesConfigFlags.FlagUsages(),
+		"Telemetry":                   telemetryFlags.FlagUsages(),
 	}
 
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}

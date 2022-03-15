@@ -29,13 +29,12 @@ func TestEnv_Template(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().ParseEnv(&template.EnvOpts{
-					AppName:                   "project",
-					ScriptBucketName:          "mockbucket",
-					DNSCertValidatorLambda:    "mockkey1",
-					DNSDelegationLambda:       "mockkey2",
-					EnableLongARNFormatLambda: "mockkey3",
-					CustomDomainLambda:        "mockkey4",
-					ImportVPC:                 nil,
+					AppName:                "project",
+					ScriptBucketName:       "mockbucket",
+					DNSCertValidatorLambda: "mockkey1",
+					DNSDelegationLambda:    "mockkey2",
+					CustomDomainLambda:     "mockkey4",
+					ImportVPC:              nil,
 					VPCConfig: &config.AdjustVPC{
 						CIDR:               DefaultVPCCIDR,
 						PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
@@ -262,7 +261,6 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 		CustomResourcesURLs: map[string]string{
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
-			template.EnableLongARNsFileName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey3",
 			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
 	}

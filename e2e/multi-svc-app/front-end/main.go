@@ -15,9 +15,13 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// Get the env var "MAGIC_WORDS" for testing if the build arg was overridden.
-var magicWords string = os.Getenv("MAGIC_WORDS")
-var volumeName string = "efsTestVolume"
+var (
+	// Get the env var "MAGIC_VERB" for testing if the build arg was overridden.
+	magicVerb = os.Getenv("MAGIC_VERB")
+	// Get the env var "MAGIC_WORD" for testing if the env var defined in env file is rendered.
+	magicWord  = os.Getenv("MAGIC_WORD")
+	volumeName = "efsTestVolume"
+)
 
 // SimpleGet just returns true no matter what
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -50,6 +54,7 @@ func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter
 func GetMagicWords(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	log.Println("Get Succeeded")
 	w.WriteHeader(http.StatusOK)
+	magicWords := magicVerb + " " + magicWord
 	log.Println(magicWords)
 	w.Write([]byte(magicWords))
 }
@@ -88,13 +93,13 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer fileObj.Close()
 	// Resize file to 10M
 	if err := fileObj.Truncate(1e7); err != nil {
 		log.Printf("Resize test file %s in EFS volume FAILED\n", fileName)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	fileObj.Close()
 
 	// Shred file to write 10MiB of data to the filesystem.
 	shredCmd := exec.Command("shred", "-n", "1", fileName)

@@ -14,23 +14,26 @@ import (
 // Long flag names.
 const (
 	// Common flags.
-	nameFlag     = "name"
-	appFlag      = "app"
-	envFlag      = "env"
-	workloadFlag = "workload"
-	svcTypeFlag  = "svc-type"
-	jobTypeFlag  = "job-type"
-	typeFlag     = "type"
-	profileFlag  = "profile"
-	yesFlag      = "yes"
-	jsonFlag     = "json"
-	allFlag      = "all"
-
+	nameFlag       = "name"
+	appFlag        = "app"
+	envFlag        = "env"
+	workloadFlag   = "workload"
+	svcTypeFlag    = "svc-type"
+	jobTypeFlag    = "job-type"
+	typeFlag       = "type"
+	profileFlag    = "profile"
+	yesFlag        = "yes"
+	jsonFlag       = "json"
+	allFlag        = "all"
+	forceFlag      = "force"
+	noRollbackFlag = "no-rollback"
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
+	dockerFileContextFlag = "build-context"
 	imageTagFlag          = "tag"
 	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
+	uploadAssetsFlag      = "upload-assets"
 	limitFlag             = "limit"
 	followFlag            = "follow"
 	sinceFlag             = "since"
@@ -51,6 +54,9 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
+	noSubscriptionFlag  = "no-subscribe"
+	subscribeTopicsFlag = "subscribe-topics"
+
 	storageTypeFlag              = "storage-type"
 	storagePartitionKeyFlag      = "partition-key"
 	storageSortKeyFlag           = "sort-key"
@@ -61,30 +67,36 @@ const (
 	storageRDSInitialDBFlag      = "initial-db"
 	storageRDSParameterGroupFlag = "parameter-group"
 
-	taskGroupNameFlag   = "task-group-name"
-	countFlag           = "count"
-	cpuFlag             = "cpu"
-	memoryFlag          = "memory"
-	imageFlag           = "image"
-	taskRoleFlag        = "task-role"
-	executionRoleFlag   = "execution-role"
-	clusterFlag         = "cluster"
-	subnetsFlag         = "subnets"
-	securityGroupsFlag  = "security-groups"
-	envVarsFlag         = "env-vars"
-	secretsFlag         = "secrets"
-	commandFlag         = "command"
-	entrypointFlag      = "entrypoint"
-	taskDefaultFlag     = "default"
-	generateCommandFlag = "generate-cmd"
+	taskGroupNameFlag            = "task-group-name"
+	countFlag                    = "count"
+	cpuFlag                      = "cpu"
+	memoryFlag                   = "memory"
+	imageFlag                    = "image"
+	taskRoleFlag                 = "task-role"
+	executionRoleFlag            = "execution-role"
+	clusterFlag                  = "cluster"
+	acknowledgeSecretsAccessFlag = "acknowledge-secrets-access"
+	subnetsFlag                  = "subnets"
+	securityGroupsFlag           = "security-groups"
+	envVarsFlag                  = "env-vars"
+	secretsFlag                  = "secrets"
+	commandFlag                  = "command"
+	entrypointFlag               = "entrypoint"
+	taskDefaultFlag              = "default"
+	generateCommandFlag          = "generate-cmd"
+	osFlag                       = "platform-os"
+	archFlag                     = "platform-arch"
 
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
 	privateSubnetsFlag = "import-private-subnets"
 
-	vpcCIDRFlag            = "override-vpc-cidr"
-	publicSubnetCIDRsFlag  = "override-public-cidrs"
-	privateSubnetCIDRsFlag = "override-private-cidrs"
+	overrideVPCCIDRFlag            = "override-vpc-cidr"
+	overrideAZsFlag                = "override-az-names"
+	overridePublicSubnetCIDRsFlag  = "override-public-cidrs"
+	overridePrivateSubnetCIDRsFlag = "override-private-cidrs"
+
+	enableContainerInsightsFlag = "container-insights"
 
 	defaultConfigFlag = "default-config"
 
@@ -130,20 +142,24 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes()), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Mutually exclusive with -%s, --%s.`, dockerFileFlagShort, dockerFileFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
 Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
+	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
+Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes()), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes()), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
+	acknowledgeSecretsAccessDescription = fmt.Sprintf(`Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag. 
+This flag is useful only when '%s' flag is specified`, secretsFlag)
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
@@ -158,6 +174,8 @@ Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
 Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
 Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+	osFlagDescription   = fmt.Sprintf(`Optional. Operating system of the task. Must be specified along with '%s'.`, archFlag)
+	archFlagDescription = fmt.Sprintf(`Optional. Architecture of the task. Must be specified along with '%s'.`, osFlag)
 
 	secretNameFlagDescription = fmt.Sprintf(`The name of the secret.
 Mutually exclusive with the --%s flag.`, inputFilePathFlag)
@@ -167,27 +185,34 @@ Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
-Supported providers are: %s`, strings.Join(manifest.PipelineProviders, ", "))
+Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
 )
 
 const (
-	appFlagDescription      = "Name of the application."
-	envFlagDescription      = "Name of the environment."
-	svcFlagDescription      = "Name of the service."
-	jobFlagDescription      = "Name of the job."
-	workloadFlagDescription = "Name of the service or job."
-	nameFlagDescription     = "Name of the service, job, or task group."
-	pipelineFlagDescription = "Name of the pipeline."
-	profileFlagDescription  = "Name of the profile."
-	yesFlagDescription      = "Skips confirmation prompt."
-	execYesFlagDescription  = "Optional. Whether to update the Session Manager Plugin."
-	jsonFlagDescription     = "Optional. Outputs in JSON format."
+	appFlagDescription        = "Name of the application."
+	envFlagDescription        = "Name of the environment."
+	svcFlagDescription        = "Name of the service."
+	jobFlagDescription        = "Name of the job."
+	workloadFlagDescription   = "Name of the service or job."
+	nameFlagDescription       = "Name of the service, job, or task group."
+	pipelineFlagDescription   = "Name of the pipeline."
+	profileFlagDescription    = "Name of the profile."
+	yesFlagDescription        = "Skips confirmation prompt."
+	execYesFlagDescription    = "Optional. Whether to update the Session Manager Plugin."
+	jsonFlagDescription       = "Optional. Outputs in JSON format."
+	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
+	noRollbackFlagDescription = `Optional. Disable automatic stack 
+rollback in case of deployment failure.
+We do not recommend using this flag for a
+production environment.`
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
-	prodEnvFlagDescription        = "If the environment contains production services."
+	uploadAssetsFlagDescription   = `Optional. Whether to upload assets (container images, Lambda functions, etc.).
+Uploaded asset locations are filled in the template configuration.`
+	prodEnvFlagDescription = "If the environment contains production services."
 
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
 unless any time filtering flags are set.`
@@ -203,7 +228,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
-	githubURLFlagDescription         = "(Deprecated.) Use --url instead. Repository URL to trigger your pipeline."
+	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
@@ -215,6 +240,10 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localJobFlagDescription          = "Only show jobs in the workspace."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "The port on which your service listens."
+
+	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
+	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.
+Must be of format '<svcName>:<topicName>'`
 
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
@@ -253,9 +282,16 @@ Cannot be specified with any other flags.`
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
 	privateSubnetsFlagDescription = "Optional. Use existing private subnet IDs."
 
-	vpcCIDRFlagDescription            = "Optional. Global CIDR to use for VPC (default 10.0.0.0/16)."
-	publicSubnetCIDRsFlagDescription  = "Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24)."
-	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
+	overrideVPCCIDRFlagDescription = `Optional. Global CIDR to use for VPC.
+(default 10.0.0.0/16)`
+	overrideAZsFlagDescription = `Optional. Availability Zone names.
+(default 2 random AZs)`
+	overridePublicSubnetCIDRsFlagDescription = `Optional. CIDR to use for public subnets. 
+(default 10.0.0.0/24,10.0.1.0/24)`
+	overridePrivateSubnetCIDRsFlagDescription = `Optional. CIDR to use for private subnets.
+(default 10.0.2.0/24,10.0.3.0/24)`
+
+	enableContainerInsightsFlagDescription = "Optional. Enable CloudWatch Container Insights."
 
 	defaultConfigFlagDescription = "Optional. Skip prompting and use default environment configuration."
 

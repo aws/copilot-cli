@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 	"github.com/robfig/cron/v3"
 )
 
@@ -102,11 +103,13 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  mft.ImageConfig,
+				image:  mft.ImageConfig.Image,
 				parser: parser,
 				addons: addons,
 			},
-			tc: mft.TaskConfig,
+			logRetention:        mft.Logging.Retention,
+			tc:                  mft.TaskConfig,
+			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: mft,
 
@@ -116,24 +119,19 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 
 // Template returns the CloudFormation template for the scheduled job.
 func (j *ScheduledJob) Template() (string, error) {
-	outputs, err := j.addonsOutputs()
+	addonsParams, err := j.addonsParameters()
 	if err != nil {
 		return "", err
 	}
-	convSidecarOpts := convertSidecarOpts{
-		sidecarConfig: j.manifest.Sidecars,
-		imageConfig:   &j.manifest.ImageConfig.Image,
-		workloadName:  aws.StringValue(j.manifest.Name),
+	addonsOutputs, err := j.addonsOutputs()
+	if err != nil {
+		return "", err
 	}
-	sidecars, err := convertSidecar(convSidecarOpts)
+	sidecars, err := convertSidecar(j.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
-	dependencies, err := convertImageDependsOn(convSidecarOpts)
-	if err != nil {
-		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
-	}
-	publishers, err := convertPublish(j.manifest.Publish, j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
+	publishers, err := convertPublish(j.manifest.Publish(), j.rc.AccountID, j.rc.Region, j.app, j.env, j.name)
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for job %s: %w`, j.name, err)
 	}
@@ -141,22 +139,14 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
 	}
-
 	stateMachine, err := j.stateMachineOpts()
 	if err != nil {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
-
-	storage, err := convertStorageOpts(j.manifest.Name, j.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
-	}
-
 	envControllerLambda, err := j.parser.Read(envControllerPath)
 	if err != nil {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
-
 	entrypoint, err := convertEntryPoint(j.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -168,29 +158,35 @@ func (j *ScheduledJob) Template() (string, error) {
 
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:                j.manifest.Variables,
-		Secrets:                  j.manifest.Secrets,
-		NestedStack:              outputs,
+		Secrets:                  convertSecrets(j.manifest.Secrets),
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		ScheduleExpression:       schedule,
 		StateMachine:             stateMachine,
-		HealthCheck:              j.manifest.ImageConfig.HealthCheckOpts(),
+		HealthCheck:              convertContainerHealthCheck(j.manifest.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(j.manifest.Logging),
-		DockerLabels:             j.manifest.ImageConfig.DockerLabels,
-		Storage:                  storage,
+		DockerLabels:             j.manifest.ImageConfig.Image.DockerLabels,
+		Storage:                  convertStorageOpts(j.manifest.Name, j.manifest.Storage),
 		Network:                  convertNetworkConfig(j.manifest.Network),
 		EntryPoint:               entrypoint,
 		Command:                  command,
-		DependsOn:                dependencies,
-		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Credentials),
+		DependsOn:                convertDependsOn(j.manifest.ImageConfig.Image.DependsOn),
+		CredentialsParameter:     aws.StringValue(j.manifest.ImageConfig.Image.Credentials),
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
+		Platform:                 convertPlatform(j.manifest.Platform),
 
 		EnvControllerLambda: envControllerLambda.String(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
 	}
-	return content.String(), nil
+	overridenTpl, err := j.taskDefOverrideFunc(convertTaskDefOverrideRules(j.manifest.TaskDefOverrides), content.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("apply task definition overrides: %w", err)
+	}
+	return string(overridenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
@@ -207,6 +203,10 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
 			ParameterValue: aws.String(schedule),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
+			ParameterValue: aws.String(j.rc.EnvFileARN),
 		},
 	}...), nil
 }

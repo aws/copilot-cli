@@ -1,0 +1,2 @@
+Parameters:
+  ServiceSecurityGroupId: !GetAtt ServiceSecurityGroup.GroupId

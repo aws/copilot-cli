@@ -10,10 +10,12 @@
     "TaskCount": "2",
     "LogRetention": "30",
     "ContainerPort": "4000",
-    "RulePath": "/",
-    "HTTPSEnabled": "true",
+    "DNSDelegated": "true",
     "TargetContainer": "fe",
     "TargetPort": "4000",
+    "EnvFileARN": "",
+    "RulePath": "/",
+    "HTTPSEnabled": "true",
     "Stickiness": "false"
   },
   "Tags": { 

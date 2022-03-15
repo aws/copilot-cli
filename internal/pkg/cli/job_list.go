@@ -7,8 +7,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
+	"github.com/aws/copilot-cli/internal/pkg/cli/list"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/list"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -28,7 +33,12 @@ type listJobOpts struct {
 }
 
 func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
-	store, err := config.NewStore()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("job ls")).Default()
+	if err != nil {
+		return nil, err
+	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +51,7 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 		Store: store,
 		Out:   os.Stdout,
 
-		ShowLocalJobs: vars.shouldOutputJSON,
+		ShowLocalJobs: vars.shouldShowLocalWorkloads,
 		OutputJSON:    vars.shouldOutputJSON,
 	}
 
@@ -53,6 +63,12 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 	}, nil
 }
 
+// Validate is a no-op for this command.
+func (o *listJobOpts) Validate() error {
+	return nil
+}
+
+// Ask asks for fields that are required but not passed in.
 func (o *listJobOpts) Ask() error {
 	if o.appName != "" {
 		return nil

@@ -19,6 +19,7 @@ $ copilot deploy
 ```bash
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
+      --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service or job.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.

@@ -1,0 +1,31 @@
+# The manifest for the "fe" service.
+# Read the full specification for the "Load Balanced Web Service" type at:
+#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#load-balanced-web-svc
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: front-end
+# The "architecture" of the service you're running.
+type: Request-Driven Web Service
+
+image:
+  # Path to your service's Dockerfile.
+  build: 
+    dockerfile: front-end/Dockerfile
+    context: front-end
+  # Port exposed through your container to route traffic to it.
+  port: 80
+
+http:
+  # Requests to this path will be forwarded to your service. 
+  # To match all requests you can use the "/" path. 
+  path: '/'
+
+network:
+  vpc:
+    placement: private
+
+# Number of CPU units for the task.
+cpu: 1024
+# Amount of memory in MiB used by the task.
+memory: 2048
+# Number of tasks that should be running in your service.

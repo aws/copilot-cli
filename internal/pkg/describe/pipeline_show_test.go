@@ -205,19 +205,19 @@ func TestPipelineDescriber_String(t *testing.T) {
 			inPipeline: &Pipeline{*mockPipeline, expectedResources},
 			expectedHumanString: `About
 
-  Name              pipeline-dinder-badgoose-repo
-  Region            us-west-2
-  AccountID         1234567890
-  Created At        4 months ago
-  Updated At        4 months ago
+  Name        pipeline-dinder-badgoose-repo
+  Region      us-west-2
+  AccountID   1234567890
+  Created At  4 months ago
+  Updated At  4 months ago
 
 Stages
 
-  Name              Category            Provider            Details
-  ----              --------            --------            -------
-  Source            Source              GitHub              Repository: badgoose/repo
-  Build             Build               CodeBuild           BuildProject: pipeline-dinder-badgoose-repo-BuildProject
-  DeployTo-test     Deploy              CloudFormation      StackName: dinder-test-test
+  Name           Category  Provider        Details
+  ----           --------  --------        -------
+  Source         Source    GitHub          Repository: badgoose/repo
+  Build          Build     CodeBuild       BuildProject: pipeline-dinder-badgoose-repo-BuildProject
+  DeployTo-test  Deploy    CloudFormation  StackName: dinder-test-test
 
 Resources
     AWS::CodeBuild::Project      pipeline-dinder-badgoose-repo-BuildProject
@@ -233,19 +233,19 @@ Resources
 			inPipeline: &Pipeline{*mockPipeline, nil},
 			expectedHumanString: `About
 
-  Name              pipeline-dinder-badgoose-repo
-  Region            us-west-2
-  AccountID         1234567890
-  Created At        4 months ago
-  Updated At        4 months ago
+  Name        pipeline-dinder-badgoose-repo
+  Region      us-west-2
+  AccountID   1234567890
+  Created At  4 months ago
+  Updated At  4 months ago
 
 Stages
 
-  Name              Category            Provider            Details
-  ----              --------            --------            -------
-  Source            Source              GitHub              Repository: badgoose/repo
-  Build             Build               CodeBuild           BuildProject: pipeline-dinder-badgoose-repo-BuildProject
-  DeployTo-test     Deploy              CloudFormation      StackName: dinder-test-test
+  Name           Category  Provider        Details
+  ----           --------  --------        -------
+  Source         Source    GitHub          Repository: badgoose/repo
+  Build          Build     CodeBuild       BuildProject: pipeline-dinder-badgoose-repo-BuildProject
+  DeployTo-test  Deploy    CloudFormation  StackName: dinder-test-test
 `,
 			expectedJSONString: "{\"name\":\"pipeline-dinder-badgoose-repo\",\"region\":\"us-west-2\",\"accountId\":\"1234567890\",\"stages\":[{\"name\":\"Source\",\"category\":\"Source\",\"provider\":\"GitHub\",\"details\":\"Repository: badgoose/repo\"},{\"name\":\"Build\",\"category\":\"Build\",\"provider\":\"CodeBuild\",\"details\":\"BuildProject: pipeline-dinder-badgoose-repo-BuildProject\"},{\"name\":\"DeployTo-test\",\"category\":\"Deploy\",\"provider\":\"CloudFormation\",\"details\":\"StackName: dinder-test-test\"}],\"createdAt\":\"2020-02-02T15:04:05Z\",\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
 		},

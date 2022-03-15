@@ -5,6 +5,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -54,7 +55,7 @@ func (s *Store) createWorkload(wkld *Workload) error {
 		return fmt.Errorf("serialize data: %w", err)
 	}
 
-	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssm.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(wkldPath),
 		Description: aws.String(fmt.Sprintf("Copilot %s %s", wkld.Type, wkld.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -77,7 +78,14 @@ func (s *Store) createWorkload(wkld *Workload) error {
 func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 	param, err := s.getWorkloadParam(appName, svcName)
 	if err != nil {
-		return nil, fmt.Errorf("get service: %w", err)
+		var errNoSuchWkld *errNoSuchWorkload
+		if errors.As(err, &errNoSuchWkld) {
+			return nil, &ErrNoSuchService{
+				App:  appName,
+				Name: svcName,
+			}
+		}
+		return nil, err
 	}
 
 	var svc Workload
@@ -99,7 +107,14 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	param, err := s.getWorkloadParam(appName, jobName)
 	if err != nil {
-		return nil, fmt.Errorf("get job: %w", err)
+		var errNoSuchWkld *errNoSuchWorkload
+		if errors.As(err, &errNoSuchWkld) {
+			return nil, &ErrNoSuchJob{
+				App:  appName,
+				Name: jobName,
+			}
+		}
+		return nil, err
 	}
 
 	var job Workload
@@ -120,7 +135,7 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 func (s *Store) GetWorkload(appName, name string) (*Workload, error) {
 	param, err := s.getWorkloadParam(appName, name)
 	if err != nil {
-		return nil, fmt.Errorf("get workload: %w", err)
+		return nil, err
 	}
 	var wl Workload
 	err = json.Unmarshal(param, &wl)
@@ -132,14 +147,14 @@ func (s *Store) GetWorkload(appName, name string) (*Workload, error) {
 
 func (s *Store) getWorkloadParam(appName, name string) ([]byte, error) {
 	wlPath := fmt.Sprintf(fmtWkldParamPath, appName, name)
-	wlParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+	wlParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(wlPath),
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
-				return nil, &ErrNoSuchWorkload{
+				return nil, &errNoSuchWorkload{
 					App:  appName,
 					Name: name,
 				}
@@ -233,7 +248,7 @@ func (s *Store) DeleteJob(appName, jobName string) error {
 
 func (s *Store) deleteWorkload(appName, wkldName string) error {
 	paramName := fmt.Sprintf(fmtWkldParamPath, appName, wkldName)
-	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+	_, err := s.ssm.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
 

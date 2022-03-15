@@ -7,7 +7,13 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -15,7 +21,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -90,17 +95,19 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	ssm, err := config.NewStore()
-	if err != nil {
-		return nil, err
-	}
-	sessProvider := sessions.NewProvider()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("init"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompt := prompt.New()
-	sel := selector.NewWorkspaceSelect(prompt, ssm, ws)
+	sel := selector.NewWorkspaceSelect(prompt, configStore, ws)
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
+	if err != nil {
+		return nil, err
+	}
+	snsSel := selector.NewDeploySelect(prompt, configStore, deployStore)
 	spin := termprogress.NewSpinner(log.DiagnosticWriter)
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess)
@@ -111,7 +118,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initAppVars: initAppVars{
 			name: vars.appName,
 		},
-		store:    ssm,
+		store:    configStore,
 		ws:       ws,
 		prompt:   prompt,
 		identity: id,
@@ -127,14 +134,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
-		store:       ssm,
+		store:       configStore,
 		appDeployer: deployer,
 		prog:        spin,
 		prompt:      prompt,
 		identity:    id,
 		appCFN:      cloudformation.New(defaultSess),
 		uploader:    template.New(),
-		newS3: func(region string) (zipAndUploader, error) {
+		newS3: func(region string) (uploader, error) {
 			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, err
@@ -152,17 +159,18 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			appName:  vars.appName,
 		},
 
-		store:        ssm,
-		prompt:       prompt,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		sel:          sel,
-		spinner:      spin,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessProvider,
-		newAppVersionGetter: func(appName string) (versionGetter, error) {
-			return describe.NewAppDescriber(appName)
-		},
+		store:           configStore,
+		prompt:          prompt,
+		ws:              ws,
+		newInterpolator: newManifestInterpolator,
+		unmarshal:       manifest.UnmarshalWorkload,
+		sel:             sel,
+		spinner:         spin,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessProvider,
+	}
+	deploySvcCmd.newSvcDeployer = func() (workloadDeployer, error) {
+		return newSvcDeployer(deploySvcCmd)
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
@@ -170,16 +178,19 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			imageTag: vars.imageTag,
 			appName:  vars.appName,
 		},
-		store:        ssm,
-		prompt:       prompt,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		sel:          sel,
-		spinner:      spin,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessProvider,
+		store:           configStore,
+		ws:              ws,
+		newInterpolator: newManifestInterpolator,
+		unmarshal:       manifest.UnmarshalWorkload,
+		sel:             sel,
+		cmd:             exec.NewCmd(),
+		sessProvider:    sessProvider,
+	}
+	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
+		return newJobDeployer(deployJobCmd)
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	cmd := exec.NewCmd()
 	return &initOpts{
 		initVars:     vars,
 		ShouldDeploy: vars.shouldDeploy,
@@ -194,7 +205,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prompt: prompt,
 
 		setupWorkloadInit: func(o *initOpts, wkldType string) error {
-			wlInitializer := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
+			wlInitializer := &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
 			wkldVars := initWkldVars{
 				appName:        *o.appName,
 				wkldType:       wkldType,
@@ -214,13 +225,16 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initJobOpts{
 					initJobVars: jobVars,
 
-					fs:           fs,
-					init:         wlInitializer,
-					sel:          sel,
-					prompt:       prompt,
-					dockerEngine: exec.NewDockerCommand(),
+					fs:                fs,
+					store:             configStore,
+					init:              wlInitializer,
+					sel:               sel,
+					prompt:            prompt,
+					mftReader:         ws,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 					initParser: func(s string) dockerfileParser {
-						return exec.NewDockerfile(fs, s)
+						return dockerfile.New(fs, s)
 					},
 				}
 				o.initWlCmd = &opts
@@ -234,17 +248,21 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
 
-					fs:           fs,
-					init:         wlInitializer,
-					sel:          sel,
-					prompt:       prompt,
-					dockerEngine: exec.NewDockerCommand(),
+					fs:                fs,
+					init:              wlInitializer,
+					sel:               sel,
+					store:             configStore,
+					topicSel:          snsSel,
+					mftReader:         ws,
+					prompt:            prompt,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {
 						return opts.df
 					}
-					opts.df = exec.NewDockerfile(opts.fs, opts.dockerfilePath)
+					opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 					return opts.df
 				}
 				o.initWlCmd = &opts
@@ -354,14 +372,7 @@ func (o *initOpts) askWorkload() (string, error) {
 	}
 	wkldInitTypePrompt := "Which " + color.Emphasize("workload type") + " best represents your architecture?"
 	// Build the workload help prompt from existing helps text.
-	wkldHelp := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
-		manifest.RequestDrivenWebServiceType,
-		manifest.LoadBalancedWebServiceType,
-		manifest.BackendServiceType,
-	) + `
-
-` + fmt.Sprintf(fmtJobInitTypeHelp, manifest.ScheduledJobType)
-
+	wkldHelp := fmt.Sprintf("%s\n\n%s", svcInitSvcTypeHelpPrompt, jobInitTypeHelp)
 	t, err := o.prompt.SelectOption(wkldInitTypePrompt, wkldHelp, append(svcTypePromptOpts(), jobTypePromptOpts()...), prompt.WithFinalMessage("Workload type:"))
 	if err != nil {
 		return "", fmt.Errorf("select workload type: %w", err)
@@ -404,7 +415,13 @@ func (o *initOpts) deploySvc() error {
 	if err := o.deploySvcCmd.Ask(); err != nil {
 		return err
 	}
-	return o.deploySvcCmd.Execute()
+	if err := o.deploySvcCmd.Execute(); err != nil {
+		return err
+	}
+	if err := o.deploySvcCmd.RecommendActions(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *initOpts) deployJob() error {
@@ -420,7 +437,13 @@ func (o *initOpts) deployJob() error {
 	if err := o.deployJobCmd.Ask(); err != nil {
 		return err
 	}
-	return o.deployJobCmd.Execute()
+	if err := o.deployJobCmd.Execute(); err != nil {
+		return err
+	}
+	if err := o.deployJobCmd.RecommendActions(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *initOpts) askShouldDeploy() error {
@@ -452,9 +475,7 @@ func BuildInitCmd() *cobra.Command {
 				log.Info("\nNo problem, you can deploy your service later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
 					color.HighlightCode(fmt.Sprintf("copilot env init --name %s --profile %s --app %s", defaultEnvironmentName, defaultEnvironmentProfile, *opts.appName)))
-				for _, followup := range opts.initWlCmd.RecommendedActions() {
-					log.Infof("- %s\n", followup)
-				}
+				log.Infof("- Run %s to deploy your service.\n", color.HighlightCode("copilot deploy"))
 			}
 			return nil
 		}),

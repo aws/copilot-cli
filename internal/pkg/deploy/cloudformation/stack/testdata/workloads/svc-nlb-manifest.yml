@@ -1,0 +1,47 @@
+# The manifest for the "fe" service.
+# Read the full specification for the "Load Balanced Web Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: fe
+# The "architecture" of the service you're running.
+type: Load Balanced Web Service
+image:
+  build: ./Dockerfile
+  port: 80
+http: false
+nlb:
+  port: 443/tls
+count: 5
+cpu: 256
+memory: 512
+
+# Optional fields for more advanced use-cases.
+variables:                    # Pass environment variables as key value pairs.
+  LOG_LEVEL: info
+
+# You can override any of the values defined above by environment.
+environments:
+  test:
+    nlb:
+      healthcheck:
+        port: 80
+  dev:
+    http:
+      path: '/'
+    nlb:
+      port: 81/tcp
+    count:
+      spot: 5
+  prod:
+    http: false
+    nlb:
+      port: 443/tls
+      target_container: tls
+      alias: nlb.example.com
+    count: 5
+    sidecars:
+      tls:
+        port: 82
+        image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/proxy:${TAG}
+

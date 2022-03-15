@@ -4,16 +4,18 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -31,9 +33,9 @@ const (
 
 type showPipelineVars struct {
 	appName               string
+	name                  string
 	shouldOutputJSON      bool
 	shouldOutputResources bool
-	pipelineName          string
 }
 
 type showPipelineOpts struct {
@@ -43,7 +45,7 @@ type showPipelineOpts struct {
 	w             io.Writer
 	ws            wsPipelineReader
 	store         applicationStore
-	pipelineSvc   pipelineGetter
+	codepipeline  pipelineGetter
 	describer     describer
 	initDescriber func(bool) error
 	sel           appSelector
@@ -51,33 +53,29 @@ type showPipelineOpts struct {
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("new config store client: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	defaultSession, err := sessions.NewProvider().Default()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline show")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &showPipelineOpts{
 		showPipelineVars: vars,
 		ws:               ws,
 		store:            store,
-		pipelineSvc:      codepipeline.New(defaultSession),
+		codepipeline:     codepipeline.New(defaultSession),
 		sel:              selector.NewSelect(prompter, store),
 		prompt:           prompter,
 		w:                log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
-		describer, err := describe.NewPipelineDescriber(opts.pipelineName, enableResources)
+		describer, err := describe.NewPipelineDescriber(opts.name, enableResources)
 		if err != nil {
 			return fmt.Errorf("new pipeline describer: %w", err)
 		}
@@ -85,123 +83,37 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		opts.describer = describer
 		return nil
 	}
-
 	return opts, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *showPipelineOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
-	}
-	if o.pipelineName != "" {
-		if _, err := o.pipelineSvc.GetPipeline(o.pipelineName); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-// Ask prompts for fields that are required but not passed in.
+// Ask prompts for fields that are required but not passed in, and validates those that are.
 func (o *showPipelineOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
-		return err
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return fmt.Errorf("validate application name: %w", err)
+		}
+	} else {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
+	}
+	if o.name != "" {
+		_, err := o.codepipeline.GetPipeline(o.name)
+		if err != nil {
+			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
+		}
+		return nil
 	}
 	return o.askPipelineName()
 }
 
-func (o *showPipelineOpts) askAppName() error {
-	if o.appName != "" {
-		return nil
-	}
-	name, err := o.sel.Application(pipelineShowAppNamePrompt, pipelineShowAppNameHelpPrompt)
-	if err != nil {
-		return fmt.Errorf("select application: %w", err)
-	}
-	o.appName = name
-	return nil
-}
-
-func (o *showPipelineOpts) askPipelineName() error {
-	// return if pipeline name is set by flag
-	if o.pipelineName != "" {
-		return nil
-	}
-
-	// return pipelineName from manifest if found
-	pipelineName, err := o.getPipelineNameFromManifest()
-	if err == nil {
-		o.pipelineName = pipelineName
-		return nil
-	}
-
-	if errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-		log.Infof("No pipeline manifest in workspace for application %s, looking for deployed pipelines\n", color.HighlightUserInput(o.appName))
-	}
-
-	// find deployed pipelines
-	pipelineNames, err := o.retrieveAllPipelines()
-	if err != nil {
-		return err
-	}
-
-	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
-		return nil
-	}
-
-	if len(pipelineNames) == 1 {
-		pipelineName = pipelineNames[0]
-		log.Infof("Found pipeline: %s.\n", color.HighlightUserInput(pipelineName))
-		o.pipelineName = pipelineName
-
-		return nil
-	}
-
-	// select from list of deployed pipelines
-	pipelineName, err = o.prompt.SelectOne(
-		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.appName)), pipelineShowPipelineNameHelpPrompt, pipelineNames,
-	)
-	if err != nil {
-		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
-	}
-	o.pipelineName = pipelineName
-	return nil
-
-}
-
-func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
-	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list pipelines: %w", err)
-	}
-	return pipelines, nil
-}
-
-func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
-	data, err := o.ws.ReadPipelineManifest()
-	if err != nil {
-		return "", err
-	}
-
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-
-	return pipeline.Name, nil
-}
-
 // Execute shows details about the pipeline.
 func (o *showPipelineOpts) Execute() error {
-	if o.pipelineName == "" {
-		return nil
-	}
 	err := o.initDescriber(o.shouldOutputResources)
 	if err != nil {
 		return err
@@ -209,7 +121,7 @@ func (o *showPipelineOpts) Execute() error {
 
 	pipeline, err := o.describer.Describe()
 	if err != nil {
-		return fmt.Errorf("describe pipeline %s: %w", o.pipelineName, err)
+		return fmt.Errorf("describe pipeline %s: %w", o.name, err)
 	}
 
 	if o.shouldOutputJSON {
@@ -223,6 +135,59 @@ func (o *showPipelineOpts) Execute() error {
 	}
 
 	return nil
+}
+
+func (o *showPipelineOpts) askAppName() error {
+	name, err := o.sel.Application(pipelineShowAppNamePrompt, pipelineShowAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("select application: %w", err)
+	}
+	o.appName = name
+	return nil
+}
+
+func (o *showPipelineOpts) askPipelineName() error {
+	// find deployed pipelines
+	pipelineNames, err := o.retrieveAllPipelines()
+	if err != nil {
+		return err
+	}
+
+	if len(pipelineNames) == 0 {
+		return fmt.Errorf("No deployed pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
+	}
+
+	if len(pipelineNames) == 1 {
+		pipelineName := pipelineNames[0]
+		log.Infof("Found pipeline: %s.\n", color.HighlightUserInput(pipelineName))
+		o.name = pipelineName
+
+		return nil
+	}
+
+	// select from list of deployed pipelines
+	pipelineName, err := o.prompt.SelectOne(
+		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.appName)),
+		pipelineShowPipelineNameHelpPrompt,
+		pipelineNames,
+		prompt.WithFinalMessage("Pipeline:"),
+	)
+	if err != nil {
+		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
+	}
+	o.name = pipelineName
+	return nil
+
+}
+
+func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
+	pipelines, err := o.codepipeline.ListPipelineNamesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list pipelines: %w", err)
+	}
+	return pipelines, nil
 }
 
 // buildPipelineShowCmd build the command for deploying a new pipeline or updating an existing pipeline.
@@ -240,17 +205,11 @@ func buildPipelineShowCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.pipelineName, nameFlag, nameFlagShort, "", pipelineFlagDescription)
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, pipelineResourcesFlagDescription)
 

@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 )
 
@@ -28,6 +29,11 @@ const (
 
 const (
 	stackResourceType = "cloudformation:stack"
+	snsResourceType   = "sns"
+
+	// fmtSNSTopicNamePrefix holds the App-Env-Workload- components of a topic name
+	fmtSNSTopicNamePrefix = "%s-%s-%s-"
+	snsServiceName        = "sns"
 )
 
 type resourceGetter interface {
@@ -43,6 +49,11 @@ type ConfigStoreClient interface {
 	GetJob(appName, jobname string) (*config.Workload, error)
 }
 
+// SessionProvider is the interface to provide configuration for the AWS SDK's service clients.
+type SessionProvider interface {
+	FromRole(roleARN, region string) (*session.Session, error)
+}
+
 // Store fetches information on deployed services.
 type Store struct {
 	configStore         ConfigStoreClient
@@ -51,7 +62,7 @@ type Store struct {
 }
 
 // NewStore returns a new store.
-func NewStore(store ConfigStoreClient) (*Store, error) {
+func NewStore(sessProvider SessionProvider, store ConfigStoreClient) (*Store, error) {
 	s := &Store{
 		configStore: store,
 	}
@@ -60,14 +71,14 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get environment config %s: %w", envName, err)
 		}
-		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return nil, fmt.Errorf("create new session from env role: %w", err)
 		}
 		return rg.New(sess), nil
 	}
 	s.newRgClientFromRole = func(roleARN, region string) (resourceGetter, error) {
-		sess, err := sessions.NewProvider().FromRole(roleARN, region)
+		sess, err := sessProvider.FromRole(roleARN, region)
 		if err != nil {
 			return nil, fmt.Errorf("create new session from env role: %w", err)
 		}
@@ -78,12 +89,12 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 
 // ListDeployedServices returns the names of deployed services in an environment.
 func (s *Store) ListDeployedServices(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, manifest.ServiceTypes)
+	return s.listDeployedWorkloads(appName, envName, manifest.ServiceTypes())
 }
 
 // ListDeployedJobs returns the names of deployed jobs in an environment.
 func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, manifest.JobTypes)
+	return s.listDeployedWorkloads(appName, envName, manifest.JobTypes())
 }
 
 func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType []string) ([]string, error) {
@@ -125,6 +136,49 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	}
 	sort.Strings(wklds)
 	return wklds, nil
+}
+
+// ListSNSTopics returns a list of SNS topics deployed to the current environment and tagged with
+// Copilot identifiers.
+func (s *Store) ListSNSTopics(appName string, envName string) ([]Topic, error) {
+	rgClient, err := s.newRgClientFromIDs(appName, envName)
+	if err != nil {
+		return nil, err
+	}
+	topics, err := rgClient.GetResourcesByTags(snsResourceType, map[string]string{
+		AppTagKey: appName,
+		EnvTagKey: envName,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var out []Topic
+	for _, r := range topics {
+		// If the topic doesn't have a specific workload tag, don't return it.
+		if _, ok := r.Tags[ServiceTagKey]; !ok {
+			continue
+		}
+
+		t, err := NewTopic(r.ARN, appName, envName, r.Tags[ServiceTagKey])
+		if err != nil {
+			// If there's an error parsing the topic ARN, don't include it in the list of topics.
+			// This includes times where the topic name does not match its tags, or the name
+			// is invalid.
+			switch err {
+			case errInvalidARN:
+				// This error indicates that the returned ARN is not parseable.
+				return nil, err
+			default:
+				continue
+			}
+		}
+
+		out = append(out, *t)
+	}
+
+	return out, nil
 }
 
 func contains(name string, names []string) bool {

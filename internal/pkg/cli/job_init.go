@@ -7,6 +7,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -24,10 +32,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	job = "job"
-)
-
 var (
 	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + " this job?"
 	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
@@ -35,7 +39,8 @@ executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
 jobs or those which require specific execution schedules.`
 
-	fmtJobInitTypeHelp = "A %s is a task which is invoked on a set schedule, with optional retry logic."
+	jobInitTypeHelp = fmt.Sprintf(`A %s is a task which is invoked on a set schedule, with optional retry logic.
+To learn more see: https://git.io/JEEU4`, manifest.ScheduledJobType)
 )
 
 var jobTypeHints = map[string]string{
@@ -60,32 +65,34 @@ type initJobOpts struct {
 	prompt       prompter
 	sel          initJobSelector
 	dockerEngine dockerEngine
+	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	platform     *string
+	platform     *manifest.PlatformString
+
+	// For workspace validation.
+	wsPendingCreation bool
+	wsAppName         string
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	p := sessions.NewProvider()
+	p := sessions.ImmutableProvider(sessions.UserAgentExtras("job init"))
 	sess, err := p.Default()
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
+
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
 
 	jobInitter := &initialize.WorkloadInitializer{
 		Store:    store,
@@ -105,38 +112,29 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		init:         jobInitter,
 		prompt:       prompter,
 		sel:          sel,
-		dockerEngine: exec.NewDockerCommand(),
+		dockerEngine: dockerengine.New(exec.NewCmd()),
+		mftReader:    ws,
 		initParser: func(path string) dockerfileParser {
-			return exec.NewDockerfile(fs, path)
+			return dockerfile.New(fs, path)
 		},
+		wsAppName: tryReadingAppName(),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.wkldType != "" {
-		if err := validateJobType(o.wkldType); err != nil {
+	// If this app is pending creation, we'll skip validation.
+	if !o.wsPendingCreation {
+		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
-	}
-	if o.name != "" {
-		if err := validateJobName(o.name); err != nil {
-			return err
-		}
+		o.appName = o.wsAppName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
 	}
 	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
-			return err
-		}
-	}
-	if o.schedule != "" {
-		if err := validateSchedule(o.schedule); err != nil {
 			return err
 		}
 	}
@@ -153,11 +151,44 @@ func (o *initJobOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initJobOpts) Ask() error {
-	if err := o.askJobType(); err != nil {
+	if o.wkldType != "" {
+		if err := validateJobType(o.wkldType); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askJobType(); err != nil {
+			return err
+		}
+	}
+	if o.name == "" {
+		if err := o.askJobName(); err != nil {
+			return err
+		}
+	}
+	if err := validateJobName(o.name); err != nil {
 		return err
 	}
-	if err := o.askJobName(); err != nil {
+	if err := o.validateDuplicateJob(); err != nil {
 		return err
+	}
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err == nil {
+		jobType, err := localMft.WorkloadType()
+		if err != nil {
+			return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
+		}
+		if o.wkldType != jobType {
+			return fmt.Errorf("manifest file for job %s exists with a different type %s", o.name, jobType)
+		}
+		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+		return nil
+	}
+	var (
+		errNotFound          *workspace.ErrFileNotExists
+		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+	)
+	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
+		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
@@ -168,7 +199,12 @@ func (o *initJobOpts) Ask() error {
 			return err
 		}
 	}
-	if err := o.askSchedule(); err != nil {
+	if o.schedule == "" {
+		if err := o.askSchedule(); err != nil {
+			return err
+		}
+	}
+	if err := validateSchedule(o.schedule); err != nil {
 		return err
 	}
 	return nil
@@ -177,7 +213,7 @@ func (o *initJobOpts) Ask() error {
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
+	var hc manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.initParser(o.dockerfilePath))
@@ -185,13 +221,16 @@ func (o *initJobOpts) Execute() error {
 			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
-
-	platform, err := o.dockerEngine.RedirectPlatform(o.image)
-	if err != nil {
-		return err
+	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
+	if o.image == "" {
+		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
+		if err != nil {
+			return err
+		}
+		if platform != "" {
+			o.platform = &platform
+		}
 	}
-	o.platform = platform
-
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -199,7 +238,9 @@ func (o *initJobOpts) Execute() error {
 			Type:           o.wkldType,
 			DockerfilePath: o.dockerfilePath,
 			Image:          o.image,
-			Platform:       o.platform,
+			Platform: manifest.PlatformArgsOrString{
+				PlatformString: o.platform,
+			},
 		},
 
 		Schedule:    o.schedule,
@@ -214,14 +255,36 @@ func (o *initJobOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initJobOpts) RecommendedActions() []string {
-	return []string{
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initJobOpts) RecommendActions() error {
+	logRecommendedActions([]string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your job to a %s environment.",
 			color.HighlightCode(fmt.Sprintf("copilot job deploy --name %s --env %s", o.name, defaultEnvironmentName)),
 			defaultEnvironmentName),
+	})
+	return nil
+}
+
+func (o *initJobOpts) validateDuplicateJob() error {
+	_, err := o.store.GetJob(o.appName, o.name)
+	if err == nil {
+		log.Errorf(`It seems like you are trying to init a job that already exists.
+To recreate the job, please run:
+1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
+If you'd prefer a new default manifest, please manually delete the existing one.
+2. And then %s
+`,
+			color.HighlightCode(fmt.Sprintf("copilot job delete --name %s", o.name)),
+			color.HighlightCode(fmt.Sprintf("copilot job init --name %s", o.name)))
+		return fmt.Errorf("job %s already exists", color.HighlightUserInput(o.name))
 	}
+
+	var errNoSuchJob *config.ErrNoSuchJob
+	if !errors.As(err, &errNoSuchJob) {
+		return fmt.Errorf("validate if job exists: %w", err)
+	}
+	return nil
 }
 
 func (o *initJobOpts) askJobType() error {
@@ -237,12 +300,11 @@ func (o *initJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
 	}
-
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
-		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "job"),
+		fmt.Sprintf(fmtWkldInitNameHelpPrompt, "job", o.appName),
 		func(val interface{}) error {
-			return validateSvcName(val, o.wkldType)
+			return validateJobName(val)
 		},
 		prompt.WithFinalMessage("Job name:"),
 	)
@@ -272,9 +334,9 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 		return true, nil
 	}
 	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
-		var errDaemon *exec.ErrDockerDaemonNotResponsive
+		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
 		switch {
-		case errors.Is(err, exec.ErrDockerCommandNotFound):
+		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
 			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
 			return false, nil
 		case errors.As(err, &errDaemon):
@@ -304,9 +366,6 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 }
 
 func (o *initJobOpts) askSchedule() error {
-	if o.schedule != "" {
-		return nil
-	}
 	schedule, err := o.sel.Schedule(
 		jobInitSchedulePrompt,
 		jobInitScheduleHelp,
@@ -323,7 +382,7 @@ func (o *initJobOpts) askSchedule() error {
 
 func jobTypePromptOpts() []prompt.Option {
 	var options []prompt.Option
-	for _, jobType := range manifest.JobTypes {
+	for _, jobType := range manifest.JobTypes() {
 		options = append(options, prompt.Option{
 			Value: jobType,
 			Hint:  jobTypeHints[jobType],
@@ -349,20 +408,7 @@ func buildJobInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

@@ -28,28 +28,28 @@ func TestCloudFormation_DeployTask(t *testing.T) {
 	}
 
 	t.Run("returns a wrapped error if creating a change set fails", func(t *testing.T) {
-		testDeployWorkload_OnCreateChangeSetFailure(t, when)
+		testDeployTask_OnCreateChangeSetFailure(t, when)
 	})
 	t.Run("calls Update if stack is already created and returns wrapped error if Update fails", func(t *testing.T) {
-		testDeployWorkload_OnUpdateChangeSetFailure(t, when)
+		testDeployTask_OnUpdateChangeSetFailure(t, when)
 	})
 	t.Run("returns nil if the change set is empty when calling Update", func(t *testing.T) {
-		testDeployWorkload_ReturnNilOnEmptyChangeSetWhileUpdatingStack(t, when)
+		testDeployTask_ReturnNilOnEmptyChangeSetWhileUpdatingStack(t, when)
 	})
 	t.Run("returns an error when the ChangeSet cannot be described for stack changes before rendering", func(t *testing.T) {
-		testDeployWorkload_OnDescribeChangeSetFailure(t, when)
+		testDeployTask_OnDescribeChangeSetFailure(t, when)
 	})
 	t.Run("returns an error when stack template body cannot be retrieved to parse resource descriptions", func(t *testing.T) {
-		testDeployWorkload_OnTemplateBodyFailure(t, when)
+		testDeployTask_OnTemplateBodyFailure(t, when)
 	})
 	t.Run("returns a wrapped error if a streamer fails and cancels the renderer", func(t *testing.T) {
-		testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t, when)
+		testDeployTask_StackStreamerFailureShouldCancelRenderer(t, when)
 	})
 	t.Run("returns an error if stack creation fails", func(t *testing.T) {
-		testDeployWorkload_StreamUntilStackCreationFails(t, "task-hello", when)
+		testDeployTask_StreamUntilStackCreationFails(t, "task-hello", when)
 	})
 	t.Run("renders a stack with addons template if stack creation is successful", func(t *testing.T) {
-		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, "task-hello", when)
+		testDeployTask_RenderNewlyCreatedStackWithAddons(t, "task-hello", when)
 	})
 }
 

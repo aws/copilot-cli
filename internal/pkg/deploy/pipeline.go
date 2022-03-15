@@ -9,16 +9,23 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 )
 
-const (
-	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
+// DefaultPipelineBranch is the default repository branch to use for pipeline.
+const DefaultPipelineBranch = "main"
 
-	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+const (
+	fmtInvalidRepo           = "unable to parse the repository from the URL %+v"
+	fmtErrMissingProperty    = "missing `%s` in properties"
+	fmtErrPropertyNotAString = "property `%s` is not a string"
+
+	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
 )
 
 var (
@@ -61,7 +68,8 @@ type CreatePipelineInput struct {
 // to build and test Docker image.
 type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
-	Image string
+	Image           string
+	EnvironmentType string
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
@@ -98,10 +106,11 @@ type GitHubV1Source struct {
 // GitHubSource (version 2) defines the source of the artifacts to be built and deployed. This version uses CodeStar
 // Connections to authenticate access to the remote repo.
 type GitHubSource struct {
-	ProviderName  string
-	Branch        string
-	RepositoryURL GitHubURL
-	ConnectionARN string
+	ProviderName         string
+	Branch               string
+	RepositoryURL        GitHubURL
+	ConnectionARN        string
+	OutputArtifactFormat string
 }
 
 // GitHubURL is the common type for repo URLs for both GitHubSource versions:
@@ -110,29 +119,71 @@ type GitHubURL string
 
 // CodeCommitSource defines the (CC) source of the artifacts to be built and deployed.
 type CodeCommitSource struct {
-	ProviderName  string
-	Branch        string
-	RepositoryURL string
+	ProviderName         string
+	Branch               string
+	RepositoryURL        string
+	OutputArtifactFormat string
 }
 
 // BitbucketSource defines the (BB) source of the artifacts to be built and deployed.
 type BitbucketSource struct {
-	ProviderName  string
-	Branch        string
-	RepositoryURL string
-	ConnectionARN string
+	ProviderName         string
+	Branch               string
+	RepositoryURL        string
+	ConnectionARN        string
+	OutputArtifactFormat string
+}
+
+func convertRequiredProperty(properties map[string]interface{}, key string) (string, error) {
+	v, ok := properties[key]
+	if !ok {
+		return "", fmt.Errorf(fmtErrMissingProperty, key)
+	}
+	vStr, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf(fmtErrPropertyNotAString, key)
+	}
+	return vStr, nil
+}
+
+func convertOptionalProperty(properties map[string]interface{}, key string, defaultValue string) (string, error) {
+	v, ok := properties[key]
+	if !ok {
+		return defaultValue, nil
+	}
+	vStr, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf(fmtErrPropertyNotAString, key)
+	}
+	return vStr, nil
 }
 
 // PipelineSourceFromManifest processes manifest info about the source based on provider type.
 // The return boolean is true for CodeStar Connections sources that require a polling prompt.
 func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, shouldPrompt bool, err error) {
+	branch, err := convertOptionalProperty(mfSource.Properties, "branch", DefaultPipelineBranch)
+	if err != nil {
+		return nil, false, err
+	}
+	repository, err := convertRequiredProperty(mfSource.Properties, "repository")
+	if err != nil {
+		return nil, false, err
+	}
+	outputFormat, err := convertOptionalProperty(mfSource.Properties, "output_artifact_format", "")
+	if err != nil {
+		return nil, false, err
+	}
 	switch mfSource.ProviderName {
 	case manifest.GithubV1ProviderName:
+		token, err := convertRequiredProperty(mfSource.Properties, "access_token_secret")
+		if err != nil {
+			return nil, false, err
+		}
 		return &GitHubV1Source{
 			ProviderName:                manifest.GithubV1ProviderName,
-			Branch:                      (mfSource.Properties["branch"]).(string),
-			RepositoryURL:               GitHubURL((mfSource.Properties["repository"]).(string)),
-			PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
+			Branch:                      branch,
+			RepositoryURL:               GitHubURL(repository),
+			PersonalAccessTokenSecretID: token,
 		}, false, nil
 	case manifest.GithubProviderName:
 		// If the creation of the user's pipeline manifest predates Copilot's conversion to GHv2/CSC, the provider
@@ -141,17 +192,18 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 		if mfSource.Properties["access_token_secret"] != nil {
 			return &GitHubV1Source{
 				ProviderName:                manifest.GithubV1ProviderName,
-				Branch:                      (mfSource.Properties["branch"]).(string),
-				RepositoryURL:               GitHubURL((mfSource.Properties["repository"]).(string)),
+				Branch:                      branch,
+				RepositoryURL:               GitHubURL(repository),
 				PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
 			}, false, nil
 		} else {
 			// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
 			connection, ok := mfSource.Properties["connection_arn"]
 			repo := &GitHubSource{
-				ProviderName:  manifest.GithubProviderName,
-				Branch:        (mfSource.Properties["branch"]).(string),
-				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
+				ProviderName:         manifest.GithubProviderName,
+				Branch:               branch,
+				RepositoryURL:        GitHubURL(repository),
+				OutputArtifactFormat: outputFormat,
 			}
 			if !ok {
 				return repo, true, nil
@@ -161,17 +213,19 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 		}
 	case manifest.CodeCommitProviderName:
 		return &CodeCommitSource{
-			ProviderName:  manifest.CodeCommitProviderName,
-			Branch:        (mfSource.Properties["branch"]).(string),
-			RepositoryURL: (mfSource.Properties["repository"]).(string),
+			ProviderName:         manifest.CodeCommitProviderName,
+			Branch:               branch,
+			RepositoryURL:        repository,
+			OutputArtifactFormat: outputFormat,
 		}, false, nil
 	case manifest.BitbucketProviderName:
 		// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
 		connection, ok := mfSource.Properties["connection_arn"]
 		repo := &BitbucketSource{
-			ProviderName:  manifest.BitbucketProviderName,
-			Branch:        (mfSource.Properties["branch"]).(string),
-			RepositoryURL: (mfSource.Properties["repository"]).(string),
+			ProviderName:         manifest.BitbucketProviderName,
+			Branch:               branch,
+			RepositoryURL:        repository,
+			OutputArtifactFormat: outputFormat,
 		}
 		if !ok {
 			return repo, true, nil
@@ -186,11 +240,16 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 // PipelineBuildFromManifest processes manifest info about the build project settings.
 func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
 	image := defaultPipelineBuildImage
+	environmentType := defaultPipelineEnvironmentType
 	if mfBuild != nil && mfBuild.Image != "" {
 		image = mfBuild.Image
 	}
+	if strings.Contains(image, "aarch64") {
+		environmentType = "ARM_CONTAINER"
+	}
 	return &Build{
-		Image: image,
+		Image:           image,
+		EnvironmentType: environmentType,
 	}
 }
 

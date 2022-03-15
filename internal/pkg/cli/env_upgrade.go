@@ -7,6 +7,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -60,18 +66,16 @@ type envUpgradeOpts struct {
 	// These functions are overridden in tests to provide mocks.
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
-	newS3               func(region string) (zipAndUploader, error)
+	newS3               func(region string) (uploader, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %v", err)
-	}
-	defaultSession, err := sessions.NewProvider().Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env upgrade"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	return &envUpgradeOpts{
 		envUpgradeVars: vars,
 
@@ -99,14 +103,14 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 			return d, nil
 		},
 		newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
-			sess, err := sessions.NewProvider().FromRole(conf.ManagerRoleARN, conf.Region)
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
 				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
 		},
-		newS3: func(region string) (zipAndUploader, error) {
-			sess, err := sessions.NewProvider().DefaultWithRegion(region)
+		newS3: func(region string) (uploader, error) {
+			sess, err := sessProvider.DefaultWithRegion(region)
 			if err != nil {
 				return nil, fmt.Errorf("create session with region %s: %v", region, err)
 			}
@@ -180,15 +184,15 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}
-		if err := o.upgrade(env, urls); err != nil {
+		if err := o.upgrade(env, s3.FormatARN(endpoints.AwsPartitionID, resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *envUpgradeOpts) RecommendedActions() []string {
+// RecommendActions is a no-op for this command.
+func (o *envUpgradeOpts) RecommendActions() error {
 	return nil
 }
 
@@ -208,7 +212,8 @@ func (o *envUpgradeOpts) listEnvsToUpgrade() ([]*config.Environment, error) {
 	return envs, nil
 }
 
-func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs map[string]string) (err error) {
+func (o *envUpgradeOpts) upgrade(env *config.Environment,
+	artifactBucketARN, artifactBucketKeyARN string, customResourcesURLs map[string]string) (err error) {
 	version, err := o.envVersion(env.Name)
 	if err != nil {
 		return err
@@ -230,9 +235,9 @@ func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs ma
 		return err
 	}
 	if version == deploy.LegacyEnvTemplateVersion {
-		return o.upgradeLegacyEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
+		return o.upgradeLegacyEnvironment(upgrader, env, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 	}
-	return o.upgradeEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
+	return o.upgradeEnvironment(upgrader, env, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 }
 
 func (o *envUpgradeOpts) envVersion(name string) (string, error) {
@@ -267,6 +272,7 @@ Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplate
 }
 
 func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment,
+	artifactBucketARN, artifactBucketKeyARN string,
 	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
@@ -280,11 +286,14 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 		App: deploy.AppInformation{
 			Name: conf.App,
 		},
-		Name:                conf.Name,
-		CustomResourcesURLs: customResourcesURLs,
-		ImportVPCConfig:     importedVPC,
-		AdjustVPCConfig:     adjustedVPC,
-		CFNServiceRoleARN:   conf.ExecutionRoleARN,
+		Name:                 conf.Name,
+		ArtifactBucketKeyARN: artifactBucketKeyARN,
+		ArtifactBucketARN:    artifactBucketARN,
+		CustomResourcesURLs:  customResourcesURLs,
+		ImportVPCConfig:      importedVPC,
+		AdjustVPCConfig:      adjustedVPC,
+		CFNServiceRoleARN:    conf.ExecutionRoleARN,
+		Telemetry:            conf.Telemetry,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 	}
@@ -292,6 +301,7 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 }
 
 func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment,
+	artifactBucketARN, artifactBucketKeyARN string,
 	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	isDefaultEnv, err := o.isDefaultLegacyTemplate(upgrader, conf.App, conf.Name)
 	if err != nil {
@@ -307,9 +317,12 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 			App: deploy.AppInformation{
 				Name: conf.App,
 			},
-			Name:                conf.Name,
-			CustomResourcesURLs: customResourcesURLs,
-			CFNServiceRoleARN:   conf.ExecutionRoleARN,
+			Name:                 conf.Name,
+			ArtifactBucketKeyARN: artifactBucketKeyARN,
+			ArtifactBucketARN:    artifactBucketARN,
+			CustomResourcesURLs:  customResourcesURLs,
+			CFNServiceRoleARN:    conf.ExecutionRoleARN,
+			Telemetry:            conf.Telemetry,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 		}
@@ -385,13 +398,7 @@ func buildEnvUpgradeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)

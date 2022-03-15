@@ -9,6 +9,9 @@ import (
 	"io"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -45,6 +48,8 @@ type wkldLogsVars struct {
 type svcLogsOpts struct {
 	wkldLogsVars
 	wkldLogOpts
+	// cached variables.
+	targetEnv *config.Environment
 }
 
 type wkldLogOpts struct {
@@ -57,15 +62,18 @@ type wkldLogOpts struct {
 	deployStore deployedEnvironmentLister
 	sel         deploySelector
 	logsSvc     logEventsWriter
-	initLogsSvc func() error // Overriden in tests.
+	initLogsSvc func() error // Overridden in tests.
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
-	configStore, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc logs"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to environment config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
-	deployStore, err := deploy.NewStore(configStore)
+
+	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
@@ -79,11 +87,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		},
 	}
 	opts.initLogsSvc = func() error {
-		configStore, err := config.NewStore()
-		if err != nil {
-			return fmt.Errorf("connect to environment config store: %w", err)
-		}
-		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
+		env, err := opts.getTargetEnv()
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
@@ -91,7 +95,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return fmt.Errorf("get workload: %w", err)
 		}
-		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
@@ -113,15 +117,8 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the values provided by flags are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *svcLogsOpts) Validate() error {
-	if o.appName != "" {
-		_, err := o.configStore.GetApplication(o.appName)
-		if err != nil {
-			return err
-		}
-	}
-
 	if o.since != 0 && o.humanStartTime != "" {
 		return errors.New("only one of --since or --start-time may be used")
 	}
@@ -161,12 +158,12 @@ func (o *svcLogsOpts) Validate() error {
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *svcLogsOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	return o.askSvcEnvName()
+	return o.validateAndAskSvcEnvName()
 }
 
 // Execute outputs logs of the service.
@@ -196,9 +193,10 @@ func (o *svcLogsOpts) Execute() error {
 	return nil
 }
 
-func (o *svcLogsOpts) askApp() error {
+func (o *svcLogsOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.configStore.GetApplication(o.appName)
+		return err
 	}
 	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
@@ -208,7 +206,20 @@ func (o *svcLogsOpts) askApp() error {
 	return nil
 }
 
-func (o *svcLogsOpts) askSvcEnvName() error {
+func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
+	if o.envName != "" {
+		if _, err := o.getTargetEnv(); err != nil {
+			return err
+		}
+	}
+
+	if o.name != "" {
+		if _, err := o.configStore.GetService(o.appName, o.name); err != nil {
+			return err
+		}
+	}
+	// Note: we let prompter handle the case when there is only option for user to choose from.
+	// This is naturally the case when `o.envName != "" && o.name != ""`.
 	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
@@ -218,10 +229,22 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	return nil
 }
 
+func (o *svcLogsOpts) getTargetEnv() (*config.Environment, error) {
+	if o.targetEnv != nil {
+		return o.targetEnv, nil
+	}
+	env, err := o.configStore.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, err
+	}
+	o.targetEnv = env
+	return o.targetEnv, nil
+}
+
 func parseSince(since time.Duration) *int64 {
 	sinceSec := int64(since.Round(time.Second).Seconds())
 	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
-	return aws.Int64(timeNow.Unix() * 1000)
+	return aws.Int64(timeNow.UnixMilli())
 }
 
 func parseRFC3339(timeStr string) (int64, error) {
@@ -229,7 +252,7 @@ func parseRFC3339(timeStr string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("reading time value %s: %w", timeStr, err)
 	}
-	return startTimeTmp.Unix() * 1000, nil
+	return startTimeTmp.UnixMilli(), nil
 }
 
 // buildSvcLogsCmd builds the command for displaying service logs in an application.
@@ -257,13 +280,7 @@ func buildSvcLogsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Execute()
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)

@@ -7,6 +7,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -48,14 +52,20 @@ type svcPauseOpts struct {
 	initSvcPause func() error
 	svcARN       string
 	prog         progress
+
+	// cached variables.
+	targetEnv *config.Environment
 }
 
 func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
-	configStore, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc pause"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
-	deployStore, err := deploy.NewStore(configStore)
+
+	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
@@ -68,13 +78,9 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	opts.initSvcPause = func() error {
-		configStore, err := config.NewStore()
+		env, err := opts.getTargetEnv()
 		if err != nil {
-			return fmt.Errorf("connect to environment config store: %w", err)
-		}
-		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
-		if err != nil {
-			return fmt.Errorf("get environment: %w", err)
+			return err
 		}
 		wl, err := configStore.GetWorkload(opts.appName, opts.svcName)
 		if err != nil {
@@ -83,7 +89,7 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 		if wl.Type != manifest.RequestDrivenWebServiceType {
 			return fmt.Errorf("pausing a service is only supported for services with type: %s", manifest.RequestDrivenWebServiceType)
 		}
-		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
@@ -106,32 +112,17 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *svcPauseOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
-	}
-	if o.svcName != "" {
-		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
-			return err
-		}
-	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *svcPauseOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	if err := o.askSvcEnvName(); err != nil {
+	if err := o.validateAndAskSvcEnvName(); err != nil {
 		return err
 	}
 
@@ -139,7 +130,7 @@ func (o *svcPauseOpts) Ask() error {
 		return nil
 	}
 
-	pauseConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtSvcPauseConfirmPrompt, color.HighlightUserInput(o.svcName)), "")
+	pauseConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtSvcPauseConfirmPrompt, color.HighlightUserInput(o.svcName)), "", prompt.WithConfirmFinalMessage())
 	if err != nil {
 		return fmt.Errorf("svc pause confirmation prompt: %w", err)
 	}
@@ -149,9 +140,10 @@ func (o *svcPauseOpts) Ask() error {
 	return nil
 }
 
-func (o *svcPauseOpts) askApp() error {
+func (o *svcPauseOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.store.GetApplication(o.appName)
+		return err
 	}
 	app, err := o.sel.Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
@@ -161,7 +153,21 @@ func (o *svcPauseOpts) askApp() error {
 	return nil
 }
 
-func (o *svcPauseOpts) askSvcEnvName() error {
+func (o *svcPauseOpts) validateAndAskSvcEnvName() error {
+	if o.envName != "" {
+		if _, err := o.getTargetEnv(); err != nil {
+			return err
+		}
+	}
+
+	if o.svcName != "" {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
+			return err
+		}
+	}
+
+	// Note: we let prompter handle the case when there is only option for user to choose from.
+	// This is naturally the case when `o.envName != "" && o.svcName != ""`.
 	deployedService, err := o.sel.DeployedService(
 		fmt.Sprintf(svcPauseNamePrompt, color.HighlightUserInput(o.appName)),
 		svcPauseSvcNameHelpPrompt,
@@ -196,11 +202,24 @@ func (o *svcPauseOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *svcPauseOpts) RecommendedActions() []string {
-	return []string{
-		fmt.Sprintf("Run %s to start processing requests again.", color.HighlightCode(fmt.Sprintf("copilot svc resume -n %s", o.svcName))),
+func (o *svcPauseOpts) getTargetEnv() (*config.Environment, error) {
+	if o.targetEnv != nil {
+		return o.targetEnv, nil
 	}
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment: %w", err)
+	}
+	o.targetEnv = env
+	return o.targetEnv, nil
+}
+
+// RecommendActions returns follow-up actions the user can take after successfully executing the command.
+func (o *svcPauseOpts) RecommendActions() error {
+	logRecommendedActions([]string{
+		fmt.Sprintf("Run %s to start processing requests again.", color.HighlightCode(fmt.Sprintf("copilot svc resume -n %s", o.svcName))),
+	})
+	return nil
 }
 
 // buildSvcPauseCmd builds the command for pausing the running service.
@@ -219,20 +238,7 @@ func buildSvcPauseCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-			log.Infoln("Recommended follow-up action:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return run(opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)

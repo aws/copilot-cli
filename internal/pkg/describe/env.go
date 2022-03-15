@@ -11,23 +11,30 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"gopkg.in/yaml.v3"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"gopkg.in/yaml.v3"
 )
 
 var (
 	fmtLegacySvcDiscoveryEndpoint = "%s.local"
 )
 
+type vpcSubnetLister interface {
+	ListVPCSubnets(vpcID string) (*ec2.VPCSubnets, error)
+}
+
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
 	Environment    *config.Environment `json:"environment"`
 	Services       []*config.Workload  `json:"services"`
+	Jobs           []*config.Workload  `json:"jobs"`
 	Tags           map[string]string   `json:"tags,omitempty"`
 	Resources      []*stack.Resource   `json:"resources,omitempty"`
 	EnvironmentVPC EnvironmentVPC      `json:"environmentVPC"`
@@ -46,9 +53,10 @@ type EnvDescriber struct {
 	env             *config.Environment
 	enableResources bool
 
-	configStore ConfigStoreSvc
-	deployStore DeployedEnvServicesLister
-	cfn         stackDescriber
+	configStore  ConfigStoreSvc
+	deployStore  DeployedEnvServicesLister
+	cfn          stackDescriber
+	subnetLister vpcSubnetLister
 
 	// Cached values for reuse.
 	description *EnvDescription
@@ -69,7 +77,7 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get environment: %w", err)
 	}
-	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("assume role for environment %s: %w", env.ManagerRoleARN, err)
 	}
@@ -78,9 +86,10 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 		env:             env,
 		enableResources: opt.EnableResources,
 
-		configStore: opt.ConfigStore,
-		deployStore: opt.DeployStore,
-		cfn:         stack.NewStackDescriber(cfnstack.NameForEnv(opt.App, opt.Env), sess),
+		configStore:  opt.ConfigStore,
+		deployStore:  opt.DeployStore,
+		cfn:          stack.NewStackDescriber(cfnstack.NameForEnv(opt.App, opt.Env), sess),
+		subnetLister: ec2.New(sess),
 	}, nil
 }
 
@@ -90,6 +99,11 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 		return d.description, nil
 	}
 	svcs, err := d.filterDeployedSvcs()
+	if err != nil {
+		return nil, err
+	}
+
+	jobs, err := d.filterDeployedJobs()
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +123,7 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 	d.description = &EnvDescription{
 		Environment:    d.env,
 		Services:       svcs,
+		Jobs:           jobs,
 		Tags:           tags,
 		Resources:      stackResources,
 		EnvironmentVPC: environmentVPC,
@@ -178,6 +193,24 @@ func (d *EnvDescriber) ServiceDiscoveryEndpoint() (string, error) {
 	return fmt.Sprintf(fmtLegacySvcDiscoveryEndpoint, d.app), nil
 }
 
+// PublicCIDRBlocks returns the public CIDR blocks of the public subnets in the environment VPC.
+func (d *EnvDescriber) PublicCIDRBlocks() ([]string, error) {
+	_, envVPC, err := d.loadStackInfo()
+	if err != nil {
+		return nil, err
+	}
+	vpcID := envVPC.ID
+	subnets, err := d.subnetLister.ListVPCSubnets(vpcID)
+	if err != nil {
+		return nil, fmt.Errorf("list subnets of vpc %s in environment %s: %w", vpcID, d.env.Name, err)
+	}
+	var cidrBlocks []string
+	for _, subnet := range subnets.Public {
+		cidrBlocks = append(cidrBlocks, subnet.CIDRBlock)
+	}
+	return cidrBlocks, nil
+}
+
 func (d *EnvDescriber) loadStackInfo() (map[string]string, EnvironmentVPC, error) {
 	var environmentVPC EnvironmentVPC
 
@@ -220,6 +253,27 @@ func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 	return deployedSvcs, nil
 }
 
+// filterDeployedJobs lists the jobs that are deployed on the given app and environment
+func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
+	allJobs, err := d.configStore.ListJobs(d.app)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs for app %s: %w", d.app, err)
+	}
+	jobs := make(map[string]*config.Workload)
+	for _, job := range allJobs {
+		jobs[job.Name] = job
+	}
+	deployedJobNames, err := d.deployStore.ListDeployedJobs(d.app, d.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("list deployed jobs in env %s: %w", d.env.Name, err)
+	}
+	var deployedJobs []*config.Workload
+	for _, deployedJobName := range deployedJobNames {
+		deployedJobs = append(deployedJobs, jobs[deployedJobName])
+	}
+	return deployedJobs, nil
+}
+
 // JSONString returns the stringified EnvDescription struct with json format.
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
@@ -239,13 +293,16 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
-	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
 	headers := []string{"Name", "Type"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
+	}
+	for _, job := range e.Jobs {
+		fmt.Fprintf(writer, "  %s\t%s\n", job.Name, job.Type)
 	}
 	writer.Flush()
 	if len(e.Tags) != 0 {
@@ -262,7 +319,6 @@ func (e *EnvDescription) HumanString() string {
 		sort.Strings(keys)
 		for _, key := range keys {
 			fmt.Fprintf(writer, "  %s\t%s\n", key, e.Tags[key])
-			writer.Flush()
 		}
 	}
 	writer.Flush()

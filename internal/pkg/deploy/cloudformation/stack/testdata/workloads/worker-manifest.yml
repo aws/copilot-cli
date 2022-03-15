@@ -7,14 +7,22 @@ name: dogworker
 type: Worker Service
 
 # Configuration for your containers and service.
-image:
-  # Docker build arguments.
-  build: ./Dockerfile
 
 cpu: 256       # Number of CPU units for the task.
 memory: 512    # Amount of memory in MiB used by the task.
-count: 1       # Number of tasks that should be running in your service.
+count:
+  range:
+    min: 1
+    max: 10
+    spot_from: 6
+  queue_delay:  # Should result in 900 msgs backlog.
+    acceptable_latency: 15m
+    msg_processing_time: 1s
 exec: true     # Enable running commands in your container.
+
+publish:
+  topics:
+    - name: givesOtherdogs
 
 subscribe:
   queue:
@@ -24,6 +32,19 @@ subscribe:
   topics:
     - name: givesdogs
       service: dogsvc
+      filter_policy:
+        store:
+          - example_corp
+        event:
+          - anything-but: order_cancelled
+        cutomer_interests:
+          - rugby
+          - football
+          - baseball
+        price_usd:
+          - numeric:
+              - ">="
+              - 100
     - name: giveshuskies
       service: dogsvc
       queue:
@@ -38,7 +59,8 @@ subscribe:
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
 # You can override any of the values defined above by environment.
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
+environments:
+  test:
+    image:
+      location: amazon/ecs-example
 

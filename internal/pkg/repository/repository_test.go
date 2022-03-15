@@ -9,7 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+
 	"github.com/aws/copilot-cli/internal/pkg/repository/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 	mockTag1, mockTag2, mockTag3 := "tag1", "tag2", "tag3"
 	mockRepoURI := "mockRepoURI"
 
-	defaultDockerArguments := exec.BuildArguments{
+	defaultDockerArguments := dockerengine.BuildArguments{
 		URI:        mockRepoURI,
 		Dockerfile: inDockerfilePath,
 		Context:    filepath.Dir(inDockerfilePath),
@@ -30,16 +31,23 @@ func TestRepository_BuildAndPush(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inRepoName       string
-		inDockerfilePath string
-		inMockDocker     func(m *mocks.MockContainerLoginBuildPusher)
+		inURI        string
+		inMockDocker func(m *mocks.MockContainerLoginBuildPusher)
 
 		mockRegistry func(m *mocks.MockRegistry)
 
 		wantedError  error
 		wantedDigest string
 	}{
+		"failed to get repo URI": {
+			mockRegistry: func(m *mocks.MockRegistry) {
+				m.EXPECT().RepositoryURI(inRepoName).Return("", errors.New("some error"))
+			},
+			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {},
+			wantedError:  errors.New("get repository URI: some error"),
+		},
 		"failed to get auth": {
+			inURI: defaultDockerArguments.URI,
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Return("", "", errors.New("error getting auth"))
 			},
@@ -52,6 +60,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			wantedError: errors.New("get auth: error getting auth"),
 		},
 		"failed to build image": {
+			inURI: defaultDockerArguments.URI,
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Return("", "", nil).AnyTimes()
 			},
@@ -63,6 +72,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			wantedError: fmt.Errorf("build Dockerfile at %s: error building image", inDockerfilePath),
 		},
 		"failed to login": {
+			inURI: defaultDockerArguments.URI,
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Return("my-name", "my-pwd", nil)
 			},
@@ -75,6 +85,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			wantedError: fmt.Errorf("login to repo %s: error logging in", inRepoName),
 		},
 		"failed to push": {
+			inURI: defaultDockerArguments.URI,
 			mockRegistry: func(m *mocks.MockRegistry) {
 				m.EXPECT().Auth().Times(1)
 			},
@@ -87,6 +98,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			wantedError: errors.New("push to repo my-repo: error pushing image"),
 		},
 		"push with ecr-login": {
+			inURI: defaultDockerArguments.URI,
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
 				m.EXPECT().IsEcrCredentialHelperEnabled(defaultDockerArguments.URI).Return(true)
@@ -96,6 +108,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		},
 		"success": {
 			mockRegistry: func(m *mocks.MockRegistry) {
+				m.EXPECT().RepositoryURI(inRepoName).Return(defaultDockerArguments.URI, nil)
 				m.EXPECT().Auth().Return("my-name", "my-pwd", nil).Times(1)
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
@@ -125,11 +138,10 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			repo := &Repository{
 				name:     inRepoName,
 				registry: mockRepoGetter,
-
-				uri: mockRepoURI,
+				uri:      tc.inURI,
 			}
 
-			digest, err := repo.BuildAndPush(mockDocker, &exec.BuildArguments{
+			digest, err := repo.BuildAndPush(mockDocker, &dockerengine.BuildArguments{
 				Dockerfile: inDockerfilePath,
 				Context:    filepath.Dir(inDockerfilePath),
 				Tags:       []string{mockTag1, mockTag2, mockTag3},

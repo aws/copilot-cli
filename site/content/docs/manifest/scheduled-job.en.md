@@ -2,13 +2,13 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
 
 ???+ note "Sample manifest for a report generator cronjob"
 
-    ```yaml
+```yaml
     # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
     name: report-generator
     type: Scheduled Job
 
     on:
-      schedule: @daily
+      schedule: "@daily"
     cpu: 256
     memory: 512
     retries: 3
@@ -20,15 +20,16 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
 
     variables:
       LOG_LEVEL: info
+    env_file: log.env
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
-      
+
     # You can override any of the values defined above by environment.
     environments:
       prod:
-        cpu: 2048               # Larger CPU value for prod environment 
+        cpu: 2048               # Larger CPU value for prod environment
         memory: 4096
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your job.
@@ -47,11 +48,14 @@ The configuration for the event that triggers your job.
 <span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
 You can specify a rate to periodically trigger your job. Supported rates:
 
-* `"@yearly"`
-* `"@monthly"`
-* `"@weekly"`
-* `"@daily"`
-* `"@hourly"`
+| Rate         | Identical to          | In human-readable text and `UTC`, it runs ... |
+| ------------ | --------------------- | --------------------------------------------- |
+| `"@yearly"`  | `"cron(0 * * * ? *)"` | at midnight on January 1st                    |
+| `"@monthly"` | `"cron(0 0 1 * ? *)"` | at midnight on the first day of the month     |
+| `"@weekly"`  | `"cron(0 0 ? * 1 *)"` | at midnight on Sunday                         |
+| `"@daily"`   | `"cron(0 0 * * ? *)"` | at midnight                                   |
+| `"@hourly"`  | `"cron(0 * * * ? *)"` | at minute 0                                   |
+
 * `"@every {duration}"` (For example, "1m", "5m")
 * `"rate({duration})"` based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions)
 
@@ -62,58 +66,7 @@ Alternatively, you can specify a cron schedule if you'd like to trigger the job 
 
 <div class="separator"></div>
 
-<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
-The image section contains parameters relating to the Docker build configuration.
-
-<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
-If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
-```yaml
-image:
-  build: path/to/dockerfile
-```
-will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
-
-You can also specify build as a map:
-```yaml
-image:
-  build:
-    dockerfile: path/to/dockerfile
-    context: context/dir
-    target: build-stage
-    cache_from:
-      - image:tag
-    args:
-      key: value
-```
-In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:
-`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
-
-You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
-
-All paths are relative to your workspace root.
-
-<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
-Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).
-The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
-
-<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>  
-An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
-
-<span class="parent-field">image.</span><a id="image-depends-on" href="#image-depends-on" class="field">`depends_on`</a><span class="type">Map</span>  
-An optional key/value map of [Container Dependencies](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDependency.html) to add to the container. The key of the map is a container name and the value is the condition to depend on. Valid conditions are: `start`, `healthy`, `complete`, and `success`. You cannot specify a `complete` or `success` dependency on an essential container.
-
-!!! note
-    Container health checks for sidecars are not currently supported in Copilot. This means that `healthy` is not a valid sidecar dependency condition.
-
-For example:
-```yaml
-image:
-  build: ./Dockerfile
-  depends_on:
-    nginx: start
-    startup: success
-```
-In the above example, the task's main container will only start after the `nginx` sidecar has started and the `startup` container has completed successfully.  
+{% include 'image-config.en.md' %}
 
 <div class="separator"></div>  
 
@@ -151,8 +104,18 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 <div class="separator"></div>
 
 <a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`.
+Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`. For example, `linux/arm64` or `windows/x86_64`. The default is `linux/x86_64`.
 
+Override the generated string to build with a different valid `osfamily` or `architecture`. For example, Windows users might change the string
+```yaml
+platform: windows/x86_64
+```
+which defaults to `WINDOWS_SERVER_2019_CORE`, using a map:
+```yaml
+platform:
+  osfamily: windows_server_2019_full
+  architecture: x86_64
+```
 
 <div class="separator"></div>
 
@@ -240,7 +203,7 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 The logging section contains log configuration parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
-Optional. The Fluent Bit image to use. Defaults to `amazon/aws-for-fluent-bit:latest`.
+Optional. The Fluent Bit image to use. Defaults to `public.ecr.aws/aws-observability/aws-for-fluent-bit:latest`.
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 Optional. The configuration options to send to the FireLens log driver.
@@ -253,6 +216,8 @@ Optional. The secrets to pass to the log configuration.
 
 <span class="parent-field">logging.</span><a id="logging-configFilePath" href="#logging-configFilePath" class="field">`configFilePath`</a> <span class="type">Map</span>  
 Optional. The full config file path in your custom Fluent Bit image.
+
+{% include 'publish.en.md' %}
 
 <div class="separator"></div>
 

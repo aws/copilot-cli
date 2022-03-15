@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/spf13/afero"
@@ -56,7 +58,7 @@ var basicNameTestCases = map[string]testCase{
 	},
 }
 
-func TestValidateProjectName(t *testing.T) {
+func TestValidateAppName(t *testing.T) {
 	// Any project-specific name validations can be added here
 	testCases := map[string]testCase{
 		"contains emoji": {
@@ -309,35 +311,95 @@ func TestValidatePath(t *testing.T) {
 	}
 }
 
+type mockManifestReader struct {
+	out workspace.WorkloadManifest
+	err error
+}
+
+func (m mockManifestReader) ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error) {
+	return m.out, m.err
+}
+
 func TestValidateStorageType(t *testing.T) {
 	testCases := map[string]struct {
-		input string
-		want  error
+		input     string
+		optionals validateStorageTypeOpts
+		want      error
 	}{
-		"S3 okay": {
+		"should allow S3 addons": {
 			input: "S3",
 			want:  nil,
 		},
-		"DDB okay": {
+		"should allow DynamoDB allows": {
 			input: "DynamoDB",
 			want:  nil,
 		},
-		//"RDS okay": {
-		//	// Hiding RDS for now.
-		//	input: "RDS",
-		//},
-		"Bad name": {
+		"should return an error if a storage type does not exist": {
 			input: "Dropbox",
 			want:  fmt.Errorf(fmtErrInvalidStorageType, "Dropbox", prettify(storageTypes)),
+		},
+		"should allow Aurora if workload name is not yet specified": {
+			input: "Aurora",
+			want:  nil,
+		},
+		"should return an error if manifest file cannot be read while initializing an Aurora storage type": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					err: errors.New("some error"),
+				},
+				workloadName: "api",
+			},
+			want: errors.New("invalid storage type Aurora: read manifest file for api: some error"),
+		},
+		"should allow Aurora if the workload type is not a RDWS": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					out: []byte(`
+name: api
+type: Load Balanced Web Service
+`),
+				},
+				workloadName: "api",
+			},
+		},
+		"should return an error if Aurora is selected for a RDWS while not connected to a VPC": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					out: []byte(`
+name: api
+type: Request-Driven Web Service
+`),
+				},
+				workloadName: "api",
+			},
+			want: errors.New("invalid storage type Aurora: Request-Driven Web Service requires a VPC connection"),
+		},
+		"should succeed if Aurora is selected and RDWS is connected to a VPC": {
+			input: "Aurora",
+			optionals: validateStorageTypeOpts{
+				ws: mockManifestReader{
+					out: []byte(`
+name: api
+type: Request-Driven Web Service
+network:
+  vpc:
+    placement: private
+`),
+				},
+				workloadName: "api",
+			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateStorageType(tc.input)
+			got := validateStorageType(tc.input, tc.optionals)
 			if tc.want == nil {
-				require.Nil(t, got)
+				require.NoError(t, got)
 			} else {
-				require.EqualError(t, tc.want, got.Error())
+				require.EqualError(t, got, tc.want.Error())
 			}
 		})
 	}
@@ -427,31 +489,71 @@ func TestValidateCIDR(t *testing.T) {
 	}
 }
 
-func TestValidateCIDRSlice(t *testing.T) {
+func Test_validatePublicSubnetsCIDR(t *testing.T) {
 	testCases := map[string]struct {
-		inputCIDRSlice string
-		wantError      error
+		in     string
+		numAZs int
+
+		wantedErr string
 	}{
-		"good case": {
-			inputCIDRSlice: "10.10.10.10/24,10.10.10.10/24",
-			wantError:      nil,
+		"returns nil if CIDRs are valid and match number of available AZs": {
+			in:     "10.10.10.10/24,10.10.10.10/24",
+			numAZs: 2,
 		},
-		"bad case": {
-			inputCIDRSlice: "mockBadInput",
-			wantError:      errValueNotIPNetSlice,
+		"returns err if number of CIDRs is not equal to number of available AZs": {
+			in:        "10.10.10.10/24,10.10.10.10/24",
+			numAZs:    3,
+			wantedErr: "number of public subnet CIDRs (2) does not match number of AZs (3)",
 		},
-		"bad IPNet case": {
-			inputCIDRSlice: "10.10.10.10,10.10.10.10",
-			wantError:      errValueNotIPNetSlice,
+		"returns err if input is not valid CIDR fmt": {
+			in:        "10.10.10.10,10.10.10.10",
+			numAZs:    2,
+			wantedErr: errValueNotIPNetSlice.Error(),
 		},
 	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateCIDRSlice(tc.inputCIDRSlice)
-			if tc.wantError != nil {
-				require.EqualError(t, got, tc.wantError.Error())
+			actual := validatePublicSubnetsCIDR(tc.numAZs)(tc.in)
+			if tc.wantedErr == "" {
+				require.NoError(t, actual)
 			} else {
-				require.Nil(t, got)
+				require.EqualError(t, actual, tc.wantedErr)
+			}
+		})
+	}
+}
+
+func Test_validatePrivateSubnetsCIDR(t *testing.T) {
+	testCases := map[string]struct {
+		in     string
+		numAZs int
+
+		wantedErr string
+	}{
+		"returns nil if CIDRs are valid and match number of available AZs": {
+			in:     "10.10.10.10/24,10.10.10.10/24",
+			numAZs: 2,
+		},
+		"returns err if number of CIDRs is not equal to number of available AZs": {
+			in:        "10.10.10.10/24,10.10.10.10/24",
+			numAZs:    3,
+			wantedErr: "number of private subnet CIDRs (2) does not match number of AZs (3)",
+		},
+		"returns err if input is not valid CIDR fmt": {
+			in:        "10.10.10.10,10.10.10.10",
+			numAZs:    2,
+			wantedErr: errValueNotIPNetSlice.Error(),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual := validatePrivateSubnetsCIDR(tc.numAZs)(tc.in)
+			if tc.wantedErr == "" {
+				require.NoError(t, actual)
+			} else {
+				require.EqualError(t, actual, tc.wantedErr)
 			}
 		})
 	}
@@ -670,6 +772,115 @@ func TestValidateSecretName(t *testing.T) {
 				require.EqualError(t, got, tc.want.Error())
 			} else {
 				require.NoError(t, got)
+			}
+		})
+	}
+}
+
+func Test_validatePubSubTopicName(t *testing.T) {
+	testCases := map[string]struct {
+		inName string
+
+		wantErr error
+	}{
+		"valid topic name": {
+			inName: "a-Perfectly_V4l1dString",
+		},
+		"error when no topic name": {
+			inName:  "",
+			wantErr: errMissingPublishTopicField,
+		},
+		"error when invalid topic name": {
+			inName:  "OHNO~/`...,",
+			wantErr: errInvalidPubSubTopicName,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validatePubSubName(tc.inName)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateSubscriptionKey(t *testing.T) {
+	testCases := map[string]struct {
+		inSub interface{}
+
+		wantErr error
+	}{
+		"valid subscription": {
+			inSub:   "svc:topic",
+			wantErr: nil,
+		},
+		"error when non string": {
+			inSub:   true,
+			wantErr: errValueNotAString,
+		},
+		"error when bad format": {
+			inSub:   "svctopic",
+			wantErr: errSubscribeBadFormat,
+		},
+		"error when bad publisher name": {
+			inSub:   "svc:@@@@@@@h",
+			wantErr: fmt.Errorf("invalid topic subscription topic name `@@@@@@@h`: %w", errInvalidPubSubTopicName),
+		},
+		"error when bad svc name": {
+			inSub:   "n#######:topic",
+			wantErr: fmt.Errorf("invalid topic subscription service name `n#######`: %w", errValueBadFormat),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateSubscriptionKey(tc.inSub)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+		})
+	}
+}
+
+func Test_validateSubscribe(t *testing.T) {
+	testCases := map[string]struct {
+		inNoSubscriptions bool
+		inSubscribeTags   []string
+
+		wantErr error
+	}{
+		"valid subscription": {
+			inNoSubscriptions: false,
+			inSubscribeTags:   []string{"svc1:topic1", "svc2:topic2"},
+			wantErr:           nil,
+		},
+		"no error when no subscriptions": {
+			inNoSubscriptions: true,
+			inSubscribeTags:   nil,
+			wantErr:           nil,
+		},
+		"error when no-subscriptions and subscribe": {
+			inNoSubscriptions: true,
+			inSubscribeTags:   []string{"svc1:topic1", "svc2:topic2"},
+			wantErr:           errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
+		},
+		"error when bad subscription tag": {
+			inNoSubscriptions: false,
+			inSubscribeTags:   []string{"svc:topic", "svc:@@@@@@@h"},
+			wantErr:           fmt.Errorf("invalid topic subscription topic name `@@@@@@@h`: %w", errInvalidPubSubTopicName),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateSubscribe(tc.inNoSubscriptions, tc.inSubscribeTags)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
 			}
 		})
 	}

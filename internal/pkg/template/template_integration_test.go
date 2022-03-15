@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -21,12 +22,21 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 	}{
 		"renders a valid template by default": {
 			opts: template.WorkloadOpts{
-				ServiceDiscoveryEndpoint: "test.app.local"},
+				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+			},
 		},
 		"renders with timeout and no retries": {
 			opts: template.WorkloadOpts{
 				StateMachine: &template.StateMachineOpts{
 					Timeout: aws.Int(3600),
+				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
@@ -36,6 +46,10 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 				StateMachine: &template.StateMachineOpts{
 					Retries: aws.Int(5),
 					Timeout: aws.Int(3600),
+				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
@@ -51,6 +65,23 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SecretOutputs:   []string{"TablePassword"},
 					PolicyOutputs:   []string{"TablePolicy"},
 				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				ServiceDiscoveryEndpoint: "test.app.local",
+			},
+		},
+		"renders with Windows platform": {
+			opts: template.WorkloadOpts{
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				Platform: template.RuntimePlatformOpts{
+					OS:   "windows",
+					Arch: "x86_64",
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 			},
 		},
@@ -58,7 +89,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			sess, err := sessions.NewProvider().Default()
+			sess, err := sessions.ImmutableProvider().Default()
 			require.NoError(t, err)
 			cfn := cloudformation.New(sess)
 			tpl := template.New()
@@ -87,6 +118,23 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				ALBEnabled: true,
+			},
+		},
+		"renders a valid grpc template by default": {
+			opts: template.WorkloadOpts{
+				HTTPVersion:              aws.String("GRPC"),
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with addons with no outputs": {
@@ -95,7 +143,12 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				NestedStack: &template.WorkloadNestedStackOpts{
 					StackName: "AddonsStack",
 				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 		"renders a valid template with addons with outputs": {
@@ -107,23 +160,33 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					SecretOutputs:   []string{"TablePassword"},
 					PolicyOutputs:   []string{"TablePolicy"},
 				},
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 		"renders a valid template with private subnet placement": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
-				Network: &template.NetworkOpts{
-					AssignPublicIP: "DISABLED",
-					SubnetsType:    "PrivateSubnets",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.DisablePublicIP,
+					SubnetsType:    template.PrivateSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 		"renders a valid template with all storage options": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 					EFSPerms: []*template.EFSPermission{
@@ -152,12 +215,17 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with minimal storage options": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck:          defaultHttpHealthCheck,
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				Storage: &template.StorageOpts{
 					EFSPerms: []*template.EFSPermission{
 						{
@@ -181,15 +249,21 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with ephemeral storage": {
 			opts: template.WorkloadOpts{
-				HTTPHealthCheck:          defaultHttpHealthCheck,
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 				},
+				ALBEnabled: true,
 			},
 		},
 		"renders a valid template with entrypoint and command overrides": {
@@ -198,6 +272,41 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				EntryPoint:               []string{"/bin/echo", "hello"},
 				Command:                  []string{"world"},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				ALBEnabled: true,
+			},
+		},
+		"renders a valid template with additional addons parameters": {
+			opts: template.WorkloadOpts{
+				ServiceDiscoveryEndpoint: "test.app.local",
+				HTTPHealthCheck:          defaultHttpHealthCheck,
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				AddonsExtraParams: `ServiceName: !Ref Service
+DiscoveryServiceArn:
+  Fn::GetAtt: [DiscoveryService, Arn]
+`,
+				ALBEnabled: true,
+			},
+		},
+		"renders a valid template with Windows platform": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Network: template.NetworkOpts{
+					AssignPublicIP: template.EnablePublicIP,
+					SubnetsType:    template.PublicSubnetsPlacement,
+				},
+				Platform: template.RuntimePlatformOpts{
+					OS:   "windows",
+					Arch: "x86_64",
+				},
+				ServiceDiscoveryEndpoint: "test.app.local",
+				ALBEnabled:               true,
 			},
 		},
 	}
@@ -205,7 +314,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			sess, err := sessions.NewProvider().Default()
+			sess, err := sessions.ImmutableProvider().Default()
 			require.NoError(t, err)
 			cfn := cloudformation.New(sess)
 			tpl := template.New()

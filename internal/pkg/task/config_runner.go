@@ -35,6 +35,9 @@ type ConfigRunner struct {
 
 	// Must not be nil if using default subnets.
 	VPCGetter VPCGetter
+
+	// Platform configuration
+	OS string
 }
 
 // Run runs tasks given subnets, security groups and the cluster, and returns the tasks.
@@ -65,14 +68,22 @@ func (r *ConfigRunner) Run() ([]*Task, error) {
 		}
 		r.Subnets = subnets
 	}
+	platformVersion := "LATEST"
+	enableExec := true
+	if IsValidWindowsOS(r.OS) {
+		platformVersion = "1.0.0"
+		enableExec = false
+	}
 
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
-		Cluster:        r.Cluster,
-		Count:          r.Count,
-		Subnets:        r.Subnets,
-		SecurityGroups: r.SecurityGroups,
-		TaskFamilyName: taskFamilyName(r.GroupName),
-		StartedBy:      startedBy,
+		Cluster:         r.Cluster,
+		Count:           r.Count,
+		Subnets:         r.Subnets,
+		SecurityGroups:  r.SecurityGroups,
+		TaskFamilyName:  taskFamilyName(r.GroupName),
+		StartedBy:       startedBy,
+		PlatformVersion: platformVersion,
+		EnableExec:      enableExec,
 	})
 	if err != nil {
 		return nil, &errRunTask{

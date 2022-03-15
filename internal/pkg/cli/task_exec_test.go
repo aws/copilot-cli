@@ -19,17 +19,18 @@ import (
 )
 
 type execTaskMocks struct {
-	storeSvc    *mocks.Mockstore
-	configSel   *mocks.MockappEnvSelector
-	taskSel     *mocks.MockrunningTaskSelector
-	commandExec *mocks.MockecsCommandExecutor
+	storeSvc         *mocks.Mockstore
+	configSel        *mocks.MockappEnvSelector
+	taskSel          *mocks.MockrunningTaskSelector
+	commandExec      *mocks.MockecsCommandExecutor
+	ssmPluginManager *mocks.MockssmPluginManager
+	provider         *mocks.MocksessionProvider
 }
 
 func TestTaskExec_Validate(t *testing.T) {
 	const (
-		mockApp       = "my-app"
-		mockEnv       = "my-env"
-		mockTaskGroup = "my-task-group"
+		mockApp = "my-app"
+		mockEnv = "my-env"
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
@@ -73,6 +74,21 @@ func TestTaskExec_Validate(t *testing.T) {
 
 			wantedError: fmt.Errorf("some error"),
 		},
+		"skip validation if app flag is not set": {
+			inEnv: mockEnv,
+			setupMocks: func(m execTaskMocks) {
+				m.ssmPluginManager.EXPECT().ValidateBinary().Return(nil)
+			},
+		},
+		"success": {
+			inApp: mockApp,
+			inEnv: mockEnv,
+			setupMocks: func(m execTaskMocks) {
+				m.storeSvc.EXPECT().GetApplication(mockApp).Return(&config.Application{}, nil)
+				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(&config.Environment{}, nil)
+				m.ssmPluginManager.EXPECT().ValidateBinary().Return(nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -81,8 +97,10 @@ func TestTaskExec_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockSSMValidator := mocks.NewMockssmPluginManager(ctrl)
 			mocks := execTaskMocks{
-				storeSvc: mockStoreReader,
+				storeSvc:         mockStoreReader,
+				ssmPluginManager: mockSSMValidator,
 			}
 
 			tc.setupMocks(mocks)
@@ -96,7 +114,8 @@ func TestTaskExec_Validate(t *testing.T) {
 					},
 					useDefault: tc.useDefault,
 				},
-				store: mockStoreReader,
+				store:            mockStoreReader,
+				ssmPluginManager: mockSSMValidator,
 			}
 
 			// WHEN
@@ -114,10 +133,8 @@ func TestTaskExec_Validate(t *testing.T) {
 
 func TestTaskExec_Ask(t *testing.T) {
 	const (
-		mockApp       = "my-app"
-		mockEnv       = "my-env"
-		mockTaskGroup = "my-task-group"
-		mockTaskID    = "my-task-id"
+		mockApp = "my-app"
+		mockEnv = "my-env"
 	)
 	mockTask := &ecs.Task{
 		TaskArn: aws.String("mockTaskARN"),
@@ -138,6 +155,7 @@ func TestTaskExec_Ask(t *testing.T) {
 		"should bubble error if fail to select task in default cluster": {
 			useDefault: true,
 			setupMocks: func(m execTaskMocks) {
+				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.taskSel.EXPECT().RunningTask(taskExecTaskPrompt, taskExecTaskHelpPrompt,
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, mockErr)
 			},
@@ -175,6 +193,7 @@ func TestTaskExec_Ask(t *testing.T) {
 			inEnv: mockEnv,
 			setupMocks: func(m execTaskMocks) {
 				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(&config.Environment{}, nil)
+				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())
 				m.taskSel.EXPECT().RunningTask(taskExecTaskPrompt, taskExecTaskHelpPrompt,
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, mockErr)
 			},
@@ -184,6 +203,7 @@ func TestTaskExec_Ask(t *testing.T) {
 		"success with default flag set": {
 			useDefault: true,
 			setupMocks: func(m execTaskMocks) {
+				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.taskSel.EXPECT().RunningTask(taskExecTaskPrompt, taskExecTaskHelpPrompt,
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTask, nil)
 			},
@@ -191,8 +211,9 @@ func TestTaskExec_Ask(t *testing.T) {
 			wantedTask:       mockTask,
 			wantedUseDefault: true,
 		},
-		"success with default option choosed": {
+		"success with default option chose": {
 			setupMocks: func(m execTaskMocks) {
+				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
 				m.configSel.EXPECT().Application(taskExecAppNamePrompt, taskExecAppNameHelpPrompt, useDefaultClusterOption).
 					Return(useDefaultClusterOption, nil)
 				m.taskSel.EXPECT().RunningTask(taskExecTaskPrompt, taskExecTaskHelpPrompt,
@@ -209,6 +230,7 @@ func TestTaskExec_Ask(t *testing.T) {
 				m.configSel.EXPECT().Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, mockApp, useDefaultClusterOption).
 					Return(mockEnv, nil)
 				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(&config.Environment{}, nil)
+				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())
 				m.taskSel.EXPECT().RunningTask(taskExecTaskPrompt, taskExecTaskHelpPrompt,
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTask, nil)
 			},
@@ -229,10 +251,12 @@ func TestTaskExec_Ask(t *testing.T) {
 			mockNewTaskSel := func(_ *session.Session) runningTaskSelector {
 				return mockTaskSel
 			}
+			mockProvider := mocks.NewMocksessionProvider(ctrl)
 			mocks := execTaskMocks{
 				storeSvc:  mockStoreReader,
 				configSel: mockConfigSel,
 				taskSel:   mockTaskSel,
+				provider:  mockProvider,
 			}
 
 			tc.setupMocks(mocks)
@@ -250,6 +274,7 @@ func TestTaskExec_Ask(t *testing.T) {
 				store:      mockStoreReader,
 				newTaskSel: mockNewTaskSel,
 				configSel:  mockConfigSel,
+				provider:   mockProvider,
 			}
 
 			// WHEN
@@ -313,7 +338,9 @@ func TestTaskExec_Execute(t *testing.T) {
 					},
 				},
 			},
-			setupMocks: func(m execTaskMocks) {},
+			setupMocks: func(m execTaskMocks) {
+				m.provider.EXPECT().Default()
+			},
 
 			wantedError: fmt.Errorf("parse task ARN mockBadTaskARN: parse ECS task ARN: arn: invalid prefix"),
 		},
@@ -321,6 +348,7 @@ func TestTaskExec_Execute(t *testing.T) {
 			inTask:       mockTask,
 			inUseDefault: true,
 			setupMocks: func(m execTaskMocks) {
+				m.provider.EXPECT().Default()
 				m.commandExec.EXPECT().ExecuteCommand(ecs.ExecuteCommandInput{
 					Cluster:   mockClusterARN,
 					Command:   mockCommand,
@@ -335,6 +363,7 @@ func TestTaskExec_Execute(t *testing.T) {
 			inTask: mockTask,
 			setupMocks: func(m execTaskMocks) {
 				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(&config.Environment{}, nil)
+				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())
 				m.commandExec.EXPECT().ExecuteCommand(ecs.ExecuteCommandInput{
 					Cluster:   mockClusterARN,
 					Command:   mockCommand,
@@ -358,6 +387,7 @@ func TestTaskExec_Execute(t *testing.T) {
 			mocks := execTaskMocks{
 				storeSvc:    mockStoreReader,
 				commandExec: mockCommandExec,
+				provider:    mocks.NewMocksessionProvider(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -374,6 +404,7 @@ func TestTaskExec_Execute(t *testing.T) {
 				task:               tc.inTask,
 				store:              mockStoreReader,
 				newCommandExecutor: mockNewCommandExec,
+				provider:           mocks.provider,
 			}
 
 			// WHEN

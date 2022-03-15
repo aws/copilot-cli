@@ -7,6 +7,7 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -60,25 +61,40 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
 )
 
+// Final messages displayed after prompting.
+const (
+	appNameFinalMessage = "Application:"
+	envNameFinalMessage = "Environment:"
+	svcNameFinalMsg     = "Service name:"
+	jobNameFinalMsg     = "Job name:"
+	deployedSvcFinalMsg = "Service:"
+	taskFinalMsg        = "Task:"
+	workloadFinalMsg    = "Name:"
+	dockerfileFinalMsg  = "Dockerfile:"
+	topicFinalMsg       = "Topic subscriptions:"
+	pipelineFinalMsg    = "Pipeline:"
+)
+
 var scheduleTypes = []string{
 	rate,
 	fixedSchedule,
 }
 
-var presetSchedules = []string{
-	custom,
-	hourly,
-	daily,
-	weekly,
-	monthly,
-	yearly,
+var presetSchedules = []prompt.Option{
+	{Value: custom, Hint: ""},
+	{Value: hourly, Hint: "At minute 0"},
+	{Value: daily, Hint: "At midnight UTC"},
+	{Value: weekly, Hint: "At midnight on Sunday UTC"},
+	{Value: monthly, Hint: "At midnight, first day of month UTC"},
+	{Value: yearly, Hint: "At midnight, Jan 1st UTC"},
 }
 
 // Prompter wraps the methods to ask for inputs from the terminal.
 type Prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
-	MultiSelect(message, help string, options []string, promptOpts ...prompt.PromptConfig) ([]string, error)
+	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
+	MultiSelect(message, help string, options []string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) ([]string, error)
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
 
@@ -103,9 +119,14 @@ type ConfigLister interface {
 
 // WsWorkloadLister wraps the method to get workloads in current workspace.
 type WsWorkloadLister interface {
-	ServiceNames() ([]string, error)
-	JobNames() ([]string, error)
-	WorkloadNames() ([]string, error)
+	ListServices() ([]string, error)
+	ListJobs() ([]string, error)
+	ListWorkloads() ([]string, error)
+}
+
+// WorkspacePipelinesLister is a pipeline lister.
+type WorkspacePipelinesLister interface {
+	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -121,6 +142,7 @@ type DeployStoreClient interface {
 	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 	IsJobDeployed(appName, envName, jobName string) (bool, error)
+	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
 // TaskStackDescriber wraps cloudformation client methods to describe task stacks
@@ -152,6 +174,12 @@ type WorkspaceSelect struct {
 	*Select
 	ws      WorkspaceRetriever
 	appName string
+}
+
+// PipelineSelect is a workspace pipeline selector.
+type PipelineSelect struct {
+	prompt Prompter
+	ws     WorkspacePipelinesLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -190,7 +218,7 @@ func TaskWithAppEnv(app, env string) GetDeployedTaskOpts {
 	}
 }
 
-// WithDefaultCluster sets up whether CFTaskSelect should use only the default cluster.
+// TaskWithDefaultCluster sets up whether CFTaskSelect should use only the default cluster.
 func TaskWithDefaultCluster() GetDeployedTaskOpts {
 	return func(in *CFTaskSelect) {
 		in.defaultCluster = true
@@ -229,6 +257,14 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select: NewSelect(prompt, store),
+		ws:     ws,
+	}
+}
+
+// NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
+func NewWsPipelineSelect(prompt Prompter, ws WorkspacePipelinesLister) *PipelineSelect {
+	return &PipelineSelect{
+		prompt: prompt,
 		ws:     ws,
 	}
 }
@@ -285,7 +321,7 @@ func WithTaskID(id string) TaskOpts {
 
 // RunningTask has the user select a running task. Callers can provide either app and env names,
 // or use default cluster.
-func (s *TaskSelect) RunningTask(prompt, help string, opts ...TaskOpts) (*awsecs.Task, error) {
+func (s *TaskSelect) RunningTask(msg, help string, opts ...TaskOpts) (*awsecs.Task, error) {
 	var tasks []*awsecs.Task
 	var err error
 	for _, opt := range opts {
@@ -328,9 +364,10 @@ func (s *TaskSelect) RunningTask(prompt, help string, opts ...TaskOpts) (*awsecs
 		return taskStrMap[taskStrList[0]], nil
 	}
 	task, err := s.prompt.SelectOne(
-		prompt,
+		msg,
 		help,
 		taskStrList,
+		prompt.WithFinalMessage(taskFinalMsg),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select running task: %w", err)
@@ -391,7 +428,7 @@ func (s *DeployedService) String() string {
 
 // Task has the user select a task. Callers can provide an environment, an app, or a "use default cluster" option
 // to filter the returned tasks.
-func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (string, error) {
+func (s *CFTaskSelect) Task(msg, help string, opts ...GetDeployedTaskOpts) (string, error) {
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -432,7 +469,7 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (s
 		log.Infof("Found only one deployed task: %s\n", color.HighlightUserInput(choices[0]))
 		return choices[0], nil
 	}
-	choice, err := s.prompt.SelectOne(prompt, help, choices)
+	choice, err := s.prompt.SelectOne(msg, help, choices, prompt.WithFinalMessage(taskFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select task for deletion: %w", err)
 	}
@@ -441,7 +478,7 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (s
 
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,
 // a particular service to filter on, or both.
-func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...GetDeployedServiceOpts) (*DeployedService, error) {
+func (s *DeploySelect) DeployedService(msg, help string, app string, opts ...GetDeployedServiceOpts) (*DeployedService, error) {
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -527,9 +564,10 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 	}
 
 	svcEnvName, err := s.prompt.SelectOne(
-		prompt,
+		msg,
 		help,
 		svcEnvNames,
+		prompt.WithFinalMessage(deployedSvcFinalMsg),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select deployed services for application %s: %w", app, err)
@@ -574,7 +612,7 @@ func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 		return serviceNames[0], nil
 	}
 
-	selectedServiceName, err := s.prompt.SelectOne(msg, help, serviceNames, prompt.WithFinalMessage("Service name:"))
+	selectedServiceName, err := s.prompt.SelectOne(msg, help, serviceNames, prompt.WithFinalMessage(svcNameFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select service: %w", err)
 	}
@@ -604,7 +642,7 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 		return jobNames[0], nil
 	}
 
-	selectedJobName, err := s.prompt.SelectOne(msg, help, jobNames, prompt.WithFinalMessage("Job name:"))
+	selectedJobName, err := s.prompt.SelectOne(msg, help, jobNames, prompt.WithFinalMessage(jobNameFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select job: %w", err)
 	}
@@ -633,7 +671,7 @@ func (s *WorkspaceSelect) Workload(msg, help string) (wl string, err error) {
 		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(wlNames[0]))
 		return wlNames[0], nil
 	}
-	selectedWlName, err := s.prompt.SelectOne(msg, help, wlNames, prompt.WithFinalMessage("Name: "))
+	selectedWlName, err := s.prompt.SelectOne(msg, help, wlNames, prompt.WithFinalMessage(workloadFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select workload: %w", err)
 	}
@@ -655,8 +693,38 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 	return filtered
 }
 
+// Pipeline fetches all the pipelines in a workspace and prompts the user to select one.
+func (s *PipelineSelect) Pipeline(msg, help string) (*workspace.PipelineManifest, error) {
+	pipelines, err := s.ws.ListPipelines()
+	if err != nil {
+		return nil, err
+	}
+	if len(pipelines) == 0 {
+		return nil, errors.New("no pipelines found")
+	}
+	var pipelineNames []string
+	for _, pipeline := range pipelines {
+		pipelineNames = append(pipelineNames, pipeline.Name)
+	}
+	if len(pipelineNames) == 1 {
+		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelineNames[0]))
+		return &workspace.PipelineManifest{
+			Name: pipelines[0].Name,
+			Path: pipelines[0].Path,
+		}, nil
+	}
+	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
+	if err != nil {
+		return nil, fmt.Errorf("select pipeline: %w", err)
+	}
+	return &workspace.PipelineManifest{
+		Name: selectedPipeline,
+		Path: s.pipelinePath(pipelines, selectedPipeline),
+	}, nil
+}
+
 // Service fetches all services in an app and prompts the user to select one.
-func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
+func (s *ConfigSelect) Service(msg, help, app string) (string, error) {
 	services, err := s.retrieveServices(app)
 	if err != nil {
 		return "", err
@@ -671,7 +739,7 @@ func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
 		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(services[0]))
 		return services[0], nil
 	}
-	selectedSvcName, err := s.prompt.SelectOne(prompt, help, services)
+	selectedSvcName, err := s.prompt.SelectOne(msg, help, services, prompt.WithFinalMessage(svcNameFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select service: %w", err)
 	}
@@ -679,7 +747,7 @@ func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
 }
 
 // Job fetches all jobs in an app and prompts the user to select one.
-func (s *ConfigSelect) Job(prompt, help, app string) (string, error) {
+func (s *ConfigSelect) Job(msg, help, app string) (string, error) {
 	jobs, err := s.retrieveJobs(app)
 	if err != nil {
 		return "", err
@@ -694,7 +762,7 @@ func (s *ConfigSelect) Job(prompt, help, app string) (string, error) {
 		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(jobs[0]))
 		return jobs[0], nil
 	}
-	selectedJobName, err := s.prompt.SelectOne(prompt, help, jobs)
+	selectedJobName, err := s.prompt.SelectOne(msg, help, jobs, prompt.WithFinalMessage(jobNameFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select job: %w", err)
 	}
@@ -702,7 +770,7 @@ func (s *ConfigSelect) Job(prompt, help, app string) (string, error) {
 }
 
 // Environment fetches all the environments in an app and prompts the user to select one.
-func (s *Select) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
+func (s *Select) Environment(msg, help, app string, additionalOpts ...string) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return "", fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
@@ -720,7 +788,7 @@ func (s *Select) Environment(prompt, help, app string, additionalOpts ...string)
 		return envs[0], nil
 	}
 
-	selectedEnvName, err := s.prompt.SelectOne(prompt, help, envs)
+	selectedEnvName, err := s.prompt.SelectOne(msg, help, envs, prompt.WithFinalMessage(envNameFinalMessage))
 	if err != nil {
 		return "", fmt.Errorf("select environment: %w", err)
 	}
@@ -769,7 +837,7 @@ func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) p
 }
 
 // Application fetches all the apps in an account/region and prompts the user to select one.
-func (s *Select) Application(prompt, help string, additionalOpts ...string) (string, error) {
+func (s *Select) Application(msg, help string, additionalOpts ...string) (string, error) {
 	appNames, err := s.retrieveApps()
 	if err != nil {
 		return "", err
@@ -787,11 +855,133 @@ func (s *Select) Application(prompt, help string, additionalOpts ...string) (str
 		return appNames[0], nil
 	}
 
-	app, err := s.prompt.SelectOne(prompt, help, appNames)
+	app, err := s.prompt.SelectOne(msg, help, appNames, prompt.WithFinalMessage(appNameFinalMessage))
 	if err != nil {
 		return "", fmt.Errorf("select application: %w", err)
 	}
 	return app, nil
+}
+
+// Dockerfile asks the user to select from a list of Dockerfiles in the current
+// directory or one level down. If no dockerfiles are found, it asks for a custom path.
+func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+	dockerfiles, err := s.ws.ListDockerfiles()
+	if err != nil {
+		return "", fmt.Errorf("list Dockerfiles: %w", err)
+	}
+	var sel string
+	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
+	sel, err = s.prompt.SelectOne(
+		selPrompt,
+		selHelp,
+		dockerfiles,
+		prompt.WithFinalMessage(dockerfileFinalMsg),
+	)
+	if err != nil {
+		return "", fmt.Errorf("select Dockerfile: %w", err)
+	}
+	if sel != dockerfilePromptUseCustom {
+		return sel, nil
+	}
+	sel, err = s.prompt.Get(
+		notFoundPrompt,
+		notFoundHelp,
+		pathValidator,
+		prompt.WithFinalMessage(dockerfileFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
+	}
+	return sel, nil
+}
+
+// Schedule asks the user to select either a rate, preset cron, or custom cron.
+func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+	scheduleType, err := s.prompt.SelectOne(
+		scheduleTypePrompt,
+		scheduleTypeHelp,
+		scheduleTypes,
+		prompt.WithFinalMessage("Schedule type:"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get schedule type: %w", err)
+	}
+	switch scheduleType {
+	case rate:
+		return s.askRate(rateValidator)
+	case fixedSchedule:
+		return s.askCron(scheduleValidator)
+	default:
+		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
+	}
+}
+
+// Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
+// across all environments* and returns the topic structs.
+func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
+	envs, err := s.config.ListEnvironments(app)
+	if err != nil {
+		return nil, fmt.Errorf("list environments: %w", err)
+	}
+	if len(envs) == 0 {
+		log.Infoln("No environments are currently deployed. Skipping subscription selection.")
+		return nil, nil
+	}
+
+	envTopics := make(map[string][]deploy.Topic, len(envs))
+	for _, env := range envs {
+		topics, err := s.deployStoreSvc.ListSNSTopics(app, env.Name)
+		if err != nil {
+			return nil, fmt.Errorf("list SNS topics: %w", err)
+		}
+		envTopics[env.Name] = topics
+	}
+
+	// Get only topics deployed in all environments.
+	// Computes the intersection of the `envTopics` lists.
+	overallTopics := make(map[string]deploy.Topic)
+	// Initialize the list of topics.
+	for _, topic := range envTopics[envs[0].Name] {
+		overallTopics[topic.String()] = topic
+	}
+	// Then do the pairwise intersection of all other envs.
+	for _, env := range envs[1:] {
+		topics := envTopics[env.Name]
+		overallTopics = intersect(overallTopics, topics)
+	}
+
+	if len(overallTopics) == 0 {
+		log.Infoln("No SNS topics are currently deployed in all environments. You can customize subscriptions in your manifest.")
+		return nil, nil
+	}
+	// Create the list of options.
+	var topicDescriptions []string
+	for t := range overallTopics {
+		topicDescriptions = append(topicDescriptions, t)
+	}
+	// Sort descriptions by ARN, which implies sorting by workload name and then by topic name due to
+	// behavior of `intersect`. That is, the `overallTopics` map is guaranteed to contain topics
+	// referencing the same environment.
+	sort.Slice(topicDescriptions, func(i, j int) bool {
+		return overallTopics[topicDescriptions[i]].ARN() < overallTopics[topicDescriptions[j]].ARN()
+	})
+
+	selectedTopics, err := s.prompt.MultiSelect(
+		promptMsg,
+		help,
+		topicDescriptions,
+		nil,
+		prompt.WithFinalMessage(topicFinalMsg),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select SNS topics: %w", err)
+	}
+
+	// Get the topics from the topic descriptions again.
+	var topics []deploy.Topic
+	for _, t := range selectedTopics {
+		topics = append(topics, overallTopics[t])
+	}
+	return topics, nil
 }
 
 func (s *Select) retrieveApps() ([]string, error) {
@@ -843,7 +1033,7 @@ func (s *ConfigSelect) retrieveJobs(app string) ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
-	localServiceNames, err := s.ws.ServiceNames()
+	localServiceNames, err := s.ws.ListServices()
 	if err != nil {
 		return nil, err
 	}
@@ -851,7 +1041,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
-	localJobNames, err := s.ws.JobNames()
+	localJobNames, err := s.ws.ListJobs()
 	if err != nil {
 		return nil, err
 	}
@@ -859,64 +1049,20 @@ func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
-	localWlNames, err := s.ws.WorkloadNames()
+	localWlNames, err := s.ws.ListWorkloads()
 	if err != nil {
 		return nil, err
 	}
 	return localWlNames, nil
 }
 
-// Dockerfile asks the user to select from a list of Dockerfiles in the current
-// directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
-	dockerfiles, err := s.ws.ListDockerfiles()
-	if err != nil {
-		return "", fmt.Errorf("list Dockerfiles: %w", err)
+func (s *PipelineSelect) pipelinePath(pipelines []workspace.PipelineManifest, name string) string {
+	for _, pipeline := range pipelines {
+		if pipeline.Name == name {
+			return pipeline.Path
+		}
 	}
-	var sel string
-	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
-	sel, err = s.prompt.SelectOne(
-		selPrompt,
-		selHelp,
-		dockerfiles,
-		prompt.WithFinalMessage("Dockerfile:"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("select Dockerfile: %w", err)
-	}
-	if sel != dockerfilePromptUseCustom {
-		return sel, nil
-	}
-	sel, err = s.prompt.Get(
-		notFoundPrompt,
-		notFoundHelp,
-		pathValidator,
-		prompt.WithFinalMessage("Dockerfile:"))
-	if err != nil {
-		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
-	}
-	return sel, nil
-}
-
-// Schedule asks the user to select either a rate, preset cron, or custom cron.
-func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
-	scheduleType, err := s.prompt.SelectOne(
-		scheduleTypePrompt,
-		scheduleTypeHelp,
-		scheduleTypes,
-		prompt.WithFinalMessage("Schedule type:"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("get schedule type: %w", err)
-	}
-	switch scheduleType {
-	case rate:
-		return s.askRate(rateValidator)
-	case fixedSchedule:
-		return s.askCron(scheduleValidator)
-	default:
-		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
-	}
+	return ""
 }
 
 func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
@@ -934,11 +1080,11 @@ func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, e
 }
 
 func (s *WorkspaceSelect) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
-	cronInput, err := s.prompt.SelectOne(
+	cronInput, err := s.prompt.SelectOption(
 		schedulePrompt,
 		scheduleHelp,
 		presetSchedules,
-		prompt.WithFinalMessage("Fixed Schedule:"),
+		prompt.WithFinalMessage("Fixed schedule:"),
 	)
 	if err != nil {
 		return "", fmt.Errorf("get preset schedule: %w", err)
@@ -957,7 +1103,7 @@ func (s *WorkspaceSelect) askCron(scheduleValidator prompt.ValidatorFunc) (strin
 			customScheduleHelp,
 			scheduleValidator,
 			prompt.WithDefaultInput("0 * * * *"),
-			prompt.WithFinalMessage("Custom Schedule:"),
+			prompt.WithFinalMessage("Custom schedule:"),
 		)
 		if err != nil {
 			return "", fmt.Errorf("get custom schedule: %w", err)
@@ -1004,4 +1150,14 @@ func filterDeployedServices(filter DeployedServiceFilter, inServices []*Deployed
 		}
 	}
 	return outServices, nil
+}
+
+func intersect(firstMap map[string]deploy.Topic, secondArr []deploy.Topic) map[string]deploy.Topic {
+	out := make(map[string]deploy.Topic)
+	for _, topic := range secondArr {
+		if _, ok := firstMap[topic.String()]; ok {
+			out[topic.String()] = topic
+		}
+	}
+	return out
 }

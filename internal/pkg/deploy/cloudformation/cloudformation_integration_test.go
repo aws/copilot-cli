@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -436,6 +437,8 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		}))
 		require.NoError(t, err)
 		environmentToDeploy.CustomResourcesURLs = urls
+		environmentToDeploy.ArtifactBucketKeyARN = "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+		environmentToDeploy.ArtifactBucketARN = "arn:aws:s3:::fakebucket/key"
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
@@ -521,6 +524,26 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.NotNil(t,
 					output.OutputValue,
 					"ServiceDiscoveryNamespaceID value should not be nil")
+			},
+			"InternetGatewayID": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-InternetGatewayID", envStackName),
+					*output.ExportName,
+					"Should export InternetGatewayID as stackname-InternetGatewayID")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"InternetGatewayID value should not be nil")
+			},
+			"PublicRouteTableID": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-PublicRouteTableID", envStackName),
+					*output.ExportName,
+					"Should export PublicRouteTableID as stackname-PublicRouteTableID when creating environment with default VPC")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"PublicRouteTableID value should not be nil")
 			},
 			"EnvironmentSecurityGroup": func(output *awsCF.Output) {
 				require.Equal(t,

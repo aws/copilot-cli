@@ -79,10 +79,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, enableLongARN, err := s3.ParseURL(e.in.CustomResourcesURLs[template.EnableLongARNsFileName])
-	if err != nil {
-		return "", err
-	}
 	_, customDomain, err := s3.ParseURL(e.in.CustomResourcesURLs[template.CustomDomainFileName])
 	if err != nil {
 		return "", err
@@ -93,16 +89,18 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:                   e.in.App.Name,
-		DNSCertValidatorLambda:    dnsCertValidator,
-		DNSDelegationLambda:       dnsDelegation,
-		EnableLongARNFormatLambda: enableLongARN,
-		CustomDomainLambda:        customDomain,
-		ScriptBucketName:          bucket,
-		ImportVPC:                 e.in.ImportVPCConfig,
-		VPCConfig:                 vpcConf,
-		Version:                   e.in.Version,
-		LatestVersion:             deploy.LatestEnvTemplateVersion,
+		AppName:                e.in.App.Name,
+		DNSCertValidatorLambda: dnsCertValidator,
+		DNSDelegationLambda:    dnsDelegation,
+		CustomDomainLambda:     customDomain,
+		ScriptBucketName:       bucket,
+		ArtifactBucketARN:      e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
+		ImportVPC:              e.in.ImportVPCConfig,
+		VPCConfig:              vpcConf,
+		Version:                e.in.Version,
+		Telemetry:              e.in.Telemetry,
+		LatestVersion:          deploy.LatestEnvTemplateVersion,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
 	}))
@@ -140,6 +138,13 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(fmt.Sprintf(fmtServiceDiscoveryEndpoint, e.in.Name, e.in.App.Name)),
 		},
 	}, nil
+}
+
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *EnvStackConfig) SerializedParameters() (string, error) {
+	// No-op for now.
+	return "", nil
 }
 
 // Tags returns the tags that should be applied to the environment CloudFormation stack.

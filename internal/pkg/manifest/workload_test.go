@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -12,6 +13,36 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
+
+func TestImage_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedError error
+	}{
+		"error if both build and location are set": {
+			inContent: []byte(`build: mockBuild
+location: mockLocation`),
+			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
+		},
+		"success": {
+			inContent: []byte(`location: mockLocation`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			i := Image{}
+			err := yaml.Unmarshal(tc.inContent, &i)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "mockLocation", aws.StringValue(i.Location))
+			}
+		})
+	}
+}
 
 func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
@@ -47,7 +78,7 @@ func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			e := ImageOverride{
-				EntryPoint: &EntryPointOverride{
+				EntryPoint: EntryPointOverride{
 					String: aws.String("wrong"),
 				},
 			}
@@ -138,7 +169,7 @@ func TestCommandOverride_UnmarshalYAML(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			e := ImageOverride{
-				Command: &CommandOverride{
+				Command: CommandOverride{
 					String: aws.String("wrong"),
 				},
 			}
@@ -286,67 +317,164 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestExec_UnmarshalYAML(t *testing.T) {
+func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
 
-		wantedStruct ExecuteCommand
+		wantedStruct PlatformArgsOrString
 		wantedError  error
 	}{
-		"use default with empty value": {
-			inContent: []byte(`exec:
-count: 1`),
+		"returns error if both string and args specified": {
+			inContent: []byte(`platform: linux/amd64
+  osfamily: linux
+  architecture: amd64`),
 
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
-			},
+			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
 		},
-		"use default without any input": {
-			inContent: []byte(`count: 1`),
-
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
-			},
-		},
-		"simple enable": {
-			inContent: []byte(`exec: true`),
-
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(true),
-			},
-		},
-		"with config": {
-			inContent: []byte(`exec:
-  enable: true`),
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
-				Config: ExecuteCommandConfig{
-					Enable: aws.Bool(true),
-				},
-			},
-		},
-		"Error if unmarshalable": {
-			inContent: []byte(`exec:
-  badfield: OH NOES
-  otherbadfield: DOUBLE BAD`),
-			wantedError: errUnmarshalExec,
+		"error if unmarshalable": {
+			inContent: []byte(`platform:
+  ohess: linus
+  archie: leg64`),
+			wantedError: errUnmarshalPlatformOpts,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			b := TaskConfig{
-				ExecuteCommand: ExecuteCommand{
-					Enable: aws.Bool(false),
-				},
-			}
-			err := yaml.Unmarshal(tc.inContent, &b)
+			p := TaskConfig{}
+			err := yaml.Unmarshal(tc.inContent, &p)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.Enable, b.ExecuteCommand.Enable)
-				require.Equal(t, tc.wantedStruct.Config, b.ExecuteCommand.Config)
+				require.Equal(t, tc.wantedStruct.PlatformString, p.Platform.PlatformString)
+				require.Equal(t, tc.wantedStruct.PlatformArgs.OSFamily, p.Platform.PlatformArgs.OSFamily)
+				require.Equal(t, tc.wantedStruct.PlatformArgs.Arch, p.Platform.PlatformArgs.Arch)
+			}
+		})
+	}
+}
+
+func TestPlatformArgsOrString_OS(t *testing.T) {
+	linux := PlatformString("linux/amd64")
+	testCases := map[string]struct {
+		in     *PlatformArgsOrString
+		wanted string
+	}{
+		"should return os when platform is of string format 'os/arch'": {
+			in: &PlatformArgsOrString{
+				PlatformString: &linux,
+			},
+			wanted: "linux",
+		},
+		"should return OS when platform is a map": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2019_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2019_core",
+		},
+		"should return lowercase OS": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("wINdows_sERver_2019_cORe"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2019_core",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.OS())
+		})
+	}
+}
+
+func TestPlatformArgsOrString_Arch(t *testing.T) {
+	testCases := map[string]struct {
+		in     *PlatformArgsOrString
+		wanted string
+	}{
+		"should return arch when platform is of string format 'os/arch'": {
+			in: &PlatformArgsOrString{
+				PlatformString: (*PlatformString)(aws.String("windows/arm")),
+			},
+			wanted: "arm",
+		},
+		"should return arch when platform is a map": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2019_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "x86_64",
+		},
+		"should return lowercase arch": {
+			in: &PlatformArgsOrString{
+				PlatformString: (*PlatformString)(aws.String("windows/aMd64")),
+			},
+			wanted: "amd64",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.Arch())
+		})
+	}
+}
+
+func TestRedirectPlatform(t *testing.T) {
+	testCases := map[string]struct {
+		inOS           string
+		inArch         string
+		inWorkloadType string
+
+		wantedPlatform string
+		wantedError    error
+	}{
+		"returns nil if default platform": {
+			inOS:           "linux",
+			inArch:         "amd64",
+			inWorkloadType: LoadBalancedWebServiceType,
+
+			wantedPlatform: "",
+			wantedError:    nil,
+		},
+		"returns error if App Runner + Windows": {
+			inOS:           "windows",
+			inArch:         "amd64",
+			inWorkloadType: RequestDrivenWebServiceType,
+
+			wantedPlatform: "",
+			wantedError:    errors.New("Windows is not supported for App Runner services"),
+		},
+		"targets x86_64 if ARM architecture passed in": {
+			inOS:   "linux",
+			inArch: "arm64",
+
+			wantedPlatform: "linux/x86_64",
+			wantedError:    nil,
+		},
+		"returns non-default os as is": {
+			inOS:   "windows",
+			inArch: "amd64",
+
+			wantedPlatform: "windows/x86_64",
+			wantedError:    nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			platform, err := RedirectPlatform(tc.inOS, tc.inArch, tc.inWorkloadType)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPlatform, platform)
 			}
 		})
 	}
@@ -458,57 +586,29 @@ func TestBuildConfig(t *testing.T) {
 	}
 }
 
-func TestLogging_LogImage(t *testing.T) {
+func TestNetworkConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		inputImage  *string
-		wantedImage *string
+		in     NetworkConfig
+		wanted bool
 	}{
-		"Image specified": {
-			inputImage:  aws.String("nginx:why-on-earth"),
-			wantedImage: aws.String("nginx:why-on-earth"),
+		"empty network config": {
+			in:     NetworkConfig{},
+			wanted: true,
 		},
-		"no image specified": {
-			inputImage:  nil,
-			wantedImage: aws.String(defaultFluentbitImage),
+		"non empty network config": {
+			in: NetworkConfig{
+				VPC: vpcConfig{
+					SecurityGroups: []string{"group"},
+				},
+			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			l := Logging{
-				Image: tc.inputImage,
-			}
-			got := l.LogImage()
+			// WHEN
+			got := tc.in.IsEmpty()
 
-			require.Equal(t, tc.wantedImage, got)
-		})
-	}
-}
-
-func TestLogging_GetEnableMetadata(t *testing.T) {
-	testCases := map[string]struct {
-		enable *bool
-		wanted *string
-	}{
-		"specified true": {
-			enable: aws.Bool(true),
-			wanted: aws.String("true"),
-		},
-		"specified false": {
-			enable: aws.Bool(false),
-			wanted: aws.String("false"),
-		},
-		"not specified": {
-			enable: nil,
-			wanted: aws.String("true"),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			l := Logging{
-				EnableMetadata: tc.enable,
-			}
-			got := l.GetEnableMetadata()
-
+			// THEN
 			require.Equal(t, tc.wanted, got)
 		})
 	}
@@ -527,18 +627,8 @@ network:
   vpc:
 `,
 			wantedConfig: &NetworkConfig{
-				VPC: &vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
-				},
+				VPC: vpcConfig{},
 			},
-		},
-		"returns error if placement option is invalid": {
-			data: `
-network:
-  vpc:
-    placement: 'tartarus'
-`,
-			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus' must be one of []string{"public", "private"}`),
 		},
 		"unmarshals successfully for public placement with security groups": {
 			data: `
@@ -550,8 +640,8 @@ network:
     - 'sg-4567'
 `,
 			wantedConfig: &NetworkConfig{
-				VPC: &vpcConfig{
-					Placement:      stringP(PublicSubnetPlacement),
+				VPC: vpcConfig{
+					Placement:      placementP("public"),
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},
 			},
@@ -643,22 +733,8 @@ func TestUnmarshalPublish(t *testing.T) {
 		wantedErr     error
 	}{
 		"Valid publish yaml": {
-			inContent: `topics:
-  - name: tests
-    allowed_workers:
-      - hello
-`,
-			wantedPublish: PublishConfig{
-				Topics: []Topic{
-					{
-						Name:           aws.String("tests"),
-						AllowedWorkers: []string{"hello"},
-					},
-				},
-			},
-		},
-		"Empty workers don't appear in topic": {
-			inContent: `topics:
+			inContent: `
+topics:
   - name: tests
 `,
 			wantedPublish: PublishConfig{
@@ -670,13 +746,10 @@ func TestUnmarshalPublish(t *testing.T) {
 			},
 		},
 		"Error when unmarshalable": {
-			inContent: `topics:
-   - name: tests
-    allowed_workers:
-      - hello
-  - name: orders
+			inContent: `
+topics: abc
 `,
-			wantedErr: errors.New("yaml: line 1: did not find expected '-' indicator"),
+			wantedErr: errors.New("yaml: unmarshal errors:\n  line 2: cannot unmarshal !!str `abc` into []manifest.Topic"),
 		},
 	}
 

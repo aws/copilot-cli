@@ -5,7 +5,14 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"io"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 
@@ -14,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -31,8 +39,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
-// actionCommand is the interface that every command that creates a resource implements.
-type actionCommand interface {
+type cmd interface {
 	// Validate returns an error if a flag's value is invalid.
 	Validate() error
 
@@ -41,9 +48,13 @@ type actionCommand interface {
 
 	// Execute runs the command after collecting all required options.
 	Execute() error
+}
 
-	// RecommendedActions returns a list of follow-up suggestions users can run once the command executes successfully.
-	RecommendedActions() []string
+// actionCommand is the interface that every command that creates a resource implements.
+type actionCommand interface {
+	cmd
+	// RecommendActions logs a list of follow-up suggestions users can run once the command executes successfully.
+	RecommendActions() error
 }
 
 // SSM store interfaces.
@@ -134,6 +145,7 @@ type deployedEnvironmentLister interface {
 	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
 	ListDeployedServices(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName, envName string, svcName string) (bool, error)
+	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
 // Secretsmanager interface.
@@ -152,11 +164,11 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error)
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
 
 type repositoryURIGetter interface {
-	URI() string
+	URI() (string, error)
 }
 
 type repositoryService interface {
@@ -170,11 +182,6 @@ type logEventsWriter interface {
 
 type templater interface {
 	Template() (string, error)
-}
-
-type stackSerializer interface {
-	templater
-	SerializedParameters() (string, error)
 }
 
 type runner interface {
@@ -221,20 +228,16 @@ type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
-type svcManifestReader interface {
-	ReadServiceManifest(svcName string) ([]byte, error)
+type manifestReader interface {
+	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }
 
-type jobManifestReader interface {
-	ReadJobManifest(jobName string) ([]byte, error)
-}
-
-type copilotDirGetter interface {
-	CopilotDirPath() (string, error)
+type workspacePathGetter interface {
+	Path() (string, error)
 }
 
 type wsPipelineManifestReader interface {
-	ReadPipelineManifest() ([]byte, error)
+	ReadPipelineManifest(path string) (*manifest.Pipeline, error)
 }
 
 type wsPipelineWriter interface {
@@ -242,50 +245,51 @@ type wsPipelineWriter interface {
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
 }
 
-type wsServiceLister interface {
-	ServiceNames() ([]string, error)
+type serviceLister interface {
+	ListServices() ([]string, error)
 }
 
 type wsSvcReader interface {
-	wsServiceLister
-	svcManifestReader
+	serviceLister
+	manifestReader
 }
 
-type wsSvcDirReader interface {
-	wsSvcReader
-	copilotDirGetter
-}
-
-type wsJobLister interface {
-	JobNames() ([]string, error)
+type jobLister interface {
+	ListJobs() ([]string, error)
 }
 
 type wsJobReader interface {
-	jobManifestReader
-	wsJobLister
+	manifestReader
+	jobLister
 }
 
-type wsWlReader interface {
-	WorkloadNames() ([]string, error)
+type wlLister interface {
+	ListWorkloads() ([]string, error)
 }
 
 type wsJobDirReader interface {
 	wsJobReader
-	copilotDirGetter
+	workspacePathGetter
 }
 
 type wsWlDirReader interface {
 	wsJobReader
 	wsSvcReader
-	copilotDirGetter
-	wsWlReader
+	workspacePathGetter
+	wlLister
 	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
 }
 
 type wsPipelineReader interface {
+	wsPipelineGetter
+}
+
+type wsPipelineGetter interface {
 	wsPipelineManifestReader
-	WorkloadNames() ([]string, error)
+	wlLister
+	ListPipelines() ([]workspace.PipelineManifest, error)
+	PipelineManifestLegacyPath() (string, error)
 }
 
 type wsAppManager interface {
@@ -295,26 +299,19 @@ type wsAppManager interface {
 
 type wsAddonManager interface {
 	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
-	wsWlReader
+	manifestReader
+	wlLister
 }
 
-type artifactUploader interface {
-	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
-}
-
-type zipAndUploader interface {
+type uploader interface {
+	Upload(bucket, key string, data io.Reader) (string, error)
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
-}
-
-type Uploader interface {
-	zipAndUploader
-	Upload(bucket, key string, file s3.NamedBinary) (string, error)
 }
 
 type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-	UploadRequestDrivenWebServiceLayers(upload s3.UploadFunc) (map[string]string, error)
+	UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {
@@ -398,9 +395,13 @@ type domainHostedZoneGetter interface {
 	DomainHostedZoneID(domainName string) (string, error)
 }
 
+type domainInfoGetter interface {
+	IsRegisteredDomain(domainName string) error
+}
+
 type dockerfileParser interface {
-	GetExposedPorts() ([]uint16, error)
-	GetHealthCheck() (*exec.HealthCheck, error)
+	GetExposedPorts() ([]dockerfile.Port, error)
+	GetHealthCheck() (*dockerfile.HealthCheck, error)
 }
 
 type statusDescriber interface {
@@ -409,14 +410,11 @@ type statusDescriber interface {
 
 type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
+	PublicCIDRBlocks() ([]string, error)
 }
 
 type versionGetter interface {
 	Version() (string, error)
-}
-
-type endpointGetter interface {
-	ServiceDiscoveryEndpoint() (string, error)
 }
 
 type envTemplater interface {
@@ -451,10 +449,6 @@ type executor interface {
 	Execute() error
 }
 
-type deletePipelineRunner interface {
-	Run() error
-}
-
 type executeAsker interface {
 	Ask() error
 	executor
@@ -480,8 +474,12 @@ type deploySelector interface {
 	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
-type pipelineSelector interface {
+type pipelineEnvSelector interface {
 	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
+}
+
+type wsPipelineSelector interface {
+	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
 }
 
 type wsSelector interface {
@@ -504,10 +502,13 @@ type dockerfileSelector interface {
 	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
 
+type topicSelector interface {
+	Topics(prompt, help, app string) ([]deploy.Topic, error)
+}
+
 type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
-	PublicSubnets(prompt, help, vpcID string) ([]string, error)
-	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
+	Subnets(input selector.SubnetsInput) ([]string, error)
 }
 
 type credsSelector interface {
@@ -516,6 +517,7 @@ type credsSelector interface {
 
 type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
+	ListAZs() ([]ec2.AZ, error)
 }
 
 type serviceResumer interface {
@@ -581,7 +583,7 @@ type runningTaskSelector interface {
 
 type dockerEngine interface {
 	CheckDockerEngineRunning() error
-	RedirectPlatform(string) (*string, error)
+	GetPlatform() (string, string, error)
 }
 
 type codestar interface {
@@ -602,4 +604,20 @@ type secretPutter interface {
 
 type servicePauser interface {
 	PauseService(svcARN string) error
+}
+
+type interpolator interface {
+	Interpolate(s string) (string, error)
+}
+
+type workloadDeployer interface {
+	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
+	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
+	IsServiceAvailableInRegion(region string) (bool, error)
+}
+
+type workloadTemplateGenerator interface {
+	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
+	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
+		*clideploy.GenerateCloudFormationTemplateOutput, error)
 }

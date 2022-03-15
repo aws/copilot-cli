@@ -98,6 +98,10 @@ Resources:
               - ecr:CompleteLayerUpload
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': phonetool}}
+          - Effect: Allow
+            Action:
+              - codestar-connections:UseConnection
+            Resource: !Ref SourceConnection
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -123,6 +127,8 @@ Resources:
         EnvironmentVariables:
           - Name: AWS_ACCOUNT_ID
             Value: !Sub '${AWS::AccountId}'
+          - Name: PARTITION
+            Value: !Ref AWS::Partition
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/buildspec.yml
@@ -272,6 +278,7 @@ Resources:
                 ConnectionArn: !Ref SourceConnection
                 FullRepositoryId: huanjani/sample
                 BranchName: main
+                OutputArtifactFormat: CODEBUILD_CLONE_REF
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1

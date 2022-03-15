@@ -6,6 +6,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 )
 
 // ErrNoPipelineInWorkspace means there was no pipeline manifest in the workspace dir.
@@ -20,14 +21,23 @@ func (e *ErrFileExists) Error() string {
 	return fmt.Sprintf("file %s already exists", e.FileName)
 }
 
-// errWorkspaceNotFound means we couldn't locate a workspace root.
-type errWorkspaceNotFound struct {
+// ErrFileNotExists means we tried to read a non-existing file.
+type ErrFileNotExists struct {
+	FileName string
+}
+
+func (e *ErrFileNotExists) Error() string {
+	return fmt.Sprintf("file %s does not exists", e.FileName)
+}
+
+// ErrWorkspaceNotFound means we couldn't locate a workspace root.
+type ErrWorkspaceNotFound struct {
 	CurrentDirectory      string
 	ManifestDirectoryName string
 	NumberOfLevelsChecked int
 }
 
-func (e *errWorkspaceNotFound) Error() string {
+func (e *ErrWorkspaceNotFound) Error() string {
 	return fmt.Sprintf("couldn't find a directory called %s up to %d levels up from %s",
 		e.ManifestDirectoryName,
 		e.NumberOfLevelsChecked,
@@ -44,8 +54,14 @@ func (e *errNoAssociatedApplication) Error() string {
 // errHasExistingApplication means we tried to create a workspace that belongs to another application.
 type errHasExistingApplication struct {
 	existingAppName string
+	basePath        string
+	summaryPath     string
 }
 
 func (e *errHasExistingApplication) Error() string {
-	return fmt.Sprintf("this workspace is already registered with application %s", e.existingAppName)
+	relPath, _ := filepath.Rel(e.basePath, e.summaryPath)
+	if relPath == "" {
+		relPath = e.summaryPath
+	}
+	return fmt.Sprintf("workspace is already registered with application %s under %s", e.existingAppName, relPath)
 }

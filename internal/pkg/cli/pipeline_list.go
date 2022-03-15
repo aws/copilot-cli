@@ -10,6 +10,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -34,39 +38,40 @@ type listPipelineOpts struct {
 	pipelineSvc pipelineGetter
 	prompt      prompter
 	sel         configSelector
+	store       store
 	w           io.Writer
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, err
-	}
-
-	defaultSession, err := sessions.NewProvider().Default()
+	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline ls")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &listPipelineOpts{
 		listPipelineVars: vars,
 		pipelineSvc:      codepipeline.New(defaultSession),
 		prompt:           prompter,
 		sel:              selector.NewConfigSelect(prompter, store),
+		store:            store,
 		w:                os.Stdout,
 	}, nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask asks for and validates fields that are required but not passed in.
 func (o *listPipelineOpts) Ask() error {
 	if o.appName != "" {
-		return nil
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return fmt.Errorf("validate application: %w", err)
+		}
+	} else {
+		app, err := o.sel.Application(pipelineListAppNamePrompt, pipelineListAppNameHelper)
+		if err != nil {
+			return fmt.Errorf("select application: %w", err)
+		}
+		o.appName = app
 	}
-	app, err := o.sel.Application(pipelineListAppNamePrompt, pipelineListAppNameHelper)
-	if err != nil {
-		return fmt.Errorf("select application: %w", err)
-	}
-	o.appName = app
 	return nil
 }
 

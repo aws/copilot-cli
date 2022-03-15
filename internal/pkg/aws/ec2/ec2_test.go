@@ -158,6 +158,93 @@ func TestEC2_ListVPC(t *testing.T) {
 	}
 }
 
+func TestEC2_ListAZs(t *testing.T) {
+	testCases := map[string]struct {
+		mockClient func(m *mocks.Mockapi)
+
+		wantedErr string
+		wantedAZs []AZ
+	}{
+		"return wrapped error on unexpected call error": {
+			mockClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeAvailabilityZones(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedErr: "describe availability zones: some error",
+		},
+		"returns AZs that are available and opted-in": {
+			mockClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{
+					Filters: []*ec2.Filter{
+						{
+							Name:   aws.String("zone-type"),
+							Values: aws.StringSlice([]string{"availability-zone"}),
+						},
+						{
+							Name:   aws.String("state"),
+							Values: aws.StringSlice([]string{"available"}),
+						},
+					},
+				}).Return(&ec2.DescribeAvailabilityZonesOutput{
+					AvailabilityZones: []*ec2.AvailabilityZone{
+						{
+							GroupName:          aws.String("us-west-2"),
+							NetworkBorderGroup: aws.String("us-west-2"),
+							OptInStatus:        aws.String("opt-in-not-required"),
+							RegionName:         aws.String("us-west-2"),
+							State:              aws.String("available"),
+							ZoneId:             aws.String("usw2-az1"),
+							ZoneName:           aws.String("us-west-2a"),
+							ZoneType:           aws.String("availability-zone"),
+						},
+						{
+							GroupName:          aws.String("us-west-2"),
+							NetworkBorderGroup: aws.String("us-west-2"),
+							OptInStatus:        aws.String("opt-in-not-required"),
+							RegionName:         aws.String("us-west-2"),
+							State:              aws.String("available"),
+							ZoneId:             aws.String("usw2-az2"),
+							ZoneName:           aws.String("us-west-2b"),
+							ZoneType:           aws.String("availability-zone"),
+						},
+					},
+				}, nil)
+			},
+			wantedAZs: []AZ{
+				{
+					ID:   "usw2-az1",
+					Name: "us-west-2a",
+				},
+				{
+					ID:   "usw2-az2",
+					Name: "us-west-2b",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := mocks.NewMockapi(ctrl)
+			tc.mockClient(m)
+			ec2 := EC2{client: m}
+
+			// WHEN
+			azs, err := ec2.ListAZs()
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.wantedAZs, azs)
+			}
+		})
+	}
+}
+
 func TestEC2_ListVPCSubnets(t *testing.T) {
 	const (
 		mockVPCID     = "mockVPC"
@@ -193,7 +280,7 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("describe subnets: some error"),
 		},
-		"success": {
+		"can retrieve subnets explicitly associated with an internet gateway": {
 			mockEC2Client: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeRouteTables(&ec2.DescribeRouteTablesInput{
 					Filters: mockfilter,
@@ -241,10 +328,12 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 				}).Return(&ec2.DescribeSubnetsOutput{
 					Subnets: []*ec2.Subnet{
 						{
-							SubnetId: aws.String("subnet1"),
+							SubnetId:  aws.String("subnet1"),
+							CidrBlock: aws.String("10.0.0.0/24"),
 						},
 						{
-							SubnetId: aws.String("subnet2"),
+							SubnetId:  aws.String("subnet2"),
+							CidrBlock: aws.String("10.0.1.0/24"),
 						},
 						{
 							SubnetId: aws.String("subnet3"),
@@ -254,6 +343,7 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 									Value: aws.String("mySubnet"),
 								},
 							},
+							CidrBlock: aws.String("10.0.2.0/24"),
 						},
 					},
 				}, nil)
@@ -263,19 +353,162 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 					Resource: Resource{
 						ID: "subnet2",
 					},
+					CIDRBlock: "10.0.1.0/24",
 				},
 				{
 					Resource: Resource{
 						ID:   "subnet3",
 						Name: "mySubnet",
 					},
+					CIDRBlock: "10.0.2.0/24",
 				},
 			},
 			wantedPrivateSubnets: []Subnet{
 				{
 					Resource: Resource{
 						ID: "subnet1",
-					}},
+					},
+					CIDRBlock: "10.0.0.0/24",
+				},
+			},
+		},
+		"can retrieve subnets that are implicitly associated with an internet gateway": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRouteTables(&ec2.DescribeRouteTablesInput{
+					Filters: mockfilter,
+				}).Return(&ec2.DescribeRouteTablesOutput{
+					RouteTables: []*ec2.RouteTable{
+						{
+							Associations: []*ec2.RouteTableAssociation{
+								{
+									Main: aws.Bool(true),
+								},
+							},
+							Routes: []*ec2.Route{
+								{
+									GatewayId:            aws.String("local"),
+									DestinationCidrBlock: aws.String("172.31.0.0/16"),
+								},
+								{
+									GatewayId:            aws.String("igw-3542f24c"),
+									DestinationCidrBlock: aws.String("0.0.0.0/0"),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
+					Filters: mockfilter,
+				}).Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []*ec2.Subnet{
+						{
+							SubnetId:  aws.String("subnet1"),
+							CidrBlock: aws.String("172.31.16.0/20"),
+						},
+						{
+							SubnetId:  aws.String("subnet2"),
+							CidrBlock: aws.String("172.31.48.0/20"),
+						},
+						{
+							SubnetId:  aws.String("subnet3"),
+							CidrBlock: aws.String("172.31.32.0/20"),
+						},
+					},
+				}, nil)
+			},
+			wantedPublicSubnets: []Subnet{
+				{
+					Resource: Resource{
+						ID: "subnet1",
+					},
+					CIDRBlock: "172.31.16.0/20",
+				},
+				{
+					Resource: Resource{
+						ID: "subnet2",
+					},
+					CIDRBlock: "172.31.48.0/20",
+				},
+				{
+					Resource: Resource{
+						ID: "subnet3",
+					},
+					CIDRBlock: "172.31.32.0/20",
+				},
+			},
+			wantedPrivateSubnets: nil,
+		},
+		"prioritizes explicit route table association over implicit while detecting public subnets": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRouteTables(&ec2.DescribeRouteTablesInput{
+					Filters: mockfilter,
+				}).Return(&ec2.DescribeRouteTablesOutput{
+					RouteTables: []*ec2.RouteTable{
+						{
+							Associations: []*ec2.RouteTableAssociation{
+								{
+									Main:     aws.Bool(false),
+									SubnetId: aws.String("subnet1"),
+								},
+							},
+							Routes: []*ec2.Route{
+								{
+									GatewayId:            aws.String("local"),
+									DestinationCidrBlock: aws.String("172.31.0.0/16"),
+								},
+							},
+						},
+						{
+							Associations: []*ec2.RouteTableAssociation{
+								{
+									Main: aws.Bool(true),
+								},
+							},
+							Routes: []*ec2.Route{
+								{
+									GatewayId:            aws.String("local"),
+									DestinationCidrBlock: aws.String("172.31.0.0/16"),
+								},
+								{
+									GatewayId:            aws.String("igw-3542f24c"),
+									DestinationCidrBlock: aws.String("0.0.0.0/0"),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
+					Filters: mockfilter,
+				}).Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []*ec2.Subnet{
+						{
+							SubnetId:  aws.String("subnet1"),
+							CidrBlock: aws.String("172.31.16.0/20"),
+						},
+						{
+							SubnetId:  aws.String("subnet2"),
+							CidrBlock: aws.String("172.31.48.0/20"),
+						},
+					},
+				}, nil)
+			},
+			wantedPublicSubnets: []Subnet{
+				{
+					Resource: Resource{
+						ID: "subnet2",
+					},
+					CIDRBlock: "172.31.48.0/20",
+				},
+			},
+			wantedPrivateSubnets: []Subnet{
+				{
+					Resource: Resource{
+						ID: "subnet1",
+					},
+					CIDRBlock: "172.31.16.0/20",
+				},
 			},
 		},
 	}

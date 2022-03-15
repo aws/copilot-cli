@@ -197,6 +197,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteConfirmPrompt, testJobName, testAppName),
 					jobDeleteConfirmHelp,
+					gomock.Any(),
 				).Times(1).Return(true, mockError)
 			},
 
@@ -213,6 +214,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteConfirmPrompt, testJobName, testAppName),
 					jobDeleteConfirmHelp,
+					gomock.Any(),
 				).Times(1).Return(false, nil)
 			},
 
@@ -229,6 +231,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteConfirmPrompt, testJobName, testAppName),
 					jobDeleteConfirmHelp,
+					gomock.Any(),
 				).Times(1).Return(true, nil)
 			},
 
@@ -246,6 +249,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteFromEnvConfirmPrompt, testJobName, "test"),
 					fmt.Sprintf(fmtJobDeleteFromEnvConfirmHelp, "test"),
+					gomock.Any(),
 				).Times(1).Return(true, nil)
 			},
 
@@ -431,7 +435,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockSession := sessions.NewProvider()
+			mockSession := sessions.ImmutableProvider()
 			mockAppCFN := mocks.NewMockjobRemoverFromApp(ctrl)
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)

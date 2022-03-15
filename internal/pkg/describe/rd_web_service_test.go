@@ -17,30 +17,30 @@ import (
 
 const humanStringWithResources = `About
 
-  Application       testapp
-  Name              testsvc
-  Type              Request-Driven Web Service
+  Application  testapp
+  Name         testsvc
+  Type         Request-Driven Web Service
 
 Configurations
 
-  Environment       CPU (vCPU)          Memory (MiB)        Port
-  -----------       ----------          ------------        ----
-  test              1                   2048                80
-  prod              2                   3072                  "
+  Environment  CPU (vCPU)  Memory (MiB)  Port
+  -----------  ----------  ------------  ----
+  test         1           2048          80
+  prod         2           3072            "
 
 Routes
 
-  Environment       URL
-  -----------       ---
-  test              https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
-  prod              https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
+  Environment  URL
+  -----------  ---
+  test         https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
+  prod         https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
 
 Variables
 
-  Name                      Environment         Value
-  ----                      -----------         -----
-  COPILOT_ENVIRONMENT_NAME  prod                prod
-    "                       test                test
+  Name                      Environment  Value
+  ----                      -----------  -----
+  COPILOT_ENVIRONMENT_NAME  prod         prod
+    "                       test         test
 
 Resources
 
@@ -53,76 +53,7 @@ Resources
 
 type apprunnerSvcDescriberMocks struct {
 	storeSvc        *mocks.MockDeployedEnvServicesLister
-	ecsSvcDescriber *mocks.MockapprunnerSvcDescriber
-}
-
-func TestRDWebServiceDescriber_URI(t *testing.T) {
-	const (
-		testApp    = "phonetool"
-		testEnv    = "test"
-		testSvc    = "frontend"
-		testSvcURL = "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com"
-	)
-	mockErr := errors.New("some error")
-	testCases := map[string]struct {
-		setupMocks func(mocks apprunnerSvcDescriberMocks)
-
-		wantedURI   string
-		wantedError error
-	}{
-		"fail to get outputs of service stack": {
-			setupMocks: func(m apprunnerSvcDescriberMocks) {
-				gomock.InOrder(
-					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", mockErr),
-				)
-			},
-			wantedError: fmt.Errorf("get outputs for service frontend: some error"),
-		},
-		"succeed in getting outputs of service stack": {
-			setupMocks: func(m apprunnerSvcDescriberMocks) {
-				gomock.InOrder(
-					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
-				)
-			},
-
-			wantedURI: "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockSvcDescriber := mocks.NewMockapprunnerSvcDescriber(ctrl)
-			mocks := apprunnerSvcDescriberMocks{
-				ecsSvcDescriber: mockSvcDescriber,
-			}
-
-			tc.setupMocks(mocks)
-
-			d := &RDWebServiceDescriber{
-				app: testApp,
-				svc: testSvc,
-				envSvcDescribers: map[string]apprunnerSvcDescriber{
-					"test": mockSvcDescriber,
-				},
-				initServiceDescriber: func(string) error { return nil },
-			}
-
-			// WHEN
-			actual, err := d.URI(testEnv)
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual)
-			}
-		})
-	}
+	ecsSvcDescriber *mocks.MockapprunnerDescriber
 }
 
 func TestRDWebServiceDescriber_Describe(t *testing.T) {
@@ -218,7 +149,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 				Service: testSvc,
 				Type:    "Request-Driven Web Service",
 				App:     testApp,
-				Configurations: []*ServiceConfig{
+				AppRunnerConfigurations: []*ServiceConfig{
 					{
 						CPU:         "1024",
 						Environment: "test",
@@ -279,7 +210,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMockapprunnerSvcDescriber(ctrl)
+			mockSvcDescriber := mocks.NewMockapprunnerDescriber(ctrl)
 			mocks := apprunnerSvcDescriberMocks{
 				storeSvc:        mockStore,
 				ecsSvcDescriber: mockSvcDescriber,
@@ -292,11 +223,12 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 				svc:             testSvc,
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
-				envSvcDescribers: map[string]apprunnerSvcDescriber{
+				initClients:     func(string) error { return nil },
+
+				envSvcDescribers: map[string]apprunnerDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,
 				},
-				initServiceDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
@@ -321,7 +253,7 @@ func TestRDWebServiceDesc_String(t *testing.T) {
 			Service: "testsvc",
 			Type:    "Request-Driven Web Service",
 			App:     "testapp",
-			Configurations: []*ServiceConfig{
+			AppRunnerConfigurations: []*ServiceConfig{
 				{
 					CPU:         "1024",
 					Environment: "test",

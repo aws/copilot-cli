@@ -9,146 +9,113 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSvcStatus_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inputApp         string
-		inputSvc         string
-		inputEnvironment string
-		mockStoreReader  func(m *mocks.Mockstore)
+	// NOTE: No optional flag to `copilot svc pause` needs to be validated.
+}
 
-		wantedError error
-	}{
-		"invalid app name": {
-			inputApp: "my-app",
-
-			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("some error"),
-		},
-		"invalid service name": {
-			inputApp: "my-app",
-			inputSvc: "my-svc",
-
-			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name: "my-app",
-				}, nil)
-				m.EXPECT().GetService("my-app", "my-svc").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("some error"),
-		},
-		"invalid environment name": {
-			inputApp:         "my-app",
-			inputEnvironment: "test",
-
-			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name: "my-app",
-				}, nil)
-				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("some error"),
-		},
-		"success": {
-			inputApp:         "my-app",
-			inputSvc:         "my-svc",
-			inputEnvironment: "test",
-
-			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name: "my-app",
-				}, nil)
-				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
-					Name: "test",
-				}, nil)
-				m.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
-					Name: "my-svc",
-				}, nil)
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockStoreReader := mocks.NewMockstore(ctrl)
-			tc.mockStoreReader(mockStoreReader)
-
-			svcStatus := &svcStatusOpts{
-				svcStatusVars: svcStatusVars{
-					svcName: tc.inputSvc,
-					envName: tc.inputEnvironment,
-					appName: tc.inputApp,
-				},
-				store: mockStoreReader,
-			}
-
-			// WHEN
-			err := svcStatus.Validate()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
+type svcStatusAskMock struct {
+	store *mocks.Mockstore
+	sel   *mocks.MockdeploySelector
 }
 
 func TestSvcStatus_Ask(t *testing.T) {
+	const (
+		testAppName = "phonetool"
+		testEnvName = "test"
+		testSvcName = "api"
+	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		inputApp         string
-		inputSvc         string
-		inputEnvironment string
-		mockSelector     func(m *mocks.MockdeploySelector)
+		inputApp string
+		inputSvc string
+		inputEnv string
 
+		setupMocks func(m svcStatusAskMock)
+
+		wantedApp   string
+		wantedEnv   string
+		wantedSvc   string
 		wantedError error
 	}{
-		"errors if failed to select application": {
-			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", mockError)
+		"validate app env and svc with all flags passed in": {
+			inputApp: testAppName,
+			inputSvc: testSvcName,
+			inputEnv: testEnvName,
+			setupMocks: func(m svcStatusAskMock) {
+				gomock.InOrder(
+					m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil),
+					m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test"}, nil),
+					m.store.EXPECT().GetService("phonetool", "api").Return(&config.Workload{}, nil),
+				)
+				m.sel.EXPECT().DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, "phonetool", gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: "test",
+						Svc: "api",
+					}, nil) // Let prompter handles the case when svc(env) is definite.
 			},
-
+			wantedApp: testAppName,
+			wantedEnv: testEnvName,
+			wantedSvc: testSvcName,
+		},
+		"prompt for app name": {
+			inputEnv: testEnvName,
+			inputSvc: testSvcName,
+			setupMocks: func(m svcStatusAskMock) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("phonetool", nil)
+				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
+				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: testEnvName,
+						Svc: testSvcName,
+					}, nil).AnyTimes()
+			},
+			wantedApp: testAppName,
+			wantedEnv: testEnvName,
+			wantedSvc: testSvcName,
+		},
+		"errors if failed to select application": {
+			setupMocks: func(m svcStatusAskMock) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
+			},
 			wantedError: fmt.Errorf("select application: some error"),
+		},
+		"prompt for service and env": {
+			inputApp: testAppName,
+			setupMocks: func(m svcStatusAskMock) {
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, testAppName, gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: testEnvName,
+						Svc: testSvcName,
+					}, nil)
+			},
+			wantedApp: testAppName,
+			wantedEnv: testEnvName,
+			wantedSvc: testSvcName,
 		},
 		"errors if failed to select deployed service": {
 			inputApp: "mockApp",
-
-			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any()).
-					Return(nil, mockError)
+			setupMocks: func(m svcStatusAskMock) {
+				m.store.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any()).Return(nil, mockError)
 			},
 
 			wantedError: fmt.Errorf("select deployed services for application mockApp: some error"),
 		},
-		"success": {
-			inputApp:         "mockApp",
-			inputSvc:         "mockSvc",
-			inputEnvironment: "mockEnv",
-
-			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any()).
-					Return(&selector.DeployedService{
-						Env: "mockEnv",
-						Svc: "mockSvc",
-					}, nil)
-			},
-		},
 	}
 
 	for name, tc := range testCases {
@@ -156,16 +123,19 @@ func TestSvcStatus_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSelector := mocks.NewMockdeploySelector(ctrl)
-			tc.mockSelector(mockSelector)
-
+			m := svcStatusAskMock{
+				store: mocks.NewMockstore(ctrl),
+				sel:   mocks.NewMockdeploySelector(ctrl),
+			}
+			tc.setupMocks(m)
 			svcStatus := &svcStatusOpts{
 				svcStatusVars: svcStatusVars{
 					svcName: tc.inputSvc,
-					envName: tc.inputEnvironment,
+					envName: tc.inputEnv,
 					appName: tc.inputApp,
 				},
-				sel: mockSelector,
+				sel:   m.sel,
+				store: m.store,
 			}
 
 			// WHEN
@@ -176,6 +146,9 @@ func TestSvcStatus_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedApp, svcStatus.appName, "expected app name to match")
+				require.Equal(t, tc.wantedSvc, svcStatus.svcName, "expected service name to match")
+				require.Equal(t, tc.wantedEnv, svcStatus.envName, "expected service name to match")
 			}
 		})
 	}

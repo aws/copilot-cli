@@ -29,6 +29,173 @@ type deploySelectMocks struct {
 	prompt    *mocks.MockPrompter
 }
 
+func TestDeploySelect_Topics(t *testing.T) {
+	const (
+		testApp = "mockApp"
+		testEnv = "mockEnv"
+		prodEnv = "mockProdEnv"
+	)
+	mockTopic, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-orders", testApp, testEnv, "mockWkld")
+	mockTopic2, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv-mockWkld-events", testApp, testEnv, "mockWkld")
+	testCases := map[string]struct {
+		setupMocks func(mocks deploySelectMocks)
+
+		wantErr    error
+		wantTopics []deploy.Topic
+	}{
+		"return error if fail to retrieve topics from deploy": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return(
+					[]*config.Environment{{Name: testEnv}}, nil,
+				)
+				m.deploySvc.
+					EXPECT().
+					ListSNSTopics(testApp, testEnv).
+					Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("list SNS topics: some error"),
+		},
+		"return error if fail to select topics": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return(
+					[]*config.Environment{{Name: testEnv}}, nil,
+				)
+				m.deploySvc.
+					EXPECT().
+					ListSNSTopics(testApp, testEnv).
+					Return([]deploy.Topic{*mockTopic}, nil)
+				m.prompt.
+					EXPECT().
+					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}, nil, gomock.Any()).
+					Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("select SNS topics: some error"),
+		},
+		"success": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListEnvironments(testApp).Return(
+					[]*config.Environment{{Name: testEnv}, {Name: prodEnv}}, nil,
+				)
+				m.deploySvc.
+					EXPECT().
+					ListSNSTopics(testApp, testEnv).
+					Return([]deploy.Topic{*mockTopic, *mockTopic2}, nil)
+				m.deploySvc.
+					EXPECT().
+					ListSNSTopics(testApp, prodEnv).
+					Return([]deploy.Topic{*mockTopic}, nil)
+				m.prompt.
+					EXPECT().
+					MultiSelect("Select a deployed topic", "Help text", []string{"orders (mockWkld)"}, nil, gomock.Any()).
+					Return([]string{"orders (mockWkld)"}, nil)
+			},
+			wantTopics: []deploy.Topic{*mockTopic},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockdeploySvc := mocks.NewMockDeployStoreClient(ctrl)
+			mockconfigSvc := mocks.NewMockConfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := deploySelectMocks{
+				deploySvc: mockdeploySvc,
+				configSvc: mockconfigSvc,
+				prompt:    mockprompt,
+			}
+
+			tc.setupMocks(mocks)
+
+			sel := DeploySelect{
+				Select: &Select{
+					config: mockconfigSvc,
+					prompt: mockprompt,
+				},
+				deployStoreSvc: mockdeploySvc,
+			}
+			topics, err := sel.Topics("Select a deployed topic", "Help text", testApp)
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.wantTopics, topics)
+			}
+		})
+	}
+}
+
+func TestIntersect(t *testing.T) {
+	mockTopic1Env1, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv1-mockWkld-orders", "mockApp", "mockEnv1", "mockWkld")
+	mockTopic1Env2, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv2-mockWkld-orders", "mockApp", "mockEnv2", "mockWkld")
+	mockTopic2Env1, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv1-mockWkld2-events", "mockApp", "mockEnv1", "mockWkld2")
+	mockTopic2Env2, _ := deploy.NewTopic("arn:aws:sns:us-west-2:123456789012:mockApp-mockEnv2-mockWkld2-events", "mockApp", "mockEnv2", "mockWkld2")
+	testCases := map[string]struct {
+		inArray []deploy.Topic
+		inMap   map[string]deploy.Topic
+
+		wantedMap map[string]deploy.Topic
+	}{
+		"with no common entries": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+			},
+			wantedMap: map[string]deploy.Topic{},
+		},
+		"with common entries": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+				*mockTopic2Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+				mockTopic1Env2.String(): *mockTopic1Env2,
+			},
+			wantedMap: map[string]deploy.Topic{
+				mockTopic2Env1.String(): *mockTopic2Env1,
+				mockTopic1Env1.String(): *mockTopic1Env1,
+			},
+		},
+		"with one common entry, extra entry in array": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+				*mockTopic2Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+			},
+			wantedMap: map[string]deploy.Topic{
+				mockTopic2Env1.String(): *mockTopic2Env1,
+			},
+		},
+		"with one common entry, extra entry in map": {
+			inArray: []deploy.Topic{
+				*mockTopic1Env1,
+			},
+			inMap: map[string]deploy.Topic{
+				mockTopic2Env2.String(): *mockTopic2Env2,
+				mockTopic1Env2.String(): *mockTopic1Env2,
+			},
+			wantedMap: map[string]deploy.Topic{
+				mockTopic1Env1.String(): *mockTopic1Env1,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+
+			// WHEN
+			out := intersect(tc.inMap, tc.inArray)
+
+			// THEN
+			require.Equal(t, out, tc.wantedMap)
+		})
+	}
+}
 func TestDeploySelect_Service(t *testing.T) {
 	const testApp = "mockApp"
 	testCases := map[string]struct {
@@ -105,7 +272,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}).
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}, gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("select deployed services for application %s: some error", testApp),
@@ -128,7 +295,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}).
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}, gomock.Any()).
 					Return("mockSvc1 (test)", nil)
 			},
 			wantEnv: "test",
@@ -225,7 +392,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test1)", "mockSvc2 (test1)"}).
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test1)", "mockSvc2 (test1)"}, gomock.Any()).
 					Return("mockSvc1 (test1)", nil)
 			},
 			wantEnv: "test1",
@@ -330,7 +497,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 	}{
 		"with no workspace services and no store services": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{}, nil).Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -345,7 +512,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with one workspace service but no store services": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 					}, nil).
@@ -361,7 +528,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with one store service but no workspace services": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{}, nil).
 					Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
@@ -381,7 +548,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with only one service in both workspace and store (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 					}, nil).Times(1)
@@ -405,7 +572,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with multiple workspace services but only one store service (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -431,7 +598,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with multiple store services but only one workspace service (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service3",
 					}, nil).Times(1)
@@ -466,7 +633,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with multiple workspace services and multiple store services, of which multiple overlap": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().ServiceNames().Return(
+					EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -508,7 +675,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with error retrieving services from workspace": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().ServiceNames().Return(
+					EXPECT().ListServices().Return(
 					[]string{""}, errors.New("some error"))
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -519,7 +686,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 		"with error retrieving services from store": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().ServiceNames().Return(
+				m.workloadLister.EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -537,7 +704,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with error selecting services": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().ServiceNames().Return(
+					EXPECT().ListServices().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -611,7 +778,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with no workspace jobs and no store jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{}, nil).Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -629,7 +796,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with one workspace job but no store jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{
 						"job1",
 					}, nil).Times(1)
@@ -649,7 +816,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with one store job but no workspace jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{}, nil).Times(1)
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -674,7 +841,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			setupMocks: func(m workspaceSelectMocks) {
 
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{
 						"resizer",
 					}, nil).Times(1)
@@ -699,7 +866,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with multiple workspace jobs but only one store job (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"job1",
 						"job2",
@@ -725,7 +892,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with multiple store jobs but only one workspace job (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"job3",
 					}, nil).Times(1)
@@ -759,7 +926,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with multiple workspace jobs and multiple store jobs, of which multiple overlap": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"job1",
 						"job2",
@@ -805,7 +972,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		"with error retrieving jobs from workspace": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
-					EXPECT().JobNames().Return(
+					EXPECT().ListJobs().Return(
 					[]string{""}, errors.New("some error"))
 				m.workloadLister.EXPECT().Summary().Return(
 					&workspace.Summary{
@@ -816,7 +983,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with error retrieving jobs from store": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"service1",
 						"service2",
@@ -833,7 +1000,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 		},
 		"with error selecting jobs": {
 			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.EXPECT().JobNames().Return(
+				m.workloadLister.EXPECT().ListJobs().Return(
 					[]string{
 						"resizer1",
 						"resizer2",
@@ -918,7 +1085,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -939,7 +1106,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -968,7 +1135,8 @@ func TestConfigSelect_Service(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a service"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"service1", "service2"})).
+						gomock.Eq([]string{"service1", "service2"}),
+						gomock.Any()).
 					Return("service2", nil).
 					Times(1)
 			},
@@ -994,7 +1162,7 @@ func TestConfigSelect_Service(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1048,7 +1216,7 @@ func TestConfigSelect_Job(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1069,7 +1237,7 @@ func TestConfigSelect_Job(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1098,7 +1266,8 @@ func TestConfigSelect_Job(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a job"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"job1", "job2"})).
+						gomock.Eq([]string{"job1", "job2"}),
+						gomock.Any()).
 					Return("job2", nil).
 					Times(1)
 			},
@@ -1124,7 +1293,7 @@ func TestConfigSelect_Job(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"job1", "job2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"job1", "job2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1187,7 +1356,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1207,7 +1376,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1234,7 +1403,8 @@ func TestSelect_Environment(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select an environment"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"env1", "env2"})).
+						gomock.Eq([]string{"env1", "env2"}),
+						gomock.Any()).
 					Return("env2", nil).
 					Times(1)
 			},
@@ -1258,7 +1428,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1274,7 +1444,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
 
@@ -1290,7 +1460,7 @@ func TestSelect_Environment(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), []string{additionalOpt1, additionalOpt2}).
+					SelectOne(gomock.Any(), gomock.Any(), []string{additionalOpt1, additionalOpt2}, gomock.Any()).
 					Times(1).
 					Return(additionalOpt2, nil)
 			},
@@ -1556,7 +1726,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1575,7 +1745,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -1600,7 +1770,8 @@ func TestSelect_Application(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select an app"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"app1", "app2"})).
+						gomock.Eq([]string{"app1", "app2"}),
+						gomock.Any()).
 					Return("app2", nil).
 					Times(1)
 			},
@@ -1622,7 +1793,7 @@ func TestSelect_Application(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"app1", "app2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"app1", "app2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -1838,7 +2009,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
-					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Daily", nil),
+					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Daily", nil),
 				)
 			},
 			wantedSchedule: "@daily",
@@ -1847,7 +2018,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
-					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("", errors.New("some error")),
+					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("", errors.New("some error")),
 				)
 			},
 			wantedErr: errors.New("get preset schedule: some error"),
@@ -1856,7 +2027,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
-					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
 					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("0 * * * *", nil),
 					m.EXPECT().Confirm(humanReadableCronConfirmPrompt, humanReadableCronConfirmHelp).Return(true, nil),
 				)
@@ -1867,7 +2038,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
-					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
 					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("", errors.New("some error")),
 				)
 			},
@@ -1877,7 +2048,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
-					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
 					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("0 * * * *", nil),
 					m.EXPECT().Confirm(humanReadableCronConfirmPrompt, humanReadableCronConfirmHelp).Return(false, errors.New("some error")),
 				)
@@ -1888,7 +2059,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				gomock.InOrder(
 					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
-					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().SelectOption(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
 					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("@hourly", nil),
 				)
 			},
@@ -1970,6 +2141,7 @@ func TestSelect_CFTask(t *testing.T) {
 						"abc",
 						"db-migrate",
 					},
+					gomock.Any(),
 				).Return("abc", nil)
 			},
 			wantedErr:  nil,
@@ -2008,6 +2180,7 @@ func TestSelect_CFTask(t *testing.T) {
 						"oneoff",
 						"db-migrate",
 					},
+					gomock.Any(),
 				).Return("db-migrate", nil)
 			},
 			wantedErr:  nil,
@@ -2137,7 +2310,7 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
 					"4082490e (sample-fargate:2)",
 					"0aa1ba8d (sample-fargate:3)",
-				}).Return("", mockErr)
+				}, gomock.Any()).Return("", mockErr)
 			},
 			wantErr: fmt.Errorf("select running task: some error"),
 		},
@@ -2169,7 +2342,7 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
 					"4082490e (sample-fargate:2)",
 					"0aa1ba8d (sample-fargate:3)",
-				}).Return("0aa1ba8d (sample-fargate:3)", nil)
+				}, gomock.Any()).Return("0aa1ba8d (sample-fargate:3)", nil)
 			},
 			wantTask: mockTask2,
 		},

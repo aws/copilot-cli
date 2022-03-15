@@ -15,6 +15,7 @@ $ copilot svc exec
   -h, --help               help for exec
   -n, --name string        Name of the service, job, or task group.
       --task-id string     Optional. ID of the task you want to exec in.
+      --yes                Optional. Whether to update the Session Manager Plugin.
 ```
 
 ## Examples
@@ -38,3 +39,4 @@ $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command 
 !!! info
     1. Please make sure `exec: true` is set in your manifest before deploying the service.
     2. Please note that this will update the service's Fargate Platform Version to 1.4.0. Updating the Platform Version results in [replacing your service](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html#cfn-ecs-service-platformversion) which will result in downtime for your service.
+    3. `exec` is not supported for Windows containers.

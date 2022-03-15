@@ -31,13 +31,13 @@ func TestTaskStackConfig_Template(t *testing.T) {
 	}{
 		"should return error if unable to read": {
 			mockReadParser: func(m *mocks.MockReadParser) {
-				m.EXPECT().Parse(taskTemplatePath, gomock.Any()).Return(nil, errors.New("error reading template"))
+				m.EXPECT().Parse(taskTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("error reading template"))
 			},
 			wantedError: errors.New("read template for task stack: error reading template"),
 		},
 		"should return template body when present": {
 			mockReadParser: func(m *mocks.MockReadParser) {
-				m.EXPECT().Parse(taskTemplatePath, gomock.Any()).Return(&template.Content{
+				m.EXPECT().Parse(taskTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("This is the task template"),
 				}, nil)
 			},
@@ -100,16 +100,20 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 			ParameterValue: aws.String("task-role"),
 		},
 		{
-			ParameterKey:   aws.String(taskExecutionRoleParamKey),
-			ParameterValue: aws.String("execution-role"),
-		},
-		{
 			ParameterKey:   aws.String(taskCommandParamKey),
 			ParameterValue: aws.String("echo hooray"),
 		},
 		{
 			ParameterKey:   aws.String(taskEntryPointParamKey),
 			ParameterValue: aws.String("exec,some command"),
+		},
+		{
+			ParameterKey:   aws.String(taskOSParamKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(taskArchParamKey),
+			ParameterValue: aws.String(""),
 		},
 	}
 
@@ -118,11 +122,10 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 		CPU:    256,
 		Memory: 512,
 
-		Image:         "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
-		TaskRole:      "task-role",
-		ExecutionRole: "execution-role",
-		Command:       []string{"echo hooray"},
-		EntryPoint:    []string{"exec", "some command"},
+		Image:      "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
+		TaskRole:   "task-role",
+		Command:    []string{"echo hooray"},
+		EntryPoint: []string{"exec", "some command"},
 	}
 
 	task := &taskStackConfig{

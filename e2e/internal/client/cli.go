@@ -68,6 +68,7 @@ func (e EnvInitRequestVPCImport) IsSet() bool {
 // calling copilot env init.
 type EnvInitRequestVPCConfig struct {
 	CIDR               string
+	AZs                string
 	PublicSubnetCIDRs  string
 	PrivateSubnetCIDRs string
 }
@@ -80,11 +81,12 @@ type EnvShowRequest struct {
 
 // SvcInitRequest contains the parameters for calling copilot svc init.
 type SvcInitRequest struct {
-	Name       string
-	SvcType    string
-	Dockerfile string
-	Image      string
-	SvcPort    string
+	Name               string
+	SvcType            string
+	Dockerfile         string
+	Image              string
+	SvcPort            string
+	TopicSubscriptions []string
 }
 
 // SvcShowRequest contains the parameters for calling copilot svc show.
@@ -148,6 +150,7 @@ type SvcDeployInput struct {
 	Name     string
 	EnvName  string
 	ImageTag string
+	Force    bool
 }
 
 // TaskRunInput contains the parameters for calling copilot task run.
@@ -211,7 +214,7 @@ type PackageInput struct {
 	Tag     string
 }
 
-// NewCLI returns a wrapper around CLI
+// NewCLI returns a wrapper around CLI.
 func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
 	// your file system and docker image repo isn't polluted
@@ -313,6 +316,9 @@ func (cli *CLI) SvcInit(opts *SvcInitRequest) (string, error) {
 	if opts.Image != "" {
 		args = append(args, "--image", opts.Image)
 	}
+	if len(opts.TopicSubscriptions) > 0 {
+		args = append(args, "--subscribe-topics", strings.Join(opts.TopicSubscriptions, ","))
+	}
 	return cli.exec(
 		exec.Command(cli.path, args...))
 }
@@ -408,11 +414,16 @@ copilot svc deploy
 	--tag $t
 */
 func (cli *CLI) SvcDeploy(opts *SvcDeployInput) (string, error) {
+	arguments := []string{
+		"svc", "deploy",
+		"--name", opts.Name,
+		"--env", opts.EnvName,
+		"--tag", opts.ImageTag}
+	if opts.Force {
+		arguments = append(arguments, "--force")
+	}
 	return cli.exec(
-		exec.Command(cli.path, "svc", "deploy",
-			"--name", opts.Name,
-			"--env", opts.EnvName,
-			"--tag", opts.ImageTag))
+		exec.Command(cli.path, arguments...))
 }
 
 /*SvcList runs:
@@ -553,8 +564,10 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 			opts.VPCImport.PublicSubnetIDs, "--import-private-subnets", opts.VPCImport.PrivateSubnetIDs)
 	}
 	if (opts.VPCConfig != EnvInitRequestVPCConfig{}) {
-		commands = append(commands, "--override-vpc-cidr", opts.VPCConfig.CIDR, "--override-public-cidrs",
-			opts.VPCConfig.PublicSubnetCIDRs, "--override-private-cidrs", opts.VPCConfig.PrivateSubnetCIDRs)
+		commands = append(commands, "--override-vpc-cidr", opts.VPCConfig.CIDR,
+			"--override-az-names", opts.VPCConfig.AZs,
+			"--override-public-cidrs", opts.VPCConfig.PublicSubnetCIDRs,
+			"--override-private-cidrs", opts.VPCConfig.PrivateSubnetCIDRs)
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }
@@ -643,9 +656,9 @@ func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, er
 			"-e", strings.Join(envs, ",")))
 }
 
-// PipelineUpdate runs "copilot pipeline update".
-func (cli *CLI) PipelineUpdate(app string) (string, error) {
-	return cli.exec(exec.Command(cli.path, "pipeline", "update", "-a", app, "--yes"))
+// PipelineDeploy runs "copilot pipeline deploy".
+func (cli *CLI) PipelineDeploy(app string) (string, error) {
+	return cli.exec(exec.Command(cli.path, "pipeline", "deploy", "-a", app, "--yes"))
 }
 
 // PipelineShow runs "copilot pipeline show --json"
@@ -914,7 +927,7 @@ func (cli *CLI) exec(command *exec.Cmd) (string, error) {
 
 	contents := sess.Wait(100000000).Out.Contents()
 	if exitCode := sess.ExitCode(); exitCode != 0 {
-		return string(contents), fmt.Errorf("received non 0 exit code")
+		return string(sess.Err.Contents()), fmt.Errorf("received non 0 exit code")
 	}
 
 	return string(contents), nil

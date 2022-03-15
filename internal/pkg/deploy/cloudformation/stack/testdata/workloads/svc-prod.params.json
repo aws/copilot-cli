@@ -8,12 +8,14 @@
     "TaskCPU": "256",
     "TaskMemory": "512",
     "TaskCount": "3",
-    "LogRetention": "30",
+    "LogRetention": "1",
     "ContainerPort": "4000",
-    "RulePath": "/",
-    "HTTPSEnabled": "true",
+    "DNSDelegated": "true",
     "TargetContainer": "fe",
     "TargetPort": "4000",
+    "EnvFileARN": "",
+    "RulePath": "/",
+    "HTTPSEnabled": "true",
     "Stickiness": "false"
   },
   "Tags": { 

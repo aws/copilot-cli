@@ -2,4 +2,4 @@
 
 * @aws/aws-ecs-devx
 
-*.ja.md @toricls
+*.ja.md @toricls @hkford

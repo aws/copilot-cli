@@ -19,111 +19,107 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type initAppMocks struct {
+	mockRoute53Svc       *mocks.MockdomainHostedZoneGetter
+	mockStore            *mocks.Mockstore
+	mockDomainInfoGetter *mocks.MockdomainInfoGetter
+}
+
 func TestInitAppOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inAppName      string
-		inDomainName   string
-		mockRoute53Svc func(m *mocks.MockdomainHostedZoneGetter)
-		mockStore      func(m *mocks.Mockstore)
+		inAppName    string
+		inDomainName string
 
-		wantedError string
+		mock func(m *initAppMocks)
+
+		wantedError error
 	}{
 		"skip everything": {
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {},
-			mockStore:      func(m *mocks.Mockstore) {},
-
-			wantedError: "",
+			mock: func(m *initAppMocks) {},
 		},
 		"valid app name": {
-			inAppName:      "metrics",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
 					ApplicationName: "metrics",
 				})
 			},
-			wantedError: "",
 		},
 		"invalid app name": {
-			inAppName:      "123chicken",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {},
-			mockStore:      func(m *mocks.Mockstore) {},
+			inAppName: "123chicken",
+			mock:      func(m *initAppMocks) {},
 
-			wantedError: "application name 123chicken is invalid: value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen",
+			wantedError: errors.New("application name 123chicken is invalid: value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen"),
 		},
 		"errors if application with different domain already exists": {
-			inAppName:      "metrics",
-			inDomainName:   "badDomain.com",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("metrics").Return(&config.Application{
+			inAppName:    "metrics",
+			inDomainName: "badDomain.com",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(&config.Application{
 					Name:   "metrics",
 					Domain: "domain.com",
 				}, nil)
 			},
 
-			wantedError: "application named metrics already exists with a different domain name domain.com",
+			wantedError: errors.New("application named metrics already exists with a different domain name domain.com"),
 		},
 		"skip checking if domain name is not set": {
-			inAppName:      "metrics",
-			inDomainName:   "",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("metrics").Return(&config.Application{
-					Name:   "metrics",
-					Domain: "mockDomain.com",
-				}, nil)
+			inAppName:    "metrics",
+			inDomainName: "",
+
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, nil)
 			},
 		},
 		"errors if failed to get application": {
-			inAppName:      "metrics",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("metrics").Return(nil, errors.New("some error"))
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, errors.New("some error"))
 			},
+			wantedError: errors.New("get application metrics: some error"),
+		},
+		"invalid domain name not containing a dot": {
+			inDomainName: "hello_website",
+			mock:         func(m *initAppMocks) {},
 
-			wantedError: "get application metrics: some error",
+			wantedError: fmt.Errorf("domain name hello_website is invalid: %w", errDomainInvalid),
+		},
+		"errors checking if the domain is owned by the account": {
+			inDomainName: "badMockDomain.com",
+			mock: func(m *initAppMocks) {
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("badMockDomain.com").Return(errors.New("some error"))
+			},
+			wantedError: errors.New("check if domain is owned by the account: some error"),
+		},
+		"invalid domain name that doesn't have a hosted zone": {
+			inDomainName: "badMockDomain.com",
+			mock: func(m *initAppMocks) {
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("badMockDomain.com").Return(nil)
+				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", &route53.ErrDomainHostedZoneNotFound{})
+			},
+			wantedError: fmt.Errorf("get hosted zone ID for domain badMockDomain.com: %w", &route53.ErrDomainHostedZoneNotFound{}),
+		},
+		"errors if failed to validate that domain has a hosted zone": {
+			inDomainName: "mockDomain.com",
+			mock: func(m *initAppMocks) {
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("mockDomain.com").Return(nil)
+				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("get hosted zone ID for domain mockDomain.com: some error"),
 		},
 		"valid domain name": {
 			inDomainName: "mockDomain.com",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZoneID("mockDomain.com").Return("mockHostedZoneID", nil)
+			mock: func(m *initAppMocks) {
+				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("mockHostedZoneID", nil)
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("mockDomain.com").Return(nil)
 			},
-			mockStore:   func(m *mocks.Mockstore) {},
-			wantedError: "",
 		},
-		"invalid domain name that does not exist": {
-			inDomainName: "badMockDomain.com",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", route53.ErrDomainNotExist)
-			},
-			mockStore: func(m *mocks.Mockstore) {},
-
-			wantedError: "get hosted zone ID for domain badMockDomain.com: domain does not exist",
-		},
-		"errors if failed to validate domain name": {
-			inDomainName: "mockDomain.com",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZoneID("mockDomain.com").Return("", errors.New("some error"))
-			},
-			mockStore: func(m *mocks.Mockstore) {},
-
-			wantedError: "get hosted zone ID for domain mockDomain.com: some error",
-		},
-		"domain name does not contain a dot": {
-			inDomainName:   "hello_website",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {},
-			mockStore:      func(m *mocks.Mockstore) {},
-
-			wantedError: fmt.Errorf("domain name %s is invalid: %w", "hello_website", errDomainInvalid).Error(),
-		},
-		"domain name contains multiple dots": {
+		"valid domain name containing multiple dots": {
 			inDomainName: "hello.dog.com",
-			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZoneID("hello.dog.com").Return("mockHostedZoneID", nil)
+			mock: func(m *initAppMocks) {
+				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("hello.dog.com").Return(nil)
+				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("hello.dog.com").Return("mockHostedZoneID", nil)
 			},
-			mockStore:   func(m *mocks.Mockstore) {},
-			wantedError: "",
 		},
 	}
 
@@ -132,13 +128,18 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockRoute53Svc := mocks.NewMockdomainHostedZoneGetter(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			tc.mockRoute53Svc(mockRoute53Svc)
-			tc.mockStore(mockStore)
+
+			m := &initAppMocks{
+				mockStore:            mocks.NewMockstore(ctrl),
+				mockRoute53Svc:       mocks.NewMockdomainHostedZoneGetter(ctrl),
+				mockDomainInfoGetter: mocks.NewMockdomainInfoGetter(ctrl),
+			}
+			tc.mock(m)
+
 			opts := &initAppOpts{
-				route53: mockRoute53Svc,
-				store:   mockStore,
+				route53:          m.mockRoute53Svc,
+				domainInfoGetter: m.mockDomainInfoGetter,
+				store:            m.mockStore,
 				initAppVars: initAppVars{
 					name:       tc.inAppName,
 					domainName: tc.inDomainName,
@@ -149,8 +150,8 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			// THEN
-			if tc.wantedError != "" {
-				require.EqualError(t, err, tc.wantedError)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 			}

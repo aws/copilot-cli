@@ -1,0 +1,64 @@
+InstanceRole:
+  Metadata:
+    'aws:copilot:description': 'An IAM role to control permissions for the containers in your service'
+  Type: AWS::IAM::Role
+  Properties:
+  {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
+    {{- if gt (len .NestedStack.PolicyOutputs) 0}}
+    ManagedPolicyArns:
+    {{- range $managedPolicy := .NestedStack.PolicyOutputs}}
+    - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]
+    {{- end}}
+    {{- end}}
+  {{- end}}
+    AssumeRolePolicyDocument:
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service: tasks.apprunner.amazonaws.com
+          Action: 'sts:AssumeRole'
+    Policies:
+      - PolicyName: 'DenyIAMExceptTaggedRoles'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Deny'
+              Action: 'iam:*'
+              Resource: '*'
+            - Effect: 'Allow'
+              Action: 'sts:AssumeRole'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
+              Condition:
+                StringEquals:
+                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      {{- if .Publish }}
+      {{- if .Publish.Topics }}
+      - PolicyName: 'Publish2SNS'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action: 'sns:Publish'
+              Resource:
+              {{- range $topic := .Publish.Topics }}
+              - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
+              {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- if and (contains .FeatureFlags "Tracing") (eq .Observability.Tracing "AWSXRAY")}}
+      - PolicyName: 'EnableAWSXRayTracing'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action: 
+                - 'xray:PutTraceSegments'
+                - 'xray:PutTelemetryRecords'
+                - 'xray:GetSamplingRules'
+                - 'xray:GetSamplingTargets'
+                - 'xray:GetSamplingStatisticSummaries'
+                - 'ssm:GetParameters'
+              Resource: '*'
+      {{- end}}

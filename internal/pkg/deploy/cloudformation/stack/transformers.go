@@ -4,18 +4,21 @@
 package stack
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template/override"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -31,12 +34,7 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
-)
-
-// Min and Max values for task ephemeral storage in GiB.
-const (
-	ephemeralMinValueGiB = 21
-	ephemeralMaxValueGiB = 200
+	defaultNLBProtocol     = manifest.TCP
 )
 
 // Supported capacityproviders for Fargate services
@@ -45,208 +43,132 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
-// Time interval options.
-const (
-	retentionMinValueSeconds = 0
-	retentionMaxValueSeconds = 1209600
-	delayMinValueSeconds     = 0
-	delayMaxValueSeconds     = 900
-	timeoutMinValueSeconds   = 0
-	timeoutMaxValueSeconds   = 43200
-)
-
 var (
-	errEphemeralBadSize  = errors.New("ephemeral storage must be between 20 GiB and 200 GiB")
-	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
+	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
 )
-
-type convertSidecarOpts struct {
-	sidecarConfig map[string]*manifest.SidecarConfig
-	imageConfig   *manifest.Image
-	workloadName  string
-}
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
-	if s.sidecarConfig == nil {
+func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
+	if s == nil {
 		return nil, nil
 	}
-	if err := validateNoCircularDependencies(s); err != nil {
-		return nil, err
-	}
 	var sidecars []*template.SidecarOpts
-	for name, config := range s.sidecarConfig {
-		port, protocol, err := parsePortMapping(config.Port)
+	for name, config := range s {
+		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
 		}
-		if err := validateSidecarMountPoints(config.MountPoints); err != nil {
-			return nil, err
-		}
-		convertDependsOnStatus(&s)
-		if err := validateSidecarDependsOn(*config, name, s); err != nil {
-			return nil, err
-		}
-
 		entrypoint, err := convertEntryPoint(config.EntryPoint)
 		if err != nil {
 			return nil, err
 		}
-
 		command, err := convertCommand(config.Command)
 		if err != nil {
 			return nil, err
 		}
-
 		mp := convertSidecarMountPoints(config.MountPoints)
-
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:         aws.String(name),
-			Image:        config.Image,
-			Essential:    config.Essential,
-			Port:         port,
-			Protocol:     protocol,
-			CredsParam:   config.CredsParam,
-			Secrets:      config.Secrets,
-			Variables:    config.Variables,
-			MountPoints:  mp,
+			Name:       aws.String(name),
+			Image:      config.Image,
+			Essential:  config.Essential,
+			Port:       port,
+			Protocol:   protocol,
+			CredsParam: config.CredsParam,
+			Secrets:    convertSecrets(config.Secrets),
+			Variables:  config.Variables,
+			Storage: template.SidecarStorageOpts{
+				MountPoints: mp,
+			},
 			DockerLabels: config.DockerLabels,
-			DependsOn:    config.DependsOn,
+			DependsOn:    convertDependsOn(config.DependsOn),
 			EntryPoint:   entrypoint,
+			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
 		})
 	}
 	return sidecars, nil
 }
 
-// convertDependsOnStatus converts image and sidecar depends on fields to have upper case statuses
-func convertDependsOnStatus(s *convertSidecarOpts) {
-	if s.sidecarConfig != nil {
-		for _, sidecar := range s.sidecarConfig {
-			if sidecar.DependsOn == nil {
-				continue
-			}
-			for name, status := range sidecar.DependsOn {
-				sidecar.DependsOn[name] = strings.ToUpper(status)
-			}
-		}
+func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.ContainerHealthCheck {
+	if hc.IsEmpty() {
+		return nil
 	}
-	if s.imageConfig != nil && s.imageConfig.DependsOn != nil {
-		for name, status := range s.imageConfig.DependsOn {
-			s.imageConfig.DependsOn[name] = strings.ToUpper(status)
-		}
+	// Make sure that unset fields in the healthcheck gets a default value.
+	hc.ApplyIfNotSet(manifest.NewDefaultContainerHealthCheck())
+	return &template.ContainerHealthCheck{
+		Command:     hc.Command,
+		Interval:    aws.Int64(int64(hc.Interval.Seconds())),
+		Retries:     aws.Int64(int64(aws.IntValue(hc.Retries))),
+		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
+		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
 	}
 }
 
-// convertDependsOn converts an Image DependsOn field to a template DependsOn version
-func convertImageDependsOn(s convertSidecarOpts) (map[string]string, error) {
-	if s.imageConfig == nil || s.imageConfig.DependsOn == nil {
-		return nil, nil
+// convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
+func convertDependsOn(d manifest.DependsOn) map[string]string {
+	if d == nil {
+		return nil
 	}
-	convertDependsOnStatus(&s)
-	if err := validateImageDependsOn(s); err != nil {
-		return nil, err
+	dependsOn := make(map[string]string)
+	for name, status := range d {
+		dependsOn[name] = strings.ToUpper(status)
 	}
-	return s.imageConfig.DependsOn, nil
+	return dependsOn
 }
 
-// Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
-func parsePortMapping(s *string) (port *string, protocol *string, err error) {
-	if s == nil {
-		return nil, nil, nil
-	}
-	portProtocol := strings.Split(*s, "/")
-	switch len(portProtocol) {
-	case 1:
-		return aws.String(portProtocol[0]), nil, nil
-	case 2:
-		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
-	default:
-		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
-	}
-}
-
-func convertAdvancedCount(a *manifest.AdvancedCount) (*template.AdvancedCount, error) {
-	if a == nil {
-		return nil, nil
-	}
-
+func convertAdvancedCount(a manifest.AdvancedCount) (*template.AdvancedCount, error) {
 	if a.IsEmpty() {
 		return nil, nil
 	}
-
 	autoscaling, err := convertAutoscaling(a)
 	if err != nil {
 		return nil, err
 	}
-
-	cps, err := convertCapacityProviders(a)
-	if err != nil {
-		return nil, err
-	}
-
 	return &template.AdvancedCount{
 		Spot:        a.Spot,
 		Autoscaling: autoscaling,
-		Cps:         cps,
+		Cps:         convertCapacityProviders(a),
 	}, nil
 }
 
 // convertCapacityProviders transforms the manifest fields into a format
 // parsable by the templates pkg.
-func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityProviderStrategy, error) {
-	if a.IsEmpty() {
-		return nil, nil
+func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProviderStrategy {
+	if a.Spot == nil && a.Range.RangeConfig.SpotFrom == nil {
+		return nil
 	}
-
-	if a.Spot != nil && a.Range != nil {
-		return nil, errInvalidSpotConfig
-	}
-
-	// return if autoscaling range specified without spot scaling
-	if a.Range != nil && a.Range.Value != nil {
-		return nil, nil
-	}
-
 	var cps []*template.CapacityProviderStrategy
-
 	// if Spot specified as count, then weight on Spot CPS should be 1
 	cps = append(cps, &template.CapacityProviderStrategy{
 		Weight:           aws.Int(1),
 		CapacityProvider: capacityProviderFargateSpot,
 	})
-
-	// Return if only spot is specifed as count
-	if a.Range == nil {
-		return cps, nil
-	}
-
-	// Scaling with spot
 	rc := a.Range.RangeConfig
-	if !rc.IsEmpty() {
-		spotFrom := aws.IntValue(rc.SpotFrom)
-		min := aws.IntValue(rc.Min)
-
-		// If spotFrom value is not equal to the autoscaling min, then
-		// the base value on the Fargate Capacity provider must be set
-		// to one less than spotFrom
-		if spotFrom > min {
-			base := spotFrom - 1
-			fgCapacity := &template.CapacityProviderStrategy{
-				Base:             aws.Int(base),
-				Weight:           aws.Int(0),
-				CapacityProvider: capacityProviderFargate,
-			}
-			cps = append(cps, fgCapacity)
-		}
+	// Return if only spot is specifed as count
+	if rc.SpotFrom == nil {
+		return cps
 	}
-
-	return cps, nil
+	// Scaling with spot
+	spotFrom := aws.IntValue(rc.SpotFrom)
+	min := aws.IntValue(rc.Min)
+	// If spotFrom value is not equal to the autoscaling min, then
+	// the base value on the Fargate Capacity provider must be set
+	// to one less than spotFrom
+	if spotFrom > min {
+		base := spotFrom - 1
+		fgCapacity := &template.CapacityProviderStrategy{
+			Base:             aws.Int(base),
+			Weight:           aws.Int(0),
+			CapacityProvider: capacityProviderFargate,
+		}
+		cps = append(cps, fgCapacity)
+	}
+	return cps
 }
 
 // convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
 // by the templates pkg.
-func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
+func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
 	if a.IsEmpty() {
 		return nil, nil
 	}
@@ -274,6 +196,15 @@ func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, e
 	if a.ResponseTime != nil {
 		responseTime := float64(*a.ResponseTime) / float64(time.Second)
 		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
+	}
+	if !a.QueueScaling.IsEmpty() {
+		acceptableBacklog, err := a.QueueScaling.AcceptableBacklogPerTask()
+		if err != nil {
+			return nil, err
+		}
+		autoscalingOpts.QueueDelay = &template.AutoscalingQueueDelayOpts{
+			AcceptableBacklogPerTask: acceptableBacklog,
+		}
 	}
 	return &autoscalingOpts, nil
 }
@@ -306,6 +237,107 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	return opts
 }
 
+type networkLoadBalancerConfig struct {
+	settings *template.NetworkLoadBalancer
+
+	// If a domain is associated these values are not empty.
+	appDNSDelegationRole *string
+	appDNSName           *string
+	certValidatorLambda  string
+	customDomainLambda   string
+}
+
+func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
+	nlbConfig := s.manifest.NLBConfig
+	if nlbConfig.IsEmpty() {
+		return networkLoadBalancerConfig{}, nil
+	}
+
+	// Parse listener port and protocol.
+	port, protocol, err := manifest.ParsePortMapping(nlbConfig.Port)
+	if err != nil {
+		return networkLoadBalancerConfig{}, err
+	}
+	if protocol == nil {
+		protocol = aws.String(defaultNLBProtocol)
+	}
+
+	// Configure target container and port.
+	targetContainer := s.name
+	if nlbConfig.TargetContainer != nil {
+		targetContainer = aws.StringValue(nlbConfig.TargetContainer)
+	}
+
+	// By default, the target port is the same as listener port.
+	targetPort := aws.StringValue(port)
+	if targetContainer != s.name {
+		// If the target container is a sidecar container, the target port is the exposed sidecar port.
+		sideCarPort := s.manifest.Sidecars[targetContainer].Port // We validated that a sidecar container exposes a port if it is a target container.
+		port, _, err := manifest.ParsePortMapping(sideCarPort)
+		if err != nil {
+			return networkLoadBalancerConfig{}, err
+		}
+		targetPort = aws.StringValue(port)
+	}
+	// Finally, if a target port is explicitly specified, use that value.
+	if nlbConfig.TargetPort != nil {
+		targetPort = strconv.Itoa(aws.IntValue(nlbConfig.TargetPort))
+	}
+
+	aliases, err := convertAlias(nlbConfig.Aliases)
+	if err != nil {
+		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
+	}
+
+	hc := template.NLBHealthCheck{
+		HealthyThreshold:   nlbConfig.HealthCheck.HealthyThreshold,
+		UnhealthyThreshold: nlbConfig.HealthCheck.UnhealthyThreshold,
+	}
+	if nlbConfig.HealthCheck.Port != nil {
+		hc.Port = strconv.Itoa(aws.IntValue(nlbConfig.HealthCheck.Port))
+	}
+	if nlbConfig.HealthCheck.Timeout != nil {
+		hc.Timeout = aws.Int64(int64(nlbConfig.HealthCheck.Timeout.Seconds()))
+	}
+	if nlbConfig.HealthCheck.Interval != nil {
+		hc.Interval = aws.Int64(int64(nlbConfig.HealthCheck.Interval.Seconds()))
+	}
+	config := networkLoadBalancerConfig{
+		settings: &template.NetworkLoadBalancer{
+			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
+			Listener: template.NetworkLoadBalancerListener{
+				Port:            aws.StringValue(port),
+				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
+				TargetContainer: targetContainer,
+				TargetPort:      targetPort,
+				SSLPolicy:       nlbConfig.SSLPolicy,
+				Aliases:         aliases,
+				HealthCheck:     hc,
+				Stickiness:      nlbConfig.Stickiness,
+			},
+			MainContainerPort: s.containerPort(),
+		},
+	}
+
+	if s.dnsDelegationEnabled {
+		dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
+		config.appDNSName = dnsName
+		config.appDNSDelegationRole = dnsDelegationRole
+
+		nlbCertValidatorLambda, err := s.parser.Read(nlbCertValidatorPath)
+		if err != nil {
+			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb certificate validator lambda: %w", err)
+		}
+		nlbCustomDomainLambda, err := s.parser.Read(nlbCustomDomainPath)
+		if err != nil {
+			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb custom domain lambda: %w", err)
+		}
+		config.certValidatorLambda = nlbCertValidatorLambda.String()
+		config.customDomainLambda = nlbCustomDomainLambda.String()
+	}
+	return config, nil
+}
+
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {
 	if e.Config.IsEmpty() && !aws.BoolValue(e.Enable) {
 		return nil
@@ -313,77 +345,55 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 	return &template.ExecuteCommandOpts{}
 }
 
-func convertLogging(lc *manifest.Logging) *template.LogConfigOpts {
-	if lc == nil {
+func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
+	if lc.IsEmpty() {
 		return nil
 	}
-	return logConfigOpts(lc)
-}
-
-func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 	return &template.LogConfigOpts{
 		Image:          lc.LogImage(),
 		ConfigFile:     lc.ConfigFile,
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
-		SecretOptions:  lc.SecretOptions,
+		SecretOptions:  convertSecrets(lc.SecretOptions),
+		Variables:      lc.Variables,
+		Secrets:        convertSecrets(lc.Secrets),
 	}
+}
+
+func convertTaskDefOverrideRules(inRules []manifest.OverrideRule) []override.Rule {
+	var res []override.Rule
+	suffixStr := strings.Join(taskDefOverrideRulePrefixes, override.PathSegmentSeparator)
+	for _, r := range inRules {
+		res = append(res, override.Rule{
+			Path:  strings.Join([]string{suffixStr, r.Path}, override.PathSegmentSeparator),
+			Value: r.Value,
+		})
+	}
+	return res
 }
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(wlName *string, in *manifest.Storage) (*template.StorageOpts, error) {
-	if in == nil {
-		return nil, nil
-	}
-	if err := validateStorageConfig(in); err != nil {
-		return nil, err
-	}
-	mv, err := convertManagedFSInfo(wlName, in.Volumes)
-	if err != nil {
-		return nil, err
-	}
-	v, err := convertVolumes(in.Volumes)
-	if err != nil {
-		return nil, err
-	}
-	mp, err := convertMountPoints(in.Volumes)
-	if err != nil {
-		return nil, err
-	}
-	perms, err := convertEFSPermissions(in.Volumes)
-	if err != nil {
-		return nil, err
-	}
-	ephemeral, err := convertEphemeral(in.Ephemeral)
-	if err != nil {
-		return nil, err
+func convertStorageOpts(wlName *string, in manifest.Storage) *template.StorageOpts {
+	if in.IsEmpty() {
+		return nil
 	}
 	return &template.StorageOpts{
-		Ephemeral:         ephemeral,
-		Volumes:           v,
-		MountPoints:       mp,
-		EFSPerms:          perms,
-		ManagedVolumeInfo: mv,
-	}, nil
+		Ephemeral:         convertEphemeral(in.Ephemeral),
+		Volumes:           convertVolumes(in.Volumes),
+		MountPoints:       convertMountPoints(in.Volumes),
+		EFSPerms:          convertEFSPermissions(in.Volumes),
+		ManagedVolumeInfo: convertManagedFSInfo(wlName, in.Volumes),
+	}
 }
 
-func convertEphemeral(in *int) (*int, error) {
-	if in == nil {
-		return nil, nil
-	}
-
+func convertEphemeral(in *int) *int {
 	// Min value for extensible ephemeral storage is 21; if customer specifies 20, which is the default size,
 	// we shouldn't let CF error out. Instead, we'll just omit it from the config.
 	if aws.IntValue(in) == 20 {
-		return nil, nil
+		return nil
 	}
-
-	if aws.IntValue(in) < ephemeralMinValueGiB || aws.IntValue(in) > ephemeralMaxValueGiB {
-		return nil, errEphemeralBadSize
-	}
-
-	return in, nil
+	return in
 }
 
 // convertSidecarMountPoints is used to convert from manifest to template objects.
@@ -411,18 +421,18 @@ func convertMountPoint(sourceVolume, containerPath *string, readOnly *bool) *tem
 	}
 }
 
-func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
+func convertMountPoints(input map[string]*manifest.Volume) []*template.MountPoint {
 	if len(input) == 0 {
-		return nil, nil
+		return nil
 	}
 	var output []*template.MountPoint
 	for name, volume := range input {
 		output = append(output, convertMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly))
 	}
-	return output, nil
+	return output
 }
 
-func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
+func convertEFSPermissions(input map[string]*manifest.Volume) []*template.EFSPermission {
 	var output []*template.EFSPermission
 	for _, volume := range input {
 		// If there's no EFS configuration, we don't need to generate any permissions.
@@ -443,36 +453,24 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 		if volume.ReadOnly != nil {
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
-		var accessPointID *string
-		if volume.EFS.Advanced.AuthConfig != nil {
-			accessPointID = volume.EFS.Advanced.AuthConfig.AccessPointID
-		}
+		accessPointID := volume.EFS.Advanced.AuthConfig.AccessPointID
 		output = append(output, &template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
 			FilesystemID:  volume.EFS.Advanced.FileSystemID,
 		})
 	}
-	return output, nil
+	return output
 }
 
-func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
+func convertManagedFSInfo(wlName *string, input map[string]*manifest.Volume) *template.ManagedVolumeCreationInfo {
 	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
-		if volume.EmptyVolume() {
+		if volume.EmptyVolume() || !volume.EFS.UseManagedFS() {
 			continue
 		}
-		if !volume.EFS.UseManagedFS() {
-			continue
-		}
-
-		if output != nil {
-			return nil, fmt.Errorf("cannot specify more than one managed volume per service")
-		}
-
 		uid := volume.EFS.Advanced.UID
 		gid := volume.EFS.Advanced.GID
-
 		if uid == nil && gid == nil {
 			crc := aws.Uint32(getRandomUIDGID(wlName))
 			uid = crc
@@ -485,7 +483,7 @@ func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*te
 			GID:     gid,
 		}
 	}
-	return output, nil
+	return output
 }
 
 // getRandomUIDGID returns the 32-bit checksum of the service name for use as CreationInfo in the EFS Access Point.
@@ -495,7 +493,7 @@ func getRandomUIDGID(name *string) uint32 {
 	return crc32.ChecksumIEEE([]byte(aws.StringValue(name)))
 }
 
-func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
+func convertVolumes(input map[string]*manifest.Volume) []*template.Volume {
 	var output []*template.Volume
 	for name, volume := range input {
 		// Volumes can contain either:
@@ -528,7 +526,7 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 			},
 		)
 	}
-	return output, nil
+	return output
 }
 
 func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVolumeConfiguration {
@@ -539,7 +537,7 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 	// Set default values for IAM and AccessPointID
 	iam := aws.String(defaultIAM)
-	if in.AuthConfig == nil {
+	if in.AuthConfig.IsEmpty() {
 		return &template.EFSVolumeConfiguration{
 			Filesystem:    in.FileSystemID,
 			RootDirectory: rootDir,
@@ -559,218 +557,184 @@ func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) *template.EFSVo
 	}
 }
 
-func convertNetworkConfig(network *manifest.NetworkConfig) *template.NetworkOpts {
-	if network == nil || network.VPC == nil {
-		return &template.NetworkOpts{
+func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
+	if network.IsEmpty() {
+		return template.NetworkOpts{
 			AssignPublicIP: template.EnablePublicIP,
 			SubnetsType:    template.PublicSubnetsPlacement,
 		}
 	}
-	opts := &template.NetworkOpts{
+	opts := template.NetworkOpts{
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 		SecurityGroups: network.VPC.SecurityGroups,
 	}
-	if aws.StringValue(network.VPC.Placement) != manifest.PublicSubnetPlacement {
+	if network.VPC.Placement == nil {
+		return opts
+	}
+	if *network.VPC.Placement != manifest.PublicSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
 	return opts
 }
 
-func convertEntryPoint(entrypoint *manifest.EntryPointOverride) ([]string, error) {
-	if entrypoint == nil {
-		return nil, nil
+func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkConfig) template.NetworkOpts {
+	opts := template.NetworkOpts{}
+	if network.IsEmpty() {
+		return opts
 	}
+	if network.VPC.Placement == nil {
+		return opts
+	}
+	if string(*network.VPC.Placement) == string(manifest.PrivateSubnetPlacement) {
+		opts.SubnetsType = template.PrivateSubnetsPlacement
+	}
+	return opts
+}
 
+func convertAlias(alias manifest.Alias) ([]string, error) {
+	out, err := alias.ToStringSlice()
+	if err != nil {
+		return nil, fmt.Errorf(`convert "http.alias" to string slice: %w`, err)
+	}
+	return out, nil
+}
+
+func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error) {
 	out, err := entrypoint.ToStringSlice()
 	if err != nil {
-		return nil, fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
+		return nil, fmt.Errorf(`convert "entrypoint" to string slice: %w`, err)
 	}
 	return out, nil
 }
 
-func convertCommand(command *manifest.CommandOverride) ([]string, error) {
-	if command == nil {
-		return nil, nil
-	}
+func convertCommand(command manifest.CommandOverride) ([]string, error) {
 	out, err := command.ToStringSlice()
 	if err != nil {
-		return nil, fmt.Errorf(`convert 'command' to string slice: %w`, err)
+		return nil, fmt.Errorf(`convert "command" to string slice: %w`, err)
 	}
 	return out, nil
 }
 
-func convertPublish(p *manifest.PublishConfig, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
-	if p == nil || len(p.Topics) == 0 {
+func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc string) (*template.PublishOpts, error) {
+	if len(topics) == 0 {
 		return nil, nil
 	}
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	if !ok {
-		return nil, fmt.Errorf("find the partition for region %s", region)
+	partition, err := partitions.Region(region).Partition()
+	if err != nil {
+		return nil, err
 	}
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
-	for _, topic := range p.Topics {
-		t, err := convertTopic(topic, accountID, partition.ID(), region, app, env, svc)
-		if err != nil {
-			return nil, err
-		}
-
-		publishers.Topics = append(publishers.Topics, t)
+	for _, topic := range topics {
+		publishers.Topics = append(publishers.Topics, &template.Topic{
+			Name:      topic.Name,
+			AccountID: accountID,
+			Partition: partition.ID(),
+			Region:    region,
+			App:       app,
+			Env:       env,
+			Svc:       svc,
+		})
 	}
 
 	return &publishers, nil
 }
 
-func convertTopic(t manifest.Topic, accountID, partition, region, app, env, svc string) (*template.Topic, error) {
-	// topic should have a valid name and valid service worker names
-	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
-		return nil, err
-	}
-	if err := validateWorkerNames(t.AllowedWorkers); err != nil {
-		return nil, err
-	}
-
-	return &template.Topic{
-		Name:           t.Name,
-		AllowedWorkers: t.AllowedWorkers,
-		AccountID:      accountID,
-		Partition:      partition,
-		Region:         region,
-		App:            app,
-		Env:            env,
-		Svc:            svc,
-	}, nil
-}
-
-func convertSubscribe(s *manifest.SubscribeConfig, validTopicARNs []string, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
-	if s == nil || s.Topics == nil {
+func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, error) {
+	if s.Topics == nil {
 		return nil, nil
 	}
-
-	sqsEndpoint, err := endpoints.DefaultResolver().EndpointFor(endpoints.SqsServiceID, region)
-	if err != nil {
-		return nil, err
-	}
-
 	var subscriptions template.SubscribeOpts
-	for _, sb := range *s.Topics {
-		ts, err := convertTopicSubscription(sb, validTopicARNs, sqsEndpoint.URL, accountID, app, env, svc)
+	for _, sb := range s.Topics {
+		ts, err := convertTopicSubscription(sb)
 		if err != nil {
 			return nil, err
 		}
-
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	queue, err := convertQueue(s.Queue, sqsEndpoint.URL, accountID, app, env, svc)
-	if err != nil {
-		return nil, err
-	}
-	subscriptions.Queue = queue
-
+	subscriptions.Queue = convertQueue(s.Queue)
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, validTopicARNs []string, url, accountID, app, env, svc string) (*template.TopicSubscription, error) {
-	err := validateTopicSubscription(t, validTopicARNs, app, env)
+func convertTopicSubscription(t manifest.TopicSubscription) (
+	*template.TopicSubscription, error) {
+	filterPolicy, err := convertFilterPolicy(t.FilterPolicy)
 	if err != nil {
-		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+		return nil, err
 	}
-	queue, err := convertQueue(t.Queue, url, accountID, app, env, svc)
-	if err != nil {
-		return nil, fmt.Errorf(`invalid topic subscription "%s": %w`, t.Name, err)
+	if aws.BoolValue(t.Queue.Enabled) {
+		return &template.TopicSubscription{
+			Name:         t.Name,
+			Service:      t.Service,
+			Queue:        &template.SQSQueue{},
+			FilterPolicy: filterPolicy,
+		}, nil
 	}
-
 	return &template.TopicSubscription{
-		Name:    aws.String(t.Name),
-		Service: aws.String(t.Service),
-		Queue:   queue,
+		Name:         t.Name,
+		Service:      t.Service,
+		Queue:        convertQueue(t.Queue.Advanced),
+		FilterPolicy: filterPolicy,
 	}, nil
 }
 
-func convertQueue(q *manifest.SQSQueue, url, accountID, app, env, svc string) (*template.SQSQueue, error) {
-	if q == nil {
+func convertFilterPolicy(filterPolicy map[string]interface{}) (*string, error) {
+	if len(filterPolicy) == 0 {
 		return nil, nil
 	}
-	retention, err := convertRetention(q.Retention)
+	bytes, err := json.Marshal(filterPolicy)
 	if err != nil {
-		return nil, fmt.Errorf(" `retention` %w", err)
+		return nil, fmt.Errorf(`convert "filter_policy" to a JSON string: %w`, err)
 	}
-	delay, err := convertDelay(q.Delay)
-	if err != nil {
-		return nil, fmt.Errorf("`delay` %w", err)
-	}
-	timeout, err := convertTimeout(q.Timeout)
-	if err != nil {
-		return nil, fmt.Errorf("`timeout` %w", err)
-	}
-	deadletter, err := convertDeadLetter(q.DeadLetter)
-	if err != nil {
-		return nil, err
-	}
-
-	return &template.SQSQueue{
-		Retention:  retention,
-		Delay:      delay,
-		Timeout:    timeout,
-		DeadLetter: deadletter,
-		FIFO:       convertFIFO(q.FIFO),
-	}, nil
+	return aws.String(string(bytes)), nil
 }
 
-func convertTime(t *time.Duration, floor, ceiling time.Duration) (*int64, error) {
-	if t == nil {
-		return nil, nil
-	}
-
-	if err := validateTime(*t, floor, ceiling); err != nil {
-		return nil, err
-	}
-
-	return aws.Int64(int64(t.Seconds())), nil
-}
-
-func convertRetention(t *time.Duration) (*int64, error) {
-	return convertTime(t, retentionMinValueSeconds*time.Second, retentionMaxValueSeconds*time.Second)
-}
-
-func convertDelay(t *time.Duration) (*int64, error) {
-	return convertTime(t, delayMinValueSeconds*time.Second, delayMaxValueSeconds*time.Second)
-}
-
-func convertTimeout(t *time.Duration) (*int64, error) {
-	return convertTime(t, timeoutMinValueSeconds*time.Second, timeoutMaxValueSeconds*time.Second)
-}
-
-func convertFIFO(f *manifest.FIFOOrBool) *template.FIFOQueue {
-	if f == nil || !aws.BoolValue(f.Enabled) {
+func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
+	if q.IsEmpty() {
 		return nil
 	}
-
-	return &template.FIFOQueue{
-		HighThroughput: aws.BoolValue(f.FIFO.HighThroughput),
+	return &template.SQSQueue{
+		Retention:  convertRetention(q.Retention),
+		Delay:      convertDelay(q.Delay),
+		Timeout:    convertTimeout(q.Timeout),
+		DeadLetter: convertDeadLetter(q.DeadLetter),
 	}
 }
 
-func convertDeadLetter(d *manifest.DeadLetterQueue) (*template.DeadLetterQueue, error) {
-	if d == nil {
-		return nil, nil
+func convertTime(t *time.Duration) *int64 {
+	if t == nil {
+		return nil
 	}
-	if err := validateDeadLetter(d); err != nil {
-		return nil, err
-	}
+	return aws.Int64(int64(t.Seconds()))
+}
 
+func convertRetention(t *time.Duration) *int64 {
+	return convertTime(t)
+}
+
+func convertDelay(t *time.Duration) *int64 {
+	return convertTime(t)
+}
+
+func convertTimeout(t *time.Duration) *int64 {
+	return convertTime(t)
+}
+
+func convertDeadLetter(d manifest.DeadLetterQueue) *template.DeadLetterQueue {
+	if d.IsEmpty() {
+		return nil
+	}
 	return &template.DeadLetterQueue{
 		Tries: d.Tries,
-	}, nil
+	}
 }
 
 func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
 	if len(nameToS3URL) == 0 {
 		return nil, nil, nil
 	}
-
 	s3ObjectKeys = make(map[string]*string)
 	for fname, s3url := range nameToS3URL {
 		bucketName, key, err := s3.ParseURL(s3url)
@@ -788,11 +752,55 @@ func convertAppInformation(app deploy.AppInformation) (delegationRole *string, d
 	if role != "" {
 		delegationRole = &role
 	}
-
 	dns := app.DNSName
 	if dns != "" {
 		dnsName = &dns
 	}
-
 	return
+}
+
+func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePlatformOpts {
+	if platform.IsEmpty() {
+		return template.RuntimePlatformOpts{}
+	}
+
+	os := template.OSLinux
+	switch platform.OS() {
+	case manifest.OSWindows, manifest.OSWindowsServer2019Core:
+		os = template.OSWindowsServerCore
+	case manifest.OSWindowsServer2019Full:
+		os = template.OSWindowsServerFull
+	}
+
+	arch := template.ArchX86
+	if manifest.IsArmArch(platform.Arch()) {
+		arch = template.ArchARM64
+	}
+	return template.RuntimePlatformOpts{
+		OS:   os,
+		Arch: arch,
+	}
+}
+
+func convertHTTPVersion(protocolVersion *string) *string {
+	if protocolVersion == nil {
+		return nil
+	}
+	pv := strings.ToUpper(*protocolVersion)
+	return &pv
+}
+
+func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
+	if len(secrets) == 0 {
+		return nil
+	}
+	m := make(map[string]template.Secret)
+	for name, mftSecret := range secrets {
+		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
+		if mftSecret.IsSecretsManagerName() {
+			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+		}
+		m[name] = tplSecret
+	}
+	return m
 }
