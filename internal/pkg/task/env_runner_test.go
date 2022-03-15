@@ -80,10 +80,11 @@ func TestEnvRunner_Run(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		count     int
-		groupName string
-		os        string
-		arch      string
+		count          int
+		groupName      string
+		os             string
+		arch           string
+		securityGroups []string
 
 		MockVPCGetter            func(m *mocks.MockVPCGetter)
 		MockClusterGetter        func(m *mocks.MockClusterGetter)
@@ -194,6 +195,35 @@ func TestEnvRunner_Run(t *testing.T) {
 				},
 			},
 		},
+		"run in env with extra security groups success": {
+			count:          1,
+			groupName:      "my-task",
+			securityGroups: []string{"sg-extra"},
+
+			MockClusterGetter: mockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"subnet-0789ab", "subnet-0123cd"},
+					SecurityGroups:  []string{"sg-1", "sg-2", "sg-extra"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "LATEST",
+					EnableExec:      true,
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
+			},
+			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+			},
+		},
 		"run in env with windows os success": {
 			count:     1,
 			groupName: "my-task",
@@ -286,6 +316,8 @@ func TestEnvRunner_Run(t *testing.T) {
 				Env: inEnv,
 
 				OS: tc.os,
+
+				SecurityGroups: tc.securityGroups,
 
 				VPCGetter:            MockVPCGetter,
 				ClusterGetter:        MockClusterGetter,

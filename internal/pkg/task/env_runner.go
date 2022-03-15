@@ -36,7 +36,10 @@ type EnvRunner struct {
 	App string
 	Env string
 
-	// Platform configuration
+	// Extra security groups to use.
+	SecurityGroups []string
+
+	// Platform configuration.
 	OS string
 
 	// Interfaces to interact with dependencies. Must not be nil.
@@ -76,6 +79,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
+	securityGroups = append(securityGroups, r.SecurityGroups...)
 
 	platformVersion := "LATEST"
 	enableExec := true
