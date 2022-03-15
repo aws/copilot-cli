@@ -168,7 +168,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		spinner:         spin,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
-		newSvcDeployer:  newSvcDeployer,
+	}
+	deploySvcCmd.newSvcDeployer = func() (workloadDeployer, error) {
+		return newSvcDeployer(deploySvcCmd)
 	}
 	deployJobCmd := &deployJobOpts{
 		deployWkldVars: deployWkldVars{
@@ -183,7 +185,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sel:             sel,
 		cmd:             exec.NewCmd(),
 		sessProvider:    sessProvider,
-		newJobDeployer:  newJobDeployer,
+	}
+	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
+		return newJobDeployer(deployJobCmd)
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()
@@ -221,13 +225,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initJobOpts{
 					initJobVars: jobVars,
 
-					fs:           fs,
-					store:        configStore,
-					init:         wlInitializer,
-					sel:          sel,
-					prompt:       prompt,
-					mftReader:    ws,
-					dockerEngine: dockerengine.New(cmd),
+					fs:                fs,
+					store:             configStore,
+					init:              wlInitializer,
+					sel:               sel,
+					prompt:            prompt,
+					mftReader:         ws,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
 					},
@@ -243,14 +248,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
 
-					fs:           fs,
-					init:         wlInitializer,
-					sel:          sel,
-					store:        configStore,
-					topicSel:     snsSel,
-					mftReader:    ws,
-					prompt:       prompt,
-					dockerEngine: dockerengine.New(cmd),
+					fs:                fs,
+					init:              wlInitializer,
+					sel:               sel,
+					store:             configStore,
+					topicSel:          snsSel,
+					mftReader:         ws,
+					prompt:            prompt,
+					dockerEngine:      dockerengine.New(cmd),
+					wsPendingCreation: true,
 				}
 				opts.dockerfile = func(path string) dockerfileParser {
 					if opts.df != nil {

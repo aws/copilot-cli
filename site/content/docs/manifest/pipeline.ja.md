@@ -54,7 +54,7 @@ Pipeline をトリガーするための GitHub アクセストークンを保持
     Copilot v1.4.0 から GitHub リポジトリをソースにする場合のアクセストークンは不要になりました。代わりに Copilot は [AWS CodeStar の GitHub への接続](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/update-github-action-connections.html)を使って Pipeline をトリガーします。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
-Pipeline をトリガーするリポジトリのブランチ名。 GitHub と CodeCommit の場合デフォルトは `main` で Bitbucket の場合デフォルトは `master` です。
+Pipeline をトリガーするリポジトリのブランチ名。 Copilot は、このフィールドに現在のローカルブランチを自動的に入力します。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-repository" href="#source-properties-repository" class="field">`repository`</a> <span class="type">String</span>  
 リポジトリの URL 。

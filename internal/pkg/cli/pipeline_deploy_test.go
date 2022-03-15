@@ -22,7 +22,7 @@ import (
 )
 
 type deployPipelineMocks struct {
-	envStore  *mocks.MockenvironmentStore
+	store     *mocks.Mockstore
 	prompt    *mocks.Mockprompter
 	prog      *mocks.Mockprogress
 	deployer  *mocks.MockpipelineDeployer
@@ -31,47 +31,45 @@ type deployPipelineMocks struct {
 }
 
 func TestDeployPipelineOpts_Validate(t *testing.T) {
-	legacyPath := "copilot/pipeline.yml"
 	testCases := map[string]struct {
 		inAppName      string
+		inWsAppName    string
 		inPipelineName string
-		mockWs         func(m *mocks.MockwsPipelineReader)
+		mockStore      func(m *mocks.Mockstore)
 
-		wantedPath     string
-		wantedPipeline *workspace.PipelineManifest
-		wantedError    error
+		wantedAppName string
+		wantedError   error
 	}{
-		"pipeline doesn't exist": {
-			inAppName:      "app",
-			inPipelineName: "nonexistentPipeline",
-
-			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{
-					{
-						Name: "existentPipeline",
-						Path: legacyPath,
-					}}, nil)
-			},
-
-			wantedError: errors.New("pipeline nonexistentPipeline not found in the workspace"),
+		"return error if can't read app name from workspace file": {
+			inWsAppName: "",
+			mockStore:   func(m *mocks.Mockstore) {},
+			wantedError: errNoAppInWorkspace,
 		},
-		"success": {
-			inAppName:      "app",
-			inPipelineName: "existentPipeline",
+		"return error if passed-in app name doesn't match workspace app": {
+			inAppName:   "badAppName",
+			inWsAppName: testAppName,
+			mockStore:   func(m *mocks.Mockstore) {},
 
-			mockWs: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{
-					{
-						Name: "existentPipeline",
-						Path: legacyPath,
-					}}, nil)
+			wantedError: errors.New("cannot specify app badAppName because the workspace is already registered with app badgoose"),
+		},
+		"return error if passed-in app name can't be validated": {
+			inWsAppName: testAppName,
+			inAppName:   testAppName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(testAppName).Return(nil, errors.New("some error"))
 			},
 
-			wantedPipeline: &workspace.PipelineManifest{
-				Name: "existentPipeline",
-				Path: "copilot/pipeline.yml",
+			wantedError: errors.New("get application badgoose configuration: some error"),
+		},
+		"success with app flag": {
+			inWsAppName: testAppName,
+			inAppName:   testAppName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(testAppName).Return(nil, nil)
 			},
-			wantedError: nil,
+
+			wantedAppName: testAppName,
+			wantedError:   nil,
 		},
 	}
 	for name, tc := range testCases {
@@ -80,14 +78,15 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWs := mocks.NewMockwsPipelineReader(ctrl)
-			tc.mockWs(mockWs)
+			mockStore := mocks.NewMockstore(ctrl)
+			tc.mockStore(mockStore)
 			opts := deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
 				},
-				ws: mockWs,
+				store:     mockStore,
+				wsAppName: tc.inWsAppName,
 			}
 
 			// WHEN
@@ -98,51 +97,56 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedPipeline, opts.pipeline)
+				require.Equal(t, tc.wantedAppName, opts.appName)
 			}
 		})
 	}
 }
 
 func TestDeployPipelineOpts_Ask(t *testing.T) {
+	pipeline := workspace.PipelineManifest{
+		Name: testPipelineName,
+		Path: "copilot/pipeline.yml",
+	}
 	testCases := map[string]struct {
 		inAppName      string
 		inPipelineName string
 		mockWs         func(m *mocks.MockwsPipelineReader)
 		mockSel        func(m *mocks.MockwsPipelineSelector)
 
+		wantedApp      string
 		wantedPipeline *workspace.PipelineManifest
 		wantedError    error
 	}{
-		"return nil if pipeline name passed in with flag": {
-			inAppName:      "app",
-			inPipelineName: "existentPipeline",
-			mockSel:        func(m *mocks.MockwsPipelineSelector) {},
+		"return error if passed-in pipeline name not found": {
+			inAppName:      testAppName,
+			inPipelineName: "someOtherPipelineName",
 
-			wantedError: nil,
+			mockSel: func(m *mocks.MockwsPipelineSelector) {},
+			mockWs: func(m *mocks.MockwsPipelineReader) {
+				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil)
+			},
+			wantedError: errors.New("pipeline someOtherPipelineName not found in the workspace"),
 		},
-		"success": {
-			inAppName: "app",
+		"return error if fail to select pipeline": {
+			inAppName: testAppName,
 			mockSel: func(m *mocks.MockwsPipelineSelector) {
-				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(&workspace.PipelineManifest{
-					Name: "existentPipeline",
-					Path: "copilot/pipeline.yml",
-				}, nil)
+				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 			},
-
-			wantedPipeline: &workspace.PipelineManifest{
-				Name: "existentPipeline",
-				Path: "copilot/pipeline.yml",
-			},
-			wantedError: nil,
-		},
-		"errors if fail to select pipeline": {
-			inAppName: "app",
-			mockSel: func(m *mocks.MockwsPipelineSelector) {
-				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(&workspace.PipelineManifest{}, errors.New("some error"))
-			},
+			mockWs: func(m *mocks.MockwsPipelineReader) {},
 
 			wantedError: fmt.Errorf("select pipeline: some error"),
+		},
+		"success with pipeline flag": {
+			inPipelineName: testPipelineName,
+			mockSel:        func(m *mocks.MockwsPipelineSelector) {},
+			mockWs: func(m *mocks.MockwsPipelineReader) {
+				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil)
+			},
+
+			wantedApp:      testAppName,
+			wantedPipeline: &pipeline,
+			wantedError:    nil,
 		},
 	}
 	for name, tc := range testCases {
@@ -152,13 +156,16 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSel := mocks.NewMockwsPipelineSelector(ctrl)
+			mockWs := mocks.NewMockwsPipelineReader(ctrl)
 			tc.mockSel(mockSel)
+			tc.mockWs(mockWs)
 			opts := deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
 				},
 				sel: mockSel,
+				ws:  mockWs,
 			}
 
 			// WHEN
@@ -252,8 +259,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -282,8 +289,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -313,8 +320,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -341,8 +348,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -481,8 +488,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, errors.New("some error")),
@@ -504,8 +511,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -530,8 +537,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -560,8 +567,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -616,8 +623,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
-					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
-					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
@@ -641,14 +648,14 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPipelineDeployer := mocks.NewMockpipelineDeployer(ctrl)
-			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
 
 			mocks := deployPipelineMocks{
-				envStore:  mockEnvStore,
+				store:     mockStore,
 				prompt:    mockPrompt,
 				prog:      mockProgress,
 				deployer:  mockPipelineDeployer,
@@ -667,7 +674,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				ws:               mockWorkspace,
 				app:              tc.inApp,
 				region:           tc.inRegion,
-				envStore:         mockEnvStore,
+				store:            mockStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
 				newSvcListCmd: func(w io.Writer) cmd {
@@ -724,7 +731,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.actionCmd.EXPECT().Execute().Times(2),
-					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
 
@@ -759,7 +766,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.actionCmd.EXPECT().Execute().Times(2),
-					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
 
@@ -795,7 +802,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				}
 				gomock.InOrder(
 					m.actionCmd.EXPECT().Execute().Times(2),
-					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
 
@@ -821,11 +828,11 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
 			mocks := deployPipelineMocks{
-				envStore:  mockEnvStore,
+				store:     mockStore,
 				ws:        mockWorkspace,
 				actionCmd: mockActionCmd,
 			}
@@ -836,8 +843,8 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
 				},
-				envStore: mockEnvStore,
-				ws:       mockWorkspace,
+				store: mockStore,
+				ws:    mockWorkspace,
 				newSvcListCmd: func(w io.Writer) cmd {
 					return mockActionCmd
 				},

@@ -2,7 +2,7 @@ List of all available properties for a Copilot pipeline manifest. To learn more 
 
 ???+ note "Sample manifest for a pipeline triggered from a GitHub repo"
 
-    ```yaml
+```yaml
     name: pipeline-sample-app-frontend
     version: 1
 
@@ -26,7 +26,7 @@ List of all available properties for a Copilot pipeline manifest. To learn more 
         -
           name: prod
           requires_approval: true
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your pipeline.
