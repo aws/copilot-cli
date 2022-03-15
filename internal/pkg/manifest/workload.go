@@ -22,14 +22,14 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
-// AWS VPC subnet placement options.
-var (
+const (
+	// AWS VPC subnet placement options.
 	PublicSubnetPlacement  = Placement("public")
 	PrivateSubnetPlacement = Placement("private")
-
-	// All placement options.
-	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 )
+
+// All placement options.
+var subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 
 // Error definitions.
 var (
@@ -73,7 +73,6 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	switch typeVal {
 	case LoadBalancedWebServiceType:
 		m = newDefaultLoadBalancedWebService()
-
 	case RequestDrivenWebServiceType:
 		m = newDefaultRequestDrivenWebService()
 	case BackendServiceType:
@@ -381,27 +380,6 @@ func (c *NetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
-// UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
-// If the user specified a placement that's not valid then throw an error.
-func (c *NetworkConfig) UnmarshalYAML(value *yaml.Node) error {
-	type networkWithDefaults NetworkConfig
-	publicPlacement := Placement(PublicSubnetPlacement)
-	defaultVPCConf := vpcConfig{
-		Placement: &publicPlacement,
-	}
-	conf := networkWithDefaults{
-		VPC: defaultVPCConf,
-	}
-	if err := value.Decode(&conf); err != nil {
-		return err
-	}
-	if conf.VPC.isEmpty() { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
-		conf.VPC = defaultVPCConf
-	}
-	*c = NetworkConfig(conf)
-	return nil
-}
-
 // Placement represents where to place tasks (public or private subnets).
 type Placement string
 
@@ -564,4 +542,12 @@ func uint16P(n uint16) *uint16 {
 		return nil
 	}
 	return &n
+}
+
+func placementP(p Placement) *Placement {
+	if p == "" {
+		return nil
+	}
+	placement := p
+	return &placement
 }

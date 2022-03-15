@@ -209,7 +209,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 					clientConfigured: true,
 				},
-				newSvcDeployer: func(dso *deploySvcOpts) (workloadDeployer, error) {
+				newSvcDeployer: func() (workloadDeployer, error) {
 					return m.mockDeployer, nil
 				},
 				envUpgradeCmd: m.mockEnvUpgrader,

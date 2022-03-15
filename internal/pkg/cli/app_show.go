@@ -117,6 +117,10 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list services in application %s: %w", o.name, err)
 	}
+	jobs, err := o.store.ListJobs(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs in application %s: %w", o.name, err)
+	}
 
 	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.name,
@@ -142,6 +146,13 @@ func (o *showAppOpts) description() (*describe.App, error) {
 			Type: svc.Type,
 		})
 	}
+	var trimmedJobs []*config.Workload
+	for _, job := range jobs {
+		trimmedJobs = append(trimmedJobs, &config.Workload{
+			Name: job.Name,
+			Type: job.Type,
+		})
+	}
 	versionGetter, err := o.newVersionGetter(o.name)
 	if err != nil {
 		return nil, err
@@ -156,6 +167,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		URI:       app.Domain,
 		Envs:      trimmedEnvs,
 		Services:  trimmedSvcs,
+		Jobs:      trimmedJobs,
 		Pipelines: pipelines,
 	}, nil
 }
