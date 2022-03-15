@@ -1,7 +1,7 @@
 <div class="separator"></div>
 
 <a id="nlb" href="#nlb" class="field">`nlb`</a> <span class="type">Map</span>  
-nlbセクションには、Service を Network Load Balancer と統合するためのパラメータが含まれています。
+nlb セクションは Service を Network Load Balancer と統合するためのパラメーターを含みます。
 
 Network Load Balancerは、`nlb` フィールドを指定した場合のみ有効になります。Load-Balanced Web Service では、Application Load Balancer と Network Load Balancer のいずれかが有効になっている必要があることに注意してください。
 
