@@ -23,17 +23,23 @@ Service のタイプを選択すると、Copilot は Dockerfile 内で記述さ�
 インターネットからアクセス可能な Service を作る際の選択肢には次の２つがあります。
 
 * "Request-Driven Web Service" - Service 実行環境として AWS App Runner サービスを作成します。
-* "Load Balanced Web Service" - Service 実行環境として Appplication Load Balancer (ALB)、セキュリティグループ、ECS サービス (Fargate) を作成します。
+* "Load Balanced Web Service" - Service 実行環境として Appplication Load Balancer (ALB)、Network Load Balancer、または、その両方を作成し、セキュリティグループ、ECS サービス (Fargate) を利用します。
 
 #### Request-Driven Web Service
 
 AWS App Runner を利用する Service で、受け付けるトラフィックに応じてオートスケールし、トラフィックがない場合は設定された最低インスタンス数までスケールダウンします。リクエスト量の大きな変化や恒常的な少ないリクエスト量が見込まれる HTTP サービスにとってもよりコスト効率の高い選択肢です。
+ECS とは異なり、 App Runner サービスはデフォルトでは VPC とは接続されていません。 出力トラフィックを VPC 経由でルーティングするには、
+マニフェスト内の[`network`](../manifest/rd-web-service.ja.md#network)フィールドを設定します。
 
 #### Load Balanced Web Service
 
-Application Load Balancer をトラフィックの入り口として Fargate 上でタスクを実行する ECS サービスです。安定したリクエスト量が見込まれる場合、Service から VPC 内のリソースにアクセスする必要がある場合、あるいはより高度な設定の必要がある場合に適した選択肢です。
+Application Load Balancer、Network Load Balancer、または両方をトラフィックの入り口として Fargate 上でタスクを実行する ECS サービスです。
+安定したリクエスト量が見込まれる場合、Service から VPC 内のリソースにアクセスする必要がある場合、あるいはより高度な設定の必要がある場合に適した HTTP まはた TCP サービスの選択肢です。
 
-Service でインターネット側からのリクエストを捌きたいですか？__Load Balanced Web Service__ を選べば、Copilot は Application Load Balancer やセキュリティグループ、そしてあなたの Service を Fargate で実行するための ECS サービスを作成します。
+Application Load Balancer は Environment レベルのリソースであり、Environment 内の全ての Load Balanced Web Service で共有されることに注意しましょう。
+詳細については、[こちら](environments.ja.md#load-balancers-and-dns)を確認してください。対照的に、 Net Work Load Balancer は Service レベルのリソースであり、 Service 間では共有されません。
+
+下図は Application Load Balancer のみを含む Load Balanced Web Service の図です。
 
 ![lb-web-service-infra](https://user-images.githubusercontent.com/879348/86045951-39762880-ba01-11ea-9a47-fc9278600154.png)
 
@@ -45,9 +51,9 @@ VPC 外部からアクセスさせる必要はないが、Application 内の他�
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
 
 ### Worker Service
-__Worker Services__ は [pub/sub アーキテクチャ](https://aws.amazon.com/pub-sub-messaging/)による非同期のサービス間通信を実装することができます。
+__Worker Services__ は [pub/sub アーキテクチャ](https://aws.amazon.com/pub-sub-messaging/)による非同期のサービス間通信を実装できます。
 
-アプリケーション内のマイクロサービスはイベントを [Amazon SNS トピック](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) に `パブリッシュ` することができ、それを "Worker Service" がサブスクライバーとして受け取ることができます。
+アプリケーション内のマイクロサービスはイベントを [Amazon SNS トピック](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) に `パブリッシュ` でき、それを "Worker Service" がサブスクライバーとして受け取ることができます。
 
 Worker Service は次の要素で構成されます。
 

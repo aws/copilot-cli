@@ -36,7 +36,7 @@ Service はパブリックサブネットで実行されますが、ロードバ
 
 ### ロードバランサーと DNS
 
-"Load Balanced Web Service" タイプの Service を作ると、Copilot は Application Load Balancer を作成します。同一 Environment 内にデプロイされたすべての "Load Balanced Web Service" タイプの Service は、Service 固有のリスナーを作成してこのロードバランサーを共有します。ロードバランサーは VPC 内の各 Service と通信できるようにセットアップされます。
+"Load Balanced Web Service" タイプの Service を作ると、Copilot は Application Load Balancer を作成します。同一 Environment 内にデプロイされたすべての "Load Balanced Web Service" タイプの Service は、Service 固有のリスナーを作成してこの Application Load Balancer を共有します。ロードバランサーは VPC 内の各 Service と通信できるようにセットアップされます。
 
 所有するドメイン名を Route 53 に登録するよう、Application 作成時にオプションとして設定できます。ドメイン名の利用が設定されている場合、Copilot は各 Environment の作成時に `environment-name.app-name.your-domain.com` のような形でサブドメインを登録し、ACM を通して発行した証明書を Application Load Balancer に設定します。これにより Service が HTTPS を利用できるようになります。
 

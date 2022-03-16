@@ -14,12 +14,12 @@ $ copilot env init [flags]
 AWS Copilot CLI の全てのコマンド同様、必須フラグを省略した場合にはそれらの情報の入力をインタラクティブに求められます。必須フラグを明示的に渡してコマンドを実行することでこれをスキップできます。
 ```
 Common Flags
+  -a, --app string                     Name of the application.
       --aws-access-key-id string       Optional. An AWS access key.
       --aws-secret-access-key string   Optional. An AWS secret access key.
       --aws-session-token string       Optional. An AWS session token for temporary credentials.
       --default-config                 Optional. Skip prompting and use default environment configuration.
   -n, --name string                    Name of the environment.
-      --prod                           If the environment contains production services.
       --profile string                 Name of the profile.
       --region string                  Optional. An AWS region where the environment will be created.
 
@@ -29,27 +29,44 @@ Import Existing Resources Flags
       --import-vpc-id string             Optional. Use an existing VPC ID.
 
 Configure Default Resources Flags
-      --override-private-cidrs strings   Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24).
-      --override-public-cidrs strings    Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24).
-      --override-vpc-cidr ipNet          Optional. Global CIDR to use for VPC (default 10.0.0.0/16).
+      --override-az-names strings        Optional. Availability Zone names.
+                                         (default 2 random AZs)
+      --override-private-cidrs strings   Optional. CIDR to use for private subnets.
+                                         (default 10.0.2.0/24,10.0.3.0/24)
+      --override-public-cidrs strings    Optional. CIDR to use for public subnets.
+                                         (default 10.0.0.0/24,10.0.1.0/24)
+      --override-vpc-cidr ipNet          Optional. Global CIDR to use for VPC.
+                                         (default 10.0.0.0/16)
 
-Global Flags
-  -a, --app string   Name of the application.
+Telemetry Flags
+      --container-insights   Optional. Enable CloudWatch Container Insights.
 ```
 
 ## 実行例
-AWS プロファイルの "default" に、デフォルト設定を使用して test Environment を作成します。
-
+AWS プロファイルの "default" 利用し、デフォルト設定を使用して test Environment を作成します。
 ```bash
 $ copilot env init --name test --profile default --default-config
 ```
 
-AWS プロファイルの "prod-admin" を利用して既存の VPC に prod-iad Environment を作成します。
+AWS プロファイルの "prod-admin" を利用して既存の VPC に prod-iad Environment を作成し、 CloudWatch Container Insights　を有効化します。
 ```bash
-$ copilot env init --name prod-iad --profile prod-admin --prod \
---import-vpc-id vpc-099c32d2b98cdcf47 \
---import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
---import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+$ copilot env init --name prod-iad --profile prod-admin --container-insights 
+```
+
+VPC リソースをインポートして Environment を作成します。
+```bash
+$ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
+  --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
+  --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+```
+
+CIDR と AZ を上書きして、Environment を作成します。
+
+```bash
+$ copilot env init --override-vpc-cidr 10.1.0.0/16 \
+  --override-az-names us-west-2b,us-west-2c \
+  --override-public-cidrs 10.1.0.0/24,10.1.1.0/24 \
+  --override-private-cidrs 10.1.2.0/24,10.1.3.0/24
 ```
 
 ## 出力例
