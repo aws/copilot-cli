@@ -131,7 +131,7 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 		"return error if fail to select pipeline": {
 			inAppName: testAppName,
 			mockSel: func(m *mocks.MockwsPipelineSelector) {
-				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().WsPipeline(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			mockWs: func(m *mocks.MockwsPipelineReader) {},
 

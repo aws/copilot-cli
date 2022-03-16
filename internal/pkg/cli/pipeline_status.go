@@ -14,9 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -46,7 +44,7 @@ type pipelineStatusOpts struct {
 	store         store
 	codepipeline  pipelineGetter
 	describer     describer
-	sel           appSelector
+	sel           codePipelineSelector
 	prompt        prompter
 	initDescriber func(opts *pipelineStatusOpts) error
 }
@@ -61,6 +59,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 	if err != nil {
 		return nil, fmt.Errorf("session: %w", err)
 	}
+	codepipeline := codepipeline.New(session)
 
 	store := config.NewSSMStore(identity.New(session), ssm.New(session), aws.StringValue(session.Config.Region))
 	prompter := prompt.New()
@@ -69,8 +68,8 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		pipelineStatusVars: vars,
 		ws:                 ws,
 		store:              store,
-		codepipeline:       codepipeline.New(session),
-		sel:                selector.NewSelect(prompter, store),
+		codepipeline:       codepipeline,
+		sel:                selector.NewCodePipelineSelect(prompter, codepipeline),
 		prompt:             prompter,
 		initDescriber: func(o *pipelineStatusOpts) error {
 			d, err := describe.NewPipelineStatusDescriber(o.name)
@@ -106,7 +105,16 @@ func (o *pipelineStatusOpts) Ask() error {
 		}
 		return nil
 	}
-	return o.askPipelineName()
+	pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
+		appName: o.appName,
+		sel: o.sel,
+		command: "show the status of",
+	})
+	if err != nil {
+		return err
+	}
+	o.name = pipelineName
+	return nil
 }
 
 // Execute displays the status of the pipeline.
@@ -140,49 +148,6 @@ func (o *pipelineStatusOpts) askAppName() error {
 	}
 	o.appName = name
 	return nil
-}
-
-func (o *pipelineStatusOpts) askPipelineName() error {
-	// find deployed pipelines
-	pipelineNames, err := o.retrieveAllPipelines()
-	if err != nil {
-		return err
-	}
-
-	if len(pipelineNames) == 0 {
-		return fmt.Errorf("no pipelines found for application %s", color.HighlightUserInput(o.appName))
-	}
-
-	if len(pipelineNames) == 1 {
-		pipelineName := pipelineNames[0]
-		log.Infof("Found pipeline: %s\n", color.HighlightUserInput(pipelineName))
-		o.name = pipelineName
-
-		return nil
-	}
-
-	// select from list of deployed pipelines
-	pipelineName, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtPipelineStatusPipelineNamePrompt, color.HighlightUserInput(o.appName)),
-		pipelineStatusPipelineNameHelpPrompt,
-		pipelineNames,
-		prompt.WithFinalMessage("Pipeline:"),
-	)
-	if err != nil {
-		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
-	}
-	o.name = pipelineName
-	return nil
-}
-
-func (o *pipelineStatusOpts) retrieveAllPipelines() ([]string, error) {
-	pipelines, err := o.codepipeline.ListPipelineNamesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list pipelines: %w", err)
-	}
-	return pipelines, nil
 }
 
 // buildPipelineStatusCmd builds the command for showing the status of a deployed pipeline.

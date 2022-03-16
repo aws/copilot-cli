@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -32,6 +33,7 @@ const (
 	pipelineSecretDeleteConfirmPrompt = "Are you sure you want to delete the source secret %s associated with pipeline %s?"
 	pipelineDeleteSecretConfirmHelp   = "This will delete the token associated with the source of your pipeline."
 
+	fmtPipelineCommandPrompt  = "Which deployed pipeline of application %s would you like to %s?"
 	fmtDeletePipelineStart    = "Deleting pipeline %s from application %s."
 	fmtDeletePipelineFailed   = "Failed to delete pipeline %s from application %s: %v.\n"
 	fmtDeletePipelineComplete = "Deleted pipeline %s from application %s.\n"
@@ -117,6 +119,7 @@ func (o *deletePipelineOpts) Ask() error {
 		pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
 			appName: o.appName,
 			sel:     o.sel,
+			command: "delete",
 		})
 		if err != nil {
 			return err
@@ -160,10 +163,11 @@ func (o *deletePipelineOpts) Execute() error {
 type askDeployedPipelineNameInput struct {
 	appName string
 	sel codePipelineSelector
+	command string
 }
 
 func askDeployedPipelineName(input *askDeployedPipelineNameInput) (string, error) {
-	pipeline, err := input.sel.DeployedPipeline(pipelineSelectPrompt, "", map[string]string{
+	pipeline, err := input.sel.DeployedPipeline(fmt.Sprintf(fmtPipelineCommandPrompt, color.HighlightUserInput(input.appName), input.command), "", map[string]string{
 		deploy.AppTagKey: input.appName,
 	})
 	if err != nil {

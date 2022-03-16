@@ -464,6 +464,44 @@ func (mr *MockWorkspacePipelinesListerMockRecorder) ListPipelines() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockWorkspacePipelinesLister)(nil).ListPipelines))
 }
 
+// MockCodePipelinesLister is a mock of CodePipelinesLister interface.
+type MockCodePipelinesLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockCodePipelinesListerMockRecorder
+}
+
+// MockCodePipelinesListerMockRecorder is the mock recorder for MockCodePipelinesLister.
+type MockCodePipelinesListerMockRecorder struct {
+	mock *MockCodePipelinesLister
+}
+
+// NewMockCodePipelinesLister creates a new mock instance.
+func NewMockCodePipelinesLister(ctrl *gomock.Controller) *MockCodePipelinesLister {
+	mock := &MockCodePipelinesLister{ctrl: ctrl}
+	mock.recorder = &MockCodePipelinesListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCodePipelinesLister) EXPECT() *MockCodePipelinesListerMockRecorder {
+	return m.recorder
+}
+
+// ListPipelineNamesByTags mocks base method.
+func (m *MockCodePipelinesLister) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelineNamesByTags", tags)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPipelineNamesByTags indicates an expected call of ListPipelineNamesByTags.
+func (mr *MockCodePipelinesListerMockRecorder) ListPipelineNamesByTags(tags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineNamesByTags", reflect.TypeOf((*MockCodePipelinesLister)(nil).ListPipelineNamesByTags), tags)
+}
+
 // MockWorkspaceRetriever is a mock of WorkspaceRetriever interface.
 type MockWorkspaceRetriever struct {
 	ctrl     *gomock.Controller

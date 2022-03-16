@@ -750,10 +750,10 @@ func (s *CodePipelineSelect) DeployedPipeline(msg, help string, tags map[string]
 		return "", err
 	}
 	if len(pipelines) == 0 {
-		return "", errors.New("no pipelines found")
+		return "", errors.New("no deployed pipelines found")
 	}
 	if len(pipelines) == 1 {
-		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelines[0]))
+		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0]))
 		return pipelines[0], nil
 	}
 	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelines, prompt.WithFinalMessage(pipelineFinalMsg))
