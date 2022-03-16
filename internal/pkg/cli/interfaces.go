@@ -479,7 +479,12 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
-	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
+	WsPipeline(prompt, help string) (*workspace.PipelineManifest, error)
+}
+
+type codePipelineSelector interface {
+	appSelector
+	DeployedPipeline(prompt, help string, tags map[string]string) (string, error)
 }
 
 type wsSelector interface {

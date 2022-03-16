@@ -169,7 +169,7 @@ func (o *deployPipelineOpts) Ask() error {
 		return o.validatePipelineName()
 	}
 
-	return o.askPipelineName()
+	return o.askWsPipelineName()
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
@@ -248,11 +248,8 @@ func (o *deployPipelineOpts) validatePipelineName() error {
 	return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 }
 
-func (o *deployPipelineOpts) askPipelineName() error {
-	if o.name != "" {
-		return nil
-	}
-	pipeline, err := o.sel.Pipeline(pipelineSelectPrompt, "")
+func (o *deployPipelineOpts) askWsPipelineName() error {
+	pipeline, err := o.sel.WsPipeline(pipelineSelectPrompt, "")
 	if err != nil {
 		return fmt.Errorf("select pipeline: %w", err)
 	}

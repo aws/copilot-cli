@@ -129,6 +129,11 @@ type WorkspacePipelinesLister interface {
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
+// CodePipelinesLister is a pipeline lister for deployed pipelines.
+type CodePipelinesLister interface {
+	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
+}
+
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
 type WorkspaceRetriever interface {
 	WsWorkloadLister
@@ -176,10 +181,17 @@ type WorkspaceSelect struct {
 	appName string
 }
 
-// PipelineSelect is a workspace pipeline selector.
-type PipelineSelect struct {
+// WsPipelineSelect is a workspace pipeline selector.
+type WsPipelineSelect struct {
 	prompt Prompter
 	ws     WorkspacePipelinesLister
+}
+
+// CodePipelineSelect is a selector for deployed pipelines.
+type CodePipelineSelect struct {
+	*Select
+	prompt Prompter
+	codepipeline CodePipelinesLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -262,10 +274,18 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 }
 
 // NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(prompt Prompter, ws WorkspacePipelinesLister) *PipelineSelect {
-	return &PipelineSelect{
+func NewWsPipelineSelect(prompt Prompter, ws WorkspacePipelinesLister) *WsPipelineSelect {
+	return &WsPipelineSelect{
 		prompt: prompt,
 		ws:     ws,
+	}
+}
+
+// NewCodePipelineSelect returns a new selector with pipelines from the local workspace.
+func NewCodePipelineSelect(prompt Prompter, cp CodePipelinesLister) *CodePipelineSelect {
+	return &CodePipelineSelect{
+		prompt: prompt,
+		codepipeline: cp,
 	}
 }
 
@@ -693,8 +713,8 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 	return filtered
 }
 
-// Pipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *PipelineSelect) Pipeline(msg, help string) (*workspace.PipelineManifest, error) {
+// WsPipeline fetches all the pipelines in a workspace and prompts the user to select one.
+func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineManifest, error) {
 	pipelines, err := s.ws.ListPipelines()
 	if err != nil {
 		return nil, err
@@ -721,6 +741,26 @@ func (s *PipelineSelect) Pipeline(msg, help string) (*workspace.PipelineManifest
 		Name: selectedPipeline,
 		Path: s.pipelinePath(pipelines, selectedPipeline),
 	}, nil
+}
+
+// DeployedPipeline fetches all the pipelines in a workspace and prompts the user to select one.
+func (s *CodePipelineSelect) DeployedPipeline(msg, help string, tags map[string]string) (string, error) {
+	pipelines, err := s.codepipeline.ListPipelineNamesByTags(tags)
+	if err != nil {
+		return "", err
+	}
+	if len(pipelines) == 0 {
+		return "", errors.New("no pipelines found")
+	}
+	if len(pipelines) == 1 {
+		log.Infof("Only found one pipeline; defaulting to: %s\n", color.HighlightUserInput(pipelines[0]))
+		return pipelines[0], nil
+	}
+	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelines, prompt.WithFinalMessage(pipelineFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("select pipeline: %w", err)
+	}
+	return selectedPipeline, nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.
@@ -1056,7 +1096,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 	return localWlNames, nil
 }
 
-func (s *PipelineSelect) pipelinePath(pipelines []workspace.PipelineManifest, name string) string {
+func (s *WsPipelineSelect) pipelinePath(pipelines []workspace.PipelineManifest, name string) string {
 	for _, pipeline := range pipelines {
 		if pipeline.Name == name {
 			return pipeline.Path
