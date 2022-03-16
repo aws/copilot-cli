@@ -124,6 +124,11 @@ func TestValidateSvcName(t *testing.T) {
 			svcType: manifest.LoadBalancedWebServiceType,
 			wanted:  errValueBadFormat,
 		},
+		"is not a reserved name": {
+			val:     "pipelines",
+			svcType: manifest.LoadBalancedWebServiceType,
+			wanted:  errValueReserved,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -882,6 +887,33 @@ func Test_validateSubscribe(t *testing.T) {
 			} else {
 				require.EqualError(t, err, tc.wantErr.Error())
 			}
+		})
+	}
+}
+
+func TestValidateJobName(t *testing.T) {
+	testCases := map[string]struct {
+		val    interface{}
+		wanted error
+	}{
+		"string as input": {
+			val:     "hello",
+			wanted:  nil,
+		},
+		"number as input": {
+			val:    1234,
+			wanted: errValueNotAString,
+		},
+		"is not a reserved name": {
+			val:    "pipelines",
+			wanted: errValueReserved,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateJobName(tc.val)
+			require.True(t, errors.Is(got, tc.wanted), "got %v instead of %v", got, tc.wanted)
 		})
 	}
 }

@@ -30,6 +30,7 @@ var (
 	errValueTooLong         = errors.New("value must not exceed 255 characters")
 	errValueBadFormat       = errors.New("value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 	errValueNotAString      = errors.New("value must be a string")
+	errValueReserved        = errors.New("value is reserved")
 	errValueNotAStringSlice = errors.New("value must be a string slice")
 	errValueNotAValidPath   = errors.New("value must be a valid path")
 	errValueNotAnIPNet      = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
@@ -155,6 +156,13 @@ var (
 
 const regexpFindAllMatches = -1
 
+// reservedWorkloadNames is a constant map of reserved workload names that users are not allowed to name their workloads
+func reservedWorkloadNames() map[string]bool {
+	return map[string]bool{
+		"pipelines": true, // reserved to avoid directory conflict with copilot pipelines
+	}
+}
+
 func validateAppName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("application name %v is invalid: %w", val, err)
@@ -173,11 +181,27 @@ func validateSvcName(val interface{}, svcType string) error {
 	if err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
+
+	if err := validateNotReservedWorkloadName(val); err != nil {
+		return fmt.Errorf("service name %v is invalid: %w", val, err)
+	}
+
+	return nil
+}
+
+func validateNotReservedWorkloadName(val interface{}) error {
+	name, ok := val.(string)
+	switch {
+	case !ok:
+		return errValueNotAString
+	case reservedWorkloadNames()[name]:
+		return errValueReserved
+	}
+
 	return nil
 }
 
 func validateSvcPort(val interface{}) error {
-
 	if err := basicPortValidation(val); err != nil {
 		return fmt.Errorf("port %v is invalid: %w", val, err)
 	}
@@ -213,6 +237,9 @@ func validateJobType(val interface{}) error {
 func validateJobName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("job name %v is invalid: %w", val, err)
+	}
+	if err := validateNotReservedWorkloadName(val); err != nil {
+		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
 	return nil
 }
