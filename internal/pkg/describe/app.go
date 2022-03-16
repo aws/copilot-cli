@@ -28,6 +28,7 @@ type App struct {
 	URI       string                   `json:"uri"`
 	Envs      []*config.Environment    `json:"environments"`
 	Services  []*config.Workload       `json:"services"`
+	Jobs      []*config.Workload       `json:"jobs"`
 	Pipelines []*codepipeline.Pipeline `json:"pipelines"`
 }
 
@@ -61,7 +62,7 @@ func (a *App) HumanString() string {
 	for _, env := range a.Envs {
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", env.Name, env.AccountID, env.Region)
 	}
-	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
 	headers = []string{"Name", "Type"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
@@ -69,6 +70,10 @@ func (a *App) HumanString() string {
 	for _, svc := range a.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
+	for _, job := range a.Jobs {
+		fmt.Fprintf(writer, "  %s\t%s\n", job.Name, job.Type)
+	}
+	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))
 	writer.Flush()
 	headers = []string{"Name"}

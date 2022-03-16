@@ -32,6 +32,19 @@ subscribe:
   topics:
     - name: givesdogs
       service: dogsvc
+      filter_policy:
+        store:
+          - example_corp
+        event:
+          - anything-but: order_cancelled
+        cutomer_interests:
+          - rugby
+          - football
+          - baseball
+        price_usd:
+          - numeric:
+              - ">="
+              - 100
     - name: giveshuskies
       service: dogsvc
       queue:

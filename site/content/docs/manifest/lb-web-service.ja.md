@@ -12,6 +12,7 @@ http:
   path: '/'
   healthcheck:
     path: '/_healthcheck'
+    success_codes: '200,301'
     healthy_threshold: 3
     unhealthy_threshold: 2
     interval: 15s
@@ -20,6 +21,10 @@ http:
   deregistration_delay: 5s
   stickiness: false
   allowed_source_ips: ["10.24.34.0/23"]
+  alias: example.com
+
+nlb:
+  port: 443/tls
 
 # コンテナと Service の構成
 image:
@@ -40,6 +45,7 @@ exec: true
 
 variables:
   LOG_LEVEL: info
+env_file: log.env
 secrets:
   GITHUB_TOKEN: GITHUB_TOKEN
 
@@ -68,6 +74,8 @@ Service のアーキテクチャタイプ。 [Load Balanced Web Service](../conc
 
 {% include 'http-config.ja.md' %}
 
+{% include 'nlb.ja.md' %}
+
 {% include 'image-config-with-port.ja.md' %}
 
 {% include 'image-healthcheck.ja.md' %}
@@ -92,6 +100,8 @@ Service は、希望するタスク数を 5 に設定し、Service 内に 5 つ�
 count:
   spot: 5
 ```
+!!! info
+    ARM アーキテクチャで動作するコンテナでは、Fargate Spot はサポートされていません。
 
 <div class="separator"></div>
 

@@ -151,7 +151,7 @@ environments:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: &PublicSubnetPlacement,
+								Placement: placementP(PublicSubnetPlacement),
 							},
 						},
 						TaskDefOverrides: []OverrideRule{
@@ -270,7 +270,7 @@ secrets:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: &PublicSubnetPlacement,
+								Placement: placementP(PublicSubnetPlacement),
 							},
 						},
 					},
@@ -333,7 +333,7 @@ subscribe:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: &PublicSubnetPlacement,
+								Placement: placementP(PublicSubnetPlacement),
 							},
 						},
 						Subscribe: SubscribeConfig{
@@ -471,17 +471,6 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 					},
 					CPU: &mockCPU,
 				},
-			},
-		},
-
-		"Error if mutually exclusive fields are specified": {
-			inContent: []byte(`count:
-  spot: 1
-  cpu_percentage: 30
-`),
-			wantedError: &errFieldMutualExclusive{
-				firstField:  "spot",
-				secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
 			},
 		},
 		"Error if unmarshalable": {

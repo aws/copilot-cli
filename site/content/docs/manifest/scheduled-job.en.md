@@ -2,7 +2,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
 
 ???+ note "Sample manifest for a report generator cronjob"
 
-    ```yaml
+```yaml
     # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
     name: report-generator
     type: Scheduled Job
@@ -29,7 +29,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
       prod:
         cpu: 2048               # Larger CPU value for prod environment
         memory: 4096
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your job.
@@ -103,7 +103,7 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
 Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`. For example, `linux/arm64` or `windows/x86_64`. The default is `linux/x86_64`.
 
 Override the generated string to build with a different valid `osfamily` or `architecture`. For example, Windows users might change the string

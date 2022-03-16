@@ -2,7 +2,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
 
 ???+ note "Sample manifest for an api service"
 
-    ```yaml
+```yaml
     # Your service name will be used in naming your resources like log groups, ECS services, etc.
     name: api
     type: Backend Service
@@ -55,7 +55,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
           spot: 2
       production:
         count: 2
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>
 The name of your service.

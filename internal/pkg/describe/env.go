@@ -293,7 +293,7 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
-	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
 	headers := []string{"Name", "Type"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
@@ -301,12 +301,6 @@ func (e *EnvDescription) HumanString() string {
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
-	writer.Flush()
-	fmt.Fprint(writer, color.Bold.Sprint("\nJobs\n\n"))
-	writer.Flush()
-	jobsHeaders := []string{"Name", "Type"}
-	fmt.Fprintf(writer, "  %s\n", strings.Join(jobsHeaders, "\t"))
-	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(jobsHeaders), "\t"))
 	for _, job := range e.Jobs {
 		fmt.Fprintf(writer, "  %s\t%s\n", job.Name, job.Type)
 	}

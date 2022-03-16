@@ -618,6 +618,7 @@ type interpolator interface {
 type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
+	IsServiceAvailableInRegion(region string) (bool, error)
 }
 
 type workloadTemplateGenerator interface {
