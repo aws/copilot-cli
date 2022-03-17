@@ -69,10 +69,10 @@ func (a *App) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range a.Services {
-		fmt.Fprintf(writer, "  %s\t%s\t%v\n", svc.Name, svc.Type, strings.Join(a.WorkloadEnvs[svc.Name], ","))
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", svc.Name, svc.Type, strings.Join(a.WorkloadEnvs[svc.Name], ","))
 	}
 	for _, job := range a.Jobs {
-		fmt.Fprintf(writer, "  %s\t%s\t%v\n", job.Name, job.Type, strings.Join(a.WorkloadEnvs[job.Name], ","))
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", job.Name, job.Type, strings.Join(a.WorkloadEnvs[job.Name], ","))
 	}
 	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))
