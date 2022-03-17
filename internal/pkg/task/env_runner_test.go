@@ -141,6 +141,17 @@ func TestEnvRunner_Run(t *testing.T) {
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
 			wantedError:              fmt.Errorf(fmtErrSecurityGroupsFromEnv, inEnv, errors.New("error getting security groups")),
 		},
+		"failed with too many security groups": {
+			securityGroups: []string{"sg-2", "sg-3", "sg-4", "sg-5", "sg-6"},
+
+			MockClusterGetter: mockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
+			},
+			mockStarter:              mockStarterNotRun,
+			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
+			wantedError:              fmt.Errorf(fmtErrNumSecurityGroups, 6, "sg-1,sg-2,sg-3,sg-4,sg-5,sg-6"),
+		},
 		"failed to kick off task": {
 			count:     1,
 			groupName: "my-task",
@@ -198,7 +209,7 @@ func TestEnvRunner_Run(t *testing.T) {
 		"run in env with extra security groups success": {
 			count:          1,
 			groupName:      "my-task",
-			securityGroups: []string{"sg-extra"},
+			securityGroups: []string{"sg-1", "sg-extra"},
 
 			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
