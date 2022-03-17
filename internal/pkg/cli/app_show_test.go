@@ -19,11 +19,11 @@ import (
 )
 
 type showAppMocks struct {
-	storeSvc      *mocks.Mockstore
-	sel           *mocks.MockappSelector
-	pipelineSvc   *mocks.MockpipelineGetter
-	versionGetter *mocks.MockversionGetter
-	deploySvc     *selectorMocks.MockDeployStoreClient
+	storeSvc          *mocks.Mockstore
+	sel               *mocks.MockappSelector
+	pipelineSvc       *mocks.MockpipelineGetter
+	versionGetter     *mocks.MockversionGetter
+	deployStoreClient *selectorMocks.MockDeployStoreClient
 }
 
 func TestShowAppOpts_Validate(t *testing.T) {
@@ -202,10 +202,10 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						Prod:      true,
 					},
 				}, nil)
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
 				m.pipelineSvc.EXPECT().
 					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
 					Return([]*codepipeline.Pipeline{
@@ -247,10 +247,10 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						Region:    "us-west-1",
 					},
 				}, nil)
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil)
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil)
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
 				m.pipelineSvc.EXPECT().
 					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
 					Return([]*codepipeline.Pipeline{
@@ -318,10 +318,10 @@ Pipelines
 						Region:    "us-west-1",
 					},
 				}, nil)
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil)
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil)
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
 				m.pipelineSvc.EXPECT().
 					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
 					Return([]*codepipeline.Pipeline{
@@ -467,10 +467,10 @@ Pipelines
 						Type: "Scheduled Job",
 					},
 				}, nil)
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
 				m.pipelineSvc.EXPECT().
 					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
 					Return(nil, testError)
@@ -509,10 +509,10 @@ Pipelines
 						Type: "Scheduled Job",
 					},
 				}, nil)
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
-				m.deploySvc.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
+				m.deployStoreClient.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
 
 				m.pipelineSvc.EXPECT().
 					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
@@ -535,13 +535,13 @@ Pipelines
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockVersionGetter := mocks.NewMockversionGetter(ctrl)
-			mockDeploySvc := selectorMocks.NewMockDeployStoreClient(ctrl)
+			mockDeployStoreClient := selectorMocks.NewMockDeployStoreClient(ctrl)
 
 			mocks := showAppMocks{
-				storeSvc:      mockStoreReader,
-				pipelineSvc:   mockPLSvc,
-				versionGetter: mockVersionGetter,
-				deploySvc:     mockDeploySvc,
+				storeSvc:          mockStoreReader,
+				pipelineSvc:       mockPLSvc,
+				versionGetter:     mockVersionGetter,
+				deployStoreClient: mockDeployStoreClient,
 			}
 			tc.setupMocks(mocks)
 
@@ -550,10 +550,10 @@ Pipelines
 					shouldOutputJSON: tc.shouldOutputJSON,
 					name:             testAppName,
 				},
-				store:          mockStoreReader,
-				w:              b,
-				pipelineSvc:    mockPLSvc,
-				deployStoreSvc: mockDeploySvc,
+				store:             mockStoreReader,
+				w:                 b,
+				pipelineSvc:       mockPLSvc,
+				deployStoreClient: mockDeployStoreClient,
 				newVersionGetter: func(s string) (versionGetter, error) {
 					return mockVersionGetter, nil
 				},

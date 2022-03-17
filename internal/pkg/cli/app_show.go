@@ -36,12 +36,12 @@ type showAppVars struct {
 type showAppOpts struct {
 	showAppVars
 
-	store            store
-	w                io.Writer
-	sel              appSelector
-	pipelineSvc      pipelineGetter
-	deployStoreSvc   selector.DeployStoreClient
-	newVersionGetter func(string) (versionGetter, error)
+	store             store
+	w                 io.Writer
+	sel               appSelector
+	pipelineSvc       pipelineGetter
+	deployStoreClient selector.DeployStoreClient
+	newVersionGetter  func(string) (versionGetter, error)
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -51,14 +51,17 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
-	deployStoreSvc, err := deploy.NewStore(sessProvider, store)
+	deployStoreClient, err := deploy.NewStore(sessProvider, store)
+	if err != nil {
+		return nil, fmt.Errorf("deploy store client: %w", err)
+	}
 	return &showAppOpts{
-		showAppVars:    vars,
-		store:          store,
-		deployStoreSvc: deployStoreSvc,
-		w:              log.OutputWriter,
-		sel:            selector.NewSelect(prompt.New(), store),
-		pipelineSvc:    codepipeline.New(defaultSession),
+		showAppVars:       vars,
+		store:             store,
+		deployStoreClient: deployStoreClient,
+		w:                 log.OutputWriter,
+		sel:               selector.NewSelect(prompt.New(), store),
+		pipelineSvc:       codepipeline.New(defaultSession),
 		newVersionGetter: func(s string) (versionGetter, error) {
 			d, err := describe.NewAppDescriber(s)
 			if err != nil {
@@ -128,14 +131,14 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	}
 	//1st approach takes 2 seconds to display the table
 	for _, env := range envs {
-		deployedJobs, err := o.deployStoreSvc.ListDeployedJobs(o.name, env.Name)
+		deployedJobs, err := o.deployStoreClient.ListDeployedJobs(o.name, env.Name)
 		if err != nil {
 			return nil, fmt.Errorf("list deployed jobs %s: %w", o.name, err)
 		}
 		for _, job := range deployedJobs {
 			workloadEnvs[job] = append(workloadEnvs[job], env.Name)
 		}
-		deployedSvcs, err := o.deployStoreSvc.ListDeployedServices(o.name, env.Name)
+		deployedSvcs, err := o.deployStoreClient.ListDeployedServices(o.name, env.Name)
 		if err != nil {
 			return nil, fmt.Errorf("list deployed services %s: %w", o.name, err)
 		}
