@@ -40,21 +40,25 @@ type showAppOpts struct {
 	w                io.Writer
 	sel              appSelector
 	pipelineSvc      pipelineGetter
+	deployStoreSvc   selector.DeployStoreClient
 	newVersionGetter func(string) (versionGetter, error)
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
-	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app show")).Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("app show"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+	deployStoreSvc, err := deploy.NewStore(sessProvider, store)
 	return &showAppOpts{
-		showAppVars: vars,
-		store:       store,
-		w:           log.OutputWriter,
-		sel:         selector.NewSelect(prompt.New(), store),
-		pipelineSvc: codepipeline.New(defaultSession),
+		showAppVars:    vars,
+		store:          store,
+		deployStoreSvc: deployStoreSvc,
+		w:              log.OutputWriter,
+		sel:            selector.NewSelect(prompt.New(), store),
+		pipelineSvc:    codepipeline.New(defaultSession),
 		newVersionGetter: func(s string) (versionGetter, error) {
 			d, err := describe.NewAppDescriber(s)
 			if err != nil {
@@ -105,6 +109,7 @@ func (o *showAppOpts) Execute() error {
 }
 
 func (o *showAppOpts) description() (*describe.App, error) {
+	workloadEnvs := make(map[string][]string)
 	app, err := o.store.GetApplication(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", o.name, err)
@@ -121,6 +126,45 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list jobs in application %s: %w", o.name, err)
 	}
+	//1st approach takes 2 seconds to display the table
+	for _, env := range envs {
+		deployedJobs, err := o.deployStoreSvc.ListDeployedJobs(o.name, env.Name)
+		if err != nil {
+			return nil, fmt.Errorf("list deployed jobs %s: %w", o.name, err)
+		}
+		for _, job := range deployedJobs {
+			workloadEnvs[job] = append(workloadEnvs[job], env.Name)
+		}
+		deployedSvcs, err := o.deployStoreSvc.ListDeployedServices(o.name, env.Name)
+		if err != nil {
+			return nil, fmt.Errorf("list deployed services %s: %w", o.name, err)
+		}
+		for _, svc := range deployedSvcs {
+			workloadEnvs[svc] = append(workloadEnvs[svc], env.Name)
+		}
+	}
+
+	//2nd approach takes 5-6 seconds to display the table
+	/*for _, env := range envs {
+		for _, job := range jobs {
+			flag, err := o.deployStoreSvc.IsJobDeployed(o.name, env.Name, job.Name)
+			if err != nil {
+				return nil, fmt.Errorf("services not available %s: %w", o.name, err)
+			}
+			if flag {
+				workloadEnvs[job.Name] = append(workloadEnvs[job.Name], env.Name)
+			}
+		}
+		for _, svc := range svcs {
+			flag, err := o.deployStoreSvc.IsServiceDeployed(o.name, env.Name, svc.Name)
+			if err != nil {
+				return nil, fmt.Errorf("services not available %s: %w", o.name, err)
+			}
+			if flag {
+				workloadEnvs[svc.Name] = append(workloadEnvs[svc.Name], env.Name)
+			}
+		}
+	}*/
 
 	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.name,
@@ -162,13 +206,14 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		return nil, fmt.Errorf("get version for application %s: %w", o.name, err)
 	}
 	return &describe.App{
-		Name:      app.Name,
-		Version:   version,
-		URI:       app.Domain,
-		Envs:      trimmedEnvs,
-		Services:  trimmedSvcs,
-		Jobs:      trimmedJobs,
-		Pipelines: pipelines,
+		Name:         app.Name,
+		Version:      version,
+		URI:          app.Domain,
+		Envs:         trimmedEnvs,
+		Services:     trimmedSvcs,
+		Jobs:         trimmedJobs,
+		Pipelines:    pipelines,
+		WorkloadEnvs: workloadEnvs,
 	}, nil
 }
 

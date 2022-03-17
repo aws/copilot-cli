@@ -23,13 +23,14 @@ import (
 
 // App contains serialized parameters for an application.
 type App struct {
-	Name      string                   `json:"name"`
-	Version   string                   `json:"version"`
-	URI       string                   `json:"uri"`
-	Envs      []*config.Environment    `json:"environments"`
-	Services  []*config.Workload       `json:"services"`
-	Jobs      []*config.Workload       `json:"jobs"`
-	Pipelines []*codepipeline.Pipeline `json:"pipelines"`
+	Name         string                   `json:"name"`
+	Version      string                   `json:"version"`
+	URI          string                   `json:"uri"`
+	Envs         []*config.Environment    `json:"environments"`
+	Services     []*config.Workload       `json:"services"`
+	Jobs         []*config.Workload       `json:"jobs"`
+	Pipelines    []*codepipeline.Pipeline `json:"pipelines"`
+	WorkloadEnvs map[string][]string      `json:"workloadenvs"`
 }
 
 // JSONString returns the stringified App struct with json format.
@@ -64,14 +65,14 @@ func (a *App) HumanString() string {
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
-	headers = []string{"Name", "Type"}
+	headers = []string{"Name", "Type", "Environments"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range a.Services {
-		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
+		fmt.Fprintf(writer, "  %s\t%s\t%v\n", svc.Name, svc.Type, strings.Join(a.WorkloadEnvs[svc.Name], ","))
 	}
 	for _, job := range a.Jobs {
-		fmt.Fprintf(writer, "  %s\t%s\n", job.Name, job.Type)
+		fmt.Fprintf(writer, "  %s\t%s\t%v\n", job.Name, job.Type, strings.Join(a.WorkloadEnvs[job.Name], ","))
 	}
 	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))
