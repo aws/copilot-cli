@@ -5,6 +5,8 @@ package ecs
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/ecs/mocks"
@@ -383,6 +385,65 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedRunTaskRequest, got)
 			}
+		})
+	}
+}
+
+func TestRunTaskRequest_CLIString(t *testing.T) {
+	var (
+		testApp = "test-app"
+		testEnv = "test-env"
+	)
+	testCases := map[string]struct {
+		in     RunTaskRequest
+		wanted string
+	}{
+		"generates copilot service cmd with --app and --env and --security-groups": {
+			in: RunTaskRequest{
+				networkConfiguration: ecs.NetworkConfiguration{
+					AssignPublicIp: "1.2.3.4",
+					SecurityGroups: []string{"sg-1", "sg-2"},
+				},
+
+				executionRole: "execution-role",
+				taskRole:      "task-role",
+
+				appName: testApp,
+				envName: testEnv,
+
+				containerInfo: containerInfo{
+					image:      "beautiful-image",
+					entryPoint: []string{"enter", "here"},
+					command:    []string{"do", "not", "enter", "here"},
+					envVars: map[string]string{
+						"enter":   "no",
+						"kidding": "yes",
+					},
+					secrets: map[string]string{
+						"truth": "go-ask-the-wise",
+					},
+				},
+			},
+			wanted: strings.Join([]string{
+				"copilot task run",
+				"--execution-role execution-role",
+				"--task-role task-role",
+				"--image beautiful-image",
+				"--entrypoint \"enter here\"",
+				"--command \"do not enter here\"",
+				"--env-vars enter=no,kidding=yes",
+				"--secrets truth=go-ask-the-wise",
+				"--security-groups sg-1,sg-2",
+				fmt.Sprintf("--app %s", testApp),
+				fmt.Sprintf("--env %s", testEnv),
+			}, " \\\n"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.CLIString()
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }
