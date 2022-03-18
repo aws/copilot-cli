@@ -5,6 +5,8 @@ package ecs
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/ecs/mocks"
@@ -209,17 +211,18 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				}, nil)
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("kamura-village", nil)
 			},
 			wantedRunTaskRequest: &RunTaskRequest{
 				networkConfiguration: ecs.NetworkConfiguration{
 					AssignPublicIp: "1.2.3.4",
-					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				},
 
 				executionRole: "execution-role",
 				taskRole:      "task-role",
+
+				appName: testApp,
+				envName: testEnv,
 
 				containerInfo: containerInfo{
 					image:      "beautiful-image",
@@ -233,8 +236,6 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 						"truth": "go-ask-the-wise",
 					},
 				},
-
-				cluster: "kamura-village",
 			},
 		},
 		"unable to retrieve task definition": {
@@ -252,14 +253,6 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			wantedError: errors.New("retrieve network configuration for service svc: some error"),
-		},
-		"unable to obtain cluster ARN": {
-			setUpMock: func(m *mocks.MockServiceDescriber) {
-				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
-			},
-			wantedError: errors.New("retrieve cluster ARN created for environment env in application app: some error"),
 		},
 	}
 
@@ -332,17 +325,18 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				}, nil)
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("kamura-village", nil)
 			},
 			wantedRunTaskRequest: &RunTaskRequest{
 				networkConfiguration: ecs.NetworkConfiguration{
 					AssignPublicIp: "1.2.3.4",
-					Subnets:        []string{"sbn-1", "sbn-2"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				},
 
 				executionRole: "execution-role",
 				taskRole:      "task-role",
+
+				appName: testApp,
+				envName: testEnv,
 
 				containerInfo: containerInfo{
 					image:      "beautiful-image",
@@ -356,8 +350,6 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 						"truth": "go-ask-the-wise",
 					},
 				},
-
-				cluster: "kamura-village",
 			},
 		},
 		"unable to retrieve task definition": {
@@ -376,14 +368,6 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 			},
 			wantedError: errors.New("retrieve network configuration for job test-job: some error"),
 		},
-		"unable to obtain cluster ARN": {
-			setUpMock: func(m *mocks.MockJobDescriber) {
-				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().NetworkConfigurationForJob(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
-			},
-			wantedError: errors.New("retrieve cluster ARN created for environment test-env in application test-app: some error"),
-		},
 	}
 
 	for name, tc := range testCases {
@@ -401,6 +385,65 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedRunTaskRequest, got)
 			}
+		})
+	}
+}
+
+func TestRunTaskRequest_CLIString(t *testing.T) {
+	var (
+		testApp = "test-app"
+		testEnv = "test-env"
+	)
+	testCases := map[string]struct {
+		in     RunTaskRequest
+		wanted string
+	}{
+		"generates copilot service cmd with --app and --env and --security-groups": {
+			in: RunTaskRequest{
+				networkConfiguration: ecs.NetworkConfiguration{
+					AssignPublicIp: "1.2.3.4",
+					SecurityGroups: []string{"sg-1", "sg-2"},
+				},
+
+				executionRole: "execution-role",
+				taskRole:      "task-role",
+
+				appName: testApp,
+				envName: testEnv,
+
+				containerInfo: containerInfo{
+					image:      "beautiful-image",
+					entryPoint: []string{"enter", "here"},
+					command:    []string{"do", "not", "enter", "here"},
+					envVars: map[string]string{
+						"enter":   "no",
+						"kidding": "yes",
+					},
+					secrets: map[string]string{
+						"truth": "go-ask-the-wise",
+					},
+				},
+			},
+			wanted: strings.Join([]string{
+				"copilot task run",
+				"--execution-role execution-role",
+				"--task-role task-role",
+				"--image beautiful-image",
+				"--entrypoint \"enter here\"",
+				"--command \"do not enter here\"",
+				"--env-vars enter=no,kidding=yes",
+				"--secrets truth=go-ask-the-wise",
+				"--security-groups sg-1,sg-2",
+				fmt.Sprintf("--app %s", testApp),
+				fmt.Sprintf("--env %s", testEnv),
+			}, " \\\n"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.CLIString()
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

@@ -63,7 +63,6 @@ type deployPipelineOpts struct {
 	deployPipelineVars
 
 	pipelineDeployer pipelineDeployer
-	app              *config.Application
 	sel              wsPipelineSelector
 	prog             progress
 	prompt           prompter
@@ -71,11 +70,12 @@ type deployPipelineOpts struct {
 	store            store
 	ws               wsPipelineReader
 	codestar         codestar
-	newSvcListCmd    func(io.Writer) cmd
-	newJobListCmd    func(io.Writer) cmd
+	newSvcListCmd    func(io.Writer, string) cmd
+	newJobListCmd    func(io.Writer, string) cmd
 
 	// cached variables
 	wsAppName                    string
+	app                          *config.Application
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
 	pipelineMft                  *manifest.Pipeline
@@ -90,10 +90,6 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 
-	app, err := store.GetApplication(vars.appName)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", vars.appName, err)
-	}
 	prompter := prompt.New()
 
 	ws, err := workspace.New()
@@ -107,7 +103,6 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	}
 
 	return &deployPipelineOpts{
-		app:                app,
 		ws:                 ws,
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
@@ -117,10 +112,10 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		prompt:             prompter,
 		sel:                selector.NewWsPipelineSelect(prompter, ws),
 		codestar:           cs.New(defaultSession),
-		newSvcListCmd: func(w io.Writer) cmd {
+		newSvcListCmd: func(w io.Writer, appName string) cmd {
 			return &listSvcOpts{
 				listWkldVars: listWkldVars{
-					appName: vars.appName,
+					appName: appName,
 				},
 				sel: selector.NewSelect(prompt.New(), store),
 				list: &list.SvcListWriter{
@@ -133,10 +128,10 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
-		newJobListCmd: func(w io.Writer) cmd {
+		newJobListCmd: func(w io.Writer, appName string) cmd {
 			return &listJobOpts{
 				listWkldVars: listWkldVars{
-					appName: vars.appName,
+					appName: appName,
 				},
 				sel: selector.NewSelect(prompt.New(), store),
 				list: &list.JobListWriter{
@@ -157,14 +152,24 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
-	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
-		return err
-	}
 	return nil
 }
 
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *deployPipelineOpts) Ask() error {
+	if o.wsAppName == "" {
+		return errNoAppInWorkspace
+	}
+	// This command must be run within the app's workspace.
+	if o.appName != "" && o.appName != o.wsAppName {
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+	}
+	appConfig, err := o.store.GetApplication(o.wsAppName)
+	if err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
+	}
+	o.app = appConfig
+
 	if o.name != "" {
 		return o.validatePipelineName()
 	}
@@ -307,10 +312,10 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 
 func (o deployPipelineOpts) getLocalWorkloads() ([]string, error) {
 	var localWklds []string
-	if err := o.newSvcListCmd(o.svcBuffer).Execute(); err != nil {
+	if err := o.newSvcListCmd(o.svcBuffer, o.appName).Execute(); err != nil {
 		return nil, fmt.Errorf("get local services: %w", err)
 	}
-	if err := o.newJobListCmd(o.jobBuffer).Execute(); err != nil {
+	if err := o.newJobListCmd(o.jobBuffer, o.appName).Execute(); err != nil {
 		return nil, fmt.Errorf("get local jobs: %w", err)
 	}
 	svcOutput, jobOutput := &list.ServiceJSONOutput{}, &list.JobJSONOutput{}
