@@ -68,7 +68,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		ws:               ws,
 		store:            store,
 		codepipeline:     codepipeline,
-		sel:              selector.NewCodePipelineSelect(prompter, codepipeline),
+		sel:              selector.NewCodePipelineSelect(prompter, store, codepipeline),
 		prompt:           prompter,
 		w:                log.OutputWriter,
 	}
@@ -109,7 +109,7 @@ func (o *showPipelineOpts) Ask() error {
 	}
 	pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
 		appName: o.appName,
-		sel: o.sel,
+		sel:     o.sel,
 		command: "show",
 	})
 	if err != nil {

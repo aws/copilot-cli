@@ -124,13 +124,13 @@ type WsWorkloadLister interface {
 	ListWorkloads() ([]string, error)
 }
 
-// WorkspacePipelinesLister is a pipeline lister.
-type WorkspacePipelinesLister interface {
+// WsPipelinesLister is a pipeline lister.
+type WsPipelinesLister interface {
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
-// CodePipelinesLister is a pipeline lister for deployed pipelines.
-type CodePipelinesLister interface {
+// CodePipelineLister is a pipeline lister for deployed pipelines.
+type CodePipelineLister interface {
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
 }
 
@@ -184,14 +184,14 @@ type WorkspaceSelect struct {
 // WsPipelineSelect is a workspace pipeline selector.
 type WsPipelineSelect struct {
 	prompt Prompter
-	ws     WorkspacePipelinesLister
+	ws     WsPipelinesLister
 }
 
 // CodePipelineSelect is a selector for deployed pipelines.
 type CodePipelineSelect struct {
 	*Select
-	prompt Prompter
-	codepipeline CodePipelinesLister
+	prompt       Prompter
+	codepipeline CodePipelineLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -274,7 +274,7 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 }
 
 // NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(prompt Prompter, ws WorkspacePipelinesLister) *WsPipelineSelect {
+func NewWsPipelineSelect(prompt Prompter, ws WsPipelinesLister) *WsPipelineSelect {
 	return &WsPipelineSelect{
 		prompt: prompt,
 		ws:     ws,
@@ -282,9 +282,10 @@ func NewWsPipelineSelect(prompt Prompter, ws WorkspacePipelinesLister) *WsPipeli
 }
 
 // NewCodePipelineSelect returns a new selector with pipelines from the local workspace.
-func NewCodePipelineSelect(prompt Prompter, cp CodePipelinesLister) *CodePipelineSelect {
+func NewCodePipelineSelect(prompt Prompter, store ConfigLister, cp CodePipelineLister) *CodePipelineSelect {
 	return &CodePipelineSelect{
-		prompt: prompt,
+		Select:       NewSelect(prompt, store),
+		prompt:       prompt,
 		codepipeline: cp,
 	}
 }
@@ -717,7 +718,7 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineManifest, error) {
 	pipelines, err := s.ws.ListPipelines()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list pipelines: %w", err)
 	}
 	if len(pipelines) == 0 {
 		return nil, errors.New("no pipelines found")
@@ -747,7 +748,7 @@ func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineMani
 func (s *CodePipelineSelect) DeployedPipeline(msg, help string, tags map[string]string) (string, error) {
 	pipelines, err := s.codepipeline.ListPipelineNamesByTags(tags)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("list deployed pipelines: %w", err)
 	}
 	if len(pipelines) == 0 {
 		return "", errors.New("no deployed pipelines found")

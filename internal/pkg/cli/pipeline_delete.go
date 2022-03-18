@@ -85,11 +85,11 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		codepipeline:       codepipeline,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
-		sel:                selector.NewCodePipelineSelect(prompter, codepipeline),
 		secretsmanager:     secretsmanager.New(defaultSess),
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
 		store:              ssmStore,
+		sel:                selector.NewCodePipelineSelect(prompter, ssmStore, codepipeline),
 	}
 
 	return opts, nil
@@ -115,7 +115,7 @@ func (o *deletePipelineOpts) Ask() error {
 		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
 			return err
 		}
-	 } else {
+	} else {
 		pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
 			appName: o.appName,
 			sel:     o.sel,
@@ -162,7 +162,7 @@ func (o *deletePipelineOpts) Execute() error {
 
 type askDeployedPipelineNameInput struct {
 	appName string
-	sel codePipelineSelector
+	sel     codePipelineSelector
 	command string
 }
 
@@ -171,7 +171,7 @@ func askDeployedPipelineName(input *askDeployedPipelineNameInput) (string, error
 		deploy.AppTagKey: input.appName,
 	})
 	if err != nil {
-		return "", fmt.Errorf("select pipeline: %w", err)
+		return "", fmt.Errorf("get deployed pipelines: %w", err)
 	}
 	return pipeline, nil
 }

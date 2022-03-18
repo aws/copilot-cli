@@ -69,7 +69,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		ws:                 ws,
 		store:              store,
 		codepipeline:       codepipeline,
-		sel:                selector.NewCodePipelineSelect(prompter, codepipeline),
+		sel:                selector.NewCodePipelineSelect(prompter, store, codepipeline),
 		prompt:             prompter,
 		initDescriber: func(o *pipelineStatusOpts) error {
 			d, err := describe.NewPipelineStatusDescriber(o.name)
@@ -107,7 +107,7 @@ func (o *pipelineStatusOpts) Ask() error {
 	}
 	pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
 		appName: o.appName,
-		sel: o.sel,
+		sel:     o.sel,
 		command: "show the status of",
 	})
 	if err != nil {
