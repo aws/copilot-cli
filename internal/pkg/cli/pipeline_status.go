@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	pipelineStatusAppNamePrompt          = "Which application's pipeline status would you like to show?"
-	pipelineStatusAppNameHelpPrompt      = "An application is a collection of related services."
+	pipelineStatusAppNamePrompt     = "Which application's pipeline status would you like to show?"
+	pipelineStatusAppNameHelpPrompt = "An application is a collection of related services."
 )
 
 type pipelineStatusVars struct {
