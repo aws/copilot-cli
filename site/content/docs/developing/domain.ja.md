@@ -51,8 +51,8 @@ http:
 * Environment があるアカウント内で `${EnvName}.${AppName}.${DomainName}` という新しい Environment 用のサブドメインのために別のホストゾーンを作成し
 * Environment 用のサブドメインに使う ACM 証明書の作成と検証し
 * ACM 証明書を
-    - エイリアスが Application Load Balancer　(`http.alias`) として利用されている場合、HTTPS リスナー と関連づけて HTTP のトラフィックを HTTPS にリダイレクトし、
-    - エリアスが `nlb.alias` として利用されていて、 TLS ターミーネーションが有効な場合、 Network Load Balancer の TLS リスナー
+    - エイリアスが Application Load Balancer　(`http.alias`) として利用されている場合、HTTPS リスナーと関連づけて HTTP のトラフィックを HTTPS にリダイレクトし
+    - エリアスが `nlb.alias` として利用されていて、 TLS ターミーネーションが有効な場合、 Network Load Balancer の TLS リスナーと関連づけて
 * エイリアス用でオプションの A レコードを作成しています。
 
 ## デモ

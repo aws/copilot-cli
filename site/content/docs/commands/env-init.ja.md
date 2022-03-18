@@ -48,7 +48,7 @@ AWS プロファイルの "default" 利用し、デフォルト設定を使用�
 $ copilot env init --name test --profile default --default-config
 ```
 
-AWS プロファイルの "prod-admin" を利用して既存の VPC に prod-iad Environment を作成し、 CloudWatch Container Insights　を有効化します。
+AWS プロファイルの "prod-admin" を利用して prod-iad Environment を作成し、 CloudWatch Container Insights　を有効化します。
 ```bash
 $ copilot env init --name prod-iad --profile prod-admin --container-insights 
 ```

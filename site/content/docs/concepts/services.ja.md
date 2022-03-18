@@ -23,21 +23,21 @@ Service のタイプを選択すると、Copilot は Dockerfile 内で記述さ�
 インターネットからアクセス可能な Service を作る際の選択肢には次の２つがあります。
 
 * "Request-Driven Web Service" - Service 実行環境として AWS App Runner サービスを作成します。
-* "Load Balanced Web Service" - Service 実行環境として Appplication Load Balancer (ALB)、Network Load Balancer、または、その両方を作成し、セキュリティグループ、ECS サービス (Fargate) を利用します。
+* "Load Balanced Web Service" - Service 実行環境として Appplication Load Balancer (ALB)、Network Load Balancer、またはその両方を作成し、セキュリティグループ、ECS サービス (Fargate) を利用します。
 
 #### Request-Driven Web Service
 
 AWS App Runner を利用する Service で、受け付けるトラフィックに応じてオートスケールし、トラフィックがない場合は設定された最低インスタンス数までスケールダウンします。リクエスト量の大きな変化や恒常的な少ないリクエスト量が見込まれる HTTP サービスにとってもよりコスト効率の高い選択肢です。
-ECS とは異なり、 App Runner サービスはデフォルトでは VPC とは接続されていません。 出力トラフィックを VPC 経由でルーティングするには、
+ECS とは異なり、 App Runner サービスはデフォルトでは VPC とは接続されていません。 Egress トラフィックを VPC 経由でルーティングするには、
 マニフェスト内の[`network`](../manifest/rd-web-service.ja.md#network)フィールドを設定します。
 
 #### Load Balanced Web Service
 
 Application Load Balancer、Network Load Balancer、または両方をトラフィックの入り口として Fargate 上でタスクを実行する ECS サービスです。
-安定したリクエスト量が見込まれる場合、Service から VPC 内のリソースにアクセスする必要がある場合、あるいはより高度な設定の必要がある場合に適した HTTP まはた TCP サービスの選択肢です。
+安定したリクエスト量が見込まれる場合、Service から VPC 内のリソースにアクセスする必要がある場合、あるいはより高度な設定の必要がある場合に適した HTTP または TCP サービスの選択肢です。
 
 Application Load Balancer は Environment レベルのリソースであり、Environment 内の全ての Load Balanced Web Service で共有されることに注意しましょう。
-詳細については、[こちら](environments.ja.md#load-balancers-and-dns)を確認してください。対照的に、 Net Work Load Balancer は Service レベルのリソースであり、 Service 間では共有されません。
+詳細については、[こちら](environments.ja.md#load-balancers-and-dns)を確認してください。対照的に、 Network Load Balancer は Service レベルのリソースであり、 Service 間では共有されません。
 
 下図は Application Load Balancer のみを含む Load Balanced Web Service の図です。
 

@@ -1,6 +1,6 @@
 # パブリッシュ / サブスクライブ アーキテクチャ
 
-Copilot [Worker Services](../manifest/worker-service.ja.md)は、すべてのサービスタイプとジョブタイプに共通する `publish` フィールドを利用して、サービス間でメッセージを受け渡すためのパブリッシュ / サブスクライブロジックを簡単に作成できます。
+Copilot [Worker Services](../manifest/worker-service.ja.md)は、すべての Service タイプと Job タイプに共通する `publish` フィールドを利用して、サービス間でメッセージを受け渡すためのパブリッシュ / サブスクライブロジックを簡単に作成できます。
 
 AWS 上での一般的なパターンは、メッセージの配信と処理を行うための SNS と SQS の組み合わせです。[SNS](https://docs.aws.amazon.com/ja_jp/sns/latest/dg/welcome.html) は堅牢なメッセージ配信システムで、メッセージの配信を保証しながら複数のサブスクライブしたエンドポイントにメッセージを送ることができます。
 
