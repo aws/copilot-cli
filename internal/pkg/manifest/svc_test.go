@@ -473,17 +473,6 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
-
-		"Error if mutually exclusive fields are specified": {
-			inContent: []byte(`count:
-  spot: 1
-  cpu_percentage: 30
-`),
-			wantedError: &errFieldMutualExclusive{
-				firstField:  "spot",
-				secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
-			},
-		},
 		"Error if unmarshalable": {
 			inContent: []byte(`count: badNumber
 `),

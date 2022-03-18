@@ -2,7 +2,7 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
 
 ???+ note "Sample manifest for a frontend service"
 
-    ```yaml
+```yaml
     # Your service name will be used in naming your resources like log groups, App Runner services, etc.
     name: frontend
     type: Request-Driven Web Service
@@ -36,7 +36,7 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
     environments:
       test:
         LOG_LEVEL: debug
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.

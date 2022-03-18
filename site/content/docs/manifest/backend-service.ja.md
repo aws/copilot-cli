@@ -46,6 +46,7 @@ network:
 
 variables:
   LOG_LEVEL: info
+env_file: log.env
 secrets:
   GITHUB_TOKEN: GITHUB_TOKEN
 
@@ -90,6 +91,8 @@ Service は、希望するタスク数を 5 に設定し、Service 内に 5 つ�
 count:
   spot: 5
 ```
+!!! info
+    ARM アーキテクチャで動作するコンテナでは、Fargate Spot はサポートされていません。
 
 <div class="separator"></div>
 

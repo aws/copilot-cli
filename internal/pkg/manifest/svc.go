@@ -138,13 +138,6 @@ func (c *Count) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if c.AdvancedCount.Spot != nil && (c.AdvancedCount.hasAutoscaling()) {
-		return &errFieldMutualExclusive{
-			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
-		}
-	}
-
 	if !c.AdvancedCount.IsEmpty() {
 		// Successfully unmarshalled AdvancedCount fields, return
 		return nil
