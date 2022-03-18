@@ -25,8 +25,6 @@ import (
 const (
 	pipelineShowAppNamePrompt          = "Which application's pipelines would you like to show?"
 	pipelineShowAppNameHelpPrompt      = "An application is a collection of related services."
-	fmtPipelineShowPipelineNamePrompt  = "Which pipeline of %s would you like to show?"
-	pipelineShowPipelineNameHelpPrompt = "The details of a pipeline will be shown (e.g., region, account ID, stages)."
 )
 
 type showPipelineVars struct {
