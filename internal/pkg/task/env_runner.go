@@ -5,6 +5,7 @@ package task
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -14,6 +15,7 @@ import (
 const (
 	fmtErrSecurityGroupsFromEnv = "get security groups from environment %s: %w"
 	fmtErrDescribeEnvironment   = "describe environment %s: %w"
+	fmtErrNumSecurityGroups     = "unable to run task with more than 5 security groups: (%d) %s"
 
 	envSecurityGroupCFNLogicalIDTagKey   = "aws:cloudformation:logical-id"
 	envSecurityGroupCFNLogicalIDTagValue = "EnvironmentSecurityGroup"
@@ -36,7 +38,10 @@ type EnvRunner struct {
 	App string
 	Env string
 
-	// Platform configuration
+	// Extra security groups to use.
+	SecurityGroups []string
+
+	// Platform configuration.
 	OS string
 
 	// Interfaces to interact with dependencies. Must not be nil.
@@ -75,6 +80,10 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 	})...)
 	if err != nil {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
+	}
+	securityGroups = appendUniqueStrings(securityGroups, r.SecurityGroups...)
+	if numSGs := len(securityGroups); numSGs > 5 {
+		return nil, fmt.Errorf(fmtErrNumSecurityGroups, numSGs, strings.Join(securityGroups, ","))
 	}
 
 	platformVersion := "LATEST"
@@ -130,4 +139,22 @@ func (r *EnvRunner) validateDependencies() error {
 	}
 
 	return nil
+}
+
+func appendUniqueStrings(s1 []string, s2 ...string) []string {
+	for _, v := range s2 {
+		if !containsString(s1, v) {
+			s1 = append(s1, v)
+		}
+	}
+	return s1
+}
+
+func containsString(s []string, search string) bool {
+	for _, v := range s {
+		if v == search {
+			return true
+		}
+	}
+	return false
 }
