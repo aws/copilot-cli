@@ -2240,33 +2240,33 @@ func (m *MockwsPipelineWriter) EXPECT() *MockwsPipelineWriterMockRecorder {
 }
 
 // WritePipelineBuildspec mocks base method.
-func (m *MockwsPipelineWriter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error) {
+func (m *MockwsPipelineWriter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WritePipelineBuildspec", marshaler)
+	ret := m.ctrl.Call(m, "WritePipelineBuildspec", marshaler, name)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WritePipelineBuildspec indicates an expected call of WritePipelineBuildspec.
-func (mr *MockwsPipelineWriterMockRecorder) WritePipelineBuildspec(marshaler interface{}) *gomock.Call {
+func (mr *MockwsPipelineWriterMockRecorder) WritePipelineBuildspec(marshaler, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineBuildspec", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineBuildspec), marshaler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineBuildspec", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineBuildspec), marshaler, name)
 }
 
 // WritePipelineManifest mocks base method.
-func (m *MockwsPipelineWriter) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error) {
+func (m *MockwsPipelineWriter) WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WritePipelineManifest", marshaler)
+	ret := m.ctrl.Call(m, "WritePipelineManifest", marshaler, name)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WritePipelineManifest indicates an expected call of WritePipelineManifest.
-func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler interface{}) *gomock.Call {
+func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler, name)
 }
 
 // MockserviceLister is a mock of serviceLister interface.
@@ -6459,6 +6459,21 @@ func (mr *MockworkloadDeployerMockRecorder) DeployWorkload(in interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployWorkload", reflect.TypeOf((*MockworkloadDeployer)(nil).DeployWorkload), in)
 }
 
+// IsServiceAvailableInRegion mocks base method.
+func (m *MockworkloadDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsServiceAvailableInRegion", region)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsServiceAvailableInRegion indicates an expected call of IsServiceAvailableInRegion.
+func (mr *MockworkloadDeployerMockRecorder) IsServiceAvailableInRegion(region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceAvailableInRegion", reflect.TypeOf((*MockworkloadDeployer)(nil).IsServiceAvailableInRegion), region)
+}
+
 // UploadArtifacts mocks base method.
 func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput, error) {
 	m.ctrl.T.Helper()
@@ -6472,21 +6487,6 @@ func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput,
 func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
-}
-
-// IsServiceAvailableInRegion mocks base method.
-func (m *MockworkloadDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsServiceAvailableInRegion", region)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsServiceAvailableInRegion indicates an expected call of UploadArtifacts.
-func (mr *MockworkloadDeployerMockRecorder) IsServiceAvailableInRegion(region string) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceAvailableInRegion", reflect.TypeOf((*MockworkloadDeployer)(nil).IsServiceAvailableInRegion), region)
 }
 
 // MockworkloadTemplateGenerator is a mock of workloadTemplateGenerator interface.

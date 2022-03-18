@@ -42,6 +42,9 @@ import (
 )
 
 const (
+	fmtPipelineInitNamePrompt  = "What would you like to %s this pipeline?"
+	pipelineInitNameHelpPrompt = "An identifier for your pipeline (e.g. beta, prod)."
+
 	pipelineSelectEnvPrompt     = "Which environment would you like to add to your pipeline?"
 	pipelineSelectEnvHelpPrompt = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 
@@ -80,6 +83,7 @@ var (
 
 type initPipelineVars struct {
 	appName           string
+	name              string // Name of the pipeline
 	environments      []string
 	repoURL           string
 	repoBranch        string
@@ -166,26 +170,35 @@ func (o *initPipelineOpts) Validate() error {
 
 // Ask prompts for required fields that are not passed in and validates them.
 func (o *initPipelineOpts) Ask() error {
-	if o.repoURL != "" {
-		if err := o.validateURL(o.repoURL); err != nil {
+	if o.name == "" {
+		if err := o.askPipelineName(); err != nil {
 			return err
 		}
-	} else {
+	}
+	if err := validatePipelineName(o.name, o.appName); err != nil {
+		return err
+	}
+
+	// TODO: validate not a duplicate
+
+	if o.repoURL == "" {
 		if err := o.selectURL(); err != nil {
 			return err
 		}
 	}
+	if err := o.validateURL(o.repoURL); err != nil {
+		return err
+	}
 
-	if len(o.environments) > 0 {
-		if err := o.validateEnvs(); err != nil {
-			return err
-		}
-
-	} else {
+	if len(o.environments) == 0 {
 		if err := o.askEnvs(); err != nil {
 			return err
 		}
 	}
+	if err := o.validateEnvs(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -224,6 +237,21 @@ func (o *initPipelineOpts) RequiredActions() []string {
 	}
 }
 
+func (o *initPipelineOpts) askPipelineName() error {
+	name, err := o.prompt.Get(fmt.Sprintf(fmtPipelineInitNamePrompt, color.Emphasize("name")),
+		pipelineInitNameHelpPrompt,
+		func(val interface{}) error {
+			return validatePipelineName(val, o.appName)
+		},
+		prompt.WithFinalMessage("Pipeline name:"))
+	if err != nil {
+		return fmt.Errorf("prompt get pipeline name: %w", err)
+	}
+
+	o.name = name
+	return nil
+}
+
 func (o *initPipelineOpts) validateURL(url string) error {
 	// Note: no longer calling `validateDomainName` because if users use git-remote-codecommit
 	// (the HTTPS (GRC) protocol) to connect to CodeCommit, the url does not have any periods.
@@ -254,17 +282,8 @@ func (o *initPipelineOpts) askEnvs() error {
 	if err != nil {
 		return fmt.Errorf("select environments: %w", err)
 	}
-	o.environments = envs
 
-	var envConfigs []*config.Environment
-	for _, environment := range o.environments {
-		envConfig, err := o.store.GetEnvironment(o.appName, environment)
-		if err != nil {
-			return fmt.Errorf("get config of environment %s: %w", environment, err)
-		}
-		envConfigs = append(envConfigs, envConfig)
-	}
-	o.envConfigs = envConfigs
+	o.environments = envs
 	return nil
 }
 
@@ -528,8 +547,6 @@ func (o *initPipelineOpts) storeGitHubAccessToken() error {
 }
 
 func (o *initPipelineOpts) createPipelineManifest() error {
-	pipelineName := o.pipelineName()
-
 	provider, err := o.pipelineProvider()
 	if err != nil {
 		return err
@@ -545,13 +562,13 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		stages = append(stages, stage)
 	}
 
-	manifest, err := manifest.NewPipeline(pipelineName, provider, stages)
+	manifest, err := manifest.NewPipeline(o.name, provider, stages)
 	if err != nil {
 		return fmt.Errorf("generate a pipeline manifest: %w", err)
 	}
 
 	var manifestExists bool
-	manifestPath, err := o.workspace.WritePipelineManifest(manifest)
+	manifestPath, err := o.workspace.WritePipelineManifest(manifest, o.name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -594,7 +611,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 	if err != nil {
 		return err
 	}
-	buildspecPath, err := o.workspace.WritePipelineBuildspec(content)
+	buildspecPath, err := o.workspace.WritePipelineBuildspec(content, o.name)
 	var buildspecExists bool
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
@@ -622,14 +639,6 @@ Update the %s phase to unit test your services before pushing the images.
 
 func (o *initPipelineOpts) secretName() string {
 	return fmt.Sprintf(fmtSecretName, o.appName, o.repoName)
-}
-
-func (o *initPipelineOpts) pipelineName() string {
-	name := fmt.Sprintf(fmtPipelineName, o.appName, o.repoName)
-	if len(name) <= 100 {
-		return name
-	}
-	return name[:100]
 }
 
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
@@ -725,6 +734,7 @@ func buildPipelineInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", pipelineFlagDescription)
 	cmd.Flags().StringVar(&vars.repoURL, githubURLFlag, "", githubURLFlagDescription)
 	_ = cmd.Flags().MarkHidden(githubURLFlag)
 	cmd.Flags().StringVarP(&vars.repoURL, repoURLFlag, repoURLFlagShort, "", repoURLFlagDescription)
