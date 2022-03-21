@@ -147,28 +147,6 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		}
 	}
 
-	//2nd approach takes 5-6 seconds to display the table
-	/*for _, env := range envs {
-		for _, job := range jobs {
-			flag, err := o.deployStoreSvc.IsJobDeployed(o.name, env.Name, job.Name)
-			if err != nil {
-				return nil, fmt.Errorf("services not available %s: %w", o.name, err)
-			}
-			if flag {
-				workloadEnvs[job.Name] = append(workloadEnvs[job.Name], env.Name)
-			}
-		}
-		for _, svc := range svcs {
-			flag, err := o.deployStoreSvc.IsServiceDeployed(o.name, env.Name, svc.Name)
-			if err != nil {
-				return nil, fmt.Errorf("services not available %s: %w", o.name, err)
-			}
-			if flag {
-				workloadEnvs[svc.Name] = append(workloadEnvs[svc.Name], env.Name)
-			}
-		}
-	}*/
-
 	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.name,
 	})
