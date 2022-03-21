@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -166,10 +167,17 @@ func (o *deletePipelineOpts) getNameAndSecret() error {
 		o.name = manifest.Name
 	}
 
-	if secret, ok := (manifest.Source.Properties["access_token_secret"]).(string); ok {
-		o.ghAccessTokenSecretName = secret
-	}
+	//if secret, ok := (manifest.Source.Properties["access_token_secret"]).(string); ok {
+	//	o.ghAccessTokenSecretName = secret
+	//}
+
+
 	return nil
+}
+// With GHv1 sources, we stored access tokens in SecretsManager. Pipelines generated prior to Copilot v1.4 have secrets named 'github-token-[appName]-[repoName]'. Pipelines prior to 1.16(?) were given default names of `pipeline-[appName]-[repoName]`. Users may have changed pipeline names, so this is our best-guess approach to deleting lingering legacy pipeline secrets.
+func (o *deletePipelineOpts) pipelineSecretName() string {
+	appAndRepo := strings.TrimPrefix(o.name, fmt.Sprintf("pipeline-"))
+	return fmt.Sprintf("github-token-%s", appAndRepo)
 }
 
 func (o *deletePipelineOpts) deleteSecret() error {
