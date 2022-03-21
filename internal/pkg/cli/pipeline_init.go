@@ -161,15 +161,17 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
-	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
-	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
-		return err
-	}
 	return nil
 }
 
 // Ask prompts for required fields that are not passed in and validates them.
 func (o *initPipelineOpts) Ask() error {
+	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
+	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+		return err
+	}
+	o.appName = o.wsAppName
+
 	if o.name == "" {
 		if err := o.askPipelineName(); err != nil {
 			return err
@@ -245,7 +247,7 @@ func (o *initPipelineOpts) askPipelineName() error {
 		},
 		prompt.WithFinalMessage("Pipeline name:"))
 	if err != nil {
-		return fmt.Errorf("prompt get pipeline name: %w", err)
+		return fmt.Errorf("get pipeline name: %w", err)
 	}
 
 	o.name = name
