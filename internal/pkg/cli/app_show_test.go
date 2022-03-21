@@ -249,7 +249,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil)
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
-				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{}, nil)
 				m.pipelineSvc.EXPECT().
 					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
 					Return([]*codepipeline.Pipeline{
@@ -276,7 +276,7 @@ Workloads
 
   Name    Type           Environments
   ----    ----           ------------
-  my-svc  lb-web-svc     test, prod
+  my-svc  lb-web-svc     test
   my-job  Scheduled Job  test, prod
 
 Pipelines
@@ -420,6 +420,100 @@ Workloads
   ----    ----           ------------
   my-svc  lb-web-svc     
   my-job  Scheduled Job  
+
+Pipelines
+
+  Name
+  ----
+  pipeline1
+  pipeline2
+`,
+		}, "when multiple services/jobs are deployed": {
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
+					{
+						Name: "my-svc",
+						Type: "lb-web-svc",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListJobs("my-app").Return([]*config.Workload{
+					{
+						Name: "my-job",
+						Type: "Scheduled Job",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test1",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod1",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+					{
+						Name:      "test2",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod2",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+					{
+						Name:      "staging",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+				}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test1").Return([]string{"my-job"}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod1").Return([]string{"my-job"}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod2").Return([]string{}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test2").Return([]string{}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "staging").Return([]string{"my-job"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "test1").Return([]string{}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod1").Return([]string{}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod2").Return([]string{"my-svc"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "test2").Return([]string{"my-svc"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "staging").Return([]string{"my-svc"}, nil)
+				m.pipelineSvc.EXPECT().
+					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
+					Return([]*codepipeline.Pipeline{
+						{Name: "pipeline1"},
+						{Name: "pipeline2"},
+					}, nil)
+				m.versionGetter.EXPECT().Version().Return(deploy.LatestAppTemplateVersion, nil)
+			},
+
+			wantedContent: `About
+
+  Name     my-app
+  Version  v1.0.2 
+  URI      example.com
+
+Environments
+
+  Name     AccountID  Region
+  ----     ---------  ------
+  test1    123456789  us-west-2
+  prod1    123456789  us-west-1
+  test2    123456789  us-west-2
+  prod2    123456789  us-west-1
+  staging  123456789  us-west-1
+
+Workloads
+
+  Name    Type           Environments
+  ----    ----           ------------
+  my-svc  lb-web-svc     test2, prod2, staging
+  my-job  Scheduled Job  test1, prod1, staging
 
 Pipelines
 
