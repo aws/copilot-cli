@@ -30,7 +30,7 @@ type App struct {
 	Services     []*config.Workload       `json:"services"`
 	Jobs         []*config.Workload       `json:"jobs"`
 	Pipelines    []*codepipeline.Pipeline `json:"pipelines"`
-	WorkloadEnvs map[string][]string
+	WorkloadEnvs map[string][]string      `json:"-"`
 }
 
 // JSONString returns the stringified App struct with json format.
