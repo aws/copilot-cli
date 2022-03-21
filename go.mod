@@ -3,7 +3,7 @@ module github.com/aws/copilot-cli
 go 1.17
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.2
+	github.com/AlecAivazis/survey/v2 v2.3.3
 	github.com/aws/aws-sdk-go v1.43.21
 	github.com/briandowns/spinner v1.18.1
 	github.com/dustin/go-humanize v1.0.0
@@ -30,7 +30,6 @@ require (
 )
 
 require (
-	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -40,7 +39,6 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
