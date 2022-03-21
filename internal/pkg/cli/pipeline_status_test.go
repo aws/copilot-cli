@@ -98,7 +98,7 @@ func TestPipelineStatus_Ask(t *testing.T) {
 				)
 			},
 			expectedApp: mockAppName,
-			expectedErr: fmt.Errorf("get deployed pipelines: %w", mockError),
+			expectedErr: fmt.Errorf("select deployed pipelines: %w", mockError),
 		},
 		"success with flags": {
 			testAppName:      mockAppName,

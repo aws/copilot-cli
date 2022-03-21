@@ -108,7 +108,7 @@ func TestPipelineShow_Ask(t *testing.T) {
 					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError),
 				)
 			},
-			expectedErr: fmt.Errorf("get deployed pipelines: %w", mockError),
+			expectedErr: fmt.Errorf("select deployed pipelines: %w", mockError),
 		},
 	}
 

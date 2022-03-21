@@ -150,7 +150,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			wantedAppName: testAppName,
 			wantedSecret:  "",
-			wantedError:   errors.New("get deployed pipelines: some error"),
+			wantedError:   errors.New("select deployed pipelines: some error"),
 		},
 		"skip confirmation works": {
 			skipConfirmation: true,
