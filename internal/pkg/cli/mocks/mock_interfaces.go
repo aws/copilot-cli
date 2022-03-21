@@ -1299,6 +1299,21 @@ func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedServices(appNam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedServices), appName, envName)
 }
 
+// ListDeployedJobs mocks base method.
+func (m *MockdeployedEnvironmentLister) ListDeployedJobs(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedJobs", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedJobs indicates an expected call of ListDeployedJobs.
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedJobs(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedJobs), appName, envName)
+}
+
 // ListEnvironmentsDeployedTo mocks base method.
 func (m *MockdeployedEnvironmentLister) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
 	m.ctrl.T.Helper()
