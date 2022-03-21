@@ -171,7 +171,7 @@ func askDeployedPipelineName(input *askDeployedPipelineNameInput) (string, error
 		deploy.AppTagKey: input.appName,
 	})
 	if err != nil {
-		return "", fmt.Errorf("get deployed pipelines: %w", err)
+		return "", fmt.Errorf("select deployed pipelines: %w", err)
 	}
 	return pipeline, nil
 }
