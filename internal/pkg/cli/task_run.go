@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
@@ -78,7 +78,7 @@ var (
 	taskRunAppPrompt = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("application"), color.Emphasize("task"))
 	taskRunEnvPrompt = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
 
-	taskRunAppPromptHelp = fmt.Sprintf(`Task will be deployed to the selected application. 
+	taskRunAppPromptHelp = fmt.Sprintf(`Task will be deployed to the selected application.
 Select %s to run the task in your default VPC instead of any existing application.`, color.Emphasize(appEnvOptionNone))
 	taskRunEnvPromptHelp = fmt.Sprintf(`Task will be deployed to the selected environment.
 Select %s to run the task in your default VPC instead of any existing environment.`, color.Emphasize(appEnvOptionNone))
@@ -256,6 +256,8 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			App: o.appName,
 			Env: o.env,
 
+			SecurityGroups: o.securityGroups,
+
 			OS: o.os,
 
 			VPCGetter:            vpcGetter,
@@ -370,10 +372,6 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if err := o.validateFlagsWithSubnets(); err != nil {
-		return err
-	}
-
-	if err := o.validateFlagsWithSecurityGroups(); err != nil {
 		return err
 	}
 
@@ -546,21 +544,6 @@ func (o *runTaskOpts) validateFlagsWithSubnets() error {
 		return fmt.Errorf("cannot specify both `--subnets` and `--env`")
 	}
 
-	return nil
-}
-
-func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
-	if o.securityGroups == nil {
-		return nil
-	}
-
-	if o.appName != "" {
-		return fmt.Errorf("cannot specify both `--security-groups` and `--app`")
-	}
-
-	if o.env != "" {
-		return fmt.Errorf("cannot specify both `--security-groups` and `--env`")
-	}
 	return nil
 }
 
@@ -1028,7 +1011,7 @@ func BuildTaskRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-  Run a task using your local Dockerfile and display log streams after the task is running. 
+  Run a task using your local Dockerfile and display log streams after the task is running.
   You will be prompted to specify an environment for the tasks to run in.
   /code $ copilot task run
   Run a task named "db-migrate" in the "test" environment under the current workspace.
