@@ -26,6 +26,8 @@ import (
 const (
 	pipelineStatusAppNamePrompt     = "Which application's pipeline status would you like to show?"
 	pipelineStatusAppNameHelpPrompt = "An application is a collection of related services."
+
+	fmtpipelineStatusPrompt = "Which pipeline of %s would you like to show the status of?"
 )
 
 type pipelineStatusVars struct {
@@ -103,11 +105,7 @@ func (o *pipelineStatusOpts) Ask() error {
 		}
 		return nil
 	}
-	pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
-		appName: o.appName,
-		sel:     o.sel,
-		command: "show the status of",
-	})
+	pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmtpipelineStatusPrompt)
 	if err != nil {
 		return err
 	}

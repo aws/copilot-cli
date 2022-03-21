@@ -23,8 +23,10 @@ import (
 )
 
 const (
-	pipelineShowAppNamePrompt          = "Which application's pipelines would you like to show?"
-	pipelineShowAppNameHelpPrompt      = "An application is a collection of related services."
+	pipelineShowAppNamePrompt     = "Which application's pipelines would you like to show?"
+	pipelineShowAppNameHelpPrompt = "An application is a collection of related services."
+
+	fmtPipelineShowPrompt = "Which deployed pipeline of application %s would you like to show the details of?"
 )
 
 type showPipelineVars struct {
@@ -105,11 +107,7 @@ func (o *showPipelineOpts) Ask() error {
 		}
 		return nil
 	}
-	pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
-		appName: o.appName,
-		sel:     o.sel,
-		command: "show",
-	})
+	pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmtPipelineShowPrompt)
 	if err != nil {
 		return err
 	}

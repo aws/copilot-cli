@@ -33,7 +33,7 @@ const (
 	pipelineSecretDeleteConfirmPrompt = "Are you sure you want to delete the source secret %s associated with pipeline %s?"
 	pipelineDeleteSecretConfirmHelp   = "This will delete the token associated with the source of your pipeline."
 
-	fmtPipelineCommandPrompt  = "Which deployed pipeline of application %s would you like to %s?"
+	fmtPipelineDeletePrompt   = "Which deployed pipeline of application %s would you like to delete?"
 	fmtDeletePipelineStart    = "Deleting pipeline %s from application %s."
 	fmtDeletePipelineFailed   = "Failed to delete pipeline %s from application %s: %v.\n"
 	fmtDeletePipelineComplete = "Deleted pipeline %s from application %s.\n"
@@ -116,11 +116,7 @@ func (o *deletePipelineOpts) Ask() error {
 			return err
 		}
 	} else {
-		pipelineName, err := askDeployedPipelineName(&askDeployedPipelineNameInput{
-			appName: o.appName,
-			sel:     o.sel,
-			command: "delete",
-		})
+		pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmtPipelineDeletePrompt)
 		if err != nil {
 			return err
 		}
@@ -160,15 +156,9 @@ func (o *deletePipelineOpts) Execute() error {
 	return nil
 }
 
-type askDeployedPipelineNameInput struct {
-	appName string
-	sel     codePipelineSelector
-	command string
-}
-
-func askDeployedPipelineName(input *askDeployedPipelineNameInput) (string, error) {
-	pipeline, err := input.sel.DeployedPipeline(fmt.Sprintf(fmtPipelineCommandPrompt, color.HighlightUserInput(input.appName), input.command), "", map[string]string{
-		deploy.AppTagKey: input.appName,
+func askDeployedPipelineName(sel codePipelineSelector, appName, msg string) (string, error) {
+	pipeline, err := sel.DeployedPipeline(fmt.Sprintf(msg, color.HighlightUserInput(appName)), "", map[string]string{
+		deploy.AppTagKey: appName,
 	})
 	if err != nil {
 		return "", fmt.Errorf("select deployed pipelines: %w", err)
