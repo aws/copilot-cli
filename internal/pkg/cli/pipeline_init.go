@@ -43,7 +43,7 @@ import (
 
 const (
 	fmtPipelineInitNamePrompt  = "What would you like to %s this pipeline?"
-	pipelineInitNameHelpPrompt = "An identifier for your pipeline (e.g. beta, prod)."
+	pipelineInitNameHelpPrompt = "An identifier for your pipeline (e.g. release, test, prod)."
 
 	pipelineSelectEnvPrompt     = "Which environment would you like to add to your pipeline?"
 	pipelineSelectEnvHelpPrompt = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
@@ -172,23 +172,11 @@ func (o *initPipelineOpts) Ask() error {
 	}
 	o.appName = o.wsAppName
 
-	if o.name == "" {
-		if err := o.askPipelineName(); err != nil {
-			return err
-		}
-	}
-	if err := validatePipelineName(o.name, o.appName); err != nil {
+	if err := o.askOrValidatePipelineName(); err != nil {
 		return err
 	}
 
-	// TODO: validate not a duplicate
-
-	if o.repoURL == "" {
-		if err := o.selectURL(); err != nil {
-			return err
-		}
-	}
-	if err := o.validateURL(o.repoURL); err != nil {
+	if err := o.askOrValidateURL(); err != nil {
 		return err
 	}
 
@@ -202,6 +190,22 @@ func (o *initPipelineOpts) Ask() error {
 	}
 
 	return nil
+}
+
+func (o *initPipelineOpts) askOrValidatePipelineName() error {
+	if o.name == "" {
+		return o.askPipelineName()
+	}
+
+	return validatePipelineName(o.name, o.appName)
+}
+
+func (o *initPipelineOpts) askOrValidateURL() error {
+	if o.repoURL == "" {
+		return o.selectURL()
+	}
+
+	return o.validateURL(o.repoURL)
 }
 
 // Execute writes the pipeline manifest file.
