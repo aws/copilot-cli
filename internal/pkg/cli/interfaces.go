@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"io"
 
@@ -160,6 +161,7 @@ type secretCreator interface {
 }
 
 type secretDeleter interface {
+	DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error)
 	DeleteSecret(secretName string) error
 }
 

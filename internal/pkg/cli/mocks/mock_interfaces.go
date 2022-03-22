@@ -10,6 +10,7 @@ import (
 	reflect "reflect"
 
 	session "github.com/aws/aws-sdk-go/aws/session"
+	secretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -1381,6 +1382,21 @@ func (mr *MocksecretsManagerMockRecorder) DeleteSecret(secretName interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MocksecretsManager)(nil).DeleteSecret), secretName)
 }
 
+// DescribeSecret mocks base method.
+func (m *MocksecretsManager) DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeSecret", secretName)
+	ret0, _ := ret[0].(*secretsmanager.DescribeSecretOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeSecret indicates an expected call of DescribeSecret.
+func (mr *MocksecretsManagerMockRecorder) DescribeSecret(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*MocksecretsManager)(nil).DescribeSecret), secretName)
+}
+
 // MocksecretCreator is a mock of secretCreator interface.
 type MocksecretCreator struct {
 	ctrl     *gomock.Controller
@@ -1454,6 +1470,21 @@ func (m *MocksecretDeleter) DeleteSecret(secretName string) error {
 func (mr *MocksecretDeleterMockRecorder) DeleteSecret(secretName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MocksecretDeleter)(nil).DeleteSecret), secretName)
+}
+
+// DescribeSecret mocks base method.
+func (m *MocksecretDeleter) DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeSecret", secretName)
+	ret0, _ := ret[0].(*secretsmanager.DescribeSecretOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeSecret indicates an expected call of DescribeSecret.
+func (mr *MocksecretDeleterMockRecorder) DescribeSecret(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*MocksecretDeleter)(nil).DescribeSecret), secretName)
 }
 
 // MockimageBuilderPusher is a mock of imageBuilderPusher interface.
@@ -6459,6 +6490,21 @@ func (mr *MockworkloadDeployerMockRecorder) DeployWorkload(in interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployWorkload", reflect.TypeOf((*MockworkloadDeployer)(nil).DeployWorkload), in)
 }
 
+// IsServiceAvailableInRegion mocks base method.
+func (m *MockworkloadDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsServiceAvailableInRegion", region)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsServiceAvailableInRegion indicates an expected call of IsServiceAvailableInRegion.
+func (mr *MockworkloadDeployerMockRecorder) IsServiceAvailableInRegion(region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceAvailableInRegion", reflect.TypeOf((*MockworkloadDeployer)(nil).IsServiceAvailableInRegion), region)
+}
+
 // UploadArtifacts mocks base method.
 func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput, error) {
 	m.ctrl.T.Helper()
@@ -6472,21 +6518,6 @@ func (m *MockworkloadDeployer) UploadArtifacts() (*deploy.UploadArtifactsOutput,
 func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
-}
-
-// IsServiceAvailableInRegion mocks base method.
-func (m *MockworkloadDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsServiceAvailableInRegion", region)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsServiceAvailableInRegion indicates an expected call of UploadArtifacts.
-func (mr *MockworkloadDeployerMockRecorder) IsServiceAvailableInRegion(region string) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceAvailableInRegion", reflect.TypeOf((*MockworkloadDeployer)(nil).IsServiceAvailableInRegion), region)
 }
 
 // MockworkloadTemplateGenerator is a mock of workloadTemplateGenerator interface.

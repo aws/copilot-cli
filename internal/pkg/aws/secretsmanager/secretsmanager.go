@@ -18,6 +18,7 @@ import (
 type api interface {
 	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
 	DeleteSecret(*secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error)
+	DescribeSecret(input *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error)
 }
 
 // SecretsManager wraps the AWS SecretManager client.
@@ -82,6 +83,25 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 	return nil
 }
 
+// DescribeSecret retrieves the details of a secret.
+func (s *SecretsManager) DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error) {
+	resp, err := s.secretsManager.DescribeSecret(&secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(secretName),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
+				return nil, &ErrSecretNotFound{
+					secretName: secretName,
+					parentErr: err,
+				}
+			}
+		}
+		return nil, fmt.Errorf("describe secret %s: %w", secretName, err)
+	}
+	return resp, nil
+}
+
 // ErrSecretAlreadyExists occurs if a secret with the same name already exists.
 type ErrSecretAlreadyExists struct {
 	secretName string
@@ -90,4 +110,13 @@ type ErrSecretAlreadyExists struct {
 
 func (err *ErrSecretAlreadyExists) Error() string {
 	return fmt.Sprintf("secret %s already exists", err.secretName)
+}
+// ErrSecretNotFound occurs if a secret with the given name does not exist.
+type ErrSecretNotFound struct {
+	secretName string
+	parentErr  error
+}
+
+func (err *ErrSecretNotFound) Error() string {
+	return fmt.Sprintf("secret %s was not found", err.secretName)
 }
