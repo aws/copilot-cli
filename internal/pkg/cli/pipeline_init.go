@@ -13,6 +13,7 @@ import (
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -98,6 +99,7 @@ type initPipelineOpts struct {
 	store          store
 	prompt         prompter
 	sel            pipelineEnvSelector
+	pipeline       pipelineGetter
 
 	// Outputs stored on successful actions.
 	secret    string
@@ -152,6 +154,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
+		pipeline:         codepipeline.New(defaultSession),
 	}, nil
 }
 
@@ -186,6 +189,41 @@ func (o *initPipelineOpts) Ask() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// TODO see how errors show up in CLI, figure out best wording
+func (o *initPipelineOpts) validateDuplicateSvc() error {
+	name := "TODO: replace with o.name"
+	// make sure pipeline doesn't exist locally (?)
+	// TODO what happens if you do: (and match this logic here)
+	//   1. svc delete
+	//   2. svc init, without deleting the manifest file
+	fullName := fmt.Sprintf(fmtPipelineName, o.appName, name)
+
+	// make sure pipeline isn't already deployed
+	names, err := o.pipeline.ListPipelineNamesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return fmt.Errorf("validate if pipeline exists: %w", err)
+	}
+
+	for _, name := range names {
+		if name == fullName {
+			// TODO 'delete the existing one' -> 'also delete the existing manifest file?'
+			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
+To recreate the pipeline, please run:
+1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
+If you'd prefer a new default manifest, please manually delete the existing one.
+2. And then %s
+`,
+				color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", name)),
+				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", name)))
+			return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(name))
+		}
+	}
+
 	return nil
 }
 
