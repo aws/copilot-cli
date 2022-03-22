@@ -12,10 +12,10 @@ import (
 )
 
 type cursor interface {
-	Up(n int)
-	Down(n int)
-	Hide()
-	Show()
+	Up(n int) error
+	Down(n int) error
+	Hide() error
+	Show() error
 }
 
 // fakeFileWriter is a terminal.FileWriter.
@@ -53,7 +53,7 @@ func New() *Cursor {
 	}
 }
 
-// New creates a new cursor that writes to the given out writer.
+// NewWithWriter creates a new cursor that writes to the given out writer.
 func NewWithWriter(out io.Writer) *Cursor {
 	return &Cursor{
 		c: &terminal.Cursor{
@@ -62,26 +62,26 @@ func NewWithWriter(out io.Writer) *Cursor {
 	}
 }
 
-// Hide makes the cursor invisible.
+// Hide best-effort makes the cursor invisible.
 func (c *Cursor) Hide() {
-	c.c.Hide()
+	_ = c.c.Hide()
 }
 
-// Show makes the cursor visible.
+// Show best-effort makes the cursor visible.
 func (c *Cursor) Show() {
-	c.c.Show()
+	_ = c.c.Show()
 }
 
-// EraseLine deletes the contents of the current line.
+// EraseLine best-effort deletes the contents of the current line.
 func (c *Cursor) EraseLine() {
 	if cur, ok := c.c.(*terminal.Cursor); ok {
-		terminal.EraseLine(cur.Out, terminal.ERASE_LINE_ALL)
+		_ = terminal.EraseLine(cur.Out, terminal.ERASE_LINE_ALL)
 	}
 }
 
-// EraseLine erases a line from a FileWriter.
+// EraseLine best-effort erases a line from a FileWriter.
 func EraseLine(fw terminal.FileWriter) {
-	terminal.EraseLine(fw, terminal.ERASE_LINE_ALL)
+	_ = terminal.EraseLine(fw, terminal.ERASE_LINE_ALL)
 }
 
 // EraseLinesAbove erases a line and moves the cursor up from fw, repeated n times.
