@@ -731,7 +731,7 @@ func (cli *CLI) PipelineShow(opts PipelineShowInput) (PipelineShowOutput, error)
 	return out, nil
 }
 
-// PipelineShow runs:
+// PipelineStatus runs:
 //	copilot pipeline show
 //	--name $n
 //	--json
