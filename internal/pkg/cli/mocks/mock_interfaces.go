@@ -2240,33 +2240,33 @@ func (m *MockwsPipelineWriter) EXPECT() *MockwsPipelineWriterMockRecorder {
 }
 
 // WritePipelineBuildspec mocks base method.
-func (m *MockwsPipelineWriter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error) {
+func (m *MockwsPipelineWriter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WritePipelineBuildspec", marshaler)
+	ret := m.ctrl.Call(m, "WritePipelineBuildspec", marshaler, name)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WritePipelineBuildspec indicates an expected call of WritePipelineBuildspec.
-func (mr *MockwsPipelineWriterMockRecorder) WritePipelineBuildspec(marshaler interface{}) *gomock.Call {
+func (mr *MockwsPipelineWriterMockRecorder) WritePipelineBuildspec(marshaler, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineBuildspec", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineBuildspec), marshaler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineBuildspec", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineBuildspec), marshaler, name)
 }
 
 // WritePipelineManifest mocks base method.
-func (m *MockwsPipelineWriter) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error) {
+func (m *MockwsPipelineWriter) WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WritePipelineManifest", marshaler)
+	ret := m.ctrl.Call(m, "WritePipelineManifest", marshaler, name)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WritePipelineManifest indicates an expected call of WritePipelineManifest.
-func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler interface{}) *gomock.Call {
+func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler, name)
 }
 
 // MockserviceLister is a mock of serviceLister interface.
