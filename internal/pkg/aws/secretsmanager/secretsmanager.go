@@ -78,7 +78,7 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("delete secret %s from secrets manager: %+v", secretName, err)
+		return fmt.Errorf("delete secret %s from secrets manager: %w", secretName, err)
 	}
 	return nil
 }
@@ -93,7 +93,7 @@ func (s *SecretsManager) DescribeSecret(secretName string) (*secretsmanager.Desc
 			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
 				return nil, &ErrSecretNotFound{
 					secretName: secretName,
-					parentErr: err,
+					parentErr:  err,
 				}
 			}
 		}
@@ -111,6 +111,7 @@ type ErrSecretAlreadyExists struct {
 func (err *ErrSecretAlreadyExists) Error() string {
 	return fmt.Sprintf("secret %s already exists", err.secretName)
 }
+
 // ErrSecretNotFound occurs if a secret with the given name does not exist.
 type ErrSecretNotFound struct {
 	secretName string

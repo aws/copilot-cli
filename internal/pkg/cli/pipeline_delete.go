@@ -115,9 +115,6 @@ func (o *deletePipelineOpts) Ask() error {
 	if err := o.getName(); err != nil {
 		return err
 	}
-	if err := o.getSecret(); err != nil {
-		return err
-	}
 	if o.skipConfirmation {
 		return nil
 	}
@@ -138,6 +135,9 @@ func (o *deletePipelineOpts) Ask() error {
 
 // Execute deletes the secret and pipeline stack.
 func (o *deletePipelineOpts) Execute() error {
+	if err := o.getSecret(); err != nil {
+		return err
+	}
 	if err := o.deleteSecret(); err != nil {
 		return err
 	}
@@ -174,26 +174,23 @@ func (o *deletePipelineOpts) getName() error {
 }
 
 func (o *deletePipelineOpts) getSecret() error {
-	//o.name = "pipeline-muckles-aws-copilot-sample-service"
 	// Look for default secret name for GHv1 access token based on default pipeline name.
 	o.ghAccessTokenSecretName = o.pipelineSecretName()
 	output, err := o.secretsmanager.DescribeSecret(o.ghAccessTokenSecretName)
-
-	if err != nil {
-		var notFoundErr *secretsmanager.ErrSecretNotFound
-		if !errors.As(err, &notFoundErr) {
-			return fmt.Errorf("describe secret %s: %w", o.ghAccessTokenSecretName, err)
-		}
-		log.Infof("Found no Copilot-generated Secrets Manager secrets to delete for pipeline '%s'.\n", o.name)
-		o.ghAccessTokenSecretName = ""
-		return nil
-	}
-	for _, tag := range output.Tags {
-		if aws.StringValue(tag.Key) == "copilot-application" && aws.StringValue(tag.Value) == output.CreatedDate.UTC().Format(time.UnixDate) {
-			log.Infof("Found secret '%s'.\n", o.ghAccessTokenSecretName)
-			return nil
+	if err == nil {
+		// Check for Copilot-assigned tag for added assurance. If tags not found, fall through.
+		for _, tag := range output.Tags {
+			if aws.StringValue(tag.Key) == "copilot-application" && aws.StringValue(tag.Value) == output.CreatedDate.UTC().Format(time.UnixDate) {
+				log.Infof("Found secret '%s'.\n", o.ghAccessTokenSecretName)
+				return nil
+			}
 		}
 	}
+	var notFoundErr *secretsmanager.ErrSecretNotFound
+	if err != nil && !errors.As(err, &notFoundErr) {
+		return fmt.Errorf("describe secret %s: %w", o.ghAccessTokenSecretName, err)
+	}
+	// To get here, either the secret was found but tags didn't match, or Secrets Manager returned a ResourceNotFoundException.
 	log.Infof("Found no Copilot-generated Secrets Manager secrets to delete for pipeline '%s'.\n", o.name)
 	o.ghAccessTokenSecretName = ""
 	return nil
