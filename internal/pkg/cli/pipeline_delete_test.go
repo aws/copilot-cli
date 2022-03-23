@@ -22,8 +22,6 @@ const (
 	testAppName        = "badgoose"
 	testPipelineName   = "pipeline-badgoose-honkpipes"
 	testPipelineSecret = "github-token-badgoose-honkpipes"
-
-	pipelineManifestLegacyPath = "copilot/pipeline.yml"
 )
 
 type deletePipelineMocks struct {
