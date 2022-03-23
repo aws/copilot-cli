@@ -327,24 +327,24 @@ func (ws *Workspace) WriteJobManifest(marshaler encoding.BinaryMarshaler, name s
 	return ws.write(data, name, manifestFileName)
 }
 
-// WritePipelineBuildspec writes the pipeline buildspec under the copilot/ directory.
+// WritePipelineBuildspec writes the pipeline buildspec under the copilot/pipelines/{name}/ directory.
 // If successful returns the full path of the file, otherwise returns an empty string and the error.
-func (ws *Workspace) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error) {
+func (ws *Workspace) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal pipeline buildspec to binary: %w", err)
 	}
-	return ws.write(data, buildspecFileName)
+	return ws.write(data, pipelinesDirName, name, buildspecFileName)
 }
 
-// WritePipelineManifest writes the pipeline manifest under the copilot directory.
+// WritePipelineManifest writes the pipeline manifest under the copilot/pipelines/{name}/ directory.
 // If successful returns the full path of the file, otherwise returns an empty string and the error.
-func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error) {
+func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal pipeline manifest to binary: %w", err)
 	}
-	return ws.write(data, legacyPipelineFileName)
+	return ws.write(data, pipelinesDirName, name, manifestFileName)
 }
 
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.

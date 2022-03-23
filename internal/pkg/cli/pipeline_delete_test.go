@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	secretsmanager2 "github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"testing"
 	"time"
 
@@ -35,21 +34,10 @@ type deletePipelineMocks struct {
 	ws             *mocks.MockwsPipelineGetter
 	store          *mocks.Mockstore
 	codepipeline   *mocks.MockpipelineGetter
-	sel            *mocks.MockappSelector
+	sel            *mocks.MockcodePipelineSelector
 }
 
 func TestDeletePipelineOpts_Ask(t *testing.T) {
-	mockPipelineManifest := &manifest.Pipeline{
-		Name:    testPipelineName,
-		Version: 1,
-		Source: &manifest.Source{
-			ProviderName: "GitHub",
-			Properties: map[string]interface{}{
-				"repository": "aws/somethingCool",
-				"branch":     "main",
-			},
-		},
-	}
 	testCases := map[string]struct {
 		skipConfirmation bool
 		inAppName        string
@@ -61,17 +49,16 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 		wantedError        error
 	}{
 		"prompts for app name if empty": {
+			inPipelineName:   testPipelineName,
 			skipConfirmation: true,
 
 			callMocks: func(m deletePipelineMocks) {
 				m.sel.EXPECT().Application(pipelineDeleteAppNamePrompt, pipelineDeleteAppNameHelpPrompt).Return(testAppName, nil)
-				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
+				m.codepipeline.EXPECT().GetPipeline(testPipelineName).Return(nil, nil)
 			},
 
 			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
-
 			wantedError: nil,
 		},
 		"errors if passed-in app name invalid": {
@@ -103,49 +90,45 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
+				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return(testPipelineName, nil)
 			},
 			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
 			wantedError:        nil,
 		},
-		"gets name of legacy pipeline, no secret": {
+		"error getting pipeline": {
 			skipConfirmation: true,
 			inAppName:        testAppName,
 
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
+				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 
-			wantedAppName:      testAppName,
-			wantedPipelineName: testPipelineName,
-			wantedError:        nil,
+			wantedAppName: testAppName,
+			wantedError:   errors.New("select deployed pipelines: some error"),
 		},
-		"skips confirmation works": {
+		"skip confirmation works": {
 			skipConfirmation: true,
 			inAppName:        testAppName,
+			inPipelineName:   testPipelineName,
 
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
+				m.codepipeline.EXPECT().GetPipeline(testPipelineName).Return(nil, nil)
 			},
 
 			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
 			wantedError:        nil,
 		},
-
 		"delete confirmation works": {
 			skipConfirmation: false,
 			inAppName:        testAppName,
+			inPipelineName:   testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil)
-				m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil)
+				m.codepipeline.EXPECT().GetPipeline(testPipelineName).Return(nil, nil)
 				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(pipelineDeleteConfirmPrompt, testPipelineName, testAppName),
 					pipelineDeleteConfirmHelp,
@@ -169,7 +152,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineGetter(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
-			mockSel := mocks.NewMockappSelector(ctrl)
+			mockSel := mocks.NewMockcodePipelineSelector(ctrl)
 
 			mocks := deletePipelineMocks{
 				codepipeline: mockPipelineGetter,
