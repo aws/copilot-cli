@@ -116,7 +116,7 @@ func (o *deletePipelineOpts) Ask() error {
 			return err
 		}
 	} else {
-		pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmtPipelineDeletePrompt)
+		pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtPipelineDeletePrompt, color.HighlightUserInput(o.appName)))
 		if err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func (o *deletePipelineOpts) Execute() error {
 }
 
 func askDeployedPipelineName(sel codePipelineSelector, appName, msg string) (string, error) {
-	pipeline, err := sel.DeployedPipeline(fmt.Sprintf(msg, color.HighlightUserInput(appName)), "", map[string]string{
+	pipeline, err := sel.DeployedPipeline(msg, "", map[string]string{
 		deploy.AppTagKey: appName,
 	})
 	if err != nil {

@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -105,7 +106,7 @@ func (o *pipelineStatusOpts) Ask() error {
 		}
 		return nil
 	}
-	pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmtpipelineStatusPrompt)
+	pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtpipelineStatusPrompt, color.HighlightUserInput(o.appName)))
 	if err != nil {
 		return err
 	}
