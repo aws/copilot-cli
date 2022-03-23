@@ -173,9 +173,8 @@ func TestSecretsManager_DescribeSecret(t *testing.T) {
 	mockAwsErr := awserr.New(secretsmanager.ErrCodeResourceNotFoundException, "", nil)
 
 	tests := map[string]struct {
-		inSecretName   string
-		inSecretString string
-		callMock       func(m *mocks.Mockapi)
+		inSecretName string
+		callMock     func(m *mocks.Mockapi)
 
 		expectedResp  *secretsmanager.DescribeSecretOutput
 		expectedError error

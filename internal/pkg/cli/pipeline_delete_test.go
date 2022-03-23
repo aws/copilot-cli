@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	secretsmanager2 "github.com/aws/aws-sdk-go/service/secretsmanager"
+	sdkSecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"testing"
 	"time"
@@ -59,7 +59,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
-			wantedError: nil,
+			wantedError:        nil,
 		},
 		"errors if passed-in app name invalid": {
 			skipConfirmation: true,
@@ -193,11 +193,11 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 }
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {
-	mockResp := &secretsmanager2.DescribeSecretOutput{
+	mockResp := &sdkSecretsmanager.DescribeSecretOutput{
 		ARN:         aws.String("arn-goose"),
 		CreatedDate: aws.Time(time.Now()),
 		Name:        aws.String(testPipelineSecret),
-		Tags: []*secretsmanager2.Tag{
+		Tags: []*sdkSecretsmanager.Tag{
 			{
 				Key:   aws.String("copilot-application"),
 				Value: aws.String(time.Now().UTC().Format(time.UnixDate)),
@@ -205,11 +205,11 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 		},
 		VersionIdsToStages: nil,
 	}
-	mockBadResp := &secretsmanager2.DescribeSecretOutput{
+	mockBadResp := &sdkSecretsmanager.DescribeSecretOutput{
 		ARN:         aws.String("arn-goose"),
 		CreatedDate: aws.Time(time.Now()),
 		Name:        aws.String(testPipelineSecret),
-		Tags: []*secretsmanager2.Tag{
+		Tags: []*sdkSecretsmanager.Tag{
 			{
 				Key:   aws.String("someOtherKey"),
 				Value: aws.String(time.Now().UTC().Format(time.UnixDate)),
