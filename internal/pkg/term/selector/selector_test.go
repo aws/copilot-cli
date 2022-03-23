@@ -117,7 +117,7 @@ func TestDeploySelect_Topics(t *testing.T) {
 			}
 			topics, err := sel.Topics("Select a deployed topic", "Help text", testApp)
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.wantTopics, topics)
 			}
@@ -474,7 +474,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, opts...)
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.wantSvc, gotDeployed.Svc)
 				require.Equal(t, tc.wantEnv, gotDeployed.Env)
@@ -761,7 +761,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			}
 			got, err := sel.Service("Select a service", "Help text")
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
 			}
@@ -1056,7 +1056,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			}
 			got, err := sel.Job("Select a job", "Help text")
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
 			}
@@ -1192,7 +1192,7 @@ func TestConfigSelect_Service(t *testing.T) {
 
 			got, err := sel.Service("Select a service", "Help text", appName)
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
 			}
@@ -1323,7 +1323,7 @@ func TestConfigSelect_Job(t *testing.T) {
 
 			got, err := sel.Job("Select a job", "Help text", appName)
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
 			}
@@ -1489,7 +1489,7 @@ func TestSelect_Environment(t *testing.T) {
 
 			got, err := sel.Environment("Select an environment", "Help text", appName, tc.inAdditionalOpts...)
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
 			}
@@ -1698,7 +1698,7 @@ func TestSelect_Environments(t *testing.T) {
 				return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
 			})
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
 			}
@@ -1821,7 +1821,7 @@ func TestSelect_Application(t *testing.T) {
 
 			got, err := sel.Application("Select an app", "Help text")
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
 			}
@@ -2094,6 +2094,182 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.Equal(t, tc.wantedSchedule, schedule)
+			}
+		})
+	}
+}
+
+type wsPipelineSelectMocks struct {
+	prompt *mocks.MockPrompter
+	ws     *mocks.MockWsPipelinesLister
+}
+
+func TestWorkspaceSelect_WsPipeline(t *testing.T) {
+	mockPipelineManifests := []workspace.PipelineManifest{
+		{
+			Name: "betaManifest",
+			Path: "/copilot/pipelines/beta/manifest.yml",
+		},
+		{
+			Name: "legacyInCopiDir",
+			Path: "/copilot/pipeline.yml",
+		},
+		{
+			Name: "prodManifest",
+			Path: "/copilot/pipelines/prod/manifest.yml",
+		},
+	}
+	singlePipelineManifest := &workspace.PipelineManifest{
+		Name: "betaManifest",
+		Path: "/copilot/pipelines/beta/manifest.yml",
+	}
+	testCases := map[string]struct {
+		setupMocks     func(mocks wsPipelineSelectMocks)
+		wantedErr      error
+		wantedPipeline *workspace.PipelineManifest
+	}{
+		"with no workspace pipelines": {
+			setupMocks: func(m wsPipelineSelectMocks) {
+				m.ws.EXPECT().ListPipelines().Return(nil, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantedErr: fmt.Errorf("no pipelines found"),
+		},
+		"don't prompt to select if only one workspace pipeline": {
+			setupMocks: func(m wsPipelineSelectMocks) {
+				m.ws.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{
+					{
+						Name: "betaManifest",
+						Path: "/copilot/pipelines/beta/manifest.yml",
+					}}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantedPipeline: &workspace.PipelineManifest{
+				Name: "betaManifest",
+				Path: "/copilot/pipelines/beta/manifest.yml",
+			},
+		},
+		"with multiple workspace pipelines": {
+			setupMocks: func(m wsPipelineSelectMocks) {
+				m.ws.EXPECT().ListPipelines().Return(mockPipelineManifests, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("betaManifest", nil)
+			},
+			wantedPipeline: singlePipelineManifest,
+		},
+		"with error selecting": {
+			setupMocks: func(m wsPipelineSelectMocks) {
+				m.ws.EXPECT().ListPipelines().Return(mockPipelineManifests, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: errors.New("select pipeline: some error"),
+		},
+		"wrap error from ListPipelines": {
+			setupMocks: func(m wsPipelineSelectMocks) {
+				m.ws.EXPECT().ListPipelines().Return(nil, errors.New("some error"))
+
+			},
+			wantedErr: errors.New("list pipelines: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWsPipelinesLister := mocks.NewMockWsPipelinesLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := wsPipelineSelectMocks{
+				prompt: mockprompt,
+				ws:     mockWsPipelinesLister,
+			}
+			tc.setupMocks(mocks)
+
+			sel := WsPipelineSelect{
+				prompt: mockprompt,
+				ws:     mockWsPipelinesLister,
+			}
+			got, err := sel.WsPipeline("Select a pipeline", "Help text")
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedPipeline, got)
+			}
+		})
+	}
+}
+
+type codePipelineSelectMocks struct {
+	prompt *mocks.MockPrompter
+	cp     *mocks.MockCodePipelineLister
+}
+
+func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
+	testTags := map[string]string{
+		"copilot-application": "dinder",
+	}
+	mockMultiplePipelines := []string{"firstPipeline", "secondPipeline", "thirdPipeline"}
+	testCases := map[string]struct {
+		setupMocks     func(mocks codePipelineSelectMocks)
+		wantedErr      error
+		wantedPipeline string
+	}{
+		"with no workspace pipelines": {
+			setupMocks: func(m codePipelineSelectMocks) {
+				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return(nil, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantedErr: fmt.Errorf("no deployed pipelines found"),
+		},
+		"don't prompt to select if only one workspace pipeline": {
+			setupMocks: func(m codePipelineSelectMocks) {
+				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{"singlePipeline"}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantedPipeline: "singlePipeline",
+		},
+		"with multiple workspace pipelines": {
+			setupMocks: func(m codePipelineSelectMocks) {
+				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return(mockMultiplePipelines, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("secondPipeline", nil)
+			},
+			wantedPipeline: "secondPipeline",
+		},
+		"with error selecting": {
+			setupMocks: func(m codePipelineSelectMocks) {
+				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return(mockMultiplePipelines, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: errors.New("select pipeline: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockCodePipelinesLister := mocks.NewMockCodePipelineLister(ctrl)
+			mockPrompt := mocks.NewMockPrompter(ctrl)
+			mocks := codePipelineSelectMocks{
+				prompt: mockPrompt,
+				cp:     mockCodePipelinesLister,
+			}
+			tc.setupMocks(mocks)
+
+			sel := CodePipelineSelect{
+				prompt:       mockPrompt,
+				codepipeline: mockCodePipelinesLister,
+			}
+			got, err := sel.DeployedPipeline("Select a pipeline", "Help text", testTags)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedPipeline, got)
 			}
 		})
 	}
@@ -2375,7 +2551,7 @@ func TestTaskSelect_Task(t *testing.T) {
 					WithAppEnv(tc.app, tc.env))
 			}
 			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.NoError(t, tc.wantErr)
 				require.Equal(t, tc.wantTask, gotTask)

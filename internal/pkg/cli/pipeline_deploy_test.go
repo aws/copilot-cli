@@ -97,7 +97,7 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().GetApplication(testAppName).Return(nil, nil)
 			},
 			mockSel: func(m *mocks.MockwsPipelineSelector) {
-				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().WsPipeline(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			mockWs: func(m *mocks.MockwsPipelineReader) {},
 
