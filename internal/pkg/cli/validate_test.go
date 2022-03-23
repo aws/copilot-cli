@@ -147,6 +147,63 @@ func TestValidateEnvironmentName(t *testing.T) {
 	}
 }
 
+func TestValidatePipelineName(t *testing.T) {
+	testCases := map[string]struct {
+		val     interface{}
+		appName string
+
+		wanted            error
+		wantedErrorSuffix string
+	}{
+		"string as input": {
+			val:    "hello",
+			wanted: nil,
+		},
+		"number as input": {
+			val:    1234,
+			wanted: errValueNotAString,
+		},
+		"string with invalid characters": {
+			val:    "myPipe!",
+			wanted: errValueBadFormat,
+		},
+		"longer than 100 characters": {
+			val:               strings.Repeat("s", 101),
+			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 90),
+		},
+		"longer than 100 characters with pipeline-[app]": {
+			val:               strings.Repeat("x", 86),
+			appName:           "myApp",
+			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 85),
+		},
+		"does not start with letter": {
+			val:    "123chicken",
+			wanted: errValueBadFormat,
+		},
+		"starts with a dash": {
+			val:    "-beta",
+			wanted: errValueBadFormat,
+		},
+		"contains upper-case letters": {
+			val:    "badGoose",
+			wanted: errValueBadFormat,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validatePipelineName(tc.val, tc.appName)
+
+			if tc.wantedErrorSuffix != "" {
+				require.True(t, strings.HasSuffix(got.Error(), tc.wantedErrorSuffix), "got %v instead of %v", got, tc.wantedErrorSuffix)
+				return
+			}
+
+			require.True(t, errors.Is(got, tc.wanted), "got %v instead of %v", got, tc.wanted)
+		})
+	}
+}
+
 func TestValidateS3Name(t *testing.T) {
 	testCases := map[string]testCase{
 		"good case": {
