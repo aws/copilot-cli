@@ -189,9 +189,14 @@ type WsPipelineSelect struct {
 
 // CodePipelineSelect is a selector for deployed pipelines.
 type CodePipelineSelect struct {
-	*Select
 	prompt       Prompter
 	codepipeline CodePipelineLister
+}
+
+// AppPipelineSelect is a selector for deployed pipelines and apps.
+type AppPipelineSelect struct {
+	*Select
+	*CodePipelineSelect
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -281,12 +286,14 @@ func NewWsPipelineSelect(prompt Prompter, ws WsPipelinesLister) *WsPipelineSelec
 	}
 }
 
-// NewCodePipelineSelect returns a new selector with pipelines from the local workspace.
-func NewCodePipelineSelect(prompt Prompter, store ConfigLister, cp CodePipelineLister) *CodePipelineSelect {
-	return &CodePipelineSelect{
-		Select:       NewSelect(prompt, store),
-		prompt:       prompt,
-		codepipeline: cp,
+// NewAppPipelineSelect returns new selectors with deployed pipelines and apps.
+func NewAppPipelineSelect(prompt Prompter, store ConfigLister, cp CodePipelineLister) *AppPipelineSelect {
+	return &AppPipelineSelect{
+		Select: NewSelect(prompt, store),
+		CodePipelineSelect: &CodePipelineSelect{
+			prompt:       prompt,
+			codepipeline: cp,
+		},
 	}
 }
 

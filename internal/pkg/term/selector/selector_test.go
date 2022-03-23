@@ -2255,7 +2255,6 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 
 			mockCodePipelinesLister := mocks.NewMockCodePipelineLister(ctrl)
 			mockPrompt := mocks.NewMockPrompter(ctrl)
-			mockStore := mocks.NewMockConfigLister(ctrl)
 			mocks := codePipelineSelectMocks{
 				prompt: mockPrompt,
 				cp:     mockCodePipelinesLister,
@@ -2263,10 +2262,6 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			sel := CodePipelineSelect{
-				Select: &Select{
-					prompt: mockPrompt,
-					config: mockStore,
-				},
 				prompt:       mockPrompt,
 				codepipeline: mockCodePipelinesLister,
 			}

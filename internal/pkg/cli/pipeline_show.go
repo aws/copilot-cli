@@ -68,7 +68,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		ws:               ws,
 		store:            store,
 		codepipeline:     codepipeline,
-		sel:              selector.NewCodePipelineSelect(prompter, store, codepipeline),
+		sel:              selector.NewAppPipelineSelect(prompter, store, codepipeline),
 		prompt:           prompter,
 		w:                log.OutputWriter,
 	}

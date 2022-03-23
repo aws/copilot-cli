@@ -89,7 +89,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
 		store:              ssmStore,
-		sel:                selector.NewCodePipelineSelect(prompter, ssmStore, codepipeline),
+		sel:                selector.NewAppPipelineSelect(prompter, ssmStore, codepipeline),
 	}
 
 	return opts, nil
