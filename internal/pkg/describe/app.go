@@ -23,14 +23,14 @@ import (
 
 // App contains serialized parameters for an application.
 type App struct {
-	Name         string                   `json:"name"`
-	Version      string                   `json:"version"`
-	URI          string                   `json:"uri"`
-	Envs         []*config.Environment    `json:"environments"`
-	Services     []*config.Workload       `json:"services"`
-	Jobs         []*config.Workload       `json:"jobs"`
-	Pipelines    []*codepipeline.Pipeline `json:"pipelines"`
-	WorkloadEnvs map[string][]string      `json:"-"`
+	Name               string                   `json:"name"`
+	Version            string                   `json:"version"`
+	URI                string                   `json:"uri"`
+	Envs               []*config.Environment    `json:"environments"`
+	Services           []*config.Workload       `json:"services"`
+	Jobs               []*config.Workload       `json:"jobs"`
+	Pipelines          []*codepipeline.Pipeline `json:"pipelines"`
+	WkldDeployedtoEnvs map[string][]string      `json:"-"`
 }
 
 // JSONString returns the stringified App struct with json format.
@@ -69,10 +69,22 @@ func (a *App) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range a.Services {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", svc.Name, svc.Type, strings.Join(a.WorkloadEnvs[svc.Name], ", "))
+		var envs string
+		if len(a.WkldDeployedtoEnvs[svc.Name]) > 0 {
+			envs = strings.Join(a.WkldDeployedtoEnvs[svc.Name], ", ")
+		} else {
+			envs = "-"
+		}
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", svc.Name, svc.Type, envs)
 	}
 	for _, job := range a.Jobs {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", job.Name, job.Type, strings.Join(a.WorkloadEnvs[job.Name], ", "))
+		var envs string
+		if len(a.WkldDeployedtoEnvs[job.Name]) > 0 {
+			envs = strings.Join(a.WkldDeployedtoEnvs[job.Name], ", ")
+		} else {
+			envs = "-"
+		}
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", job.Name, job.Type, envs)
 	}
 	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))

@@ -5,11 +5,14 @@ package cli
 
 import (
 	"fmt"
-	"io"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"golang.org/x/net/context"
+	"golang.org/x/sync/errgroup"
+	"io"
+	"sort"
+	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -112,7 +115,7 @@ func (o *showAppOpts) Execute() error {
 }
 
 func (o *showAppOpts) description() (*describe.App, error) {
-	workloadEnvs := make(map[string][]string)
+	wkldDeployedtoEnvs := make(map[string][]string)
 	app, err := o.store.GetApplication(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", o.name, err)
@@ -129,24 +132,45 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list jobs in application %s: %w", o.name, err)
 	}
-	//1st approach takes 2 seconds to display the table
-	for _, env := range envs {
-		deployedJobs, err := o.deployStore.ListDeployedJobs(o.name, env.Name)
-		if err != nil {
-			return nil, fmt.Errorf("list deployed jobs %s: %w", o.name, err)
-		}
-		for _, job := range deployedJobs {
-			workloadEnvs[job] = append(workloadEnvs[job], env.Name)
-		}
-		deployedSvcs, err := o.deployStore.ListDeployedServices(o.name, env.Name)
-		if err != nil {
-			return nil, fmt.Errorf("list deployed services %s: %w", o.name, err)
-		}
-		for _, svc := range deployedSvcs {
-			workloadEnvs[svc] = append(workloadEnvs[svc], env.Name)
-		}
-	}
+	var mux sync.Mutex
+	g, ctx := errgroup.WithContext(context.Background())
+	defer ctx.Done()
+	for i := range envs {
+		env := envs[i]
+		g.Go(func() error {
+			deployedJobs, err := o.deployStore.ListDeployedJobs(o.name, env.Name)
+			if err != nil {
+				return fmt.Errorf("list jobs deployed to %s: %w", env.Name, err)
+			}
 
+			mux.Lock()
+			defer mux.Unlock()
+			for _, job := range deployedJobs {
+				wkldDeployedtoEnvs[job] = append(wkldDeployedtoEnvs[job], env.Name)
+			}
+			return nil
+		})
+		g.Go(func() error {
+			deployedSvcs, err := o.deployStore.ListDeployedServices(o.name, env.Name)
+			if err != nil {
+				return fmt.Errorf("list services deployed to %s: %w", env.Name, err)
+			}
+			mux.Lock()
+			defer mux.Unlock()
+			for _, svc := range deployedSvcs {
+				wkldDeployedtoEnvs[svc] = append(wkldDeployedtoEnvs[svc], env.Name)
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	// Sort the map values so that `output` is consistent and the unit test won't be flaky.
+	for key, value := range wkldDeployedtoEnvs {
+		sort.Strings(value)
+		wkldDeployedtoEnvs[key] = value
+	}
 	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.name,
 	})
@@ -187,14 +211,14 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		return nil, fmt.Errorf("get version for application %s: %w", o.name, err)
 	}
 	return &describe.App{
-		Name:         app.Name,
-		Version:      version,
-		URI:          app.Domain,
-		Envs:         trimmedEnvs,
-		Services:     trimmedSvcs,
-		Jobs:         trimmedJobs,
-		Pipelines:    pipelines,
-		WorkloadEnvs: workloadEnvs,
+		Name:               app.Name,
+		Version:            version,
+		URI:                app.Domain,
+		Envs:               trimmedEnvs,
+		Services:           trimmedSvcs,
+		Jobs:               trimmedJobs,
+		Pipelines:          pipelines,
+		WkldDeployedtoEnvs: wkldDeployedtoEnvs,
 	}, nil
 }
 

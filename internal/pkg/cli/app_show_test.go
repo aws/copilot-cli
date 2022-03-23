@@ -277,7 +277,7 @@ Workloads
   Name    Type           Environments
   ----    ----           ------------
   my-svc  lb-web-svc     test
-  my-job  Scheduled Job  test, prod
+  my-job  Scheduled Job  prod, test
 
 Pipelines
 
@@ -347,8 +347,8 @@ Workloads
 
   Name    Type           Environments
   ----    ----           ------------
-  my-svc  lb-web-svc     test, prod
-  my-job  Scheduled Job  test, prod
+  my-svc  lb-web-svc     prod, test
+  my-job  Scheduled Job  prod, test
 
 Pipelines
 
@@ -418,8 +418,8 @@ Workloads
 
   Name    Type           Environments
   ----    ----           ------------
-  my-svc  lb-web-svc     
-  my-job  Scheduled Job  
+  my-svc  lb-web-svc     -
+  my-job  Scheduled Job  -
 
 Pipelines
 
@@ -512,8 +512,8 @@ Workloads
 
   Name    Type           Environments
   ----    ----           ------------
-  my-svc  lb-web-svc     test2, prod2, staging
-  my-job  Scheduled Job  test1, prod1, staging
+  my-svc  lb-web-svc     prod2, staging, test2
+  my-job  Scheduled Job  prod1, staging, test1
 
 Pipelines
 
