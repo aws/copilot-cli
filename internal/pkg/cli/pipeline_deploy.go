@@ -267,14 +267,12 @@ func (o *deployPipelineOpts) getPipelineMft() (*manifest.Pipeline, error) {
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
-	path, err := o.ws.PipelineManifestLegacyPath()
-	if err != nil {
-		return nil, fmt.Errorf("get pipeline manifest path: %w", err)
-	}
-	pipelineMft, err := o.ws.ReadPipelineManifest(path)
+
+	pipelineMft, err := o.ws.ReadPipelineManifest(o.pipeline.Path)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
+
 	if err := pipelineMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
 	}

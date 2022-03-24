@@ -290,7 +290,6 @@ type wsPipelineGetter interface {
 	wsPipelineManifestReader
 	wlLister
 	ListPipelines() ([]workspace.PipelineManifest, error)
-	PipelineManifestLegacyPath() (string, error)
 }
 
 type wsAppManager interface {
