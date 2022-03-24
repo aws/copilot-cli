@@ -5,7 +5,7 @@
 
 !!! Attention
     AWS CodePipeline は OS ファミリーが Windows の Service をサポートしていません。
-    CodePipeline は、Build Stage で Linux ベースの AWS CodeBuild を使用しているため、現時点では Copilot Pipeline で Windows コンテナをビルドすることができません。
+    CodePipeline は、Build Stage で Linux ベースの AWS CodeBuild を使用しているため、現時点では Copilot Pipeline で Windows コンテナをビルドできません。
 
 <!-- textlint-disable ja-technical-writing/no-exclamation-question-mark -->
 ## Why?
@@ -59,6 +59,8 @@ Pipeline の設定はワークスペースのレベルで作成されます。�
 * __Release order__: デプロイ先の Environment (複数可)を尋ねられます - どの Environment からデプロイを実施したいか、その順番にあわせて Environment を選択しましょう。(複数の Environment に対して同時にデプロイを実行することはありません)。最初に _test_ Environment へデプロイし、その後 _prod_ Environment へデプロイする、といった設定がよくある順番でしょう。
 
 * __Tracking repository__: デプロイ先の Environment を選択すると、次にどの Git リポジトリを CodePipeline からトラックしたいかを尋ねられます。ここで選ぶリポジトリへのプッシュが、CodePipeline の Pipeline をトリガーするリポジトリとなります。(設定したい対象のリポジトリがここでリストに表示されない場合、 `--url` フラグで明示的に Git リポジトリの URL を渡すこともできます。)
+
+* __Tracking branch__: リポジトリを選択すると、 Copilot は現在のローカルブランチをパイプラインを利用するブランチとして指定します。これはステップ 2 で変更できます。
 
 ### ステップ2: Pipeline 用 Manifest ファイルの更新 (オプション)
 
