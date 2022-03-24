@@ -130,5 +130,5 @@ type ErrSecretNotFound struct {
 }
 
 func (err *ErrSecretNotFound) Error() string {
-	return fmt.Sprintf("secret %s was not found", err.secretName)
+	return fmt.Sprintf("secret %s was not found: %s", err.secretName, err.parentErr)
 }

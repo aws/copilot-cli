@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	sdkSecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"testing"
 	"time"
 
@@ -197,7 +198,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 		Name:        aws.String(testPipelineSecret),
 		Tags: []*sdkSecretsmanager.Tag{
 			{
-				Key:   aws.String("copilot-application"),
+				Key:   aws.String(deploy.AppTagKey),
 				Value: aws.String(mockTime.UTC().Format(time.UnixDate)),
 			},
 		},
