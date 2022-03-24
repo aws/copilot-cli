@@ -186,7 +186,7 @@ func (o *deletePipelineOpts) getSecret() error {
 		// Check for Copilot-assigned tag for added assurance. If tags not found, fall through.
 		for _, tag := range output.Tags {
 			if aws.StringValue(tag.Key) == "copilot-application" && aws.StringValue(tag.Value) == output.CreatedDate.UTC().Format(time.UnixDate) {
-				log.Infof("Found secret '%s'.\n", o.ghAccessTokenSecretName)
+				log.Infof("Found the Copilot-generated secret '%s' used to connect to your GitHub source repo.\n", o.ghAccessTokenSecretName)
 				return nil
 			}
 		}
@@ -196,7 +196,6 @@ func (o *deletePipelineOpts) getSecret() error {
 		return fmt.Errorf("describe secret %s: %w", o.ghAccessTokenSecretName, err)
 	}
 	// To get here, either the secret was found but tags didn't match, or Secrets Manager returned a ResourceNotFoundException.
-	log.Infof("Found no Copilot-generated Secrets Manager secrets to delete for pipeline '%s'.\n", o.name)
 	o.ghAccessTokenSecretName = ""
 	return nil
 }

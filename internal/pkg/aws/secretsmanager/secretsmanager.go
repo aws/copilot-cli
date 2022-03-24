@@ -84,9 +84,9 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 }
 
 type DescribeSecretOutput struct {
-	Name *string
+	Name        *string
 	CreatedDate *time.Time
-	Tags []*secretsmanager.Tag
+	Tags        []*secretsmanager.Tag
 }
 
 // DescribeSecret retrieves the details of a secret.

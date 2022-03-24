@@ -167,12 +167,12 @@ func TestSecretsManager_DescribeSecret(t *testing.T) {
 	mockAPIOutput := &secretsmanager.DescribeSecretOutput{
 		CreatedDate: aws.Time(mockTime),
 		Name:        aws.String(mockSecretName),
-		Tags: []*secretsmanager.Tag{},
+		Tags:        []*secretsmanager.Tag{},
 	}
 	mockOutput := &DescribeSecretOutput{
 		CreatedDate: aws.Time(mockTime),
 		Name:        aws.String(mockSecretName),
-		Tags: []*secretsmanager.Tag{},
+		Tags:        []*secretsmanager.Tag{},
 	}
 	mockAwsErr := awserr.New(secretsmanager.ErrCodeResourceNotFoundException, "", nil)
 
@@ -248,7 +248,6 @@ func TestSecretsManager_DescribeSecret(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedResp, resp)
 			}
-			require.Equal(t, tc.expectedError, err)
 		})
 	}
 }
