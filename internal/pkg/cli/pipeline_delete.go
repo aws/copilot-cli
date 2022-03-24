@@ -203,7 +203,7 @@ func (o *deletePipelineOpts) getSecret() error {
 
 // With GHv1 sources, we stored access tokens in SecretsManager. Pipelines generated prior to Copilot v1.4 have secrets named 'github-token-[appName]-[repoName]'. Pipelines prior to 1.16(?) were given default names of `pipeline-[appName]-[repoName]`. Users may have changed pipeline names, so this is our best-guess approach to deleting legacy pipeline secrets.
 func (o *deletePipelineOpts) pipelineSecretName() string {
-	appAndRepo := strings.TrimPrefix(o.name,"pipeline-")
+	appAndRepo := strings.TrimPrefix(o.name, "pipeline-")
 	return fmt.Sprintf("github-token-%s", appAndRepo)
 }
 

@@ -191,26 +191,27 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 }
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {
+	mockTime := time.Now()
 	mockResp := &sdkSecretsmanager.DescribeSecretOutput{
 		ARN:         aws.String("arn-goose"),
-		CreatedDate: aws.Time(time.Now()),
+		CreatedDate: aws.Time(mockTime),
 		Name:        aws.String(testPipelineSecret),
 		Tags: []*sdkSecretsmanager.Tag{
 			{
 				Key:   aws.String("copilot-application"),
-				Value: aws.String(time.Now().UTC().Format(time.UnixDate)),
+				Value: aws.String(mockTime.UTC().Format(time.UnixDate)),
 			},
 		},
 		VersionIdsToStages: nil,
 	}
 	mockBadResp := &sdkSecretsmanager.DescribeSecretOutput{
 		ARN:         aws.String("arn-goose"),
-		CreatedDate: aws.Time(time.Now()),
+		CreatedDate: aws.Time(mockTime),
 		Name:        aws.String(testPipelineSecret),
 		Tags: []*sdkSecretsmanager.Tag{
 			{
 				Key:   aws.String("someOtherKey"),
-				Value: aws.String(time.Now().UTC().Format(time.UnixDate)),
+				Value: aws.String(mockTime.UTC().Format(time.UnixDate)),
 			},
 		},
 		VersionIdsToStages: nil,
