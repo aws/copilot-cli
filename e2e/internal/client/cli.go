@@ -216,7 +216,6 @@ type PackageInput struct {
 
 // PipelineInitInput contains the parameters for calling copilot pipeline init.
 type PipelineInitInput struct {
-	AppName      string
 	Name         string
 	URL          string
 	GitBranch    string
@@ -225,20 +224,17 @@ type PipelineInitInput struct {
 
 // PipelineDeployInput contains the parameters for calling copilot pipeline deploy.
 type PipelineDeployInput struct {
-	AppName string
-	Name    string
+	Name string
 }
 
 // PipelineShowInput contains the parameters for calling copilot pipeline show.
 type PipelineShowInput struct {
-	AppName string
-	Name    string
+	Name string
 }
 
 // PipelineStatusInput contains the parameters for calling copilot pipeline status.
 type PipelineStatusInput struct {
-	AppName string
-	Name    string
+	Name string
 }
 
 // NewCLI returns a wrapper around CLI.
