@@ -83,8 +83,14 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 	return nil
 }
 
+type DescribeSecretOutput struct {
+	Name *string
+	CreatedDate *time.Time
+	Tags []*secretsmanager.Tag
+}
+
 // DescribeSecret retrieves the details of a secret.
-func (s *SecretsManager) DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error) {
+func (s *SecretsManager) DescribeSecret(secretName string) (*DescribeSecretOutput, error) {
 	resp, err := s.secretsManager.DescribeSecret(&secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(secretName),
 	})
@@ -99,7 +105,12 @@ func (s *SecretsManager) DescribeSecret(secretName string) (*secretsmanager.Desc
 		}
 		return nil, fmt.Errorf("describe secret %s: %w", secretName, err)
 	}
-	return resp, nil
+
+	return &DescribeSecretOutput{
+		Name:        resp.Name,
+		CreatedDate: resp.CreatedDate,
+		Tags:        resp.Tags,
+	}, nil
 }
 
 // ErrSecretAlreadyExists occurs if a secret with the same name already exists.

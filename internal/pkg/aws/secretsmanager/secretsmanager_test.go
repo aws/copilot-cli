@@ -7,6 +7,7 @@ package secretsmanager
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"testing"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager/mocks"
 	"github.com/golang/mock/gomock"
 
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/stretchr/testify/require"
 )
 
@@ -161,14 +161,18 @@ func TestSecretsManager_DeleteSecret(t *testing.T) {
 }
 
 func TestSecretsManager_DescribeSecret(t *testing.T) {
+	mockTime := time.Now()
 	mockSecretName := "github-token-backend-badgoose"
 	mockError := errors.New("mockError")
-	mockOutput := &secretsmanager.DescribeSecretOutput{
-		ARN:                aws.String("arn-goose"),
-		CreatedDate:        aws.Time(time.Now()),
-		Name:               aws.String(mockSecretName),
-		Tags:               []*secretsmanager.Tag{},
-		VersionIdsToStages: nil,
+	mockAPIOutput := &secretsmanager.DescribeSecretOutput{
+		CreatedDate: aws.Time(mockTime),
+		Name:        aws.String(mockSecretName),
+		Tags: []*secretsmanager.Tag{},
+	}
+	mockOutput := &DescribeSecretOutput{
+		CreatedDate: aws.Time(mockTime),
+		Name:        aws.String(mockSecretName),
+		Tags: []*secretsmanager.Tag{},
 	}
 	mockAwsErr := awserr.New(secretsmanager.ErrCodeResourceNotFoundException, "", nil)
 
@@ -176,7 +180,7 @@ func TestSecretsManager_DescribeSecret(t *testing.T) {
 		inSecretName string
 		callMock     func(m *mocks.Mockapi)
 
-		expectedResp  *secretsmanager.DescribeSecretOutput
+		expectedResp  *DescribeSecretOutput
 		expectedError error
 	}{
 		"should wrap error returned by DescribeSecret": {
@@ -207,7 +211,7 @@ func TestSecretsManager_DescribeSecret(t *testing.T) {
 			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeSecret(&secretsmanager.DescribeSecretInput{
 					SecretId: aws.String(mockSecretName),
-				}).Return(mockOutput, nil)
+				}).Return(mockAPIOutput, nil)
 			},
 			expectedResp:  mockOutput,
 			expectedError: nil,

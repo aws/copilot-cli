@@ -192,8 +192,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {
 	mockTime := time.Now()
-	mockResp := &sdkSecretsmanager.DescribeSecretOutput{
-		ARN:         aws.String("arn-goose"),
+	mockResp := &secretsmanager.DescribeSecretOutput{
 		CreatedDate: aws.Time(mockTime),
 		Name:        aws.String(testPipelineSecret),
 		Tags: []*sdkSecretsmanager.Tag{
@@ -202,10 +201,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				Value: aws.String(mockTime.UTC().Format(time.UnixDate)),
 			},
 		},
-		VersionIdsToStages: nil,
 	}
-	mockBadResp := &sdkSecretsmanager.DescribeSecretOutput{
-		ARN:         aws.String("arn-goose"),
+	mockBadResp := &secretsmanager.DescribeSecretOutput{
 		CreatedDate: aws.Time(mockTime),
 		Name:        aws.String(testPipelineSecret),
 		Tags: []*sdkSecretsmanager.Tag{
@@ -214,7 +211,6 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				Value: aws.String(mockTime.UTC().Format(time.UnixDate)),
 			},
 		},
-		VersionIdsToStages: nil,
 	}
 	testError := errors.New("some error")
 	testCases := map[string]struct {

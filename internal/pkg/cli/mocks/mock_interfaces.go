@@ -10,12 +10,12 @@ import (
 	reflect "reflect"
 
 	session "github.com/aws/aws-sdk-go/aws/session"
-	secretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	secretsmanager "github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	ssm "github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	deploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	config "github.com/aws/copilot-cli/internal/pkg/config"

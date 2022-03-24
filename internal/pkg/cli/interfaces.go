@@ -5,10 +5,10 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
