@@ -316,14 +316,6 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 			wantedError: errors.New("cannot specify both `--subnets` and `--env`"),
 		},
-		"both environment and security groups specified": {
-			basicOpts: defaultOpts,
-
-			inEnv:            "test",
-			inSecurityGroups: []string{"security group id1", "securty group id2"},
-
-			wantedError: errors.New("cannot specify both `--security-groups` and `--env`"),
-		},
 		"both application and subnets specified": {
 			basicOpts: defaultOpts,
 
@@ -331,14 +323,6 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inSubnets: []string{"subnet id"},
 
 			wantedError: errors.New("cannot specify both `--subnets` and `--app`"),
-		},
-		"both application and security groups specified": {
-			basicOpts: defaultOpts,
-
-			appName:          "my-app",
-			inSecurityGroups: []string{"security group id1", "security group id2"},
-
-			wantedError: errors.New("cannot specify both `--security-groups` and `--app`"),
 		},
 		"both default and subnets specified": {
 			basicOpts: defaultOpts,
