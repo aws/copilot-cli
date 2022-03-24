@@ -29,6 +29,11 @@ var RootUsage = fmt.Sprintf("{{h1 \"Commands\"}}{{ $cmds := .Commands }}{{$group
 {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
 
 {{h1 "Examples"}}{{code .Example}}{{end}}
+
+{{h1 "Get Involved"}}
+  Be a part of the Copilot ✨community✨! 
+  Ask or answer a question, submit a feature request... 
+  See 👉 https://aws.github.io/copilot-cli/community/get-involved/ to see how!
 `
 
 // Usage is the text template for a single command.
