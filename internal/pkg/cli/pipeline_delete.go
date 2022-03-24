@@ -8,11 +8,14 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -30,6 +33,7 @@ const (
 	pipelineSecretDeleteConfirmPrompt = "Are you sure you want to delete the source secret %s associated with pipeline %s?"
 	pipelineDeleteSecretConfirmHelp   = "This will delete the token associated with the source of your pipeline."
 
+	fmtPipelineDeletePrompt   = "Which deployed pipeline of application %s would you like to delete?"
 	fmtDeletePipelineStart    = "Deleting pipeline %s from application %s."
 	fmtDeletePipelineFailed   = "Failed to delete pipeline %s from application %s: %v.\n"
 	fmtDeletePipelineComplete = "Deleted pipeline %s from application %s.\n"
@@ -55,7 +59,7 @@ type deletePipelineOpts struct {
 	pipelineDeployer pipelineDeployer
 	codepipeline     pipelineGetter
 	prog             progress
-	sel              appSelector
+	sel              codePipelineSelector
 	prompt           prompter
 	secretsmanager   secretsManager
 	ws               wsPipelineGetter
@@ -74,16 +78,18 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	}
 	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
+	codepipeline := codepipeline.New(defaultSess)
 
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
+		codepipeline:       codepipeline,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
-		sel:                selector.NewConfigSelect(prompter, ssmStore),
 		secretsmanager:     secretsmanager.New(defaultSess),
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
 		store:              ssmStore,
+		sel:                selector.NewAppPipelineSelect(prompter, ssmStore, codepipeline),
 	}
 
 	return opts, nil
@@ -109,8 +115,14 @@ func (o *deletePipelineOpts) Ask() error {
 		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
 			return err
 		}
+	} else {
+		pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtPipelineDeletePrompt, color.HighlightUserInput(o.appName)))
+		if err != nil {
+			return err
+		}
+		o.name = pipelineName
 	}
-	if err := o.getNameAndSecret(); err != nil {
+	if err := o.getSecret(); err != nil {
 		return err
 	}
 	if o.skipConfirmation {
@@ -144,6 +156,16 @@ func (o *deletePipelineOpts) Execute() error {
 	return nil
 }
 
+func askDeployedPipelineName(sel codePipelineSelector, appName, msg string) (string, error) {
+	pipeline, err := sel.DeployedPipeline(msg, "", map[string]string{
+		deploy.AppTagKey: appName,
+	})
+	if err != nil {
+		return "", fmt.Errorf("select deployed pipelines: %w", err)
+	}
+	return pipeline, nil
+}
+
 func (o *deletePipelineOpts) askAppName() error {
 	app, err := o.sel.Application(pipelineDeleteAppNamePrompt, pipelineDeleteAppNameHelpPrompt)
 	if err != nil {
@@ -153,7 +175,7 @@ func (o *deletePipelineOpts) askAppName() error {
 	return nil
 }
 
-func (o *deletePipelineOpts) getNameAndSecret() error {
+func (o *deletePipelineOpts) getSecret() error {
 	path, err := o.ws.PipelineManifestLegacyPath()
 	if err != nil {
 		return fmt.Errorf("get path to pipeline manifest: %w", err)
@@ -161,9 +183,6 @@ func (o *deletePipelineOpts) getNameAndSecret() error {
 	manifest, err := o.ws.ReadPipelineManifest(path)
 	if err != nil {
 		return fmt.Errorf("read pipeline manifest: %w", err)
-	}
-	if o.name == "" {
-		o.name = manifest.Name
 	}
 
 	if secret, ok := (manifest.Source.Properties["access_token_secret"]).(string); ok {

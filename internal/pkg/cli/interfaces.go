@@ -5,8 +5,9 @@ package cli
 
 import (
 	"encoding"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"io"
+
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 
@@ -241,8 +242,8 @@ type wsPipelineManifestReader interface {
 }
 
 type wsPipelineWriter interface {
-	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error)
-	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
+	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
+	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
 }
 
 type serviceLister interface {
@@ -479,7 +480,12 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
-	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
+	WsPipeline(prompt, help string) (*workspace.PipelineManifest, error)
+}
+
+type codePipelineSelector interface {
+	appSelector
+	DeployedPipeline(prompt, help string, tags map[string]string) (string, error)
 }
 
 type wsSelector interface {
