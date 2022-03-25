@@ -5,33 +5,29 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"io"
-
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
-
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -161,6 +157,7 @@ type secretCreator interface {
 }
 
 type secretDeleter interface {
+	DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error)
 	DeleteSecret(secretName string) error
 }
 

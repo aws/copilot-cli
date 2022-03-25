@@ -15,6 +15,7 @@ import (
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	secretsmanager "github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	ssm "github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	deploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
@@ -1381,6 +1382,21 @@ func (mr *MocksecretsManagerMockRecorder) DeleteSecret(secretName interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MocksecretsManager)(nil).DeleteSecret), secretName)
 }
 
+// DescribeSecret mocks base method.
+func (m *MocksecretsManager) DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeSecret", secretName)
+	ret0, _ := ret[0].(*secretsmanager.DescribeSecretOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeSecret indicates an expected call of DescribeSecret.
+func (mr *MocksecretsManagerMockRecorder) DescribeSecret(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*MocksecretsManager)(nil).DescribeSecret), secretName)
+}
+
 // MocksecretCreator is a mock of secretCreator interface.
 type MocksecretCreator struct {
 	ctrl     *gomock.Controller
@@ -1454,6 +1470,21 @@ func (m *MocksecretDeleter) DeleteSecret(secretName string) error {
 func (mr *MocksecretDeleterMockRecorder) DeleteSecret(secretName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MocksecretDeleter)(nil).DeleteSecret), secretName)
+}
+
+// DescribeSecret mocks base method.
+func (m *MocksecretDeleter) DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeSecret", secretName)
+	ret0, _ := ret[0].(*secretsmanager.DescribeSecretOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeSecret indicates an expected call of DescribeSecret.
+func (mr *MocksecretDeleterMockRecorder) DescribeSecret(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecret", reflect.TypeOf((*MocksecretDeleter)(nil).DescribeSecret), secretName)
 }
 
 // MockimageBuilderPusher is a mock of imageBuilderPusher interface.
