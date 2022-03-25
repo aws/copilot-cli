@@ -114,7 +114,7 @@ func (o *showAppOpts) Execute() error {
 	fmt.Fprint(o.w, data)
 	return nil
 }
-func (o *showAppOpts) populateDeployedWorkloads(listWorkloads func(app, env string) ([]string, error), wkldDeployedtoEnvs map[string][]string, env string, mux sync.Mutex) error {
+func (o *showAppOpts) populateDeployedWorkloads(listWorkloads func(app, env string) ([]string, error), wkldDeployedtoEnvs map[string][]string, env string, mux *sync.Mutex) error {
 	deployedworkload, err := listWorkloads(o.name, env)
 	if err != nil {
 		return fmt.Errorf("list services/jobs deployed to %s: %w", env, err)
@@ -155,10 +155,10 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	for i := range envs {
 		env := envs[i]
 		g.Go(func() error {
-			return o.populateDeployedWorkloads(o.deployStore.ListDeployedJobs, wkldDeployedtoEnvs, env.Name, mux)
+			return o.populateDeployedWorkloads(o.deployStore.ListDeployedJobs, wkldDeployedtoEnvs, env.Name, &mux)
 		})
 		g.Go(func() error {
-			return o.populateDeployedWorkloads(o.deployStore.ListDeployedServices, wkldDeployedtoEnvs, env.Name, mux)
+			return o.populateDeployedWorkloads(o.deployStore.ListDeployedServices, wkldDeployedtoEnvs, env.Name, &mux)
 		})
 	}
 	if err := g.Wait(); err != nil {
