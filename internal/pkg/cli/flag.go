@@ -90,7 +90,6 @@ const (
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
 	privateSubnetsFlag = "import-private-subnets"
-	certsFlag          = "import-cert-arns"
 
 	overrideVPCCIDRFlag            = "override-vpc-cidr"
 	overrideAZsFlag                = "override-az-names"
@@ -282,7 +281,6 @@ Cannot be specified with any other flags.`
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
 	privateSubnetsFlagDescription = "Optional. Use existing private subnet IDs."
-	certsFlagDescription          = "Optional. Use existing ACM certificates."
 
 	overrideVPCCIDRFlagDescription = `Optional. Global CIDR to use for VPC.
 (default 10.0.0.0/16)`
