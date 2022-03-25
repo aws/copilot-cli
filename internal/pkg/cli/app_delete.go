@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -91,6 +92,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
+		codepipeline: codepipeline.New(defaultSession),
 		svcDeleteExecutor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
@@ -139,6 +141,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		pipelineDeleteExecutor: func(pipelineName string) (executor, error) {
 			opts, err := newDeletePipelineOpts(deletePipelineVars{
 				appName:            vars.name,
+				name:               pipelineName,
 				skipConfirmation:   true,
 				shouldDeleteSecret: true,
 			})
