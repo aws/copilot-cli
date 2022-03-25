@@ -90,6 +90,12 @@ logging:
     <key>: <value>
   # カスタムの Fluent Bit イメージ内の設定ファイルのフルパス
   configFilePath: <config file path>
+  # サイドカーコンテナに対する環境変数 (オプション)
+  variables:
+    <key>: <value>
+  # サイドカーコンテナに公開するシークレット (オプション)
+  secrets:
+    <key>: <value>
 ```
 例えば以下のように設定できます。
 
