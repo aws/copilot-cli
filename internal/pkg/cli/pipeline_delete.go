@@ -21,6 +21,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -122,9 +124,7 @@ func (o *deletePipelineOpts) Ask() error {
 		}
 		o.name = pipelineName
 	}
-	if err := o.getSecret(); err != nil {
-		return err
-	}
+
 	if o.skipConfirmation {
 		return nil
 	}
@@ -145,6 +145,9 @@ func (o *deletePipelineOpts) Ask() error {
 
 // Execute deletes the secret and pipeline stack.
 func (o *deletePipelineOpts) Execute() error {
+	if err := o.getSecret(); err != nil {
+		return err
+	}
 	if err := o.deleteSecret(); err != nil {
 		return err
 	}
@@ -176,19 +179,36 @@ func (o *deletePipelineOpts) askAppName() error {
 }
 
 func (o *deletePipelineOpts) getSecret() error {
-	path, err := o.ws.PipelineManifestLegacyPath()
+	// Look for default secret name for GHv1 access token based on default pipeline name.
+	o.ghAccessTokenSecretName = o.pipelineSecretName()
+	output, err := o.secretsmanager.DescribeSecret(o.ghAccessTokenSecretName)
 	if err != nil {
-		return fmt.Errorf("get path to pipeline manifest: %w", err)
-	}
-	manifest, err := o.ws.ReadPipelineManifest(path)
-	if err != nil {
-		return fmt.Errorf("read pipeline manifest: %w", err)
+		var notFoundErr *secretsmanager.ErrSecretNotFound
+		if errors.As(err, &notFoundErr) {
+			o.ghAccessTokenSecretName = ""
+			return nil
+		}
+		return fmt.Errorf("describe secret %s: %w", o.ghAccessTokenSecretName, err)
 	}
 
-	if secret, ok := (manifest.Source.Properties["access_token_secret"]).(string); ok {
-		o.ghAccessTokenSecretName = secret
+	for _, tag := range output.Tags {
+		if aws.StringValue(tag.Key) == deploy.AppTagKey && aws.StringValue(tag.Value) == output.CreatedDate.UTC().Format(time.UnixDate) {
+			return nil
+		}
 	}
+	// The secret was found but tags didn't match.
+	o.ghAccessTokenSecretName = ""
 	return nil
+}
+
+// With GHv1 sources, we stored access tokens in SecretsManager. Pipelines generated
+// prior to Copilot v1.4 have secrets named 'github-token-[appName]-[repoName]'.
+// Pipelines prior to 1745fee were given default names of `pipeline-[appName]-[repoName]`.
+// Users may have changed pipeline names, so this is our best-guess approach to
+// deleting legacy pipeline secrets.
+func (o *deletePipelineOpts) pipelineSecretName() string {
+	appAndRepo := strings.TrimPrefix(o.name, "pipeline-")
+	return fmt.Sprintf("github-token-%s", appAndRepo)
 }
 
 func (o *deletePipelineOpts) deleteSecret() error {
