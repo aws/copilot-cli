@@ -201,7 +201,7 @@ func (o *deleteAppOpts) Execute() error {
 		return err
 	}
 
-	// deletePipeline must happen before deleteAppResources and deleteWs, since the pipeline delete command relies
+	// deletePipelines must happen before deleteAppResources and deleteWs, since the pipeline delete command relies
 	// on the application stackset as well as the workspace directory to still exist.
 	if err := o.deletePipelines(); err != nil {
 		return err
