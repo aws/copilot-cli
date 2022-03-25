@@ -97,6 +97,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ArtifactBucketARN:      e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
 		ImportVPC:              e.in.ImportVPCConfig,
+		ImportCertARNs:         e.in.ImportCertARNs,
 		VPCConfig:              vpcConf,
 		Version:                e.in.Version,
 		Telemetry:              e.in.Telemetry,

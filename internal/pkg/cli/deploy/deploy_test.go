@@ -41,6 +41,7 @@ type deployMocks struct {
 	mockUploader               *mocks.Mockuploader
 	mockVersionGetter          *mocks.MockversionGetter
 	mockFileReader             *mocks.MockfileReader
+	mockValidator              *mocks.MockaliasCertValidator
 }
 
 type mockWorkloadMft struct {
@@ -261,6 +262,8 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		mockName     = "mockWkld"
 		mockS3Bucket = "mockBucket"
 	)
+	mockAliases := []string{"example.com", "foobar.com"}
+	mockCertARNs := []string{"mockCertARN"}
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
 	}
@@ -284,6 +287,26 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("", mockError)
 			},
 			wantErr: fmt.Errorf("get service discovery endpoint: some error"),
+		},
+		"fail to validate certificate aliases": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: mockCertARNs,
+				},
+			},
+			inAliases: manifest.Alias{
+				StringSlice: mockAliases,
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockValidator.EXPECT().ValidCertificatesAliases(mockAliases, mockCertARNs).Return(mockError)
+			},
+			wantErr: fmt.Errorf("validate aliases against the imported certificate for env mockEnv: some error"),
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
@@ -314,7 +337,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			wantErr: errors.New("alias specified when application is not associated with a domain"),
+			wantErr: errors.New("alias specified when application is not associated with a domain and env mockEnv doesn't have any certificates"),
 		},
 		"fail to get app version": {
 			inAliases: manifest.Alias{String: aws.String("mockAlias")},
@@ -513,22 +536,22 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"success": {
 			inAliases: manifest.Alias{
-				StringSlice: []string{
-					"v1.mockDomain",
-					"mockDomain",
-				},
+				StringSlice: mockAliases,
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: mockCertARNs,
+				},
 			},
 			inApp: &config.Application{
 				Name:   mockAppName,
 				Domain: "mockDomain",
 			},
 			mock: func(m *deployMocks) {
-				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockValidator.EXPECT().ValidCertificatesAliases(mockAliases, mockCertARNs).Return(nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
@@ -566,6 +589,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				mockServiceForceUpdater:    mocks.NewMockserviceForceUpdater(ctrl),
 				mockSpinner:                mocks.NewMockspinner(ctrl),
 				mockPublicCIDRBlocksGetter: mocks.NewMockpublicCIDRBlocksGetter(ctrl),
+				mockValidator:              mocks.NewMockaliasCertValidator(ctrl),
 			}
 			tc.mock(m)
 
@@ -589,6 +613,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				},
 				appVersionGetter:       m.mockVersionGetter,
 				publicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
+				aliasCertValidator:     m.mockValidator,
 				lbMft: &manifest.LoadBalancedWebService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),
@@ -1004,6 +1029,141 @@ func Test_validateTopicsExist(t *testing.T) {
 				require.EqualError(t, err, tc.wantErr)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestWorkloadDeployer_albOpts(t *testing.T) {
+	const (
+		mockAppName = "mockApp"
+		mockEnvName = "mockEnv"
+		mockName    = "mockWkld"
+		mockDomain  = "example.com"
+		mockRootARN = "mockRootARN"
+	)
+	mockError := errors.New("cannot deploy service mockWkld without custom domain to environment mockEnv with certificate imported")
+	mockAliases := manifest.Alias{StringSlice: []string{"example.com", "foobar.com"}}
+	mockCertARNs := []string{"mockCertARN"}
+	tests := map[string]struct {
+		inAliases       manifest.Alias
+		inDomain        string
+		inImportedCerts []string
+		inALBDisabled   bool
+
+		wantErr     error
+		wantOptsLen int
+	}{
+		"succeed when ALB is disabled with app domain": {
+			inALBDisabled: true,
+			inDomain:      mockDomain,
+
+			wantOptsLen: 1, // only ALB
+		},
+		"succeed when ALB is disabled without app domain": {
+			inALBDisabled: true,
+
+			wantOptsLen: 0,
+		},
+		"domain app: fail when alias is not specify and imported certs specified": {
+			inDomain:        mockDomain,
+			inImportedCerts: mockCertARNs,
+
+			wantErr: mockError,
+		},
+		"domain app: HTTPS when alias is specified and imported certs specified": {
+			inDomain:        mockDomain,
+			inImportedCerts: mockCertARNs,
+			inAliases:       mockAliases,
+
+			wantOptsLen: 2,
+		},
+		"domain app: HTTPS when no imported certs specified": {
+			inDomain: mockDomain,
+
+			wantOptsLen: 2,
+		},
+		"domain app: HTTPS when no imported certs specified with alias": {
+			inDomain:  mockDomain,
+			inAliases: mockAliases,
+
+			wantOptsLen: 2,
+		},
+		"app without domain: HTTPS when imported certs with alias": {
+			inAliases:       mockAliases,
+			inImportedCerts: mockCertARNs,
+
+			wantOptsLen: 1, // only HTTPS
+		},
+		"app without domain: fail when imported certs without alias": {
+			inImportedCerts: mockCertARNs,
+
+			wantErr: mockError,
+		},
+		"app without domain: HTTP when no imported certs without alias": {
+			wantOptsLen: 0,
+		},
+		"app without domain: HTTP when no imported certs specified with alias (ideally not possible because fail early)": {
+			wantOptsLen: 0,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			deployer := lbSvcDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						name: mockName,
+						app: &config.Application{
+							Name:   mockAppName,
+							Domain: tc.inDomain,
+						},
+						env: &config.Environment{
+							Name: mockEnvName,
+							CustomConfig: &config.CustomizeEnv{
+								ImportCertARNs: tc.inImportedCerts,
+							},
+						},
+					},
+				},
+				lbMft: &manifest.LoadBalancedWebService{
+					Workload: manifest.Workload{
+						Name: aws.String(mockName),
+					},
+					LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
+						ImageConfig: manifest.ImageWithPortAndHealthcheck{
+							ImageWithPort: manifest.ImageWithPort{
+								Image: manifest.Image{
+									Build: manifest.BuildArgsOrString{BuildString: aws.String("/Dockerfile")},
+								},
+								Port: aws.Uint16(80),
+							},
+						},
+						RoutingRule: manifest.RoutingRuleConfigOrBool{
+							Enabled: aws.Bool(false),
+						},
+					},
+				},
+			}
+			if !tc.inALBDisabled {
+				deployer.lbMft.RoutingRule = manifest.RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+						Path:  aws.String("/"),
+						Alias: tc.inAliases,
+					},
+				}
+			}
+
+			opts, gotErr := deployer.albOpts(mockRootARN)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantOptsLen, len(opts))
 			}
 		})
 	}

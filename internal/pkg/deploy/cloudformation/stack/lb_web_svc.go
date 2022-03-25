@@ -69,7 +69,6 @@ type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
 // the service is being deployed into has an HTTPS configured listener.
 func WithHTTPS() func(s *LoadBalancedWebService) {
 	return func(s *LoadBalancedWebService) {
-		s.dnsDelegationEnabled = true
 		s.httpsEnabled = true
 	}
 }
@@ -202,6 +201,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Variables:                      s.manifest.TaskConfig.Variables,
 		Secrets:                        convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                        aliases,
+		HTTPSListener:                  s.httpsEnabled,
 		NestedStack:                    addonsOutputs,
 		AddonsExtraParams:              addonsParams,
 		Sidecars:                       sidecars,

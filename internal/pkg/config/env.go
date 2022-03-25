@@ -29,18 +29,25 @@ type Environment struct {
 
 // CustomizeEnv represents the custom environment config.
 type CustomizeEnv struct {
-	ImportVPC *ImportVPC `json:"importVPC,omitempty"`
-	VPCConfig *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportVPC      *ImportVPC `json:"importVPC,omitempty"`
+	VPCConfig      *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportCertARNs []string   `json:"importCertARNs,omitempty"`
 }
 
-// NewCustomizeEnv returns a new CustomizeEnv struct.
-func NewCustomizeEnv(importVPC *ImportVPC, adjustVPC *AdjustVPC) *CustomizeEnv {
-	if importVPC == nil && adjustVPC == nil {
+// HasImportedCerts return if the environment has imported certs.
+func (e *Environment) HasImportedCerts() bool {
+	return e.CustomConfig != nil && len(e.CustomConfig.ImportCertARNs) != 0
+}
+
+// CustomizeEnvP returns a pointer to the CustomizeEnv value passed in.
+func CustomizeEnvP(input CustomizeEnv) *CustomizeEnv {
+	if input.ImportVPC == nil && input.VPCConfig == nil && input.ImportCertARNs == nil {
 		return nil
 	}
 	return &CustomizeEnv{
-		ImportVPC: importVPC,
-		VPCConfig: adjustVPC,
+		ImportVPC:      input.ImportVPC,
+		VPCConfig:      input.VPCConfig,
+		ImportCertARNs: input.ImportCertARNs,
 	}
 }
 

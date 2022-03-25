@@ -13,6 +13,7 @@ DelegateDNSAction:
     NameServers: !GetAtt EnvironmentHostedZone.NameServers
     RootDNSRole: !Ref AppDNSDelegationRole
 
+{{- if not .ImportCertARNs}}
 HTTPSCert:
   Metadata:
     'aws:copilot:description': 'Request and validate an ACM certificate for your domain'
@@ -36,7 +37,6 @@ CustomDomainAction:
   Metadata:
     'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
   Condition: HasAliases
-  DependsOn: HTTPSCert
   Type: Custom::CustomDomainFunction
   Properties:
     ServiceToken: !GetAtt CustomDomainFunction.Arn
@@ -47,3 +47,4 @@ CustomDomainAction:
     DomainName: !Ref AppDNSName
     LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
     LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID 
+{{- end}}

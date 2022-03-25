@@ -1,4 +1,5 @@
 # DNS Delegation Resources
+{{- if not .ImportCertARNs}}
 CertificateValidationFunction:
   Type: AWS::Lambda::Function
   Condition: DelegateDNS
@@ -8,19 +9,6 @@ CertificateValidationFunction:
       S3Key: {{.DNSCertValidatorLambda}}
     Handler: "index.certificateRequestHandler"
     Timeout: 900
-    MemorySize: 512
-    Role: !GetAtt 'CustomResourceRole.Arn'
-    Runtime: nodejs12.x
-
-DNSDelegationFunction:
-  Type: AWS::Lambda::Function
-  Condition: DelegateDNS
-  Properties:
-    Code:
-      S3Bucket: {{.ScriptBucketName}}
-      S3Key: {{.DNSDelegationLambda}}
-    Handler: "index.domainDelegationHandler"
-    Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x
@@ -37,3 +25,17 @@ CustomDomainFunction:
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x 
+{{- end}}
+
+DNSDelegationFunction:
+  Type: AWS::Lambda::Function
+  Condition: DelegateDNS
+  Properties:
+    Code:
+      S3Bucket: {{.ScriptBucketName}}
+      S3Key: {{.DNSDelegationLambda}}
+    Handler: "index.domainDelegationHandler"
+    Timeout: 600
+    MemorySize: 512
+    Role: !GetAtt 'CustomResourceRole.Arn'
+    Runtime: nodejs12.x

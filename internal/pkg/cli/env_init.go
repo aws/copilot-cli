@@ -141,9 +141,10 @@ type initEnvVars struct {
 	isProduction  bool   // True means retain resources even after deletion.
 	defaultConfig bool   // True means using default environment configuration.
 
-	importVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
-	adjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
-	telemetry telemetryVars // Configure observability and monitoring settings.
+	importVPC   importVPCVars // Existing VPC resources to use instead of creating new ones.
+	adjustVPC   adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+	telemetry   telemetryVars // Configure observability and monitoring settings.
+	importCerts []string      // Addtional existing ACM certificates to use.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -320,7 +321,11 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
-	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
+	env.CustomConfig = config.CustomizeEnvP(config.CustomizeEnv{
+		ImportVPC:      o.importVPCConfig(),
+		VPCConfig:      o.adjustVPCConfig(),
+		ImportCertARNs: o.importCerts,
+	})
 	env.Telemetry = o.telemetry.toConfig()
 
 	// 6. Store the environment in SSM.
@@ -699,6 +704,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		ArtifactBucketKeyARN: artifactBucketKeyARN,
 		AdjustVPCConfig:      o.adjustVPCConfig(),
 		ImportVPCConfig:      o.importVPCConfig(),
+		ImportCertARNs:       o.importCerts,
 		Telemetry:            o.telemetry.toConfig(),
 		Version:              deploy.LatestEnvTemplateVersion,
 	}
@@ -811,10 +817,11 @@ func buildEnvInitCmd() *cobra.Command {
   Creates a prod-iad environment using your "prod-admin" AWS profile and enables container insights.
   /code $ copilot env init --name prod-iad --profile prod-admin --container-insights
 
-  Creates an environment with imported VPC resources.
+  Creates an environment with imported resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
   /code --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
-  /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+  /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f \
+  /code --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 
   Creates an environment with overridden CIDRs and AZs.
   /code $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
@@ -843,6 +850,7 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.importVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.importCerts, certsFlag, nil, certsFlagDescription)
 
 	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, overrideVPCCIDRFlag, net.IPNet{}, overrideVPCCIDRFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.adjustVPC.AZs, overrideAZsFlag, nil, overrideAZsFlagDescription)
@@ -865,6 +873,7 @@ func buildEnvInitCmd() *cobra.Command {
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(certsFlag))
 
 	resourcesConfigFlags := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))

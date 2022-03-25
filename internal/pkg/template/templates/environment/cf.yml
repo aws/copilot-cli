@@ -37,14 +37,23 @@ Conditions:
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
-    - !Condition DelegateDNS
     - !Condition CreateALB
+    - !Condition UseHTTPS
+  UseHTTPS: !Or
+    - !Condition DelegateDNS
+    - !Condition HasImportedCert
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
+  HasImportedCert:
+{{- if .ImportCertARNs}}
+    !Equals [ 'true', 'true' ]
+{{- else}}
+    !Equals [ 'true', 'false' ]
+{{- end}}
 Resources:
 {{- if not .ImportVPC}}
 {{include "vpc-resources" .VPCConfig | indent 2}}
@@ -189,17 +198,31 @@ Resources:
     Metadata:
       'aws:copilot:description': 'A load balancer listener to route HTTPS traffic'
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn: HTTPSCert
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
+{{- if .ImportCertARNs}}
+        - CertificateArn: {{index .ImportCertARNs 0}}
+{{- else }}
         - CertificateArn: !Ref HTTPSCert
+{{- end }}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultHTTPTargetGroup
           Type: forward
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- range $ind, $arn := .ImportCertARNs}}
+{{- if gt $ind 0}}
+  HTTPSImportCertificate{{inc $ind}}:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Condition: ExportHTTPSListener
+    Properties:
+      ListenerArn: !Ref HTTPSListener
+      Certificates:
+        - CertificateArn: {{$arn}}
+{{- end}}
+{{- end}}
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
@@ -405,8 +428,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
   EnabledFeatures:
-    # We don't need to include Aliases because updating it always results in the CustomDomain action to update.
-    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
