@@ -69,20 +69,16 @@ func (a *App) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range a.Services {
-		var envs string
+		envs := "-"
 		if len(a.WkldDeployedtoEnvs[svc.Name]) > 0 {
 			envs = strings.Join(a.WkldDeployedtoEnvs[svc.Name], ", ")
-		} else {
-			envs = "-"
 		}
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", svc.Name, svc.Type, envs)
 	}
 	for _, job := range a.Jobs {
-		var envs string
+		envs := "-"
 		if len(a.WkldDeployedtoEnvs[job.Name]) > 0 {
 			envs = strings.Join(a.WkldDeployedtoEnvs[job.Name], ", ")
-		} else {
-			envs = "-"
 		}
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", job.Name, job.Type, envs)
 	}

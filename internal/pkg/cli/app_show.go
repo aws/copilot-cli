@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"golang.org/x/net/context"
-	"golang.org/x/sync/errgroup"
-	"io"
-	"sort"
-	"sync"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"golang.org/x/net/context"
+	"golang.org/x/sync/errgroup"
+	"io"
+	"sort"
+	"sync"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -29,6 +29,7 @@ import (
 const (
 	appShowNamePrompt     = "Which application would you like to show?"
 	appShowNameHelpPrompt = "An application is a collection of related services."
+	waitForStackTimeout   = 30 * time.Second
 )
 
 type showAppVars struct {
@@ -113,9 +114,21 @@ func (o *showAppOpts) Execute() error {
 	fmt.Fprint(o.w, data)
 	return nil
 }
+func (o *showAppOpts) populateDeployedWorkloads(listWorkloads func(app, env string) ([]string, error), wkldDeployedtoEnvs map[string][]string, env string, mux sync.Mutex) error {
+	deployedworkload, err := listWorkloads(o.name, env)
+	if err != nil {
+		return fmt.Errorf("list services/jobs deployed to %s: %w", env, err)
+	}
+
+	mux.Lock()
+	defer mux.Unlock()
+	for _, wkld := range deployedworkload {
+		wkldDeployedtoEnvs[wkld] = append(wkldDeployedtoEnvs[wkld], env)
+	}
+	return nil
+}
 
 func (o *showAppOpts) description() (*describe.App, error) {
-	wkldDeployedtoEnvs := make(map[string][]string)
 	app, err := o.store.GetApplication(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", o.name, err)
@@ -132,44 +145,28 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list jobs in application %s: %w", o.name, err)
 	}
-	var mux sync.Mutex
-	g, ctx := errgroup.WithContext(context.Background())
+
+	wkldDeployedtoEnvs := make(map[string][]string)
+	ctx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	g, ctx := errgroup.WithContext(ctx)
+	defer cancelWait()
 	defer ctx.Done()
+	var mux sync.Mutex
 	for i := range envs {
 		env := envs[i]
 		g.Go(func() error {
-			deployedJobs, err := o.deployStore.ListDeployedJobs(o.name, env.Name)
-			if err != nil {
-				return fmt.Errorf("list jobs deployed to %s: %w", env.Name, err)
-			}
-
-			mux.Lock()
-			defer mux.Unlock()
-			for _, job := range deployedJobs {
-				wkldDeployedtoEnvs[job] = append(wkldDeployedtoEnvs[job], env.Name)
-			}
-			return nil
+			return o.populateDeployedWorkloads(o.deployStore.ListDeployedJobs, wkldDeployedtoEnvs, env.Name, mux)
 		})
 		g.Go(func() error {
-			deployedSvcs, err := o.deployStore.ListDeployedServices(o.name, env.Name)
-			if err != nil {
-				return fmt.Errorf("list services deployed to %s: %w", env.Name, err)
-			}
-			mux.Lock()
-			defer mux.Unlock()
-			for _, svc := range deployedSvcs {
-				wkldDeployedtoEnvs[svc] = append(wkldDeployedtoEnvs[svc], env.Name)
-			}
-			return nil
+			return o.populateDeployedWorkloads(o.deployStore.ListDeployedServices, wkldDeployedtoEnvs, env.Name, mux)
 		})
 	}
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 	// Sort the map values so that `output` is consistent and the unit test won't be flaky.
-	for key, value := range wkldDeployedtoEnvs {
-		sort.Strings(value)
-		wkldDeployedtoEnvs[key] = value
+	for k := range wkldDeployedtoEnvs {
+		sort.Strings(wkldDeployedtoEnvs[k])
 	}
 	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.name,
