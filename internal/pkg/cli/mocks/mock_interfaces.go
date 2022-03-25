@@ -2769,21 +2769,6 @@ func (mr *MockwsPipelineReaderMockRecorder) ListWorkloads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwsPipelineReader)(nil).ListWorkloads))
 }
 
-// PipelineManifestLegacyPath mocks base method.
-func (m *MockwsPipelineReader) PipelineManifestLegacyPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PipelineManifestLegacyPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PipelineManifestLegacyPath indicates an expected call of PipelineManifestLegacyPath.
-func (mr *MockwsPipelineReaderMockRecorder) PipelineManifestLegacyPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineManifestLegacyPath", reflect.TypeOf((*MockwsPipelineReader)(nil).PipelineManifestLegacyPath))
-}
-
 // ReadPipelineManifest mocks base method.
 func (m *MockwsPipelineReader) ReadPipelineManifest(path string) (*manifest.Pipeline, error) {
 	m.ctrl.T.Helper()
@@ -2850,21 +2835,6 @@ func (m *MockwsPipelineGetter) ListWorkloads() ([]string, error) {
 func (mr *MockwsPipelineGetterMockRecorder) ListWorkloads() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockwsPipelineGetter)(nil).ListWorkloads))
-}
-
-// PipelineManifestLegacyPath mocks base method.
-func (m *MockwsPipelineGetter) PipelineManifestLegacyPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PipelineManifestLegacyPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PipelineManifestLegacyPath indicates an expected call of PipelineManifestLegacyPath.
-func (mr *MockwsPipelineGetterMockRecorder) PipelineManifestLegacyPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineManifestLegacyPath", reflect.TypeOf((*MockwsPipelineGetter)(nil).PipelineManifestLegacyPath))
 }
 
 // ReadPipelineManifest mocks base method.
