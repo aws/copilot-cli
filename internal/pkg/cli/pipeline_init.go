@@ -179,6 +179,10 @@ func (o *initPipelineOpts) Ask() error {
 		return err
 	}
 
+	if err := o.validateDuplicatePipeline(); err != nil {
+		return err
+	}
+
 	if err := o.askOrValidateURL(); err != nil {
 		return err
 	}
@@ -196,36 +200,33 @@ func (o *initPipelineOpts) Ask() error {
 }
 
 // TODO see how errors show up in CLI, figure out best wording
-func (o *initPipelineOpts) validateDuplicateSvc() error {
-	name := "TODO: replace with o.name"
+func (o *initPipelineOpts) validateDuplicatePipeline() error {
 	// make sure pipeline doesn't exist locally (?)
 	// TODO what happens if you do: (and match this logic here)
 	//   1. svc delete
 	//   2. svc init, without deleting the manifest file
-	fullName := fmt.Sprintf(fmtPipelineName, o.appName, name)
+	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
 
 	// make sure pipeline isn't already deployed
-	names, err := o.pipeline.ListPipelineNamesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
-	if err != nil {
-		return fmt.Errorf("validate if pipeline exists: %w", err)
-	}
-
-	for _, name := range names {
-		if name == fullName {
-			// TODO 'delete the existing one' -> 'also delete the existing manifest file?'
-			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
+	_, err := o.pipeline.GetPipeline(fullName)
+	if err == nil {
+		log.Errorf(`It seems like you are trying to init a pipeline that already exists.
 To recreate the pipeline, please run:
 1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
-If you'd prefer a new default manifest, please manually delete the existing one.
+If you'd prefer a new default manifest, please manually delete the existing file.
 2. And then %s
 `,
-				color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", name)),
-				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", name)))
-			return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(name))
-		}
+			color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", o.name)),
+			color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
+		return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(o.name))
 	}
+
+	/*
+		var notFound *config.ErrNoSuchService
+		if !errors.As(err, &notFound) {
+			return fmt.Errorf("validate if service exists: %w", err)
+		}
+	*/
 
 	return nil
 }
