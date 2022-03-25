@@ -198,7 +198,7 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 	}
 
 	// add the legacy pipeline
-	legacyPath, err := ws.PipelineManifestLegacyPath()
+	legacyPath, err := ws.pipelineManifestLegacyPath()
 	if err != nil {
 		return nil, err
 	}
@@ -398,8 +398,8 @@ func IsInGitRepository(fs FileStat) bool {
 	return !os.IsNotExist(err)
 }
 
-// PipelineManifestLegacyPath returns the path to pipeline manifests before multiple pipelines (and the copilot/pipelines/ dir) were enabled.
-func (ws *Workspace) PipelineManifestLegacyPath() (string, error) {
+// pipelineManifestLegacyPath returns the path to pipeline manifests before multiple pipelines (and the copilot/pipelines/ dir) were enabled.
+func (ws *Workspace) pipelineManifestLegacyPath() (string, error) {
 	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err
