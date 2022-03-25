@@ -2,10 +2,9 @@
 
 ???+ note "frontend Service のサンプル Manifest"
 
-    ```yaml
+```yaml
     # Service 名はロググループや App Runner サービスなどのリソースの命名に利用されます。
     name: frontend
-    # 実行する Service の「アーキテクチャ」
     type: Request-Driven Web Service
 
     http:
@@ -21,10 +20,13 @@
     image:
       build: ./frontend/Dockerfile
       port: 80
-
     cpu: 1024
     memory: 2048
 
+    network:
+      vpc:
+        placement: 'private'
+    
     variables:
       LOG_LEVEL: info
     
@@ -35,7 +37,7 @@
       test:
         variables:
           LOG_LEVEL: debug
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -138,8 +140,17 @@ Service のインスタンスに割り当てる CPU ユニット数。指定可�
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
-`docker build --platform` で渡すオペレーティングシステムとアーキテクチャ。（`[os]/[arch]` の形式で指定）
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
+`network` セクションには、Environment の VPC 内の AWS リソースに Service を接続するためのパラメータが含まれています。Service を VPC に接続することで、[サービス検出](../developing/service-discovery.ja.md)を使用して Environment 内の他の Service と通信したり、[`storage init`](../commands/storage-init.ja.md)で Amazon Aurora などの VPC 内のデータベースに接続することができます。
+
+<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
+Service からの Egress トラフィックをルーティングする VPC 内のサブネットを指定します。
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
+この項目において現在有効なオプションは `'private'` のみです。もし、Service が VPC に接続されないことを期待する場合は、`network` セクションを削除してください。
+
+この項目が 'private' の場合、App Runner サービスは VPC のプライベートサブネットを経由して Egress トラフィックをルーティングします。
+Copilot で生成された VPC を使用する場合、Copilot はインターネット接続用の NAT Gateway を Environment に自動的に追加します。 ([VPC の料金](https://aws.amazon.com/jp/vpc/pricing/)をご覧ください。) また、`copilot env init` を実行する際に、NAT ゲートウェイを持つ既存の VPC や、分離されたワークロードのための VPC エンドポイントをインポートすることも可能です。詳しくは、[Environment のリソースをカスタマイズする](../developing/custom-environment-resources.ja.md)をご覧ください。
 
 <div class="separator"></div>
 
@@ -149,9 +160,14 @@ Service のインスタンスに割り当てる CPU ユニット数。指定可�
 <div class="separator"></div>
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
-Copilot は Service 名などを常に環境変数としてインスタンスに対して渡します。本フィールドではそれら以外に追加で渡したい環境変数をキーバーリューのペアで指定します。
+Copilot は Service 名などを常に環境変数としてインスタンスに対して渡します。本フィールドではそれら以外に追加で渡したい環境変数をキー・値のペアで指定します。
 
 {% include 'publish.ja.md' %}
+
+<div class="separator"></div>
+
+<a id="variables" href="#variables" class="field">`tags`</a> <span class="type">Map</span>  
+AWS App Runner リソースとして渡される AWS タグを表すキー・値ペアです。
 
 <div class="separator"></div>
 

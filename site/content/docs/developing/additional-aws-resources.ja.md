@@ -37,15 +37,20 @@ Service がデプロイされると Copilot はこれらのファイルを全て
 ## Addon テンプレートの構造
 Addon テンプレートには任意の有効な CloudFormation テンプレートを用いることができます。しかしデフォルトでは Copilot は `App`, `Env` そして `Name` [パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を渡すため、必要であれば [Conditions セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) または [Mappings セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) でリソースのプロパティをカスタマイズできます。
 
-ここでは、ECS タスクから [Resources セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) にアクセスするいくつかの方法を紹介します。
+### Addon リソースとの接続
+ESC タスクまたは App Runner インスタンスから Addon [リソース](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html)にアクセスするいくつかの方法を紹介します。
 
-1. テンプレートの中で [IAM 管理ポリシー](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) リソースを使ってタスクにパーミッションを与え、　[Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を使ってパーミッションを ECS タスクロールに注入してください。
-2. [Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を作成して ECS タスクに環境変数として注入したい値を定義してください。
+* ECS タスクロールや App Runner インスタンスロールに対して追加のポリシーが必要な場合は、[IAM 管理ポリシー](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) Addon リソースをテンプレートに追加し、そのリソースをテンプレート内の[Output](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。 パーミッションが ECS タスクロール、または App Runner インスタンスロールに注入されます。
+* ECS サービスにセキュリティグループを追加したい場合、[セキュリティグループ](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html)をテンプレートに定義した上で、[Outputs](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。これによりそのセキュリティグループが ECS サービスにアタッチされます。
+* AWS Secrets Manager を使って秘密情報を ECS コンテナに渡したい場合、[シークレット](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-secretsmanager-secret.html)をテンプレートに定義し、[Outputs ](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。これによりその秘密情報がコンテナに大文字のスネークケース (SNAKE_CASE) で環境変数として渡されます。
+* 任意の環境変数を追加したい場合は、渡したい値を[Outputs](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。これにより大文字スネークケース (SNAKE_CASE) の環境変数としてコンテナに渡されます。
 
-* ECS タスクロールに追加のポリシーを設定したい場合、必要なパーミッションを持つ [IAM 管理ポリシー](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) リソースをテンプレートに加え、そのリソースをテンプレート内の [Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。これにより必要なパーミッションが ECS タスクロールに追加されます。
-* ECS サービスにセキュリティグループを追加したい場合、[セキュリティグループ](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html)をテンプレートに定義した上で、[Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。これによりそのセキュリティグループが ECS サービスにアタッチされます。
-* AWS Secrets Manager を使って秘密情報をコンテナに渡したい場合、[シークレット](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-secretsmanager-secret.html)をテンプレートに定義し、[Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。これによりその秘密情報がコンテナに大文字のスネークケース (SNAKE_CASE) で環境変数として渡されます。
-* 任意の環境変数をコンテナに追加したい場合は、渡したい値を[Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)に記述します。これにより大文字スネークケース (SNAKE_CASE) の環境変数としてコンテナに渡されます。
+### テンプレートの作成
+テンプレートを作成する場合は、以下に従う必要があります。
+
+* `Parameters` セクションに `App` 、 `Env` 、 `Name`  を含める
+* 少なくとも 1 つの `Resource` を含める
+
 
 以下は DynamoDB テーブル Addon を作成するテンプレートの例です。
 
@@ -96,6 +101,11 @@ Resources:
             Resource: !Sub ${ MyTable.Arn}
 
 Outputs:
+  # 1. Copilot が ESC タスクロールに対して マネージドポリシーを追加するために、IAM ManagedPolicyを Outputセクションに追加する必要があります。
+  MyTableAccessPolicyArn:
+    Description: "The ARN of the ManagedPolicy to attach to the task role."
+    Value: !Ref MyTableAccessPolicy
+    
   # 2. ECS タスクにリソースのプロパティを環境変数として注入したい場合は、
   # Output セクションを定義する必要があります。
   #
@@ -103,11 +113,6 @@ Outputs:
   MyTableName:
     Description: "The name of this DynamoDB."
     Value: !Ref MyTable
-
-  # 1. さらに IAM ManagedPolicy を出力して Copilot が ECS タスクロールに注入できるようにする必要もあります。
-  MyTableAccessPolicyArn:
-    Description: "The ARN of the ManagedPolicy to attach to the task role."
-    Value: !Ref MyTableAccessPolicy
 ```
 
 次回リリースするとき Copilot はこのテンプレートを Service にネストされたスタックとして用います！

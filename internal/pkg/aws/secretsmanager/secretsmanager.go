@@ -18,6 +18,7 @@ import (
 type api interface {
 	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
 	DeleteSecret(*secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error)
+	DescribeSecret(input *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error)
 }
 
 // SecretsManager wraps the AWS SecretManager client.
@@ -77,9 +78,39 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("delete secret %s from secrets manager: %+v", secretName, err)
+		return fmt.Errorf("delete secret %s from secrets manager: %w", secretName, err)
 	}
 	return nil
+}
+
+type DescribeSecretOutput struct {
+	Name        *string
+	CreatedDate *time.Time
+	Tags        []*secretsmanager.Tag
+}
+
+// DescribeSecret retrieves the details of a secret.
+func (s *SecretsManager) DescribeSecret(secretName string) (*DescribeSecretOutput, error) {
+	resp, err := s.secretsManager.DescribeSecret(&secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(secretName),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
+				return nil, &ErrSecretNotFound{
+					secretName: secretName,
+					parentErr:  err,
+				}
+			}
+		}
+		return nil, fmt.Errorf("describe secret %s: %w", secretName, err)
+	}
+
+	return &DescribeSecretOutput{
+		Name:        resp.Name,
+		CreatedDate: resp.CreatedDate,
+		Tags:        resp.Tags,
+	}, nil
 }
 
 // ErrSecretAlreadyExists occurs if a secret with the same name already exists.
@@ -90,4 +121,14 @@ type ErrSecretAlreadyExists struct {
 
 func (err *ErrSecretAlreadyExists) Error() string {
 	return fmt.Sprintf("secret %s already exists", err.secretName)
+}
+
+// ErrSecretNotFound occurs if a secret with the given name does not exist.
+type ErrSecretNotFound struct {
+	secretName string
+	parentErr  error
+}
+
+func (err *ErrSecretNotFound) Error() string {
+	return fmt.Sprintf("secret %s was not found: %s", err.secretName, err.parentErr)
 }

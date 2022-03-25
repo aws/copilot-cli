@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -24,74 +23,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitPipelineOpts_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inAppName     string
-		inWsAppName   string
-		inrepoURL     string
-		inEnvs        []string
-		setupMocks    func(m *mocks.Mockstore)
-		expectedError error
-	}{
-		"empty workspace app name": {
-			inWsAppName:   "",
-			setupMocks:    func(m *mocks.Mockstore) {},
-			expectedError: errNoAppInWorkspace,
-		},
-		"invalid app name (not in workspace)": {
-			inWsAppName:   "diff-app",
-			inAppName:     "ghost-app",
-			setupMocks:    func(m *mocks.Mockstore) {},
-			expectedError: errors.New("cannot specify app ghost-app because the workspace is already registered with app diff-app"),
-		},
-		"invalid app name": {
-			inWsAppName: "ghost-app",
-			inAppName:   "ghost-app",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("ghost-app").Return(nil, errors.New("some error"))
-			},
-
-			expectedError: fmt.Errorf("get application ghost-app configuration: some error"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockStore := mocks.NewMockstore(ctrl)
-
-			tc.setupMocks(mockStore)
-
-			opts := &initPipelineOpts{
-				initPipelineVars: initPipelineVars{
-					appName:      tc.inAppName,
-					repoURL:      tc.inrepoURL,
-					environments: tc.inEnvs,
-				},
-				store:     mockStore,
-				wsAppName: tc.inWsAppName,
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.expectedError != nil {
-				require.EqualError(t, err, tc.expectedError.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestInitPipelineOpts_Ask(t *testing.T) {
+	const (
+		mockAppName = "my-app"
+		wantedName  = "mypipe"
+	)
+	mockApp := &config.Application{
+		Name: mockAppName,
+	}
+
 	githubAnotherURL := "git@github.com:goodGoose/bhaOS.git"
 	githubToken := "hunter2"
 	testCases := map[string]struct {
+		inName              string
+		inAppName           string
+		inWsAppName         string
 		inEnvironments      []string
 		inRepoURL           string
 		inGitHubAccessToken string
@@ -106,10 +52,89 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 		expectedError error
 	}{
-		"passed-in URL to unsupported repo provider": {
-			inRepoURL:        "unsupported.org/repositories/repoName",
-			inEnvironments:   []string{"test"},
+		"empty workspace app name": {
+			inWsAppName:      "",
 			mockStore:        func(m *mocks.Mockstore) {},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			expectedError:    errNoAppInWorkspace,
+		},
+		"invalid app name (not in workspace)": {
+			inWsAppName:      "diff-app",
+			inAppName:        "ghost-app",
+			mockStore:        func(m *mocks.Mockstore) {},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			expectedError:    errors.New("cannot specify app ghost-app because the workspace is already registered with app diff-app"),
+		},
+		"invalid app name": {
+			inWsAppName: "ghost-app",
+			inAppName:   "ghost-app",
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("ghost-app").Return(nil, errors.New("some error"))
+			},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			expectedError:    fmt.Errorf("get application ghost-app configuration: some error"),
+		},
+		"invalid pipeline name": {
+			inWsAppName: mockAppName,
+			inName:      "1234",
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			expectedError:    fmt.Errorf("pipeline name 1234 is invalid: %w", errValueBadFormat),
+		},
+		"prompt for pipeline name": {
+			inWsAppName:    mockAppName,
+			inRepoURL:      githubAnotherURL,
+			inEnvironments: []string{"prod"},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.EXPECT().GetEnvironment(mockAppName, "prod").
+					Return(&config.Environment{Name: "prod"}, nil)
+			},
+			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:   func(m *mocks.Mockrunner) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq("What would you like to name this pipeline?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedName, nil)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+		},
+		"returns an error if fail to get pipeline name": {
+			inWsAppName: mockAppName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
+			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:   func(m *mocks.Mockrunner) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("mock error"))
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			expectedError:    fmt.Errorf("get pipeline name: mock error"),
+		},
+		// TODO error if pipeline already exists
+		"passed-in URL to unsupported repo provider": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
+			inRepoURL:      "unsupported.org/repositories/repoName",
+			inEnvironments: []string{"test"},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockPrompt:       func(m *mocks.Mockprompter) {},
@@ -118,10 +143,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError: errors.New("repository unsupported.org/repositories/repoName must be from a supported provider: GitHub, CodeCommit or Bitbucket"),
 		},
 		"passed-in invalid environments": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
 			inRepoURL:      "https://github.com/badGoose/chaOS",
 			inEnvironments: []string{"test", "prod"},
 
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
 			},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
@@ -132,10 +160,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError: errors.New("validate environment test: some error"),
 		},
 		"success with GH repo with env and repoURL flags": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
 			inEnvironments: []string{"test", "prod"},
 			inRepoURL:      "https://github.com/badGoose/chaOS",
-
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(
 					&config.Environment{
 						Name: "test",
@@ -151,10 +181,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 		},
 		"success with CC repo with env and repoURL flags": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
 			inEnvironments: []string{"test", "prod"},
 			inRepoURL:      "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
-
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(
 					&config.Environment{
 						Name: "test",
@@ -170,6 +202,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 		},
 		"no flags, prompts for all input, success case for selecting URL": {
+			inWsAppName:         mockAppName,
 			inEnvironments:      []string{},
 			inRepoURL:           "",
 			inGitHubAccessToken: githubToken,
@@ -179,12 +212,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(wantedName, nil)
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
 			},
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name:   "test",
 					Region: "us-west-2",
@@ -197,6 +232,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 		},
 		"returns error if fail to list environments": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
 			inEnvironments: []string{},
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 			mockRunner: func(m *mocks.Mockrunner) {
@@ -208,19 +245,24 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			mockStore:        func(m *mocks.Mockstore) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedError: fmt.Errorf("select environments: some error"),
 		},
-
 		"returns error if fail to select URL": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
 			inRepoURL:      "",
 			inEnvironments: []string{},
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockStore:    func(m *mocks.Mockstore) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -232,6 +274,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError: fmt.Errorf("select URL: some error"),
 		},
 		"returns error if fail to get env config": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
 			inRepoURL:      "",
 			inEnvironments: []string{},
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
@@ -246,6 +290,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name:   "test",
 					Region: "us-west-2",
@@ -254,15 +299,18 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedError: fmt.Errorf("get config of environment prod: some error"),
+			expectedError: fmt.Errorf("validate environment prod: some error"),
 		},
 		"skip selector prompt if only one repo URL": {
-			buffer: *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
+			inWsAppName: mockAppName,
+			inName:      wantedName,
+			buffer:      *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineEnvSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name:   "test",
 					Region: "us-west-2",
@@ -296,11 +344,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					appName:           "my-app",
+					appName:           tc.inAppName,
+					name:              tc.inName,
 					environments:      tc.inEnvironments,
 					repoURL:           tc.inRepoURL,
 					githubAccessToken: tc.inGitHubAccessToken,
 				},
+				wsAppName:    tc.inWsAppName,
 				prompt:       mockPrompt,
 				runner:       mockRunner,
 				sessProvider: mocksSessProvider,
@@ -329,9 +379,16 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 }
 
 func TestInitPipelineOpts_Execute(t *testing.T) {
-	buildspecExistsErr := &workspace.ErrFileExists{FileName: "/buildspec.yml"}
-	manifestExistsErr := &workspace.ErrFileExists{FileName: "/pipeline.yml"}
+	const (
+		wantedName          = "mypipe"
+		wantedManifestFile  = "/piplines/mypipe/manifest.yml"
+		wantedBuildspecFile = "/piplines/mypipe/buildspec.yml"
+	)
+
+	buildspecExistsErr := &workspace.ErrFileExists{FileName: wantedBuildspecFile}
+	manifestExistsErr := &workspace.ErrFileExists{FileName: wantedManifestFile}
 	testCases := map[string]struct {
+		inName         string
 		inEnvironments []string
 		inEnvConfigs   []*config.Environment
 		inGitHubToken  string
@@ -353,18 +410,18 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		expectedError  error
 	}{
 		"successfully detects local branch and sets it": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
 				},
 			},
-			inRepoURL: "git@github.com:badgoose/goose.git",
-			inAppName: "badgoose",
-
+			inRepoURL:          "git@github.com:badgoose/goose.git",
+			inAppName:          "badgoose",
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -394,6 +451,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError:  nil,
 		},
 		"sets 'main' as branch name if error fetching it": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -404,8 +462,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -434,6 +492,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError:  nil,
 		},
 		"creates secret and writes manifest and buildspec for GHV1 provider": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -447,8 +506,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -477,6 +536,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for GH(v2) provider": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -487,8 +547,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -517,6 +577,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for CC provider": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -527,8 +588,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -564,6 +625,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"writes manifest and buildspec for BB provider": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -574,8 +636,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -604,6 +666,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"does not return an error if secret already exists": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -618,8 +681,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -648,6 +711,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"returns an error if can't write manifest": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -662,7 +726,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("", errors.New("some error"))
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", errors.New("some error"))
 			},
 			mockParser:                  func(m *templatemocks.MockParser) {},
 			mockStoreSvc:                func(m *mocks.Mockstore) {},
@@ -673,6 +737,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: errors.New("write pipeline manifest to workspace: some error"),
 		},
 		"returns an error if application cannot be retrieved": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -686,7 +751,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *mocks.Mockstore) {
@@ -699,6 +764,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: errors.New("get application badgoose: some error"),
 		},
 		"returns an error if can't get regional application resources": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -712,7 +778,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *mocks.Mockstore) {
@@ -731,6 +797,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: fmt.Errorf("get regional application resources: some error"),
 		},
 		"returns an error if buildspec cannot be parsed": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -744,8 +811,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Times(0)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Times(0)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
@@ -771,6 +838,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: errors.New("some error"),
 		},
 		"does not return an error if buildspec and manifest already exists": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -784,8 +852,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("", manifestExistsErr)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", buildspecExistsErr)
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", manifestExistsErr)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", buildspecExistsErr)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -814,6 +882,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedBranch: "main",
 		},
 		"returns an error if can't write buildspec": {
+			inName: wantedName,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -828,8 +897,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", errors.New("some error"))
+				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", errors.New("some error"))
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -940,6 +1009,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
+					name:              tc.inName,
 					githubAccessToken: tc.inGitHubToken,
 					appName:           tc.inAppName,
 					repoBranch:        tc.inBranch,
@@ -968,47 +1038,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedBranch, opts.repoBranch)
 			}
-		})
-	}
-}
-
-func TestInitPipelineOpts_pipelineName(t *testing.T) {
-	testCases := map[string]struct {
-		inRepoName string
-		inAppName  string
-
-		expected    string
-		expectedErr error
-	}{
-		"generates pipeline name": {
-			inAppName:  "goodmoose",
-			inRepoName: "repo-man",
-
-			expected: "pipeline-goodmoose-repo-man",
-		},
-		"generates and truncates pipeline name if it exceeds 100 characters": {
-			inAppName:  "goodmoose01234567820123456783012345678401234567850",
-			inRepoName: "repo-man101234567820123456783012345678401234567850",
-
-			expected: "pipeline-goodmoose01234567820123456783012345678401234567850-repo-man10123456782012345678301234567840",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{
-				initPipelineVars: initPipelineVars{
-					appName: tc.inAppName,
-				},
-				repoName: tc.inRepoName,
-			}
-
-			// WHEN
-			actual := opts.pipelineName()
-
-			// THEN
-			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

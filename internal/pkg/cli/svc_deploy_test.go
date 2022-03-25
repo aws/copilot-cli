@@ -169,6 +169,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(nil, mockError)
 			},
 
@@ -181,6 +182,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
+				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
 
 			wantedError: fmt.Errorf("deploy service frontend to environment prod-iad: some error"),
@@ -209,7 +211,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 					clientConfigured: true,
 				},
-				newSvcDeployer: func(dso *deploySvcOpts) (workloadDeployer, error) {
+				newSvcDeployer: func() (workloadDeployer, error) {
 					return m.mockDeployer, nil
 				},
 				envUpgradeCmd: m.mockEnvUpgrader,
@@ -221,6 +223,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 					return &mockWorkloadMft{}, nil
 				},
 				targetApp: &config.Application{},
+				targetEnv: &config.Environment{},
 			}
 
 			// WHEN

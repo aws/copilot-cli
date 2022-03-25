@@ -126,13 +126,18 @@ var _ = Describe("pipeline flow", func() {
 
 	Context("when creating the pipeline manifest", func() {
 		It("should initialize the pipeline", func() {
-			_, err := copilot.PipelineInit(appName, repoURL, "master", []string{"test", "prod"})
+			_, err := copilot.PipelineInit(client.PipelineInitInput{
+				Name:         pipelineName,
+				URL:          repoURL,
+				GitBranch:    "master",
+				Environments: []string{"test", "prod"},
+			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should generate pipeline artifacts", func() {
-			Expect(filepath.Join(repoName, "copilot", "pipeline.yml")).Should(BeAnExistingFile())
-			Expect(filepath.Join(repoName, "copilot", "buildspec.yml")).Should(BeAnExistingFile())
+			Expect(filepath.Join(repoName, "copilot", "pipelines", pipelineName, "manifest.yml")).Should(BeAnExistingFile())
+			Expect(filepath.Join(repoName, "copilot", "pipelines", pipelineName, "buildspec.yml")).Should(BeAnExistingFile())
 		})
 
 		It("should push repo changes upstream", func() {
@@ -170,7 +175,9 @@ var _ = Describe("pipeline flow", func() {
 
 	Context("when creating the pipeline stack", func() {
 		It("should start creating the pipeline stack", func() {
-			_, err := copilot.PipelineDeploy(appName)
+			_, err := copilot.PipelineDeploy(client.PipelineDeployInput{
+				Name: pipelineName,
+			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -199,16 +206,20 @@ var _ = Describe("pipeline flow", func() {
 			}
 
 			Eventually(func() error {
-				out, err := copilot.PipelineShow(appName)
-				if err != nil {
+				out, err := copilot.PipelineShow(client.PipelineShowInput{
+					Name: pipelineName,
+				})
+				switch {
+				case err != nil:
 					return err
-				}
-				if out.Name == "" {
+				case out.Name == "":
 					return fmt.Errorf("pipeline name is empty: %v", out)
-				}
-				if len(wantedStages) != len(out.Stages) {
+				case out.Name != pipelineName:
+					return fmt.Errorf("expected pipeline name %q, got %q", pipelineName, out.Name)
+				case len(out.Stages) != len(wantedStages):
 					return fmt.Errorf("pipeline stages do not match: %v", out.Stages)
 				}
+
 				for idx, actualStage := range out.Stages {
 					if wantedStages[idx].Name != actualStage.Name {
 						return fmt.Errorf("stage name %s at index %d does not match", actualStage.Name, idx)
@@ -251,7 +262,9 @@ var _ = Describe("pipeline flow", func() {
 			}
 
 			Eventually(func() error {
-				out, err := copilot.PipelineStatus(appName)
+				out, err := copilot.PipelineStatus(client.PipelineStatusInput{
+					Name: pipelineName,
+				})
 				if err != nil {
 					return err
 				}

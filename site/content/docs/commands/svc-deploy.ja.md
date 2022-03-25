@@ -18,11 +18,20 @@ Service デプロイの手順は以下の通りです。
 ## フラグ
 
 ```bash
+  -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
+      --no-rollback bool               Optional. Disable automatic stack
+                                       rollback in case of deployment failure.
+                                       We do not recommend using this flag for a
+                                       production environment.
       --tag string                     Optional. The service's image tag.
 ```
+
+!!!info
+    `--no-rollback` フラグは production 環境へのデプロイには **推奨されません**。 サービスダウンタイムが発生する可能性があります。
+    自動的なスタックロールバックが無効化されている状況でデプロイに失敗した場合、次のデプロイを行う前に、AWS Console や AWS CLI を利用して、手動でスタックを開始する必要がある場合があります。
