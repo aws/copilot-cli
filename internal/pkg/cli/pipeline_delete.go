@@ -193,7 +193,6 @@ func (o *deletePipelineOpts) getSecret() error {
 
 	for _, tag := range output.Tags {
 		if aws.StringValue(tag.Key) == deploy.AppTagKey && aws.StringValue(tag.Value) == output.CreatedDate.UTC().Format(time.UnixDate) {
-			log.Infof("Found the Copilot-generated secret '%s' used to connect to your GitHub source repo.\n", o.ghAccessTokenSecretName)
 			return nil
 		}
 	}
