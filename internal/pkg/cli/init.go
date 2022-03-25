@@ -477,6 +477,9 @@ func BuildInitCmd() *cobra.Command {
 					color.HighlightCode(fmt.Sprintf("copilot env init --name %s --profile %s --app %s", defaultEnvironmentName, defaultEnvironmentProfile, *opts.appName)))
 				log.Infof("- Run %s to deploy your service.\n", color.HighlightCode("copilot deploy"))
 			}
+			log.Infoln(`- Be a part of the Copilot ✨community✨!
+  Ask or answer a question, submit a feature request...
+  Visit 👉 https://aws.github.io/copilot-cli/community/get-involved/ to see how!`)
 			return nil
 		}),
 	}
