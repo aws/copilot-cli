@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -28,6 +29,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		mockAppName = "my-app"
 		wantedName  = "mypipe"
 	)
+	fullName := fmt.Sprintf(fmtPipelineName, mockAppName, wantedName)
 	mockApp := &config.Application{
 		Name: mockAppName,
 	}
@@ -43,33 +45,39 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inGitHubAccessToken string
 		inGitBranch         string
 
-		mockPrompt       func(m *mocks.Mockprompter)
-		mockRunner       func(m *mocks.Mockrunner)
-		mockSessProvider func(m *mocks.MocksessionProvider)
-		mockSelector     func(m *mocks.MockpipelineEnvSelector)
-		mockStore        func(m *mocks.Mockstore)
-		buffer           bytes.Buffer
+		mockPrompt         func(m *mocks.Mockprompter)
+		mockRunner         func(m *mocks.Mockrunner)
+		mockSessProvider   func(m *mocks.MocksessionProvider)
+		mockSelector       func(m *mocks.MockpipelineEnvSelector)
+		mockStore          func(m *mocks.Mockstore)
+		mockPipelineGetter func(m *mocks.MockpipelineGetter)
+		mockWsLister       func(m *mocks.MockwsPipelineLister)
+		buffer             bytes.Buffer
 
 		expectedError error
 	}{
 		"empty workspace app name": {
-			inWsAppName:      "",
-			mockStore:        func(m *mocks.Mockstore) {},
-			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
-			mockRunner:       func(m *mocks.Mockrunner) {},
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-			expectedError:    errNoAppInWorkspace,
+			inWsAppName:        "",
+			mockStore:          func(m *mocks.Mockstore) {},
+			mockSelector:       func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:         func(m *mocks.Mockrunner) {},
+			mockPrompt:         func(m *mocks.Mockprompter) {},
+			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
+			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			expectedError:      errNoAppInWorkspace,
 		},
 		"invalid app name (not in workspace)": {
-			inWsAppName:      "diff-app",
-			inAppName:        "ghost-app",
-			mockStore:        func(m *mocks.Mockstore) {},
-			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
-			mockRunner:       func(m *mocks.Mockrunner) {},
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-			expectedError:    errors.New("cannot specify app ghost-app because the workspace is already registered with app diff-app"),
+			inWsAppName:        "diff-app",
+			inAppName:          "ghost-app",
+			mockStore:          func(m *mocks.Mockstore) {},
+			mockSelector:       func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:         func(m *mocks.Mockrunner) {},
+			mockPrompt:         func(m *mocks.Mockprompter) {},
+			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
+			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			expectedError:      errors.New("cannot specify app ghost-app because the workspace is already registered with app diff-app"),
 		},
 		"invalid app name": {
 			inWsAppName: "ghost-app",
@@ -77,11 +85,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("ghost-app").Return(nil, errors.New("some error"))
 			},
-			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
-			mockRunner:       func(m *mocks.Mockrunner) {},
-			mockPrompt:       func(m *mocks.Mockprompter) {},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-			expectedError:    fmt.Errorf("get application ghost-app configuration: some error"),
+			mockSelector:       func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:         func(m *mocks.Mockrunner) {},
+			mockPrompt:         func(m *mocks.Mockprompter) {},
+			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
+			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			expectedError:      fmt.Errorf("get application ghost-app configuration: some error"),
 		},
 		"invalid pipeline name": {
 			inWsAppName: mockAppName,
@@ -89,11 +99,97 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 			},
+			mockSelector:       func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:         func(m *mocks.Mockrunner) {},
+			mockPrompt:         func(m *mocks.Mockprompter) {},
+			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
+			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			expectedError:      fmt.Errorf("pipeline name 1234 is invalid: %w", errValueBadFormat),
+		},
+		"returns an error if fail to get pipeline name": {
+			inWsAppName: mockAppName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
+			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:   func(m *mocks.Mockrunner) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("mock error"))
+			},
+			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
+			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			expectedError:      fmt.Errorf("get pipeline name: mock error"),
+		},
+		"returns error on duplicate deployed pipeline": {
+			inWsAppName: mockAppName,
+			inName:      wantedName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-			expectedError:    fmt.Errorf("pipeline name 1234 is invalid: %w", errValueBadFormat),
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, nil)
+			},
+			mockWsLister:  func(m *mocks.MockwsPipelineLister) {},
+			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
+		},
+		"returns error if fail to check against deployed pipelines": {
+			inWsAppName: mockAppName,
+			inName:      wantedName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, errors.New("some error"))
+			},
+			mockWsLister:  func(m *mocks.MockwsPipelineLister) {},
+			expectedError: errors.New("validate if pipeline exists: some error"),
+		},
+		"returns error on duplicate local pipeline": {
+			inWsAppName: mockAppName,
+			inName:      wantedName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{{Name: wantedName}}, nil)
+			},
+			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
+		},
+		"returns error if fail to check against local pipelines": {
+			inWsAppName: mockAppName,
+			inName:      wantedName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, errors.New("some error"))
+			},
+			expectedError: errors.New("get local pipelines: some error"),
 		},
 		"prompt for pipeline name": {
 			inWsAppName:    mockAppName,
@@ -111,22 +207,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					Return(wantedName, nil)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-		},
-		"returns an error if fail to get pipeline name": {
-			inWsAppName: mockAppName,
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockSelector: func(m *mocks.MockpipelineEnvSelector) {},
-			mockRunner:   func(m *mocks.Mockrunner) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("mock error"))
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
-			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-			expectedError:    fmt.Errorf("get pipeline name: mock error"),
 		},
-		// TODO error if pipeline already exists
 		"passed-in URL to unsupported repo provider": {
 			inWsAppName:    mockAppName,
 			inName:         wantedName,
@@ -139,7 +226,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 			expectedError: errors.New("repository unsupported.org/repositories/repoName must be from a supported provider: GitHub, CodeCommit or Bitbucket"),
 		},
 		"passed-in invalid environments": {
@@ -156,7 +248,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 			expectedError: errors.New("validate environment test: some error"),
 		},
 		"success with GH repo with env and repoURL flags": {
@@ -179,6 +276,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 		},
 		"success with CC repo with env and repoURL flags": {
 			inWsAppName:    mockAppName,
@@ -200,6 +303,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner:       func(m *mocks.Mockrunner) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 		},
 		"no flags, prompts for all input, success case for selecting URL": {
 			inWsAppName:         mockAppName,
@@ -230,6 +339,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 		},
 		"returns error if fail to list environments": {
 			inWsAppName:    mockAppName,
@@ -249,6 +364,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 
 			expectedError: fmt.Errorf("select environments: some error"),
 		},
@@ -270,7 +391,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
-
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 			expectedError: fmt.Errorf("select URL: some error"),
 		},
 		"returns error if fail to get env config": {
@@ -298,6 +424,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().GetEnvironment("my-app", "prod").Return(nil, errors.New("some error"))
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 
 			expectedError: fmt.Errorf("validate environment prod: some error"),
 		},
@@ -327,6 +459,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).Times(0)
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+			},
+			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+				m.EXPECT().ListPipelines().Return(nil, nil)
+			},
 		},
 	}
 
@@ -341,6 +479,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mocksSessProvider := mocks.NewMocksessionProvider(ctrl)
 			mockSelector := mocks.NewMockpipelineEnvSelector(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
+			mockWsLister := mocks.NewMockwsPipelineLister(ctrl)
+			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
@@ -357,6 +497,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				buffer:       tc.buffer,
 				sel:          mockSelector,
 				store:        mockStore,
+				pipeline:     mockPipelineGetter,
+				wsLister:     mockWsLister,
 			}
 
 			tc.mockPrompt(mockPrompt)
@@ -364,6 +506,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			tc.mockSessProvider(mocksSessProvider)
 			tc.mockSelector(mockSelector)
 			tc.mockStore(mockStore)
+			tc.mockPipelineGetter(mockPipelineGetter)
+			tc.mockWsLister(mockWsLister)
 
 			// WHEN
 			err := opts.Ask()

@@ -19,6 +19,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
+var ErrPipelineNotFound = errors.New("pipeline not found")
+
 const (
 	pipelineResourceType = "codepipeline:pipeline"
 )
@@ -114,12 +116,15 @@ func New(s *session.Session) *CodePipeline {
 
 // GetPipeline retrieves information from a given pipeline.
 func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
-	input := &cp.GetPipelineInput{
+	resp, err := c.client.GetPipeline(&cp.GetPipelineInput{
 		Name: aws.String(name),
-	}
-	resp, err := c.client.GetPipeline(input)
-
+	})
 	if err != nil {
+		var notFoundErr *cp.PipelineNotFoundException
+		if errors.As(err, &notFoundErr) {
+			return nil, fmt.Errorf("get pipeline %s: %w", name, ErrPipelineNotFound)
+		}
+
 		return nil, fmt.Errorf("get pipeline %s: %w", name, err)
 	}
 

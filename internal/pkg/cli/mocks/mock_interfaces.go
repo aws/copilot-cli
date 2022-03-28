@@ -2300,6 +2300,44 @@ func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler, nam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler, name)
 }
 
+// MockwsPipelineLister is a mock of wsPipelineLister interface.
+type MockwsPipelineLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsPipelineListerMockRecorder
+}
+
+// MockwsPipelineListerMockRecorder is the mock recorder for MockwsPipelineLister.
+type MockwsPipelineListerMockRecorder struct {
+	mock *MockwsPipelineLister
+}
+
+// NewMockwsPipelineLister creates a new mock instance.
+func NewMockwsPipelineLister(ctrl *gomock.Controller) *MockwsPipelineLister {
+	mock := &MockwsPipelineLister{ctrl: ctrl}
+	mock.recorder = &MockwsPipelineListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsPipelineLister) EXPECT() *MockwsPipelineListerMockRecorder {
+	return m.recorder
+}
+
+// ListPipelines mocks base method.
+func (m *MockwsPipelineLister) ListPipelines() ([]workspace.PipelineManifest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelines")
+	ret0, _ := ret[0].([]workspace.PipelineManifest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPipelines indicates an expected call of ListPipelines.
+func (mr *MockwsPipelineListerMockRecorder) ListPipelines() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockwsPipelineLister)(nil).ListPipelines))
+}
+
 // MockserviceLister is a mock of serviceLister interface.
 type MockserviceLister struct {
 	ctrl     *gomock.Controller

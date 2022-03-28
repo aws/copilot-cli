@@ -5,8 +5,9 @@ package cli
 
 import (
 	"encoding"
-	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"io"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -241,6 +242,10 @@ type wsPipelineManifestReader interface {
 type wsPipelineWriter interface {
 	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
+}
+
+type wsPipelineLister interface {
+	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
 type serviceLister interface {
