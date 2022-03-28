@@ -23,6 +23,8 @@ const (
 	waitServiceStablePollingInterval = 15 * time.Second
 	waitServiceStableMaxTry          = 80
 	stableServiceDeploymentNum       = 1
+	// ECS EndpointsID
+	EndpointsID = ecs.EndpointsID
 )
 
 type api interface {

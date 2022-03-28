@@ -80,6 +80,12 @@ var (
 	errAppRunnerImageNotSupported = errors.New("value must be an ECR or ECR Public image URI")
 )
 
+// Pipelines
+const (
+	maxPipelineNameLen        = 100
+	fmtErrPipelineNameTooLong = "value must not exceed %d characters"
+)
+
 var (
 	emptyIPNet = net.IPNet{}
 	emptyIP    = net.IP{}
@@ -240,6 +246,29 @@ func validateJobName(val interface{}) error {
 	}
 	if err := validateNotReservedWorkloadName(val); err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validatePipelineName(val interface{}, appName string) error {
+	// https://docs.aws.amazon.com/codepipeline/latest/userguide/limits.html
+
+	// compute the longest name a user can name their pipeline for this app
+	// since we prefix their name with 'pipeline-[app]-'
+	maxNameLen := maxPipelineNameLen - len(fmt.Sprintf(fmtPipelineName, appName, ""))
+	errFmt := "pipeline name %v is invalid: %w"
+
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf(errFmt, val, err)
+	}
+
+	name, ok := val.(string)
+	switch {
+	case !ok:
+		return fmt.Errorf(errFmt, val, errValueNotAString)
+	case len(name) > maxNameLen:
+		err := fmt.Errorf(fmtErrPipelineNameTooLong, maxNameLen)
+		return fmt.Errorf(errFmt, val, err)
 	}
 	return nil
 }

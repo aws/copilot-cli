@@ -2,7 +2,7 @@
 
 ???+ note "Worker Service の Manifest のサンプル"
 
-    ```yaml
+```yaml
     # Service 名は、ロググループや ECS サービスなどのリソースの命名に使用されます。
     name: orders-worker
     type: Worker Service
@@ -28,6 +28,7 @@
 
     variables:
       LOG_LEVEL: info
+    env_file: log.env
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
 
@@ -42,7 +43,7 @@
           queue_delay:
             acceptable_latency: 1m
             msg_processing_time: 250ms
-    ```
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>
 Service の名前。
@@ -123,6 +124,8 @@ Service は、希望するタスク数を 5 に設定し、Service 内に 5 つ�
 count:
   spot: 5
 ```
+!!! info
+    ARM アーキテクチャで動作するコンテナでは、Fargate Spot はサポートされていません。
 
 <div class="separator"></div>
 

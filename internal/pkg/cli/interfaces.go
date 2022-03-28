@@ -5,32 +5,29 @@ package cli
 
 import (
 	"encoding"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"io"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
-
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -160,6 +157,7 @@ type secretCreator interface {
 }
 
 type secretDeleter interface {
+	DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error)
 	DeleteSecret(secretName string) error
 }
 
@@ -241,8 +239,8 @@ type wsPipelineManifestReader interface {
 }
 
 type wsPipelineWriter interface {
-	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error)
-	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
+	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
+	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
 }
 
 type serviceLister interface {
@@ -289,7 +287,6 @@ type wsPipelineGetter interface {
 	wsPipelineManifestReader
 	wlLister
 	ListPipelines() ([]workspace.PipelineManifest, error)
-	PipelineManifestLegacyPath() (string, error)
 }
 
 type wsAppManager interface {
@@ -479,7 +476,12 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
-	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
+	WsPipeline(prompt, help string) (*workspace.PipelineManifest, error)
+}
+
+type codePipelineSelector interface {
+	appSelector
+	DeployedPipeline(prompt, help string, tags map[string]string) (string, error)
 }
 
 type wsSelector interface {
@@ -613,6 +615,7 @@ type interpolator interface {
 type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
+	IsServiceAvailableInRegion(region string) (bool, error)
 }
 
 type workloadTemplateGenerator interface {
