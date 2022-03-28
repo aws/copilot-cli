@@ -165,7 +165,8 @@ const regexpFindAllMatches = -1
 // reservedWorkloadNames is a constant map of reserved workload names that users are not allowed to name their workloads
 func reservedWorkloadNames() map[string]bool {
 	return map[string]bool{
-		"pipelines": true, // reserved to avoid directory conflict with copilot pipelines
+		"pipelines":    true, // reserved to avoid directory conflict with copilot pipelines
+		"environments": true, // reserved to avoid directory conflict with copilot enviornments
 	}
 }
 
