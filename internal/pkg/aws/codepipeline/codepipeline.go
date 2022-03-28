@@ -19,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
+// ErrPipelineNotFound is returned if a given pipeline cannot be found.
 var ErrPipelineNotFound = errors.New("pipeline not found")
 
 const (
