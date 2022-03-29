@@ -211,7 +211,7 @@ func (o *deployPipelineOpts) Execute() error {
 	}
 	o.shouldPromptUpdateConnection = bool
 
-	// Convert full manifest path to relative path.
+	// Convert full manifest path to relative path from workspace root.
 	relPath, err := o.ws.Rel(o.pipeline.Path)
 	if err != nil {
 		return err
