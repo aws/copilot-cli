@@ -168,7 +168,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 		region               = "us-west-2"
 		accountID            = "123456789012"
 		pipelineName         = "pipepiper"
-		pipelineManifestPath = "/copilot/pipelines/pipepiper/manifest.yml"
+		pipelineManifestPath = "someStuff/someMoreStuff/aws-copilot-sample-service/copilot/pipelines/pipepiper/manifest.yml"
+		relativePath         = "/copilot/pipelines/pipepiper/manifest.yml"
 	)
 	mockPipelineManifest := &manifest.Pipeline{
 		Name:    "pipepiper",
@@ -235,7 +236,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -265,7 +266,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -296,7 +297,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -324,7 +325,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -444,7 +445,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Return(errors.New("some error")),
 				)
 			},
@@ -460,7 +461,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -483,7 +484,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -509,7 +510,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -539,7 +540,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -595,7 +596,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
-					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages

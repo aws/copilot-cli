@@ -2270,6 +2270,21 @@ func (m *MockwsPipelineWriter) EXPECT() *MockwsPipelineWriterMockRecorder {
 	return m.recorder
 }
 
+// Rel mocks base method.
+func (m *MockwsPipelineWriter) Rel(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rel", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Rel indicates an expected call of Rel.
+func (mr *MockwsPipelineWriterMockRecorder) Rel(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsPipelineWriter)(nil).Rel), path)
+}
+
 // WritePipelineBuildspec mocks base method.
 func (m *MockwsPipelineWriter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()

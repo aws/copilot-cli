@@ -583,8 +583,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestExists = true
 		o.manifestPath = e.FileName
 	}
-
-	o.manifestPath, err = relPath(o.manifestPath)
+	o.manifestPath, err = o.workspace.Rel(o.manifestPath)
 	if err != nil {
 		return err
 	}

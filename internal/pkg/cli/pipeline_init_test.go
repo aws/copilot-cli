@@ -383,6 +383,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		wantedName          = "mypipe"
 		wantedManifestFile  = "/pipelines/mypipe/manifest.yml"
 		wantedBuildspecFile = "/pipelines/mypipe/buildspec.yml"
+		wantedRelativePath  = "/copilot/pipelines/mypipe/manifest.yml"
 	)
 
 	buildspecExistsErr := &workspace.ErrFileExists{FileName: wantedBuildspecFile}
@@ -422,6 +423,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -464,6 +466,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -508,6 +511,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -549,6 +553,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -590,6 +595,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -638,6 +644,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -683,6 +690,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -715,7 +723,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",
@@ -752,6 +759,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *mocks.Mockstore) {
@@ -779,6 +787,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *mocks.Mockstore) {
@@ -813,6 +822,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Times(0)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
@@ -854,6 +864,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", manifestExistsErr)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", buildspecExistsErr)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -897,6 +908,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", errors.New("some error"))
 			},
 			mockParser: func(m *templatemocks.MockParser) {
