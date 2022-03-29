@@ -281,6 +281,7 @@ type wsWlDirReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
+	Rel(path string) (string, error)
 }
 
 type wsPipelineGetter interface {

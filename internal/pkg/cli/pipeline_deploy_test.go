@@ -235,6 +235,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -264,6 +265,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -294,6 +296,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -321,6 +324,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -440,6 +444,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Return(errors.New("some error")),
 				)
 			},
@@ -455,6 +460,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -477,6 +483,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -502,6 +509,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -531,6 +539,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -586,6 +595,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
 					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Times(1),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages

@@ -212,9 +212,9 @@ func (o *deployPipelineOpts) Execute() error {
 	o.shouldPromptUpdateConnection = bool
 
 	// Convert full manifest path to relative path.
-	relPath, err := relPath(o.pipeline.Path)
+	relPath, err := o.ws.Rel(o.pipeline.Path)
 	if err != nil {
-		return fmt.Errorf("convert pipeline manifest path: %w", err)
+		return err
 	}
 
 	// Convert environments to deployment stages.
