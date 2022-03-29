@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -14,7 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"sort"
@@ -114,16 +114,16 @@ func (o *showAppOpts) Execute() error {
 	fmt.Fprint(o.w, data)
 	return nil
 }
-func (o *showAppOpts) populateDeployedWorkloads(listWorkloads func(app, env string) ([]string, error), wkldDeployedtoEnvs map[string][]string, env string, mux *sync.Mutex) error {
+func (o *showAppOpts) populateDeployedWorkloads(listWorkloads func(app, env string) ([]string, error), deployedEnvsFor map[string][]string, env string, lock sync.Locker) error {
 	deployedworkload, err := listWorkloads(o.name, env)
 	if err != nil {
 		return fmt.Errorf("list services/jobs deployed to %s: %w", env, err)
 	}
 
-	mux.Lock()
-	defer mux.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
 	for _, wkld := range deployedworkload {
-		wkldDeployedtoEnvs[wkld] = append(wkldDeployedtoEnvs[wkld], env)
+		deployedEnvsFor[wkld] = append(deployedEnvsFor[wkld], env)
 	}
 	return nil
 }
@@ -148,8 +148,8 @@ func (o *showAppOpts) description() (*describe.App, error) {
 
 	wkldDeployedtoEnvs := make(map[string][]string)
 	ctx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
-	g, ctx := errgroup.WithContext(ctx)
 	defer cancelWait()
+	g, ctx := errgroup.WithContext(ctx)
 	defer ctx.Done()
 	var mux sync.Mutex
 	for i := range envs {
