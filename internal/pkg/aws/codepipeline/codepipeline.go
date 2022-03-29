@@ -118,6 +118,7 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 		Name: aws.String(name),
 	}
 	resp, err := c.client.GetPipeline(input)
+
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline %s: %w", name, err)
 	}
