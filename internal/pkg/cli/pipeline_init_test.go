@@ -171,7 +171,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{{Name: wantedName}}, nil)
 			},
-			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
+			expectedError: fmt.Errorf("pipeline %s's manifest already exists", wantedName),
 		},
 		"returns error if fail to check against local pipelines": {
 			inWsAppName: mockAppName,
@@ -495,7 +495,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				buffer:       tc.buffer,
 				sel:          mockSelector,
 				store:        mockStore,
-				pipeline:     mockPipelineGetter,
+				codePipeline: mockPipelineGetter,
 				workspace:    mockWorkspace,
 			}
 

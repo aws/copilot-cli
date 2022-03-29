@@ -103,7 +103,7 @@ type initPipelineOpts struct {
 	store          store
 	prompt         prompter
 	sel            pipelineEnvSelector
-	pipeline       pipelineGetter
+	codePipeline   pipelineGetter
 
 	// Outputs stored on successful actions.
 	secret    string
@@ -158,7 +158,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
-		pipeline:         codepipeline.New(defaultSession),
+		codePipeline:     codepipeline.New(defaultSession),
 	}, nil
 }
 
@@ -203,7 +203,7 @@ func (o *initPipelineOpts) validateDuplicatePipeline() error {
 	// make sure pipeline isn't already deployed
 	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
 
-	_, err := o.pipeline.GetPipeline(fullName)
+	_, err := o.codePipeline.GetPipeline(fullName)
 	switch {
 	case err == nil:
 		log.Errorf(`It seems like you are trying to init a pipeline that already exists.
@@ -235,7 +235,7 @@ and then %s
 `,
 				color.HighlightCode(fmt.Sprintf("copilot pipeline deploy --name %s", o.name)),
 				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
-			return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(o.name))
+			return fmt.Errorf("pipeline %s's manifest already exists", color.HighlightUserInput(o.name))
 		}
 	}
 

@@ -123,7 +123,7 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 	if err != nil {
 		var notFoundErr *cp.PipelineNotFoundException
 		if errors.As(err, &notFoundErr) {
-			return nil, fmt.Errorf("get pipeline %s: %w", name, ErrPipelineNotFound)
+			return nil, ErrPipelineNotFound
 		}
 
 		return nil, fmt.Errorf("get pipeline %s: %w", name, err)

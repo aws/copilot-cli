@@ -226,6 +226,16 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			expectedOut:   nil,
 			expectedError: fmt.Errorf("get pipeline %s: %w", mockPipelineName, mockError),
 		},
+		"should return not found error on codepipeline not found exception": {
+			inPipelineName: mockPipelineName,
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
+					Name: aws.String(mockPipelineName),
+				}).Return(nil, &codepipeline.PipelineNotFoundException{})
+			},
+			expectedOut:   nil,
+			expectedError: ErrPipelineNotFound,
+		},
 	}
 
 	for name, tc := range tests {
