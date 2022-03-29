@@ -56,6 +56,7 @@ Generally, the steps involved in task run are:
     --tag string                     Optional. The container image tag in addition to "latest".
 -n, --task-group-name string         Optional. The group name of the task. Tasks with the same group name share the same set of resources.
     --task-role string               Optional. The role for the task to use.
+     --acknowledge-secrets-access    Optional. Skips the secrets access permission grant question and directly grants the permission to secrets.
 ```
 ## Example
 Run a task using your local Dockerfile and display log streams after the task is running. 
