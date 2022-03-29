@@ -8,14 +8,16 @@ $ copilot task exec
 
 ## What are the flags?
 ```
-  -a, --app string       Name of the application.
-  -c, --command string   Optional. The command that is passed to a running container. (default "/bin/bash")
-      --default          Optional. Execute commands in running tasks in default cluster and default subnets.
-                         Cannot be specified with 'app' or 'env'.
-  -e, --env string       Name of the environment.
-  -h, --help             help for exec
-  -n, --name string      Name of the service, job, or task group.
-      --task-id string   Optional. ID of the task you want to exec in.
+  -a, --app string                  Name of the application.
+  -c, --command string              Optional. The command that is passed to a running container. (default "/bin/bash")
+      --default                     Optional. Execute commands in running tasks in default cluster and default subnets.
+                                    Cannot be specified with 'app' or 'env'.
+  -e, --env string                  Name of the environment.
+  -h, --help                        help for exec
+  -n, --name string                 Name of the service, job, or task group.
+      --task-id string              Optional. ID of the task you want to exec in.
+      --acknowledge-secrets-access  Optional. Skips the secrets access permission grant question and directly grants the 
+                                    permission to secrets
 ```
 
 ## Examples
