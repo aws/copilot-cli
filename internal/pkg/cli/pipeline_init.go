@@ -94,8 +94,7 @@ type initPipelineVars struct {
 type initPipelineOpts struct {
 	initPipelineVars
 	// Interfaces to interact with dependencies.
-	workspace      wsPipelineWriter
-	wsLister       wsPipelineLister
+	workspace      wsPipelineIniter
 	secretsmanager secretsManager
 	parser         template.Parser
 	runner         runner
@@ -149,7 +148,6 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
-		wsLister:         ws,
 		secretsmanager:   secretsmanager.New(defaultSession),
 		parser:           template.New(),
 		sessProvider:     p,
@@ -222,7 +220,7 @@ If you'd prefer a new default manifest, please manually delete the existing file
 	}
 
 	// make sure pipeline doesn't exist locally
-	pipelines, err := o.wsLister.ListPipelines()
+	pipelines, err := o.workspace.ListPipelines()
 	if err != nil {
 		return fmt.Errorf("get local pipelines: %w", err)
 	}

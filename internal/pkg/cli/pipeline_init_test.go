@@ -51,7 +51,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		mockSelector       func(m *mocks.MockpipelineEnvSelector)
 		mockStore          func(m *mocks.Mockstore)
 		mockPipelineGetter func(m *mocks.MockpipelineGetter)
-		mockWsLister       func(m *mocks.MockwsPipelineLister)
+		mockWorkspace      func(m *mocks.MockwsPipelineIniter)
 		buffer             bytes.Buffer
 
 		expectedError error
@@ -64,7 +64,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:         func(m *mocks.Mockprompter) {},
 			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
-			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			mockWorkspace:      func(m *mocks.MockwsPipelineIniter) {},
 			expectedError:      errNoAppInWorkspace,
 		},
 		"invalid app name (not in workspace)": {
@@ -76,7 +76,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:         func(m *mocks.Mockprompter) {},
 			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
-			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			mockWorkspace:      func(m *mocks.MockwsPipelineIniter) {},
 			expectedError:      errors.New("cannot specify app ghost-app because the workspace is already registered with app diff-app"),
 		},
 		"invalid app name": {
@@ -90,7 +90,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:         func(m *mocks.Mockprompter) {},
 			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
-			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			mockWorkspace:      func(m *mocks.MockwsPipelineIniter) {},
 			expectedError:      fmt.Errorf("get application ghost-app configuration: some error"),
 		},
 		"invalid pipeline name": {
@@ -104,7 +104,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:         func(m *mocks.Mockprompter) {},
 			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
-			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			mockWorkspace:      func(m *mocks.MockwsPipelineIniter) {},
 			expectedError:      fmt.Errorf("pipeline name 1234 is invalid: %w", errValueBadFormat),
 		},
 		"returns an error if fail to get pipeline name": {
@@ -120,7 +120,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider:   func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {},
-			mockWsLister:       func(m *mocks.MockwsPipelineLister) {},
+			mockWorkspace:      func(m *mocks.MockwsPipelineIniter) {},
 			expectedError:      fmt.Errorf("get pipeline name: mock error"),
 		},
 		"returns error on duplicate deployed pipeline": {
@@ -136,7 +136,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, nil)
 			},
-			mockWsLister:  func(m *mocks.MockwsPipelineLister) {},
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {},
 			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
 		},
 		"returns error if fail to check against deployed pipelines": {
@@ -152,7 +152,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, errors.New("some error"))
 			},
-			mockWsLister:  func(m *mocks.MockwsPipelineLister) {},
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {},
 			expectedError: errors.New("validate if pipeline exists: some error"),
 		},
 		"returns error on duplicate local pipeline": {
@@ -168,7 +168,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{{Name: wantedName}}, nil)
 			},
 			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
@@ -186,7 +186,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, errors.New("some error"))
 			},
 			expectedError: errors.New("get local pipelines: some error"),
@@ -210,7 +210,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 		},
@@ -229,7 +229,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 			expectedError: errors.New("repository unsupported.org/repositories/repoName must be from a supported provider: GitHub, CodeCommit or Bitbucket"),
@@ -251,7 +251,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 			expectedError: errors.New("validate environment test: some error"),
@@ -279,7 +279,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 		},
@@ -306,7 +306,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 		},
@@ -342,7 +342,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 		},
@@ -367,10 +367,9 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
-
 			expectedError: fmt.Errorf("select environments: some error"),
 		},
 		"returns error if fail to select URL": {
@@ -394,7 +393,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 			expectedError: fmt.Errorf("select URL: some error"),
@@ -427,10 +426,9 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
-
 			expectedError: fmt.Errorf("validate environment prod: some error"),
 		},
 		"skip selector prompt if only one repo URL": {
@@ -462,7 +460,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
 				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
 			},
-			mockWsLister: func(m *mocks.MockwsPipelineLister) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
 			},
 		},
@@ -479,8 +477,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mocksSessProvider := mocks.NewMocksessionProvider(ctrl)
 			mockSelector := mocks.NewMockpipelineEnvSelector(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
-			mockWsLister := mocks.NewMockwsPipelineLister(ctrl)
 			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineIniter(ctrl)
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
@@ -498,7 +496,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				sel:          mockSelector,
 				store:        mockStore,
 				pipeline:     mockPipelineGetter,
-				wsLister:     mockWsLister,
+				workspace:    mockWorkspace,
 			}
 
 			tc.mockPrompt(mockPrompt)
@@ -507,7 +505,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			tc.mockSelector(mockSelector)
 			tc.mockStore(mockStore)
 			tc.mockPipelineGetter(mockPipelineGetter)
-			tc.mockWsLister(mockWsLister)
+			tc.mockWorkspace(mockWorkspace)
 
 			// WHEN
 			err := opts.Ask()
@@ -541,7 +539,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inAppName      string
 
 		mockSecretsManager          func(m *mocks.MocksecretsManager)
-		mockWsWriter                func(m *mocks.MockwsPipelineWriter)
+		mockWorkspace               func(m *mocks.MockwsPipelineIniter)
 		mockParser                  func(m *templatemocks.MockParser)
 		mockFileSystem              func(mockFS afero.Fs)
 		mockRegionalResourcesGetter func(m *mocks.MockappResourcesGetter)
@@ -563,7 +561,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inRepoURL:          "git@github.com:badgoose/goose.git",
 			inAppName:          "badgoose",
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
@@ -605,7 +603,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
@@ -649,7 +647,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
@@ -690,7 +688,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
@@ -731,7 +729,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
@@ -779,7 +777,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inAppName: "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
@@ -824,7 +822,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 			},
@@ -869,7 +867,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", errors.New("some error"))
 			},
 			mockParser:                  func(m *templatemocks.MockParser) {},
@@ -894,7 +892,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
@@ -921,7 +919,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
@@ -954,7 +952,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Times(0)
 			},
@@ -995,7 +993,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", manifestExistsErr)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", buildspecExistsErr)
 			},
@@ -1040,7 +1038,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", errors.New("some error"))
 			},
@@ -1121,7 +1119,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockWriter := mocks.NewMockwsPipelineWriter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineIniter(ctrl)
 			mockParser := templatemocks.NewMockParser(ctrl)
 			mockRegionalResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
 			mockstore := mocks.NewMockstore(ctrl)
@@ -1131,8 +1129,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			if tc.mockSecretsManager != nil {
 				tc.mockSecretsManager(mockSecretsManager)
 			}
-			if tc.mockWsWriter != nil {
-				tc.mockWsWriter(mockWriter)
+			if tc.mockWorkspace != nil {
+				tc.mockWorkspace(mockWorkspace)
 			}
 			if tc.mockParser != nil {
 				tc.mockParser(mockParser)
@@ -1164,7 +1162,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				cfnClient:      mockRegionalResourcesGetter,
 				sessProvider:   mockSessProvider,
 				store:          mockstore,
-				workspace:      mockWriter,
+				workspace:      mockWorkspace,
 				parser:         mockParser,
 				runner:         mockRunner,
 				fs:             memFs,

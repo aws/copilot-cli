@@ -239,12 +239,9 @@ type wsPipelineManifestReader interface {
 	ReadPipelineManifest(path string) (*manifest.Pipeline, error)
 }
 
-type wsPipelineWriter interface {
+type wsPipelineIniter interface {
 	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
-}
-
-type wsPipelineLister interface {
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
