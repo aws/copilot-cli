@@ -201,7 +201,7 @@ func (o *initPipelineOpts) Ask() error {
 
 // validateDuplicatePipeline checks that the pipeline name isn't already used
 // by another pipeline, whether it's been deployed or just has a local manifest file.
-// We check for the existance of the name and the namespaced name to reduce
+// We check for the existence of the name and the namespaced name to reduce
 // potential confusion with a legacy pipeline.
 func (o *initPipelineOpts) validateDuplicatePipeline() error {
 	// make sure pipeline isn't already deployed
