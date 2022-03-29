@@ -13,8 +13,6 @@ import (
 )
 
 const (
-	fmtDefaultPipelineBuildspecPath = "copilot/pipelines/%s/buildspec.yml"
-
 	GithubProviderName     = "GitHub"
 	GithubV1ProviderName   = "GitHubV1"
 	CodeCommitProviderName = "CodeCommit"
