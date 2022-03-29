@@ -19,10 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
-const (
-	pipelineResourceType = "codepipeline:pipeline"
-)
-
 type api interface {
 	GetPipeline(*cp.GetPipelineInput) (*cp.GetPipelineOutput, error)
 	GetPipelineState(*cp.GetPipelineStateInput) (*cp.GetPipelineStateOutput, error)
