@@ -13,6 +13,7 @@ import (
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -93,7 +94,7 @@ type initPipelineVars struct {
 type initPipelineOpts struct {
 	initPipelineVars
 	// Interfaces to interact with dependencies.
-	workspace      wsPipelineWriter
+	workspace      wsPipelineIniter
 	secretsmanager secretsManager
 	parser         template.Parser
 	runner         runner
@@ -102,6 +103,7 @@ type initPipelineOpts struct {
 	store          store
 	prompt         prompter
 	sel            pipelineEnvSelector
+	codePipeline   pipelineGetter
 
 	// Outputs stored on successful actions.
 	secret    string
@@ -156,6 +158,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
+		codePipeline:     codepipeline.New(defaultSession),
 	}, nil
 }
 
@@ -176,6 +179,10 @@ func (o *initPipelineOpts) Ask() error {
 		return err
 	}
 
+	if err := o.validateDuplicatePipeline(); err != nil {
+		return err
+	}
+
 	if err := o.askOrValidateURL(); err != nil {
 		return err
 	}
@@ -187,6 +194,57 @@ func (o *initPipelineOpts) Ask() error {
 	}
 	if err := o.validateEnvs(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// validateDuplicatePipeline checks that the pipeline name isn't already used
+// by another pipeline, whether it's been deployed or just has a local manifest file.
+// We check for the existence of the name and the namespaced name to reduce
+// potential confusion with a legacy pipeline.
+func (o *initPipelineOpts) validateDuplicatePipeline() error {
+	// make sure pipeline isn't already deployed
+	names, err := o.codePipeline.ListPipelineNamesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return fmt.Errorf("validate if pipeline exists: %w", err)
+	}
+
+	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
+	for _, name := range names {
+		if strings.EqualFold(name, o.name) || strings.EqualFold(name, fullName) {
+			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
+To recreate the pipeline, please run:
+%s
+If you'd like a new default manifest, please manually delete the existing file, then run:
+%s
+`,
+				color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", o.name)),
+				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
+			return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(o.name))
+		}
+	}
+
+	// make sure pipeline doesn't exist locally
+	pipelines, err := o.workspace.ListPipelines()
+	if err != nil {
+		return fmt.Errorf("get local pipelines: %w", err)
+	}
+
+	for _, pipeline := range pipelines {
+		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
+			log.Errorf(`It seems like you are trying to init a pipeline that exists,
+but has not been deployed. To deploy this pipeline, please run:
+%s
+If you'd like a new default manifest, please manually delete the existing file, then run:
+%s
+`,
+				color.HighlightCode(fmt.Sprintf("copilot pipeline deploy --name %s", o.name)),
+				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
+			return fmt.Errorf("pipeline %s's manifest already exists", color.HighlightUserInput(o.name))
+		}
 	}
 
 	return nil
