@@ -199,24 +199,32 @@ func (o *initPipelineOpts) Ask() error {
 	return nil
 }
 
+// validateDuplicatePipeline checks that the pipeline name isn't already used
+// by another pipeline, whether it's been deployed or just has a local manifest file.
+// We check for the existance of the name and the namespaced name to reduce
+// potential confusion with a legacy pipeline.
 func (o *initPipelineOpts) validateDuplicatePipeline() error {
 	// make sure pipeline isn't already deployed
-	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
+	names, err := o.codePipeline.ListPipelineNamesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return fmt.Errorf("validate if pipeline exists: %w", err)
+	}
 
-	_, err := o.codePipeline.GetPipeline(fullName)
-	switch {
-	case err == nil:
-		log.Errorf(`It seems like you are trying to init a pipeline that already exists.
+	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
+	for _, name := range names {
+		if strings.EqualFold(name, o.name) || strings.EqualFold(name, fullName) {
+			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
 To recreate the pipeline, please run:
 1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
 If you'd prefer a new default manifest, please manually delete the existing file.
 2. And then %s
 `,
-			color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", o.name)),
-			color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
-		return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(o.name))
-	case !errors.Is(err, codepipeline.ErrPipelineNotFound):
-		return fmt.Errorf("validate if pipeline exists: %w", err)
+				color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", o.name)),
+				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
+			return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(o.name))
+		}
 	}
 
 	// make sure pipeline doesn't exist locally
@@ -226,7 +234,7 @@ If you'd prefer a new default manifest, please manually delete the existing file
 	}
 
 	for _, pipeline := range pipelines {
-		if pipeline.Name == o.name {
+		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
 			log.Errorf(`It seems like you are trying to init a pipeline that exists,
 but has not been deployed. To deploy this pipeline, please run:
 %s

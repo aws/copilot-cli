@@ -11,10 +11,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	templatemocks "github.com/aws/copilot-cli/internal/pkg/template/mocks"
@@ -134,7 +134,23 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, nil)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return([]string{fullName, "random"}, nil)
+			},
+			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {},
+			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
+		},
+		"returns error on duplicate short name deployed pipeline": {
+			inWsAppName: mockAppName,
+			inName:      wantedName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+			},
+			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
+			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return([]string{"random", wantedName}, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {},
 			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
@@ -150,7 +166,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, errors.New("some error"))
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, errors.New("some error"))
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {},
 			expectedError: errors.New("validate if pipeline exists: some error"),
@@ -166,7 +182,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{{Name: wantedName}}, nil)
@@ -184,7 +200,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, errors.New("some error"))
@@ -208,7 +224,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -227,7 +243,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -249,7 +265,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt:       func(m *mocks.Mockprompter) {},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -277,7 +293,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -304,7 +320,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockSelector:     func(m *mocks.MockpipelineEnvSelector) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -340,7 +356,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -365,7 +381,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -391,7 +407,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -424,7 +440,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
@@ -458,7 +474,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 			mockPipelineGetter: func(m *mocks.MockpipelineGetter) {
-				m.EXPECT().GetPipeline(fullName).Return(nil, codepipeline.ErrPipelineNotFound)
+				m.EXPECT().ListPipelineNamesByTags(map[string]string{deploy.AppTagKey: mockAppName}).Return(nil, nil)
 			},
 			mockWorkspace: func(m *mocks.MockwsPipelineIniter) {
 				m.EXPECT().ListPipelines().Return(nil, nil)
