@@ -166,7 +166,7 @@ const regexpFindAllMatches = -1
 func reservedWorkloadNames() map[string]bool {
 	return map[string]bool{
 		"pipelines":    true, // reserved to avoid directory conflict with copilot pipelines
-		"environments": true, // reserved to avoid directory conflict with copilot enviornments
+		"environments": true, // reserved to avoid directory conflict with copilot environments
 	}
 }
 
