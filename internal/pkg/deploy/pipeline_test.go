@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -201,37 +202,44 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 
 	testCases := map[string]struct {
 		mfBuild       *manifest.Build
+		pipelineName  string
 		expectedBuild *Build
 	}{
-		"set default image if not be specified in manifest": {
-			mfBuild: nil,
+		"set default image, env type, and path if not specified in manifest": {
+			mfBuild:      &manifest.Build{},
+			pipelineName: "my-pipeline",
 			expectedBuild: &Build{
 				Image:           defaultImage,
 				EnvironmentType: "LINUX_CONTAINER",
+				BuildspecPath:   fmt.Sprintf(fmtDefaultPipelineBuildspecPath, "my-pipeline"),
 			},
 		},
 		"set image according to manifest": {
 			mfBuild: &manifest.Build{
-				Image: "aws/codebuild/standard:3.0",
+				Image:     "aws/codebuild/standard:3.0",
+				Buildspec: "some/path",
 			},
 			expectedBuild: &Build{
 				Image:           "aws/codebuild/standard:3.0",
 				EnvironmentType: "LINUX_CONTAINER",
+				BuildspecPath:   "some/path",
 			},
 		},
 		"set image according to manifest (ARM based)": {
 			mfBuild: &manifest.Build{
-				Image: "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				Buildspec: "some/path",
 			},
 			expectedBuild: &Build{
 				Image:           "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				EnvironmentType: "ARM_CONTAINER",
+				BuildspecPath:   "some/path",
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			build := PipelineBuildFromManifest(tc.mfBuild)
+			build := PipelineBuildFromManifest(tc.mfBuild, tc.pipelineName)
 			require.Equal(t, tc.expectedBuild, build, "mismatched build")
 		})
 	}

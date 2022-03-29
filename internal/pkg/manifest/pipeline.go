@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	fmtDefaultPipelineBuildspecPath = "copilot/pipelines/%s/buildspec.yml"
+
 	GithubProviderName     = "GitHub"
 	GithubV1ProviderName   = "GitHubV1"
 	CodeCommitProviderName = "CodeCommit"
@@ -178,7 +180,8 @@ type Source struct {
 
 // Build defines the build project to build and test image.
 type Build struct {
-	Image string `yaml:"image"`
+	Image     string `yaml:"image"`
+	Buildspec string `yaml:"buildspec"`
 }
 
 // PipelineStage represents a stage in the pipeline manifest

@@ -381,8 +381,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 func TestInitPipelineOpts_Execute(t *testing.T) {
 	const (
 		wantedName          = "mypipe"
-		wantedManifestFile  = "/piplines/mypipe/manifest.yml"
-		wantedBuildspecFile = "/piplines/mypipe/buildspec.yml"
+		wantedManifestFile  = "/pipelines/mypipe/manifest.yml"
+		wantedBuildspecFile = "/pipelines/mypipe/buildspec.yml"
 	)
 
 	buildspecExistsErr := &workspace.ErrFileExists{FileName: wantedBuildspecFile}
@@ -886,7 +886,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
-					Prod: false,
 				},
 			},
 			inGitHubToken: "hunter2",

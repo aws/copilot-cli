@@ -111,10 +111,11 @@ type initPipelineOpts struct {
 	ccRegion  string
 
 	// Cached variables
-	wsAppName  string
-	fs         *afero.Afero
-	buffer     bytes.Buffer
-	envConfigs []*config.Environment
+	wsAppName    string
+	fs           *afero.Afero
+	buffer       bytes.Buffer
+	envConfigs   []*config.Environment
+	manifestPath string // relative path to pipeline's manifest.yml file
 }
 
 type artifactBucket struct {
@@ -222,7 +223,7 @@ func (o *initPipelineOpts) Execute() error {
 		}
 	}
 
-	// write pipeline.yml file, populate with:
+	// write manifest.yml file, populate with:
 	//   - git repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
@@ -562,8 +563,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	for _, env := range o.envConfigs {
 
 		stage := manifest.PipelineStage{
-			Name:             env.Name,
-			RequiresApproval: env.Prod,
+			Name: env.Name,
 		}
 		stages = append(stages, stage)
 	}
@@ -589,6 +589,8 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		return err
 	}
 
+	o.manifestPath = manifestPath
+
 	manifestMsgFmt := "Wrote the pipeline manifest for %s at '%s'\n"
 	if manifestExists {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
@@ -608,10 +610,12 @@ func (o *initPipelineOpts) createBuildspec() error {
 	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
+		ManifestPath       string
 		ArtifactBuckets    []artifactBucket
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
 		Version:            version.Version,
+		ManifestPath:       o.manifestPath,
 		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {

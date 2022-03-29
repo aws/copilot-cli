@@ -226,7 +226,7 @@ func (o *deployPipelineOpts) Execute() error {
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		Source:          source,
-		Build:           deploy.PipelineBuildFromManifest(pipeline.Build),
+		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, pipeline.Name),
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,

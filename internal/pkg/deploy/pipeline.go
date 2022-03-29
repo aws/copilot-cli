@@ -20,9 +20,10 @@ import (
 const DefaultPipelineBranch = "main"
 
 const (
-	fmtInvalidRepo           = "unable to parse the repository from the URL %+v"
-	fmtErrMissingProperty    = "missing `%s` in properties"
-	fmtErrPropertyNotAString = "property `%s` is not a string"
+	fmtInvalidRepo                  = "unable to parse the repository from the URL %+v"
+	fmtErrMissingProperty           = "missing `%s` in properties"
+	fmtErrPropertyNotAString        = "property `%s` is not a string"
+	fmtDefaultPipelineBuildspecPath = "copilot/pipelines/%s/buildspec.yml"
 
 	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
@@ -70,6 +71,7 @@ type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
 	Image           string
 	EnvironmentType string
+	BuildspecPath   string
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
@@ -238,11 +240,15 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 }
 
 // PipelineBuildFromManifest processes manifest info about the build project settings.
-func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
+func PipelineBuildFromManifest(mfBuild *manifest.Build, plName string) (build *Build) {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
+	path := fmt.Sprintf(fmtDefaultPipelineBuildspecPath, plName)
 	if mfBuild != nil && mfBuild.Image != "" {
 		image = mfBuild.Image
+	}
+	if mfBuild != nil && mfBuild.Buildspec != "" {
+		path = mfBuild.Buildspec
 	}
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
@@ -250,6 +256,7 @@ func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
 	return &Build{
 		Image:           image,
 		EnvironmentType: environmentType,
+		BuildspecPath:   path,
 	}
 }
 
