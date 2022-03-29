@@ -41,7 +41,7 @@ type showAppOpts struct {
 	w                  io.Writer
 	sel                appSelector
 	pipelineInfoGetter pipelineGetter
-	pipelineLister     pipelineLister
+	pipelineLister     deployedPipelineLister
 	newVersionGetter   func(string) (versionGetter, error)
 }
 

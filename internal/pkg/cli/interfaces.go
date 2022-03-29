@@ -441,7 +441,7 @@ type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 }
 
-type pipelineLister interface {
+type deployedPipelineLister interface {
 	ListDeployedPipelines() ([]deploy.Pipeline, error)
 }
 

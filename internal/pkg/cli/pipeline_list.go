@@ -37,7 +37,7 @@ type listPipelineVars struct {
 type listPipelineOpts struct {
 	listPipelineVars
 	pipelineInfoGetter pipelineGetter
-	pipelineLister
+	deployedPipelineLister
 	prompt prompter
 	sel    configSelector
 	store  store
@@ -52,13 +52,13 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &listPipelineOpts{
-		listPipelineVars:   vars,
-		pipelineInfoGetter: codepipeline.New(defaultSession),
-		pipelineLister:     deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
-		prompt:             prompter,
-		sel:                selector.NewConfigSelect(prompter, store),
-		store:              store,
-		w:                  os.Stdout,
+		listPipelineVars:       vars,
+		pipelineInfoGetter:     codepipeline.New(defaultSession),
+		deployedPipelineLister: deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
+		prompt:                 prompter,
+		sel:                    selector.NewConfigSelect(prompter, store),
+		store:                  store,
+		w:                      os.Stdout,
 	}, nil
 }
 
@@ -81,7 +81,7 @@ func (o *listPipelineOpts) Ask() error {
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
 	var out string
-	pipelines, err := o.pipelineLister.ListDeployedPipelines()
+	pipelines, err := o.deployedPipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return fmt.Errorf("list deployed pipelines in application %s: %w", o.appName, err)
 	}

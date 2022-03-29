@@ -40,7 +40,7 @@ const (
 	fmtSNSTopicNamePrefix = "%s-%s-%s-"
 	snsServiceName        = "sns"
 
-	// pipeline name has a prefix in the format of "pipeline-${appName}-"
+	// After v1.x, pipeline names are namespaced with a prefix in the format of "pipeline-${appName}-"
 	pipelineNamePrefix = "pipeline-%s-"
 )
 
@@ -102,7 +102,7 @@ type Pipeline struct {
 	isLegacy     bool
 }
 
-// NewPipeline initiates a new pipeline.
+// NewPipeline initiates a new pipeline. Note that this function should only be used for unit tests.
 func NewPipeline(appName, resourceName string, isLegacy bool) Pipeline {
 	return Pipeline{
 		appName:      appName,
@@ -112,6 +112,7 @@ func NewPipeline(appName, resourceName string, isLegacy bool) Pipeline {
 }
 
 // HumanName returns the human-friendly name of the deployed pipeline.
+// For example: bad-goose (legacy)
 func (p Pipeline) HumanName() string {
 	if p.isLegacy {
 		return fmt.Sprintf("%s (legacy)", p.resourceName)

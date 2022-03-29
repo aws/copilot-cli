@@ -61,7 +61,7 @@ type deleteAppOpts struct {
 	sessProvider           sessionProvider
 	cfn                    deployer
 	prompt                 prompter
-	pipelineLister         pipelineLister
+	pipelineLister         deployedPipelineLister
 	s3                     func(session *session.Session) bucketEmptier
 	svcDeleteExecutor      func(svcName string) (executor, error)
 	jobDeleteExecutor      func(jobName string) (executor, error)

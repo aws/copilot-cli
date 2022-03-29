@@ -183,11 +183,11 @@ bad-goose (legacy)
 					appName:          mockAppName,
 					shouldOutputJSON: tc.shouldOutputJSON,
 				},
-				pipelineInfoGetter: mockPipelineGetter,
-				pipelineLister:     mockPipelineLister,
-				sel:                mockSel,
-				prompt:             mockPrompt,
-				w:                  b,
+				pipelineInfoGetter:     mockPipelineGetter,
+				deployedPipelineLister: mockPipelineLister,
+				sel:                    mockSel,
+				prompt:                 mockPrompt,
+				w:                      b,
 			}
 
 			// WHEN
