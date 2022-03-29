@@ -217,9 +217,9 @@ func (o *initPipelineOpts) validateDuplicatePipeline() error {
 		if strings.EqualFold(name, o.name) || strings.EqualFold(name, fullName) {
 			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
 To recreate the pipeline, please run:
-1. %s. Note: The manifest file will not be deleted and will be used in Step 2.
-If you'd prefer a new default manifest, please manually delete the existing file.
-2. And then %s
+%s
+If you'd like a new default manifest, please manually delete the existing file, then run:
+%s
 `,
 				color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", o.name)),
 				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
@@ -238,8 +238,8 @@ If you'd prefer a new default manifest, please manually delete the existing file
 			log.Errorf(`It seems like you are trying to init a pipeline that exists,
 but has not been deployed. To deploy this pipeline, please run:
 %s
-If you'd prefer a new default manifest, please manually delete the existing file
-and then %s
+If you'd like a new default manifest, please manually delete the existing file, then run:
+%s
 `,
 				color.HighlightCode(fmt.Sprintf("copilot pipeline deploy --name %s", o.name)),
 				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
