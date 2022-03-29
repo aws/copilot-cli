@@ -574,28 +574,26 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	}
 
 	var manifestExists bool
-	manifestPath, err := o.workspace.WritePipelineManifest(manifest, o.name)
+	o.manifestPath, err = o.workspace.WritePipelineManifest(manifest, o.name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
 			return fmt.Errorf("write pipeline manifest to workspace: %w", err)
 		}
 		manifestExists = true
-		manifestPath = e.FileName
+		o.manifestPath = e.FileName
 	}
 
-	manifestPath, err = relPath(manifestPath)
+	o.manifestPath, err = relPath(o.manifestPath)
 	if err != nil {
 		return err
 	}
-
-	o.manifestPath = manifestPath
 
 	manifestMsgFmt := "Wrote the pipeline manifest for %s at '%s'\n"
 	if manifestExists {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPath))
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	log.Infof(`The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.
 Update the file to add additional stages, change the branch to be tracked, or add test commands or manual approval actions.
 `)

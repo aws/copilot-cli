@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -194,7 +195,7 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 
-	// If the source has an existing connection, get the correlating ConnectionARN .
+	// If the source has an existing connection, get the correlating ConnectionARN.
 	connection, ok := pipeline.Source.Properties["connection_name"]
 	if ok {
 		arn, err := o.codestar.GetConnectionARN((connection).(string))
@@ -210,13 +211,19 @@ func (o *deployPipelineOpts) Execute() error {
 	}
 	o.shouldPromptUpdateConnection = bool
 
-	// convert environments to deployment stages
+	// Convert full manifest path to relative path.
+	relPath, err := relPath(o.pipeline.Path)
+	if err != nil {
+		return fmt.Errorf("convert pipeline manifest path: %w", err)
+	}
+
+	// Convert environments to deployment stages.
 	stages, err := o.convertStages(pipeline.Stages)
 	if err != nil {
 		return fmt.Errorf("convert environments to deployment stage: %w", err)
 	}
 
-	// get cross-regional resources
+	// Get cross-regional resources.
 	artifactBuckets, err := o.getArtifactBuckets()
 	if err != nil {
 		return fmt.Errorf("get cross-regional resources: %w", err)
@@ -226,7 +233,7 @@ func (o *deployPipelineOpts) Execute() error {
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		Source:          source,
-		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, pipeline.Name),
+		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, filepath.Dir(relPath)),
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,

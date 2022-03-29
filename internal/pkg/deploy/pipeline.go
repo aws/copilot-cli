@@ -8,6 +8,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -20,10 +21,9 @@ import (
 const DefaultPipelineBranch = "main"
 
 const (
-	fmtInvalidRepo                  = "unable to parse the repository from the URL %+v"
-	fmtErrMissingProperty           = "missing `%s` in properties"
-	fmtErrPropertyNotAString        = "property `%s` is not a string"
-	fmtDefaultPipelineBuildspecPath = "copilot/pipelines/%s/buildspec.yml"
+	fmtInvalidRepo           = "unable to parse the repository from the URL %+v"
+	fmtErrMissingProperty    = "missing `%s` in properties"
+	fmtErrPropertyNotAString = "property `%s` is not a string"
 
 	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
@@ -240,10 +240,10 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 }
 
 // PipelineBuildFromManifest processes manifest info about the build project settings.
-func PipelineBuildFromManifest(mfBuild *manifest.Build, plName string) (build *Build) {
+func PipelineBuildFromManifest(mfBuild *manifest.Build, mfDirPath string) (build *Build) {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
-	path := fmt.Sprintf(fmtDefaultPipelineBuildspecPath, plName)
+	path := filepath.Join(mfDirPath, "buildspec.yml")
 	if mfBuild != nil && mfBuild.Image != "" {
 		image = mfBuild.Image
 	}
