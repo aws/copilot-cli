@@ -7,8 +7,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/config"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
@@ -56,7 +57,7 @@ func TestPipelineStatus_Ask(t *testing.T) {
 			setupMocks: func(mocks pipelineStatusMocks) {
 				gomock.InOrder(
 					mocks.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Return(mockAppName, nil),
-					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPipelineName, nil),
+					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any()).Return(mockPipelineName, nil),
 				)
 			},
 
@@ -79,7 +80,7 @@ func TestPipelineStatus_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "dinder",
 					}, nil),
-					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPipelineName, nil),
+					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any()).Return(mockPipelineName, nil),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -94,7 +95,7 @@ func TestPipelineStatus_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "dinder",
 					}, nil),
-					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError),
+					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any()).Return("", mockError),
 				)
 			},
 			expectedApp: mockAppName,

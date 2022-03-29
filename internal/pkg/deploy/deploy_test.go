@@ -688,3 +688,105 @@ func TestStore_ListSNSTopics(t *testing.T) {
 		})
 	}
 }
+
+func TestPipelineStore_ListDeployedPipelines(t *testing.T) {
+	const (
+		mockAppName           = "mockApp"
+		mockLegacyPipelineARN = "arn:aws:codepipeline:us-west-2:1234567890:pipeline-dinder-badgoose-repo"
+		mockPipelineARN       = "arn:aws:codepipeline:us-west-2:1234567890:pipeline-my-pipeline-repo"
+	)
+	testCases := map[string]struct {
+		setupMocks func(mocks storeMock)
+
+		wantedError     error
+		wantedPipelines []Pipeline
+	}{
+		"return error if fail to get resources by tag": {
+			setupMocks: func(m storeMock) {
+				m.rgGetter.EXPECT().GetResourcesByTags(pipelineResourceType, map[string]string{
+					AppTagKey: "mockApp",
+				}).Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("get pipeline resources by tags for app mockApp: some error"),
+		},
+		"return error if fail to parse pipeline ARN": {
+			setupMocks: func(m storeMock) {
+				m.rgGetter.EXPECT().GetResourcesByTags(pipelineResourceType, map[string]string{
+					AppTagKey: "mockApp",
+				}).Return([]*rg.Resource{
+					{
+						ARN: "badARN",
+					},
+				}, nil)
+			},
+
+			wantedError: fmt.Errorf("parse pipeline ARN: badARN"),
+		},
+		"success": {
+			setupMocks: func(m storeMock) {
+				m.rgGetter.EXPECT().GetResourcesByTags(pipelineResourceType, map[string]string{
+					AppTagKey: "mockApp",
+				}).Return([]*rg.Resource{
+					{
+						ARN: mockLegacyPipelineARN,
+						Tags: map[string]string{
+							AppTagKey: mockAppName,
+						},
+					},
+					{
+						ARN: mockPipelineARN,
+						Tags: map[string]string{
+							AppTagKey:      mockAppName,
+							PipelineTagKey: "my-pipeline-repo",
+						},
+					},
+				}, nil)
+			},
+
+			wantedPipelines: []Pipeline{
+				{
+					resourceName: "pipeline-dinder-badgoose-repo",
+					isLegacy:     true,
+					appName:      mockAppName,
+				},
+				{
+					resourceName: "my-pipeline-repo",
+					isLegacy:     false,
+					appName:      mockAppName,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+
+			mocks := storeMock{
+				rgGetter: mockRgGetter,
+			}
+
+			tc.setupMocks(mocks)
+
+			store := &PipelineStore{
+				appName: mockAppName,
+				getter:  mocks.rgGetter,
+			}
+
+			// WHEN
+			pipelines, err := store.ListDeployedPipelines()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+				require.ElementsMatch(t, pipelines, tc.wantedPipelines)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

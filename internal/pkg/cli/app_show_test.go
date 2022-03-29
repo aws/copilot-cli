@@ -18,10 +18,11 @@ import (
 )
 
 type showAppMocks struct {
-	storeSvc      *mocks.Mockstore
-	sel           *mocks.MockappSelector
-	pipelineSvc   *mocks.MockpipelineGetter
-	versionGetter *mocks.MockversionGetter
+	storeSvc       *mocks.Mockstore
+	sel            *mocks.MockappSelector
+	pipelineGetter *mocks.MockpipelineGetter
+	pipelineLister *mocks.MockpipelineLister
+	versionGetter  *mocks.MockversionGetter
 }
 
 func TestShowAppOpts_Validate(t *testing.T) {
@@ -156,7 +157,13 @@ func TestShowAppOpts_Ask(t *testing.T) {
 }
 
 func TestShowAppOpts_Execute(t *testing.T) {
-	testAppName := "my-app"
+	const (
+		mockAppName            = "my-app"
+		mockPipelineName       = "my-pipeline-repo"
+		mockLegacyPipelineName = "bad-goose"
+	)
+	mockPipeline := deploy.NewPipeline(mockAppName, fmt.Sprintf("pipeline-%s-%s", mockAppName, mockPipelineName), false)
+	mockLegacyPipeline := deploy.NewPipeline(mockAppName, mockLegacyPipelineName, true)
 	testError := errors.New("some error")
 	testCases := map[string]struct {
 		shouldOutputJSON bool
@@ -200,16 +207,19 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						Prod:      true,
 					},
 				}, nil)
-				m.pipelineSvc.EXPECT().
-					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
-					Return([]*codepipeline.Pipeline{
-						{Name: "pipeline1"},
-						{Name: "pipeline2"},
-					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
+				m.pipelineGetter.EXPECT().
+					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(&codepipeline.Pipeline{
+					Name: "my-pipeline-repo",
+				}, nil)
+				m.pipelineGetter.EXPECT().
+					GetPipeline("bad-goose").Return(&codepipeline.Pipeline{
+					Name: "bad-goose",
+				}, nil)
 				m.versionGetter.EXPECT().Version().Return("v0.0.0", nil)
 			},
 
-			wantedContent: "{\"name\":\"my-app\",\"version\":\"v0.0.0\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}],\"jobs\":[{\"app\":\"\",\"name\":\"my-job\",\"type\":\"Scheduled Job\"}],\"pipelines\":[{\"name\":\"pipeline1\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"pipeline2\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
+			wantedContent: "{\"name\":\"my-app\",\"version\":\"v0.0.0\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}],\"jobs\":[{\"app\":\"\",\"name\":\"my-job\",\"type\":\"Scheduled Job\"}],\"pipelines\":[{\"name\":\"my-pipeline-repo\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
 		},
 		"correctly shows human output": {
 			setupMocks: func(m showAppMocks) {
@@ -241,12 +251,15 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						Region:    "us-west-1",
 					},
 				}, nil)
-				m.pipelineSvc.EXPECT().
-					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
-					Return([]*codepipeline.Pipeline{
-						{Name: "pipeline1"},
-						{Name: "pipeline2"},
-					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
+				m.pipelineGetter.EXPECT().
+					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(&codepipeline.Pipeline{
+					Name: "my-pipeline-repo",
+				}, nil)
+				m.pipelineGetter.EXPECT().
+					GetPipeline("bad-goose").Return(&codepipeline.Pipeline{
+					Name: "bad-goose",
+				}, nil)
 				m.versionGetter.EXPECT().Version().Return("v0.0.0", nil)
 			},
 
@@ -274,8 +287,8 @@ Pipelines
 
   Name
   ----
-  pipeline1
-  pipeline2
+  my-pipeline-repo
+  bad-goose
 `,
 		},
 		"correctly shows human output with latest version": {
@@ -308,12 +321,7 @@ Pipelines
 						Region:    "us-west-1",
 					},
 				}, nil)
-				m.pipelineSvc.EXPECT().
-					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
-					Return([]*codepipeline.Pipeline{
-						{Name: "pipeline1"},
-						{Name: "pipeline2"},
-					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
 				m.versionGetter.EXPECT().Version().Return(deploy.LatestAppTemplateVersion, nil)
 			},
 
@@ -341,8 +349,6 @@ Pipelines
 
   Name
   ----
-  pipeline1
-  pipeline2
 `,
 		},
 		"returns error if fail to get application": {
@@ -453,11 +459,47 @@ Pipelines
 						Type: "Scheduled Job",
 					},
 				}, nil)
-				m.pipelineSvc.EXPECT().
-					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
-					Return(nil, testError)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return(nil, testError)
 			},
 			wantedError: fmt.Errorf("list pipelines in application %s: %w", "my-app", testError),
+		},
+		"returns error if fail to get pipeline info": {
+			shouldOutputJSON: false,
+
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
+					{
+						Name: "my-svc",
+						Type: "lb-web-svc",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListJobs("my-app").Return([]*config.Workload{
+					{
+						Name: "my-job",
+						Type: "Scheduled Job",
+					},
+				}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline}, nil)
+				m.pipelineGetter.EXPECT().
+					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(nil, testError)
+			},
+			wantedError: fmt.Errorf("get info for pipeline %s: %w", mockPipelineName, testError),
 		},
 		"returns error if fail to get app version": {
 			shouldOutputJSON: false,
@@ -491,12 +533,7 @@ Pipelines
 						Type: "Scheduled Job",
 					},
 				}, nil)
-				m.pipelineSvc.EXPECT().
-					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
-					Return([]*codepipeline.Pipeline{
-						{Name: "pipeline1"},
-						{Name: "pipeline2"},
-					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
 				m.versionGetter.EXPECT().Version().Return("", testError)
 			},
 			wantedError: fmt.Errorf("get version for application %s: %w", "my-app", testError),
@@ -512,22 +549,25 @@ Pipelines
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockVersionGetter := mocks.NewMockversionGetter(ctrl)
+			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
 
 			mocks := showAppMocks{
-				storeSvc:      mockStoreReader,
-				pipelineSvc:   mockPLSvc,
-				versionGetter: mockVersionGetter,
+				storeSvc:       mockStoreReader,
+				pipelineGetter: mockPLSvc,
+				versionGetter:  mockVersionGetter,
+				pipelineLister: mockPipelineLister,
 			}
 			tc.setupMocks(mocks)
 
 			opts := &showAppOpts{
 				showAppVars: showAppVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
-					name:             testAppName,
+					name:             mockAppName,
 				},
-				store:       mockStoreReader,
-				w:           b,
-				pipelineSvc: mockPLSvc,
+				store:              mockStoreReader,
+				w:                  b,
+				pipelineInfoGetter: mockPLSvc,
+				pipelineLister:     mockPipelineLister,
 				newVersionGetter: func(s string) (versionGetter, error) {
 					return mockVersionGetter, nil
 				},

@@ -31,6 +31,11 @@ type deployPipelineMocks struct {
 }
 
 func TestDeployPipelineOpts_Ask(t *testing.T) {
+	const (
+		testAppName        = "badgoose"
+		testPipelineName   = "pipeline-badgoose-honkpipes"
+		testPipelineSecret = "github-token-badgoose-honkpipes"
+	)
 	pipeline := workspace.PipelineManifest{
 		Name: testPipelineName,
 		Path: "copilot/pipeline.yml",
@@ -169,6 +174,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 		accountID            = "123456789012"
 		pipelineName         = "pipepiper"
 		pipelineManifestPath = "/copilot/pipelines/pipepiper/manifest.yml"
+		badPipelineName      = "pipeline-badgoose-honkpipes"
 	)
 	mockPipelineManifest := &manifest.Pipeline{
 		Name:    "pipepiper",
@@ -410,7 +416,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			inRegion:  region,
 			callMocks: func(m deployPipelineMocks) {
 				mockBadPipelineManifest := &manifest.Pipeline{
-					Name:    testPipelineName,
+					Name:    badPipelineName,
 					Version: 1,
 					Source: &manifest.Source{
 						ProviderName: "NotGitHub",

@@ -6,10 +6,14 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -21,8 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -81,6 +83,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	codepipeline := codepipeline.New(defaultSess)
+	pipelineLister := deploy.NewPipelineStore(vars.appName, rg.New(defaultSess))
 
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
@@ -91,7 +94,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
 		store:              ssmStore,
-		sel:                selector.NewAppPipelineSelect(prompter, ssmStore, codepipeline),
+		sel:                selector.NewAppPipelineSelect(prompter, ssmStore, pipelineLister),
 	}
 
 	return opts, nil
@@ -160,9 +163,7 @@ func (o *deletePipelineOpts) Execute() error {
 }
 
 func askDeployedPipelineName(sel codePipelineSelector, appName, msg string) (string, error) {
-	pipeline, err := sel.DeployedPipeline(msg, "", map[string]string{
-		deploy.AppTagKey: appName,
-	})
+	pipeline, err := sel.DeployedPipeline(msg, "")
 	if err != nil {
 		return "", fmt.Errorf("select deployed pipelines: %w", err)
 	}

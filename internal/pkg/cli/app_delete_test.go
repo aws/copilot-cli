@@ -129,7 +129,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 type deleteAppMocks struct {
 	spinner         *mocks.Mockprogress
 	store           *mocks.Mockstore
-	codepipeline    *mocks.MockpipelineGetter
+	codepipeline    *mocks.MockpipelineLister
 	ws              *mocks.MockwsFileDeleter
 	sessProvider    *sessions.Provider
 	deployer        *mocks.Mockdeployer
@@ -167,10 +167,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 	mockApp := &config.Application{
 		Name: "badgoose",
 	}
-	mockTags := map[string]string{
-		deploy.AppTagKey: mockAppName,
-	}
-	mockPipelines := []string{"pipeline1", "pipeline2", "pipeline3"}
+	mockPipelines := []deploy.Pipeline{deploy.NewPipeline("badgoose", "pipeline1", false), deploy.NewPipeline("badgoose", "pipeline2", false)}
 	mockResources := []*stack.AppRegionalResources{
 		{
 			Region:   "us-west-2",
@@ -221,8 +218,8 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
 					// delete pipelines
-					mocks.codepipeline.EXPECT().ListPipelineNamesByTags(mockTags).Return(mockPipelines, nil),
-					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(3),
+					mocks.codepipeline.EXPECT().ListDeployedPipelines().Return(mockPipelines, nil),
+					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// deleteAppResources
 					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
@@ -255,7 +252,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockWorkspace := mocks.NewMockwsFileDeleter(ctrl)
 			mockSession := sessions.ImmutableProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
-			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
+			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
 
 			mockBucketEmptier := mocks.NewMockbucketEmptier(ctrl)
 			mockGetBucketEmptier := func(session *session.Session) bucketEmptier {
@@ -294,7 +291,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				ws:              mockWorkspace,
 				sessProvider:    mockSession,
 				deployer:        mockDeployer,
-				codepipeline:    mockPipelineGetter,
+				codepipeline:    mockPipelineLister,
 				svcDeleter:      mockSvcDeleteExecutor,
 				jobDeleter:      mockJobDeleteExecutor,
 				envDeleter:      mockEnvDeleteExecutor,
@@ -311,7 +308,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				spinner:                mockSpinner,
 				store:                  mockStore,
 				ws:                     mockWorkspace,
-				codepipeline:           mockPipelineGetter,
+				pipelineLister:         mockPipelineLister,
 				sessProvider:           mockSession,
 				cfn:                    mockDeployer,
 				s3:                     mockGetBucketEmptier,
