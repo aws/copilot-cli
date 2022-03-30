@@ -13,11 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -29,8 +30,9 @@ const (
 )
 
 type listPipelineVars struct {
-	appName          string
-	shouldOutputJSON bool
+	appName                  string
+	shouldOutputJSON         bool
+	shouldShowLocalPipelines bool
 }
 
 type listPipelineOpts struct {
@@ -40,13 +42,20 @@ type listPipelineOpts struct {
 	sel         configSelector
 	store       store
 	w           io.Writer
+	workspace   wsPipelineGetter
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, err
+	}
+
 	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline ls")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
+
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &listPipelineOpts{
@@ -56,6 +65,7 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 		sel:              selector.NewConfigSelect(prompter, store),
 		store:            store,
 		w:                os.Stdout,
+		workspace:        ws,
 	}, nil
 }
 
@@ -72,36 +82,105 @@ func (o *listPipelineOpts) Ask() error {
 		}
 		o.appName = app
 	}
+
 	return nil
 }
 
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
-	var out string
-	if o.shouldOutputJSON {
-		pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
-			deploy.AppTagKey: o.appName,
-		})
-		if err != nil {
-			return fmt.Errorf("list pipelines: %w", err)
-		}
+	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return fmt.Errorf("list pipelines: %w", err)
+	}
 
+	if o.shouldShowLocalPipelines {
+		return o.writeLocalPipelines(pipelines)
+	}
+
+	if o.shouldOutputJSON {
 		data, err := o.jsonOutput(pipelines)
 		if err != nil {
 			return err
 		}
-		out = data
-	} else {
-		pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
-			deploy.AppTagKey: o.appName,
-		})
-		if err != nil {
-			return fmt.Errorf("list pipelines: %w", err)
-		}
-		out = o.humanOutput(pipelines)
+		fmt.Fprintf(o.w, "%s\n", data)
 	}
-	fmt.Fprint(o.w, out)
 
+	// TODO: if doing local, get list of pipelines. add "deployed" and "manifestPath" fields.
+
+	return o.writeHuman()
+
+	/*
+		var out string
+		if o.shouldOutputJSON {
+			out = data
+		} else {
+			out = o.humanOutput(pipelines)
+		}
+		fmt.Fprint(o.w, out)
+	*/
+
+	return nil
+}
+
+func (o *listPipelineOpts) writeJson() error {
+	return nil
+}
+
+func (o *listPipelineOpts) writeHuman() error {
+	return nil
+}
+
+func (o *listPipelineOpts) writeLocalPipelines(deployed []*codepipeline.Pipeline) error {
+	local, err := o.workspace.ListPipelines()
+	if err != nil {
+		return err
+	}
+
+	if !o.shouldOutputJSON {
+		var names []string
+		for _, pipeline := range local {
+			names = append(names, pipeline.Name)
+		}
+
+		fmt.Fprint(o.w, o.humanOutput(names))
+		return nil
+	}
+
+	cp := make(map[string]*codepipeline.Pipeline)
+	for _, pipeline := range deployed {
+		cp[pipeline.Name] = pipeline
+	}
+
+	type localInfo struct {
+		*codepipeline.Pipeline
+		Name         string `json:"name"`
+		Deployed     bool   `json:"deployed"`
+		ManifestPath string `json:"manfiestPath"`
+	}
+
+	var out struct {
+		Pipelines []localInfo `json:"pipelines"`
+	}
+	for _, pipeline := range local {
+		p, deployed := cp[pipeline.Name]
+		info := localInfo{
+			Name:         pipeline.Name,
+			ManifestPath: pipeline.Path,
+			Deployed:     deployed,
+			Pipeline:     p,
+		}
+
+		out.Pipelines = append(out.Pipelines, info)
+	}
+
+	b, err := json.Marshal(out)
+	if err != nil {
+		return fmt.Errorf("marshal pipelines: %w", err)
+	}
+
+	fmt.Fprintf(o.w, "%s\n", b)
 	return nil
 }
 
@@ -147,5 +226,6 @@ func buildPipelineListCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldShowLocalPipelines, localFlag, false, localPipelineFlagDescription)
 	return cmd
 }

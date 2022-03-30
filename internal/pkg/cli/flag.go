@@ -238,6 +238,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	pipelineResourcesFlagDescription = "Optional. Show the resources in your pipeline."
 	localSvcFlagDescription          = "Only show services in the workspace."
 	localJobFlagDescription          = "Only show jobs in the workspace."
+	localPipelineFlagDescription     = "Only show pipelines in the workspace."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "The port on which your service listens."
 
