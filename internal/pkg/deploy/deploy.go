@@ -44,7 +44,7 @@ const (
 	pipelineNamePrefix = "pipeline-%s-"
 )
 
-type resourceGetter interface {
+type ResourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
 
@@ -65,8 +65,8 @@ type SessionProvider interface {
 // Store fetches information on deployed services.
 type Store struct {
 	configStore         ConfigStoreClient
-	newRgClientFromIDs  func(string, string) (resourceGetter, error)
-	newRgClientFromRole func(string, string) (resourceGetter, error)
+	newRgClientFromIDs  func(string, string) (ResourceGetter, error)
+	newRgClientFromRole func(string, string) (ResourceGetter, error)
 }
 
 // NewStore returns a new store.
@@ -74,7 +74,7 @@ func NewStore(sessProvider SessionProvider, store ConfigStoreClient) (*Store, er
 	s := &Store{
 		configStore: store,
 	}
-	s.newRgClientFromIDs = func(appName, envName string) (resourceGetter, error) {
+	s.newRgClientFromIDs = func(appName, envName string) (ResourceGetter, error) {
 		env, err := s.configStore.GetEnvironment(appName, envName)
 		if err != nil {
 			return nil, fmt.Errorf("get environment config %s: %w", envName, err)
@@ -85,7 +85,7 @@ func NewStore(sessProvider SessionProvider, store ConfigStoreClient) (*Store, er
 		}
 		return rg.New(sess), nil
 	}
-	s.newRgClientFromRole = func(roleARN, region string) (resourceGetter, error) {
+	s.newRgClientFromRole = func(roleARN, region string) (ResourceGetter, error) {
 		sess, err := sessProvider.FromRole(roleARN, region)
 		if err != nil {
 			return nil, fmt.Errorf("create new session from env role: %w", err)
@@ -113,11 +113,11 @@ func (p Pipeline) Name() string {
 // PipelineStore fetches information on deployed pipelines.
 type PipelineStore struct {
 	appName string
-	getter  resourceGetter
+	getter  ResourceGetter
 }
 
 // NewPipelineStore returns a new PipelineStore.
-func NewPipelineStore(appName string, getter resourceGetter) *PipelineStore {
+func NewPipelineStore(appName string, getter ResourceGetter) *PipelineStore {
 	return &PipelineStore{
 		appName: appName,
 		getter:  getter,
@@ -256,7 +256,7 @@ type result struct {
 	err  error
 }
 
-func (s *Store) deployedServices(rgClient resourceGetter, app, env, svc string) result {
+func (s *Store) deployedServices(rgClient ResourceGetter, app, env, svc string) result {
 	resources, err := rgClient.GetResourcesByTags(stackResourceType, map[string]string{
 		AppTagKey:     app,
 		EnvTagKey:     env,
