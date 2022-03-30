@@ -20,6 +20,7 @@ import (
 type showAppMocks struct {
 	storeSvc       *mocks.Mockstore
 	sel            *mocks.MockappSelector
+	deployStore    *mocks.MockdeployedEnvironmentLister
 	pipelineGetter *mocks.MockpipelineGetter
 	pipelineLister *mocks.MockpipelineLister
 	versionGetter  *mocks.MockversionGetter
@@ -218,7 +219,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
 				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
-				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()=
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
 				m.pipelineGetter.EXPECT().
 					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(&codepipeline.Pipeline{
@@ -369,8 +370,6 @@ Pipelines
 
   Name
   ----
-  pipeline1
-  pipeline2
 `,
 		},
 		"when service/job is not deployed": {
@@ -407,12 +406,11 @@ Pipelines
 				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{}, nil)
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{}, nil)
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{}, nil)
-				m.pipelineSvc.EXPECT().
-					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
-					Return([]*codepipeline.Pipeline{
-						{Name: "pipeline1"},
-						{Name: "pipeline2"},
-					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline}, nil)
+				m.pipelineGetter.EXPECT().
+					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(&codepipeline.Pipeline{
+					Name: "my-pipeline-repo",
+				}, nil)
 				m.versionGetter.EXPECT().Version().Return(deploy.LatestAppTemplateVersion, nil)
 			},
 
@@ -440,8 +438,7 @@ Pipelines
 
   Name
   ----
-  pipeline1
-  pipeline2
+  my-pipeline-repo
 `,
 		}, "when multiple services/jobs are deployed": {
 			setupMocks: func(m showAppMocks) {
@@ -498,12 +495,11 @@ Pipelines
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod2").Return([]string{"my-svc"}, nil)
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "test2").Return([]string{"my-svc"}, nil)
 				m.deployStore.EXPECT().ListDeployedServices("my-app", "staging").Return([]string{"my-svc"}, nil)
-				m.pipelineSvc.EXPECT().
-					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
-					Return([]*codepipeline.Pipeline{
-						{Name: "pipeline1"},
-						{Name: "pipeline2"},
-					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline}, nil)
+				m.pipelineGetter.EXPECT().
+					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(&codepipeline.Pipeline{
+					Name: "my-pipeline-repo",
+				}, nil)
 				m.versionGetter.EXPECT().Version().Return(deploy.LatestAppTemplateVersion, nil)
 			},
 
@@ -534,6 +530,7 @@ Pipelines
 
   Name
   ----
+  my-pipeline-repo
 `,
 		},
 		"returns error if fail to get application": {
@@ -644,10 +641,10 @@ Pipelines
 						Type: "Scheduled Job",
 					},
 				}, nil)
-				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil).AnyTimes()
-				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil).AnyTimes()
-				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil).AnyTimes()
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return(nil, testError)
 			},
 			wantedError: fmt.Errorf("list pipelines in application %s: %w", "my-app", testError),
@@ -684,6 +681,10 @@ Pipelines
 						Type: "Scheduled Job",
 					},
 				}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil)
+				m.deployStore.EXPECT().ListDeployedJobs("my-app", "prod").Return([]string{"my-job"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "test").Return([]string{"my-svc"}, nil)
+				m.deployStore.EXPECT().ListDeployedServices("my-app", "prod").Return([]string{"my-svc"}, nil)
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline}, nil)
 				m.pipelineGetter.EXPECT().
 					GetPipeline("pipeline-my-app-my-pipeline-repo").Return(nil, testError)
@@ -743,14 +744,14 @@ Pipelines
 			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockVersionGetter := mocks.NewMockversionGetter(ctrl)
 			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
-      mockDeployStore := mocks.NewMockdeployedEnvironmentLister(ctrl)
-        
+			mockDeployStore := mocks.NewMockdeployedEnvironmentLister(ctrl)
+
 			mocks := showAppMocks{
 				storeSvc:       mockStoreReader,
 				pipelineGetter: mockPLSvc,
 				versionGetter:  mockVersionGetter,
 				pipelineLister: mockPipelineLister,
-        deployStore:   mockDeployStore,
+				deployStore:    mockDeployStore,
 			}
 			tc.setupMocks(mocks)
 
@@ -763,7 +764,7 @@ Pipelines
 				w:              b,
 				codepipeline:   mockPLSvc,
 				pipelineLister: mockPipelineLister,
-        deployStore:   mockDeployStore,
+				deployStore:    mockDeployStore,
 				newVersionGetter: func(s string) (versionGetter, error) {
 					return mockVersionGetter, nil
 				},

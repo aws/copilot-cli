@@ -12,7 +12,6 @@ import (
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -46,6 +45,7 @@ type showAppOpts struct {
 	store            store
 	w                io.Writer
 	sel              appSelector
+	deployStore      deployedEnvironmentLister
 	codepipeline     pipelineGetter
 	pipelineLister   deployedPipelineLister
 	newVersionGetter func(string) (versionGetter, error)
@@ -67,6 +67,7 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		store:          store,
 		w:              log.OutputWriter,
 		sel:            selector.NewSelect(prompt.New(), store),
+		deployStore:    deployStore,
 		codepipeline:   codepipeline.New(defaultSession),
 		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
 		newVersionGetter: func(s string) (versionGetter, error) {
@@ -215,14 +216,14 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		return nil, fmt.Errorf("get version for application %s: %w", o.name, err)
 	}
 	return &describe.App{
-		Name:      app.Name,
-		Version:   version,
-		URI:       app.Domain,
-		Envs:      trimmedEnvs,
-		Services:  trimmedSvcs,
-		Jobs:      trimmedJobs,
-		Pipelines: pipelineInfo,
-    WkldDeployedtoEnvs: wkldDeployedtoEnvs,
+		Name:               app.Name,
+		Version:            version,
+		URI:                app.Domain,
+		Envs:               trimmedEnvs,
+		Services:           trimmedSvcs,
+		Jobs:               trimmedJobs,
+		Pipelines:          pipelineInfo,
+		WkldDeployedtoEnvs: wkldDeployedtoEnvs,
 	}, nil
 }
 
