@@ -764,17 +764,15 @@ func (s *CodePipelineSelect) DeployedPipeline(msg, help string) (string, error) 
 		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0].Name()))
 		return pipelines[0].Name(), nil
 	}
-	var pipelineHumanNames []string
-	pipelineNames := make(map[string]string)
+	var pipelineNames []string
 	for _, pipeline := range pipelines {
-		pipelineHumanNames = append(pipelineHumanNames, pipeline.Name())
-		pipelineNames[pipeline.Name()] = pipeline.Name()
+		pipelineNames = append(pipelineNames, pipeline.Name())
 	}
-	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineHumanNames, prompt.WithFinalMessage(pipelineFinalMsg))
+	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select pipeline: %w", err)
 	}
-	return pipelineNames[selectedPipeline], nil
+	return selectedPipeline, nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.
