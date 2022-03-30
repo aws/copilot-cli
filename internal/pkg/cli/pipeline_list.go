@@ -32,6 +32,8 @@ import (
 const (
 	pipelineListAppNamePrompt = "Which application are the pipelines in?"
 	pipelineListAppNameHelper = "An application is a collection of related services."
+
+	pipelineListTimeout = 10 * time.Second
 )
 
 type listPipelineVars struct {
@@ -110,7 +112,7 @@ func (o *listPipelineOpts) Ask() error {
 
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // TODO const
+	ctx, cancel := context.WithTimeout(context.Background(), pipelineListTimeout)
 	defer cancel()
 
 	switch {
@@ -119,19 +121,21 @@ func (o *listPipelineOpts) Execute() error {
 	case o.shouldShowLocalPipelines:
 		return o.humanOutputLocal()
 	case o.shouldOutputJSON:
-		return o.jsonOutput(ctx)
+		return o.jsonOutputDeployed(ctx)
 	}
 
-	return o.humanOutput(ctx)
+	return o.humanOutputDeployed(ctx)
 }
 
+// jsonOutputLocal prints data about all pipelines in the current workspace.
+// If a local pipeline has been deployed, data from codepipeline is included.
 func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 	local, err := o.workspace.ListPipelines()
 	if err != nil {
 		return err
 	}
 
-	deployed, err := getDeployedPipelines(ctx, o.pipelineLister, o.codepipeline)
+	deployed, err := getDeployedPipelines(ctx, o.wsAppName, o.pipelineLister, o.codepipeline)
 	if err != nil {
 		return err
 	}
@@ -167,6 +171,7 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 	return nil
 }
 
+// humanOutputLocal prints the name of all pipelines in the current workspace.
 func (o *listPipelineOpts) humanOutputLocal() error {
 	local, err := o.workspace.ListPipelines()
 	if err != nil {
@@ -180,8 +185,9 @@ func (o *listPipelineOpts) humanOutputLocal() error {
 	return nil
 }
 
-func (o *listPipelineOpts) jsonOutput(ctx context.Context) error {
-	pipelines, err := getDeployedPipelines(ctx, o.pipelineLister, o.codepipeline)
+// jsonOutputDeployed prints data about all pipelines in the given app that have been deployed.
+func (o *listPipelineOpts) jsonOutputDeployed(ctx context.Context) error {
+	pipelines, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.codepipeline)
 	if err != nil {
 		return err
 	}
@@ -198,8 +204,9 @@ func (o *listPipelineOpts) jsonOutput(ctx context.Context) error {
 	return nil
 }
 
-func (o *listPipelineOpts) humanOutput(ctx context.Context) error {
-	pipelines, err := getDeployedPipelines(ctx, o.pipelineLister, o.codepipeline)
+// humanOutputDeployed prints the name of all pipelines in the given app that have been deployed.
+func (o *listPipelineOpts) humanOutputDeployed(ctx context.Context) error {
+	pipelines, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.codepipeline)
 	if err != nil {
 		return err
 	}
@@ -211,7 +218,7 @@ func (o *listPipelineOpts) humanOutput(ctx context.Context) error {
 	return nil
 }
 
-func getDeployedPipelines(ctx context.Context, lister deployedPipelineLister, getter pipelineGetter) ([]*codepipeline.Pipeline, error) {
+func getDeployedPipelines(ctx context.Context, app string, lister deployedPipelineLister, getter pipelineGetter) ([]*codepipeline.Pipeline, error) {
 	names, err := lister.ListDeployedPipelines()
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)
@@ -223,6 +230,10 @@ func getDeployedPipelines(ctx context.Context, lister deployedPipelineLister, ge
 	g, _ := errgroup.WithContext(ctx)
 
 	for i := range names {
+		if names[i].AppName != app {
+			continue
+		}
+
 		name := names[i].Name()
 		g.Go(func() error {
 			pipeline, err := getter.GetPipeline(name)

@@ -135,10 +135,9 @@ func filterByName(wklds []*config.Workload, wantedNames []string) []*config.Work
 	}
 	var filtered []*config.Workload
 	for _, wkld := range wklds {
-		if _, ok := isWanted[wkld.Name]; !ok {
-			continue
+		if isWanted[wkld.Name] {
+			filtered = append(filtered, wkld)
 		}
-		filtered = append(filtered, wkld)
 	}
 	return filtered
 }
