@@ -242,6 +242,7 @@ type wsPipelineManifestReader interface {
 type wsPipelineIniter interface {
 	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
+	Rel(path string) (string, error)
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
@@ -283,6 +284,7 @@ type wsWlDirReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
+	Rel(path string) (string, error)
 }
 
 type wsPipelineGetter interface {

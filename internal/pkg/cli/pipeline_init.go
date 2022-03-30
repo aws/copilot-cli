@@ -113,10 +113,11 @@ type initPipelineOpts struct {
 	ccRegion  string
 
 	// Cached variables
-	wsAppName  string
-	fs         *afero.Afero
-	buffer     bytes.Buffer
-	envConfigs []*config.Environment
+	wsAppName    string
+	fs           *afero.Afero
+	buffer       bytes.Buffer
+	envConfigs   []*config.Environment
+	manifestPath string // relative path to pipeline's manifest.yml file
 }
 
 type artifactBucket struct {
@@ -280,7 +281,7 @@ func (o *initPipelineOpts) Execute() error {
 		}
 	}
 
-	// write pipeline.yml file, populate with:
+	// write manifest.yml file, populate with:
 	//   - git repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
@@ -620,8 +621,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	for _, env := range o.envConfigs {
 
 		stage := manifest.PipelineStage{
-			Name:             env.Name,
-			RequiresApproval: env.Prod,
+			Name: env.Name,
 		}
 		stages = append(stages, stage)
 	}
@@ -632,17 +632,16 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	}
 
 	var manifestExists bool
-	manifestPath, err := o.workspace.WritePipelineManifest(manifest, o.name)
+	o.manifestPath, err = o.workspace.WritePipelineManifest(manifest, o.name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
 			return fmt.Errorf("write pipeline manifest to workspace: %w", err)
 		}
 		manifestExists = true
-		manifestPath = e.FileName
+		o.manifestPath = e.FileName
 	}
-
-	manifestPath, err = relPath(manifestPath)
+	o.manifestPath, err = o.workspace.Rel(o.manifestPath)
 	if err != nil {
 		return err
 	}
@@ -651,7 +650,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	if manifestExists {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPath))
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	log.Infof(`The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.
 Update the file to add additional stages, change the branch to be tracked, or add test commands or manual approval actions.
 `)
@@ -666,10 +665,12 @@ func (o *initPipelineOpts) createBuildspec() error {
 	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
+		ManifestPath       string
 		ArtifactBuckets    []artifactBucket
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
 		Version:            version.Version,
+		ManifestPath:       o.manifestPath,
 		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {

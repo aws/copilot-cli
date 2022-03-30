@@ -156,7 +156,7 @@ Resources:
             Value: !Ref AWS::Partition
       Source:
         Type: CODEPIPELINE
-        BuildSpec: copilot/buildspec.yml
+        BuildSpec: {{.Build.BuildspecPath}}
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role

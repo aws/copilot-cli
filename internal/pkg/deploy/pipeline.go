@@ -8,6 +8,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -70,6 +71,7 @@ type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
 	Image           string
 	EnvironmentType string
+	BuildspecPath   string
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
@@ -238,11 +240,15 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 }
 
 // PipelineBuildFromManifest processes manifest info about the build project settings.
-func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
+func PipelineBuildFromManifest(mfBuild *manifest.Build, mfDirPath string) (build *Build) {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
+	path := filepath.Join(mfDirPath, "buildspec.yml")
 	if mfBuild != nil && mfBuild.Image != "" {
 		image = mfBuild.Image
+	}
+	if mfBuild != nil && mfBuild.Buildspec != "" {
+		path = mfBuild.Buildspec
 	}
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
@@ -250,6 +256,7 @@ func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
 	return &Build{
 		Image:           image,
 		EnvironmentType: environmentType,
+		BuildspecPath:   path,
 	}
 }
 

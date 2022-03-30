@@ -2285,6 +2285,21 @@ func (mr *MockwsPipelineIniterMockRecorder) ListPipelines() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockwsPipelineIniter)(nil).ListPipelines))
 }
 
+// Rel mocks base method.
+func (m *MockwsPipelineIniter) Rel(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rel", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Rel indicates an expected call of Rel.
+func (mr *MockwsPipelineIniterMockRecorder) Rel(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsPipelineIniter)(nil).Rel), path)
+}
+
 // WritePipelineBuildspec mocks base method.
 func (m *MockwsPipelineIniter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()
@@ -2797,6 +2812,21 @@ func (m *MockwsPipelineReader) ReadPipelineManifest(path string) (*manifest.Pipe
 func (mr *MockwsPipelineReaderMockRecorder) ReadPipelineManifest(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineReader)(nil).ReadPipelineManifest), path)
+}
+
+// Rel mocks base method.
+func (m *MockwsPipelineReader) Rel(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rel", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Rel indicates an expected call of Rel.
+func (mr *MockwsPipelineReaderMockRecorder) Rel(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsPipelineReader)(nil).Rel), path)
 }
 
 // MockwsPipelineGetter is a mock of wsPipelineGetter interface.
