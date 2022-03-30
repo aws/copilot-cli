@@ -773,6 +773,7 @@ func buildPipelineInitCmd() *cobra.Command {
 		Example: `
   Create a pipeline for the services in your workspace.
   /code $ copilot pipeline init \
+  /code  --name my-pipeline
   /code  --url https://github.com/gitHubUserName/myFrontendApp.git \
   /code  --environments "stage,prod"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
