@@ -2,41 +2,41 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
 
 ???+ note "Sample manifest for a frontend service"
 
-```yaml
-    # Your service name will be used in naming your resources like log groups, App Runner services, etc.
-    name: frontend
-    type: Request-Driven Web Service
-
-    http:
-      healthcheck:
-        path: '/_healthcheck'
-        healthy_threshold: 3
-        unhealthy_threshold: 5
-        interval: 10s
-        timeout: 5s
-      alias: web.example.com
-
-    # Configuration for your containers and service.
-    image:
-      build: ./frontend/Dockerfile
-      port: 80
-    cpu: 1024
-    memory: 2048
-
-    network:
-      vpc:
-        placement: 'private'
-
-    variables:
-      LOG_LEVEL: info
+    ```yaml
+        # Your service name will be used in naming your resources like log groups, App Runner services, etc.
+        name: frontend
+        type: Request-Driven Web Service
     
-    tags:
-      owner: frontend-team
-
-    environments:
-      test:
-        LOG_LEVEL: debug
-```
+        http:
+          healthcheck:
+            path: '/_healthcheck'
+            healthy_threshold: 3
+            unhealthy_threshold: 5
+            interval: 10s
+            timeout: 5s
+          alias: web.example.com
+    
+        # Configuration for your containers and service.
+        image:
+          build: ./frontend/Dockerfile
+          port: 80
+        cpu: 1024
+        memory: 2048
+    
+        network:
+          vpc:
+            placement: 'private'
+    
+        variables:
+          LOG_LEVEL: info
+        
+        tags:
+          owner: frontend-team
+    
+        environments:
+          test:
+            LOG_LEVEL: debug
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.

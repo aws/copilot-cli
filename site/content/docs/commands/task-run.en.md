@@ -20,44 +20,59 @@ Generally, the steps involved in task run are:
 
 ## What are the flags?
 ```
-    --app string                     Optional. Name of the application.
-                                     Cannot be specified with 'default', 'subnets' or 'security-groups'.
-    --cluster string                 Optional. The short name or full ARN of the cluster to run the task in.
-    --command string                 Optional. The command that is passed to "docker run" to override the default command.
-    --count int                      Optional. The number of tasks to set up. (default 1)
-    --cpu int                        Optional. The number of CPU units to reserve for each task. (default 256)
-    --default                        Optional. Run tasks in default cluster and default subnets.
-                                     Cannot be specified with 'app', 'env' or 'subnets'.
-    --dockerfile string              Path to the Dockerfile.
-                                     Mutually exclusive with -i,   --image (default "Dockerfile").
-    --entrypoint string              Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.
-    --env string                     Optional. Name of the environment.
-                                     Cannot be specified with 'default', 'subnets' or 'security-groups'.
-    --env-vars stringToString        Optional. Environment variables specified by key=value separated by commas. (default [])
-    --execution-role string          Optional. The role that grants the container agent permission to make AWS API calls.
-    --follow                         Optional. Specifies if the logs should be streamed.
-    --generate-cmd string            Optional. Generate a command with a pre-filled value for each flag.
-                                     To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
-                                     Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
-                                     Cannot be specified with any other flags.
--h, --help                           help for run
-    --image string                   The location of an existing Docker image.
-                                     Mutually exclusive with -d,  --dockerfile.
-    --memory int                     Optional. The amount of memory to reserve in MiB for each task. (default 512)
-    --platform-arch string           Optional. Architecture of the task. Must be specified along with 'platform-os'.
-    --platform-os string             Optional. Operating system of the task. Must be specified along with 'platform-arch'.
-    --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
-                                     Allows you to categorize resources. (default [])
-    --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated by commas. (default [])
-    --security-groups strings        Optional. The security group IDs for the task to use. Can be specified multiple times.
-                                     Cannot be specified with 'app' or 'env'.
-    --subnets strings                Optional. The subnet IDs for the task to use. Can be specified multiple times.
-                                     Cannot be specified with 'app', 'env' or 'default'.
-    --tag string                     Optional. The container image tag in addition to "latest".
--n, --task-group-name string         Optional. The group name of the task. Tasks with the same group name share the same set of resources.
-    --task-role string               Optional. The role for the task to use.
+Name Flags
+  -n, --task-group-name string   Optional. The group name of the task. 
+                                 Tasks with the same group name share the same set of resources. 
+                                 (default directory name)
+
+Build Flags
+      --build-context string   Path to the Docker build context.
+                               Cannot be specified with --image.
+      --dockerfile string      Path to the Dockerfile.
+                               Cannot be specified with --image. (default "Dockerfile")
+  -i, --image string           The location of an existing Docker image.
+                               Cannot be specified with --dockerfile or --build-context.
+      --tag string             Optional. The container image tag in addition to "latest".
+
+Placement Flags
+      --app string                Optional. Name of the application.
+                                  Cannot be specified with --default, --subnets or --security-groups.
+      --cluster string            Optional. The short name or full ARN of the cluster to run the task in. 
+                                  Cannot be specified with --app, --env or --default.
+      --default                   Optional. Run tasks in default cluster and default subnets. 
+                                  Cannot be specified with --app, --env or --subnets.
+      --env string                Optional. Name of the environment.
+                                  Cannot be specified with --default, --subnets or --security-groups.
+      --security-groups strings   Optional. Additional security group IDs for the task to use. Can be specified multiple times.
+      --subnets strings           Optional. The subnet IDs for the task to use. Can be specified multiple times.
+                                  Cannot be specified with --app, --env or --default.
+
+Task Configuration Flags
+      --acknowledge-secrets-access     Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag. 
+                                       This flag is useful only when 'secrets' flag is specified
+      --command string                 Optional. The command that is passed to "docker run" to override the default command.
+      --count int                      Optional. The number of tasks to set up. (default 1)
+      --cpu int                        Optional. The number of CPU units to reserve for each task. (default 256)
+      --entrypoint string              Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.
+      --env-vars stringToString        Optional. Environment variables specified by key=value separated by commas. (default [])
+      --execution-role string          Optional. The ARN of the role that grants the container agent permission to make AWS API calls.
+      --memory int                     Optional. The amount of memory to reserve in MiB for each task. (default 512)
+      --platform-arch string           Optional. Architecture of the task. Must be specified along with 'platform-os'.
+      --platform-os string             Optional. Operating system of the task. Must be specified along with 'platform-arch'.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
+                                       Allows you to categorize resources. (default [])
+      --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated by commas. (default [])
+      --task-role string               Optional. The ARN of the role for the task to use.
+
+Utility Flags
+      --follow                Optional. Specifies if the logs should be streamed.
+      --generate-cmd string   Optional. Generate a command with a pre-filled value for each flag.
+                              To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
+                              Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
+                              Cannot be specified with any other flags.
 ```
-## Example
+
+## Examples
 Run a task using your local Dockerfile and display log streams after the task is running. 
 You will be prompted to specify an environment for the tasks to run in.
 ```
