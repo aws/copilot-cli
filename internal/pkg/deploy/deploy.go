@@ -40,7 +40,7 @@ const (
 	fmtSNSTopicNamePrefix = "%s-%s-%s-"
 	snsServiceName        = "sns"
 
-	// After v1.x, pipeline names are namespaced with a prefix in the format of "pipeline-${appName}-"
+	// After v1.16, pipeline names are namespaced with a prefix in the format of "pipeline-${appName}-"
 	pipelineNamePrefix = "pipeline-%s-"
 )
 
