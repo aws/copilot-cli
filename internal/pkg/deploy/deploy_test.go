@@ -746,14 +746,14 @@ func TestPipelineStore_ListDeployedPipelines(t *testing.T) {
 
 			wantedPipelines: []Pipeline{
 				{
-					resourceName: "pipeline-dinder-badgoose-repo",
-					isLegacy:     true,
-					appName:      mockAppName,
+					ResourceName: "pipeline-dinder-badgoose-repo",
+					IsLegacy:     true,
+					AppName:      mockAppName,
 				},
 				{
-					resourceName: "my-pipeline-repo",
-					isLegacy:     false,
-					appName:      mockAppName,
+					ResourceName: "my-pipeline-repo",
+					IsLegacy:     false,
+					AppName:      mockAppName,
 				},
 			},
 		},

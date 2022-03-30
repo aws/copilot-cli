@@ -162,8 +162,16 @@ func TestShowAppOpts_Execute(t *testing.T) {
 		mockPipelineName       = "my-pipeline-repo"
 		mockLegacyPipelineName = "bad-goose"
 	)
-	mockPipeline := deploy.NewPipeline(mockAppName, fmt.Sprintf("pipeline-%s-%s", mockAppName, mockPipelineName), false)
-	mockLegacyPipeline := deploy.NewPipeline(mockAppName, mockLegacyPipelineName, true)
+	mockPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: fmt.Sprintf("pipeline-%s-%s", mockAppName, mockPipelineName),
+		IsLegacy:     false,
+	}
+	mockLegacyPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: mockLegacyPipelineName,
+		IsLegacy:     true,
+	}
 	testError := errors.New("some error")
 	testCases := map[string]struct {
 		shouldOutputJSON bool
@@ -564,10 +572,10 @@ Pipelines
 					shouldOutputJSON: tc.shouldOutputJSON,
 					name:             mockAppName,
 				},
-				store:              mockStoreReader,
-				w:                  b,
-				pipelineInfoGetter: mockPLSvc,
-				pipelineLister:     mockPipelineLister,
+				store:          mockStoreReader,
+				w:              b,
+				codepipeline:   mockPLSvc,
+				pipelineLister: mockPipelineLister,
 				newVersionGetter: func(s string) (versionGetter, error) {
 					return mockVersionGetter, nil
 				},

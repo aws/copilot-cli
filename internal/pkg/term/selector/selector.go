@@ -761,14 +761,14 @@ func (s *CodePipelineSelect) DeployedPipeline(msg, help string) (string, error) 
 		return "", errors.New("no deployed pipelines found")
 	}
 	if len(pipelines) == 1 {
-		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0].HumanName()))
+		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0].Name()))
 		return pipelines[0].Name(), nil
 	}
 	var pipelineHumanNames []string
 	pipelineNames := make(map[string]string)
 	for _, pipeline := range pipelines {
-		pipelineHumanNames = append(pipelineHumanNames, pipeline.HumanName())
-		pipelineNames[pipeline.HumanName()] = pipeline.Name()
+		pipelineHumanNames = append(pipelineHumanNames, pipeline.Name())
+		pipelineNames[pipeline.Name()] = pipeline.Name()
 	}
 	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineHumanNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {

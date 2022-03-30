@@ -36,12 +36,12 @@ type listPipelineVars struct {
 
 type listPipelineOpts struct {
 	listPipelineVars
-	pipelineInfoGetter pipelineGetter
-	deployedPipelineLister
-	prompt prompter
-	sel    configSelector
-	store  store
-	w      io.Writer
+	codepipeline   pipelineGetter
+	pipelineLister deployedPipelineLister
+	prompt         prompter
+	sel            configSelector
+	store          store
+	w              io.Writer
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
@@ -52,13 +52,13 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &listPipelineOpts{
-		listPipelineVars:       vars,
-		pipelineInfoGetter:     codepipeline.New(defaultSession),
-		deployedPipelineLister: deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
-		prompt:                 prompter,
-		sel:                    selector.NewConfigSelect(prompter, store),
-		store:                  store,
-		w:                      os.Stdout,
+		listPipelineVars: vars,
+		codepipeline:     codepipeline.New(defaultSession),
+		pipelineLister:   deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
+		prompt:           prompter,
+		sel:              selector.NewConfigSelect(prompter, store),
+		store:            store,
+		w:                os.Stdout,
 	}, nil
 }
 
@@ -81,16 +81,16 @@ func (o *listPipelineOpts) Ask() error {
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
 	var out string
-	pipelines, err := o.deployedPipelineLister.ListDeployedPipelines()
+	pipelines, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return fmt.Errorf("list deployed pipelines in application %s: %w", o.appName, err)
 	}
 	if o.shouldOutputJSON {
 		var pipelineInfo []*codepipeline.Pipeline
 		for _, pipeline := range pipelines {
-			info, err := o.pipelineInfoGetter.GetPipeline(pipeline.ResourceName())
+			info, err := o.codepipeline.GetPipeline(pipeline.ResourceName)
 			if err != nil {
-				return fmt.Errorf("get pipeline info for %s: %w", pipeline.HumanName(), err)
+				return fmt.Errorf("get pipeline info for %s: %w", pipeline.Name(), err)
 			}
 			pipelineInfo = append(pipelineInfo, info)
 		}
@@ -103,7 +103,7 @@ func (o *listPipelineOpts) Execute() error {
 	} else {
 		var pipelineNames []string
 		for _, pipeline := range pipelines {
-			pipelineNames = append(pipelineNames, pipeline.HumanName())
+			pipelineNames = append(pipelineNames, pipeline.Name())
 		}
 		out = o.humanOutput(pipelineNames)
 	}

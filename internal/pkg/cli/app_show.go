@@ -37,12 +37,12 @@ type showAppVars struct {
 type showAppOpts struct {
 	showAppVars
 
-	store              store
-	w                  io.Writer
-	sel                appSelector
-	pipelineInfoGetter pipelineGetter
-	pipelineLister     deployedPipelineLister
-	newVersionGetter   func(string) (versionGetter, error)
+	store            store
+	w                io.Writer
+	sel              appSelector
+	codepipeline     pipelineGetter
+	pipelineLister   deployedPipelineLister
+	newVersionGetter func(string) (versionGetter, error)
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -52,12 +52,12 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	return &showAppOpts{
-		showAppVars:        vars,
-		store:              store,
-		w:                  log.OutputWriter,
-		sel:                selector.NewSelect(prompt.New(), store),
-		pipelineInfoGetter: codepipeline.New(defaultSession),
-		pipelineLister:     deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
+		showAppVars:    vars,
+		store:          store,
+		w:              log.OutputWriter,
+		sel:            selector.NewSelect(prompt.New(), store),
+		codepipeline:   codepipeline.New(defaultSession),
+		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
 		newVersionGetter: func(s string) (versionGetter, error) {
 			d, err := describe.NewAppDescriber(s)
 			if err != nil {
@@ -131,9 +131,9 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	}
 	var pipelineInfo []*codepipeline.Pipeline
 	for _, pipeline := range pipelines {
-		info, err := o.pipelineInfoGetter.GetPipeline(pipeline.ResourceName())
+		info, err := o.codepipeline.GetPipeline(pipeline.ResourceName)
 		if err != nil {
-			return nil, fmt.Errorf("get info for pipeline %s: %w", pipeline.HumanName(), err)
+			return nil, fmt.Errorf("get info for pipeline %s: %w", pipeline.Name(), err)
 		}
 		pipelineInfo = append(pipelineInfo, info)
 	}

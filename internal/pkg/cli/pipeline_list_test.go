@@ -108,8 +108,16 @@ func TestPipelineList_Execute(t *testing.T) {
 		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo"
 		mockLegacyPipelineResourceName = "bad-goose"
 	)
-	mockPipeline := deploy.NewPipeline(mockAppName, mockPipelineResourceName, false)
-	mockLegacyPipeline := deploy.NewPipeline(mockAppName, mockLegacyPipelineResourceName, true)
+	mockPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: mockPipelineResourceName,
+		IsLegacy:     false,
+	}
+	mockLegacyPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: mockLegacyPipelineResourceName,
+		IsLegacy:     true,
+	}
 	mockError := errors.New("mock error")
 	testCases := map[string]struct {
 		shouldOutputJSON bool
@@ -136,7 +144,7 @@ func TestPipelineList_Execute(t *testing.T) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
 			},
 			expectedContent: `my-pipeline-repo
-bad-goose (legacy)
+bad-goose
 `,
 		},
 		"with failed call to list pipelines": {
@@ -183,11 +191,11 @@ bad-goose (legacy)
 					appName:          mockAppName,
 					shouldOutputJSON: tc.shouldOutputJSON,
 				},
-				pipelineInfoGetter:     mockPipelineGetter,
-				deployedPipelineLister: mockPipelineLister,
-				sel:                    mockSel,
-				prompt:                 mockPrompt,
-				w:                      b,
+				codepipeline:   mockPipelineGetter,
+				pipelineLister: mockPipelineLister,
+				sel:            mockSel,
+				prompt:         mockPrompt,
+				w:              b,
 			}
 
 			// WHEN

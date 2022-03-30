@@ -2212,8 +2212,16 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo"
 		mockLegacyPipelineResourceName = "bad-goose"
 	)
-	mockPipeline := deploy.NewPipeline(mockAppName, mockPipelineResourceName, false)
-	mockLegacyPipeline := deploy.NewPipeline(mockAppName, mockLegacyPipelineResourceName, true)
+	mockPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: mockPipelineResourceName,
+		IsLegacy:     false,
+	}
+	mockLegacyPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: mockLegacyPipelineResourceName,
+		IsLegacy:     true,
+	}
 	testCases := map[string]struct {
 		setupMocks     func(mocks codePipelineSelectMocks)
 		wantedErr      error
@@ -2238,7 +2246,7 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 		"with multiple workspace pipelines": {
 			setupMocks: func(m codePipelineSelectMocks) {
 				m.cp.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("bad-goose (legacy)", nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("bad-goose", nil)
 			},
 			wantedPipeline: "bad-goose",
 		},

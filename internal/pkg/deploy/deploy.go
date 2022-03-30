@@ -97,40 +97,17 @@ func NewStore(sessProvider SessionProvider, store ConfigStoreClient) (*Store, er
 
 // Pipeline is a deployed pipeline.
 type Pipeline struct {
-	appName      string
-	resourceName string
-	isLegacy     bool
-}
-
-// NewPipeline initiates a new pipeline. Note that this function should only be used for unit tests.
-func NewPipeline(appName, resourceName string, isLegacy bool) Pipeline {
-	return Pipeline{
-		appName:      appName,
-		resourceName: resourceName,
-		isLegacy:     isLegacy,
-	}
-}
-
-// HumanName returns the human-friendly name of the deployed pipeline.
-// For example: bad-goose (legacy)
-func (p Pipeline) HumanName() string {
-	if p.isLegacy {
-		return fmt.Sprintf("%s (legacy)", p.resourceName)
-	}
-	return strings.TrimPrefix(p.resourceName, fmt.Sprintf(pipelineNamePrefix, p.appName))
+	AppName      string
+	ResourceName string
+	IsLegacy     bool
 }
 
 // Name returns the name of the deployed pipeline.
 func (p Pipeline) Name() string {
-	if p.isLegacy {
-		return p.resourceName
+	if p.IsLegacy {
+		return p.ResourceName
 	}
-	return strings.TrimPrefix(p.resourceName, fmt.Sprintf(pipelineNamePrefix, p.appName))
-}
-
-// ResourceName returns the resource name of the deployed pipeline.
-func (p Pipeline) ResourceName() string {
-	return p.resourceName
+	return strings.TrimPrefix(p.ResourceName, fmt.Sprintf(pipelineNamePrefix, p.AppName))
 }
 
 // PipelineStore fetches information on deployed pipelines.
@@ -140,7 +117,7 @@ type PipelineStore struct {
 }
 
 // NewPipelineStore returns a new PipelineStore.
-func NewPipelineStore(appName string, getter *rg.ResourceGroups) *PipelineStore {
+func NewPipelineStore(appName string, getter resourceGetter) *PipelineStore {
 	return &PipelineStore{
 		appName: appName,
 		getter:  getter,
@@ -162,9 +139,9 @@ func (p *PipelineStore) ListDeployedPipelines() ([]Pipeline, error) {
 		if err != nil {
 			return nil, err
 		}
-		pipeline := Pipeline{resourceName: name, appName: p.appName}
+		pipeline := Pipeline{ResourceName: name, AppName: p.appName}
 		if _, ok := pipelineRes.Tags[PipelineTagKey]; !ok {
-			pipeline.isLegacy = true
+			pipeline.IsLegacy = true
 		}
 		pipelines = append(pipelines, pipeline)
 	}

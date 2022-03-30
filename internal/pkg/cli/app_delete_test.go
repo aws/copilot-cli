@@ -167,7 +167,18 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 	mockApp := &config.Application{
 		Name: "badgoose",
 	}
-	mockPipelines := []deploy.Pipeline{deploy.NewPipeline("badgoose", "pipeline1", false), deploy.NewPipeline("badgoose", "pipeline2", false)}
+	mockPipelines := []deploy.Pipeline{
+		{
+			AppName:      "badgoose",
+			ResourceName: "pipeline1",
+			IsLegacy:     false,
+		},
+		{
+			AppName:      "badgoose",
+			ResourceName: "pipeline2",
+			IsLegacy:     false,
+		},
+	}
 	mockResources := []*stack.AppRegionalResources{
 		{
 			Region:   "us-west-2",
