@@ -5,14 +5,17 @@ package cli
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"io"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -61,7 +64,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		return nil, fmt.Errorf("session: %w", err)
 	}
 	codepipeline := codepipeline.New(session)
-
+	pipelineLister := deploy.NewPipelineStore(vars.appName, rg.New(session))
 	store := config.NewSSMStore(identity.New(session), ssm.New(session), aws.StringValue(session.Config.Region))
 	prompter := prompt.New()
 	return &pipelineStatusOpts{
@@ -70,7 +73,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		ws:                 ws,
 		store:              store,
 		codepipeline:       codepipeline,
-		sel:                selector.NewAppPipelineSelect(prompter, store, codepipeline),
+		sel:                selector.NewAppPipelineSelect(prompter, store, pipelineLister),
 		prompt:             prompter,
 		initDescriber: func(o *pipelineStatusOpts) error {
 			d, err := describe.NewPipelineStatusDescriber(o.name)

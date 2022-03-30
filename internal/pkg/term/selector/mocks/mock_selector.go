@@ -487,19 +487,19 @@ func (m *MockCodePipelineLister) EXPECT() *MockCodePipelineListerMockRecorder {
 	return m.recorder
 }
 
-// ListPipelineNamesByTags mocks base method.
-func (m *MockCodePipelineLister) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
+// ListDeployedPipelines mocks base method.
+func (m *MockCodePipelineLister) ListDeployedPipelines() ([]deploy.Pipeline, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPipelineNamesByTags", tags)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "ListDeployedPipelines")
+	ret0, _ := ret[0].([]deploy.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListPipelineNamesByTags indicates an expected call of ListPipelineNamesByTags.
-func (mr *MockCodePipelineListerMockRecorder) ListPipelineNamesByTags(tags interface{}) *gomock.Call {
+// ListDeployedPipelines indicates an expected call of ListDeployedPipelines.
+func (mr *MockCodePipelineListerMockRecorder) ListDeployedPipelines() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineNamesByTags", reflect.TypeOf((*MockCodePipelineLister)(nil).ListPipelineNamesByTags), tags)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedPipelines", reflect.TypeOf((*MockCodePipelineLister)(nil).ListDeployedPipelines))
 }
 
 // MockWorkspaceRetriever is a mock of WorkspaceRetriever interface.

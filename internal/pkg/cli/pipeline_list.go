@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -35,11 +36,12 @@ type listPipelineVars struct {
 
 type listPipelineOpts struct {
 	listPipelineVars
-	pipelineSvc pipelineGetter
-	prompt      prompter
-	sel         configSelector
-	store       store
-	w           io.Writer
+	codepipeline   pipelineGetter
+	pipelineLister deployedPipelineLister
+	prompt         prompter
+	sel            configSelector
+	store          store
+	w              io.Writer
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
@@ -51,7 +53,8 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	prompter := prompt.New()
 	return &listPipelineOpts{
 		listPipelineVars: vars,
-		pipelineSvc:      codepipeline.New(defaultSession),
+		codepipeline:     codepipeline.New(defaultSession),
+		pipelineLister:   deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
 		prompt:           prompter,
 		sel:              selector.NewConfigSelect(prompter, store),
 		store:            store,
@@ -78,27 +81,31 @@ func (o *listPipelineOpts) Ask() error {
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
 	var out string
+	pipelines, err := o.pipelineLister.ListDeployedPipelines()
+	if err != nil {
+		return fmt.Errorf("list deployed pipelines in application %s: %w", o.appName, err)
+	}
 	if o.shouldOutputJSON {
-		pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
-			deploy.AppTagKey: o.appName,
-		})
-		if err != nil {
-			return fmt.Errorf("list pipelines: %w", err)
+		var pipelineInfo []*codepipeline.Pipeline
+		for _, pipeline := range pipelines {
+			info, err := o.codepipeline.GetPipeline(pipeline.ResourceName)
+			if err != nil {
+				return fmt.Errorf("get pipeline info for %s: %w", pipeline.Name(), err)
+			}
+			pipelineInfo = append(pipelineInfo, info)
 		}
 
-		data, err := o.jsonOutput(pipelines)
+		data, err := o.jsonOutput(pipelineInfo)
 		if err != nil {
 			return err
 		}
 		out = data
 	} else {
-		pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
-			deploy.AppTagKey: o.appName,
-		})
-		if err != nil {
-			return fmt.Errorf("list pipelines: %w", err)
+		var pipelineNames []string
+		for _, pipeline := range pipelines {
+			pipelineNames = append(pipelineNames, pipeline.Name())
 		}
-		out = o.humanOutput(pipelines)
+		out = o.humanOutput(pipelineNames)
 	}
 	fmt.Fprint(o.w, out)
 

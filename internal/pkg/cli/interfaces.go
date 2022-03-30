@@ -442,8 +442,10 @@ type appUpgrader interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
-	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
-	GetPipelinesByTags(tags map[string]string) ([]*codepipeline.Pipeline, error)
+}
+
+type deployedPipelineLister interface {
+	ListDeployedPipelines() ([]deploy.Pipeline, error)
 }
 
 type executor interface {
@@ -485,7 +487,7 @@ type wsPipelineSelector interface {
 
 type codePipelineSelector interface {
 	appSelector
-	DeployedPipeline(prompt, help string, tags map[string]string) (string, error)
+	DeployedPipeline(prompt, help string) (string, error)
 }
 
 type wsSelector interface {
