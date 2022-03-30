@@ -384,6 +384,17 @@ func Test_convertCapacityProviders(t *testing.T) {
 			},
 			expected: nil,
 		},
+		"returns nil if no spot config specified with min max": {
+			input: manifest.AdvancedCount{
+				Range: manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min: aws.Int(1),
+						Max: aws.Int(10),
+					},
+				},
+			},
+			expected: nil,
+		},
 	}
 
 	for name, tc := range testCases {

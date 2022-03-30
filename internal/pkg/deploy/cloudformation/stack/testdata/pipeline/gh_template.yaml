@@ -127,7 +127,7 @@ Resources:
             Value: !Ref AWS::Partition
       Source:
         Type: CODEPIPELINE
-        BuildSpec: copilot/buildspec.yml
+        BuildSpec: copilot/pipelines/phonetool-pipeline/buildspec.yml
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role

@@ -129,6 +129,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 type deleteAppMocks struct {
 	spinner         *mocks.Mockprogress
 	store           *mocks.Mockstore
+	codepipeline    *mocks.MockpipelineLister
 	ws              *mocks.MockwsFileDeleter
 	sessProvider    *sessions.Provider
 	deployer        *mocks.Mockdeployer
@@ -137,7 +138,7 @@ type deleteAppMocks struct {
 	envDeleter      *mocks.MockexecuteAsker
 	taskDeleter     *mocks.Mockexecutor
 	bucketEmptier   *mocks.MockbucketEmptier
-	pipelineDeleter *mocks.Mockcmd
+	pipelineDeleter *mocks.Mockexecutor
 }
 
 func TestDeleteAppOpts_Execute(t *testing.T) {
@@ -146,10 +147,16 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 		{
 			Name: "webapp",
 		},
+		{
+			Name: "backend",
+		},
 	}
 	mockJobs := []*config.Workload{
 		{
 			Name: "mailer",
+		},
+		{
+			Name: "bailer",
 		},
 	}
 	mockEnvs := []*config.Environment{
@@ -159,6 +166,18 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 	}
 	mockApp := &config.Application{
 		Name: "badgoose",
+	}
+	mockPipelines := []deploy.Pipeline{
+		{
+			AppName:      "badgoose",
+			ResourceName: "pipeline1",
+			IsLegacy:     false,
+		},
+		{
+			AppName:      "badgoose",
+			ResourceName: "pipeline2",
+			IsLegacy:     false,
+		},
 	}
 	mockResources := []*stack.AppRegionalResources{
 		{
@@ -185,11 +204,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// deleteSvcs
 					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
-					mocks.svcDeleter.EXPECT().Execute().Return(nil),
+					mocks.svcDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// deleteJobs
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
-					mocks.jobDeleter.EXPECT().Execute().Return(nil),
+					mocks.jobDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// listEnvs
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
@@ -209,62 +228,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
-					// delete pipeline
-					mocks.pipelineDeleter.EXPECT().Validate().Return(nil),
-					mocks.pipelineDeleter.EXPECT().Ask().Return(nil),
-					mocks.pipelineDeleter.EXPECT().Execute().Return(nil),
-
-					// deleteAppResources
-					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
-					mocks.deployer.EXPECT().DeleteApp(mockAppName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppResourcesStopMsg)),
-
-					// deleteAppConfigs
-					mocks.spinner.EXPECT().Start(deleteAppConfigStartMsg),
-					mocks.store.EXPECT().DeleteApplication(mockAppName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppConfigStopMsg)),
-
-					// deleteWs
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName)),
-					mocks.ws.EXPECT().DeleteWorkspaceFile().Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName))),
-				)
-			},
-			wantedError: nil,
-		},
-		"when pipeline manifest does not exist": {
-			appName: mockAppName,
-			setupMocks: func(mocks deleteAppMocks) {
-				gomock.InOrder(
-					// deleteSvcs
-					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
-					mocks.svcDeleter.EXPECT().Execute().Return(nil),
-
-					// deleteJobs
-					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
-					mocks.jobDeleter.EXPECT().Execute().Return(nil),
-
-					// listEnvs
-					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
-
-					// deleteTasks
-					mocks.deployer.EXPECT().ListTaskStacks(mockAppName, mockEnvs[0].Name).Return(nil, nil),
-
-					// deleteEnvs
-					mocks.envDeleter.EXPECT().Ask().Return(nil),
-					mocks.envDeleter.EXPECT().Execute().Return(nil),
-
-					// emptyS3bucket
-					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
-					mocks.deployer.EXPECT().GetRegionalAppResources(mockApp).Return(mockResources, nil),
-					mocks.spinner.EXPECT().Start(deleteAppCleanResourcesStartMsg),
-					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
-
-					// delete pipeline
-					mocks.pipelineDeleter.EXPECT().Validate().Return(nil),
-					mocks.pipelineDeleter.EXPECT().Ask().Return(nil),
-					mocks.pipelineDeleter.EXPECT().Execute().Return(nil),
+					// delete pipelines
+					mocks.codepipeline.EXPECT().ListDeployedPipelines().Return(mockPipelines, nil),
+					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// deleteAppResources
 					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
@@ -297,6 +263,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockWorkspace := mocks.NewMockwsFileDeleter(ctrl)
 			mockSession := sessions.ImmutableProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
+			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
 
 			mockBucketEmptier := mocks.NewMockbucketEmptier(ctrl)
 			mockGetBucketEmptier := func(session *session.Session) bucketEmptier {
@@ -308,11 +275,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			// DeleteEnvOpts, and DeletePipelineOpts. It allows us to instead simply
 			// test if the deletion of those resources succeeded or failed.
 			mockSvcDeleteExecutor := mocks.NewMockexecutor(ctrl)
-			mockSvcExecutorProvider := func(appName string) (executor, error) {
+			mockSvcExecutorProvider := func(svcName string) (executor, error) {
 				return mockSvcDeleteExecutor, nil
 			}
 			mockJobDeleteExecutor := mocks.NewMockexecutor(ctrl)
-			mockJobExecutorProvider := func(appName string) (executor, error) {
+			mockJobExecutorProvider := func(jobName string) (executor, error) {
 				return mockJobDeleteExecutor, nil
 			}
 			mockTaskDeleteExecutor := mocks.NewMockexecutor(ctrl)
@@ -324,9 +291,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				return mockEnvDeleteExecutor, nil
 			}
 
-			mockPipelineDeleteCmd := mocks.NewMockcmd(ctrl)
-			mockRunnerProvider := func() (cmd, error) {
-				return mockPipelineDeleteCmd, nil
+			mockPipelineDeleteExecutor := mocks.NewMockexecutor(ctrl)
+			mockPipelineExecutorProvider := func(pipelineName string) (executor, error) {
+				return mockPipelineDeleteExecutor, nil
 			}
 
 			mocks := deleteAppMocks{
@@ -335,12 +302,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				ws:              mockWorkspace,
 				sessProvider:    mockSession,
 				deployer:        mockDeployer,
+				codepipeline:    mockPipelineLister,
 				svcDeleter:      mockSvcDeleteExecutor,
 				jobDeleter:      mockJobDeleteExecutor,
 				envDeleter:      mockEnvDeleteExecutor,
 				taskDeleter:     mockTaskDeleteExecutor,
 				bucketEmptier:   mockBucketEmptier,
-				pipelineDeleter: mockPipelineDeleteCmd,
+				pipelineDeleter: mockPipelineDeleteExecutor,
 			}
 			test.setupMocks(mocks)
 
@@ -348,17 +316,18 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				deleteAppVars: deleteAppVars{
 					name: mockAppName,
 				},
-				spinner:              mockSpinner,
-				store:                mockStore,
-				ws:                   mockWorkspace,
-				sessProvider:         mockSession,
-				cfn:                  mockDeployer,
-				s3:                   mockGetBucketEmptier,
-				svcDeleteExecutor:    mockSvcExecutorProvider,
-				jobDeleteExecutor:    mockJobExecutorProvider,
-				envDeleteExecutor:    mockAskExecutorProvider,
-				taskDeleteExecutor:   mockTaskDeleteProvider,
-				deletePipelineRunner: mockRunnerProvider,
+				spinner:                mockSpinner,
+				store:                  mockStore,
+				ws:                     mockWorkspace,
+				pipelineLister:         mockPipelineLister,
+				sessProvider:           mockSession,
+				cfn:                    mockDeployer,
+				s3:                     mockGetBucketEmptier,
+				svcDeleteExecutor:      mockSvcExecutorProvider,
+				jobDeleteExecutor:      mockJobExecutorProvider,
+				envDeleteExecutor:      mockAskExecutorProvider,
+				taskDeleteExecutor:     mockTaskDeleteProvider,
+				pipelineDeleteExecutor: mockPipelineExecutorProvider,
 			}
 
 			// WHEN

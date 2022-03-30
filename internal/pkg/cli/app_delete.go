@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -54,17 +56,18 @@ type deleteAppOpts struct {
 	deleteAppVars
 	spinner progress
 
-	store                store
-	ws                   wsFileDeleter
-	sessProvider         sessionProvider
-	cfn                  deployer
-	prompt               prompter
-	s3                   func(session *session.Session) bucketEmptier
-	svcDeleteExecutor    func(svcName string) (executor, error)
-	jobDeleteExecutor    func(jobName string) (executor, error)
-	envDeleteExecutor    func(envName string) (executeAsker, error)
-	taskDeleteExecutor   func(envName, taskName string) (executor, error)
-	deletePipelineRunner func() (cmd, error)
+	store                  store
+	ws                     wsFileDeleter
+	sessProvider           sessionProvider
+	cfn                    deployer
+	prompt                 prompter
+	pipelineLister         deployedPipelineLister
+	s3                     func(session *session.Session) bucketEmptier
+	svcDeleteExecutor      func(svcName string) (executor, error)
+	jobDeleteExecutor      func(jobName string) (executor, error)
+	envDeleteExecutor      func(envName string) (executeAsker, error)
+	taskDeleteExecutor     func(envName, taskName string) (executor, error)
+	pipelineDeleteExecutor func(pipelineName string) (executor, error)
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
@@ -90,6 +93,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
+		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
 		svcDeleteExecutor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
@@ -135,9 +139,10 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		deletePipelineRunner: func() (cmd, error) {
+		pipelineDeleteExecutor: func(pipelineName string) (executor, error) {
 			opts, err := newDeletePipelineOpts(deletePipelineVars{
 				appName:            vars.name,
+				name:               pipelineName,
 				skipConfirmation:   true,
 				shouldDeleteSecret: true,
 			})
@@ -197,12 +202,10 @@ func (o *deleteAppOpts) Execute() error {
 		return err
 	}
 
-	// deletePipeline must happen before deleteAppResources and deleteWs, since the pipeline delete command relies
+	// deletePipelines must happen before deleteAppResources and deleteWs, since the pipeline delete command relies
 	// on the application stackset as well as the workspace directory to still exist.
-	if err := o.deletePipeline(); err != nil {
-		if !errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-			return err
-		}
+	if err := o.deletePipelines(); err != nil {
+		return err
 	}
 
 	if err := o.deleteAppResources(); err != nil {
@@ -319,12 +322,22 @@ func (o *deleteAppOpts) emptyS3Bucket() error {
 	return nil
 }
 
-func (o *deleteAppOpts) deletePipeline() error {
-	cmd, err := o.deletePipelineRunner()
+func (o *deleteAppOpts) deletePipelines() error {
+	pipelines, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
-		return err
+		return fmt.Errorf("list pipelines for application %s: %w", o.name, err)
 	}
-	return run(cmd)
+
+	for _, pipeline := range pipelines {
+		cmd, err := o.pipelineDeleteExecutor(pipeline.Name())
+		if err != nil {
+			return err
+		}
+		if err := cmd.Execute(); err != nil {
+			return fmt.Errorf("execute pipeline delete: %w", err)
+		}
+	}
+	return nil
 }
 
 func (o *deleteAppOpts) deleteAppResources() error {

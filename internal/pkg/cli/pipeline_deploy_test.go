@@ -30,25 +30,43 @@ type deployPipelineMocks struct {
 	actionCmd *mocks.MockactionCommand
 }
 
-func TestDeployPipelineOpts_Validate(t *testing.T) {
+func TestDeployPipelineOpts_Ask(t *testing.T) {
+	const (
+		testAppName        = "badgoose"
+		testPipelineName   = "pipeline-badgoose-honkpipes"
+		testPipelineSecret = "github-token-badgoose-honkpipes"
+	)
+	pipeline := workspace.PipelineManifest{
+		Name: testPipelineName,
+		Path: "copilot/pipeline.yml",
+	}
 	testCases := map[string]struct {
 		inAppName      string
 		inWsAppName    string
 		inPipelineName string
+		mockWs         func(m *mocks.MockwsPipelineReader)
+		mockSel        func(m *mocks.MockwsPipelineSelector)
 		mockStore      func(m *mocks.Mockstore)
 
-		wantedAppName string
-		wantedError   error
+		wantedApp       string
+		wantedAppConfig *config.Application
+		wantedPipeline  *workspace.PipelineManifest
+		wantedError     error
 	}{
 		"return error if can't read app name from workspace file": {
 			inWsAppName: "",
 			mockStore:   func(m *mocks.Mockstore) {},
+			mockWs:      func(m *mocks.MockwsPipelineReader) {},
+			mockSel:     func(m *mocks.MockwsPipelineSelector) {},
+
 			wantedError: errNoAppInWorkspace,
 		},
 		"return error if passed-in app name doesn't match workspace app": {
 			inAppName:   "badAppName",
 			inWsAppName: testAppName,
 			mockStore:   func(m *mocks.Mockstore) {},
+			mockWs:      func(m *mocks.MockwsPipelineReader) {},
+			mockSel:     func(m *mocks.MockwsPipelineSelector) {},
 
 			wantedError: errors.New("cannot specify app badAppName because the workspace is already registered with app badgoose"),
 		},
@@ -58,95 +76,56 @@ func TestDeployPipelineOpts_Validate(t *testing.T) {
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication(testAppName).Return(nil, errors.New("some error"))
 			},
+			mockWs:  func(m *mocks.MockwsPipelineReader) {},
+			mockSel: func(m *mocks.MockwsPipelineSelector) {},
 
 			wantedError: errors.New("get application badgoose configuration: some error"),
 		},
-		"success with app flag": {
-			inWsAppName: testAppName,
-			inAppName:   testAppName,
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication(testAppName).Return(nil, nil)
-			},
-
-			wantedAppName: testAppName,
-			wantedError:   nil,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockStore := mocks.NewMockstore(ctrl)
-			tc.mockStore(mockStore)
-			opts := deployPipelineOpts{
-				deployPipelineVars: deployPipelineVars{
-					appName: tc.inAppName,
-					name:    tc.inPipelineName,
-				},
-				store:     mockStore,
-				wsAppName: tc.inWsAppName,
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedAppName, opts.appName)
-			}
-		})
-	}
-}
-
-func TestDeployPipelineOpts_Ask(t *testing.T) {
-	pipeline := workspace.PipelineManifest{
-		Name: testPipelineName,
-		Path: "copilot/pipeline.yml",
-	}
-	testCases := map[string]struct {
-		inAppName      string
-		inPipelineName string
-		mockWs         func(m *mocks.MockwsPipelineReader)
-		mockSel        func(m *mocks.MockwsPipelineSelector)
-
-		wantedApp      string
-		wantedPipeline *workspace.PipelineManifest
-		wantedError    error
-	}{
 		"return error if passed-in pipeline name not found": {
 			inAppName:      testAppName,
+			inWsAppName:    testAppName,
 			inPipelineName: "someOtherPipelineName",
 
 			mockSel: func(m *mocks.MockwsPipelineSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(testAppName).Return(nil, nil)
+			},
 			mockWs: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil)
 			},
 			wantedError: errors.New("pipeline someOtherPipelineName not found in the workspace"),
 		},
 		"return error if fail to select pipeline": {
-			inAppName: testAppName,
+			inAppName:   testAppName,
+			inWsAppName: testAppName,
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(testAppName).Return(nil, nil)
+			},
 			mockSel: func(m *mocks.MockwsPipelineSelector) {
-				m.EXPECT().Pipeline(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().WsPipeline(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			mockWs: func(m *mocks.MockwsPipelineReader) {},
 
 			wantedError: fmt.Errorf("select pipeline: some error"),
 		},
-		"success with pipeline flag": {
+		"success with app flag and pipeline flag": {
+			inWsAppName:    testAppName,
+			inAppName:      testAppName,
 			inPipelineName: testPipelineName,
-			mockSel:        func(m *mocks.MockwsPipelineSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication(testAppName).Return(&config.Application{
+					Name: testAppName,
+				}, nil)
+			},
+			mockSel: func(m *mocks.MockwsPipelineSelector) {},
 			mockWs: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{pipeline}, nil)
 			},
 
-			wantedApp:      testAppName,
-			wantedPipeline: &pipeline,
-			wantedError:    nil,
+			wantedApp:       testAppName,
+			wantedAppConfig: &config.Application{Name: testAppName},
+			wantedPipeline:  &pipeline,
+			wantedError:     nil,
 		},
 	}
 	for name, tc := range testCases {
@@ -157,15 +136,19 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 
 			mockSel := mocks.NewMockwsPipelineSelector(ctrl)
 			mockWs := mocks.NewMockwsPipelineReader(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockSel(mockSel)
 			tc.mockWs(mockWs)
+			tc.mockStore(mockStore)
 			opts := deployPipelineOpts{
 				deployPipelineVars: deployPipelineVars{
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
 				},
-				sel: mockSel,
-				ws:  mockWs,
+				wsAppName: tc.inWsAppName,
+				sel:       mockSel,
+				ws:        mockWs,
+				store:     mockStore,
 			}
 
 			// WHEN
@@ -177,6 +160,8 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedPipeline, opts.pipeline)
+				require.Equal(t, tc.wantedApp, opts.appName)
+				require.Equal(t, tc.wantedAppConfig, opts.app)
 			}
 		})
 	}
@@ -184,11 +169,13 @@ func TestDeployPipelineOpts_Ask(t *testing.T) {
 
 func TestDeployPipelineOpts_Execute(t *testing.T) {
 	const (
-		appName                    = "badgoose"
-		region                     = "us-west-2"
-		accountID                  = "123456789012"
-		pipelineName               = "pipepiper"
-		pipelineManifestLegacyPath = "/copilot/pipeline.yml"
+		appName              = "badgoose"
+		region               = "us-west-2"
+		accountID            = "123456789012"
+		pipelineName         = "pipepiper"
+		badPipelineName      = "pipeline-badgoose-honkpipes"
+		pipelineManifestPath = "someStuff/someMoreStuff/aws-copilot-sample-service/copilot/pipelines/pipepiper/manifest.yml"
+		relativePath         = "/copilot/pipelines/pipepiper/manifest.yml"
 	)
 	mockPipelineManifest := &manifest.Pipeline{
 		Name:    "pipepiper",
@@ -254,8 +241,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -284,8 +271,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -315,8 +302,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -343,8 +330,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -384,8 +371,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, errors.New("some error")),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, errors.New("some error")),
 				)
 			},
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
@@ -399,8 +385,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(nil, errors.New("some error")),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(nil, errors.New("some error")),
 				)
 			},
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
@@ -425,8 +410,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockBadPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockBadPipelineManifest, nil),
 				)
 			},
 			expectedError: fmt.Errorf("validate pipeline manifest: pipeline name '12345678101234567820123456783012345678401234567850123456786012345678701234567880123456789012345671001' must be shorter than 100 characters"),
@@ -437,7 +421,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			inRegion:  region,
 			callMocks: func(m deployPipelineMocks) {
 				mockBadPipelineManifest := &manifest.Pipeline{
-					Name:    testPipelineName,
+					Name:    badPipelineName,
 					Version: 1,
 					Source: &manifest.Source{
 						ProviderName: "NotGitHub",
@@ -452,8 +436,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockBadPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockBadPipelineManifest, nil),
 				)
 			},
 			expectedError: fmt.Errorf("read source from manifest: invalid repo source provider: NotGitHub"),
@@ -467,8 +450,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Return(errors.New("some error")),
 				)
 			},
@@ -483,8 +466,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -506,8 +489,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -532,8 +515,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -562,8 +545,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -618,8 +601,8 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
-					m.ws.EXPECT().PipelineManifestLegacyPath().Return(pipelineManifestLegacyPath, nil),
-					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestLegacyPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
 					m.actionCmd.EXPECT().Execute().Times(2),
 
 					// convertStages
@@ -677,15 +660,15 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				store:            mockStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
-				newSvcListCmd: func(w io.Writer) cmd {
+				newSvcListCmd: func(w io.Writer, app string) cmd {
 					return mockActionCmd
 				},
-				newJobListCmd: func(w io.Writer) cmd {
+				newJobListCmd: func(w io.Writer, app string) cmd {
 					return mockActionCmd
 				},
 				pipeline: &workspace.PipelineManifest{
 					Name: "pipepiper",
-					Path: pipelineManifestLegacyPath,
+					Path: pipelineManifestPath,
 				},
 				svcBuffer: bytes.NewBufferString(`{"services":[{"app":"badgoose","name":"frontend","type":""}]}`),
 				jobBuffer: bytes.NewBufferString(`{"jobs":[{"app":"badgoose","name":"backend","type":""}]}`),
@@ -845,10 +828,10 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 				},
 				store: mockStore,
 				ws:    mockWorkspace,
-				newSvcListCmd: func(w io.Writer) cmd {
+				newSvcListCmd: func(w io.Writer, app string) cmd {
 					return mockActionCmd
 				},
-				newJobListCmd: func(w io.Writer) cmd {
+				newJobListCmd: func(w io.Writer, app string) cmd {
 					return mockActionCmd
 				},
 				svcBuffer: bytes.NewBufferString(`{"services":[{"app":"badgoose","name":"frontend","type":""}]}`),

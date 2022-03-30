@@ -426,31 +426,31 @@ func (mr *MockWsWorkloadListerMockRecorder) ListWorkloads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockWsWorkloadLister)(nil).ListWorkloads))
 }
 
-// MockWorkspacePipelinesLister is a mock of WorkspacePipelinesLister interface.
-type MockWorkspacePipelinesLister struct {
+// MockWsPipelinesLister is a mock of WsPipelinesLister interface.
+type MockWsPipelinesLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockWorkspacePipelinesListerMockRecorder
+	recorder *MockWsPipelinesListerMockRecorder
 }
 
-// MockWorkspacePipelinesListerMockRecorder is the mock recorder for MockWorkspacePipelinesLister.
-type MockWorkspacePipelinesListerMockRecorder struct {
-	mock *MockWorkspacePipelinesLister
+// MockWsPipelinesListerMockRecorder is the mock recorder for MockWsPipelinesLister.
+type MockWsPipelinesListerMockRecorder struct {
+	mock *MockWsPipelinesLister
 }
 
-// NewMockWorkspacePipelinesLister creates a new mock instance.
-func NewMockWorkspacePipelinesLister(ctrl *gomock.Controller) *MockWorkspacePipelinesLister {
-	mock := &MockWorkspacePipelinesLister{ctrl: ctrl}
-	mock.recorder = &MockWorkspacePipelinesListerMockRecorder{mock}
+// NewMockWsPipelinesLister creates a new mock instance.
+func NewMockWsPipelinesLister(ctrl *gomock.Controller) *MockWsPipelinesLister {
+	mock := &MockWsPipelinesLister{ctrl: ctrl}
+	mock.recorder = &MockWsPipelinesListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockWorkspacePipelinesLister) EXPECT() *MockWorkspacePipelinesListerMockRecorder {
+func (m *MockWsPipelinesLister) EXPECT() *MockWsPipelinesListerMockRecorder {
 	return m.recorder
 }
 
 // ListPipelines mocks base method.
-func (m *MockWorkspacePipelinesLister) ListPipelines() ([]workspace.PipelineManifest, error) {
+func (m *MockWsPipelinesLister) ListPipelines() ([]workspace.PipelineManifest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPipelines")
 	ret0, _ := ret[0].([]workspace.PipelineManifest)
@@ -459,9 +459,47 @@ func (m *MockWorkspacePipelinesLister) ListPipelines() ([]workspace.PipelineMani
 }
 
 // ListPipelines indicates an expected call of ListPipelines.
-func (mr *MockWorkspacePipelinesListerMockRecorder) ListPipelines() *gomock.Call {
+func (mr *MockWsPipelinesListerMockRecorder) ListPipelines() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockWorkspacePipelinesLister)(nil).ListPipelines))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockWsPipelinesLister)(nil).ListPipelines))
+}
+
+// MockCodePipelineLister is a mock of CodePipelineLister interface.
+type MockCodePipelineLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockCodePipelineListerMockRecorder
+}
+
+// MockCodePipelineListerMockRecorder is the mock recorder for MockCodePipelineLister.
+type MockCodePipelineListerMockRecorder struct {
+	mock *MockCodePipelineLister
+}
+
+// NewMockCodePipelineLister creates a new mock instance.
+func NewMockCodePipelineLister(ctrl *gomock.Controller) *MockCodePipelineLister {
+	mock := &MockCodePipelineLister{ctrl: ctrl}
+	mock.recorder = &MockCodePipelineListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCodePipelineLister) EXPECT() *MockCodePipelineListerMockRecorder {
+	return m.recorder
+}
+
+// ListDeployedPipelines mocks base method.
+func (m *MockCodePipelineLister) ListDeployedPipelines() ([]deploy.Pipeline, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedPipelines")
+	ret0, _ := ret[0].([]deploy.Pipeline)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedPipelines indicates an expected call of ListDeployedPipelines.
+func (mr *MockCodePipelineListerMockRecorder) ListDeployedPipelines() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedPipelines", reflect.TypeOf((*MockCodePipelineLister)(nil).ListDeployedPipelines))
 }
 
 // MockWorkspaceRetriever is a mock of WorkspaceRetriever interface.

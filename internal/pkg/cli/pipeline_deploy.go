@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -63,7 +64,6 @@ type deployPipelineOpts struct {
 	deployPipelineVars
 
 	pipelineDeployer pipelineDeployer
-	app              *config.Application
 	sel              wsPipelineSelector
 	prog             progress
 	prompt           prompter
@@ -71,11 +71,12 @@ type deployPipelineOpts struct {
 	store            store
 	ws               wsPipelineReader
 	codestar         codestar
-	newSvcListCmd    func(io.Writer) cmd
-	newJobListCmd    func(io.Writer) cmd
+	newSvcListCmd    func(io.Writer, string) cmd
+	newJobListCmd    func(io.Writer, string) cmd
 
 	// cached variables
 	wsAppName                    string
+	app                          *config.Application
 	pipeline                     *workspace.PipelineManifest
 	shouldPromptUpdateConnection bool
 	pipelineMft                  *manifest.Pipeline
@@ -90,10 +91,6 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 
-	app, err := store.GetApplication(vars.appName)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", vars.appName, err)
-	}
 	prompter := prompt.New()
 
 	ws, err := workspace.New()
@@ -107,7 +104,6 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	}
 
 	return &deployPipelineOpts{
-		app:                app,
 		ws:                 ws,
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
@@ -117,10 +113,10 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		prompt:             prompter,
 		sel:                selector.NewWsPipelineSelect(prompter, ws),
 		codestar:           cs.New(defaultSession),
-		newSvcListCmd: func(w io.Writer) cmd {
+		newSvcListCmd: func(w io.Writer, appName string) cmd {
 			return &listSvcOpts{
 				listWkldVars: listWkldVars{
-					appName: vars.appName,
+					appName: appName,
 				},
 				sel: selector.NewSelect(prompt.New(), store),
 				list: &list.SvcListWriter{
@@ -133,10 +129,10 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				},
 			}
 		},
-		newJobListCmd: func(w io.Writer) cmd {
+		newJobListCmd: func(w io.Writer, appName string) cmd {
 			return &listJobOpts{
 				listWkldVars: listWkldVars{
-					appName: vars.appName,
+					appName: appName,
 				},
 				sel: selector.NewSelect(prompt.New(), store),
 				list: &list.JobListWriter{
@@ -157,19 +153,29 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *deployPipelineOpts) Validate() error {
-	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
-		return err
-	}
 	return nil
 }
 
 // Ask prompts the user for any unprovided required fields and validates them.
 func (o *deployPipelineOpts) Ask() error {
+	if o.wsAppName == "" {
+		return errNoAppInWorkspace
+	}
+	// This command must be run within the app's workspace.
+	if o.appName != "" && o.appName != o.wsAppName {
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", o.appName, o.wsAppName)
+	}
+	appConfig, err := o.store.GetApplication(o.wsAppName)
+	if err != nil {
+		return fmt.Errorf("get application %s configuration: %w", o.wsAppName, err)
+	}
+	o.app = appConfig
+
 	if o.name != "" {
 		return o.validatePipelineName()
 	}
 
-	return o.askPipelineName()
+	return o.askWsPipelineName()
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
@@ -189,7 +195,7 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 
-	// If the source has an existing connection, get the correlating ConnectionARN .
+	// If the source has an existing connection, get the correlating ConnectionARN.
 	connection, ok := pipeline.Source.Properties["connection_name"]
 	if ok {
 		arn, err := o.codestar.GetConnectionARN((connection).(string))
@@ -205,13 +211,19 @@ func (o *deployPipelineOpts) Execute() error {
 	}
 	o.shouldPromptUpdateConnection = bool
 
-	// convert environments to deployment stages
+	// Convert full manifest path to relative path from workspace root.
+	relPath, err := o.ws.Rel(o.pipeline.Path)
+	if err != nil {
+		return err
+	}
+
+	// Convert environments to deployment stages.
 	stages, err := o.convertStages(pipeline.Stages)
 	if err != nil {
 		return fmt.Errorf("convert environments to deployment stage: %w", err)
 	}
 
-	// get cross-regional resources
+	// Get cross-regional resources.
 	artifactBuckets, err := o.getArtifactBuckets()
 	if err != nil {
 		return fmt.Errorf("get cross-regional resources: %w", err)
@@ -221,7 +233,7 @@ func (o *deployPipelineOpts) Execute() error {
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		Source:          source,
-		Build:           deploy.PipelineBuildFromManifest(pipeline.Build),
+		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, filepath.Dir(relPath)),
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,
@@ -248,11 +260,8 @@ func (o *deployPipelineOpts) validatePipelineName() error {
 	return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 }
 
-func (o *deployPipelineOpts) askPipelineName() error {
-	if o.name != "" {
-		return nil
-	}
-	pipeline, err := o.sel.Pipeline(pipelineSelectPrompt, "")
+func (o *deployPipelineOpts) askWsPipelineName() error {
+	pipeline, err := o.sel.WsPipeline(pipelineSelectPrompt, "")
 	if err != nil {
 		return fmt.Errorf("select pipeline: %w", err)
 	}
@@ -265,14 +274,12 @@ func (o *deployPipelineOpts) getPipelineMft() (*manifest.Pipeline, error) {
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
-	path, err := o.ws.PipelineManifestLegacyPath()
-	if err != nil {
-		return nil, fmt.Errorf("get pipeline manifest path: %w", err)
-	}
-	pipelineMft, err := o.ws.ReadPipelineManifest(path)
+
+	pipelineMft, err := o.ws.ReadPipelineManifest(o.pipeline.Path)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
+
 	if err := pipelineMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
 	}
@@ -310,10 +317,10 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 
 func (o deployPipelineOpts) getLocalWorkloads() ([]string, error) {
 	var localWklds []string
-	if err := o.newSvcListCmd(o.svcBuffer).Execute(); err != nil {
+	if err := o.newSvcListCmd(o.svcBuffer, o.appName).Execute(); err != nil {
 		return nil, fmt.Errorf("get local services: %w", err)
 	}
-	if err := o.newJobListCmd(o.jobBuffer).Execute(); err != nil {
+	if err := o.newJobListCmd(o.jobBuffer, o.appName).Execute(); err != nil {
 		return nil, fmt.Errorf("get local jobs: %w", err)
 	}
 	svcOutput, jobOutput := &list.ServiceJSONOutput{}, &list.JobJSONOutput{}
