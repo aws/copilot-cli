@@ -3,14 +3,13 @@ List of all available properties for a Copilot pipeline manifest. To learn more 
 ???+ note "Sample manifest for a pipeline triggered from a GitHub repo"
 
     ```yaml
-        name: pipeline-sample-app-frontend
-        version: 1
+        name: frontend
     
         source:
           provider: GitHub
           properties:
             branch: main
-            repository: https://github.com/<user>/sample-app-frontend
+            repository: https://github.com/<user>/frontend
             # Optional: specify the name of an existing CodeStar Connections connection.
             connection_name: a-connection
     

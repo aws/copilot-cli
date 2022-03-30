@@ -27,25 +27,25 @@ Name Flags
 
 Build Flags
       --build-context string   Path to the Docker build context.
-                               Mutually exclusive with -i, --image.
+                               Cannot be specified with --image.
       --dockerfile string      Path to the Dockerfile.
-                               Mutually exclusive with -i, --image. (default "Dockerfile")
+                               Cannot be specified with --image. (default "Dockerfile")
   -i, --image string           The location of an existing Docker image.
-                               Mutually exclusive with -d, --dockerfile.
+                               Cannot be specified with --dockerfile or --build-context.
       --tag string             Optional. The container image tag in addition to "latest".
 
 Placement Flags
       --app string                Optional. Name of the application.
-                                  Cannot be specified with 'default', 'subnets' or 'security-groups'.
+                                  Cannot be specified with --default, --subnets or --security-groups.
       --cluster string            Optional. The short name or full ARN of the cluster to run the task in. 
-                                  Cannot be specified with 'app', 'env' or 'default'.
+                                  Cannot be specified with --app, --env or --default.
       --default                   Optional. Run tasks in default cluster and default subnets. 
-                                  Cannot be specified with 'app', 'env' or 'subnets'.
+                                  Cannot be specified with --app, --env or --subnets.
       --env string                Optional. Name of the environment.
-                                  Cannot be specified with 'default', 'subnets' or 'security-groups'.
+                                  Cannot be specified with --default, --subnets or --security-groups.
       --security-groups strings   Optional. Additional security group IDs for the task to use. Can be specified multiple times.
       --subnets strings           Optional. The subnet IDs for the task to use. Can be specified multiple times.
-                                  Cannot be specified with 'app', 'env' or 'default'.
+                                  Cannot be specified with --app, --env or --default.
 
 Task Configuration Flags
       --acknowledge-secrets-access     Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag. 
