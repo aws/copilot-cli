@@ -22,12 +22,13 @@ import (
 )
 
 type deployPipelineMocks struct {
-	store     *mocks.Mockstore
-	prompt    *mocks.Mockprompter
-	prog      *mocks.Mockprogress
-	deployer  *mocks.MockpipelineDeployer
-	ws        *mocks.MockwsPipelineReader
-	actionCmd *mocks.MockactionCommand
+	store                  *mocks.Mockstore
+	prompt                 *mocks.Mockprompter
+	prog                   *mocks.Mockprogress
+	deployer               *mocks.MockpipelineDeployer
+	ws                     *mocks.MockwsPipelineReader
+	actionCmd              *mocks.MockactionCommand
+	deployedPipelineLister *mocks.MockpipelineLister
 }
 
 func TestDeployPipelineOpts_Ask(t *testing.T) {
@@ -237,6 +238,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			inAppName: appName,
 			inRegion:  region,
 			callMocks: func(m deployPipelineMocks) {
+
 				gomock.InOrder(
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
 					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
@@ -252,17 +254,30 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
+						if in.IsLegacy {
+							return false, errors.New("should not be a legacy pipeline")
+						}
+						return false, nil
+					}),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
+						if in.IsLegacy {
+							return errors.New("should not be a legacy pipeline")
+						}
+						return nil
+					}),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployComplete, pipelineName)).Times(1),
 				)
 			},
 			expectedError: nil,
 		},
-		"update and deploy pipeline": {
+		"update and deploy pipeline with new naming": {
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
@@ -282,12 +297,74 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+
 					// deployPipeline
-					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
+						if in.IsLegacy {
+							return false, errors.New("should not be a legacy pipeline")
+						}
+						return true, nil
+					}),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, pipelineName), "").Return(true, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
+						if in.IsLegacy {
+							return errors.New("should not be a legacy pipeline")
+						}
+						return nil
+					}),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1),
+				)
+			},
+			expectedError: nil,
+		},
+		"update and deploy pipeline with legacy naming": {
+			inApp:     &app,
+			inAppName: appName,
+			inRegion:  region,
+			callMocks: func(m deployPipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployResourcesComplete, appName)).Times(1),
+					m.ws.EXPECT().ReadPipelineManifest(pipelineManifestPath).Return(mockPipelineManifest, nil),
+					m.ws.EXPECT().Rel(pipelineManifestPath).Return(relativePath, nil),
+					m.actionCmd.EXPECT().Execute().Times(2),
+
+					// convertStages
+					m.store.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.store.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{
+						{
+							ResourceName: pipelineName,
+							IsLegacy:     true,
+						},
+					}, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
+						if !in.IsLegacy {
+							return false, errors.New("should be a legacy pipeline")
+						}
+						return true, nil
+					}),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
+					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineDeployExistPrompt, pipelineName), "").Return(true, nil),
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineDeployProposalStart, pipelineName)).Times(1),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput, _ string) error {
+						if !in.IsLegacy {
+							return errors.New("should be a legacy pipeline")
+						}
+						return nil
+					}),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineDeployProposalComplete, pipelineName)).Times(1),
 				)
 			},
@@ -312,6 +389,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -340,6 +420,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -500,6 +583,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error")),
 				)
@@ -525,6 +611,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
@@ -555,6 +644,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -612,6 +704,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					// getArtifactBuckets
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
+					// check if the pipeline has been deployed using a legacy naming.
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
 					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
@@ -638,12 +733,13 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 			mockActionCmd := mocks.NewMockactionCommand(ctrl)
 
 			mocks := deployPipelineMocks{
-				store:     mockStore,
-				prompt:    mockPrompt,
-				prog:      mockProgress,
-				deployer:  mockPipelineDeployer,
-				ws:        mockWorkspace,
-				actionCmd: mockActionCmd,
+				store:                  mockStore,
+				prompt:                 mockPrompt,
+				prog:                   mockProgress,
+				deployer:               mockPipelineDeployer,
+				ws:                     mockWorkspace,
+				actionCmd:              mockActionCmd,
+				deployedPipelineLister: mocks.NewMockpipelineLister(ctrl),
 			}
 
 			tc.callMocks(mocks)
@@ -665,6 +761,9 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				},
 				newJobListCmd: func(w io.Writer, app string) cmd {
 					return mockActionCmd
+				},
+				configureDeployedPipelineLister: func() deployedPipelineLister {
+					return mocks.deployedPipelineLister
 				},
 				pipeline: &workspace.PipelineManifest{
 					Name: "pipepiper",

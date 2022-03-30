@@ -65,7 +65,7 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketNa
 	if err = cf.codeStarClient.WaitUntilConnectionStatusAvailable(ctx, output[connectionARNKey]); err != nil {
 		return err
 	}
-	if err = cf.cpClient.RetryStageExecution(in.Name, sourceStage); err != nil {
+	if err = cf.cpClient.RetryStageExecution(stack.NameForPipeline(in.AppName, in.Name, in.IsLegacy), sourceStage); err != nil {
 		return err
 	}
 

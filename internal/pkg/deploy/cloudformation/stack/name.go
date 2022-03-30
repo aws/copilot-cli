@@ -50,3 +50,11 @@ func NameForAppStack(app string) string {
 func NameForAppStackSet(app string) string {
 	return fmt.Sprintf("%s-infrastructure", app)
 }
+
+// NameForPipeline returns the stack name for a pipeline.
+func NameForPipeline(app string, pipeline string, isLegacy bool) string {
+	if isLegacy {
+		return pipeline
+	}
+	return fmt.Sprintf("pipeline-%s-%s", app, pipeline)
+}
