@@ -150,7 +150,6 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	ctx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
 	defer cancelWait()
 	g, _ := errgroup.WithContext(ctx)
-	defer ctx.Done()
 	var mux sync.Mutex
 	for i := range envs {
 		env := envs[i]
