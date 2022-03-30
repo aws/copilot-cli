@@ -5,32 +5,30 @@ package cli
 
 import (
 	"encoding"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"io"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
-
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -144,6 +142,7 @@ type store interface {
 type deployedEnvironmentLister interface {
 	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
 	ListDeployedServices(appName, envName string) ([]string, error)
+	ListDeployedJobs(appName string, envName string) ([]string, error)
 	IsServiceDeployed(appName, envName string, svcName string) (bool, error)
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
@@ -160,6 +159,7 @@ type secretCreator interface {
 }
 
 type secretDeleter interface {
+	DescribeSecret(secretName string) (*secretsmanager.DescribeSecretOutput, error)
 	DeleteSecret(secretName string) error
 }
 
@@ -240,9 +240,11 @@ type wsPipelineManifestReader interface {
 	ReadPipelineManifest(path string) (*manifest.Pipeline, error)
 }
 
-type wsPipelineWriter interface {
-	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error)
-	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
+type wsPipelineIniter interface {
+	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
+	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
+	Rel(path string) (string, error)
+	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
 type serviceLister interface {
@@ -283,13 +285,13 @@ type wsWlDirReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
+	Rel(path string) (string, error)
 }
 
 type wsPipelineGetter interface {
 	wsPipelineManifestReader
 	wlLister
 	ListPipelines() ([]workspace.PipelineManifest, error)
-	PipelineManifestLegacyPath() (string, error)
 }
 
 type wsAppManager interface {
@@ -441,8 +443,10 @@ type appUpgrader interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
-	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
-	GetPipelinesByTags(tags map[string]string) ([]*codepipeline.Pipeline, error)
+}
+
+type deployedPipelineLister interface {
+	ListDeployedPipelines() ([]deploy.Pipeline, error)
 }
 
 type executor interface {
@@ -479,7 +483,12 @@ type pipelineEnvSelector interface {
 }
 
 type wsPipelineSelector interface {
-	Pipeline(prompt, help string) (*workspace.PipelineManifest, error)
+	WsPipeline(prompt, help string) (*workspace.PipelineManifest, error)
+}
+
+type codePipelineSelector interface {
+	appSelector
+	DeployedPipeline(prompt, help string) (string, error)
 }
 
 type wsSelector interface {

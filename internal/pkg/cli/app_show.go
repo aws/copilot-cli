@@ -4,12 +4,12 @@
 package cli
 
 import (
+	"context"
 	"fmt"
-	"io"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -17,6 +17,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"golang.org/x/sync/errgroup"
+	"io"
+	"sort"
+	"sync"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -26,6 +31,7 @@ import (
 const (
 	appShowNamePrompt     = "Which application would you like to show?"
 	appShowNameHelpPrompt = "An application is a collection of related services."
+	waitForStackTimeout   = 30 * time.Second
 )
 
 type showAppVars struct {
@@ -39,22 +45,31 @@ type showAppOpts struct {
 	store            store
 	w                io.Writer
 	sel              appSelector
-	pipelineSvc      pipelineGetter
+	deployStore      deployedEnvironmentLister
+	codepipeline     pipelineGetter
+	pipelineLister   deployedPipelineLister
 	newVersionGetter func(string) (versionGetter, error)
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
-	defaultSession, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app show")).Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("app show"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+	deployStore, err := deploy.NewStore(sessProvider, store)
+	if err != nil {
+		return nil, fmt.Errorf("connect to deploy store: %w", err)
+	}
 	return &showAppOpts{
-		showAppVars: vars,
-		store:       store,
-		w:           log.OutputWriter,
-		sel:         selector.NewSelect(prompt.New(), store),
-		pipelineSvc: codepipeline.New(defaultSession),
+		showAppVars:    vars,
+		store:          store,
+		w:              log.OutputWriter,
+		sel:            selector.NewSelect(prompt.New(), store),
+		deployStore:    deployStore,
+		codepipeline:   codepipeline.New(defaultSession),
+		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
 		newVersionGetter: func(s string) (versionGetter, error) {
 			d, err := describe.NewAppDescriber(s)
 			if err != nil {
@@ -103,6 +118,19 @@ func (o *showAppOpts) Execute() error {
 	fmt.Fprint(o.w, data)
 	return nil
 }
+func (o *showAppOpts) populateDeployedWorkloads(listWorkloads func(app, env string) ([]string, error), deployedEnvsFor map[string][]string, env string, lock sync.Locker) error {
+	deployedworkload, err := listWorkloads(o.name, env)
+	if err != nil {
+		return fmt.Errorf("list services/jobs deployed to %s: %w", env, err)
+	}
+
+	lock.Lock()
+	defer lock.Unlock()
+	for _, wkld := range deployedworkload {
+		deployedEnvsFor[wkld] = append(deployedEnvsFor[wkld], env)
+	}
+	return nil
+}
 
 func (o *showAppOpts) description() (*describe.App, error) {
 	app, err := o.store.GetApplication(o.name)
@@ -121,13 +149,39 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list jobs in application %s: %w", o.name, err)
 	}
+	wkldDeployedtoEnvs := make(map[string][]string)
+	ctx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancelWait()
+	g, _ := errgroup.WithContext(ctx)
+	var mux sync.Mutex
+	for i := range envs {
+		env := envs[i]
+		g.Go(func() error {
+			return o.populateDeployedWorkloads(o.deployStore.ListDeployedJobs, wkldDeployedtoEnvs, env.Name, &mux)
+		})
+		g.Go(func() error {
+			return o.populateDeployedWorkloads(o.deployStore.ListDeployedServices, wkldDeployedtoEnvs, env.Name, &mux)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	// Sort the map values so that `output` is consistent and the unit test won't be flaky.
+	for k := range wkldDeployedtoEnvs {
+		sort.Strings(wkldDeployedtoEnvs[k])
+	}
 
-	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
-		deploy.AppTagKey: o.name,
-	})
-
+	pipelines, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines in application %s: %w", o.name, err)
+	}
+	var pipelineInfo []*codepipeline.Pipeline
+	for _, pipeline := range pipelines {
+		info, err := o.codepipeline.GetPipeline(pipeline.ResourceName)
+		if err != nil {
+			return nil, fmt.Errorf("get info for pipeline %s: %w", pipeline.Name(), err)
+		}
+		pipelineInfo = append(pipelineInfo, info)
 	}
 
 	var trimmedEnvs []*config.Environment
@@ -162,13 +216,14 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		return nil, fmt.Errorf("get version for application %s: %w", o.name, err)
 	}
 	return &describe.App{
-		Name:      app.Name,
-		Version:   version,
-		URI:       app.Domain,
-		Envs:      trimmedEnvs,
-		Services:  trimmedSvcs,
-		Jobs:      trimmedJobs,
-		Pipelines: pipelines,
+		Name:               app.Name,
+		Version:            version,
+		URI:                app.Domain,
+		Envs:               trimmedEnvs,
+		Services:           trimmedSvcs,
+		Jobs:               trimmedJobs,
+		Pipelines:          pipelineInfo,
+		WkldDeployedtoEnvs: wkldDeployedtoEnvs,
 	}, nil
 }
 

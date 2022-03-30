@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -174,7 +175,7 @@ func (o *deployPipelineOpts) Ask() error {
 		return o.validatePipelineName()
 	}
 
-	return o.askPipelineName()
+	return o.askWsPipelineName()
 }
 
 // Execute creates a new pipeline or updates the current pipeline if it already exists.
@@ -194,7 +195,7 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 
-	// If the source has an existing connection, get the correlating ConnectionARN .
+	// If the source has an existing connection, get the correlating ConnectionARN.
 	connection, ok := pipeline.Source.Properties["connection_name"]
 	if ok {
 		arn, err := o.codestar.GetConnectionARN((connection).(string))
@@ -210,13 +211,19 @@ func (o *deployPipelineOpts) Execute() error {
 	}
 	o.shouldPromptUpdateConnection = bool
 
-	// convert environments to deployment stages
+	// Convert full manifest path to relative path from workspace root.
+	relPath, err := o.ws.Rel(o.pipeline.Path)
+	if err != nil {
+		return err
+	}
+
+	// Convert environments to deployment stages.
 	stages, err := o.convertStages(pipeline.Stages)
 	if err != nil {
 		return fmt.Errorf("convert environments to deployment stage: %w", err)
 	}
 
-	// get cross-regional resources
+	// Get cross-regional resources.
 	artifactBuckets, err := o.getArtifactBuckets()
 	if err != nil {
 		return fmt.Errorf("get cross-regional resources: %w", err)
@@ -226,7 +233,7 @@ func (o *deployPipelineOpts) Execute() error {
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		Source:          source,
-		Build:           deploy.PipelineBuildFromManifest(pipeline.Build),
+		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, filepath.Dir(relPath)),
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,
@@ -253,11 +260,8 @@ func (o *deployPipelineOpts) validatePipelineName() error {
 	return fmt.Errorf(`pipeline %s not found in the workspace`, color.HighlightUserInput(o.name))
 }
 
-func (o *deployPipelineOpts) askPipelineName() error {
-	if o.name != "" {
-		return nil
-	}
-	pipeline, err := o.sel.Pipeline(pipelineSelectPrompt, "")
+func (o *deployPipelineOpts) askWsPipelineName() error {
+	pipeline, err := o.sel.WsPipeline(pipelineSelectPrompt, "")
 	if err != nil {
 		return fmt.Errorf("select pipeline: %w", err)
 	}
@@ -270,14 +274,12 @@ func (o *deployPipelineOpts) getPipelineMft() (*manifest.Pipeline, error) {
 	if o.pipelineMft != nil {
 		return o.pipelineMft, nil
 	}
-	path, err := o.ws.PipelineManifestLegacyPath()
-	if err != nil {
-		return nil, fmt.Errorf("get pipeline manifest path: %w", err)
-	}
-	pipelineMft, err := o.ws.ReadPipelineManifest(path)
+
+	pipelineMft, err := o.ws.ReadPipelineManifest(o.pipeline.Path)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
+
 	if err := pipelineMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate pipeline manifest: %w", err)
 	}

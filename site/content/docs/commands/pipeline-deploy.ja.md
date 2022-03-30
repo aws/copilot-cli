@@ -4,16 +4,18 @@ $ copilot pipeline deploy [flags]
 ```
 
 ## コマンドの概要
-`copilot pipeline deploy` は、ワークスペース内に全ての Service がデプロイ対象となるように Pipeline を作成/更新します。あわせてこの Pipeline のデプロイターゲットが Pipeline 用 Manifest にて Application と紐付けられた Environment 群となるように作成/更新されます。
+`copilot pipeline deploy` は、ワークスペース内の全ての Service に対する Pipeline をデプロイします。Pipeline 用 Manifest にて Application と紐付けられた Environment 群を利用します。
 
 ## フラグ
 ```bash
--h, --help   help for deploy
-    --yes    Skips confirmation prompt.
+-a, --app string    Name of the application.
+-h, --help          help for deploy
+-n, --name string   Name of the pipeline.
+    --yes           Skips confirmation prompt.
 ```
 
 ## 実行例
-ワークスペース内の Service 群をデプロイ対象とする形で Pipeline を作成/更新します。
+ワークスペース内の Service 群と Job 群に対する Pipeline をデプロイします。
 ```bash
 $ copilot pipeline deploy
 ```

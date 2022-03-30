@@ -7,7 +7,9 @@ package deploy
 import (
 	"fmt"
 	"sort"
+	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -21,19 +23,25 @@ const (
 	AppTagKey = "copilot-application"
 	// EnvTagKey is tag key for Copilot env.
 	EnvTagKey = "copilot-environment"
-	// ServiceTagKey is tag key for Copilot svc.
+	// ServiceTagKey is tag key for Copilot service.
 	ServiceTagKey = "copilot-service"
+	// PipelineTagKey is tag key for Copilot pipeline.
+	PipelineTagKey = "copilot-pipeline"
 	// TaskTagKey is tag key for Copilot task.
 	TaskTagKey = "copilot-task"
 )
 
 const (
-	stackResourceType = "cloudformation:stack"
-	snsResourceType   = "sns"
+	stackResourceType    = "cloudformation:stack"
+	pipelineResourceType = "codepipeline:pipeline"
+	snsResourceType      = "sns"
 
 	// fmtSNSTopicNamePrefix holds the App-Env-Workload- components of a topic name
 	fmtSNSTopicNamePrefix = "%s-%s-%s-"
 	snsServiceName        = "sns"
+
+	// After v1.x, pipeline names are namespaced with a prefix in the format of "pipeline-${appName}-"
+	pipelineNamePrefix = "pipeline-%s-"
 )
 
 type resourceGetter interface {
@@ -85,6 +93,59 @@ func NewStore(sessProvider SessionProvider, store ConfigStoreClient) (*Store, er
 		return rg.New(sess), nil
 	}
 	return s, nil
+}
+
+// Pipeline is a deployed pipeline.
+type Pipeline struct {
+	AppName      string
+	ResourceName string
+	IsLegacy     bool
+}
+
+// Name returns the name of the deployed pipeline.
+func (p Pipeline) Name() string {
+	if p.IsLegacy {
+		return p.ResourceName
+	}
+	return strings.TrimPrefix(p.ResourceName, fmt.Sprintf(pipelineNamePrefix, p.AppName))
+}
+
+// PipelineStore fetches information on deployed pipelines.
+type PipelineStore struct {
+	appName string
+	getter  resourceGetter
+}
+
+// NewPipelineStore returns a new PipelineStore.
+func NewPipelineStore(appName string, getter resourceGetter) *PipelineStore {
+	return &PipelineStore{
+		appName: appName,
+		getter:  getter,
+	}
+}
+
+// ListDeployedPipelines returns a list of names of deployed pipelines by looking up
+// pipeline resources with tags.
+func (p *PipelineStore) ListDeployedPipelines() ([]Pipeline, error) {
+	var pipelines []Pipeline
+	pipelineResources, err := p.getter.GetResourcesByTags(pipelineResourceType, map[string]string{
+		AppTagKey: p.appName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get pipeline resources by tags for app %s: %w", p.appName, err)
+	}
+	for _, pipelineRes := range pipelineResources {
+		name, err := getPipelineName(pipelineRes.ARN)
+		if err != nil {
+			return nil, err
+		}
+		pipeline := Pipeline{ResourceName: name, AppName: p.appName}
+		if _, ok := pipelineRes.Tags[PipelineTagKey]; !ok {
+			pipeline.IsLegacy = true
+		}
+		pipelines = append(pipelines, pipeline)
+	}
+	return pipelines, nil
 }
 
 // ListDeployedServices returns the names of deployed services in an environment.
@@ -270,4 +331,13 @@ func (s *Store) isWorkloadDeployed(appName, envName, name string) (bool, error) 
 		return true, nil
 	}
 	return false, nil
+}
+
+func getPipelineName(resourceArn string) (string, error) {
+	parsedArn, err := arn.Parse(resourceArn)
+	if err != nil {
+		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
+	}
+
+	return parsedArn.Resource, nil
 }

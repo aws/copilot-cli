@@ -19,10 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
-const (
-	pipelineResourceType = "codepipeline:pipeline"
-)
-
 type api interface {
 	GetPipeline(*cp.GetPipelineInput) (*cp.GetPipelineOutput, error)
 	GetPipelineState(*cp.GetPipelineStateInput) (*cp.GetPipelineStateOutput, error)
@@ -158,25 +154,6 @@ func (s *Stage) HumanString() string {
 	return fmt.Sprintf("%s\t%s\t%s\t%s\n", s.Name, s.Category, s.Provider, s.Details)
 }
 
-// ListPipelineNamesByTags retrieves the names of all pipelines for an application.
-func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
-	var pipelineNames []string
-	resources, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, resource := range resources {
-		name, err := c.getPipelineName(resource.ARN)
-		if err != nil {
-			return nil, err
-		}
-		pipelineNames = append(pipelineNames, name)
-	}
-
-	return pipelineNames, nil
-}
-
 // RetryStageExecution tries to re-initiate a failed stage for the given pipeline.
 func (c *CodePipeline) RetryStageExecution(pipelineName, stageName string) error {
 	executionID, err := c.pipelineExecutionID(pipelineName)
@@ -196,27 +173,6 @@ func (c *CodePipeline) RetryStageExecution(pipelineName, stageName string) error
 		}
 	}
 	return nil
-}
-
-// GetPipelinesByTags retrieves all pipelines for an application.
-func (c *CodePipeline) GetPipelinesByTags(tags map[string]string) ([]*Pipeline, error) {
-	var pipelines []*Pipeline
-	resources, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
-	if err != nil {
-		return nil, err
-	}
-	for _, resource := range resources {
-		name, err := c.getPipelineName(resource.ARN)
-		if err != nil {
-			return nil, err
-		}
-		pipeline, err := c.GetPipeline(name)
-		if err != nil {
-			return nil, err
-		}
-		pipelines = append(pipelines, pipeline)
-	}
-	return pipelines, nil
 }
 
 // GetPipelineState retrieves status information from a given pipeline.
@@ -333,15 +289,6 @@ func (c *CodePipeline) pipelineExecutionID(pipelineName string) (string, error) 
 		return "", fmt.Errorf("no pipeline execution IDs found for %s", pipelineName)
 	}
 	return aws.StringValue(output.PipelineExecutionSummaries[0].PipelineExecutionId), nil
-}
-
-func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
-	parsedArn, err := arn.Parse(resourceArn)
-	if err != nil {
-		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
-	}
-
-	return parsedArn.Resource, nil
 }
 
 func (sa StageAction) humanString() string {

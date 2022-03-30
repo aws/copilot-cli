@@ -198,7 +198,7 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 	}
 
 	// add the legacy pipeline
-	legacyPath, err := ws.PipelineManifestLegacyPath()
+	legacyPath, err := ws.pipelineManifestLegacyPath()
 	if err != nil {
 		return nil, err
 	}
@@ -327,24 +327,24 @@ func (ws *Workspace) WriteJobManifest(marshaler encoding.BinaryMarshaler, name s
 	return ws.write(data, name, manifestFileName)
 }
 
-// WritePipelineBuildspec writes the pipeline buildspec under the copilot/ directory.
+// WritePipelineBuildspec writes the pipeline buildspec under the copilot/pipelines/{name}/ directory.
 // If successful returns the full path of the file, otherwise returns an empty string and the error.
-func (ws *Workspace) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error) {
+func (ws *Workspace) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal pipeline buildspec to binary: %w", err)
 	}
-	return ws.write(data, buildspecFileName)
+	return ws.write(data, pipelinesDirName, name, buildspecFileName)
 }
 
-// WritePipelineManifest writes the pipeline manifest under the copilot directory.
+// WritePipelineManifest writes the pipeline manifest under the copilot/pipelines/{name}/ directory.
 // If successful returns the full path of the file, otherwise returns an empty string and the error.
-func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error) {
+func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal pipeline manifest to binary: %w", err)
 	}
-	return ws.write(data, legacyPipelineFileName)
+	return ws.write(data, pipelinesDirName, name, manifestFileName)
 }
 
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
@@ -398,8 +398,8 @@ func IsInGitRepository(fs FileStat) bool {
 	return !os.IsNotExist(err)
 }
 
-// PipelineManifestLegacyPath returns the path to pipeline manifests before multiple pipelines (and the copilot/pipelines/ dir) were enabled.
-func (ws *Workspace) PipelineManifestLegacyPath() (string, error) {
+// pipelineManifestLegacyPath returns the path to pipeline manifests before multiple pipelines (and the copilot/pipelines/ dir) were enabled.
+func (ws *Workspace) pipelineManifestLegacyPath() (string, error) {
 	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return "", err
@@ -458,6 +458,15 @@ func (ws *Workspace) Path() (string, error) {
 		return "", err
 	}
 	return filepath.Dir(copilotDirPath), nil
+}
+
+// Rel returns the path relative to the workspace root.
+func (ws *Workspace) Rel(fullPath string) (string, error) {
+	copiDir, err := ws.copilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get path to Copilot dir: %w", err)
+	}
+	return filepath.Rel(filepath.Dir(copiDir), fullPath)
 }
 
 func (ws *Workspace) copilotDirPath() (string, error) {
