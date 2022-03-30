@@ -2247,26 +2247,26 @@ func (mr *MockwsPipelineManifestReaderMockRecorder) ReadPipelineManifest(path in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineManifestReader)(nil).ReadPipelineManifest), path)
 }
 
-// MockwsPipelineWriter is a mock of wsPipelineWriter interface.
-type MockwsPipelineWriter struct {
+// MockwsPipelineIniter is a mock of wsPipelineIniter interface.
+type MockwsPipelineIniter struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsPipelineWriterMockRecorder
+	recorder *MockwsPipelineIniterMockRecorder
 }
 
-// MockwsPipelineWriterMockRecorder is the mock recorder for MockwsPipelineWriter.
-type MockwsPipelineWriterMockRecorder struct {
-	mock *MockwsPipelineWriter
+// MockwsPipelineIniterMockRecorder is the mock recorder for MockwsPipelineIniter.
+type MockwsPipelineIniterMockRecorder struct {
+	mock *MockwsPipelineIniter
 }
 
-// NewMockwsPipelineWriter creates a new mock instance.
-func NewMockwsPipelineWriter(ctrl *gomock.Controller) *MockwsPipelineWriter {
-	mock := &MockwsPipelineWriter{ctrl: ctrl}
-	mock.recorder = &MockwsPipelineWriterMockRecorder{mock}
+// NewMockwsPipelineIniter creates a new mock instance.
+func NewMockwsPipelineIniter(ctrl *gomock.Controller) *MockwsPipelineIniter {
+	mock := &MockwsPipelineIniter{ctrl: ctrl}
+	mock.recorder = &MockwsPipelineIniterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockwsPipelineWriter) EXPECT() *MockwsPipelineWriterMockRecorder {
+func (m *MockwsPipelineIniter) EXPECT() *MockwsPipelineIniterMockRecorder {
 	return m.recorder
 }
 
@@ -2275,6 +2275,12 @@ func (m *MockwsPipelineWriter) Rel(path string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Rel", path)
 	ret0, _ := ret[0].(string)
+
+  // ListPipelines mocks base method.
+func (m *MockwsPipelineIniter) ListPipelines() ([]workspace.PipelineManifest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelines")
+	ret0, _ := ret[0].([]workspace.PipelineManifest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2283,10 +2289,15 @@ func (m *MockwsPipelineWriter) Rel(path string) (string, error) {
 func (mr *MockwsPipelineWriterMockRecorder) Rel(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsPipelineWriter)(nil).Rel), path)
+
+  // ListPipelines indicates an expected call of ListPipelines.
+func (mr *MockwsPipelineIniterMockRecorder) ListPipelines() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockwsPipelineIniter)(nil).ListPipelines))
 }
 
 // WritePipelineBuildspec mocks base method.
-func (m *MockwsPipelineWriter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+func (m *MockwsPipelineIniter) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WritePipelineBuildspec", marshaler, name)
 	ret0, _ := ret[0].(string)
@@ -2295,13 +2306,13 @@ func (m *MockwsPipelineWriter) WritePipelineBuildspec(marshaler encoding.BinaryM
 }
 
 // WritePipelineBuildspec indicates an expected call of WritePipelineBuildspec.
-func (mr *MockwsPipelineWriterMockRecorder) WritePipelineBuildspec(marshaler, name interface{}) *gomock.Call {
+func (mr *MockwsPipelineIniterMockRecorder) WritePipelineBuildspec(marshaler, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineBuildspec", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineBuildspec), marshaler, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineBuildspec", reflect.TypeOf((*MockwsPipelineIniter)(nil).WritePipelineBuildspec), marshaler, name)
 }
 
 // WritePipelineManifest mocks base method.
-func (m *MockwsPipelineWriter) WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+func (m *MockwsPipelineIniter) WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WritePipelineManifest", marshaler, name)
 	ret0, _ := ret[0].(string)
@@ -2310,9 +2321,9 @@ func (m *MockwsPipelineWriter) WritePipelineManifest(marshaler encoding.BinaryMa
 }
 
 // WritePipelineManifest indicates an expected call of WritePipelineManifest.
-func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler, name interface{}) *gomock.Call {
+func (mr *MockwsPipelineIniterMockRecorder) WritePipelineManifest(marshaler, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineIniter)(nil).WritePipelineManifest), marshaler, name)
 }
 
 // MockserviceLister is a mock of serviceLister interface.
