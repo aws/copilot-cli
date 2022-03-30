@@ -2207,10 +2207,21 @@ type codePipelineSelectMocks struct {
 }
 
 func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
-	testTags := map[string]string{
-		"copilot-application": "dinder",
+	const (
+		mockAppName                    = "coolapp"
+		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo"
+		mockLegacyPipelineResourceName = "bad-goose"
+	)
+	mockPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: mockPipelineResourceName,
+		IsLegacy:     false,
 	}
-	mockMultiplePipelines := []string{"firstPipeline", "secondPipeline", "thirdPipeline"}
+	mockLegacyPipeline := deploy.Pipeline{
+		AppName:      mockAppName,
+		ResourceName: mockLegacyPipelineResourceName,
+		IsLegacy:     true,
+	}
 	testCases := map[string]struct {
 		setupMocks     func(mocks codePipelineSelectMocks)
 		wantedErr      error
@@ -2218,7 +2229,7 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 	}{
 		"with no workspace pipelines": {
 			setupMocks: func(m codePipelineSelectMocks) {
-				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return(nil, nil)
+				m.cp.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
@@ -2226,22 +2237,22 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 		},
 		"don't prompt to select if only one workspace pipeline": {
 			setupMocks: func(m codePipelineSelectMocks) {
-				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{"singlePipeline"}, nil)
+				m.cp.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline}, nil)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			wantedPipeline: "singlePipeline",
+			wantedPipeline: "my-pipeline-repo",
 		},
 		"with multiple workspace pipelines": {
 			setupMocks: func(m codePipelineSelectMocks) {
-				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return(mockMultiplePipelines, nil)
-				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("secondPipeline", nil)
+				m.cp.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("bad-goose", nil)
 			},
-			wantedPipeline: "secondPipeline",
+			wantedPipeline: "bad-goose",
 		},
 		"with error selecting": {
 			setupMocks: func(m codePipelineSelectMocks) {
-				m.cp.EXPECT().ListPipelineNamesByTags(testTags).Return(mockMultiplePipelines, nil)
+				m.cp.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: errors.New("select pipeline: some error"),
@@ -2262,10 +2273,10 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			sel := CodePipelineSelect{
-				prompt:       mockPrompt,
-				codepipeline: mockCodePipelinesLister,
+				prompt:         mockPrompt,
+				pipelineLister: mockCodePipelinesLister,
 			}
-			got, err := sel.DeployedPipeline("Select a pipeline", "Help text", testTags)
+			got, err := sel.DeployedPipeline("Select a pipeline", "Help text")
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {

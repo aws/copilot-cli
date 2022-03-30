@@ -6,23 +6,18 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	sdkSecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"testing"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-)
-
-const (
-	testAppName        = "badgoose"
-	testPipelineName   = "pipeline-badgoose-honkpipes"
-	testPipelineSecret = "github-token-badgoose-honkpipes"
 )
 
 type deletePipelineMocks struct {
@@ -37,6 +32,11 @@ type deletePipelineMocks struct {
 }
 
 func TestDeletePipelineOpts_Ask(t *testing.T) {
+	const (
+		testAppName        = "badgoose"
+		testPipelineName   = "pipeline-badgoose-honkpipes"
+		testPipelineSecret = "github-token-badgoose-honkpipes"
+	)
 	testCases := map[string]struct {
 		skipConfirmation bool
 		inAppName        string
@@ -89,7 +89,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return(testPipelineName, nil)
+				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any()).Return(testPipelineName, nil)
 			},
 			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
@@ -101,7 +101,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 
 			wantedAppName: testAppName,
@@ -192,6 +192,11 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 }
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {
+	const (
+		testAppName        = "badgoose"
+		testPipelineName   = "pipeline-badgoose-honkpipes"
+		testPipelineSecret = "github-token-badgoose-honkpipes"
+	)
 	mockTime := time.Now()
 	mockResp := &secretsmanager.DescribeSecretOutput{
 		CreatedDate: aws.Time(mockTime),

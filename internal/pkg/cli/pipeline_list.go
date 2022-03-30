@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
@@ -36,13 +37,14 @@ type listPipelineVars struct {
 
 type listPipelineOpts struct {
 	listPipelineVars
-	pipelineSvc pipelineGetter
-	prompt      prompter
-	sel         configSelector
-	store       store
-	w           io.Writer
-	workspace   wsPipelineGetter
-	wsAppName   string
+	codepipeline   pipelineGetter
+	prompt         prompter
+	sel            configSelector
+	store          store
+	w              io.Writer
+	workspace      wsPipelineGetter
+	wsAppName      string
+	pipelineLister deployedPipelineLister
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
@@ -65,7 +67,8 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	prompter := prompt.New()
 	return &listPipelineOpts{
 		listPipelineVars: vars,
-		pipelineSvc:      codepipeline.New(defaultSession),
+		codepipeline:     codepipeline.New(defaultSession),
+		pipelineLister:   deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
 		prompt:           prompter,
 		sel:              selector.NewConfigSelect(prompter, store),
 		store:            store,
@@ -120,9 +123,7 @@ func (o *listPipelineOpts) jsonOutputLocal() error {
 		return err
 	}
 
-	deployed, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
+	deployed, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return fmt.Errorf("list pipelines: %w", err)
 	}
@@ -172,7 +173,7 @@ func (o *listPipelineOpts) humanOutputLocal() error {
 }
 
 func (o *listPipelineOpts) jsonOutput() error {
-	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
+	pipelines, err := o.codepipeline.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.appName,
 	})
 	if err != nil {
@@ -192,7 +193,7 @@ func (o *listPipelineOpts) jsonOutput() error {
 }
 
 func (o *listPipelineOpts) humanOutput() error {
-	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
+	pipelines, err := o.codepipeline.GetPipelinesByTags(map[string]string{
 		deploy.AppTagKey: o.appName,
 	})
 	if err != nil {

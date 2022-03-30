@@ -144,11 +144,11 @@ var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
 %s.`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes()), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
-Mutually exclusive with -%s, --%s.`, dockerFileFlagShort, dockerFileFlag)
+Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
-Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
+Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
-Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
+Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s.`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
@@ -157,23 +157,22 @@ Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 %s.`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes()), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
-Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
+Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, taskDefaultFlag)
 	acknowledgeSecretsAccessDescription = fmt.Sprintf(`Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag. 
 This flag is useful only when '%s' flag is specified`, secretsFlag)
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
-Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
-	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
-Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
+Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, taskDefaultFlag)
+	securityGroupsFlagDescription = "Optional. Additional security group IDs for the task to use. Can be specified multiple times."
 	taskRunDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
-Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, subnetsFlag)
+Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, subnetsFlag)
 	taskExecDefaultFlagDescription = fmt.Sprintf(`Optional. Execute commands in running tasks in default cluster and default subnets. 
-Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
+Cannot be specified with --%s or --%s.`, appFlag, envFlag)
 	taskDeleteDefaultFlagDescription = fmt.Sprintf(`Optional. Delete a task which was launched in the default cluster and subnets.
-Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
+Cannot be specified with --%s or --%s.`, appFlag, envFlag)
 	taskEnvFlagDescription = fmt.Sprintf(`Optional. Name of the environment.
-Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+Cannot be specified with --%s, --%s or --%s.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
-Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+Cannot be specified with --%s, --%s or --%s.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	osFlagDescription   = fmt.Sprintf(`Optional. Operating system of the task. Must be specified along with '%s'.`, archFlag)
 	archFlagDescription = fmt.Sprintf(`Optional. Architecture of the task. Must be specified along with '%s'.`, osFlag)
 
