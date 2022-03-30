@@ -460,6 +460,15 @@ func (ws *Workspace) Path() (string, error) {
 	return filepath.Dir(copilotDirPath), nil
 }
 
+// Rel returns the path relative to the workspace root.
+func (ws *Workspace) Rel(fullPath string) (string, error) {
+	copiDir, err := ws.copilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get path to Copilot dir: %w", err)
+	}
+	return filepath.Rel(filepath.Dir(copiDir), fullPath)
+}
+
 func (ws *Workspace) copilotDirPath() (string, error) {
 	if ws.copilotDir != "" {
 		return ws.copilotDir, nil
