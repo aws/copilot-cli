@@ -149,7 +149,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	wkldDeployedtoEnvs := make(map[string][]string)
 	ctx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
 	defer cancelWait()
-	g, ctx := errgroup.WithContext(ctx)
+	g, _ := errgroup.WithContext(ctx)
 	defer ctx.Done()
 	var mux sync.Mutex
 	for i := range envs {
