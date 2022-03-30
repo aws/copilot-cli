@@ -4,10 +4,14 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"sort"
+	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -15,6 +19,7 @@ import (
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -105,27 +110,30 @@ func (o *listPipelineOpts) Ask() error {
 
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // TODO const
+	defer cancel()
+
 	switch {
 	case o.shouldShowLocalPipelines && o.shouldOutputJSON:
-		return o.jsonOutputLocal()
+		return o.jsonOutputLocal(ctx)
 	case o.shouldShowLocalPipelines:
 		return o.humanOutputLocal()
 	case o.shouldOutputJSON:
-		return o.jsonOutput()
+		return o.jsonOutput(ctx)
 	}
 
-	return o.humanOutput()
+	return o.humanOutput(ctx)
 }
 
-func (o *listPipelineOpts) jsonOutputLocal() error {
+func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 	local, err := o.workspace.ListPipelines()
 	if err != nil {
 		return err
 	}
 
-	deployed, err := o.pipelineLister.ListDeployedPipelines()
+	deployed, err := getDeployedPipelines(ctx, o.pipelineLister, o.codepipeline)
 	if err != nil {
-		return fmt.Errorf("list pipelines: %w", err)
+		return err
 	}
 
 	cp := make(map[string]*codepipeline.Pipeline)
@@ -172,12 +180,10 @@ func (o *listPipelineOpts) humanOutputLocal() error {
 	return nil
 }
 
-func (o *listPipelineOpts) jsonOutput() error {
-	pipelines, err := o.codepipeline.GetPipelinesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
+func (o *listPipelineOpts) jsonOutput(ctx context.Context) error {
+	pipelines, err := getDeployedPipelines(ctx, o.pipelineLister, o.codepipeline)
 	if err != nil {
-		return fmt.Errorf("list pipelines: %w", err)
+		return err
 	}
 
 	type serializedPipelines struct {
@@ -192,12 +198,10 @@ func (o *listPipelineOpts) jsonOutput() error {
 	return nil
 }
 
-func (o *listPipelineOpts) humanOutput() error {
-	pipelines, err := o.codepipeline.GetPipelinesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
+func (o *listPipelineOpts) humanOutput(ctx context.Context) error {
+	pipelines, err := getDeployedPipelines(ctx, o.pipelineLister, o.codepipeline)
 	if err != nil {
-		return fmt.Errorf("list pipelines: %w", err)
+		return err
 	}
 
 	for _, pipeline := range pipelines {
@@ -205,6 +209,43 @@ func (o *listPipelineOpts) humanOutput() error {
 	}
 
 	return nil
+}
+
+func getDeployedPipelines(ctx context.Context, lister deployedPipelineLister, getter pipelineGetter) ([]*codepipeline.Pipeline, error) {
+	names, err := lister.ListDeployedPipelines()
+	if err != nil {
+		return nil, fmt.Errorf("list pipelines: %w", err)
+	}
+
+	var mux sync.Mutex
+	var res []*codepipeline.Pipeline
+
+	g, _ := errgroup.WithContext(ctx)
+
+	for i := range names {
+		name := names[i].Name()
+		g.Go(func() error {
+			pipeline, err := getter.GetPipeline(name)
+			if err != nil {
+				return fmt.Errorf("get pipeline %q: %w", name, err)
+			}
+
+			mux.Lock()
+			defer mux.Unlock()
+			res = append(res, pipeline)
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Name < res[j].Name
+	})
+
+	return res, nil
 }
 
 // buildPipelineListCmd builds the command for showing a list of all deployed pipelines.
