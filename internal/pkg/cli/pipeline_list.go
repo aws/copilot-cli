@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -43,6 +42,7 @@ type listPipelineOpts struct {
 	store       store
 	w           io.Writer
 	workspace   wsPipelineGetter
+	wsAppName   string
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
@@ -56,6 +56,11 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 
+	wsAppName := tryReadingAppName()
+	if vars.appName == "" {
+		vars.appName = wsAppName
+	}
+
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &listPipelineOpts{
@@ -66,11 +71,20 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 		store:            store,
 		w:                os.Stdout,
 		workspace:        ws,
+		wsAppName:        wsAppName,
 	}, nil
 }
 
 // Ask asks for and validates fields that are required but not passed in.
 func (o *listPipelineOpts) Ask() error {
+	if o.shouldShowLocalPipelines {
+		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	if o.appName != "" {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return fmt.Errorf("validate application: %w", err)
@@ -88,64 +102,29 @@ func (o *listPipelineOpts) Ask() error {
 
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
-	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
-	if err != nil {
-		return fmt.Errorf("list pipelines: %w", err)
+	switch {
+	case o.shouldShowLocalPipelines && o.shouldOutputJSON:
+		return o.jsonOutputLocal()
+	case o.shouldShowLocalPipelines:
+		return o.humanOutputLocal()
+	case o.shouldOutputJSON:
+		return o.jsonOutput()
 	}
 
-	if o.shouldShowLocalPipelines {
-		return o.writeLocalPipelines(pipelines)
-	}
-
-	if o.shouldOutputJSON {
-		data, err := o.jsonOutput(pipelines)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(o.w, "%s\n", data)
-	}
-
-	// TODO: if doing local, get list of pipelines. add "deployed" and "manifestPath" fields.
-
-	return o.writeHuman()
-
-	/*
-		var out string
-		if o.shouldOutputJSON {
-			out = data
-		} else {
-			out = o.humanOutput(pipelines)
-		}
-		fmt.Fprint(o.w, out)
-	*/
-
-	return nil
+	return o.humanOutput()
 }
 
-func (o *listPipelineOpts) writeJson() error {
-	return nil
-}
-
-func (o *listPipelineOpts) writeHuman() error {
-	return nil
-}
-
-func (o *listPipelineOpts) writeLocalPipelines(deployed []*codepipeline.Pipeline) error {
+func (o *listPipelineOpts) jsonOutputLocal() error {
 	local, err := o.workspace.ListPipelines()
 	if err != nil {
 		return err
 	}
 
-	if !o.shouldOutputJSON {
-		var names []string
-		for _, pipeline := range local {
-			names = append(names, pipeline.Name)
-		}
-
-		fmt.Fprint(o.w, o.humanOutput(names))
-		return nil
+	deployed, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return fmt.Errorf("list pipelines: %w", err)
 	}
 
 	cp := make(map[string]*codepipeline.Pipeline)
@@ -153,26 +132,21 @@ func (o *listPipelineOpts) writeLocalPipelines(deployed []*codepipeline.Pipeline
 		cp[pipeline.Name] = pipeline
 	}
 
-	type localInfo struct {
-		*codepipeline.Pipeline
+	type combinedInfo struct {
 		Name         string `json:"name"`
-		Deployed     bool   `json:"deployed"`
 		ManifestPath string `json:"manfiestPath"`
+		*codepipeline.Pipeline
 	}
 
 	var out struct {
-		Pipelines []localInfo `json:"pipelines"`
+		Pipelines []combinedInfo `json:"pipelines"`
 	}
 	for _, pipeline := range local {
-		p, deployed := cp[pipeline.Name]
-		info := localInfo{
+		out.Pipelines = append(out.Pipelines, combinedInfo{
 			Name:         pipeline.Name,
 			ManifestPath: pipeline.Path,
-			Deployed:     deployed,
-			Pipeline:     p,
-		}
-
-		out.Pipelines = append(out.Pipelines, info)
+			Pipeline:     cp[pipeline.Name],
+		})
 	}
 
 	b, err := json.Marshal(out)
@@ -184,23 +158,52 @@ func (o *listPipelineOpts) writeLocalPipelines(deployed []*codepipeline.Pipeline
 	return nil
 }
 
-func (o *listPipelineOpts) jsonOutput(pipelines []*codepipeline.Pipeline) (string, error) {
+func (o *listPipelineOpts) humanOutputLocal() error {
+	local, err := o.workspace.ListPipelines()
+	if err != nil {
+		return err
+	}
+
+	for _, pipeline := range local {
+		fmt.Fprintln(o.w, pipeline.Name)
+	}
+
+	return nil
+}
+
+func (o *listPipelineOpts) jsonOutput() error {
+	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return fmt.Errorf("list pipelines: %w", err)
+	}
+
 	type serializedPipelines struct {
 		Pipelines []*codepipeline.Pipeline `json:"pipelines"`
 	}
 	b, err := json.Marshal(serializedPipelines{Pipelines: pipelines})
 	if err != nil {
-		return "", fmt.Errorf("marshal pipelines: %w", err)
+		return fmt.Errorf("marshal pipelines: %w", err)
 	}
-	return fmt.Sprintf("%s\n", b), nil
+
+	fmt.Fprintf(o.w, "%s\n", b)
+	return nil
 }
 
-func (o *listPipelineOpts) humanOutput(pipelines []string) string {
-	b := &strings.Builder{}
-	for _, pipeline := range pipelines {
-		fmt.Fprintln(b, pipeline)
+func (o *listPipelineOpts) humanOutput() error {
+	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
+		deploy.AppTagKey: o.appName,
+	})
+	if err != nil {
+		return fmt.Errorf("list pipelines: %w", err)
 	}
-	return b.String()
+
+	for _, pipeline := range pipelines {
+		fmt.Fprintln(o.w, pipeline.Name)
+	}
+
+	return nil
 }
 
 // buildPipelineListCmd builds the command for showing a list of all deployed pipelines.
