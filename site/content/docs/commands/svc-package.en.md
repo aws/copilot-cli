@@ -16,7 +16,7 @@ $ copilot svc package
   -n, --name string         Name of the service.
       --output-dir string   Optional. Writes the stack template and template configuration to a directory.
       --tag string          Optional. The service's image tag.
-      --upload-assets    Optional. Whether to upload assets (container images, Lambda functions, etc.).
+      --upload-assets       Optional. Whether to upload assets (container images, Lambda functions, etc.).
                             Uploaded asset locations are filled in the template configuration.
 ```
 
