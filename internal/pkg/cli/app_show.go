@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -39,7 +40,8 @@ type showAppOpts struct {
 	store            store
 	w                io.Writer
 	sel              appSelector
-	pipelineSvc      pipelineGetter
+	codepipeline     pipelineGetter
+	pipelineLister   deployedPipelineLister
 	newVersionGetter func(string) (versionGetter, error)
 }
 
@@ -50,11 +52,12 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 	}
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	return &showAppOpts{
-		showAppVars: vars,
-		store:       store,
-		w:           log.OutputWriter,
-		sel:         selector.NewSelect(prompt.New(), store),
-		pipelineSvc: codepipeline.New(defaultSession),
+		showAppVars:    vars,
+		store:          store,
+		w:              log.OutputWriter,
+		sel:            selector.NewSelect(prompt.New(), store),
+		codepipeline:   codepipeline.New(defaultSession),
+		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
 		newVersionGetter: func(s string) (versionGetter, error) {
 			d, err := describe.NewAppDescriber(s)
 			if err != nil {
@@ -122,12 +125,17 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		return nil, fmt.Errorf("list jobs in application %s: %w", o.name, err)
 	}
 
-	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
-		deploy.AppTagKey: o.name,
-	})
-
+	pipelines, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines in application %s: %w", o.name, err)
+	}
+	var pipelineInfo []*codepipeline.Pipeline
+	for _, pipeline := range pipelines {
+		info, err := o.codepipeline.GetPipeline(pipeline.ResourceName)
+		if err != nil {
+			return nil, fmt.Errorf("get info for pipeline %s: %w", pipeline.Name(), err)
+		}
+		pipelineInfo = append(pipelineInfo, info)
 	}
 
 	var trimmedEnvs []*config.Environment
@@ -168,7 +176,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		Envs:      trimmedEnvs,
 		Services:  trimmedSvcs,
 		Jobs:      trimmedJobs,
-		Pipelines: pipelines,
+		Pipelines: pipelineInfo,
 	}, nil
 }
 

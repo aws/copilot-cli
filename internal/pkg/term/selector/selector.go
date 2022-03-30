@@ -131,7 +131,7 @@ type WsPipelinesLister interface {
 
 // CodePipelineLister is a pipeline lister for deployed pipelines.
 type CodePipelineLister interface {
-	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
+	ListDeployedPipelines() ([]deploy.Pipeline, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -189,8 +189,8 @@ type WsPipelineSelect struct {
 
 // CodePipelineSelect is a selector for deployed pipelines.
 type CodePipelineSelect struct {
-	prompt       Prompter
-	codepipeline CodePipelineLister
+	prompt         Prompter
+	pipelineLister CodePipelineLister
 }
 
 // AppPipelineSelect is a selector for deployed pipelines and apps.
@@ -287,12 +287,12 @@ func NewWsPipelineSelect(prompt Prompter, ws WsPipelinesLister) *WsPipelineSelec
 }
 
 // NewAppPipelineSelect returns new selectors with deployed pipelines and apps.
-func NewAppPipelineSelect(prompt Prompter, store ConfigLister, cp CodePipelineLister) *AppPipelineSelect {
+func NewAppPipelineSelect(prompt Prompter, store ConfigLister, lister CodePipelineLister) *AppPipelineSelect {
 	return &AppPipelineSelect{
 		Select: NewSelect(prompt, store),
 		CodePipelineSelect: &CodePipelineSelect{
-			prompt:       prompt,
-			codepipeline: cp,
+			prompt:         prompt,
+			pipelineLister: lister,
 		},
 	}
 }
@@ -752,8 +752,8 @@ func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineMani
 }
 
 // DeployedPipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *CodePipelineSelect) DeployedPipeline(msg, help string, tags map[string]string) (string, error) {
-	pipelines, err := s.codepipeline.ListPipelineNamesByTags(tags)
+func (s *CodePipelineSelect) DeployedPipeline(msg, help string) (string, error) {
+	pipelines, err := s.pipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return "", fmt.Errorf("list deployed pipelines: %w", err)
 	}
@@ -761,10 +761,14 @@ func (s *CodePipelineSelect) DeployedPipeline(msg, help string, tags map[string]
 		return "", errors.New("no deployed pipelines found")
 	}
 	if len(pipelines) == 1 {
-		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0]))
-		return pipelines[0], nil
+		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0].Name()))
+		return pipelines[0].Name(), nil
 	}
-	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelines, prompt.WithFinalMessage(pipelineFinalMsg))
+	var pipelineNames []string
+	for _, pipeline := range pipelines {
+		pipelineNames = append(pipelineNames, pipeline.Name())
+	}
+	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {
 		return "", fmt.Errorf("select pipeline: %w", err)
 	}

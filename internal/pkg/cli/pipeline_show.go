@@ -5,14 +5,17 @@ package cli
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"io"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -62,6 +65,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	codepipeline := codepipeline.New(defaultSession)
+	pipelineLister := deploy.NewPipelineStore(vars.appName, rg.New(defaultSession))
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &showPipelineOpts{
@@ -69,7 +73,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		ws:               ws,
 		store:            store,
 		codepipeline:     codepipeline,
-		sel:              selector.NewAppPipelineSelect(prompter, store, codepipeline),
+		sel:              selector.NewAppPipelineSelect(prompter, store, pipelineLister),
 		prompt:           prompter,
 		w:                log.OutputWriter,
 	}

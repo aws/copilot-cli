@@ -6,10 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -60,7 +61,7 @@ type deleteAppOpts struct {
 	sessProvider           sessionProvider
 	cfn                    deployer
 	prompt                 prompter
-	codepipeline           pipelineGetter
+	pipelineLister         deployedPipelineLister
 	s3                     func(session *session.Session) bucketEmptier
 	svcDeleteExecutor      func(svcName string) (executor, error)
 	jobDeleteExecutor      func(jobName string) (executor, error)
@@ -92,7 +93,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
-		codepipeline: codepipeline.New(defaultSession),
+		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
 		svcDeleteExecutor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
@@ -322,15 +323,13 @@ func (o *deleteAppOpts) emptyS3Bucket() error {
 }
 
 func (o *deleteAppOpts) deletePipelines() error {
-	pipelines, err := o.codepipeline.ListPipelineNamesByTags(map[string]string{
-		deploy.AppTagKey: o.name,
-	})
+	pipelines, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return fmt.Errorf("list pipelines for application %s: %w", o.name, err)
 	}
 
 	for _, pipeline := range pipelines {
-		cmd, err := o.pipelineDeleteExecutor(pipeline)
+		cmd, err := o.pipelineDeleteExecutor(pipeline.Name())
 		if err != nil {
 			return err
 		}
