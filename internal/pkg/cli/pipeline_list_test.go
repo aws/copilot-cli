@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -140,6 +141,11 @@ func TestPipelineList_Execute(t *testing.T) {
 		ResourceName: mockPipelineResourceName,
 		IsLegacy:     false,
 	}
+	mockPipelineInDifferentApp := deploy.Pipeline{
+		AppName:      "lameapp",
+		ResourceName: "pipeline-lameapp-beta",
+		IsLegacy:     false,
+	}
 	mockLegacyPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: mockLegacyPipelineResourceName,
@@ -164,14 +170,14 @@ func TestPipelineList_Execute(t *testing.T) {
 					GetPipeline(mockLegacyPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
 			},
-			expectedContent: fmt.Sprintf(`{"pipelines":[{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}`+"\n", mockLegacyPipelineResourceName, mockPipelineResourceName),
+			expectedContent: fmt.Sprintf(`{"pipelines":[{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}`, mockLegacyPipelineResourceName, mockPipelineResourceName),
 		},
 		"with human output": {
 			setupMocks: func(m pipelineListMocks) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
 			},
-			expectedContent: `my-pipeline-repo
-bad-goose
+			expectedContent: `bad-goose
+my-pipeline-repo
 `,
 		},
 		"with failed call to list pipelines": {
@@ -190,6 +196,29 @@ bad-goose
 					Return(nil, mockError)
 			},
 			expectedErr: fmt.Errorf(`get pipeline %q: mock error`, mockPipelineResourceName),
+		},
+		"ls --local": {
+			shouldShowLocalPipelines: true,
+			setupMocks: func(m pipelineListMocks) {
+				m.workspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{{Name: mockLegacyPipeline.Name()}, {Name: mockPipeline.Name()}}, nil)
+			},
+			expectedContent: `bad-goose
+my-pipeline-repo
+`,
+		},
+		"ls --local --json with one deployed, one local": {
+			shouldShowLocalPipelines: true,
+			shouldOutputJSON:         true,
+			setupMocks: func(m pipelineListMocks) {
+				m.workspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{
+					{Name: mockLegacyPipeline.Name(), Path: "/hi.yml"},
+					{Name: mockPipeline.Name(), Path: "/bye.yml"}}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockLegacyPipeline, mockPipelineInDifferentApp}, nil)
+				m.codepipeline.EXPECT().
+					GetPipeline(mockLegacyPipelineResourceName).
+					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
+			},
+			expectedContent: fmt.Sprintf(`{"pipelines":[{"name":"%s","manifestPath":"/hi.yml","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"%s","manifestPath":"/bye.yml"}]}`, mockLegacyPipeline.Name(), mockPipeline.Name()),
 		},
 	}
 

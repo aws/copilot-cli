@@ -125,7 +125,7 @@ func (o *listPipelineOpts) Execute() error {
 		return o.jsonOutputDeployed(ctx)
 	}
 
-	return o.humanOutputDeployed(ctx)
+	return o.humanOutputDeployed()
 }
 
 // jsonOutputLocal prints data about all pipelines in the current workspace.
@@ -136,7 +136,7 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 		return err
 	}
 
-	deployed, err := getDeployedPipelines(ctx, o.wsAppName, o.pipelineLister, o.codepipeline)
+	deployed, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.codepipeline)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 
 	type combinedInfo struct {
 		Name         string `json:"name"`
-		ManifestPath string `json:"manfiestPath"`
+		ManifestPath string `json:"manifestPath"`
 		*codepipeline.Pipeline
 	}
 
@@ -168,7 +168,7 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 		return fmt.Errorf("marshal pipelines: %w", err)
 	}
 
-	fmt.Fprintf(o.w, "%s\n", b)
+	fmt.Fprintf(o.w, "%s", b)
 	return nil
 }
 
@@ -201,19 +201,30 @@ func (o *listPipelineOpts) jsonOutputDeployed(ctx context.Context) error {
 		return fmt.Errorf("marshal pipelines: %w", err)
 	}
 
-	fmt.Fprintf(o.w, "%s\n", b)
+	fmt.Fprintf(o.w, "%s", b)
 	return nil
 }
 
 // humanOutputDeployed prints the name of all pipelines in the given app that have been deployed.
-func (o *listPipelineOpts) humanOutputDeployed(ctx context.Context) error {
+func (o *listPipelineOpts) humanOutputDeployed() error {
 	pipelines, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
 		return fmt.Errorf("list deployed pipelines: %w", err)
 	}
 
-	for _, pipeline := range pipelines {
-		fmt.Fprintln(o.w, pipeline.Name())
+	var filtered []deploy.Pipeline
+	for _, p := range pipelines {
+		if p.AppName == o.appName {
+			filtered = append(filtered, p)
+		}
+	}
+
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].Name() < filtered[j].Name()
+	})
+
+	for _, p := range filtered {
+		fmt.Fprintln(o.w, p.Name())
 	}
 
 	return nil
