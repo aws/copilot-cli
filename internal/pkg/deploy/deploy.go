@@ -106,11 +106,11 @@ type Pipeline struct {
 
 // PipelineStore fetches information on deployed pipelines.
 type PipelineStore struct {
-	getter resourceGetter
+	getter ResourceGetter
 }
 
 // NewPipelineStore returns a new PipelineStore.
-func NewPipelineStore(getter resourceGetter) *PipelineStore {
+func NewPipelineStore(getter ResourceGetter) *PipelineStore {
 	return &PipelineStore{
 		getter: getter,
 	}
@@ -132,13 +132,8 @@ func (p *PipelineStore) ListDeployedPipelines(appName string) ([]Pipeline, error
 			return nil, err
 		}
 		pipeline := Pipeline{
-			ResourceName: resourceName, 
-			AppName: appName
-		}
-		if name, ok := pipelineRes.Tags[PipelineTagKey]; !ok {
-		pipeline := Pipeline{
 			ResourceName: resourceName,
-			AppName:      p.appName,
+			AppName:      appName,
 		}
 		if name, ok := pipelineRes.Tags[PipelineTagKey]; !ok {
 			pipeline.IsLegacy = true

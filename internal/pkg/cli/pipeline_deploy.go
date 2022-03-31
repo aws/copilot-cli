@@ -154,7 +154,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	}
 	opts.configureDeployedPipelineLister = func() deployedPipelineLister {
 		// Initialize the client only after the appName is asked.
-		return deploy.NewPipelineStore(opts.appName, rg.New(defaultSession))
+		return deploy.NewPipelineStore(rg.New(defaultSession))
 	}
 	return opts, nil
 }
@@ -261,7 +261,7 @@ func (o *deployPipelineOpts) Execute() error {
 
 func (o *deployPipelineOpts) isLegacy(inputName string) (bool, error) {
 	lister := o.configureDeployedPipelineLister()
-	pipelines, err := lister.ListDeployedPipelines()
+	pipelines, err := lister.ListDeployedPipelines(o.appName)
 	if err != nil {
 		return false, fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
 	}
