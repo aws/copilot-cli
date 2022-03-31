@@ -153,6 +153,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		jobBuffer: &bytes.Buffer{},
 	}
 	opts.configureDeployedPipelineLister = func() deployedPipelineLister {
+		// Initialize the client only after the appName is asked.
 		return deploy.NewPipelineStore(opts.appName, rg.New(defaultSession))
 	}
 	return opts, nil
