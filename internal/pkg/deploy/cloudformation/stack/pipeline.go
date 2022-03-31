@@ -30,7 +30,10 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 
 // StackName returns the name of the CloudFormation stack.
 func (p *pipelineStackConfig) StackName() string {
-	return NameForPipeline(p.AppName, p.Name, p.IsLegacy)
+	if p.IsLegacy {
+		return p.Name
+	}
+	return NameForNamespacedPipeline(p.AppName, p.Name)
 }
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
