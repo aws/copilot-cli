@@ -50,8 +50,9 @@ type listPipelineOpts struct {
 	store          store
 	w              io.Writer
 	workspace      wsPipelineGetter
-	wsAppName      string
 	pipelineLister deployedPipelineLister
+
+	wsAppName string
 }
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {

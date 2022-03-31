@@ -17,58 +17,72 @@ import (
 )
 
 type pipelineListMocks struct {
+	codepipeline   *mocks.MockpipelineGetter
 	prompt         *mocks.Mockprompter
-	pipelineGetter *mocks.MockpipelineGetter
-	pipelineLister *mocks.MockpipelineLister
 	sel            *mocks.MockconfigSelector
+	store          *mocks.Mockstore
+	workspace      *mocks.MockwsPipelineGetter
+	pipelineLister *mocks.MockpipelineLister
 }
 
 func TestPipelineList_Ask(t *testing.T) {
 	testCases := map[string]struct {
-		inputApp string
+		inputApp                 string
+		inWsAppName              string
+		shouldShowLocalPipelines bool
 
-		mockSelector func(m *mocks.MockconfigSelector)
-		mockStore    func(m *mocks.Mockstore)
+		setupMocks func(mocks pipelineListMocks)
 
 		wantedApp string
 		wantedErr error
 	}{
 		"success with no flags set": {
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(pipelineListAppNamePrompt, pipelineListAppNameHelper).Return("my-app", nil)
+			setupMocks: func(m pipelineListMocks) {
+				m.sel.EXPECT().Application(pipelineListAppNamePrompt, pipelineListAppNameHelper).Return("my-app", nil)
 			},
-			mockStore: func(m *mocks.Mockstore) {},
 			wantedApp: "my-app",
 			wantedErr: nil,
 		},
 		"success with app flag set": {
-			inputApp:     "my-app",
-			mockSelector: func(m *mocks.MockconfigSelector) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(nil, nil)
+			inputApp: "my-app",
+			setupMocks: func(m pipelineListMocks) {
+				m.store.EXPECT().GetApplication("my-app").Return(nil, nil)
 			},
-
 			wantedApp: "my-app",
 			wantedErr: nil,
 		},
 		"error if fail to select app": {
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(pipelineListAppNamePrompt, pipelineListAppNameHelper).Return("", errors.New("some error"))
+			setupMocks: func(m pipelineListMocks) {
+				m.sel.EXPECT().Application(pipelineListAppNamePrompt, pipelineListAppNameHelper).Return("", errors.New("some error"))
 			},
-			mockStore: func(m *mocks.Mockstore) {},
-
 			wantedApp: "my-app",
 			wantedErr: fmt.Errorf("select application: some error"),
 		},
 		"error if passed-in app doesn't exist": {
-			inputApp:     "my-app",
-			mockSelector: func(m *mocks.MockconfigSelector) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
+			inputApp: "my-app",
+			setupMocks: func(m pipelineListMocks) {
+				m.store.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
 			},
-
 			wantedApp: "",
 			wantedErr: errors.New("validate application: some error"),
+		},
+		"using workspace successful": {
+			inWsAppName: "my-app",
+			setupMocks: func(m pipelineListMocks) {
+				m.store.EXPECT().GetApplication("my-app").Return(nil, nil)
+			},
+			shouldShowLocalPipelines: true,
+		},
+		"--local not in workspace": {
+			inWsAppName:              "",
+			shouldShowLocalPipelines: true,
+			wantedErr:                errNoAppInWorkspace,
+		},
+		"--local workspace and app name mismatch": {
+			inWsAppName:              "my-app",
+			inputApp:                 "not-my-app",
+			shouldShowLocalPipelines: true,
+			wantedErr:                errors.New("cannot specify app not-my-app because the workspace is already registered with app my-app"),
 		},
 	}
 
@@ -77,17 +91,30 @@ func TestPipelineList_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSelector := mocks.NewMockconfigSelector(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			tc.mockSelector(mockSelector)
-			tc.mockStore(mockStore)
+			mocks := pipelineListMocks{
+				codepipeline:   mocks.NewMockpipelineGetter(ctrl),
+				prompt:         mocks.NewMockprompter(ctrl),
+				sel:            mocks.NewMockconfigSelector(ctrl),
+				store:          mocks.NewMockstore(ctrl),
+				workspace:      mocks.NewMockwsPipelineGetter(ctrl),
+				pipelineLister: mocks.NewMockpipelineLister(ctrl),
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(mocks)
+			}
 
 			listPipelines := &listPipelineOpts{
 				listPipelineVars: listPipelineVars{
-					appName: tc.inputApp,
+					appName:                  tc.inputApp,
+					shouldShowLocalPipelines: tc.shouldShowLocalPipelines,
 				},
-				sel:   mockSelector,
-				store: mockStore,
+				codepipeline:   mocks.codepipeline,
+				prompt:         mocks.prompt,
+				sel:            mocks.sel,
+				store:          mocks.store,
+				workspace:      mocks.workspace,
+				pipelineLister: mocks.pipelineLister,
+				wsAppName:      tc.inWsAppName,
 			}
 
 			err := listPipelines.Ask()
@@ -129,10 +156,10 @@ func TestPipelineList_Execute(t *testing.T) {
 			shouldOutputJSON: true,
 			setupMocks: func(m pipelineListMocks) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
-				m.pipelineGetter.EXPECT().
+				m.codepipeline.EXPECT().
 					GetPipeline(mockPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockPipelineResourceName}, nil)
-				m.pipelineGetter.EXPECT().
+				m.codepipeline.EXPECT().
 					GetPipeline(mockLegacyPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
 			},
@@ -158,7 +185,7 @@ bad-goose
 			shouldOutputJSON: true,
 			setupMocks: func(m pipelineListMocks) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline}, nil)
-				m.pipelineGetter.EXPECT().
+				m.codepipeline.EXPECT().
 					GetPipeline(mockPipelineResourceName).
 					Return(nil, mockError)
 			},
@@ -179,7 +206,7 @@ bad-goose
 
 			mocks := pipelineListMocks{
 				prompt:         mockPrompt,
-				pipelineGetter: mockPipelineGetter,
+				codepipeline:   mockPipelineGetter,
 				pipelineLister: mockPipelineLister,
 				sel:            mockSel,
 			}
