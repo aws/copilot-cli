@@ -488,7 +488,7 @@ type wsPipelineSelector interface {
 
 type codePipelineSelector interface {
 	appSelector
-	DeployedPipeline(prompt, help, app string) (string, error)
+	DeployedPipeline(prompt, help, app string) (deploy.Pipeline, error)
 }
 
 type wsSelector interface {

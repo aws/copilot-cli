@@ -59,7 +59,7 @@ type deletePipelineOpts struct {
 
 	ghAccessTokenSecretName string
 
-	// Interfaces to dependencies
+	// Interfaces to dependencies.
 	pipelineDeployer pipelineDeployer
 	codepipeline     pipelineGetter
 	prog             progress
@@ -68,6 +68,9 @@ type deletePipelineOpts struct {
 	secretsmanager   secretsManager
 	ws               wsPipelineGetter
 	store            store
+
+	// Cached variables.
+	targetPipeline deploy.Pipeline
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
@@ -116,16 +119,17 @@ func (o *deletePipelineOpts) Ask() error {
 			return err
 		}
 	}
+
 	if o.name != "" {
 		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
 			return err
 		}
 	} else {
-		pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtPipelineDeletePrompt, color.HighlightUserInput(o.appName)))
+		pipeline, err := askDeployedPipelineName(o.sel, fmt.Sprintf(fmtPipelineDeletePrompt, color.HighlightUserInput(o.appName)), o.appName)
 		if err != nil {
 			return err
 		}
-		o.name = pipelineName
+		o.name = pipeline.Name
 	}
 
 	if o.skipConfirmation {
@@ -162,12 +166,25 @@ func (o *deletePipelineOpts) Execute() error {
 	return nil
 }
 
-func askDeployedPipelineName(sel codePipelineSelector, appName, msg string) (string, error) {
+func askDeployedPipelineName(sel codePipelineSelector, msg, appName string) (deploy.Pipeline, error) {
 	pipeline, err := sel.DeployedPipeline(msg, "", appName)
 	if err != nil {
-		return "", fmt.Errorf("select deployed pipelines: %w", err)
+		return deploy.Pipeline{}, fmt.Errorf("select deployed pipelines: %w", err)
 	}
 	return pipeline, nil
+}
+
+func getDeployedPipelineInfo(lister deployedPipelineLister, app, name string) (deploy.Pipeline, error) {
+	pipelines, err := lister.ListDeployedPipelines(app)
+	if err != nil {
+		return deploy.Pipeline{}, fmt.Errorf("list deployed pipelines: %w", err)
+	}
+	for _, pipeline := range pipelines {
+		if pipeline.Name == name {
+			return pipeline, nil
+		}
+	}
+	return deploy.Pipeline{}, fmt.Errorf("cannot find pipeline named %s", name)
 }
 
 func (o *deletePipelineOpts) askAppName() error {

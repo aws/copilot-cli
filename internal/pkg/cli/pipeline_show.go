@@ -44,14 +44,18 @@ type showPipelineOpts struct {
 	showPipelineVars
 
 	// Interfaces to dependencies
-	w             io.Writer
-	ws            wsPipelineReader
-	store         applicationStore
-	codepipeline  pipelineGetter
-	describer     describer
-	initDescriber func(bool) error
-	sel           codePipelineSelector
-	prompt        prompter
+	w                      io.Writer
+	ws                     wsPipelineReader
+	store                  applicationStore
+	codepipeline           pipelineGetter
+	describer              describer
+	initDescriber          func(bool) error
+	sel                    codePipelineSelector
+	deployedPipelineLister deployedPipelineLister
+	prompt                 prompter
+
+	// Cached variables.
+	targetPipeline deploy.Pipeline
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
@@ -69,16 +73,17 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &showPipelineOpts{
-		showPipelineVars: vars,
-		ws:               ws,
-		store:            store,
-		codepipeline:     codepipeline,
-		sel:              selector.NewAppPipelineSelect(prompter, store, pipelineLister),
-		prompt:           prompter,
-		w:                log.OutputWriter,
+		showPipelineVars:       vars,
+		ws:                     ws,
+		store:                  store,
+		codepipeline:           codepipeline,
+		deployedPipelineLister: pipelineLister,
+		sel:                    selector.NewAppPipelineSelect(prompter, store, pipelineLister),
+		prompt:                 prompter,
+		w:                      log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
-		describer, err := describe.NewPipelineDescriber(opts.name, enableResources)
+		describer, err := describe.NewPipelineDescriber(opts.targetPipeline.ResourceName, enableResources)
 		if err != nil {
 			return fmt.Errorf("new pipeline describer: %w", err)
 		}
@@ -106,17 +111,20 @@ func (o *showPipelineOpts) Ask() error {
 		}
 	}
 	if o.name != "" {
-		_, err := o.codepipeline.GetPipeline(o.name)
+		pipeline, err := getDeployedPipelineInfo(o.deployedPipelineLister, o.appName, o.name)
 		if err != nil {
 			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
 		}
+		o.name = pipeline.Name
+		o.targetPipeline = pipeline
 		return nil
 	}
-	pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtPipelineShowPrompt, color.HighlightUserInput(o.appName)))
+	pipeline, err := askDeployedPipelineName(o.sel, fmt.Sprintf(fmtPipelineShowPrompt, color.HighlightUserInput(o.appName)), o.appName)
 	if err != nil {
 		return err
 	}
-	o.name = pipelineName
+	o.name = pipeline.Name
+	o.targetPipeline = pipeline
 	return nil
 }
 
