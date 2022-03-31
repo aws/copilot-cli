@@ -255,7 +255,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("some error"),
 		},
-		"returns err if unsuccessful in retrieving pipeline physical id": {
+		"returns err if error occurs when retrieving pipeline physical id": {
 			createCfnMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Times(1)
@@ -281,6 +281,33 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
+		},
+		"returns err if unable to find pipeline resource from stack": {
+			createCfnMock: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().CreateAndWait(gomock.Any()).Times(1)
+				m.EXPECT().Outputs(gomock.Any()).Return(map[string]string{
+					"PipelineConnectionARN": "mockConnectionARN",
+				}, nil)
+				m.EXPECT().StackResources(gomock.Any()).Return([]*cloudformation.StackResource{}, nil)
+				return m
+			},
+			createS3Mock: func(ctrl *gomock.Controller) s3Client {
+				m := mocks.NewMocks3Client(ctrl)
+				m.EXPECT().Upload(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
+				return m
+			},
+			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
+				m := mocks.NewMockcodeStarClient(ctrl)
+				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Return(nil)
+				return m
+			},
+			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
+				m := mocks.NewMockcodePipelineClient(ctrl)
+				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Times(0)
+				return m
+			},
+			wantedErr: fmt.Errorf(`cannot find a resource in stack pipeline-kudos-cicd with logical ID "Pipeline" of type "AWS::CodePipeline::Pipeline"`),
 		},
 		"returns err if unsuccessful in retrying stage execution": {
 			createCfnMock: func(ctrl *gomock.Controller) cfnClient {

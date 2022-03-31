@@ -91,7 +91,7 @@ func (cf CloudFormation) pipelinePhysicalResourceID(stackName string) (string, e
 			return aws.StringValue(resource.PhysicalResourceId), nil
 		}
 	}
-	return "", fmt.Errorf("cannot find a resource in stack %s with logical ID \"%s\" of type \"%s\"", stackName, cfnLogicalResourceIDPipeline, cfnResourceTypePipeline)
+	return "", fmt.Errorf(`cannot find a resource in stack %s with logical ID "%s" of type "%s"`, stackName, cfnLogicalResourceIDPipeline, cfnResourceTypePipeline)
 }
 
 // UpdatePipeline updates an existing CodePipeline for deploying services.
