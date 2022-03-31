@@ -265,8 +265,11 @@ func (o *deployPipelineOpts) isLegacy(inputName string) (bool, error) {
 		return false, fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
 	}
 	for _, pipeline := range pipelines {
-		if pipeline.ResourceName == inputName && pipeline.IsLegacy {
-			return true, nil
+		if pipeline.ResourceName == inputName {
+			// NOTE: this is double insurance. A namespaced pipeline's `ResourceName` wouldn't be equal to
+			// `inputName` in the first place, because it would have been namespaced and have random string
+			// appended by CFN.
+			return pipeline.IsLegacy, nil
 		}
 	}
 	return false, nil
