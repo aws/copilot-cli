@@ -64,7 +64,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		return nil, fmt.Errorf("session: %w", err)
 	}
 	codepipeline := codepipeline.New(session)
-	pipelineLister := deploy.NewPipelineStore(vars.appName, rg.New(session))
+	pipelineLister := deploy.NewPipelineStore(rg.New(session))
 	store := config.NewSSMStore(identity.New(session), ssm.New(session), aws.StringValue(session.Config.Region))
 	prompter := prompt.New()
 	return &pipelineStatusOpts{

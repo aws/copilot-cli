@@ -65,7 +65,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	codepipeline := codepipeline.New(defaultSession)
-	pipelineLister := deploy.NewPipelineStore(vars.appName, rg.New(defaultSession))
+	pipelineLister := deploy.NewPipelineStore(rg.New(defaultSession))
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &showPipelineOpts{

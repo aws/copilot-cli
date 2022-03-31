@@ -54,7 +54,7 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	return &listPipelineOpts{
 		listPipelineVars: vars,
 		codepipeline:     codepipeline.New(defaultSession),
-		pipelineLister:   deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
+		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
 		prompt:           prompter,
 		sel:              selector.NewConfigSelect(prompter, store),
 		store:            store,
@@ -81,7 +81,7 @@ func (o *listPipelineOpts) Ask() error {
 // Execute writes the pipelines.
 func (o *listPipelineOpts) Execute() error {
 	var out string
-	pipelines, err := o.pipelineLister.ListDeployedPipelines()
+	pipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
 	if err != nil {
 		return fmt.Errorf("list deployed pipelines in application %s: %w", o.appName, err)
 	}
