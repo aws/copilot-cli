@@ -11,6 +11,9 @@ import (
 // taskStackPrefix is used elsewhere to list CF stacks
 const taskStackPrefix = "task-"
 
+// After v1.16, pipeline names are namespaced with a prefix of "pipeline-${appName}-".
+const fmtPipelineNamespaced = "pipeline-%s-%s"
+
 // TaskStackName holds the name of a Copilot one-off task stack.
 type TaskStackName string
 
@@ -53,5 +56,5 @@ func NameForAppStackSet(app string) string {
 
 // NameForNamespacedPipeline returns the stack name for a pipeline with namespaced naming scheme.
 func NameForNamespacedPipeline(app string, pipeline string) string {
-	return fmt.Sprintf("pipeline-%s-%s", app, pipeline)
+	return fmt.Sprintf(fmtPipelineNamespaced, app, pipeline)
 }
