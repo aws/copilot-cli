@@ -38,9 +38,6 @@ const (
 	// fmtSNSTopicNamePrefix holds the App-Env-Workload- components of a topic name
 	fmtSNSTopicNamePrefix = "%s-%s-%s-"
 	snsServiceName        = "sns"
-
-	// After v1.16, pipeline names are namespaced with a prefix in the format of "pipeline-${appName}-"
-	pipelineNamePrefix = "pipeline-%s-"
 )
 
 type ResourceGetter interface {
