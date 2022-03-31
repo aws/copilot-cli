@@ -308,6 +308,9 @@ Resources:
               Id: {{.KeyArn}}
               Type: KMS{{end}}
       RoleArn: !GetAtt PipelineRole.Arn
+      {{- if .IsLegacy }}
+      Name: !Ref AWS::StackName
+      {{- end }}
       Stages:
         {{- if eq .Source.ProviderName "GitHubV1"}}
         - Name: Source
