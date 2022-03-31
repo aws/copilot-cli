@@ -19,7 +19,7 @@ import (
 )
 
 type storeMock struct {
-	rgGetter    *mocks.MockresourceGetter
+	rgGetter    *mocks.MockResourceGetter
 	configStore *mocks.MockConfigStoreClient
 }
 
@@ -121,7 +121,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
-			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockRgGetter := mocks.NewMockResourceGetter(ctrl)
 
 			mocks := storeMock{
 				rgGetter:    mockRgGetter,
@@ -217,7 +217,7 @@ func TestStore_ListDeployedJobs(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
-			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockRgGetter := mocks.NewMockResourceGetter(ctrl)
 
 			mocks := storeMock{
 				rgGetter:    mockRgGetter,
@@ -324,7 +324,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
-			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockRgGetter := mocks.NewMockResourceGetter(ctrl)
 
 			mocks := storeMock{
 				rgGetter:    mockRgGetter,
@@ -421,7 +421,7 @@ func TestStore_IsServiceDeployed(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
-			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockRgGetter := mocks.NewMockResourceGetter(ctrl)
 
 			mocks := storeMock{
 				rgGetter:    mockRgGetter,
@@ -516,7 +516,7 @@ func Test_IsJobDeployed(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
-			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockRgGetter := mocks.NewMockResourceGetter(ctrl)
 
 			mocks := storeMock{
 				rgGetter:    mockRgGetter,
@@ -661,7 +661,7 @@ func TestStore_ListSNSTopics(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
-			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockRgGetter := mocks.NewMockResourceGetter(ctrl)
 
 			mocks := storeMock{
 				rgGetter:    mockRgGetter,
@@ -764,7 +764,7 @@ func TestPipelineStore_ListDeployedPipelines(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockRgGetter := mocks.NewMockResourceGetter(ctrl)
 
 			mocks := storeMock{
 				rgGetter: mockRgGetter,

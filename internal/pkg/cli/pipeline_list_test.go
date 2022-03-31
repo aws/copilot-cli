@@ -19,7 +19,7 @@ import (
 type pipelineListMocks struct {
 	prompt         *mocks.Mockprompter
 	pipelineGetter *mocks.MockpipelineGetter
-	pipelineLister *mocks.MockpipelineLister
+	pipelineLister *mocks.MockdeployedPipelineLister
 	sel            *mocks.MockconfigSelector
 }
 
@@ -174,7 +174,7 @@ bad-goose
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
-			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
+			mockPipelineLister := mocks.NewMockdeployedPipelineLister(ctrl)
 			mockSel := mocks.NewMockconfigSelector(ctrl)
 
 			mocks := pipelineListMocks{

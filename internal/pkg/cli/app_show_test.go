@@ -21,7 +21,7 @@ type showAppMocks struct {
 	storeSvc       *mocks.Mockstore
 	sel            *mocks.MockappSelector
 	pipelineGetter *mocks.MockpipelineGetter
-	pipelineLister *mocks.MockpipelineLister
+	pipelineLister *mocks.MockdeployedPipelineLister
 	versionGetter  *mocks.MockversionGetter
 }
 
@@ -557,7 +557,7 @@ Pipelines
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockVersionGetter := mocks.NewMockversionGetter(ctrl)
-			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
+			mockPipelineLister := mocks.NewMockdeployedPipelineLister(ctrl)
 
 			mocks := showAppMocks{
 				storeSvc:       mockStoreReader,

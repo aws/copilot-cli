@@ -28,7 +28,7 @@ type deployPipelineMocks struct {
 	deployer               *mocks.MockpipelineDeployer
 	ws                     *mocks.MockwsPipelineReader
 	actionCmd              *mocks.MockactionCommand
-	deployedPipelineLister *mocks.MockpipelineLister
+	deployedPipelineLister *mocks.MockdeployedPipelineLister
 }
 
 func TestDeployPipelineOpts_Ask(t *testing.T) {
@@ -739,7 +739,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 				deployer:               mockPipelineDeployer,
 				ws:                     mockWorkspace,
 				actionCmd:              mockActionCmd,
-				deployedPipelineLister: mocks.NewMockpipelineLister(ctrl),
+				deployedPipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
 			}
 
 			tc.callMocks(mocks)

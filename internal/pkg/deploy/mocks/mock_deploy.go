@@ -13,31 +13,31 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockresourceGetter is a mock of resourceGetter interface.
-type MockresourceGetter struct {
+// MockResourceGetter is a mock of ResourceGetter interface.
+type MockResourceGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockresourceGetterMockRecorder
+	recorder *MockResourceGetterMockRecorder
 }
 
-// MockresourceGetterMockRecorder is the mock recorder for MockresourceGetter.
-type MockresourceGetterMockRecorder struct {
-	mock *MockresourceGetter
+// MockResourceGetterMockRecorder is the mock recorder for MockResourceGetter.
+type MockResourceGetterMockRecorder struct {
+	mock *MockResourceGetter
 }
 
-// NewMockresourceGetter creates a new mock instance.
-func NewMockresourceGetter(ctrl *gomock.Controller) *MockresourceGetter {
-	mock := &MockresourceGetter{ctrl: ctrl}
-	mock.recorder = &MockresourceGetterMockRecorder{mock}
+// NewMockResourceGetter creates a new mock instance.
+func NewMockResourceGetter(ctrl *gomock.Controller) *MockResourceGetter {
+	mock := &MockResourceGetter{ctrl: ctrl}
+	mock.recorder = &MockResourceGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockresourceGetter) EXPECT() *MockresourceGetterMockRecorder {
+func (m *MockResourceGetter) EXPECT() *MockResourceGetterMockRecorder {
 	return m.recorder
 }
 
 // GetResourcesByTags mocks base method.
-func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
+func (m *MockResourceGetter) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
 	ret0, _ := ret[0].([]*resourcegroups.Resource)
@@ -46,9 +46,9 @@ func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[st
 }
 
 // GetResourcesByTags indicates an expected call of GetResourcesByTags.
-func (mr *MockresourceGetterMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
+func (mr *MockResourceGetterMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGetter)(nil).GetResourcesByTags), resourceType, tags)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockResourceGetter)(nil).GetResourcesByTags), resourceType, tags)
 }
 
 // MockConfigStoreClient is a mock of ConfigStoreClient interface.

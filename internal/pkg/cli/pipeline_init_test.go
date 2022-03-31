@@ -30,7 +30,7 @@ type pipelineInitMocks struct {
 	mockSessProvider   *mocks.MocksessionProvider
 	mockSelector       *mocks.MockpipelineEnvSelector
 	mockStore          *mocks.Mockstore
-	mockPipelineLister *mocks.MockpipelineLister
+	mockPipelineLister *mocks.MockdeployedPipelineLister
 	mockWorkspace      *mocks.MockwsPipelineIniter
 }
 
@@ -363,7 +363,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mocksSessProvider := mocks.NewMocksessionProvider(ctrl)
 			mockSelector := mocks.NewMockpipelineEnvSelector(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
-			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
+			mockPipelineLister := mocks.NewMockdeployedPipelineLister(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineIniter(ctrl)
 
 			mocks := pipelineInitMocks{

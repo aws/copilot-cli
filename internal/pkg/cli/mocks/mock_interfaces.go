@@ -4707,31 +4707,31 @@ func (mr *MockpipelineGetterMockRecorder) GetPipeline(pipelineName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline), pipelineName)
 }
 
-// MockpipelineLister is a mock of pipelineLister interface.
-type MockpipelineLister struct {
+// MockdeployedPipelineLister is a mock of deployedPipelineLister interface.
+type MockdeployedPipelineLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockpipelineListerMockRecorder
+	recorder *MockdeployedPipelineListerMockRecorder
 }
 
-// MockpipelineListerMockRecorder is the mock recorder for MockpipelineLister.
-type MockpipelineListerMockRecorder struct {
-	mock *MockpipelineLister
+// MockdeployedPipelineListerMockRecorder is the mock recorder for MockdeployedPipelineLister.
+type MockdeployedPipelineListerMockRecorder struct {
+	mock *MockdeployedPipelineLister
 }
 
-// NewMockpipelineLister creates a new mock instance.
-func NewMockpipelineLister(ctrl *gomock.Controller) *MockpipelineLister {
-	mock := &MockpipelineLister{ctrl: ctrl}
-	mock.recorder = &MockpipelineListerMockRecorder{mock}
+// NewMockdeployedPipelineLister creates a new mock instance.
+func NewMockdeployedPipelineLister(ctrl *gomock.Controller) *MockdeployedPipelineLister {
+	mock := &MockdeployedPipelineLister{ctrl: ctrl}
+	mock.recorder = &MockdeployedPipelineListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockpipelineLister) EXPECT() *MockpipelineListerMockRecorder {
+func (m *MockdeployedPipelineLister) EXPECT() *MockdeployedPipelineListerMockRecorder {
 	return m.recorder
 }
 
 // ListDeployedPipelines mocks base method.
-func (m *MockpipelineLister) ListDeployedPipelines() ([]deploy0.Pipeline, error) {
+func (m *MockdeployedPipelineLister) ListDeployedPipelines() ([]deploy0.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDeployedPipelines")
 	ret0, _ := ret[0].([]deploy0.Pipeline)
@@ -4740,9 +4740,9 @@ func (m *MockpipelineLister) ListDeployedPipelines() ([]deploy0.Pipeline, error)
 }
 
 // ListDeployedPipelines indicates an expected call of ListDeployedPipelines.
-func (mr *MockpipelineListerMockRecorder) ListDeployedPipelines() *gomock.Call {
+func (mr *MockdeployedPipelineListerMockRecorder) ListDeployedPipelines() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedPipelines", reflect.TypeOf((*MockpipelineLister)(nil).ListDeployedPipelines))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedPipelines", reflect.TypeOf((*MockdeployedPipelineLister)(nil).ListDeployedPipelines))
 }
 
 // Mockexecutor is a mock of executor interface.
