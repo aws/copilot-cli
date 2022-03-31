@@ -158,7 +158,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
-		pipelineLister:   deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
+		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
 	}, nil
 }
 
@@ -204,7 +204,7 @@ func (o *initPipelineOpts) Ask() error {
 // We check for the existence of the name and the namespaced name to reduce
 // potential confusion with a legacy pipeline.
 func (o *initPipelineOpts) validateDuplicatePipeline() error {
-	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines()
+	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
 	if err != nil {
 		return fmt.Errorf("list pipelines for app %s: %w", o.appName, err)
 	}

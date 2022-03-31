@@ -773,12 +773,11 @@ func TestPipelineStore_ListDeployedPipelines(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &PipelineStore{
-				appName: mockAppName,
-				getter:  mocks.rgGetter,
+				getter: mocks.rgGetter,
 			}
 
 			// WHEN
-			pipelines, err := store.ListDeployedPipelines()
+			pipelines, err := store.ListDeployedPipelines(mockAppName)
 
 			// THEN
 			if tc.wantedError != nil {

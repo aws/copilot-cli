@@ -106,27 +106,25 @@ type Pipeline struct {
 
 // PipelineStore fetches information on deployed pipelines.
 type PipelineStore struct {
-	appName string
-	getter  ResourceGetter
+	getter ResourceGetter
 }
 
 // NewPipelineStore returns a new PipelineStore.
-func NewPipelineStore(appName string, getter ResourceGetter) *PipelineStore {
+func NewPipelineStore(getter ResourceGetter) *PipelineStore {
 	return &PipelineStore{
-		appName: appName,
-		getter:  getter,
+		getter: getter,
 	}
 }
 
 // ListDeployedPipelines returns a list of names of deployed pipelines by looking up
 // pipeline resources with tags.
-func (p *PipelineStore) ListDeployedPipelines() ([]Pipeline, error) {
+func (p *PipelineStore) ListDeployedPipelines(appName string) ([]Pipeline, error) {
 	var pipelines []Pipeline
 	pipelineResources, err := p.getter.GetResourcesByTags(pipelineResourceType, map[string]string{
-		AppTagKey: p.appName,
+		AppTagKey: appName,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get pipeline resources by tags for app %s: %w", p.appName, err)
+		return nil, fmt.Errorf("get pipeline resources by tags for app %s: %w", appName, err)
 	}
 	for _, pipelineRes := range pipelineResources {
 		resourceName, err := getPipelineResourceName(pipelineRes.ARN)
@@ -135,7 +133,7 @@ func (p *PipelineStore) ListDeployedPipelines() ([]Pipeline, error) {
 		}
 		pipeline := Pipeline{
 			ResourceName: resourceName,
-			AppName:      p.appName,
+			AppName:      appName,
 		}
 		if name, ok := pipelineRes.Tags[PipelineTagKey]; !ok {
 			pipeline.IsLegacy = true

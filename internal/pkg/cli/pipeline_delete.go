@@ -83,7 +83,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	codepipeline := codepipeline.New(defaultSess)
-	pipelineLister := deploy.NewPipelineStore(vars.appName, rg.New(defaultSess))
+	pipelineLister := deploy.NewPipelineStore(rg.New(defaultSess))
 
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
@@ -163,7 +163,7 @@ func (o *deletePipelineOpts) Execute() error {
 }
 
 func askDeployedPipelineName(sel codePipelineSelector, appName, msg string) (string, error) {
-	pipeline, err := sel.DeployedPipeline(msg, "")
+	pipeline, err := sel.DeployedPipeline(msg, "", appName)
 	if err != nil {
 		return "", fmt.Errorf("select deployed pipelines: %w", err)
 	}

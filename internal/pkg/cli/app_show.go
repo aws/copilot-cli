@@ -69,7 +69,7 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		sel:            selector.NewSelect(prompt.New(), store),
 		deployStore:    deployStore,
 		codepipeline:   codepipeline.New(defaultSession),
-		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
+		pipelineLister: deploy.NewPipelineStore(rg.New(defaultSession)),
 		newVersionGetter: func(s string) (versionGetter, error) {
 			d, err := describe.NewAppDescriber(s)
 			if err != nil {
@@ -171,7 +171,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		sort.Strings(wkldDeployedtoEnvs[k])
 	}
 
-	pipelines, err := o.pipelineLister.ListDeployedPipelines()
+	pipelines, err := o.pipelineLister.ListDeployedPipelines(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines in application %s: %w", o.name, err)
 	}

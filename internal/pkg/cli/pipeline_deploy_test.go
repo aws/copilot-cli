@@ -255,7 +255,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
@@ -298,7 +298,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).DoAndReturn(func(in *deploy.CreatePipelineInput) (bool, error) {
@@ -342,7 +342,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{
 						{
 							ResourceName: pipelineName,
 							IsLegacy:     true,
@@ -391,7 +391,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -422,7 +422,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -584,7 +584,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error")),
@@ -613,7 +613,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
@@ -646,7 +646,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
@@ -705,7 +705,7 @@ func TestDeployPipelineOpts_Execute(t *testing.T) {
 					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
 
 					// check if the pipeline has been deployed using a legacy naming.
-					m.deployedPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil),
+					m.deployedPipelineLister.EXPECT().ListDeployedPipelines(appName).Return([]deploy.Pipeline{}, nil),
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),

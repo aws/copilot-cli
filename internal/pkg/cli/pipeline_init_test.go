@@ -105,7 +105,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:      wantedName,
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{
 					{
 						AppName:      mockAppName,
 						ResourceName: fullName,
@@ -126,7 +126,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:      wantedName,
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{
 					{
 						AppName:      mockAppName,
 						ResourceName: fmt.Sprintf("%s-RANDOMRANDOM", fullName),
@@ -147,7 +147,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:      wantedName,
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return(nil, mockError)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return(nil, mockError)
 			},
 
 			expectedError: errors.New("list pipelines for app my-app: some error"),
@@ -157,7 +157,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:      wantedName,
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{{Name: wantedName}}, nil)
 			},
 
@@ -168,7 +168,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:      wantedName,
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, mockError)
 			},
 
@@ -182,7 +182,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockStore.EXPECT().GetEnvironment(mockAppName, "prod").
 					Return(&config.Environment{Name: "prod"}, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 				m.mockPrompt.EXPECT().Get(gomock.Eq("What would you like to name this pipeline?"), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedName, nil)
@@ -195,7 +195,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments: []string{"test"},
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 			},
 
@@ -209,7 +209,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "test").Return(nil, mockError)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 			},
 
@@ -230,7 +230,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					&config.Environment{
 						Name: "prod",
 					}, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 			},
 		},
@@ -249,7 +249,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					&config.Environment{
 						Name: "prod",
 					}, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 			},
 		},
@@ -273,7 +273,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				}, nil)
 				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(wantedName, nil)
 				m.mockPrompt.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
@@ -288,7 +288,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.mockPrompt.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
 				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
 			},
 
@@ -304,7 +304,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				m.mockPrompt.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError).Times(1)
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
 			},
 
@@ -326,7 +326,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					Region: "us-west-2",
 				}, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "prod").Return(nil, errors.New("some error"))
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
 			},
 
@@ -348,7 +348,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					Name:   "prod",
 					Region: "us-west-2",
 				}, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
 			},
 		},

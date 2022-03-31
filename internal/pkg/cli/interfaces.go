@@ -446,7 +446,7 @@ type pipelineGetter interface {
 }
 
 type deployedPipelineLister interface {
-	ListDeployedPipelines() ([]deploy.Pipeline, error)
+	ListDeployedPipelines(appName string) ([]deploy.Pipeline, error)
 }
 
 type executor interface {
@@ -488,7 +488,7 @@ type wsPipelineSelector interface {
 
 type codePipelineSelector interface {
 	appSelector
-	DeployedPipeline(prompt, help string) (string, error)
+	DeployedPipeline(prompt, help, app string) (string, error)
 }
 
 type wsSelector interface {
