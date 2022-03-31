@@ -133,7 +133,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	for _, pipeline := range pipelines {
 		info, err := o.codepipeline.GetPipeline(pipeline.ResourceName)
 		if err != nil {
-			return nil, fmt.Errorf("get info for pipeline %s: %w", pipeline.Name(), err)
+			return nil, fmt.Errorf("get info for pipeline %s: %w", pipeline.Name, err)
 		}
 		pipelineInfo = append(pipelineInfo, info)
 	}

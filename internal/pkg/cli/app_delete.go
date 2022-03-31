@@ -329,7 +329,7 @@ func (o *deleteAppOpts) deletePipelines() error {
 	}
 
 	for _, pipeline := range pipelines {
-		cmd, err := o.pipelineDeleteExecutor(pipeline.Name())
+		cmd, err := o.pipelineDeleteExecutor(pipeline.Name)
 		if err != nil {
 			return err
 		}

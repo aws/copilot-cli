@@ -165,6 +165,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 	mockPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: fmt.Sprintf("pipeline-%s-%s", mockAppName, mockPipelineName),
+		Name:         mockPipelineName,
 		IsLegacy:     false,
 	}
 	mockLegacyPipeline := deploy.Pipeline{
