@@ -211,7 +211,7 @@ func (o *initPipelineOpts) validateDuplicatePipeline() error {
 
 	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
 	for _, pipeline := range deployedPipelines {
-		if strings.EqualFold(pipeline.Name(), o.name) || strings.EqualFold(pipeline.Name(), fullName) {
+		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
 			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
 To recreate the pipeline, please run:
 %s

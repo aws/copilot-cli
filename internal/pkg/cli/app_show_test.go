@@ -22,7 +22,7 @@ type showAppMocks struct {
 	sel            *mocks.MockappSelector
 	deployStore    *mocks.MockdeployedEnvironmentLister
 	pipelineGetter *mocks.MockpipelineGetter
-	pipelineLister *mocks.MockpipelineLister
+	pipelineLister *mocks.MockdeployedPipelineLister
 	versionGetter  *mocks.MockversionGetter
 }
 
@@ -166,6 +166,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 	mockPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: fmt.Sprintf("pipeline-%s-%s", mockAppName, mockPipelineName),
+		Name:         mockPipelineName,
 		IsLegacy:     false,
 	}
 	mockLegacyPipeline := deploy.Pipeline{
@@ -743,7 +744,7 @@ Pipelines
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockVersionGetter := mocks.NewMockversionGetter(ctrl)
-			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
+			mockPipelineLister := mocks.NewMockdeployedPipelineLister(ctrl)
 			mockDeployStore := mocks.NewMockdeployedEnvironmentLister(ctrl)
 
 			mocks := showAppMocks{
