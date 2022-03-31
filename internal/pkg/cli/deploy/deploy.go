@@ -15,6 +15,9 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
@@ -728,7 +731,7 @@ func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {
 		}
 		svc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
 		topic := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
-		queueNames = append(queueNames, fmt.Sprintf("%s%sEventsQueue", svc, strings.Title(topic)))
+		queueNames = append(queueNames, fmt.Sprintf("%s%sEventsQueue", svc, cases.Title(language.English).String(topic)))
 	}
 	return strings.Join(queueNames, ", ")
 }
