@@ -40,6 +40,7 @@ const (
 	snsServiceName        = "sns"
 )
 
+// ResourceGetter retrieves a group of resources that satisfy certain conditions, such as tags.
 type ResourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
