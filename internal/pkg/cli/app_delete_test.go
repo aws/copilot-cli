@@ -129,7 +129,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 type deleteAppMocks struct {
 	spinner         *mocks.Mockprogress
 	store           *mocks.Mockstore
-	codepipeline    *mocks.MockpipelineLister
+	codepipeline    *mocks.MockdeployedPipelineLister
 	ws              *mocks.MockwsFileDeleter
 	sessProvider    *sessions.Provider
 	deployer        *mocks.Mockdeployer
@@ -229,7 +229,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
 					// delete pipelines
-					mocks.codepipeline.EXPECT().ListDeployedPipelines().Return(mockPipelines, nil),
+					mocks.codepipeline.EXPECT().ListDeployedPipelines(mockAppName).Return(mockPipelines, nil),
 					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// deleteAppResources
@@ -263,7 +263,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockWorkspace := mocks.NewMockwsFileDeleter(ctrl)
 			mockSession := sessions.ImmutableProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
-			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
+			mockPipelineLister := mocks.NewMockdeployedPipelineLister(ctrl)
 
 			mockBucketEmptier := mocks.NewMockbucketEmptier(ctrl)
 			mockGetBucketEmptier := func(session *session.Session) bucketEmptier {

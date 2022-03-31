@@ -89,7 +89,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any()).Return(testPipelineName, nil)
+				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), testAppName).Return(testPipelineName, nil)
 			},
 			wantedAppName:      testAppName,
 			wantedPipelineName: testPipelineName,
@@ -101,7 +101,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			callMocks: func(m deletePipelineMocks) {
 				m.store.EXPECT().GetApplication(testAppName).Return(nil, nil)
-				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), testAppName).Return("", errors.New("some error"))
 			},
 
 			wantedAppName: testAppName,
