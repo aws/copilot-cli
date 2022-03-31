@@ -109,6 +109,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					{
 						AppName:      mockAppName,
 						ResourceName: fullName,
+						Name:         fullName,
 						IsLegacy:     true,
 					},
 					{
@@ -128,7 +129,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{
 					{
 						AppName:      mockAppName,
-						ResourceName: wantedName,
+						ResourceName: fmt.Sprintf("%s-RANDOMRANDOM", fullName),
+						Name:         wantedName,
 						IsLegacy:     true,
 					},
 					{

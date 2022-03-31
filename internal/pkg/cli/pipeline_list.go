@@ -90,7 +90,7 @@ func (o *listPipelineOpts) Execute() error {
 		for _, pipeline := range pipelines {
 			info, err := o.codepipeline.GetPipeline(pipeline.ResourceName)
 			if err != nil {
-				return fmt.Errorf("get pipeline info for %s: %w", pipeline.Name(), err)
+				return fmt.Errorf("get pipeline info for %s: %w", pipeline.Name, err)
 			}
 			pipelineInfo = append(pipelineInfo, info)
 		}
@@ -103,7 +103,7 @@ func (o *listPipelineOpts) Execute() error {
 	} else {
 		var pipelineNames []string
 		for _, pipeline := range pipelines {
-			pipelineNames = append(pipelineNames, pipeline.Name())
+			pipelineNames = append(pipelineNames, pipeline.Name)
 		}
 		out = o.humanOutput(pipelineNames)
 	}

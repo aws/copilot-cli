@@ -2209,12 +2209,14 @@ type codePipelineSelectMocks struct {
 func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 	const (
 		mockAppName                    = "coolapp"
-		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo"
+		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM"
+		mockPipelineName               = "my-pipeline-repo"
 		mockLegacyPipelineResourceName = "bad-goose"
 	)
 	mockPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: mockPipelineResourceName,
+		Name:         mockPipelineName,
 		IsLegacy:     false,
 	}
 	mockLegacyPipeline := deploy.Pipeline{

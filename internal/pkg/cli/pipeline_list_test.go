@@ -105,17 +105,21 @@ func TestPipelineList_Ask(t *testing.T) {
 func TestPipelineList_Execute(t *testing.T) {
 	const (
 		mockAppName                    = "coolapp"
-		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo"
+		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM"
+		mockPipelineName               = "my-pipeline-repo"
 		mockLegacyPipelineResourceName = "bad-goose"
+		mockLegacyPipelineName         = "bad-goose"
 	)
 	mockPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: mockPipelineResourceName,
+		Name:         mockPipelineName,
 		IsLegacy:     false,
 	}
 	mockLegacyPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: mockLegacyPipelineResourceName,
+		Name:         mockLegacyPipelineName,
 		IsLegacy:     true,
 	}
 	mockError := errors.New("mock error")
@@ -136,7 +140,7 @@ func TestPipelineList_Execute(t *testing.T) {
 					GetPipeline(mockLegacyPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
 			},
-			expectedContent: "{\"pipelines\":[{\"name\":\"pipeline-coolapp-my-pipeline-repo\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
+			expectedContent: "{\"pipelines\":[{\"name\":\"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
 		},
 		"with human output": {
 			shouldOutputJSON: false,
