@@ -207,13 +207,13 @@ func (o *listPipelineOpts) jsonOutputDeployed(ctx context.Context) error {
 
 // humanOutputDeployed prints the name of all pipelines in the given app that have been deployed.
 func (o *listPipelineOpts) humanOutputDeployed(ctx context.Context) error {
-	pipelines, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.codepipeline)
+	pipelines, err := o.pipelineLister.ListDeployedPipelines()
 	if err != nil {
-		return err
+		return fmt.Errorf("list deployed pipelines: %w", err)
 	}
 
 	for _, pipeline := range pipelines {
-		fmt.Fprintln(o.w, pipeline.Name)
+		fmt.Fprintln(o.w, pipeline.Name())
 	}
 
 	return nil
@@ -222,7 +222,7 @@ func (o *listPipelineOpts) humanOutputDeployed(ctx context.Context) error {
 func getDeployedPipelines(ctx context.Context, app string, lister deployedPipelineLister, getter pipelineGetter) ([]*codepipeline.Pipeline, error) {
 	names, err := lister.ListDeployedPipelines()
 	if err != nil {
-		return nil, fmt.Errorf("list pipelines: %w", err)
+		return nil, fmt.Errorf("list deployed pipelines: %w", err)
 	}
 
 	var mux sync.Mutex
@@ -235,11 +235,11 @@ func getDeployedPipelines(ctx context.Context, app string, lister deployedPipeli
 			continue
 		}
 
-		name := names[i].Name()
+		resource := names[i].ResourceName
 		g.Go(func() error {
-			pipeline, err := getter.GetPipeline(name)
+			pipeline, err := getter.GetPipeline(resource)
 			if err != nil {
-				return fmt.Errorf("get pipeline %q: %w", name, err)
+				return fmt.Errorf("get pipeline %q: %w", resource, err)
 			}
 
 			mux.Lock()

@@ -103,7 +103,7 @@ func TestPipelineList_Ask(t *testing.T) {
 				tc.setupMocks(mocks)
 			}
 
-			listPipelines := &listPipelineOpts{
+			opts := &listPipelineOpts{
 				listPipelineVars: listPipelineVars{
 					appName:                  tc.inputApp,
 					shouldShowLocalPipelines: tc.shouldShowLocalPipelines,
@@ -117,13 +117,13 @@ func TestPipelineList_Ask(t *testing.T) {
 				wsAppName:      tc.inWsAppName,
 			}
 
-			err := listPipelines.Ask()
+			err := opts.Ask()
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedApp, listPipelines.appName, "expected app names to match")
+				require.Equal(t, tc.wantedApp, opts.appName, "expected app names to match")
 			}
 		})
 	}
@@ -147,10 +147,11 @@ func TestPipelineList_Execute(t *testing.T) {
 	}
 	mockError := errors.New("mock error")
 	testCases := map[string]struct {
-		shouldOutputJSON bool
-		setupMocks       func(m pipelineListMocks)
-		expectedContent  string
-		expectedErr      error
+		shouldOutputJSON         bool
+		shouldShowLocalPipelines bool
+		setupMocks               func(m pipelineListMocks)
+		expectedContent          string
+		expectedErr              error
 	}{
 		"with JSON output": {
 			shouldOutputJSON: true,
@@ -163,10 +164,9 @@ func TestPipelineList_Execute(t *testing.T) {
 					GetPipeline(mockLegacyPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
 			},
-			expectedContent: "{\"pipelines\":[{\"name\":\"pipeline-coolapp-my-pipeline-repo\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
+			expectedContent: fmt.Sprintf(`{"pipelines":[{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}`+"\n", mockLegacyPipelineResourceName, mockPipelineResourceName),
 		},
 		"with human output": {
-			shouldOutputJSON: false,
 			setupMocks: func(m pipelineListMocks) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
 			},
@@ -179,7 +179,7 @@ bad-goose
 			setupMocks: func(m pipelineListMocks) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines().Return(nil, mockError)
 			},
-			expectedErr: fmt.Errorf("list deployed pipelines in application coolapp: mock error"),
+			expectedErr: fmt.Errorf("list deployed pipelines: mock error"),
 		},
 		"with failed call to get pipeline info": {
 			shouldOutputJSON: true,
@@ -189,7 +189,7 @@ bad-goose
 					GetPipeline(mockPipelineResourceName).
 					Return(nil, mockError)
 			},
-			expectedErr: fmt.Errorf("get pipeline info for my-pipeline-repo: mock error"),
+			expectedErr: fmt.Errorf(`get pipeline %q: mock error`, mockPipelineResourceName),
 		},
 	}
 
@@ -199,30 +199,32 @@ bad-goose
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
-			mockPipelineLister := mocks.NewMockpipelineLister(ctrl)
-			mockSel := mocks.NewMockconfigSelector(ctrl)
-
 			mocks := pipelineListMocks{
-				prompt:         mockPrompt,
-				codepipeline:   mockPipelineGetter,
-				pipelineLister: mockPipelineLister,
-				sel:            mockSel,
+				codepipeline:   mocks.NewMockpipelineGetter(ctrl),
+				prompt:         mocks.NewMockprompter(ctrl),
+				sel:            mocks.NewMockconfigSelector(ctrl),
+				store:          mocks.NewMockstore(ctrl),
+				workspace:      mocks.NewMockwsPipelineGetter(ctrl),
+				pipelineLister: mocks.NewMockpipelineLister(ctrl),
 			}
-			tc.setupMocks(mocks)
+			if tc.setupMocks != nil {
+				tc.setupMocks(mocks)
+			}
 
 			b := &bytes.Buffer{}
 			opts := &listPipelineOpts{
 				listPipelineVars: listPipelineVars{
-					appName:          mockAppName,
-					shouldOutputJSON: tc.shouldOutputJSON,
+					appName:                  mockAppName,
+					shouldOutputJSON:         tc.shouldOutputJSON,
+					shouldShowLocalPipelines: tc.shouldShowLocalPipelines,
 				},
-				codepipeline:   mockPipelineGetter,
-				pipelineLister: mockPipelineLister,
-				sel:            mockSel,
-				prompt:         mockPrompt,
+				codepipeline:   mocks.codepipeline,
+				prompt:         mocks.prompt,
+				sel:            mocks.sel,
+				store:          mocks.store,
 				w:              b,
+				workspace:      mocks.workspace,
+				pipelineLister: mocks.pipelineLister,
 			}
 
 			// WHEN
