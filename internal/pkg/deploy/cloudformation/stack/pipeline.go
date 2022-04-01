@@ -4,8 +4,6 @@
 package stack
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -15,9 +13,6 @@ import (
 const (
 	pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
 )
-
-// After v1.16, pipeline names are namespaced with a prefix of "pipeline-${appName}-".
-const fmtPipelineNamespaced = "pipeline-%s-%s"
 
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
@@ -35,10 +30,7 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 
 // StackName returns the name of the CloudFormation stack.
 func (p *pipelineStackConfig) StackName() string {
-	if p.IsLegacy {
-		return p.Name
-	}
-	return fmt.Sprintf(fmtPipelineNamespaced, p.AppName, p.Name)
+	return NameForPipeline(p.AppName, p.Name, p.IsLegacy)
 }
 
 // Template returns the CloudFormation template for the service parametrized for the environment.

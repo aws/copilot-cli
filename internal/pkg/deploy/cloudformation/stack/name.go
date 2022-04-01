@@ -14,6 +14,9 @@ const taskStackPrefix = "task-"
 // TaskStackName holds the name of a Copilot one-off task stack.
 type TaskStackName string
 
+// After v1.16, pipeline names are namespaced with a prefix of "pipeline-${appName}-".
+const fmtPipelineNamespaced = "pipeline-%s-%s"
+
 // TaskName returns the name of the task family, generated from the stack name
 func (t TaskStackName) TaskName() string {
 	return strings.SplitN(string(t), "-", 2)[1]
@@ -51,6 +54,7 @@ func NameForAppStackSet(app string) string {
 	return fmt.Sprintf("%s-infrastructure", app)
 }
 
+// NameForPipeline returns the stack name for a pipeline, depending on whether it has been deployed using the legacy scheme.
 func NameForPipeline(app string, pipeline string, isLegacy bool) string {
 	if isLegacy {
 		return pipeline
