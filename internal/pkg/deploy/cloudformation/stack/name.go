@@ -12,7 +12,7 @@ const (
 	// taskStackPrefix is used elsewhere to list CF stacks
 	taskStackPrefix = "task-"
 
-	// After v1.16, pipeline names are namespaced with a prefix of "pipeline-${appName}-".
+	// After v1.16, pipeline stack names are namespaced with a prefix of "pipeline-${appName}-".
 	fmtPipelineNamespaced = "pipeline-%s-%s"
 
 	maxStackNameLength      = 128
