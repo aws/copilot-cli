@@ -40,7 +40,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		wantedName  = "mypipe"
 	)
 	mockError := errors.New("some error")
-	fullName := fmt.Sprintf(fmtPipelineName, mockAppName, wantedName)
 	mockApp := &config.Application{
 		Name: mockAppName,
 	}
@@ -99,78 +98,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 
 			expectedError: fmt.Errorf("get pipeline name: mock error"),
-		},
-		"returns error on duplicate deployed pipeline": {
-			inWsAppName: mockAppName,
-			inName:      wantedName,
-			setupMocks: func(m pipelineInitMocks) {
-				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{
-					{
-						AppName:      mockAppName,
-						ResourceName: fullName,
-						IsLegacy:     true,
-					},
-					{
-						AppName:      mockAppName,
-						ResourceName: "random",
-					},
-				}, nil)
-			},
-
-			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
-		},
-		"returns error on duplicate short name deployed pipeline": {
-			inWsAppName: mockAppName,
-			inName:      wantedName,
-			setupMocks: func(m pipelineInitMocks) {
-				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{
-					{
-						AppName:      mockAppName,
-						ResourceName: wantedName,
-						IsLegacy:     true,
-					},
-					{
-						AppName:      mockAppName,
-						ResourceName: "random",
-					},
-				}, nil)
-			},
-
-			expectedError: fmt.Errorf("pipeline %s already exists", wantedName),
-		},
-		"returns error if fail to check against deployed pipelines": {
-			inWsAppName: mockAppName,
-			inName:      wantedName,
-			setupMocks: func(m pipelineInitMocks) {
-				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return(nil, mockError)
-			},
-
-			expectedError: errors.New("list pipelines for app my-app: some error"),
-		},
-		"returns error on duplicate local pipeline": {
-			inWsAppName: mockAppName,
-			inName:      wantedName,
-			setupMocks: func(m pipelineInitMocks) {
-				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
-				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{{Name: wantedName}}, nil)
-			},
-
-			expectedError: fmt.Errorf("pipeline %s's manifest already exists", wantedName),
-		},
-		"returns error if fail to check against local pipelines": {
-			inWsAppName: mockAppName,
-			inName:      wantedName,
-			setupMocks: func(m pipelineInitMocks) {
-				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{}, nil)
-				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, mockError)
-			},
-
-			expectedError: errors.New("get local pipelines: some error"),
 		},
 		"prompt for pipeline name": {
 			inWsAppName:    mockAppName,

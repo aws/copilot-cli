@@ -954,8 +954,8 @@ func TestValidateJobName(t *testing.T) {
 		wanted error
 	}{
 		"string as input": {
-			val:     "hello",
-			wanted:  nil,
+			val:    "hello",
+			wanted: nil,
 		},
 		"number as input": {
 			val:    1234,
