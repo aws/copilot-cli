@@ -75,7 +75,6 @@ Utility Flags
 ```
 
 ## Examples
-
 Run a task using your local Dockerfile and display log streams after the task is running. 
 You will be prompted to specify an environment for the tasks to run in.
 ```
