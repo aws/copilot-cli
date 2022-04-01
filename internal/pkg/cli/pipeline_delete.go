@@ -60,14 +60,15 @@ type deletePipelineOpts struct {
 	ghAccessTokenSecretName string
 
 	// Interfaces to dependencies.
-	pipelineDeployer pipelineDeployer
-	codepipeline     pipelineGetter
-	prog             progress
-	sel              codePipelineSelector
-	prompt           prompter
-	secretsmanager   secretsManager
-	ws               wsPipelineGetter
-	store            store
+	pipelineDeployer       pipelineDeployer
+	codepipeline           pipelineGetter
+	prog                   progress
+	sel                    codePipelineSelector
+	prompt                 prompter
+	secretsmanager         secretsManager
+	ws                     wsPipelineGetter
+	deployedPipelineLister deployedPipelineLister
+	store                  store
 
 	// Cached variables.
 	targetPipeline deploy.Pipeline
@@ -89,15 +90,16 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	pipelineLister := deploy.NewPipelineStore(rg.New(defaultSess))
 
 	opts := &deletePipelineOpts{
-		deletePipelineVars: vars,
-		codepipeline:       codepipeline,
-		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:             prompter,
-		secretsmanager:     secretsmanager.New(defaultSess),
-		pipelineDeployer:   cloudformation.New(defaultSess),
-		ws:                 ws,
-		store:              ssmStore,
-		sel:                selector.NewAppPipelineSelect(prompter, ssmStore, pipelineLister),
+		deletePipelineVars:     vars,
+		codepipeline:           codepipeline,
+		prog:                   termprogress.NewSpinner(log.DiagnosticWriter),
+		prompt:                 prompter,
+		secretsmanager:         secretsmanager.New(defaultSess),
+		pipelineDeployer:       cloudformation.New(defaultSess),
+		deployedPipelineLister: pipelineLister,
+		ws:                     ws,
+		store:                  ssmStore,
+		sel:                    selector.NewAppPipelineSelect(prompter, ssmStore, pipelineLister),
 	}
 
 	return opts, nil
@@ -121,22 +123,25 @@ func (o *deletePipelineOpts) Ask() error {
 	}
 
 	if o.name != "" {
-		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
-			return err
+		pipeline, err := getDeployedPipelineInfo(o.deployedPipelineLister, o.appName, o.name)
+		if err != nil {
+			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
 		}
+		o.targetPipeline = pipeline
 	} else {
 		pipeline, err := askDeployedPipelineName(o.sel, fmt.Sprintf(fmtPipelineDeletePrompt, color.HighlightUserInput(o.appName)), o.appName)
 		if err != nil {
 			return err
 		}
 		o.name = pipeline.Name
+		o.targetPipeline = pipeline
 	}
 
 	if o.skipConfirmation {
 		return nil
 	}
 	deleteConfirmed, err := o.prompt.Confirm(
-		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.name, o.appName),
+		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.targetPipeline.Name, o.appName),
 		pipelineDeleteConfirmHelp,
 		prompt.WithConfirmFinalMessage())
 
@@ -225,7 +230,7 @@ func (o *deletePipelineOpts) getSecret() error {
 // Users may have changed pipeline names, so this is our best-guess approach to
 // deleting legacy pipeline secrets.
 func (o *deletePipelineOpts) pipelineSecretName() string {
-	appAndRepo := strings.TrimPrefix(o.name, "pipeline-")
+	appAndRepo := strings.TrimPrefix(o.targetPipeline.Name, "pipeline-")
 	return fmt.Sprintf("github-token-%s", appAndRepo)
 }
 
@@ -236,7 +241,7 @@ func (o *deletePipelineOpts) deleteSecret() error {
 	// Only pipelines created with GitHubV1 have personal access tokens saved as secrets.
 	if !o.shouldDeleteSecret {
 		confirmDeletion, err := o.prompt.Confirm(
-			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.ghAccessTokenSecretName, o.name),
+			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.ghAccessTokenSecretName, o.targetPipeline.Name),
 			pipelineDeleteSecretConfirmHelp,
 		)
 		if err != nil {
@@ -259,12 +264,12 @@ func (o *deletePipelineOpts) deleteSecret() error {
 }
 
 func (o *deletePipelineOpts) deleteStack() error {
-	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.name, o.appName))
-	if err := o.pipelineDeployer.DeletePipeline(o.name); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.name, o.appName, err))
+	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.targetPipeline.Name, o.appName))
+	if err := o.pipelineDeployer.DeletePipeline(o.targetPipeline); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.targetPipeline.Name, o.appName, err))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.name, o.appName))
+	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.targetPipeline.Name, o.appName))
 	return nil
 }
 

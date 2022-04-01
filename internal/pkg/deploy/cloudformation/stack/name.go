@@ -50,3 +50,10 @@ func NameForAppStack(app string) string {
 func NameForAppStackSet(app string) string {
 	return fmt.Sprintf("%s-infrastructure", app)
 }
+
+func NameForPipeline(app string, pipeline string, isLegacy bool) string {
+	if isLegacy {
+		return pipeline
+	}
+	return fmt.Sprintf(fmtPipelineNamespaced, app, pipeline)
+}
