@@ -400,7 +400,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				ws:               mockWorkspace,
 				prog:             mockProg,
 				prompt:           mockPrompter,
-				targetPipeline:   targetPipeline,
+				targetPipeline:   &targetPipeline,
 			}
 
 			// WHEN
