@@ -66,9 +66,12 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 
-	wsAppName := tryReadingAppName()
-	if vars.appName == "" {
-		vars.appName = wsAppName
+	var wsAppName string
+	if vars.shouldShowLocalPipelines {
+		wsAppName = tryReadingAppName()
+		if vars.appName == "" {
+			vars.appName = wsAppName
+		}
 	}
 
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
