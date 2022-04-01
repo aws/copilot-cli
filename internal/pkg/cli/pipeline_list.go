@@ -168,7 +168,7 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 		return fmt.Errorf("marshal pipelines: %w", err)
 	}
 
-	fmt.Fprintf(o.w, "%s", b)
+	fmt.Fprintf(o.w, "%s\n", b)
 	return nil
 }
 
@@ -201,7 +201,7 @@ func (o *listPipelineOpts) jsonOutputDeployed(ctx context.Context) error {
 		return fmt.Errorf("marshal pipelines: %w", err)
 	}
 
-	fmt.Fprintf(o.w, "%s", b)
+	fmt.Fprintf(o.w, "%s\n", b)
 	return nil
 }
 

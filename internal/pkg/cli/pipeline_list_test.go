@@ -169,7 +169,7 @@ func TestPipelineList_Execute(t *testing.T) {
 					GetPipeline(mockLegacyPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
 			},
-			expectedContent: `{"pipelines":[{"name":"bad-goose","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}`,
+			expectedContent: `{"pipelines":[{"name":"bad-goose","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}` + "\n",
 		},
 		"with human output": {
 			setupMocks: func(m pipelineListMocks) {
@@ -217,7 +217,7 @@ my-pipeline-repo
 					GetPipeline(mockLegacyPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
 			},
-			expectedContent: `{"pipelines":[{"name":"bad-goose","manifestPath":"/copilot/pipeline.yml","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"my-pipeline-repo","manifestPath":"/copilot/pipelines/my-pipeline-repo/manifest.yml"}]}`,
+			expectedContent: `{"pipelines":[{"name":"bad-goose","manifestPath":"/copilot/pipeline.yml","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"my-pipeline-repo","manifestPath":"/copilot/pipelines/my-pipeline-repo/manifest.yml"}]}` + "\n",
 		},
 	}
 
