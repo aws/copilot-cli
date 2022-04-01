@@ -76,7 +76,7 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	return &listPipelineOpts{
 		listPipelineVars: vars,
 		codepipeline:     codepipeline.New(defaultSession),
-		pipelineLister:   deploy.NewPipelineStore(vars.appName, rg.New(defaultSession)),
+		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
 		prompt:           prompter,
 		sel:              selector.NewConfigSelect(prompter, store),
 		store:            store,
@@ -207,31 +207,24 @@ func (o *listPipelineOpts) jsonOutputDeployed(ctx context.Context) error {
 
 // humanOutputDeployed prints the name of all pipelines in the given app that have been deployed.
 func (o *listPipelineOpts) humanOutputDeployed() error {
-	pipelines, err := o.pipelineLister.ListDeployedPipelines()
+	pipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
 	if err != nil {
 		return fmt.Errorf("list deployed pipelines: %w", err)
 	}
 
-	var filtered []deploy.Pipeline
-	for _, p := range pipelines {
-		if p.AppName == o.appName {
-			filtered = append(filtered, p)
-		}
-	}
-
-	sort.Slice(filtered, func(i, j int) bool {
-		return filtered[i].Name() < filtered[j].Name()
+	sort.Slice(pipelines, func(i, j int) bool {
+		return pipelines[i].Name < pipelines[j].Name
 	})
 
-	for _, p := range filtered {
-		fmt.Fprintln(o.w, p.Name())
+	for _, p := range pipelines {
+		fmt.Fprintln(o.w, p.Name)
 	}
 
 	return nil
 }
 
 func getDeployedPipelines(ctx context.Context, app string, lister deployedPipelineLister, getter pipelineGetter) ([]*codepipeline.Pipeline, error) {
-	names, err := lister.ListDeployedPipelines()
+	pipelines, err := lister.ListDeployedPipelines(app)
 	if err != nil {
 		return nil, fmt.Errorf("list deployed pipelines: %w", err)
 	}
@@ -241,21 +234,17 @@ func getDeployedPipelines(ctx context.Context, app string, lister deployedPipeli
 
 	g, _ := errgroup.WithContext(ctx)
 
-	for i := range names {
-		if names[i].AppName != app {
-			continue
-		}
-
-		resource := names[i].ResourceName
+	for i := range pipelines {
+		pipeline := pipelines[i]
 		g.Go(func() error {
-			pipeline, err := getter.GetPipeline(resource)
+			info, err := getter.GetPipeline(pipeline.ResourceName)
 			if err != nil {
-				return fmt.Errorf("get pipeline %q: %w", resource, err)
+				return fmt.Errorf("get pipeline %q: %w", pipeline.Name, err)
 			}
 
 			mux.Lock()
 			defer mux.Unlock()
-			res = append(res, pipeline)
+			res = append(res, info)
 			return nil
 		})
 	}

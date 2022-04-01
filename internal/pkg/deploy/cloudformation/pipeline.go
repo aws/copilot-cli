@@ -12,15 +12,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
 const (
-	sourceStage                = "Source"
-	connectionARNKey           = "PipelineConnectionARN"
-	fmtPipelineCfnTemplateName = "%s.pipeline.stack.yml"
+	sourceStage                  = "Source"
+	connectionARNKey             = "PipelineConnectionARN"
+	fmtPipelineCfnTemplateName   = "%s.pipeline.stack.yml"
+	cfnLogicalResourceIDPipeline = "Pipeline"
+	cfnResourceTypePipeline      = "AWS::CodePipeline::Pipeline"
 )
 
 // PipelineExists checks if the pipeline with the provided config exists.
@@ -43,7 +47,8 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketNa
 	if err != nil {
 		return err
 	}
-	s, err := toStackFromS3(stack.NewPipelineStackConfig(in), templateURL)
+	stackConfig := stack.NewPipelineStackConfig(in)
+	s, err := toStackFromS3(stackConfig, templateURL)
 	if err != nil {
 		return err
 	}
@@ -65,11 +70,28 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketNa
 	if err = cf.codeStarClient.WaitUntilConnectionStatusAvailable(ctx, output[connectionARNKey]); err != nil {
 		return err
 	}
-	if err = cf.cpClient.RetryStageExecution(in.Name, sourceStage); err != nil {
+
+	pipelineResourceName, err := cf.pipelinePhysicalResourceID(stackConfig.StackName())
+	if err != nil {
 		return err
 	}
-
+	if err = cf.cpClient.RetryStageExecution(pipelineResourceName, sourceStage); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (cf CloudFormation) pipelinePhysicalResourceID(stackName string) (string, error) {
+	stackResources, err := cf.cfnClient.StackResources(stackName)
+	if err != nil {
+		return "", err
+	}
+	for _, resource := range stackResources {
+		if aws.StringValue(resource.LogicalResourceId) == cfnLogicalResourceIDPipeline && aws.StringValue(resource.ResourceType) == cfnResourceTypePipeline {
+			return aws.StringValue(resource.PhysicalResourceId), nil
+		}
+	}
+	return "", fmt.Errorf(`cannot find a resource in stack %s with logical ID "%s" of type "%s"`, stackName, cfnLogicalResourceIDPipeline, cfnResourceTypePipeline)
 }
 
 // UpdatePipeline updates an existing CodePipeline for deploying services.

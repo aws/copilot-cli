@@ -142,6 +142,7 @@ type store interface {
 type deployedEnvironmentLister interface {
 	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
 	ListDeployedServices(appName, envName string) ([]string, error)
+	ListDeployedJobs(appName string, envName string) ([]string, error)
 	IsServiceDeployed(appName, envName string, svcName string) (bool, error)
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
@@ -445,7 +446,7 @@ type pipelineGetter interface {
 }
 
 type deployedPipelineLister interface {
-	ListDeployedPipelines() ([]deploy.Pipeline, error)
+	ListDeployedPipelines(appName string) ([]deploy.Pipeline, error)
 }
 
 type executor interface {
@@ -487,7 +488,7 @@ type wsPipelineSelector interface {
 
 type codePipelineSelector interface {
 	appSelector
-	DeployedPipeline(prompt, help string) (string, error)
+	DeployedPipeline(prompt, help, app string) (string, error)
 }
 
 type wsSelector interface {

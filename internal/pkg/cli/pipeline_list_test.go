@@ -23,7 +23,7 @@ type pipelineListMocks struct {
 	sel            *mocks.MockconfigSelector
 	store          *mocks.Mockstore
 	workspace      *mocks.MockwsPipelineGetter
-	pipelineLister *mocks.MockpipelineLister
+	pipelineLister *mocks.MockdeployedPipelineLister
 }
 
 func TestPipelineList_Ask(t *testing.T) {
@@ -133,12 +133,15 @@ func TestPipelineList_Ask(t *testing.T) {
 func TestPipelineList_Execute(t *testing.T) {
 	const (
 		mockAppName                    = "coolapp"
-		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo"
+		mockPipelineResourceName       = "pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM"
+		mockPipelineName               = "my-pipeline-repo"
 		mockLegacyPipelineResourceName = "bad-goose"
+		mockLegacyPipelineName         = "bad-goose"
 	)
 	mockPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: mockPipelineResourceName,
+		Name:         mockPipelineName,
 		IsLegacy:     false,
 	}
 	mockPipelineInDifferentApp := deploy.Pipeline{
@@ -149,6 +152,7 @@ func TestPipelineList_Execute(t *testing.T) {
 	mockLegacyPipeline := deploy.Pipeline{
 		AppName:      mockAppName,
 		ResourceName: mockLegacyPipelineResourceName,
+		Name:         mockLegacyPipelineName,
 		IsLegacy:     true,
 	}
 	mockError := errors.New("mock error")
@@ -162,19 +166,20 @@ func TestPipelineList_Execute(t *testing.T) {
 		"with JSON output": {
 			shouldOutputJSON: true,
 			setupMocks: func(m pipelineListMocks) {
-				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
-				m.codepipeline.EXPECT().
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
+				m.pipelineGetter.EXPECT().
 					GetPipeline(mockPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockPipelineResourceName}, nil)
 				m.codepipeline.EXPECT().
 					GetPipeline(mockLegacyPipelineResourceName).
 					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
 			},
-			expectedContent: fmt.Sprintf(`{"pipelines":[{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}`, mockLegacyPipelineResourceName, mockPipelineResourceName),
+			// expectedContent: fmt.Sprintf(`{"pipelines":[{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"%s","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}`, mockLegacyPipelineResourceName, mockPipelineResourceName),
+			expectedContent: "{\"pipelines\":[{\"name\":\"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
 		},
 		"with human output": {
 			setupMocks: func(m pipelineListMocks) {
-				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
 			},
 			expectedContent: `bad-goose
 my-pipeline-repo
@@ -183,15 +188,15 @@ my-pipeline-repo
 		"with failed call to list pipelines": {
 			shouldOutputJSON: true,
 			setupMocks: func(m pipelineListMocks) {
-				m.pipelineLister.EXPECT().ListDeployedPipelines().Return(nil, mockError)
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return(nil, mockError)
 			},
 			expectedErr: fmt.Errorf("list deployed pipelines: mock error"),
 		},
 		"with failed call to get pipeline info": {
 			shouldOutputJSON: true,
 			setupMocks: func(m pipelineListMocks) {
-				m.pipelineLister.EXPECT().ListDeployedPipelines().Return([]deploy.Pipeline{mockPipeline}, nil)
-				m.codepipeline.EXPECT().
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockPipeline}, nil)
+				m.pipelineGetter.EXPECT().
 					GetPipeline(mockPipelineResourceName).
 					Return(nil, mockError)
 			},

@@ -131,7 +131,7 @@ type WsPipelinesLister interface {
 
 // CodePipelineLister is a pipeline lister for deployed pipelines.
 type CodePipelineLister interface {
-	ListDeployedPipelines() ([]deploy.Pipeline, error)
+	ListDeployedPipelines(appName string) ([]deploy.Pipeline, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -752,8 +752,8 @@ func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineMani
 }
 
 // DeployedPipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *CodePipelineSelect) DeployedPipeline(msg, help string) (string, error) {
-	pipelines, err := s.pipelineLister.ListDeployedPipelines()
+func (s *CodePipelineSelect) DeployedPipeline(msg, help, app string) (string, error) {
+	pipelines, err := s.pipelineLister.ListDeployedPipelines(app)
 	if err != nil {
 		return "", fmt.Errorf("list deployed pipelines: %w", err)
 	}
@@ -761,12 +761,12 @@ func (s *CodePipelineSelect) DeployedPipeline(msg, help string) (string, error) 
 		return "", errors.New("no deployed pipelines found")
 	}
 	if len(pipelines) == 1 {
-		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0].Name()))
-		return pipelines[0].Name(), nil
+		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0].Name))
+		return pipelines[0].Name, nil
 	}
 	var pipelineNames []string
 	for _, pipeline := range pipelines {
-		pipelineNames = append(pipelineNames, pipeline.Name())
+		pipelineNames = append(pipelineNames, pipeline.Name)
 	}
 	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {

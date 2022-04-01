@@ -1300,6 +1300,21 @@ func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedServices(appNam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedServices), appName, envName)
 }
 
+// ListDeployedJobs mocks base method.
+func (m *MockdeployedEnvironmentLister) ListDeployedJobs(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedJobs", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedJobs indicates an expected call of ListDeployedJobs.
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedJobs(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedJobs), appName, envName)
+}
+
 // ListEnvironmentsDeployedTo mocks base method.
 func (m *MockdeployedEnvironmentLister) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -4707,42 +4722,42 @@ func (mr *MockpipelineGetterMockRecorder) GetPipeline(pipelineName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline), pipelineName)
 }
 
-// MockpipelineLister is a mock of pipelineLister interface.
-type MockpipelineLister struct {
+// MockdeployedPipelineLister is a mock of deployedPipelineLister interface.
+type MockdeployedPipelineLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockpipelineListerMockRecorder
+	recorder *MockdeployedPipelineListerMockRecorder
 }
 
-// MockpipelineListerMockRecorder is the mock recorder for MockpipelineLister.
-type MockpipelineListerMockRecorder struct {
-	mock *MockpipelineLister
+// MockdeployedPipelineListerMockRecorder is the mock recorder for MockdeployedPipelineLister.
+type MockdeployedPipelineListerMockRecorder struct {
+	mock *MockdeployedPipelineLister
 }
 
-// NewMockpipelineLister creates a new mock instance.
-func NewMockpipelineLister(ctrl *gomock.Controller) *MockpipelineLister {
-	mock := &MockpipelineLister{ctrl: ctrl}
-	mock.recorder = &MockpipelineListerMockRecorder{mock}
+// NewMockdeployedPipelineLister creates a new mock instance.
+func NewMockdeployedPipelineLister(ctrl *gomock.Controller) *MockdeployedPipelineLister {
+	mock := &MockdeployedPipelineLister{ctrl: ctrl}
+	mock.recorder = &MockdeployedPipelineListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockpipelineLister) EXPECT() *MockpipelineListerMockRecorder {
+func (m *MockdeployedPipelineLister) EXPECT() *MockdeployedPipelineListerMockRecorder {
 	return m.recorder
 }
 
 // ListDeployedPipelines mocks base method.
-func (m *MockpipelineLister) ListDeployedPipelines() ([]deploy0.Pipeline, error) {
+func (m *MockdeployedPipelineLister) ListDeployedPipelines(appName string) ([]deploy0.Pipeline, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDeployedPipelines")
+	ret := m.ctrl.Call(m, "ListDeployedPipelines", appName)
 	ret0, _ := ret[0].([]deploy0.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListDeployedPipelines indicates an expected call of ListDeployedPipelines.
-func (mr *MockpipelineListerMockRecorder) ListDeployedPipelines() *gomock.Call {
+func (mr *MockdeployedPipelineListerMockRecorder) ListDeployedPipelines(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedPipelines", reflect.TypeOf((*MockpipelineLister)(nil).ListDeployedPipelines))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedPipelines", reflect.TypeOf((*MockdeployedPipelineLister)(nil).ListDeployedPipelines), appName)
 }
 
 // Mockexecutor is a mock of executor interface.
@@ -5215,18 +5230,18 @@ func (mr *MockcodePipelineSelectorMockRecorder) Application(prompt, help interfa
 }
 
 // DeployedPipeline mocks base method.
-func (m *MockcodePipelineSelector) DeployedPipeline(prompt, help string) (string, error) {
+func (m *MockcodePipelineSelector) DeployedPipeline(prompt, help, app string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployedPipeline", prompt, help)
+	ret := m.ctrl.Call(m, "DeployedPipeline", prompt, help, app)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DeployedPipeline indicates an expected call of DeployedPipeline.
-func (mr *MockcodePipelineSelectorMockRecorder) DeployedPipeline(prompt, help interface{}) *gomock.Call {
+func (mr *MockcodePipelineSelectorMockRecorder) DeployedPipeline(prompt, help, app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedPipeline", reflect.TypeOf((*MockcodePipelineSelector)(nil).DeployedPipeline), prompt, help)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedPipeline", reflect.TypeOf((*MockcodePipelineSelector)(nil).DeployedPipeline), prompt, help, app)
 }
 
 // MockwsSelector is a mock of wsSelector interface.
