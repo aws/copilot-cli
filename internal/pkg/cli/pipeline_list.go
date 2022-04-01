@@ -239,7 +239,7 @@ func getDeployedPipelines(ctx context.Context, app string, lister deployedPipeli
 		g.Go(func() error {
 			info, err := getter.GetPipeline(pipeline.ResourceName)
 			if err != nil {
-				return fmt.Errorf("get pipeline %q: %w", pipeline.Name, err)
+				return fmt.Errorf("get pipeline %q: %w", pipeline.ResourceName, err)
 			}
 
 			mux.Lock()
