@@ -70,42 +70,41 @@ func NameForPipeline(app string, pipeline string, isLegacy bool) string {
 	if len(raw) <= maxStackNameLength {
 		return raw
 	}
-
 	lenToChop := len(raw) - maxStackNameLength
-	choppedApp := chopNFromHead(app, len(app)-7)
+	choppedApp := cutNFromHead(app, len(app)-7)
 
 	lenToChop = lenToChop - (len(app) - len(choppedApp))
-	choppedPipeline := smartChopNFromString(pipeline, lenToChop)
+	choppedPipeline := smartCutNFromString(pipeline, lenToChop)
 	return fmt.Sprintf(fmtPipelineNamespaced, choppedApp, choppedPipeline)
 }
 
-func chopNFromHead(s string, n int) string {
+func cutNFromHead(s string, n int) string {
+	if n <= 0 {
+		return s
+	}
 	if len(s) <= n {
 		return ""
 	}
 	return s[n:]
 }
 
-func chopNFromMiddle(s string, n int) string {
-	head := len(s) / 3
-	chopped := s[:head] + s[head+n:]
-	return chopped
-}
-
-func smartChopNFromString(s string, n int) string {
-	if len(s) <= n {
+func smartCutNFromString(s string, n int) string {
+	if n <= 0 {
 		return s
 	}
+	if len(s) <= n {
+		return ""
+	}
 
-	// If we need to chop more than 1/3, we just cut from head.
+	// If we need to cut more than 1/3, we just cut from head.
 	if n > len(s)/3 {
-		chopNFromHead(s, n)
+		return cutNFromHead(s, n)
 	}
 
-	lenTail := len(s) - (len(s)/3 + n)
-	if lenTail < 7 {
-		chopNFromHead(s, n) // We want to preserve at least 7 consecutive letters at the end.
+	head := len(s) / 3
+	if tail := len(s) - (head + n); tail < 7 {
+		return cutNFromHead(s, n) // If too little consecutive letters are preserved at the end, we just cut from head.
 	}
-
-	return chopNFromMiddle(s, n)
+	chopped := s[:head] + s[head+n:]
+	return chopped
 }
