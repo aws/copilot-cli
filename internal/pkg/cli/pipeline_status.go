@@ -43,14 +43,18 @@ type pipelineStatusVars struct {
 type pipelineStatusOpts struct {
 	pipelineStatusVars
 
-	w             io.Writer
-	ws            wsPipelineReader
-	store         store
-	codepipeline  pipelineGetter
-	describer     describer
-	sel           codePipelineSelector
-	prompt        prompter
-	initDescriber func(opts *pipelineStatusOpts) error
+	w                      io.Writer
+	ws                     wsPipelineReader
+	store                  store
+	codepipeline           pipelineGetter
+	describer              describer
+	sel                    codePipelineSelector
+	prompt                 prompter
+	initDescriber          func(opts *pipelineStatusOpts) error
+	deployedPipelineLister deployedPipelineLister
+
+	// Cached variables.
+	targetPipeline *deploy.Pipeline
 }
 
 func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error) {
@@ -68,15 +72,20 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 	store := config.NewSSMStore(identity.New(session), ssm.New(session), aws.StringValue(session.Config.Region))
 	prompter := prompt.New()
 	return &pipelineStatusOpts{
-		w:                  log.OutputWriter,
-		pipelineStatusVars: vars,
-		ws:                 ws,
-		store:              store,
-		codepipeline:       codepipeline,
-		sel:                selector.NewAppPipelineSelect(prompter, store, pipelineLister),
-		prompt:             prompter,
+		w:                      log.OutputWriter,
+		pipelineStatusVars:     vars,
+		ws:                     ws,
+		store:                  store,
+		codepipeline:           codepipeline,
+		deployedPipelineLister: pipelineLister,
+		sel:                    selector.NewAppPipelineSelect(prompter, store, pipelineLister),
+		prompt:                 prompter,
 		initDescriber: func(o *pipelineStatusOpts) error {
-			d, err := describe.NewPipelineStatusDescriber(o.name)
+			pipeline, err := o.getTargetPipeline()
+			if err != nil {
+				return err
+			}
+			d, err := describe.NewPipelineStatusDescriber(pipeline.ResourceName)
 			if err != nil {
 				return fmt.Errorf("new pipeline status describer: %w", err)
 			}
@@ -103,17 +112,17 @@ func (o *pipelineStatusOpts) Ask() error {
 		}
 	}
 	if o.name != "" {
-		_, err := o.codepipeline.GetPipeline(o.name)
-		if err != nil {
+		if _, err := o.getTargetPipeline(); err != nil {
 			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
 		}
 		return nil
 	}
-	pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtpipelineStatusPrompt, color.HighlightUserInput(o.appName)))
+	pipeline, err := askDeployedPipelineName(o.sel, fmt.Sprintf(fmtpipelineStatusPrompt, color.HighlightUserInput(o.appName)), o.appName)
 	if err != nil {
 		return err
 	}
-	o.name = pipelineName
+	o.name = pipeline.Name
+	o.targetPipeline = &pipeline
 	return nil
 }
 
@@ -139,6 +148,18 @@ func (o *pipelineStatusOpts) Execute() error {
 	}
 
 	return nil
+}
+
+func (o *pipelineStatusOpts) getTargetPipeline() (deploy.Pipeline, error) {
+	if o.targetPipeline != nil {
+		return *o.targetPipeline, nil
+	}
+	pipeline, err := getDeployedPipelineInfo(o.deployedPipelineLister, o.appName, o.name)
+	if err != nil {
+		return deploy.Pipeline{}, err
+	}
+	o.targetPipeline = &pipeline
+	return pipeline, nil
 }
 
 func (o *pipelineStatusOpts) askAppName() error {

@@ -349,7 +349,7 @@ type pipelineDeployer interface {
 	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
 	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
-	DeletePipeline(pipelineName string) error
+	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	appResourcesGetter
 	// TODO: Add StreamPipelineCreation method
@@ -488,7 +488,7 @@ type wsPipelineSelector interface {
 
 type codePipelineSelector interface {
 	appSelector
-	DeployedPipeline(prompt, help, app string) (string, error)
+	DeployedPipeline(prompt, help, app string) (deploy.Pipeline, error)
 }
 
 type wsSelector interface {
