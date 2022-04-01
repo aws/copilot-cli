@@ -47,6 +47,9 @@ type CreatePipelineInput struct {
 	// Name of the pipeline
 	Name string
 
+	// IsLegacy should be set to true if the pipeline has been deployed using a legacy non-namespaced name; otherwise it is false.
+	IsLegacy bool
+
 	// The source code provider for this pipeline
 	Source interface{}
 
