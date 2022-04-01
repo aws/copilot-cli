@@ -8,14 +8,19 @@ import (
 	"strings"
 )
 
-// taskStackPrefix is used elsewhere to list CF stacks
-const taskStackPrefix = "task-"
+const (
+	// taskStackPrefix is used elsewhere to list CF stacks
+	taskStackPrefix = "task-"
+
+	// After v1.16, pipeline names are namespaced with a prefix of "pipeline-${appName}-".
+	fmtPipelineNamespaced = "pipeline-%s-%s"
+
+	maxStackNameLength      = 128
+	minChoppedAppNameLength = 7
+)
 
 // TaskStackName holds the name of a Copilot one-off task stack.
 type TaskStackName string
-
-// After v1.16, pipeline names are namespaced with a prefix of "pipeline-${appName}-".
-const fmtPipelineNamespaced = "pipeline-%s-%s"
 
 // TaskName returns the name of the task family, generated from the stack name
 func (t TaskStackName) TaskName() string {
@@ -55,9 +60,52 @@ func NameForAppStackSet(app string) string {
 }
 
 // NameForPipeline returns the stack name for a pipeline, depending on whether it has been deployed using the legacy scheme.
+// It keeps the stack name under 128 by first attempting to chop the app name to length of 7, and then chop pipeline name
+// so that the total length is 128.
 func NameForPipeline(app string, pipeline string, isLegacy bool) string {
 	if isLegacy {
 		return pipeline
 	}
-	return fmt.Sprintf(fmtPipelineNamespaced, app, pipeline)
+	raw := fmt.Sprintf(fmtPipelineNamespaced, app, pipeline)
+	if len(raw) <= maxStackNameLength {
+		return raw
+	}
+
+	lenToChop := len(raw) - maxStackNameLength
+	choppedApp := chopNFromHead(app, len(app)-7)
+
+	lenToChop = lenToChop - (len(app) - len(choppedApp))
+	choppedPipeline := smartChopNFromString(pipeline, lenToChop)
+	return fmt.Sprintf(fmtPipelineNamespaced, choppedApp, choppedPipeline)
+}
+
+func chopNFromHead(s string, n int) string {
+	if len(s) <= n {
+		return ""
+	}
+	return s[n:]
+}
+
+func chopNFromMiddle(s string, n int) string {
+	head := len(s) / 3
+	chopped := s[:head] + s[head+n:]
+	return chopped
+}
+
+func smartChopNFromString(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+
+	// If we need to chop more than 1/3, we just cut from head.
+	if n > len(s)/3 {
+		chopNFromHead(s, n)
+	}
+
+	lenTail := len(s) - (len(s)/3 + n)
+	if lenTail < 7 {
+		chopNFromHead(s, n) // We want to preserve at least 7 consecutive letters at the end.
+	}
+
+	return chopNFromMiddle(s, n)
 }
