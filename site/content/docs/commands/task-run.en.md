@@ -56,7 +56,7 @@ Generally, the steps involved in task run are:
     --tag string                     Optional. The container image tag in addition to "latest".
 -n, --task-group-name string         Optional. The group name of the task. Tasks with the same group name share the same set of resources.
     --task-role string               Optional. The role for the task to use.
-     --acknowledge-secrets-access    Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag.
+    --acknowledge-secrets-access    Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag.
                                      This flag is useful only when '--secret' flag is specified
 ```
 ## Example
