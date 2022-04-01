@@ -30,7 +30,7 @@ func TestBB_Pipeline_Template(t *testing.T) {
 			Branch:               "main",
 			OutputArtifactFormat: "CODEBUILD_CLONE_REF",
 		},
-		Build: deploy.PipelineBuildFromManifest(nil),
+		Build: deploy.PipelineBuildFromManifest(nil, "copilot/pipelines/phonetool-pipeline/"),
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{

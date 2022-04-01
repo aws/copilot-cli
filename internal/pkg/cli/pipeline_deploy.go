@@ -9,12 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/list"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -29,8 +31,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/spf13/cobra"
+
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 const (
@@ -62,16 +65,17 @@ type deployPipelineVars struct {
 type deployPipelineOpts struct {
 	deployPipelineVars
 
-	pipelineDeployer pipelineDeployer
-	sel              wsPipelineSelector
-	prog             progress
-	prompt           prompter
-	region           string
-	store            store
-	ws               wsPipelineReader
-	codestar         codestar
-	newSvcListCmd    func(io.Writer, string) cmd
-	newJobListCmd    func(io.Writer, string) cmd
+	pipelineDeployer                pipelineDeployer
+	sel                             wsPipelineSelector
+	prog                            progress
+	prompt                          prompter
+	region                          string
+	store                           store
+	ws                              wsPipelineReader
+	codestar                        codestar
+	newSvcListCmd                   func(io.Writer, string) cmd
+	newJobListCmd                   func(io.Writer, string) cmd
+	configureDeployedPipelineLister func() deployedPipelineLister
 
 	// cached variables
 	wsAppName                    string
@@ -102,7 +106,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		vars.appName = wsAppName
 	}
 
-	return &deployPipelineOpts{
+	opts := &deployPipelineOpts{
 		ws:                 ws,
 		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
@@ -147,7 +151,12 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		wsAppName: wsAppName,
 		svcBuffer: &bytes.Buffer{},
 		jobBuffer: &bytes.Buffer{},
-	}, nil
+	}
+	opts.configureDeployedPipelineLister = func() deployedPipelineLister {
+		// Initialize the client only after the appName is asked.
+		return deploy.NewPipelineStore(rg.New(defaultSession))
+	}
+	return opts, nil
 }
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
@@ -194,7 +203,7 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 
-	// If the source has an existing connection, get the correlating ConnectionARN .
+	// If the source has an existing connection, get the correlating ConnectionARN.
 	connection, ok := pipeline.Source.Properties["connection_name"]
 	if ok {
 		arn, err := o.codestar.GetConnectionARN((connection).(string))
@@ -204,29 +213,40 @@ func (o *deployPipelineOpts) Execute() error {
 		pipeline.Source.Properties["connection_arn"] = arn
 	}
 
-	source, bool, err := deploy.PipelineSourceFromManifest(pipeline.Source)
+	source, shouldPrompt, err := deploy.PipelineSourceFromManifest(pipeline.Source)
 	if err != nil {
 		return fmt.Errorf("read source from manifest: %w", err)
 	}
-	o.shouldPromptUpdateConnection = bool
+	o.shouldPromptUpdateConnection = shouldPrompt
 
-	// convert environments to deployment stages
+	// Convert full manifest path to relative path from workspace root.
+	relPath, err := o.ws.Rel(o.pipeline.Path)
+	if err != nil {
+		return err
+	}
+
+	// Convert environments to deployment stages.
 	stages, err := o.convertStages(pipeline.Stages)
 	if err != nil {
 		return fmt.Errorf("convert environments to deployment stage: %w", err)
 	}
 
-	// get cross-regional resources
+	// Get cross-regional resources.
 	artifactBuckets, err := o.getArtifactBuckets()
 	if err != nil {
 		return fmt.Errorf("get cross-regional resources: %w", err)
 	}
 
+	isLegacy, err := o.isLegacy(pipeline.Name)
+	if err != nil {
+		return err
+	}
 	deployPipelineInput := &deploy.CreatePipelineInput{
 		AppName:         o.appName,
 		Name:            pipeline.Name,
+		IsLegacy:        isLegacy,
 		Source:          source,
-		Build:           deploy.PipelineBuildFromManifest(pipeline.Build),
+		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, filepath.Dir(relPath)),
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,
@@ -237,6 +257,23 @@ func (o *deployPipelineOpts) Execute() error {
 	}
 
 	return nil
+}
+
+func (o *deployPipelineOpts) isLegacy(inputName string) (bool, error) {
+	lister := o.configureDeployedPipelineLister()
+	pipelines, err := lister.ListDeployedPipelines(o.appName)
+	if err != nil {
+		return false, fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
+	}
+	for _, pipeline := range pipelines {
+		if pipeline.ResourceName == inputName {
+			// NOTE: this is double insurance. A namespaced pipeline's `ResourceName` wouldn't be equal to
+			// `inputName` in the first place, because it would have been namespaced and have random string
+			// appended by CFN.
+			return pipeline.IsLegacy, nil
+		}
+	}
+	return false, nil
 }
 
 func (o *deployPipelineOpts) validatePipelineName() error {
