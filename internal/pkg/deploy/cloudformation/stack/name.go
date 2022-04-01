@@ -16,8 +16,8 @@ const (
 	// After v1.16, pipeline stack names are namespaced with a prefix of "pipeline-${appName}-".
 	fmtPipelineNamespaced = "pipeline-%s-%s"
 
-	maxStackNameLength      = 128
-	minChoppedAppNameLength = 7
+	maxStackNameLength = 128
+	minNamePartsLength = 7
 )
 
 // TaskStackName holds the name of a Copilot one-off task stack.
@@ -72,7 +72,7 @@ func NameForPipeline(app string, pipeline string, isLegacy bool) string {
 		return raw
 	}
 	lenToChop := len(raw) - maxStackNameLength
-	choppedApp := cutNFromHead(app, int(math.Min(float64(len(app)-7), float64(lenToChop))))
+	choppedApp := cutNFromHead(app, int(math.Min(float64(len(app)-minNamePartsLength), float64(lenToChop))))
 
 	lenToChop = lenToChop - (len(app) - len(choppedApp))
 	choppedPipeline := smartCutNFromString(pipeline, lenToChop)
@@ -103,7 +103,7 @@ func smartCutNFromString(s string, n int) string {
 	}
 
 	head := len(s) / 3
-	if tail := len(s) - (head + n); tail < 7 {
+	if tail := len(s) - (head + n); tail < minNamePartsLength {
 		return cutNFromHead(s, n) // If too little consecutive letters are preserved at the end, we just cut from head.
 	}
 	chopped := s[:head] + s[head+n:]
