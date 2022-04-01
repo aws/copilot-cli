@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -71,7 +72,7 @@ func NameForPipeline(app string, pipeline string, isLegacy bool) string {
 		return raw
 	}
 	lenToChop := len(raw) - maxStackNameLength
-	choppedApp := cutNFromHead(app, len(app)-7)
+	choppedApp := cutNFromHead(app, int(math.Min(float64(len(app)-7), float64(lenToChop))))
 
 	lenToChop = lenToChop - (len(app) - len(choppedApp))
 	choppedPipeline := smartCutNFromString(pipeline, lenToChop)
