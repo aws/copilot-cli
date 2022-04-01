@@ -14,7 +14,7 @@ const taskStackPrefix = "task-"
 // TaskStackName holds the name of a Copilot one-off task stack.
 type TaskStackName string
 
-// After v1.16, pipeline names are namespaced with a prefix of "pipeline-${appName}-".
+// After v1.16, pipeline stack names are namespaced with a prefix of "pipeline-${appName}-".
 const fmtPipelineNamespaced = "pipeline-%s-%s"
 
 // TaskName returns the name of the task family, generated from the stack name
