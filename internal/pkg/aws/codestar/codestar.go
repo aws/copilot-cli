@@ -51,22 +51,25 @@ func (c *CodeStar) WaitUntilConnectionStatusAvailable(ctx context.Context, conne
 	}
 }
 
+// GetConnections retrieves all of the CSC connections in the current account.
+func (c *CodeStar) GetConnections() ([]string, error) {
+	connections, err := c.listConnections()
+	if err != nil {
+		return nil, err
+	}
+	var connectionNames []string
+	for _, connection := range connections {
+		connectionNames = append(connectionNames, aws.StringValue(connection.ConnectionName))
+	}
+	return connectionNames, nil
+}
+
 // GetConnectionARN retrieves all of the CSC connections in the current account and returns the ARN correlating to the
 // connection name passed in.
 func (c *CodeStar) GetConnectionARN(connectionName string) (connectionARN string, err error) {
-	output, err := c.client.ListConnections(&codestarconnections.ListConnectionsInput{})
+	connections, err := c.listConnections()
 	if err != nil {
-		return "", fmt.Errorf("get list of connections in AWS account: %w", err)
-	}
-	connections := output.Connections
-	for output.NextToken != nil {
-		output, err = c.client.ListConnections(&codestarconnections.ListConnectionsInput{
-			NextToken: output.NextToken,
-		})
-		if err != nil {
-			return "", fmt.Errorf("get list of connections in AWS account: %w", err)
-		}
-		connections = append(connections, output.Connections...)
+		return "", err
 	}
 
 	for _, connection := range connections {
@@ -76,4 +79,22 @@ func (c *CodeStar) GetConnectionARN(connectionName string) (connectionARN string
 		}
 	}
 	return "", fmt.Errorf("cannot find a connectionARN associated with %s", connectionName)
+}
+
+func (c *CodeStar) listConnections() ([]*codestarconnections.Connection, error) {
+	output, err := c.client.ListConnections(&codestarconnections.ListConnectionsInput{})
+	if err != nil {
+		return nil, fmt.Errorf("get list of connections in AWS account: %w", err)
+	}
+	connections := output.Connections
+	for output.NextToken != nil {
+		output, err = c.client.ListConnections(&codestarconnections.ListConnectionsInput{
+			NextToken: output.NextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("get list of connections in AWS account: %w", err)
+		}
+		connections = append(connections, output.Connections...)
+	}
+	return connections, nil
 }

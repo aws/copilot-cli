@@ -599,6 +599,10 @@ type codestar interface {
 	GetConnectionARN(string) (string, error)
 }
 
+type codestarGetter interface {
+	GetConnections() ([]string, error)
+}
+
 type publicIPGetter interface {
 	PublicIP(ENI string) (string, error)
 }

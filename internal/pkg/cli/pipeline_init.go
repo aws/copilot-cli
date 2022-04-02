@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"regexp"
 	"strings"
 
@@ -103,6 +104,7 @@ type initPipelineOpts struct {
 	prompt         prompter
 	sel            pipelineEnvSelector
 	pipelineLister deployedPipelineLister
+	codestar       codestarGetter
 
 	// Outputs stored on successful actions.
 	secret    string
@@ -159,11 +161,17 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
 		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
+		codestar:         cs.New(defaultSession),
 	}, nil
 }
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
+	connections, err := o.codestar.GetConnections()
+	if err != nil {
+		return fmt.Errorf("get CodeStar Connections: %w", err)
+	}
+	fmt.Println("connections: ", connections)
 	return nil
 }
 
