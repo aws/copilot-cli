@@ -891,6 +891,11 @@ func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) p
 	return selectedEnvs, nil
 }
 
+// Connection fetches all the CodeStar Connections in an account and prompts the user to select one.
+func (s *Select) Connection(msg, help string, additionalOpts ...string) (string, error) {
+	connections, err := s.
+}
+
 // Application fetches all the apps in an account/region and prompts the user to select one.
 func (s *Select) Application(msg, help string, additionalOpts ...string) (string, error) {
 	appNames, err := s.retrieveApps()

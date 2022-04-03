@@ -478,8 +478,9 @@ type deploySelector interface {
 	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
-type pipelineEnvSelector interface {
+type pipelineEnvConnectionSelector interface {
 	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
+	Connections(prompt, help, string)
 }
 
 type wsPipelineSelector interface {
@@ -600,7 +601,7 @@ type codestar interface {
 }
 
 type codestarGetter interface {
-	GetConnections() ([]string, error)
+	ListConnections() ([]string, error)
 }
 
 type publicIPGetter interface {

@@ -51,8 +51,8 @@ func (c *CodeStar) WaitUntilConnectionStatusAvailable(ctx context.Context, conne
 	}
 }
 
-// GetConnections retrieves all of the CSC connections in the current account.
-func (c *CodeStar) GetConnections() ([]string, error) {
+// ListConnections retrieves all of the CSC connections in the current account.
+func (c *CodeStar) ListConnections() ([]string, error) {
 	connections, err := c.listConnections()
 	if err != nil {
 		return nil, err

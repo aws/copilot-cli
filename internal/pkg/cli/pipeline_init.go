@@ -102,7 +102,7 @@ type initPipelineOpts struct {
 	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
-	sel            pipelineEnvSelector
+	sel            pipelineEnvConnectionSelector
 	pipelineLister deployedPipelineLister
 	codestar       codestarGetter
 
@@ -167,7 +167,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
-	connections, err := o.codestar.GetConnections()
+	connections, err := o.codestar.ListConnections()
 	if err != nil {
 		return fmt.Errorf("get CodeStar Connections: %w", err)
 	}
