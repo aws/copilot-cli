@@ -16,7 +16,7 @@ source:
   # Additional properties that further specify the location of the artifacts.
   properties:{{range $key, $value := .Source.Properties}}
     {{$key}}: {{$value}}{{end}}
-    {{- if .Source.IsCodeStarConnection}}
+    {{- if .Source.NeedsCodeStarConnection}}
     # Optional: specify the name of an existing CodeStar Connections connection.
     # connection_name: a-connection
     {{- end}}

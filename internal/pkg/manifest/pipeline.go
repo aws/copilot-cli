@@ -107,6 +107,7 @@ type GitHubV1Properties struct {
 type GitHubProperties struct {
 	RepositoryURL string `structs:"repository" yaml:"repository"`
 	Branch        string `structs:"branch" yaml:"branch"`
+	Connection    string `structs:"connection_name" yaml:"connection_name"`
 }
 
 // BitbucketProperties contains information for configuring a Bitbucket
@@ -114,6 +115,7 @@ type GitHubProperties struct {
 type BitbucketProperties struct {
 	RepositoryURL string `structs:"repository" yaml:"repository"`
 	Branch        string `structs:"branch" yaml:"branch"`
+	Connection    string `structs:"connection_name" yaml:"connection_name,omitempty"`
 }
 
 // CodeCommitProperties contains information for configuring a CodeCommit
@@ -242,16 +244,12 @@ func UnmarshalPipeline(in []byte) (*Pipeline, error) {
 	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
 }
 
-// IsCodeStarConnection indicates to the manifest if this source requires a CSC connection.
-func (s Source) IsCodeStarConnection() bool {
-	switch s.ProviderName {
-	case GithubProviderName:
+// NeedsCodeStarConnection indicates to the manifest if this source requires a CSC connection.
+func (s Source) NeedsCodeStarConnection() bool {
+	if (s.ProviderName == GithubProviderName || s.ProviderName == BitbucketProviderName) && s.Properties["connection_name"] == "" {
 		return true
-	case BitbucketProviderName:
-		return true
-	default:
-		return false
 	}
+	return false
 }
 
 func validateVersion(pm *Pipeline) (PipelineSchemaMajorVersion, error) {

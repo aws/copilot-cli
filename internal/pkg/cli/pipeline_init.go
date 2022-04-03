@@ -369,8 +369,9 @@ func (o *initPipelineOpts) askConnection() error {
 	if err != nil {
 		return err
 	}
-	if connection == "[None]" {
+	if connection == "[No thanks]" {
 		o.connection = ""
+		return nil
 	}
 	o.connection = connection
 	return nil
@@ -742,6 +743,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 		config = &manifest.GitHubProperties{
 			RepositoryURL: fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
+			Connection:    o.connection,
 		}
 	case manifest.CodeCommitProviderName:
 		config = &manifest.CodeCommitProperties{
@@ -752,6 +754,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 		config = &manifest.BitbucketProperties{
 			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
+			Connection:    o.connection,
 		}
 	default:
 		return nil, fmt.Errorf("unable to create pipeline source provider for %s", o.repoName)
