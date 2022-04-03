@@ -478,9 +478,9 @@ type deploySelector interface {
 	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
-type pipelineEnvConnectionSelector interface {
+type pipelineEnvsConnectionSelector interface {
 	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
-	Connections(prompt, help, string)
+	Connection(prompt, help string) (string, error)
 }
 
 type wsPipelineSelector interface {

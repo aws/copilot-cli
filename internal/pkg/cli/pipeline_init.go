@@ -53,6 +53,8 @@ const (
 	pipelineSelectURLHelpPrompt = `The repository linked to your pipeline.
 Pushing to this repository will trigger your pipeline build stage.
 Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
+	pipelineSelectConnectionPrompt     = "Would you like to reuse a CodeStar Connections connection?"
+	pipelineSelectConnectionHelpPrompt = "You may optionally use an existing connection to your source repository. If 'No thanks', Copilot will generate one for you."
 )
 
 const (
@@ -102,16 +104,17 @@ type initPipelineOpts struct {
 	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
-	sel            pipelineEnvConnectionSelector
+	sel            pipelineEnvsConnectionSelector
 	pipelineLister deployedPipelineLister
 	codestar       codestarGetter
 
 	// Outputs stored on successful actions.
-	secret    string
-	provider  string
-	repoName  string
-	repoOwner string
-	ccRegion  string
+	secret     string
+	provider   string
+	repoName   string
+	repoOwner  string
+	ccRegion   string
+	connection string
 
 	// Cached variables
 	wsAppName    string
@@ -147,6 +150,8 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		vars.appName = wsAppName
 	}
 
+	cs := cs.New(defaultSession)
+
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
@@ -156,22 +161,17 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		cfnClient:        cloudformation.New(defaultSession),
 		store:            ssmStore,
 		prompt:           prompter,
-		sel:              selector.NewSelect(prompter, ssmStore),
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
 		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
-		codestar:         cs.New(defaultSession),
+		codestar:         cs,
+		sel:              selector.NewPipelineEnvsConnectionSelect(prompter, ssmStore, cs),
 	}, nil
 }
 
 // Validate returns an error if the optional flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
-	connections, err := o.codestar.ListConnections()
-	if err != nil {
-		return fmt.Errorf("get CodeStar Connections: %w", err)
-	}
-	fmt.Println("connections: ", connections)
 	return nil
 }
 
@@ -202,6 +202,12 @@ func (o *initPipelineOpts) Ask() error {
 	}
 	if err := o.validateEnvs(); err != nil {
 		return err
+	}
+
+	if o.githubAccessToken == "" && !strings.Contains(o.repoURL, ccIdentifier) {
+		if err := o.askConnection(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -355,6 +361,18 @@ func (o *initPipelineOpts) askEnvs() error {
 	}
 
 	o.environments = envs
+	return nil
+}
+
+func (o *initPipelineOpts) askConnection() error {
+	connection, err := o.sel.Connection(pipelineSelectConnectionPrompt, pipelineSelectConnectionHelpPrompt)
+	if err != nil {
+		return err
+	}
+	if connection == "[None]" {
+		o.connection = ""
+	}
+	o.connection = connection
 	return nil
 }
 

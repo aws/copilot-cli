@@ -73,6 +73,7 @@ const (
 	dockerfileFinalMsg  = "Dockerfile:"
 	topicFinalMsg       = "Topic subscriptions:"
 	pipelineFinalMsg    = "Pipeline:"
+	connectionFinalMsg  = "CodeStar Connection:"
 )
 
 var scheduleTypes = []string{
@@ -132,6 +133,11 @@ type WsPipelinesLister interface {
 // CodePipelineLister is a pipeline lister for deployed pipelines.
 type CodePipelineLister interface {
 	ListDeployedPipelines(appName string) ([]deploy.Pipeline, error)
+}
+
+// ConnectionLister is a CodeStar Connections connection lister.
+type ConnectionLister interface {
+	ListConnections() ([]string, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -197,6 +203,13 @@ type CodePipelineSelect struct {
 type AppPipelineSelect struct {
 	*Select
 	*CodePipelineSelect
+}
+
+// PipelineEnvsConnectionSelect is a selector for pipeline envs and CSC.
+type PipelineEnvsConnectionSelect struct {
+	*Select
+	prompt           Prompter
+	connectionLister ConnectionLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -294,6 +307,15 @@ func NewAppPipelineSelect(prompt Prompter, store ConfigLister, lister CodePipeli
 			prompt:         prompt,
 			pipelineLister: lister,
 		},
+	}
+}
+
+// NewPipelineEnvConnectionSelect returns new selectors with environments and CodeStar Connections.
+func NewPipelineEnvsConnectionSelect(prompt Prompter, store ConfigLister, lister ConnectionLister) *PipelineEnvsConnectionSelect {
+	return &PipelineEnvsConnectionSelect{
+		Select:           NewSelect(prompt, store),
+		prompt:           prompt,
+		connectionLister: lister,
 	}
 }
 
@@ -852,7 +874,7 @@ func (s *Select) Environment(msg, help, app string, additionalOpts ...string) (s
 
 // Environments fetches all the environments in an app and prompts the user to select one OR MORE.
 // The List of options decreases as envs are chosen. Chosen envs displayed above with the finalMsg.
-func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
+func (s *PipelineEnvsConnectionSelect) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
@@ -891,9 +913,21 @@ func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) p
 	return selectedEnvs, nil
 }
 
-// Connection fetches all the CodeStar Connections in an account and prompts the user to select one.
-func (s *Select) Connection(msg, help string, additionalOpts ...string) (string, error) {
-	connections, err := s.
+// Connection fetches all the CodeStar   in an account and prompts the user to select one.
+func (s *PipelineEnvsConnectionSelect) Connection(msg, help string) (string, error) {
+	connections, err := s.connectionLister.ListConnections()
+	if err != nil {
+		return "", fmt.Errorf("list connections: %w", err)
+	}
+	if len(connections) == 0 {
+		return "", nil
+	}
+	connections = append(connections, "[No thanks]")
+	connection, err := s.prompt.SelectOne(msg, help, connections, prompt.WithFinalMessage(connectionFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("select CodeStar connection: %w", err)
+	}
+	return connection, nil
 }
 
 // Application fetches all the apps in an account/region and prompts the user to select one.
