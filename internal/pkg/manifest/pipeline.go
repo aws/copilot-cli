@@ -34,6 +34,7 @@ type Provider interface {
 	fmt.Stringer
 	Name() string
 	Properties() map[string]interface{}
+	Connection() string
 }
 
 type githubV1Provider struct {
@@ -46,12 +47,17 @@ func (p *githubV1Provider) Name() string {
 func (p *githubV1Provider) String() string {
 	return GithubProviderName
 }
+
 func (p *githubV1Provider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
+}
+func (p *githubV1Provider) Connection() string {
+	return ""
 }
 
 type githubProvider struct {
 	properties *GitHubProperties
+	connection string
 }
 
 func (p *githubProvider) Name() string {
@@ -62,6 +68,10 @@ func (p *githubProvider) String() string {
 }
 func (p *githubProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
+}
+
+func (p *githubProvider) Connection() string {
+	return p.connection
 }
 
 type codecommitProvider struct {
@@ -77,9 +87,13 @@ func (p *codecommitProvider) String() string {
 func (p *codecommitProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
+func (p *codecommitProvider) Connection() string {
+	return ""
+}
 
 type bitbucketProvider struct {
 	properties *BitbucketProperties
+	connection string
 }
 
 func (p *bitbucketProvider) Name() string {
@@ -90,6 +104,10 @@ func (p *bitbucketProvider) String() string {
 }
 func (p *bitbucketProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
+}
+
+func (p *bitbucketProvider) Connection() string {
+	return p.connection
 }
 
 // GitHubV1Properties contain information for configuring a Githubv1
@@ -107,7 +125,6 @@ type GitHubV1Properties struct {
 type GitHubProperties struct {
 	RepositoryURL string `structs:"repository" yaml:"repository"`
 	Branch        string `structs:"branch" yaml:"branch"`
-	Connection    string `structs:"connection_name" yaml:"connection_name"`
 }
 
 // BitbucketProperties contains information for configuring a Bitbucket
@@ -115,7 +132,6 @@ type GitHubProperties struct {
 type BitbucketProperties struct {
 	RepositoryURL string `structs:"repository" yaml:"repository"`
 	Branch        string `structs:"branch" yaml:"branch"`
-	Connection    string `structs:"connection_name" yaml:"connection_name,omitempty"`
 }
 
 // CodeCommitProperties contains information for configuring a CodeCommit
@@ -127,7 +143,7 @@ type CodeCommitProperties struct {
 
 // NewProvider creates a source provider based on the type of
 // the provided provider-specific configurations
-func NewProvider(configs interface{}) (Provider, error) {
+func NewProvider(configs interface{}, connection string) (Provider, error) {
 	switch props := configs.(type) {
 	case *GitHubV1Properties:
 		return &githubV1Provider{
@@ -136,6 +152,7 @@ func NewProvider(configs interface{}) (Provider, error) {
 	case *GitHubProperties:
 		return &githubProvider{
 			properties: props,
+			connection: connection,
 		}, nil
 	case *CodeCommitProperties:
 		return &codecommitProvider{
@@ -144,6 +161,7 @@ func NewProvider(configs interface{}) (Provider, error) {
 	case *BitbucketProperties:
 		return &bitbucketProvider{
 			properties: props,
+			connection: connection,
 		}, nil
 	default:
 		return nil, &ErrUnknownProvider{unknownProviderProperties: props}
@@ -176,6 +194,7 @@ type Pipeline struct {
 type Source struct {
 	ProviderName string                 `yaml:"provider"`
 	Properties   map[string]interface{} `yaml:"properties"`
+	Connection   string                 `yaml:"connection_name"`
 }
 
 // Build defines the build project to build and test image.
@@ -205,6 +224,7 @@ func NewPipeline(pipelineName string, provider Provider, stages []PipelineStage)
 		Source: &Source{
 			ProviderName: provider.Name(),
 			Properties:   provider.Properties(),
+			Connection:   provider.Connection(),
 		},
 		Stages: stages,
 
@@ -246,7 +266,7 @@ func UnmarshalPipeline(in []byte) (*Pipeline, error) {
 
 // NeedsCodeStarConnection indicates to the manifest if this source requires a CSC connection.
 func (s Source) NeedsCodeStarConnection() bool {
-	if (s.ProviderName == GithubProviderName || s.ProviderName == BitbucketProviderName) && s.Properties["connection_name"] == "" {
+	if (s.ProviderName == GithubProviderName || s.ProviderName == BitbucketProviderName) && s.Connection == "" {
 		return true
 	}
 	return false

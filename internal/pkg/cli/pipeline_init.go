@@ -743,7 +743,6 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 		config = &manifest.GitHubProperties{
 			RepositoryURL: fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
-			Connection:    o.connection,
 		}
 	case manifest.CodeCommitProviderName:
 		config = &manifest.CodeCommitProperties{
@@ -754,12 +753,11 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 		config = &manifest.BitbucketProperties{
 			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
-			Connection:    o.connection,
 		}
 	default:
 		return nil, fmt.Errorf("unable to create pipeline source provider for %s", o.repoName)
 	}
-	return manifest.NewProvider(config)
+	return manifest.NewProvider(config, o.connection)
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {

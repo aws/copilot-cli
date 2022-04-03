@@ -19,6 +19,8 @@ source:
     {{- if .Source.NeedsCodeStarConnection}}
     # Optional: specify the name of an existing CodeStar Connections connection.
     # connection_name: a-connection
+    {{- else}}
+    connection_name: {{.Source.Connection}}
     {{- end}}
 {{$length := len .Stages}}{{if gt $length 0}}
 # This section defines the order of the environments your pipeline will deploy to.
