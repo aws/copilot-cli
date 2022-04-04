@@ -11,7 +11,9 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	describeStack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 
 	// TODO refactor this into our own pkg
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -27,13 +29,12 @@ type Pipeline struct {
 	Name string `json:"name"`
 	codepipeline.Pipeline
 
-	Resources []*stack.Resource `json:"resources,omitempty"`
+	Resources []*describeStack.Resource `json:"resources,omitempty"`
 }
 
-// PipelineDescriber retrieves information about an application.
+// PipelineDescriber retrieves information about a deployed pipeline.
 type PipelineDescriber struct {
-	resourceName  string
-	pipelineName  string
+	pipeline      deploy.Pipeline
 	showResources bool
 
 	pipelineSvc pipelineGetter
@@ -41,7 +42,7 @@ type PipelineDescriber struct {
 }
 
 // NewPipelineDescriber instantiates a new pipeline describer
-func NewPipelineDescriber(resourceName string, pipelineName string, showResources bool) (*PipelineDescriber, error) {
+func NewPipelineDescriber(pipeline deploy.Pipeline, showResources bool) (*PipelineDescriber, error) {
 	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, err
@@ -50,21 +51,21 @@ func NewPipelineDescriber(resourceName string, pipelineName string, showResource
 	pipelineSvc := codepipeline.New(sess)
 
 	return &PipelineDescriber{
-		resourceName:  resourceName,
-		pipelineName:  pipelineName,
+		pipeline: pipeline,
+
 		pipelineSvc:   pipelineSvc,
 		showResources: showResources,
-		cfn:           stack.NewStackDescriber(resourceName, sess),
+		cfn:           describeStack.NewStackDescriber(stack.NameForPipeline(pipeline.AppName, pipeline.Name, pipeline.IsLegacy), sess),
 	}, nil
 }
 
 // Describe returns description of a pipeline.
 func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
-	cp, err := d.pipelineSvc.GetPipeline(d.resourceName)
+	cp, err := d.pipelineSvc.GetPipeline(d.pipeline.ResourceName)
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline: %w", err)
 	}
-	var resources []*stack.Resource
+	var resources []*describeStack.Resource
 	if d.showResources {
 		stackResources, err := d.cfn.Resources()
 		if err != nil && !IsStackNotExistsErr(err) {
@@ -73,7 +74,7 @@ func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
 		resources = stackResources
 	}
 	pipeline := &Pipeline{
-		Name:      d.pipelineName,
+		Name:      d.pipeline.Name,
 		Pipeline:  *cp,
 		Resources: resources,
 	}

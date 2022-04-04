@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/dustin/go-humanize"
@@ -175,9 +176,15 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 			}
 			tc.callMocks(mocks)
 
+			mockDeployedPipeline := deploy.Pipeline{
+				ResourceName: pipelineResourceName,
+				Name:         pipelineName,
+				AppName:      "mockAppName",
+				IsLegacy:     false,
+			}
+
 			describer := &PipelineDescriber{
-				resourceName:  pipelineResourceName,
-				pipelineName:  pipelineName,
+				pipeline:      mockDeployedPipeline,
 				showResources: tc.inShowResource,
 				pipelineSvc:   mockPipelineGetter,
 				cfn:           mockCFN,
