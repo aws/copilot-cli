@@ -65,11 +65,13 @@ Task Configuration Flags
       --task-role string               Optional. The ARN of the role for the task to use.
 
 Utility Flags
-      --follow                Optional. Specifies if the logs should be streamed.
-      --generate-cmd string   Optional. Generate a command with a pre-filled value for each flag.
-                              To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
-                              Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
-                              Cannot be specified with any other flags.
+      --follow                        Optional. Specifies if the logs should be streamed.
+      --generate-cmd string           Optional. Generate a command with a pre-filled value for each flag.
+                                      To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
+                                      Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
+                                      Cannot be specified with any other flags.
+      --acknowledge-secrets-access    Optional. Skip the confirmation question and grant access to the secrets specified by --secrets flag.
+                                      This flag is useful only when '--secret' flag is specified
 ```
 
 ## Examples

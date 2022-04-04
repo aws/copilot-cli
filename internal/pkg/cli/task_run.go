@@ -1097,7 +1097,6 @@ func BuildTaskRunCmd() *cobra.Command {
 	taskFlags.AddFlag(cmd.Flags().Lookup(archFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(envVarsFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(secretsFlag))
-	taskFlags.AddFlag(cmd.Flags().Lookup(acknowledgeSecretsAccessFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(commandFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(entrypointFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(resourceTagsFlag))
@@ -1105,6 +1104,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	utilityFlags := pflag.NewFlagSet("Utility", pflag.ContinueOnError)
 	utilityFlags.AddFlag(cmd.Flags().Lookup(followFlag))
 	utilityFlags.AddFlag(cmd.Flags().Lookup(generateCommandFlag))
+	utilityFlags.AddFlag(cmd.Flags().Lookup(acknowledgeSecretsAccessFlag))
 
 	// prettify help menu.
 	cmd.Annotations = map[string]string{
