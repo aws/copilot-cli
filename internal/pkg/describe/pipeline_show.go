@@ -12,8 +12,8 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	describeStack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	describestack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 
 	// TODO refactor this into our own pkg
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -29,7 +29,7 @@ type Pipeline struct {
 	Name string `json:"name"`
 	codepipeline.Pipeline
 
-	Resources []*describeStack.Resource `json:"resources,omitempty"`
+	Resources []*describestack.Resource `json:"resources,omitempty"`
 }
 
 // PipelineDescriber retrieves information about a deployed pipeline.
@@ -55,7 +55,7 @@ func NewPipelineDescriber(pipeline deploy.Pipeline, showResources bool) (*Pipeli
 
 		pipelineSvc:   pipelineSvc,
 		showResources: showResources,
-		cfn:           describeStack.NewStackDescriber(stack.NameForPipeline(pipeline.AppName, pipeline.Name, pipeline.IsLegacy), sess),
+		cfn:           describestack.NewStackDescriber(stack.NameForPipeline(pipeline.AppName, pipeline.Name, pipeline.IsLegacy), sess),
 	}, nil
 }
 
@@ -65,7 +65,7 @@ func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline: %w", err)
 	}
-	var resources []*describeStack.Resource
+	var resources []*describestack.Resource
 	if d.showResources {
 		stackResources, err := d.cfn.Resources()
 		if err != nil && !IsStackNotExistsErr(err) {

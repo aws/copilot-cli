@@ -12,6 +12,7 @@ import (
 	"github.com/dustin/go-humanize"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -115,10 +116,16 @@ func TestPipelineStatusDescriber_Describe(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
+			mockDeployedPipeline := deploy.Pipeline{
+				Name:         pipelineName,
+				ResourceName: pipelineResourceName,
+				AppName:      "mockApp",
+				IsLegacy:     false,
+			}
+
 			describer := &PipelineStatusDescriber{
-				resourceName: pipelineResourceName,
-				pipelineName: pipelineName,
-				pipelineSvc:  mockPipelineStateGetter,
+				pipeline:    mockDeployedPipeline,
+				pipelineSvc: mockPipelineStateGetter,
 			}
 
 			// WHEN
