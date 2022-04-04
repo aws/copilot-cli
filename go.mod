@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.43.26
+	github.com/aws/aws-sdk-go v1.43.31
 	github.com/briandowns/spinner v1.18.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
