@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"math"
 	"strings"
 )
 
@@ -61,51 +60,11 @@ func NameForAppStackSet(app string) string {
 }
 
 // NameForPipeline returns the stack name for a pipeline, depending on whether it has been deployed using the legacy scheme.
-// It keeps the stack name under 128 by first attempting to chop the app name to length of 7, and then chop pipeline name
-// so that the total length is 128.
+// Note that it doesn't cut name to length of 128 like service stack name. It expects CloudFormation to error out
+// when the name is to long.
 func NameForPipeline(app string, pipeline string, isLegacy bool) string {
 	if isLegacy {
 		return pipeline
 	}
-	raw := fmt.Sprintf(fmtPipelineNamespaced, app, pipeline)
-	if len(raw) <= maxStackNameLength {
-		return raw
-	}
-	lenToChop := len(raw) - maxStackNameLength
-	choppedApp := cutNFromHead(app, int(math.Min(float64(len(app)-minNamePartsLength), float64(lenToChop))))
-
-	lenToChop = lenToChop - (len(app) - len(choppedApp))
-	choppedPipeline := smartCutNFromString(pipeline, lenToChop)
-	return fmt.Sprintf(fmtPipelineNamespaced, choppedApp, choppedPipeline)
-}
-
-func cutNFromHead(s string, n int) string {
-	if n <= 0 {
-		return s
-	}
-	if len(s) <= n {
-		return ""
-	}
-	return s[n:]
-}
-
-func smartCutNFromString(s string, n int) string {
-	if n <= 0 {
-		return s
-	}
-	if len(s) <= n {
-		return ""
-	}
-
-	// If we need to cut more than 1/3, we just cut from head.
-	if n > len(s)/3 {
-		return cutNFromHead(s, n)
-	}
-
-	head := len(s) / 3
-	if tail := len(s) - (head + n); tail < minNamePartsLength {
-		return cutNFromHead(s, n) // If too little consecutive letters are preserved at the end, we just cut from head.
-	}
-	chopped := s[:head] + s[head+n:]
-	return chopped
+	return fmt.Sprintf(fmtPipelineNamespaced, app, pipeline)
 }
