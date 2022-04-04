@@ -10,11 +10,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dustin/go-humanize/english"
-
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -103,7 +102,7 @@ type initPipelineOpts struct {
 	store          store
 	prompt         prompter
 	sel            pipelineEnvSelector
-	codePipeline   pipelineGetter
+	pipelineLister deployedPipelineLister
 
 	// Outputs stored on successful actions.
 	secret    string
@@ -113,10 +112,11 @@ type initPipelineOpts struct {
 	ccRegion  string
 
 	// Cached variables
-	wsAppName  string
-	fs         *afero.Afero
-	buffer     bytes.Buffer
-	envConfigs []*config.Environment
+	wsAppName    string
+	fs           *afero.Afero
+	buffer       bytes.Buffer
+	envConfigs   []*config.Environment
+	manifestPath string // relative path to pipeline's manifest.yml file
 }
 
 type artifactBucket struct {
@@ -158,7 +158,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
-		codePipeline:     codepipeline.New(defaultSession),
+		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
 	}, nil
 }
 
@@ -204,17 +204,14 @@ func (o *initPipelineOpts) Ask() error {
 // We check for the existence of the name and the namespaced name to reduce
 // potential confusion with a legacy pipeline.
 func (o *initPipelineOpts) validateDuplicatePipeline() error {
-	// make sure pipeline isn't already deployed
-	names, err := o.codePipeline.ListPipelineNamesByTags(map[string]string{
-		deploy.AppTagKey: o.appName,
-	})
+	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
 	if err != nil {
-		return fmt.Errorf("validate if pipeline exists: %w", err)
+		return fmt.Errorf("list pipelines for app %s: %w", o.appName, err)
 	}
 
 	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
-	for _, name := range names {
-		if strings.EqualFold(name, o.name) || strings.EqualFold(name, fullName) {
+	for _, pipeline := range deployedPipelines {
+		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
 			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
 To recreate the pipeline, please run:
 %s
@@ -228,12 +225,12 @@ If you'd like a new default manifest, please manually delete the existing file, 
 	}
 
 	// make sure pipeline doesn't exist locally
-	pipelines, err := o.workspace.ListPipelines()
+	localPipelines, err := o.workspace.ListPipelines()
 	if err != nil {
 		return fmt.Errorf("get local pipelines: %w", err)
 	}
 
-	for _, pipeline := range pipelines {
+	for _, pipeline := range localPipelines {
 		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
 			log.Errorf(`It seems like you are trying to init a pipeline that exists,
 but has not been deployed. To deploy this pipeline, please run:
@@ -280,13 +277,15 @@ func (o *initPipelineOpts) Execute() error {
 		}
 	}
 
-	// write pipeline.yml file, populate with:
+	// write manifest.yml file, populate with:
 	//   - git repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
+	log.Infoln()
 	if err := o.createPipelineManifest(); err != nil {
 		return err
 	}
+	log.Infoln()
 	if err := o.createBuildspec(); err != nil {
 		return err
 	}
@@ -377,7 +376,6 @@ func (o *initPipelineOpts) getBranch() {
 	}
 	o.buffer.Reset()
 	log.Infof(`Your pipeline will follow branch '%s'.
-You may make changes in the pipeline manifest before deployment.
 `, color.HighlightUserInput(o.repoBranch))
 }
 
@@ -620,8 +618,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	for _, env := range o.envConfigs {
 
 		stage := manifest.PipelineStage{
-			Name:             env.Name,
-			RequiresApproval: env.Prod,
+			Name: env.Name,
 		}
 		stages = append(stages, stage)
 	}
@@ -632,17 +629,16 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	}
 
 	var manifestExists bool
-	manifestPath, err := o.workspace.WritePipelineManifest(manifest, o.name)
+	o.manifestPath, err = o.workspace.WritePipelineManifest(manifest, o.name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
 			return fmt.Errorf("write pipeline manifest to workspace: %w", err)
 		}
 		manifestExists = true
-		manifestPath = e.FileName
+		o.manifestPath = e.FileName
 	}
-
-	manifestPath, err = relPath(manifestPath)
+	o.manifestPath, err = o.workspace.Rel(o.manifestPath)
 	if err != nil {
 		return err
 	}
@@ -651,9 +647,9 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	if manifestExists {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPath))
-	log.Infof(`The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.
-Update the file to add additional stages, change the branch to be tracked, or add test commands or manual approval actions.
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+	log.Debug(`The manifest contains configurations for your pipeline.
+Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
 `)
 	return nil
 }
@@ -666,10 +662,12 @@ func (o *initPipelineOpts) createBuildspec() error {
 	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
+		ManifestPath       string
 		ArtifactBuckets    []artifactBucket
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
 		Version:            version.Version,
+		ManifestPath:       o.manifestPath,
 		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {
@@ -694,9 +692,9 @@ func (o *initPipelineOpts) createBuildspec() error {
 		return err
 	}
 	log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-	log.Infof(`The buildspec contains the commands to build and push your container images to your ECR repositories.
-Update the %s phase to unit test your services before pushing the images.
-`, color.HighlightResource("build"))
+	log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
+Update the "build" phase to unit test your services before pushing the images.
+`)
 
 	return nil
 }

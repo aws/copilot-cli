@@ -2,31 +2,30 @@ List of all available properties for a Copilot pipeline manifest. To learn more 
 
 ???+ note "Sample manifest for a pipeline triggered from a GitHub repo"
 
-```yaml
-    name: pipeline-sample-app-frontend
-    version: 1
-
-    source:
-      provider: GitHub
-      properties:
-        branch: main
-        repository: https://github.com/<user>/sample-app-frontend
-        # Optional: specify the name of an existing CodeStar Connections connection.
-        connection_name: a-connection
-
-    build:
-      image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
-
-    stages:
-        -
-          name: test
-          test_commands:
-            - make test
-            - echo "woo! Tests passed"
-        -
-          name: prod
-          requires_approval: true
-```
+    ```yaml
+        name: frontend
+    
+        source:
+          provider: GitHub
+          properties:
+            branch: main
+            repository: https://github.com/<user>/frontend
+            # Optional: specify the name of an existing CodeStar Connections connection.
+            connection_name: a-connection
+    
+        build:
+          image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+    
+        stages:
+            -
+              name: test
+              test_commands:
+                - make test
+                - echo "woo! Tests passed"
+            -
+              name: prod
+              requires_approval: true
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your pipeline.

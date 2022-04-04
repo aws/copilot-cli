@@ -142,6 +142,7 @@ type store interface {
 type deployedEnvironmentLister interface {
 	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
 	ListDeployedServices(appName, envName string) ([]string, error)
+	ListDeployedJobs(appName string, envName string) ([]string, error)
 	IsServiceDeployed(appName, envName string, svcName string) (bool, error)
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
@@ -242,6 +243,7 @@ type wsPipelineManifestReader interface {
 type wsPipelineIniter interface {
 	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
+	Rel(path string) (string, error)
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
@@ -283,6 +285,7 @@ type wsWlDirReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
+	Rel(path string) (string, error)
 }
 
 type wsPipelineGetter interface {
@@ -346,7 +349,7 @@ type pipelineDeployer interface {
 	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
 	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
-	DeletePipeline(pipelineName string) error
+	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	appResourcesGetter
 	// TODO: Add StreamPipelineCreation method
@@ -440,8 +443,10 @@ type appUpgrader interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
-	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
-	GetPipelinesByTags(tags map[string]string) ([]*codepipeline.Pipeline, error)
+}
+
+type deployedPipelineLister interface {
+	ListDeployedPipelines(appName string) ([]deploy.Pipeline, error)
 }
 
 type executor interface {
@@ -483,7 +488,7 @@ type wsPipelineSelector interface {
 
 type codePipelineSelector interface {
 	appSelector
-	DeployedPipeline(prompt, help string, tags map[string]string) (string, error)
+	DeployedPipeline(prompt, help, app string) (deploy.Pipeline, error)
 }
 
 type wsSelector interface {

@@ -5,14 +5,17 @@ package cli
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"io"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -41,14 +44,18 @@ type showPipelineOpts struct {
 	showPipelineVars
 
 	// Interfaces to dependencies
-	w             io.Writer
-	ws            wsPipelineReader
-	store         applicationStore
-	codepipeline  pipelineGetter
-	describer     describer
-	initDescriber func(bool) error
-	sel           codePipelineSelector
-	prompt        prompter
+	w                      io.Writer
+	ws                     wsPipelineReader
+	store                  applicationStore
+	codepipeline           pipelineGetter
+	describer              describer
+	initDescriber          func(bool) error
+	sel                    codePipelineSelector
+	deployedPipelineLister deployedPipelineLister
+	prompt                 prompter
+
+	// Cached variables.
+	targetPipeline *deploy.Pipeline
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
@@ -62,19 +69,21 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 	codepipeline := codepipeline.New(defaultSession)
+	pipelineLister := deploy.NewPipelineStore(rg.New(defaultSession))
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := &showPipelineOpts{
-		showPipelineVars: vars,
-		ws:               ws,
-		store:            store,
-		codepipeline:     codepipeline,
-		sel:              selector.NewAppPipelineSelect(prompter, store, codepipeline),
-		prompt:           prompter,
-		w:                log.OutputWriter,
+		showPipelineVars:       vars,
+		ws:                     ws,
+		store:                  store,
+		codepipeline:           codepipeline,
+		deployedPipelineLister: pipelineLister,
+		sel:                    selector.NewAppPipelineSelect(prompter, store, pipelineLister),
+		prompt:                 prompter,
+		w:                      log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
-		describer, err := describe.NewPipelineDescriber(opts.name, enableResources)
+		describer, err := describe.NewPipelineDescriber(opts.targetPipeline.ResourceName, enableResources)
 		if err != nil {
 			return fmt.Errorf("new pipeline describer: %w", err)
 		}
@@ -102,17 +111,17 @@ func (o *showPipelineOpts) Ask() error {
 		}
 	}
 	if o.name != "" {
-		_, err := o.codepipeline.GetPipeline(o.name)
-		if err != nil {
+		if _, err := o.getTargetPipeline(); err != nil {
 			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
 		}
 		return nil
 	}
-	pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtPipelineShowPrompt, color.HighlightUserInput(o.appName)))
+	pipeline, err := askDeployedPipelineName(o.sel, fmt.Sprintf(fmtPipelineShowPrompt, color.HighlightUserInput(o.appName)), o.appName)
 	if err != nil {
 		return err
 	}
-	o.name = pipelineName
+	o.name = pipeline.Name
+	o.targetPipeline = &pipeline
 	return nil
 }
 
@@ -139,6 +148,18 @@ func (o *showPipelineOpts) Execute() error {
 	}
 
 	return nil
+}
+
+func (o *showPipelineOpts) getTargetPipeline() (deploy.Pipeline, error) {
+	if o.targetPipeline != nil {
+		return *o.targetPipeline, nil
+	}
+	pipeline, err := getDeployedPipelineInfo(o.deployedPipelineLister, o.appName, o.name)
+	if err != nil {
+		return deploy.Pipeline{}, err
+	}
+	o.targetPipeline = &pipeline
+	return pipeline, nil
 }
 
 func (o *showPipelineOpts) askAppName() error {

@@ -238,7 +238,7 @@ func TestGHv1PipelineCreation(t *testing.T) {
 				RepositoryURL:               "https://github.com/chicken/wings",
 				PersonalAccessTokenSecretID: secretId,
 			},
-			Build: deploy.PipelineBuildFromManifest(nil),
+			Build: deploy.PipelineBuildFromManifest(nil, fmt.Sprintf("copilot/pipelines/%s/", app.Name)),
 			Stages: []deploy.PipelineStage{
 				{
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{

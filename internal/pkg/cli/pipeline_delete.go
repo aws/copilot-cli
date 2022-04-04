@@ -6,10 +6,14 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -21,8 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -57,15 +59,19 @@ type deletePipelineOpts struct {
 
 	ghAccessTokenSecretName string
 
-	// Interfaces to dependencies
-	pipelineDeployer pipelineDeployer
-	codepipeline     pipelineGetter
-	prog             progress
-	sel              codePipelineSelector
-	prompt           prompter
-	secretsmanager   secretsManager
-	ws               wsPipelineGetter
-	store            store
+	// Interfaces to dependencies.
+	pipelineDeployer       pipelineDeployer
+	codepipeline           pipelineGetter
+	prog                   progress
+	sel                    codePipelineSelector
+	prompt                 prompter
+	secretsmanager         secretsManager
+	ws                     wsPipelineGetter
+	deployedPipelineLister deployedPipelineLister
+	store                  store
+
+	// Cached variables.
+	targetPipeline *deploy.Pipeline
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
@@ -81,17 +87,19 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	codepipeline := codepipeline.New(defaultSess)
+	pipelineLister := deploy.NewPipelineStore(rg.New(defaultSess))
 
 	opts := &deletePipelineOpts{
-		deletePipelineVars: vars,
-		codepipeline:       codepipeline,
-		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:             prompter,
-		secretsmanager:     secretsmanager.New(defaultSess),
-		pipelineDeployer:   cloudformation.New(defaultSess),
-		ws:                 ws,
-		store:              ssmStore,
-		sel:                selector.NewAppPipelineSelect(prompter, ssmStore, codepipeline),
+		deletePipelineVars:     vars,
+		codepipeline:           codepipeline,
+		prog:                   termprogress.NewSpinner(log.DiagnosticWriter),
+		prompt:                 prompter,
+		secretsmanager:         secretsmanager.New(defaultSess),
+		pipelineDeployer:       cloudformation.New(defaultSess),
+		deployedPipelineLister: pipelineLister,
+		ws:                     ws,
+		store:                  ssmStore,
+		sel:                    selector.NewAppPipelineSelect(prompter, ssmStore, pipelineLister),
 	}
 
 	return opts, nil
@@ -113,16 +121,18 @@ func (o *deletePipelineOpts) Ask() error {
 			return err
 		}
 	}
+
 	if o.name != "" {
-		if _, err := o.codepipeline.GetPipeline(o.name); err != nil {
-			return err
+		if _, err := o.getTargetPipeline(); err != nil {
+			return fmt.Errorf("validate pipeline name %s: %w", o.name, err)
 		}
 	} else {
-		pipelineName, err := askDeployedPipelineName(o.sel, o.appName, fmt.Sprintf(fmtPipelineDeletePrompt, color.HighlightUserInput(o.appName)))
+		pipeline, err := askDeployedPipelineName(o.sel, fmt.Sprintf(fmtPipelineDeletePrompt, color.HighlightUserInput(o.appName)), o.appName)
 		if err != nil {
 			return err
 		}
-		o.name = pipelineName
+		o.name = pipeline.Name
+		o.targetPipeline = &pipeline
 	}
 
 	if o.skipConfirmation {
@@ -159,14 +169,37 @@ func (o *deletePipelineOpts) Execute() error {
 	return nil
 }
 
-func askDeployedPipelineName(sel codePipelineSelector, appName, msg string) (string, error) {
-	pipeline, err := sel.DeployedPipeline(msg, "", map[string]string{
-		deploy.AppTagKey: appName,
-	})
+func (o *deletePipelineOpts) getTargetPipeline() (deploy.Pipeline, error) {
+	if o.targetPipeline != nil {
+		return *o.targetPipeline, nil
+	}
+	pipeline, err := getDeployedPipelineInfo(o.deployedPipelineLister, o.appName, o.name)
 	if err != nil {
-		return "", fmt.Errorf("select deployed pipelines: %w", err)
+		return deploy.Pipeline{}, err
+	}
+	o.targetPipeline = &pipeline
+	return pipeline, nil
+}
+
+func askDeployedPipelineName(sel codePipelineSelector, msg, appName string) (deploy.Pipeline, error) {
+	pipeline, err := sel.DeployedPipeline(msg, "", appName)
+	if err != nil {
+		return deploy.Pipeline{}, fmt.Errorf("select deployed pipelines: %w", err)
 	}
 	return pipeline, nil
+}
+
+func getDeployedPipelineInfo(lister deployedPipelineLister, app, name string) (deploy.Pipeline, error) {
+	pipelines, err := lister.ListDeployedPipelines(app)
+	if err != nil {
+		return deploy.Pipeline{}, fmt.Errorf("list deployed pipelines: %w", err)
+	}
+	for _, pipeline := range pipelines {
+		if pipeline.Name == name {
+			return pipeline, nil
+		}
+	}
+	return deploy.Pipeline{}, fmt.Errorf("cannot find pipeline named %s", name)
 }
 
 func (o *deletePipelineOpts) askAppName() error {
@@ -241,12 +274,16 @@ func (o *deletePipelineOpts) deleteSecret() error {
 }
 
 func (o *deletePipelineOpts) deleteStack() error {
-	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.name, o.appName))
-	if err := o.pipelineDeployer.DeletePipeline(o.name); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.name, o.appName, err))
+	pipeline, err := o.getTargetPipeline()
+	if err != nil {
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.name, o.appName))
+	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, pipeline.Name, o.appName))
+	if err := o.pipelineDeployer.DeletePipeline(pipeline); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, pipeline.Name, o.appName, err))
+		return err
+	}
+	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, pipeline.Name, o.appName))
 	return nil
 }
 

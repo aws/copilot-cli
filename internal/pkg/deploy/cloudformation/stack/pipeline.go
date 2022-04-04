@@ -30,7 +30,7 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 
 // StackName returns the name of the CloudFormation stack.
 func (p *pipelineStackConfig) StackName() string {
-	return p.Name
+	return NameForPipeline(p.AppName, p.Name, p.IsLegacy)
 }
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
@@ -64,7 +64,11 @@ func (p *pipelineStackConfig) Parameters() ([]*cloudformation.Parameter, error) 
 
 // Tags returns the tags that should be applied to the pipeline CloudFormation stack.
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
-	return mergeAndFlattenTags(p.AdditionalTags, map[string]string{
+	defaultTags := map[string]string{
 		deploy.AppTagKey: p.AppName,
-	})
+	}
+	if !p.IsLegacy {
+		defaultTags[deploy.PipelineTagKey] = p.Name
+	}
+	return mergeAndFlattenTags(p.AdditionalTags, defaultTags)
 }
