@@ -56,7 +56,7 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
-	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
+	fmtPipelineStackName  = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	defaultBranch         = deploy.DefaultPipelineBranch
 	// For a GitHub repository.
 	githubURL     = "github.com"
@@ -217,7 +217,7 @@ func (o *initPipelineOpts) validateDuplicatePipeline() error {
 		return fmt.Errorf("list pipelines for app %s: %w", o.appName, err)
 	}
 
-	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
+	fullName := fmt.Sprintf(fmtPipelineStackName, o.appName, o.name)
 	for _, pipeline := range deployedPipelines {
 		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
 			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
@@ -303,13 +303,21 @@ func (o *initPipelineOpts) RequiredActions() []string {
 }
 
 func (o *initPipelineOpts) askPipelineName() error {
+	promptOpts := []prompt.PromptConfig{
+		prompt.WithFinalMessage("Pipeline name:"),
+	}
+
+	// only show suggestion if [repo]-[branch] is a valid pipeline name
+	suggestion := strings.ToLower(fmt.Sprintf("%s-%s", o.repoName, o.repoBranch))
+	if err := validatePipelineName(suggestion, o.appName); err == nil {
+		promptOpts = append(promptOpts, prompt.WithDefaultInput(color.Faint.Sprint(suggestion)))
+	}
+
 	name, err := o.prompt.Get(fmt.Sprintf(fmtPipelineInitNamePrompt, color.Emphasize("name")),
 		pipelineInitNameHelpPrompt,
 		func(val interface{}) error {
 			return validatePipelineName(val, o.appName)
-		},
-		prompt.WithDefaultInput(color.Faint.Sprintf("%s-%s", o.repoName, o.repoBranch)),
-		prompt.WithFinalMessage("Pipeline name:"))
+		}, promptOpts...)
 	if err != nil {
 		return fmt.Errorf("get pipeline name: %w", err)
 	}

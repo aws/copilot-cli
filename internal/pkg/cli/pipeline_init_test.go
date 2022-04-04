@@ -43,7 +43,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		wantedName  = "mypipe"
 	)
 	mockError := errors.New("some error")
-	fullName := fmt.Sprintf(fmtPipelineName, mockAppName, wantedName)
+	fullName := fmt.Sprintf(fmtPipelineStackName, mockAppName, wantedName)
 	mockApp := &config.Application{
 		Name: mockAppName,
 	}
