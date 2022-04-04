@@ -308,7 +308,7 @@ func (o *initPipelineOpts) askPipelineName() error {
 		func(val interface{}) error {
 			return validatePipelineName(val, o.appName)
 		},
-		prompt.WithDefaultInput(fmt.Sprintf("%s-%s", o.repoName, o.repoBranch)),
+		prompt.WithDefaultInput(color.Faint.Sprintf("%s-%s", o.repoName, o.repoBranch)),
 		prompt.WithFinalMessage("Pipeline name:"))
 	if err != nil {
 		return fmt.Errorf("get pipeline name: %w", err)
