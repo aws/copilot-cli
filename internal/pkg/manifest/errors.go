@@ -26,7 +26,7 @@ type ErrInvalidPipelineManifestVersion struct {
 }
 
 func (e *ErrInvalidPipelineManifestVersion) Error() string {
-	return fmt.Sprintf("pipeline.yml contains invalid schema version: %d", e.invalidVersion)
+	return fmt.Sprintf("manifest.yml contains invalid schema version: %d", e.invalidVersion)
 }
 
 // Is compares the 2 errors. Only returns true if the errors are of the same

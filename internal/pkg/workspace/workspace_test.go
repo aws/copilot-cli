@@ -888,7 +888,7 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				fs.MkdirAll(copilotDir, 0755)
-				manifest, _ := fs.Create("/copilot/pipeline.yml")
+				manifest, _ := fs.Create("/copilot/pipelines/my-pipeline/manifest.yml")
 				defer manifest.Close()
 				manifest.Write([]byte(`
 name: somePipelineName
@@ -911,7 +911,7 @@ version: 1
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				fs.MkdirAll(copilotDir, 0755)
-				manifest, _ := fs.Create("/copilot/pipeline.yml")
+				manifest, _ := fs.Create("/copilot/pipelines/my-pipeline/manifest.yml")
 				defer manifest.Close()
 				manifest.Write([]byte(`
 name: somePipelineName
@@ -919,7 +919,7 @@ version: 0
 `))
 				return fs
 			},
-			expectedError: errors.New("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
+			expectedError: errors.New("unmarshal pipeline manifest: manifest.yml contains invalid schema version: 0"),
 		},
 	}
 
@@ -933,7 +933,7 @@ version: 0
 			}
 
 			// WHEN
-			_, err := ws.ReadPipelineManifest("/copilot/pipeline.yml")
+			_, err := ws.ReadPipelineManifest("/copilot/pipelines/my-pipeline/manifest.yml")
 
 			// THEN
 			if tc.expectedError != nil {

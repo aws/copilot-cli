@@ -153,7 +153,7 @@ func NewProvider(configs interface{}) (Provider, error) {
 type PipelineSchemaMajorVersion int
 
 const (
-	// Ver1 is the current schema major version of the pipeline.yml file.
+	// Ver1 is the current schema major version of the pipelines/*/manifest.yml file.
 	Ver1 PipelineSchemaMajorVersion = iota + 1
 )
 
@@ -239,7 +239,7 @@ func UnmarshalPipeline(in []byte) (*Pipeline, error) {
 		return &pm, nil
 	}
 	// we should never reach here, this is just to make the compiler happy
-	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
+	return nil, errors.New("unexpected error occurs while unmarshalling manifest.yml")
 }
 
 // IsCodeStarConnection indicates to the manifest if this source requires a CSC connection.
