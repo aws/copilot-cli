@@ -1285,21 +1285,6 @@ func (mr *MockdeployedEnvironmentListerMockRecorder) IsServiceDeployed(appName, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceDeployed", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).IsServiceDeployed), appName, envName, svcName)
 }
 
-// ListDeployedServices mocks base method.
-func (m *MockdeployedEnvironmentLister) ListDeployedServices(appName, envName string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDeployedServices indicates an expected call of ListDeployedServices.
-func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedServices), appName, envName)
-}
-
 // ListDeployedJobs mocks base method.
 func (m *MockdeployedEnvironmentLister) ListDeployedJobs(appName, envName string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -1313,6 +1298,21 @@ func (m *MockdeployedEnvironmentLister) ListDeployedJobs(appName, envName string
 func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedJobs(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedJobs), appName, envName)
+}
+
+// ListDeployedServices mocks base method.
+func (m *MockdeployedEnvironmentLister) ListDeployedServices(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedServices indicates an expected call of ListDeployedServices.
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedServices), appName, envName)
 }
 
 // ListEnvironmentsDeployedTo mocks base method.
@@ -3490,17 +3490,17 @@ func (mr *MockpipelineDeployerMockRecorder) CreatePipeline(env, bucketName inter
 }
 
 // DeletePipeline mocks base method.
-func (m *MockpipelineDeployer) DeletePipeline(pipelineName string) error {
+func (m *MockpipelineDeployer) DeletePipeline(pipeline deploy0.Pipeline) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePipeline", pipelineName)
+	ret := m.ctrl.Call(m, "DeletePipeline", pipeline)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePipeline indicates an expected call of DeletePipeline.
-func (mr *MockpipelineDeployerMockRecorder) DeletePipeline(pipelineName interface{}) *gomock.Call {
+func (mr *MockpipelineDeployerMockRecorder) DeletePipeline(pipeline interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).DeletePipeline), pipelineName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).DeletePipeline), pipeline)
 }
 
 // GetAppResourcesByRegion mocks base method.
@@ -4028,17 +4028,17 @@ func (mr *MockdeployerMockRecorder) DeleteEnvironment(appName, envName, cfnExecR
 }
 
 // DeletePipeline mocks base method.
-func (m *Mockdeployer) DeletePipeline(pipelineName string) error {
+func (m *Mockdeployer) DeletePipeline(pipeline deploy0.Pipeline) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePipeline", pipelineName)
+	ret := m.ctrl.Call(m, "DeletePipeline", pipeline)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePipeline indicates an expected call of DeletePipeline.
-func (mr *MockdeployerMockRecorder) DeletePipeline(pipelineName interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) DeletePipeline(pipeline interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipeline", reflect.TypeOf((*Mockdeployer)(nil).DeletePipeline), pipelineName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipeline", reflect.TypeOf((*Mockdeployer)(nil).DeletePipeline), pipeline)
 }
 
 // DeployAndRenderEnvironment mocks base method.
@@ -5230,10 +5230,10 @@ func (mr *MockcodePipelineSelectorMockRecorder) Application(prompt, help interfa
 }
 
 // DeployedPipeline mocks base method.
-func (m *MockcodePipelineSelector) DeployedPipeline(prompt, help, app string) (string, error) {
+func (m *MockcodePipelineSelector) DeployedPipeline(prompt, help, app string) (deploy0.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployedPipeline", prompt, help, app)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(deploy0.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

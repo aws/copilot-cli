@@ -752,27 +752,30 @@ func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineMani
 }
 
 // DeployedPipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *CodePipelineSelect) DeployedPipeline(msg, help, app string) (string, error) {
+func (s *CodePipelineSelect) DeployedPipeline(msg, help, app string) (deploy.Pipeline, error) {
 	pipelines, err := s.pipelineLister.ListDeployedPipelines(app)
 	if err != nil {
-		return "", fmt.Errorf("list deployed pipelines: %w", err)
+		return deploy.Pipeline{}, fmt.Errorf("list deployed pipelines: %w", err)
 	}
 	if len(pipelines) == 0 {
-		return "", errors.New("no deployed pipelines found")
+		return deploy.Pipeline{}, errors.New("no deployed pipelines found")
 	}
 	if len(pipelines) == 1 {
 		log.Infof("Only one deployed pipeline found; defaulting to: %s\n", color.HighlightUserInput(pipelines[0].Name))
-		return pipelines[0].Name, nil
+		return pipelines[0], nil
 	}
+
 	var pipelineNames []string
+	pipelineNameToInfo := make(map[string]deploy.Pipeline)
 	for _, pipeline := range pipelines {
 		pipelineNames = append(pipelineNames, pipeline.Name)
+		pipelineNameToInfo[pipeline.Name] = pipeline
 	}
 	selectedPipeline, err := s.prompt.SelectOne(msg, help, pipelineNames, prompt.WithFinalMessage(pipelineFinalMsg))
 	if err != nil {
-		return "", fmt.Errorf("select pipeline: %w", err)
+		return deploy.Pipeline{}, fmt.Errorf("select pipeline: %w", err)
 	}
-	return selectedPipeline, nil
+	return pipelineNameToInfo[selectedPipeline], nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.
