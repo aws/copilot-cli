@@ -74,6 +74,9 @@ Configuration for CodeBuild project.
 <span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
 The URI that identifies the Docker image to use for this build project. As of now, `aws/codebuild/amazonlinux2-x86_64-standard:3.0` is used by default.
 
+<span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
+Optional. The URI that identifies a buildspec to use for this build project. By default, Copilot will generate one for you.
+
 <div class="separator"></div>
 
 <a id="stages" href="#stages" class="field">`stages`</a> <span class="type">Array of Maps</span>  
