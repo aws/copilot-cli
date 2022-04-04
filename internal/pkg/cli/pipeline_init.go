@@ -175,15 +175,23 @@ func (o *initPipelineOpts) Ask() error {
 	}
 	o.appName = o.wsAppName
 
+	if err := o.askOrValidateURL(); err != nil {
+		return err
+	}
+
+	if err := o.parseRepoDetails(); err != nil {
+		return err
+	}
+
+	if o.repoBranch == "" {
+		o.getBranch()
+	}
+
 	if err := o.askOrValidatePipelineName(); err != nil {
 		return err
 	}
 
 	if err := o.validateDuplicatePipeline(); err != nil {
-		return err
-	}
-
-	if err := o.askOrValidateURL(); err != nil {
 		return err
 	}
 
@@ -265,12 +273,6 @@ func (o *initPipelineOpts) askOrValidateURL() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
-	if o.repoBranch == "" {
-		o.getBranch()
-	}
-	if err := o.parseRepoDetails(); err != nil {
-		return err
-	}
 	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
@@ -306,6 +308,7 @@ func (o *initPipelineOpts) askPipelineName() error {
 		func(val interface{}) error {
 			return validatePipelineName(val, o.appName)
 		},
+		prompt.WithDefaultInput(fmt.Sprintf("%s-%s", o.repoName, o.repoBranch)),
 		prompt.WithFinalMessage("Pipeline name:"))
 	if err != nil {
 		return fmt.Errorf("get pipeline name: %w", err)
@@ -448,8 +451,7 @@ func (o *initPipelineOpts) selectURL() error {
 
 	// If there is only one returned URL, set it rather than prompt to select.
 	if len(urls) == 1 {
-		log.Infof(`Only one git repository detected. Your pipeline will follow '%s'.
-You may make changes in the generated pipeline manifest before deployment.
+		log.Infof(`Only one git remote detected. Your pipeline will follow '%s'.
 `, color.HighlightUserInput(urls[0]))
 		o.repoURL = urls[0]
 		return nil

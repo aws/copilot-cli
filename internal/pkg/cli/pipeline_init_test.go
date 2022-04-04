@@ -81,9 +81,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedError: fmt.Errorf("get application ghost-app configuration: some error"),
 		},
+		// TODO add repo/branch tests here
 		"invalid pipeline name": {
 			inWsAppName: mockAppName,
 			inName:      "1234",
+			inRepoURL:   githubAnotherURL,
+			inGitBranch: "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication("my-app").Return(mockApp, nil)
 			},
@@ -92,6 +95,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		},
 		"returns an error if fail to get pipeline name": {
 			inWsAppName: mockAppName,
+			inRepoURL:   githubAnotherURL,
+			inGitBranch: "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockPrompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -103,6 +108,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error on duplicate deployed pipeline": {
 			inWsAppName: mockAppName,
 			inName:      wantedName,
+			inGitBranch: "main",
+			inRepoURL:   githubAnotherURL,
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{
@@ -124,6 +131,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error on duplicate short name deployed pipeline": {
 			inWsAppName: mockAppName,
 			inName:      wantedName,
+			inRepoURL:   githubAnotherURL,
+			inGitBranch: "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{
@@ -145,6 +154,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error if fail to check against deployed pipelines": {
 			inWsAppName: mockAppName,
 			inName:      wantedName,
+			inRepoURL:   githubAnotherURL,
+			inGitBranch: "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return(nil, mockError)
@@ -155,6 +166,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error on duplicate local pipeline": {
 			inWsAppName: mockAppName,
 			inName:      wantedName,
+			inRepoURL:   githubAnotherURL,
+			inGitBranch: "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
@@ -166,6 +179,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error if fail to check against local pipelines": {
 			inWsAppName: mockAppName,
 			inName:      wantedName,
+			inRepoURL:   githubAnotherURL,
+			inGitBranch: "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
@@ -177,6 +192,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"prompt for pipeline name": {
 			inWsAppName:    mockAppName,
 			inRepoURL:      githubAnotherURL,
+			inGitBranch:    "main",
 			inEnvironments: []string{"prod"},
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
@@ -195,8 +211,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments: []string{"test"},
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
-				m.mockWorkspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 			},
 
 			expectedError: errors.New("repository unsupported.org/repositories/repoName must be from a supported provider: GitHub, CodeCommit or Bitbucket"),
@@ -206,6 +220,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:         wantedName,
 			inRepoURL:      "https://github.com/badGoose/chaOS",
 			inEnvironments: []string{"test", "prod"},
+			inGitBranch:    "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "test").Return(nil, mockError)
@@ -220,6 +235,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:         wantedName,
 			inEnvironments: []string{"test", "prod"},
 			inRepoURL:      "https://github.com/badGoose/chaOS",
+			inGitBranch:    "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "test").Return(
@@ -239,8 +255,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inName:         wantedName,
 			inEnvironments: []string{"test", "prod"},
 			inRepoURL:      "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
+			inGitBranch:    "main",
 			setupMocks: func(m pipelineInitMocks) {
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.mockSessProvider.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "test").Return(
 					&config.Environment{
 						Name: "test",
@@ -255,14 +277,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		},
 		"no flags, prompts for all input, success case for selecting URL": {
 			inWsAppName:         mockAppName,
-			inEnvironments:      []string{},
-			inRepoURL:           "",
 			inGitHubAccessToken: githubToken,
-			inGitBranch:         "",
 			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
 			setupMocks: func(m pipelineInitMocks) {
-				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name:   "test",
 					Region: "us-west-2",
@@ -279,17 +299,15 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 		},
 		"returns error if fail to list environments": {
-			inWsAppName:    mockAppName,
-			inName:         wantedName,
-			inEnvironments: []string{},
-			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
+			inWsAppName: mockAppName,
+			inName:      wantedName,
+			inRepoURL:   githubAnotherURL,
+			inGitBranch: "main",
 			setupMocks: func(m pipelineInitMocks) {
-				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.mockPrompt.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
-				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
+				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			expectedError: fmt.Errorf("select environments: some error"),
@@ -301,11 +319,9 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments: []string{},
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 			setupMocks: func(m pipelineInitMocks) {
+				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				m.mockPrompt.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", mockError).Times(1)
-				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
-				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
 			},
 
 			expectedError: fmt.Errorf("select URL: some error"),
@@ -313,21 +329,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error if fail to get env config": {
 			inWsAppName:    mockAppName,
 			inName:         wantedName,
-			inRepoURL:      "",
+			inRepoURL:      githubAnotherURL,
+			inGitBranch:    "main",
 			inEnvironments: []string{},
-			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 			setupMocks: func(m pipelineInitMocks) {
-				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.mockPrompt.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
-				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
+				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
+				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name:   "test",
 					Region: "us-west-2",
 				}, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "prod").Return(nil, errors.New("some error"))
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
-				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
 			},
 
 			expectedError: fmt.Errorf("validate environment prod: some error"),
@@ -335,11 +349,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"skip selector prompt if only one repo URL": {
 			inWsAppName: mockAppName,
 			inName:      wantedName,
+			inGitBranch: "main",
 			buffer:      *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
 			setupMocks: func(m pipelineInitMocks) {
-				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 				m.mockStore.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.mockRunner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
+				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
+				m.mockSelector.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 				m.mockStore.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name:   "test",
 					Region: "us-west-2",
@@ -348,8 +365,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					Name:   "prod",
 					Region: "us-west-2",
 				}, nil)
-				m.mockPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
-				m.mockWorkspace.EXPECT().ListPipelines().Return(nil, nil)
 			},
 		},
 	}
@@ -360,22 +375,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockRunner := mocks.NewMockrunner(ctrl)
-			mocksSessProvider := mocks.NewMocksessionProvider(ctrl)
-			mockSelector := mocks.NewMockpipelineEnvSelector(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			mockPipelineLister := mocks.NewMockdeployedPipelineLister(ctrl)
-			mockWorkspace := mocks.NewMockwsPipelineIniter(ctrl)
-
 			mocks := pipelineInitMocks{
-				mockPrompt:         mockPrompt,
-				mockRunner:         mockRunner,
-				mockSessProvider:   mocksSessProvider,
-				mockSelector:       mockSelector,
-				mockStore:          mockStore,
-				mockPipelineLister: mockPipelineLister,
-				mockWorkspace:      mockWorkspace,
+				mockPrompt:         mocks.NewMockprompter(ctrl),
+				mockRunner:         mocks.NewMockrunner(ctrl),
+				mockSessProvider:   mocks.NewMocksessionProvider(ctrl),
+				mockSelector:       mocks.NewMockpipelineEnvSelector(ctrl),
+				mockStore:          mocks.NewMockstore(ctrl),
+				mockPipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
+				mockWorkspace:      mocks.NewMockwsPipelineIniter(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
@@ -388,16 +395,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					environments:      tc.inEnvironments,
 					repoURL:           tc.inRepoURL,
 					githubAccessToken: tc.inGitHubAccessToken,
+					repoBranch:        tc.inGitBranch,
 				},
 				wsAppName:      tc.inWsAppName,
-				prompt:         mockPrompt,
-				runner:         mockRunner,
-				sessProvider:   mocksSessProvider,
+				prompt:         mocks.mockPrompt,
+				runner:         mocks.mockRunner,
+				sessProvider:   mocks.mockSessProvider,
 				buffer:         tc.buffer,
-				sel:            mockSelector,
-				store:          mockStore,
-				pipelineLister: mockPipelineLister,
-				workspace:      mockWorkspace,
+				sel:            mocks.mockSelector,
+				store:          mocks.mockStore,
+				pipelineLister: mocks.mockPipelineLister,
+				workspace:      mocks.mockWorkspace,
 			}
 
 			// WHEN
