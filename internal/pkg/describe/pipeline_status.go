@@ -21,17 +21,19 @@ type pipelineStateGetter interface {
 
 // PipelineStatusDescriber retrieves status of a pipeline.
 type PipelineStatusDescriber struct {
+	resourceName string
 	pipelineName string
 	pipelineSvc  pipelineStateGetter
 }
 
 // PipelineStatus contains the status for a pipeline.
 type PipelineStatus struct {
+	Name string `json:"name"`
 	codepipeline.PipelineState
 }
 
 // NewPipelineStatusDescriber instantiates a new PipelineStatus struct.
-func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, error) {
+func NewPipelineStatusDescriber(resourceName string, pipelineName string) (*PipelineStatusDescriber, error) {
 	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, err
@@ -39,6 +41,7 @@ func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, 
 
 	pipelineSvc := codepipeline.New(sess)
 	return &PipelineStatusDescriber{
+		resourceName: resourceName,
 		pipelineName: pipelineName,
 		pipelineSvc:  pipelineSvc,
 	}, nil
@@ -46,11 +49,14 @@ func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, 
 
 // Describe returns status of a pipeline.
 func (d *PipelineStatusDescriber) Describe() (HumanJSONStringer, error) {
-	ps, err := d.pipelineSvc.GetPipelineState(d.pipelineName)
+	ps, err := d.pipelineSvc.GetPipelineState(d.resourceName)
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline status: %w", err)
 	}
-	pipelineStatus := &PipelineStatus{*ps}
+	pipelineStatus := &PipelineStatus{
+		Name:          d.pipelineName,
+		PipelineState: *ps,
+	}
 	return pipelineStatus, nil
 }
 

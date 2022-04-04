@@ -24,6 +24,7 @@ type pipelineGetter interface {
 
 // Pipeline contains serialized parameters for a pipeline.
 type Pipeline struct {
+	Name string `json:"pipelineName"`
 	codepipeline.Pipeline
 
 	Resources []*stack.Resource `json:"resources,omitempty"`
@@ -31,6 +32,7 @@ type Pipeline struct {
 
 // PipelineDescriber retrieves information about an application.
 type PipelineDescriber struct {
+	resourceName  string
 	pipelineName  string
 	showResources bool
 
@@ -39,7 +41,7 @@ type PipelineDescriber struct {
 }
 
 // NewPipelineDescriber instantiates a new pipeline describer
-func NewPipelineDescriber(pipelineName string, showResources bool) (*PipelineDescriber, error) {
+func NewPipelineDescriber(resourceName string, pipelineName string, showResources bool) (*PipelineDescriber, error) {
 	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, err
@@ -48,16 +50,17 @@ func NewPipelineDescriber(pipelineName string, showResources bool) (*PipelineDes
 	pipelineSvc := codepipeline.New(sess)
 
 	return &PipelineDescriber{
+		resourceName:  resourceName,
 		pipelineName:  pipelineName,
 		pipelineSvc:   pipelineSvc,
 		showResources: showResources,
-		cfn:           stack.NewStackDescriber(pipelineName, sess),
+		cfn:           stack.NewStackDescriber(resourceName, sess),
 	}, nil
 }
 
 // Describe returns description of a pipeline.
 func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
-	cp, err := d.pipelineSvc.GetPipeline(d.pipelineName)
+	cp, err := d.pipelineSvc.GetPipeline(d.resourceName)
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline: %w", err)
 	}
@@ -69,7 +72,11 @@ func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		resources = stackResources
 	}
-	pipeline := &Pipeline{*cp, resources}
+	pipeline := &Pipeline{
+		Name:      d.pipelineName,
+		Pipeline:  *cp,
+		Resources: resources,
+	}
 	return pipeline, nil
 }
 
@@ -90,17 +97,17 @@ func (p *Pipeline) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", p.Name)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Region", p.Region)
-	fmt.Fprintf(writer, "  %s\t%s\n", "AccountID", p.AccountID)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Created At", humanizeTime(p.CreatedAt))
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.UpdatedAt))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Region", p.Pipeline.Region)
+	fmt.Fprintf(writer, "  %s\t%s\n", "AccountID", p.Pipeline.AccountID)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Created At", humanizeTime(p.Pipeline.CreatedAt))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.Pipeline.UpdatedAt))
 	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nStages\n\n"))
 	writer.Flush()
 	headers := []string{"Name", "Category", "Provider", "Details"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-	for _, stage := range p.Stages {
+	for _, stage := range p.Pipeline.Stages {
 		fmt.Fprintf(writer, "  %s", stage.HumanString())
 	}
 	writer.Flush()

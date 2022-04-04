@@ -83,7 +83,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		w:                      log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
-		describer, err := describe.NewPipelineDescriber(opts.targetPipeline.ResourceName, enableResources)
+		describer, err := describe.NewPipelineDescriber(opts.targetPipeline.ResourceName, opts.targetPipeline.Name, enableResources)
 		if err != nil {
 			return fmt.Errorf("new pipeline describer: %w", err)
 		}
