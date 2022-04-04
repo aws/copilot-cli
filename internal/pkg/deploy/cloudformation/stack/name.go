@@ -14,9 +14,6 @@ const (
 
 	// After v1.16, pipeline stack names are namespaced with a prefix of "pipeline-${appName}-".
 	fmtPipelineNamespaced = "pipeline-%s-%s"
-
-	maxStackNameLength = 128
-	minNamePartsLength = 7
 )
 
 // TaskStackName holds the name of a Copilot one-off task stack.
