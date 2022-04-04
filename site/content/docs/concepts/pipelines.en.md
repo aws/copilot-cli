@@ -69,12 +69,12 @@ This won't create your pipeline, but it will create some local files under `copi
 Just like your service has a simple manifest file, so does your pipeline. After you run `pipeline init`, two files are created: `manifest.yml` and `buildspec.yml`, both in a new `copilot/pipelines/[your pipeline name]` directory. If you poke in, you'll see that the `manifest.yml` looks something like this (for a service called "api-frontend" with two environments, "test" and "prod"):
 
 ```yaml
-# The manifest for the "pipeline-ecs-kudos-kohidave-demo-api-frontend" pipeline.
+# The manifest for the "demo-api-frontend-main" pipeline.
 # This YAML file defines your pipeline: the source repository it tracks and the order of the environments to deploy to.
 # For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
 # The name of the pipeline.
-name: pipeline-ecs-kudos-kohidave-demo-api-frontend
+name: demo-api-frontend-main
 
 # The version of the schema used in this template.
 version: 1
@@ -148,7 +148,7 @@ Are your tests configured to run inside a Docker container? Copilot's test comma
 In the example below, the pipeline will run the `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully. 
 
 ```yaml
-name: pipeline-ecs-kudos-kohidave-demo-api-frontend
+name: demo-api-frontend-main
 version: 1
 source:
   provider: GitHub

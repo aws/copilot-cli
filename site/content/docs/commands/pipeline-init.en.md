@@ -20,7 +20,8 @@ $ copilot pipeline init [flags]
 Create a pipeline for the services in your workspace.
 ```bash
 $ copilot pipeline init \
---name my-pipeline
---url https://github.com/gitHubUserName/myFrontendApp.git \
+--name frontend-main \
+--url https://github.com/gitHubUserName/frontend.git \
+--git-branch main \
 --environments "test,prod" 
 ```
