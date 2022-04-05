@@ -207,6 +207,14 @@ func (o *initPipelineOpts) Ask() error {
 	return nil
 }
 
+// RequiredActions returns follow-up actions the user must take after successfully executing the command.
+func (o *initPipelineOpts) RequiredActions() []string {
+	return []string{
+		fmt.Sprintf("Commit and push the %s directory to your repository.", color.HighlightResource("copilot/")),
+		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline deploy")),
+	}
+}
+
 // validateDuplicatePipeline checks that the pipeline name isn't already used
 // by another pipeline to reduce potential confusion with a legacy pipeline.
 func (o *initPipelineOpts) validateDuplicatePipeline() error {
@@ -282,14 +290,6 @@ func (o *initPipelineOpts) Execute() error {
 		return err
 	}
 	return nil
-}
-
-// RequiredActions returns follow-up actions the user must take after successfully executing the command.
-func (o *initPipelineOpts) RequiredActions() []string {
-	return []string{
-		fmt.Sprintf("Commit and push the %s directory to your repository.", color.HighlightResource("copilot/")),
-		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline deploy")),
-	}
 }
 
 func (o *initPipelineOpts) askPipelineName() error {
