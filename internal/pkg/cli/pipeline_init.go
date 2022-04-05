@@ -646,7 +646,9 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 
 	manifestMsgFmt := "Wrote the pipeline manifest for %s at '%s'\n"
 	if manifestExists {
-		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
+		manifestMsgFmt = `Pipeline manifest file for %s already exists at %s, skipping writing it.
+Previously set repository URL, branch, and environment stages will remain.
+`
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	log.Debug(`The manifest contains configurations for your pipeline.
@@ -686,7 +688,8 @@ func (o *initPipelineOpts) createBuildspec() error {
 	}
 	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
 	if buildspecExists {
-		buildspecMsgFmt = "Buildspec file for pipeline already exists at %s, skipping writing it.\n"
+		buildspecMsgFmt = `Buildspec file for pipeline already exists at %s, skipping writing it.
+Previously set config will remain.`
 	}
 	buildspecPath, err = relPath(buildspecPath)
 	if err != nil {
