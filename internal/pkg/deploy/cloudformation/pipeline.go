@@ -115,8 +115,8 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput, bucketNa
 }
 
 // DeletePipeline removes the CodePipeline stack.
-func (cf CloudFormation) DeletePipeline(stackName string) error {
-	return cf.cfnClient.DeleteAndWait(stackName)
+func (cf CloudFormation) DeletePipeline(pipeline deploy.Pipeline) error {
+	return cf.cfnClient.DeleteAndWait(stack.NameForPipeline(pipeline.AppName, pipeline.Name, pipeline.IsLegacy))
 }
 
 func (cf CloudFormation) pushTemplateToS3Bucket(bucket string, config StackConfiguration) (string, error) {
