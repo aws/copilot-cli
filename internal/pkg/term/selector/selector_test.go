@@ -1682,6 +1682,7 @@ func TestSelect_Environments(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockenvLister := mocks.NewMockConfigLister(ctrl)
+			mockconnectionLister := mocks.NewMockConnectionLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := environmentMocks{
 				envLister: mockenvLister,
@@ -1689,9 +1690,13 @@ func TestSelect_Environments(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := Select{
+			sel := PipelineEnvsConnectionSelect{
+				Select: &Select{
+					prompt: mockprompt,
+					config: mockenvLister,
+				},
 				prompt: mockprompt,
-				config: mockenvLister,
+				connectionLister: mockconnectionLister,
 			}
 
 			got, err := sel.Environments("Select an environment", "Help text", appName, func(order int) prompt.PromptConfig {
@@ -1701,6 +1706,89 @@ func TestSelect_Environments(t *testing.T) {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+type connectionsMocks struct {
+	connectionLister *mocks.MockConnectionLister
+	prompt    *mocks.MockPrompter
+}
+
+func TestSelect_Connections(t *testing.T) {
+
+	testCases := map[string]struct {
+		setupMocks func(m connectionsMocks)
+		wantedErr    error
+		wantedConnection       string
+	}{
+		"no error, no prompt, if no connections to select from": {
+			setupMocks: func(m connectionsMocks) {
+				gomock.InOrder(
+					m.connectionLister.EXPECT().ListConnections().Return([]*config.Environment{}, nil).Times(1),
+					m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0),
+				)
+			},
+			wantedConnection: "",
+		},
+		"successfully select connection": {
+			setupMocks: func(m connectionsMocks) {
+				gomock.InOrder(
+					m.connectionLister.EXPECT().ListConnections().Return([]string{"connection1", "connection2", "connection3"}, nil).Times(1),
+					m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("connection2", nil),
+				)
+			},
+			wantedConnection: "connection2",
+		},
+		"wrap error listing connections" : {
+			setupMocks: func(m connectionsMocks) {
+				gomock.InOrder(
+					m.connectionLister.EXPECT().ListConnections().Return(nil, errors.New("some error")),
+				)
+			},
+			wantedErr: errors.New("list connections: some error"),
+		},
+		"wrap error selecting": {
+			setupMocks: func(m connectionsMocks) {
+				gomock.InOrder(
+					m.connectionLister.EXPECT().ListConnections().Return([]string{"connection1", "connection2", "connection3"}, nil).Times(1),
+					m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")),
+				)
+			},
+			wantedErr: errors.New("select CodeStar connection: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockenvLister := mocks.NewMockConfigLister(ctrl)
+			mockconnectionLister := mocks.NewMockConnectionLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := connectionsMocks{
+				connectionLister: mockconnectionLister,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := PipelineEnvsConnectionSelect{
+				Select: &Select{
+					prompt: mockprompt,
+					config: mockenvLister,
+				},
+				prompt: mockprompt,
+				connectionLister: mockconnectionLister,
+			}
+
+			got, err := sel.Connection("some prompt", "some help prompt")
+			
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedConnection, got)
 			}
 		})
 	}

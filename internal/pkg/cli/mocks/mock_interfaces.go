@@ -5110,31 +5110,46 @@ func (mr *MockdeploySelectorMockRecorder) DeployedService(prompt, help, app inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedService", reflect.TypeOf((*MockdeploySelector)(nil).DeployedService), varargs...)
 }
 
-// MockpipelineEnvSelector is a mock of pipelineEnvSelector interface.
-type MockpipelineEnvSelector struct {
+// MockpipelineEnvsConnectionSelector is a mock of pipelineEnvsConnectionSelector interface.
+type MockpipelineEnvsConnectionSelector struct {
 	ctrl     *gomock.Controller
-	recorder *MockpipelineEnvSelectorMockRecorder
+	recorder *MockpipelineEnvsConnectionSelectorMockRecorder
 }
 
-// MockpipelineEnvSelectorMockRecorder is the mock recorder for MockpipelineEnvSelector.
-type MockpipelineEnvSelectorMockRecorder struct {
-	mock *MockpipelineEnvSelector
+// MockpipelineEnvsConnectionSelectorMockRecorder is the mock recorder for MockpipelineEnvsConnectionSelector.
+type MockpipelineEnvsConnectionSelectorMockRecorder struct {
+	mock *MockpipelineEnvsConnectionSelector
 }
 
-// NewMockpipelineEnvSelector creates a new mock instance.
-func NewMockpipelineEnvSelector(ctrl *gomock.Controller) *MockpipelineEnvSelector {
-	mock := &MockpipelineEnvSelector{ctrl: ctrl}
-	mock.recorder = &MockpipelineEnvSelectorMockRecorder{mock}
+// NewMockpipelineEnvsConnectionSelector creates a new mock instance.
+func NewMockpipelineEnvsConnectionSelector(ctrl *gomock.Controller) *MockpipelineEnvsConnectionSelector {
+	mock := &MockpipelineEnvsConnectionSelector{ctrl: ctrl}
+	mock.recorder = &MockpipelineEnvsConnectionSelectorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockpipelineEnvSelector) EXPECT() *MockpipelineEnvSelectorMockRecorder {
+func (m *MockpipelineEnvsConnectionSelector) EXPECT() *MockpipelineEnvsConnectionSelectorMockRecorder {
 	return m.recorder
 }
 
+// Connection mocks base method.
+func (m *MockpipelineEnvsConnectionSelector) Connection(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Connection", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Connection indicates an expected call of Connection.
+func (mr *MockpipelineEnvsConnectionSelectorMockRecorder) Connection(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connection", reflect.TypeOf((*MockpipelineEnvsConnectionSelector)(nil).Connection), prompt, help)
+}
+
 // Environments mocks base method.
-func (m *MockpipelineEnvSelector) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
+func (m *MockpipelineEnvsConnectionSelector) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Environments", prompt, help, app, finalMsgFunc)
 	ret0, _ := ret[0].([]string)
@@ -5143,9 +5158,9 @@ func (m *MockpipelineEnvSelector) Environments(prompt, help, app string, finalMs
 }
 
 // Environments indicates an expected call of Environments.
-func (mr *MockpipelineEnvSelectorMockRecorder) Environments(prompt, help, app, finalMsgFunc interface{}) *gomock.Call {
+func (mr *MockpipelineEnvsConnectionSelectorMockRecorder) Environments(prompt, help, app, finalMsgFunc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environments", reflect.TypeOf((*MockpipelineEnvSelector)(nil).Environments), prompt, help, app, finalMsgFunc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environments", reflect.TypeOf((*MockpipelineEnvsConnectionSelector)(nil).Environments), prompt, help, app, finalMsgFunc)
 }
 
 // MockwsPipelineSelector is a mock of wsPipelineSelector interface.
@@ -6358,6 +6373,44 @@ func (m *Mockcodestar) GetConnectionARN(arg0 string) (string, error) {
 func (mr *MockcodestarMockRecorder) GetConnectionARN(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnectionARN", reflect.TypeOf((*Mockcodestar)(nil).GetConnectionARN), arg0)
+}
+
+// MockcodestarGetter is a mock of codestarGetter interface.
+type MockcodestarGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockcodestarGetterMockRecorder
+}
+
+// MockcodestarGetterMockRecorder is the mock recorder for MockcodestarGetter.
+type MockcodestarGetterMockRecorder struct {
+	mock *MockcodestarGetter
+}
+
+// NewMockcodestarGetter creates a new mock instance.
+func NewMockcodestarGetter(ctrl *gomock.Controller) *MockcodestarGetter {
+	mock := &MockcodestarGetter{ctrl: ctrl}
+	mock.recorder = &MockcodestarGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcodestarGetter) EXPECT() *MockcodestarGetterMockRecorder {
+	return m.recorder
+}
+
+// ListConnections mocks base method.
+func (m *MockcodestarGetter) ListConnections() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConnections")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListConnections indicates an expected call of ListConnections.
+func (mr *MockcodestarGetterMockRecorder) ListConnections() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConnections", reflect.TypeOf((*MockcodestarGetter)(nil).ListConnections))
 }
 
 // MockpublicIPGetter is a mock of publicIPGetter interface.

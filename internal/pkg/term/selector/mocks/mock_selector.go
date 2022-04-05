@@ -502,6 +502,44 @@ func (mr *MockCodePipelineListerMockRecorder) ListDeployedPipelines(appName inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedPipelines", reflect.TypeOf((*MockCodePipelineLister)(nil).ListDeployedPipelines), appName)
 }
 
+// MockConnectionLister is a mock of ConnectionLister interface.
+type MockConnectionLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockConnectionListerMockRecorder
+}
+
+// MockConnectionListerMockRecorder is the mock recorder for MockConnectionLister.
+type MockConnectionListerMockRecorder struct {
+	mock *MockConnectionLister
+}
+
+// NewMockConnectionLister creates a new mock instance.
+func NewMockConnectionLister(ctrl *gomock.Controller) *MockConnectionLister {
+	mock := &MockConnectionLister{ctrl: ctrl}
+	mock.recorder = &MockConnectionListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockConnectionLister) EXPECT() *MockConnectionListerMockRecorder {
+	return m.recorder
+}
+
+// ListConnections mocks base method.
+func (m *MockConnectionLister) ListConnections() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConnections")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListConnections indicates an expected call of ListConnections.
+func (mr *MockConnectionListerMockRecorder) ListConnections() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConnections", reflect.TypeOf((*MockConnectionLister)(nil).ListConnections))
+}
+
 // MockWorkspaceRetriever is a mock of WorkspaceRetriever interface.
 type MockWorkspaceRetriever struct {
 	ctrl     *gomock.Controller
