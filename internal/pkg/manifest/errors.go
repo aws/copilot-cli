@@ -23,11 +23,10 @@ func (e *ErrInvalidWorkloadType) Error() string {
 // contains invalid schema version during unmarshalling.
 type ErrInvalidPipelineManifestVersion struct {
 	invalidVersion PipelineSchemaMajorVersion
-	fileName       string
 }
 
 func (e *ErrInvalidPipelineManifestVersion) Error() string {
-	return fmt.Sprintf("%s contains invalid schema version: %d", e.fileName, e.invalidVersion)
+	return fmt.Sprintf("pipeline manifest contains invalid schema version: %d", e.invalidVersion)
 }
 
 // Is compares the 2 errors. Only returns true if the errors are of the same

@@ -6,8 +6,6 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
@@ -224,7 +222,7 @@ func (m *Pipeline) MarshalBinary() ([]byte, error) {
 // UnmarshalPipeline deserializes the YAML input stream into a pipeline
 // manifest object. It returns an error if any issue occurs during
 // deserialization or the YAML input contains invalid fields.
-func UnmarshalPipeline(in []byte, fileName string) (*Pipeline, error) {
+func UnmarshalPipeline(in []byte) (*Pipeline, error) {
 	pm := Pipeline{}
 	err := yaml.Unmarshal(in, &pm)
 	if err != nil {
@@ -232,7 +230,7 @@ func UnmarshalPipeline(in []byte, fileName string) (*Pipeline, error) {
 	}
 
 	var version PipelineSchemaMajorVersion
-	if version, err = validateVersion(&pm, fileName); err != nil {
+	if version, err = validateVersion(&pm); err != nil {
 		return nil, err
 	}
 	switch version {
@@ -255,11 +253,7 @@ func (s Source) IsCodeStarConnection() bool {
 	}
 }
 
-func validateVersion(pm *Pipeline, path string) (PipelineSchemaMajorVersion, error) {
-	fileName := "manifest.yml"
-	if strings.Contains(path, "pipeline.yml") {
-		fileName = "pipeline.yml"
-	}
+func validateVersion(pm *Pipeline) (PipelineSchemaMajorVersion, error) {
 	switch pm.Version {
 	case Ver1:
 		return Ver1, nil
@@ -267,7 +261,6 @@ func validateVersion(pm *Pipeline, path string) (PipelineSchemaMajorVersion, err
 		return pm.Version,
 			&ErrInvalidPipelineManifestVersion{
 				invalidVersion: pm.Version,
-				fileName:       fileName,
 			}
 	}
 }

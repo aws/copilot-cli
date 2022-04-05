@@ -302,7 +302,7 @@ func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.Pipeline, erro
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
-	pipelineManifest, err := manifest.UnmarshalPipeline(data, path)
+	pipelineManifest, err := manifest.UnmarshalPipeline(data)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}

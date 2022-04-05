@@ -919,7 +919,7 @@ version: 0
 `))
 				return fs
 			},
-			expectedError: errors.New("unmarshal pipeline manifest: manifest.yml contains invalid schema version: 0"),
+			expectedError: errors.New("unmarshal pipeline manifest: pipeline manifest contains invalid schema version: 0"),
 		},
 	}
 
