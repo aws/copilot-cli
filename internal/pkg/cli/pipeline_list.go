@@ -147,21 +147,26 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 		cp[pipeline.Name] = pipeline
 	}
 
-	type combinedInfo struct {
+	type info struct {
 		Name         string `json:"name"`
 		ManifestPath string `json:"manifestPath"`
-		*describe.Pipeline
+		PipelineName string `json:"pipelineName,omitempty"`
 	}
 
 	var out struct {
-		Pipelines []combinedInfo `json:"pipelines"`
+		Pipelines []info `json:"pipelines"`
 	}
 	for _, pipeline := range local {
-		out.Pipelines = append(out.Pipelines, combinedInfo{
+		i := info{
 			Name:         pipeline.Name,
 			ManifestPath: pipeline.Path,
-			Pipeline:     cp[pipeline.Name],
-		})
+		}
+
+		if v, ok := cp[pipeline.Name]; ok {
+			i.PipelineName = v.Pipeline.Name
+		}
+
+		out.Pipelines = append(out.Pipelines, i)
 	}
 
 	b, err := json.Marshal(out)

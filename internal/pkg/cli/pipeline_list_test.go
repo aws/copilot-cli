@@ -215,15 +215,15 @@ my-pipeline-repo
 				m.workspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{
 					{Name: mockLegacyPipeline.Name, Path: "/copilot/pipeline.yml"},
 					{Name: mockPipeline.Name, Path: "/copilot/pipelines/my-pipeline-repo/manifest.yml"}}, nil)
-				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockLegacyPipeline}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockPipeline}, nil)
 				m.describer.EXPECT().Describe().Return(&describe.Pipeline{
-					Name: mockLegacyPipelineName,
+					Name: mockPipelineName,
 					Pipeline: codepipeline.Pipeline{
-						Name: mockLegacyPipelineResourceName,
+						Name: mockPipelineResourceName,
 					},
 				}, nil)
 			},
-			expectedContent: `{"pipelines":[{"name":"bad-goose","manifestPath":"/copilot/pipeline.yml","pipelineName":"bad-goose","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"my-pipeline-repo","manifestPath":"/copilot/pipelines/my-pipeline-repo/manifest.yml"}]}` + "\n",
+			expectedContent: `{"pipelines":[{"name":"bad-goose","manifestPath":"/copilot/pipeline.yml"},{"name":"my-pipeline-repo","manifestPath":"/copilot/pipelines/my-pipeline-repo/manifest.yml","pipelineName":"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM"}]}` + "\n",
 		},
 	}
 
