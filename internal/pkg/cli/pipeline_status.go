@@ -85,7 +85,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 			if err != nil {
 				return err
 			}
-			d, err := describe.NewPipelineStatusDescriber(pipeline.ResourceName)
+			d, err := describe.NewPipelineStatusDescriber(pipeline)
 			if err != nil {
 				return fmt.Errorf("new pipeline status describer: %w", err)
 			}
