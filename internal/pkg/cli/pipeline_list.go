@@ -72,9 +72,6 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	var wsAppName string
 	if vars.shouldShowLocalPipelines {
 		wsAppName = tryReadingAppName()
-		if vars.appName == "" {
-			vars.appName = wsAppName
-		}
 	}
 
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
@@ -97,11 +94,7 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 // Ask asks for and validates fields that are required but not passed in.
 func (o *listPipelineOpts) Ask() error {
 	if o.shouldShowLocalPipelines {
-		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
-			return err
-		}
-
-		return nil
+		return validateWorkspaceApp(o.wsAppName, o.appName, o.store)
 	}
 
 	if o.appName != "" {
@@ -255,9 +248,14 @@ func getDeployedPipelines(ctx context.Context, app string, lister deployedPipeli
 				return fmt.Errorf("describe pipeline %q: %w", pipeline.ResourceName, err)
 			}
 
+			p, ok := info.(*describe.Pipeline)
+			if !ok {
+				return fmt.Errorf("unexpected describer for %q: %T", pipeline.ResourceName, info)
+			}
+
 			mux.Lock()
 			defer mux.Unlock()
-			res = append(res, info.(*describe.Pipeline))
+			res = append(res, p)
 			return nil
 		})
 	}

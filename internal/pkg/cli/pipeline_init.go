@@ -170,7 +170,7 @@ func (o *initPipelineOpts) Validate() error {
 // Ask prompts for required fields that are not passed in and validates them.
 func (o *initPipelineOpts) Ask() error {
 	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
-	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+	if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
 		return err
 	}
 	o.appName = o.wsAppName
