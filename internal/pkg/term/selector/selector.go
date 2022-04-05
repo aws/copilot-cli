@@ -310,7 +310,7 @@ func NewAppPipelineSelect(prompt Prompter, store ConfigLister, lister CodePipeli
 	}
 }
 
-// NewPipelineEnvConnectionSelect returns new selectors with environments and CodeStar Connections.
+// NewPipelineEnvsConnectionSelect returns new selectors with environments and CodeStar Connections.
 func NewPipelineEnvsConnectionSelect(prompt Prompter, store ConfigLister, lister ConnectionLister) *PipelineEnvsConnectionSelect {
 	return &PipelineEnvsConnectionSelect{
 		Select:           NewSelect(prompt, store),
