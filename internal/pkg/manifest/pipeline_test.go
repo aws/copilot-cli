@@ -190,10 +190,11 @@ func TestPipelineManifest_MarshalBinary(t *testing.T) {
 func TestUnmarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
 		inContent        string
+		inPath           string
 		expectedManifest *Pipeline
 		expectedErr      error
 	}{
-		"invalid pipeline schema version": {
+		"invalid pipeline schema version, legacy path": {
 			inContent: `
 name: pipepiper
 version: -1
@@ -210,8 +211,33 @@ stages:
     -
       name: prod
 `,
+			inPath: "copilot/pipeline.yml",
 			expectedErr: &ErrInvalidPipelineManifestVersion{
-				PipelineSchemaMajorVersion(-1),
+				invalidVersion: PipelineSchemaMajorVersion(-1),
+				fileName:       "pipeline.yml",
+			},
+		},
+		"invalid pipeline schema version, non-legacy path": {
+			inContent: `
+name: pipepiper
+version: -1
+
+source:
+  provider: GitHub
+  properties:
+    repository: aws/somethingCool
+    branch: main
+
+stages:
+    -
+      name: test
+    -
+      name: prod
+`,
+			inPath: "copilot/pipelines/pipepiper/manifest.yml",
+			expectedErr: &ErrInvalidPipelineManifestVersion{
+				invalidVersion: PipelineSchemaMajorVersion(-1),
+				fileName:       "manifest.yml",
 			},
 		},
 		"invalid pipeline.yml": {
@@ -307,7 +333,7 @@ stages:
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := UnmarshalPipeline([]byte(tc.inContent))
+			m, err := UnmarshalPipeline([]byte(tc.inContent), tc.inPath)
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())

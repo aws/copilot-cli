@@ -19,14 +19,15 @@ func (e *ErrInvalidWorkloadType) Error() string {
 	return fmt.Sprintf("invalid manifest type: %s", e.Type)
 }
 
-// ErrInvalidPipelineManifestVersion occurs when the pipeline.yml file
+// ErrInvalidPipelineManifestVersion occurs when the pipeline.yml/manifest.yml file
 // contains invalid schema version during unmarshalling.
 type ErrInvalidPipelineManifestVersion struct {
 	invalidVersion PipelineSchemaMajorVersion
+	fileName       string
 }
 
 func (e *ErrInvalidPipelineManifestVersion) Error() string {
-	return fmt.Sprintf("manifest.yml contains invalid schema version: %d", e.invalidVersion)
+	return fmt.Sprintf("%s contains invalid schema version: %d", e.fileName, e.invalidVersion)
 }
 
 // Is compares the 2 errors. Only returns true if the errors are of the same
