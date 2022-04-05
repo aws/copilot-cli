@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
@@ -17,11 +18,12 @@ import (
 )
 
 type showPipelineMocks struct {
-	store        *mocks.Mockstore
-	ws           *mocks.MockwsPipelineReader
-	prompt       *mocks.Mockprompter
-	codepipeline *mocks.MockpipelineGetter
-	sel          *mocks.MockcodePipelineSelector
+	store                  *mocks.Mockstore
+	ws                     *mocks.MockwsPipelineReader
+	prompt                 *mocks.Mockprompter
+	codepipeline           *mocks.MockpipelineGetter
+	sel                    *mocks.MockcodePipelineSelector
+	deployedPipelineLister *mocks.MockdeployedPipelineLister
 }
 
 func TestPipelineShow_Ask(t *testing.T) {
@@ -47,7 +49,10 @@ func TestPipelineShow_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "dinder",
 					}, nil),
-					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), mockAppName).Return(mockPipelineName, nil),
+					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), mockAppName).Return(deploy.Pipeline{
+						Name:    mockPipelineName,
+						AppName: mockAppName,
+					}, nil),
 				)
 			},
 			expectedApp:      mockAppName,
@@ -69,7 +74,11 @@ func TestPipelineShow_Ask(t *testing.T) {
 				mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 					Name: "dinder",
 				}, nil)
-				mocks.codepipeline.EXPECT().GetPipeline(mockPipelineName).Return(nil, nil)
+				mocks.deployedPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{
+					{
+						Name: mockPipelineName,
+					},
+				}, nil)
 			},
 			expectedApp:      mockAppName,
 			expectedPipeline: mockPipelineName,
@@ -79,7 +88,9 @@ func TestPipelineShow_Ask(t *testing.T) {
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Return(mockAppName, nil))
-				mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), mockAppName).Return(mockPipelineName, nil)
+				mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), mockAppName).Return(deploy.Pipeline{
+					Name: mockPipelineName,
+				}, nil)
 			},
 			expectedApp:      mockAppName,
 			expectedPipeline: mockPipelineName,
@@ -93,12 +104,25 @@ func TestPipelineShow_Ask(t *testing.T) {
 				mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 					Name: "dinder",
 				}, nil)
-				mocks.codepipeline.EXPECT().GetPipeline("dander").Return(nil, errors.New("some error"))
+				mocks.deployedPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
 			},
 			expectedApp: mockAppName,
-			expectedErr: errors.New("validate pipeline name dander: some error"),
+			expectedErr: errors.New("validate pipeline name dander: cannot find pipeline named dander"),
 		},
-		"wraps error when fails to retrieve deployed pipelines": {
+		"error occurs when listing deployed pipelines for validation": {
+			inPipelineName: "dander",
+			inAppName:      mockAppName,
+
+			setupMocks: func(mocks showPipelineMocks) {
+				mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
+					Name: "dinder",
+				}, nil)
+				mocks.deployedPipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, errors.New("some error"))
+			},
+			expectedApp: mockAppName,
+			expectedErr: errors.New("validate pipeline name dander: list deployed pipelines: some error"),
+		},
+		"wraps error when fails to retrieve deployed pipelines to select": {
 			inAppName:      mockAppName,
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
@@ -106,7 +130,7 @@ func TestPipelineShow_Ask(t *testing.T) {
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(&config.Application{
 						Name: "dinder",
 					}, nil),
-					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), mockAppName).Return("", mockError),
+					mocks.sel.EXPECT().DeployedPipeline(gomock.Any(), gomock.Any(), mockAppName).Return(deploy.Pipeline{}, mockError),
 				)
 			},
 			expectedErr: fmt.Errorf("select deployed pipelines: %w", mockError),
@@ -124,13 +148,15 @@ func TestPipelineShow_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockPipelineSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockSel := mocks.NewMockcodePipelineSelector(ctrl)
+			mockDeployedPipelineLister := mocks.NewMockdeployedPipelineLister(ctrl)
 
 			mocks := showPipelineMocks{
-				store:        mockStore,
-				ws:           mockWorkspace,
-				prompt:       mockPrompt,
-				codepipeline: mockPipelineSvc,
-				sel:          mockSel,
+				store:                  mockStore,
+				ws:                     mockWorkspace,
+				prompt:                 mockPrompt,
+				codepipeline:           mockPipelineSvc,
+				sel:                    mockSel,
+				deployedPipelineLister: mockDeployedPipelineLister,
 			}
 
 			tc.setupMocks(mocks)
@@ -140,11 +166,12 @@ func TestPipelineShow_Ask(t *testing.T) {
 					appName: tc.inAppName,
 					name:    tc.inPipelineName,
 				},
-				store:        mockStore,
-				ws:           mockWorkspace,
-				codepipeline: mockPipelineSvc,
-				prompt:       mockPrompt,
-				sel:          mockSel,
+				store:                  mockStore,
+				ws:                     mockWorkspace,
+				codepipeline:           mockPipelineSvc,
+				prompt:                 mockPrompt,
+				sel:                    mockSel,
+				deployedPipelineLister: mockDeployedPipelineLister,
 			}
 
 			// WHEN
