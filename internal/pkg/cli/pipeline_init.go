@@ -56,7 +56,7 @@ Please enter full repository URL, e.g., "https://github.com/myCompany/myRepo", o
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
-	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
+	fmtPipelineStackName  = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	defaultBranch         = deploy.DefaultPipelineBranch
 	// For a GitHub repository.
 	githubURL     = "github.com"
@@ -175,15 +175,23 @@ func (o *initPipelineOpts) Ask() error {
 	}
 	o.appName = o.wsAppName
 
+	if err := o.askOrValidateURL(); err != nil {
+		return err
+	}
+
+	if err := o.parseRepoDetails(); err != nil {
+		return err
+	}
+
+	if o.repoBranch == "" {
+		o.getBranch()
+	}
+
 	if err := o.askOrValidatePipelineName(); err != nil {
 		return err
 	}
 
 	if err := o.validateDuplicatePipeline(); err != nil {
-		return err
-	}
-
-	if err := o.askOrValidateURL(); err != nil {
 		return err
 	}
 
@@ -220,7 +228,7 @@ func (o *initPipelineOpts) validateDuplicatePipeline() error {
 		allPipelines = append(allPipelines, pipeline.Name)
 	}
 
-	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
+	fullName := fmt.Sprintf(fmtPipelineStackName, o.appName, o.name)
 	for _, pipeline := range allPipelines {
 		if strings.EqualFold(pipeline, o.name) || strings.EqualFold(pipeline, fullName) {
 			log.Warningf(`You already have a pipeline named '%s'.
@@ -255,12 +263,6 @@ func (o *initPipelineOpts) askOrValidateURL() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
-	if o.repoBranch == "" {
-		o.getBranch()
-	}
-	if err := o.parseRepoDetails(); err != nil {
-		return err
-	}
 	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
@@ -291,12 +293,21 @@ func (o *initPipelineOpts) RequiredActions() []string {
 }
 
 func (o *initPipelineOpts) askPipelineName() error {
+	promptOpts := []prompt.PromptConfig{
+		prompt.WithFinalMessage("Pipeline name:"),
+	}
+
+	// Only show suggestion if [repo]-[branch] is a valid pipeline name.
+	suggestion := strings.ToLower(fmt.Sprintf("%s-%s", o.repoName, o.repoBranch))
+	if err := validatePipelineName(suggestion, o.appName); err == nil {
+		promptOpts = append(promptOpts, prompt.WithDefaultInput(color.Faint.Sprint(suggestion)))
+	}
+
 	name, err := o.prompt.Get(fmt.Sprintf(fmtPipelineInitNamePrompt, color.Emphasize("name")),
 		pipelineInitNameHelpPrompt,
 		func(val interface{}) error {
 			return validatePipelineName(val, o.appName)
-		},
-		prompt.WithFinalMessage("Pipeline name:"))
+		}, promptOpts...)
 	if err != nil {
 		return fmt.Errorf("get pipeline name: %w", err)
 	}
@@ -438,8 +449,7 @@ func (o *initPipelineOpts) selectURL() error {
 
 	// If there is only one returned URL, set it rather than prompt to select.
 	if len(urls) == 1 {
-		log.Infof(`Only one git repository detected. Your pipeline will follow '%s'.
-You may make changes in the generated pipeline manifest before deployment.
+		log.Infof(`Only one git remote detected. Your pipeline will follow '%s'.
 `, color.HighlightUserInput(urls[0]))
 		o.repoURL = urls[0]
 		return nil
