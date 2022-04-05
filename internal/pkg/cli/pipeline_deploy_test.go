@@ -822,6 +822,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{
 						Name:      "test",
 						Region:    "us-west-2",
+						AppName:   "badgoose",
 						AccountID: "123456789012",
 					},
 					LocalWorkloads:   []string{"frontend", "backend"},
@@ -857,6 +858,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{
 						Name:      "test",
 						Region:    "us-west-2",
+						AppName:   "badgoose",
 						AccountID: "123456789012",
 					},
 					LocalWorkloads:   []string{"frontend", "backend"},
@@ -893,6 +895,7 @@ func TestDeployPipelineOpts_convertStages(t *testing.T) {
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{
 						Name:      "test",
 						Region:    "us-west-2",
+						AppName:   "badgoose",
 						AccountID: "123456789012",
 					},
 					LocalWorkloads:   []string{"frontend", "backend"},

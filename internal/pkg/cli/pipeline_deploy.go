@@ -241,12 +241,14 @@ func (o *deployPipelineOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	var build deploy.Build
+	build.FromManifest(pipeline.Build, filepath.Dir(relPath))
 	deployPipelineInput := &deploy.CreatePipelineInput{
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		IsLegacy:        isLegacy,
 		Source:          source,
-		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, filepath.Dir(relPath)),
+		Build:           &build,
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,
@@ -332,6 +334,7 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 		pipelineStage := deploy.PipelineStage{
 			LocalWorkloads: workloads,
 			AssociatedEnvironment: &deploy.AssociatedEnvironment{
+				AppName:   o.appName,
 				Name:      stage.Name,
 				Region:    env.Region,
 				AccountID: env.AccountID,

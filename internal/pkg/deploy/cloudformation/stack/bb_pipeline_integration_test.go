@@ -21,6 +21,8 @@ import (
 
 // TestBB_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
 func TestBB_Pipeline_Template(t *testing.T) {
+	var build deploy.Build
+	build.FromManifest(nil, "copilot/pipelines/phonetool-pipeline/")
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
@@ -30,7 +32,7 @@ func TestBB_Pipeline_Template(t *testing.T) {
 			Branch:               "main",
 			OutputArtifactFormat: "CODEBUILD_CLONE_REF",
 		},
-		Build: deploy.PipelineBuildFromManifest(nil, "copilot/pipelines/phonetool-pipeline/"),
+		Build: &build,
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{

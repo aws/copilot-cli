@@ -242,8 +242,8 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 	}
 }
 
-// PipelineBuildFromManifest processes manifest info about the build project settings.
-func PipelineBuildFromManifest(mfBuild *manifest.Build, mfDirPath string) (build *Build) {
+// FromManifest populates the fields in Build by parsing the manifest file's "build" section.
+func (b *Build) FromManifest(mfBuild *manifest.Build, mfDirPath string) {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
 	path := filepath.Join(mfDirPath, "buildspec.yml")
@@ -256,11 +256,9 @@ func PipelineBuildFromManifest(mfBuild *manifest.Build, mfDirPath string) (build
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
 	}
-	return &Build{
-		Image:           image,
-		EnvironmentType: environmentType,
-		BuildspecPath:   path,
-	}
+	b.Image = image
+	b.EnvironmentType = environmentType
+	b.BuildspecPath = path
 }
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
@@ -455,16 +453,21 @@ type PipelineStage struct {
 
 // WorkloadTemplatePath returns the full path to the workload CFN template
 // built during the build stage.
-func (s *PipelineStage) WorkloadTemplatePath(wlName string) string {
-	return fmt.Sprintf(WorkloadCfnTemplateNameFormat, wlName, s.Name)
+func (stg *PipelineStage) WorkloadTemplatePath(wlName string) string {
+	return fmt.Sprintf(WorkloadCfnTemplateNameFormat, wlName, stg.Name)
 }
 
 // WorkloadTemplateConfigurationPath returns the full path to the workload CFN
 // template configuration file built during the build stage.
-func (s *PipelineStage) WorkloadTemplateConfigurationPath(wlName string) string {
+func (stg *PipelineStage) WorkloadTemplateConfigurationPath(wlName string) string {
 	return fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat,
-		wlName, s.Name,
+		wlName, stg.Name,
 	)
+}
+
+// ExecRoleARN returns the ARN of the CloudFormationExecutionRole used to run DeployActions.
+func (stg *PipelineStage) ExecRoleARN() string {
+	return ""
 }
 
 // AssociatedEnvironment defines the necessary information a pipeline stage
@@ -474,8 +477,11 @@ type AssociatedEnvironment struct {
 	// This is also the name of the pipeline stage.
 	Name string
 
-	// The region this environment is stored in.
+	// The region this environment is created in.
 	Region string
+
+	// AppName represents the application name the environment is part of.
+	AppName string
 
 	// AccountID of the account this environment is stored in.
 	AccountID string

@@ -196,7 +196,7 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 	}
 }
 
-func TestPipelineBuildFromManifest(t *testing.T) {
+func TestPipelineBuild_FromManifest(t *testing.T) {
 	const (
 		defaultImage   = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 		defaultEnvType = "LINUX_CONTAINER"
@@ -205,13 +205,13 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 	testCases := map[string]struct {
 		mfBuild       *manifest.Build
 		mfDirPath     string
-		expectedBuild *Build
+		expectedBuild Build
 	}{
 		"set default image and env type if not specified in manifest; override default if buildspec path in manifest": {
 			mfBuild: &manifest.Build{
 				Buildspec: "some/path",
 			},
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           defaultImage,
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "some/path",
@@ -222,7 +222,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 				Image:     "aws/codebuild/standard:3.0",
 				Buildspec: "some/path",
 			},
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           "aws/codebuild/standard:3.0",
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "some/path",
@@ -233,7 +233,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				Buildspec: "some/path",
 			},
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				EnvironmentType: "ARM_CONTAINER",
 				BuildspecPath:   "some/path",
@@ -241,7 +241,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 		},
 		"by default convert legacy manifest path to buildspec path": {
 			mfDirPath: "copilot/",
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           defaultImage,
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "copilot/buildspec.yml",
@@ -249,7 +249,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 		},
 		"by default convert non-legacy manifest path to buildspec path": {
 			mfDirPath: "copilot/pipelines/my-pipeline/",
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           defaultImage,
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "copilot/pipelines/my-pipeline/buildspec.yml",
@@ -258,7 +258,8 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			build := PipelineBuildFromManifest(tc.mfBuild, tc.mfDirPath)
+			var build Build
+			build.FromManifest(tc.mfBuild, tc.mfDirPath)
 			require.Equal(t, tc.expectedBuild, build, "mismatched build")
 		})
 	}

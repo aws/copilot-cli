@@ -21,6 +21,8 @@ import (
 
 // TestGHPipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
 func TestGHPipeline_Template(t *testing.T) {
+	var build deploy.Build
+	build.FromManifest(nil, "copilot/pipelines/phonetool-pipeline/")
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
@@ -29,7 +31,7 @@ func TestGHPipeline_Template(t *testing.T) {
 			RepositoryURL: "https://github.com/aws/phonetool",
 			Branch:        "mainline",
 		},
-		Build: deploy.PipelineBuildFromManifest(nil, "copilot/pipelines/phonetool-pipeline/"),
+		Build: &build,
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{
