@@ -207,6 +207,29 @@ func (o *initPipelineOpts) Ask() error {
 	return nil
 }
 
+// Execute writes the pipeline manifest file.
+func (o *initPipelineOpts) Execute() error {
+	if o.provider == manifest.GithubV1ProviderName {
+		if err := o.storeGitHubAccessToken(); err != nil {
+			return err
+		}
+	}
+
+	// write manifest.yml file, populate with:
+	//   - git repo as source
+	//   - stage names (environments)
+	//   - enable/disable transition to prod envs
+	log.Infoln()
+	if err := o.createPipelineManifest(); err != nil {
+		return err
+	}
+	log.Infoln()
+	if err := o.createBuildspec(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // RequiredActions returns follow-up actions the user must take after successfully executing the command.
 func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
@@ -220,14 +243,6 @@ func (o *initPipelineOpts) RequiredActions() []string {
 func (o *initPipelineOpts) validateDuplicatePipeline() error {
 	var allPipelines []string
 
-	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
-	if err != nil {
-		return fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
-	}
-	for _, pipeline := range deployedPipelines {
-		allPipelines = append(allPipelines, pipeline.Name)
-	}
-
 	localPipelines, err := o.workspace.ListPipelines()
 	if err != nil {
 		return fmt.Errorf("get local pipelines: %w", err)
@@ -236,15 +251,24 @@ func (o *initPipelineOpts) validateDuplicatePipeline() error {
 		allPipelines = append(allPipelines, pipeline.Name)
 	}
 
+	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
+	if err != nil {
+		return fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
+	}
+	for _, pipeline := range deployedPipelines {
+		allPipelines = append(allPipelines, pipeline.Name)
+	}
+
 	fullName := fmt.Sprintf(fmtPipelineStackName, o.appName, o.name)
 	for _, pipeline := range allPipelines {
 		if strings.EqualFold(pipeline, o.name) || strings.EqualFold(pipeline, fullName) {
 			log.Warningf(`You already have a pipeline named '%s'.
-To deploy the existing pipeline, run %s instead.
-To recreate the pipeline, run %s then 
-	%s instead.
-If you have manually deleted your manifest.yml and/or buildspec.yml file(s) for that pipeline, 
-	proceed to generate new default file(s).
+To deploy the existing pipeline, run %s.
+To recreate the pipeline, run %s,
+	optionally delete your pipeline.yml/manifest.yml and/or buildspec.yml file(s),
+	then run %s.
+If you have manually deleted your pipeline.yml/manifest.yml and/or buildspec.yml file(s) 
+	for the existing pipeline, Copilot will now generate new default file(s).
 To create an additional pipeline, run "copilot pipeline init" again, but with a new pipeline name.
 `, o.name, fmt.Sprintf(`"copilot pipeline deploy --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline delete --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline init --name %s"`, o.name))
 			return nil
@@ -267,29 +291,6 @@ func (o *initPipelineOpts) askOrValidateURL() error {
 	}
 
 	return o.validateURL(o.repoURL)
-}
-
-// Execute writes the pipeline manifest file.
-func (o *initPipelineOpts) Execute() error {
-	if o.provider == manifest.GithubV1ProviderName {
-		if err := o.storeGitHubAccessToken(); err != nil {
-			return err
-		}
-	}
-
-	// write manifest.yml file, populate with:
-	//   - git repo as source
-	//   - stage names (environments)
-	//   - enable/disable transition to prod envs
-	log.Infoln()
-	if err := o.createPipelineManifest(); err != nil {
-		return err
-	}
-	log.Infoln()
-	if err := o.createBuildspec(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (o *initPipelineOpts) askPipelineName() error {
