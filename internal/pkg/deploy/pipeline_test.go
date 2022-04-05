@@ -7,6 +7,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -196,7 +198,7 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 	}
 }
 
-func TestPipelineBuild_FromManifest(t *testing.T) {
+func TestPipelineBuild_Init(t *testing.T) {
 	const (
 		defaultImage   = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 		defaultEnvType = "LINUX_CONTAINER"
@@ -307,6 +309,51 @@ func TestParseOwnerAndRepo(t *testing.T) {
 				require.Equal(t, tc.expectedOwner, owner, "mismatched owner")
 				require.Equal(t, tc.expectedRepo, repo, "mismatched repo")
 			}
+		})
+	}
+}
+
+func TestPipelineStage_Init(t *testing.T) {
+	testCases := map[string]struct {
+		inEnv       *config.Environment
+		inManifest  *manifest.PipelineStage
+		inWorkloads []string
+
+		wanted PipelineStage
+	}{
+		"convert stage with all fields enabled": {
+			inEnv: &config.Environment{
+				Name:      "test",
+				App:       "badgoose",
+				Region:    "us-west-2",
+				AccountID: "123456789012",
+			},
+			inManifest: &manifest.PipelineStage{
+				Name:             "test",
+				RequiresApproval: true,
+				TestCommands:     []string{"make test", "echo \"made test\""},
+			},
+			inWorkloads: []string{"frontend", "backend"},
+
+			wanted: PipelineStage{
+				AssociatedEnvironment: &AssociatedEnvironment{
+					Name:      "test",
+					Region:    "us-west-2",
+					AppName:   "badgoose",
+					AccountID: "123456789012",
+				},
+				LocalWorkloads:   []string{"frontend", "backend"},
+				RequiresApproval: true,
+				TestCommands:     []string{"make test", "echo \"made test\""},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var stg PipelineStage
+			stg.Init(tc.inEnv, tc.inManifest, tc.inWorkloads)
+			require.Equal(t, tc.wanted, stg)
 		})
 	}
 }

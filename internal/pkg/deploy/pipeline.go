@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -451,6 +453,20 @@ type PipelineStage struct {
 	TestCommands     []string
 }
 
+// Init populates the fields in PipelineStage against a target environment,
+// the user's manifest config, and any local workload names.
+func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.PipelineStage, workloads []string) {
+	stg.AssociatedEnvironment = &AssociatedEnvironment{
+		AppName:   env.App,
+		Name:      mftStage.Name,
+		Region:    env.Region,
+		AccountID: env.AccountID,
+	}
+	stg.LocalWorkloads = workloads
+	stg.RequiresApproval = mftStage.RequiresApproval
+	stg.TestCommands = mftStage.TestCommands
+}
+
 // WorkloadTemplatePath returns the full path to the workload CFN template
 // built during the build stage.
 func (stg *PipelineStage) WorkloadTemplatePath(wlName string) string {
@@ -463,11 +479,6 @@ func (stg *PipelineStage) WorkloadTemplateConfigurationPath(wlName string) strin
 	return fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat,
 		wlName, stg.Name,
 	)
-}
-
-// ExecRoleARN returns the ARN of the CloudFormationExecutionRole used to run DeployActions.
-func (stg *PipelineStage) ExecRoleARN() string {
-	return ""
 }
 
 // AssociatedEnvironment defines the necessary information a pipeline stage

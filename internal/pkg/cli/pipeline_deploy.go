@@ -331,20 +331,10 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.appName, err)
 		}
 
-		pipelineStage := deploy.PipelineStage{
-			LocalWorkloads: workloads,
-			AssociatedEnvironment: &deploy.AssociatedEnvironment{
-				AppName:   o.appName,
-				Name:      stage.Name,
-				Region:    env.Region,
-				AccountID: env.AccountID,
-			},
-			RequiresApproval: stage.RequiresApproval,
-			TestCommands:     stage.TestCommands,
-		}
-		stages = append(stages, pipelineStage)
+		var stg deploy.PipelineStage
+		stg.Init(env, &stage, workloads)
+		stages = append(stages, stg)
 	}
-
 	return stages, nil
 }
 
