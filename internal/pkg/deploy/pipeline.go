@@ -77,6 +77,25 @@ type Build struct {
 	BuildspecPath   string
 }
 
+// FromManifest populates the fields in Build by parsing the manifest file's "build" section.
+func (b *Build) FromManifest(mfBuild *manifest.Build, mfDirPath string) {
+	image := defaultPipelineBuildImage
+	environmentType := defaultPipelineEnvironmentType
+	path := filepath.Join(mfDirPath, "buildspec.yml")
+	if mfBuild != nil && mfBuild.Image != "" {
+		image = mfBuild.Image
+	}
+	if mfBuild != nil && mfBuild.Buildspec != "" {
+		path = mfBuild.Buildspec
+	}
+	if strings.Contains(image, "aarch64") {
+		environmentType = "ARM_CONTAINER"
+	}
+	b.Image = image
+	b.EnvironmentType = environmentType
+	b.BuildspecPath = path
+}
+
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
 // intermediate artifacts produced by the pipeline.
 type ArtifactBucket struct {
@@ -240,25 +259,6 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 	default:
 		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
 	}
-}
-
-// FromManifest populates the fields in Build by parsing the manifest file's "build" section.
-func (b *Build) FromManifest(mfBuild *manifest.Build, mfDirPath string) {
-	image := defaultPipelineBuildImage
-	environmentType := defaultPipelineEnvironmentType
-	path := filepath.Join(mfDirPath, "buildspec.yml")
-	if mfBuild != nil && mfBuild.Image != "" {
-		image = mfBuild.Image
-	}
-	if mfBuild != nil && mfBuild.Buildspec != "" {
-		path = mfBuild.Buildspec
-	}
-	if strings.Contains(image, "aarch64") {
-		environmentType = "ARM_CONTAINER"
-	}
-	b.Image = image
-	b.EnvironmentType = environmentType
-	b.BuildspecPath = path
 }
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
