@@ -82,7 +82,7 @@ var (
 
 // Pipelines
 const (
-	maxPipelineNameLen        = 100
+	maxPipelineStackNameLen   = 128
 	fmtErrPipelineNameTooLong = "value must not exceed %d characters"
 )
 
@@ -252,11 +252,10 @@ func validateJobName(val interface{}) error {
 }
 
 func validatePipelineName(val interface{}, appName string) error {
-	// https://docs.aws.amazon.com/codepipeline/latest/userguide/limits.html
-
 	// compute the longest name a user can name their pipeline for this app
-	// since we prefix their name with 'pipeline-[app]-'
-	maxNameLen := maxPipelineNameLen - len(fmt.Sprintf(fmtPipelineName, appName, ""))
+	// since we prefix their name with 'pipeline-[app]-'. the limit is required
+	// because its the name we give the cfn stack for the pipeline.
+	maxNameLen := maxPipelineStackNameLen - len(fmt.Sprintf(fmtPipelineStackName, appName, ""))
 	errFmt := "pipeline name %v is invalid: %w"
 
 	if err := basicNameValidation(val); err != nil {
