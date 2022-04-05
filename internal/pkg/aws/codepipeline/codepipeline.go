@@ -38,6 +38,7 @@ type CodePipeline struct {
 
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
+	// Name is the full name of the pipeline in CodePipeline.
 	Name      string    `json:"pipelineName"`
 	Region    string    `json:"region"`
 	AccountID string    `json:"accountId"`

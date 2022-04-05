@@ -12,18 +12,19 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type pipelineListMocks struct {
-	codepipeline   *mocks.MockpipelineGetter
 	prompt         *mocks.Mockprompter
 	sel            *mocks.MockconfigSelector
 	store          *mocks.Mockstore
 	workspace      *mocks.MockwsPipelineGetter
 	pipelineLister *mocks.MockdeployedPipelineLister
+	describer      *mocks.Mockdescriber
 }
 
 func TestPipelineList_Ask(t *testing.T) {
@@ -93,7 +94,6 @@ func TestPipelineList_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mocks := pipelineListMocks{
-				codepipeline:   mocks.NewMockpipelineGetter(ctrl),
 				prompt:         mocks.NewMockprompter(ctrl),
 				sel:            mocks.NewMockconfigSelector(ctrl),
 				store:          mocks.NewMockstore(ctrl),
@@ -109,7 +109,6 @@ func TestPipelineList_Ask(t *testing.T) {
 					appName:                  tc.inputApp,
 					shouldShowLocalPipelines: tc.shouldShowLocalPipelines,
 				},
-				codepipeline:   mocks.codepipeline,
 				prompt:         mocks.prompt,
 				sel:            mocks.sel,
 				store:          mocks.store,
@@ -162,15 +161,20 @@ func TestPipelineList_Execute(t *testing.T) {
 			shouldOutputJSON: true,
 			setupMocks: func(m pipelineListMocks) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockPipeline, mockLegacyPipeline}, nil)
-				m.codepipeline.EXPECT().
-					GetPipeline(mockPipelineResourceName).
-					Return(&codepipeline.Pipeline{Name: mockPipelineResourceName}, nil)
-				m.codepipeline.EXPECT().
-					GetPipeline(mockLegacyPipelineResourceName).
-					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
+				m.describer.EXPECT().Describe().Return(&describe.Pipeline{
+					Name: mockLegacyPipelineName,
+					Pipeline: codepipeline.Pipeline{
+						Name: mockLegacyPipelineResourceName,
+					},
+				}, nil)
+				m.describer.EXPECT().Describe().Return(&describe.Pipeline{
+					Name: mockPipelineName,
+					Pipeline: codepipeline.Pipeline{
+						Name: mockPipelineResourceName,
+					},
+				}, nil)
 			},
-			expectedContent: `{"pipelines":[{"name":"bad-goose","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}` + "\n",
-			// expectedContent: "{\"pipelines\":[{\"pipelineName\":\"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"pipelineName\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
+			expectedContent: `{"pipelines":[{"name":"bad-goose","pipelineName":"bad-goose","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"my-pipeline-repo","pipelineName":"pipeline-coolapp-my-pipeline-repo-ABCDERANDOMRANDOM","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]}` + "\n",
 		},
 		"with human output": {
 			setupMocks: func(m pipelineListMocks) {
@@ -191,11 +195,9 @@ my-pipeline-repo
 			shouldOutputJSON: true,
 			setupMocks: func(m pipelineListMocks) {
 				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockPipeline}, nil)
-				m.codepipeline.EXPECT().
-					GetPipeline(mockPipelineResourceName).
-					Return(nil, mockError)
+				m.describer.EXPECT().Describe().Return(nil, mockError)
 			},
-			expectedErr: fmt.Errorf(`get pipeline %q: mock error`, mockPipelineResourceName),
+			expectedErr: fmt.Errorf(`describe pipeline %q: mock error`, mockPipelineResourceName),
 		},
 		"ls --local": {
 			shouldShowLocalPipelines: true,
@@ -214,11 +216,14 @@ my-pipeline-repo
 					{Name: mockLegacyPipeline.Name, Path: "/copilot/pipeline.yml"},
 					{Name: mockPipeline.Name, Path: "/copilot/pipelines/my-pipeline-repo/manifest.yml"}}, nil)
 				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{mockLegacyPipeline}, nil)
-				m.codepipeline.EXPECT().
-					GetPipeline(mockLegacyPipelineResourceName).
-					Return(&codepipeline.Pipeline{Name: mockLegacyPipelineResourceName}, nil)
+				m.describer.EXPECT().Describe().Return(&describe.Pipeline{
+					Name: mockLegacyPipelineName,
+					Pipeline: codepipeline.Pipeline{
+						Name: mockLegacyPipelineResourceName,
+					},
+				}, nil)
 			},
-			expectedContent: `{"pipelines":[{"name":"bad-goose","manifestPath":"/copilot/pipeline.yml","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"my-pipeline-repo","manifestPath":"/copilot/pipelines/my-pipeline-repo/manifest.yml"}]}` + "\n",
+			expectedContent: `{"pipelines":[{"name":"bad-goose","manifestPath":"/copilot/pipeline.yml","pipelineName":"bad-goose","region":"","accountId":"","stages":null,"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"},{"name":"my-pipeline-repo","manifestPath":"/copilot/pipelines/my-pipeline-repo/manifest.yml"}]}` + "\n",
 		},
 	}
 
@@ -229,12 +234,12 @@ my-pipeline-repo
 			defer ctrl.Finish()
 
 			mocks := pipelineListMocks{
-				codepipeline:   mocks.NewMockpipelineGetter(ctrl),
 				prompt:         mocks.NewMockprompter(ctrl),
 				sel:            mocks.NewMockconfigSelector(ctrl),
 				store:          mocks.NewMockstore(ctrl),
 				workspace:      mocks.NewMockwsPipelineGetter(ctrl),
 				pipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
+				describer:      mocks.NewMockdescriber(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
@@ -247,13 +252,15 @@ my-pipeline-repo
 					shouldOutputJSON:         tc.shouldOutputJSON,
 					shouldShowLocalPipelines: tc.shouldShowLocalPipelines,
 				},
-				codepipeline:   mocks.codepipeline,
 				prompt:         mocks.prompt,
 				sel:            mocks.sel,
 				store:          mocks.store,
 				w:              b,
 				workspace:      mocks.workspace,
 				pipelineLister: mocks.pipelineLister,
+				newDescriber: func(pipeline deploy.Pipeline) (describer, error) {
+					return mocks.describer, nil
+				},
 			}
 
 			// WHEN

@@ -18,10 +18,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -44,7 +44,6 @@ type listPipelineVars struct {
 
 type listPipelineOpts struct {
 	listPipelineVars
-	codepipeline   pipelineGetter
 	prompt         prompter
 	sel            configSelector
 	store          store
@@ -52,8 +51,12 @@ type listPipelineOpts struct {
 	workspace      wsPipelineGetter
 	pipelineLister deployedPipelineLister
 
+	newDescriber newPipelineDescriberFunc
+
 	wsAppName string
 }
+
+type newPipelineDescriberFunc func(pipeline deploy.Pipeline) (describer, error)
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	ws, err := workspace.New()
@@ -78,14 +81,16 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 	prompter := prompt.New()
 	return &listPipelineOpts{
 		listPipelineVars: vars,
-		codepipeline:     codepipeline.New(defaultSession),
 		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
 		prompt:           prompter,
 		sel:              selector.NewConfigSelect(prompter, store),
 		store:            store,
 		w:                os.Stdout,
 		workspace:        ws,
-		wsAppName:        wsAppName,
+		newDescriber: func(pipeline deploy.Pipeline) (describer, error) {
+			return describe.NewPipelineDescriber(pipeline, false)
+		},
+		wsAppName: wsAppName,
 	}, nil
 }
 
@@ -139,12 +144,12 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 		return err
 	}
 
-	deployed, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.codepipeline)
+	deployed, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.newDescriber)
 	if err != nil {
 		return err
 	}
 
-	cp := make(map[string]*codepipeline.Pipeline)
+	cp := make(map[string]*describe.Pipeline)
 	for _, pipeline := range deployed {
 		cp[pipeline.Name] = pipeline
 	}
@@ -152,7 +157,7 @@ func (o *listPipelineOpts) jsonOutputLocal(ctx context.Context) error {
 	type combinedInfo struct {
 		Name         string `json:"name"`
 		ManifestPath string `json:"manifestPath"`
-		*codepipeline.Pipeline
+		*describe.Pipeline
 	}
 
 	var out struct {
@@ -191,13 +196,13 @@ func (o *listPipelineOpts) humanOutputLocal() error {
 
 // jsonOutputDeployed prints data about all pipelines in the given app that have been deployed.
 func (o *listPipelineOpts) jsonOutputDeployed(ctx context.Context) error {
-	pipelines, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.codepipeline)
+	pipelines, err := getDeployedPipelines(ctx, o.appName, o.pipelineLister, o.newDescriber)
 	if err != nil {
 		return err
 	}
 
 	type serializedPipelines struct {
-		Pipelines []*codepipeline.Pipeline `json:"pipelines"`
+		Pipelines []*describe.Pipeline `json:"pipelines"`
 	}
 	b, err := json.Marshal(serializedPipelines{Pipelines: pipelines})
 	if err != nil {
@@ -226,28 +231,33 @@ func (o *listPipelineOpts) humanOutputDeployed() error {
 	return nil
 }
 
-func getDeployedPipelines(ctx context.Context, app string, lister deployedPipelineLister, getter pipelineGetter) ([]*codepipeline.Pipeline, error) {
+func getDeployedPipelines(ctx context.Context, app string, lister deployedPipelineLister, newDescriber newPipelineDescriberFunc) ([]*describe.Pipeline, error) {
 	pipelines, err := lister.ListDeployedPipelines(app)
 	if err != nil {
 		return nil, fmt.Errorf("list deployed pipelines: %w", err)
 	}
 
 	var mux sync.Mutex
-	var res []*codepipeline.Pipeline
+	var res []*describe.Pipeline
 
 	g, _ := errgroup.WithContext(ctx)
 
 	for i := range pipelines {
 		pipeline := pipelines[i]
 		g.Go(func() error {
-			info, err := getter.GetPipeline(pipeline.ResourceName)
+			d, err := newDescriber(pipeline)
 			if err != nil {
-				return fmt.Errorf("get pipeline %q: %w", pipeline.ResourceName, err)
+				return fmt.Errorf("create pipeline describer for %q: %w", pipeline.ResourceName, err)
+			}
+
+			info, err := d.Describe()
+			if err != nil {
+				return fmt.Errorf("describe pipeline %q: %w", pipeline.ResourceName, err)
 			}
 
 			mux.Lock()
 			defer mux.Unlock()
-			res = append(res, info)
+			res = append(res, info.(*describe.Pipeline))
 			return nil
 		})
 	}
