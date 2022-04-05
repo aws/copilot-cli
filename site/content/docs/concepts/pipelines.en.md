@@ -57,9 +57,6 @@ This won't create your pipeline, but it will create some local files under `copi
 
 * __Release order__: You'll be prompted for environments you want to deploy to – select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
 
-!!! Attention
-    Do not create pipelines that follow the same branch and deploy to the same environment(s), as that will lead to a CloudFormation stack collision.
-
 * __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
 
 * __Tracking branch__: After you've selected the repository, Copilot will designate your current local branch as the branch your pipeline will follow. This can be changed in Step 2.
