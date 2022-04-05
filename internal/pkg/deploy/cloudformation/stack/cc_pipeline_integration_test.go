@@ -22,7 +22,7 @@ import (
 // TestCC_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
 func TestCC_Pipeline_Template(t *testing.T) {
 	var build deploy.Build
-	build.FromManifest(nil, "copilot/pipelines/phonetool-pipeline/")
+	build.Init(nil, "copilot/pipelines/phonetool-pipeline/")
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",

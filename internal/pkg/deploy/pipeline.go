@@ -77,8 +77,8 @@ type Build struct {
 	BuildspecPath   string
 }
 
-// FromManifest populates the fields in Build by parsing the manifest file's "build" section.
-func (b *Build) FromManifest(mfBuild *manifest.Build, mfDirPath string) {
+// Init populates the fields in Build by parsing the manifest file's "build" section.
+func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
 	path := filepath.Join(mfDirPath, "buildspec.yml")

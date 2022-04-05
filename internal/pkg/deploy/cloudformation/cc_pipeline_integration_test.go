@@ -213,7 +213,7 @@ func TestCCPipelineCreation(t *testing.T) {
 		artifactBuckets := regionalResourcesToArtifactBuckets(t, resources)
 
 		var build deploy.Build
-		build.FromManifest(nil, fmt.Sprintf("copilot/pipelines/%s/", app.Name))
+		build.Init(nil, fmt.Sprintf("copilot/pipelines/%s/", app.Name))
 		pipelineInput := &deploy.CreatePipelineInput{
 			AppName: app.Name,
 			Name:    pipelineStackName,

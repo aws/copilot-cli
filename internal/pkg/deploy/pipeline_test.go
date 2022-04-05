@@ -259,7 +259,7 @@ func TestPipelineBuild_FromManifest(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			var build Build
-			build.FromManifest(tc.mfBuild, tc.mfDirPath)
+			build.Init(tc.mfBuild, tc.mfDirPath)
 			require.Equal(t, tc.expectedBuild, build, "mismatched build")
 		})
 	}
