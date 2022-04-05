@@ -307,7 +307,7 @@ func (o *initPipelineOpts) askPipelineName() error {
 		prompt.WithFinalMessage("Pipeline name:"),
 	}
 
-	// only show suggestion if [repo]-[branch] is a valid pipeline name
+	// Only show suggestion if [repo]-[branch] is a valid pipeline name.
 	suggestion := strings.ToLower(fmt.Sprintf("%s-%s", o.repoName, o.repoBranch))
 	if err := validatePipelineName(suggestion, o.appName); err == nil {
 		promptOpts = append(promptOpts, prompt.WithDefaultInput(color.Faint.Sprint(suggestion)))
