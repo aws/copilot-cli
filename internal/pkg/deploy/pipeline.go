@@ -451,6 +451,9 @@ type PipelineStage struct {
 	LocalWorkloads   []string
 	RequiresApproval bool
 	TestCommands     []string
+
+	execRoleARN       string
+	envManagerRoleARN string
 }
 
 // Init populates the fields in PipelineStage against a target environment,
@@ -465,6 +468,8 @@ func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.Pipel
 	stg.LocalWorkloads = workloads
 	stg.RequiresApproval = mftStage.RequiresApproval
 	stg.TestCommands = mftStage.TestCommands
+	stg.execRoleARN = env.ExecutionRoleARN
+	stg.envManagerRoleARN = env.ManagerRoleARN
 }
 
 // WorkloadTemplatePath returns the full path to the workload CFN template
@@ -476,9 +481,65 @@ func (stg *PipelineStage) WorkloadTemplatePath(wlName string) string {
 // WorkloadTemplateConfigurationPath returns the full path to the workload CFN
 // template configuration file built during the build stage.
 func (stg *PipelineStage) WorkloadTemplateConfigurationPath(wlName string) string {
-	return fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat,
-		wlName, stg.Name,
-	)
+	return fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, wlName, stg.Name)
+}
+
+func (stg *PipelineStage) Region() string {
+	return stg.AssociatedEnvironment.Region
+}
+
+// ExecRoleARN returns the IAM role assumed by CloudFormation to create or update resources defined in a template.
+func (stg *PipelineStage) ExecRoleARN() string {
+	return stg.execRoleARN
+}
+
+// EnvManagerRoleARN returns the IAM role used to create or update CloudFormation stacks in an environment.
+func (stg *PipelineStage) EnvManagerRoleARN() string {
+	return stg.envManagerRoleARN
+}
+
+// Deployments returns a list of deploy actions for the pipeline.
+func (stg *PipelineStage) Deployments() []WorkloadDeployAction {
+	var actions []WorkloadDeployAction
+	for _, workload := range stg.LocalWorkloads {
+		actions = append(actions, WorkloadDeployAction{
+			name:             workload,
+			envName:          stg.Name,
+			appName:          stg.AppName,
+			requiresApproval: stg.RequiresApproval,
+		})
+	}
+	return actions
+}
+
+// WorkloadDeployAction represents a CodePipeline action of category "Deploy" for a workload stack.
+type WorkloadDeployAction struct {
+	name    string // workload name.
+	envName string
+	appName string
+
+	requiresApproval bool
+}
+
+// Name returns the name of the CodePipeline deploy action for a workload.
+func (a *WorkloadDeployAction) Name() string {
+	return fmt.Sprintf("CreateOrUpdate-%s-%s", a.name, a.envName)
+}
+
+// StackName returns the name of the workload stack to create or update.
+func (a *WorkloadDeployAction) StackName() string {
+	return fmt.Sprintf("%s-%s-%s", a.appName, a.envName, a.name)
+}
+
+// RunOrder returns the order in which the action should run.
+// Actions with the same RunOrder run in parallel.
+// RunOrders are in ascending order.
+func (a *WorkloadDeployAction) RunOrder() int {
+	order := 1 // By default, all workloads run in parallel.
+	if a.requiresApproval {
+		return order + 1 // Workload deployments should happen after the manual approval action.
+	}
+	return order
 }
 
 // AssociatedEnvironment defines the necessary information a pipeline stage

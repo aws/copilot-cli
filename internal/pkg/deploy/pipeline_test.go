@@ -313,20 +313,24 @@ func TestParseOwnerAndRepo(t *testing.T) {
 	}
 }
 
-func TestPipelineStage_Init(t *testing.T) {
+func TestPipelineStage(t *testing.T) {
 	testCases := map[string]struct {
 		inEnv       *config.Environment
 		inManifest  *manifest.PipelineStage
 		inWorkloads []string
 
-		wanted PipelineStage
+		wantedRegion            string
+		wantedEnvManagerRoleARN string
+		wantedExecRoleARN       string
 	}{
 		"convert stage with all fields enabled": {
 			inEnv: &config.Environment{
-				Name:      "test",
-				App:       "badgoose",
-				Region:    "us-west-2",
-				AccountID: "123456789012",
+				Name:             "test",
+				App:              "badgoose",
+				Region:           "us-west-2",
+				AccountID:        "123456789012",
+				ManagerRoleARN:   "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole",
+				ExecutionRoleARN: "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole",
 			},
 			inManifest: &manifest.PipelineStage{
 				Name:             "test",
@@ -335,17 +339,9 @@ func TestPipelineStage_Init(t *testing.T) {
 			},
 			inWorkloads: []string{"frontend", "backend"},
 
-			wanted: PipelineStage{
-				AssociatedEnvironment: &AssociatedEnvironment{
-					Name:      "test",
-					Region:    "us-west-2",
-					AppName:   "badgoose",
-					AccountID: "123456789012",
-				},
-				LocalWorkloads:   []string{"frontend", "backend"},
-				RequiresApproval: true,
-				TestCommands:     []string{"make test", "echo \"made test\""},
-			},
+			wantedRegion:            "us-west-2",
+			wantedEnvManagerRoleARN: "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole",
+			wantedExecRoleARN:       "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole",
 		},
 	}
 
@@ -353,7 +349,65 @@ func TestPipelineStage_Init(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var stg PipelineStage
 			stg.Init(tc.inEnv, tc.inManifest, tc.inWorkloads)
-			require.Equal(t, tc.wanted, stg)
+
+			// THEN
+			require.Equal(t, tc.wantedRegion, stg.Region(), "region does not match")
+			require.Equal(t, tc.wantedEnvManagerRoleARN, stg.EnvManagerRoleARN(), "env manager role ARN does not match")
+			require.Equal(t, tc.wantedExecRoleARN, stg.ExecRoleARN(), "exec role ARN does not match")
+		})
+	}
+}
+
+func TestPipelineStage_Deployments(t *testing.T) {
+	// TODO(efe)
+}
+
+func TestWorkloadDeployAction_Name(t *testing.T) {
+	// GIVEN
+	action := WorkloadDeployAction{
+		name:    "frontend",
+		envName: "test",
+	}
+
+	// THEN
+	require.Equal(t, "CreateOrUpdate-frontend-test", action.Name())
+}
+
+func TestWorkloadDeployAction_StackName(t *testing.T) {
+	// GIVEN
+	action := WorkloadDeployAction{
+		name:    "frontend",
+		envName: "test",
+		appName: "phonetool",
+	}
+
+	// THEN
+	require.Equal(t, "phonetool-test-frontend", action.StackName())
+}
+
+func TestWorkloadDeployAction_RunOrder(t *testing.T) {
+	testCases := map[string]struct {
+		in     WorkloadDeployAction
+		wanted int
+	}{
+		"action has a preceding manual approval": {
+			in: WorkloadDeployAction{
+				name:             "frontend",
+				requiresApproval: true,
+			},
+			wanted: 2,
+		},
+		"action does not require a manual approval": {
+			in: WorkloadDeployAction{
+				name:             "frontend",
+				requiresApproval: false,
+			},
+			wanted: 1,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.RunOrder())
 		})
 	}
 }
