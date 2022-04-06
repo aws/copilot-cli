@@ -649,8 +649,11 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestMsgFmt = `Pipeline manifest file for %s already exists at %s, skipping writing it.
 Previously set repository URL, branch, and environment stages will remain.
 `
+		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+
+	} else {
+		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	}
-	log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
 `)
@@ -690,12 +693,15 @@ func (o *initPipelineOpts) createBuildspec() error {
 	if buildspecExists {
 		buildspecMsgFmt = `Buildspec file for pipeline already exists at %s, skipping writing it.
 Previously set config will remain.`
+		log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+
+	} else {
+		log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
 	}
 	buildspecPath, err = relPath(buildspecPath)
 	if err != nil {
 		return err
 	}
-	log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
 	log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
 Update the "build" phase to unit test your services before pushing the images.
 `)
