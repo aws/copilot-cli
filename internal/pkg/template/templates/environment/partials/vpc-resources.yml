@@ -13,7 +13,7 @@ VPC:
 
 PublicRouteTable:
   Metadata:
-    'aws:copilot:description': 'A custom Route Table that controls the routing for all the public subnets'
+    'aws:copilot:description': 'A custom Route Table that controls the routing for this environment's public subnets'
   Type: AWS::EC2::RouteTable
   Properties:
     VpcId: !Ref VPC

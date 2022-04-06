@@ -55,7 +55,7 @@ Resources:
   # before 1.5.0, this is app.local.
   ServiceDiscoveryNamespace:
     Metadata:
-      'aws:copilot:description': 'A private DNS namespace for service discovery allowing traffic within the same VPC'
+      'aws:copilot:description': 'A private DNS namespace for service discovery allowing lookup of services within the same VPC'
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
       Name: !Ref ServiceDiscoveryEndpoint
