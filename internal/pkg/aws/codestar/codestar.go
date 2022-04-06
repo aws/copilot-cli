@@ -19,7 +19,7 @@ type api interface {
 	ListConnections(input *codestarconnections.ListConnectionsInput) (*codestarconnections.ListConnectionsOutput, error)
 }
 
-// Connection represents a client to make requests to AWS CodeStarConnections.
+// CodeStar represents a client to make requests to AWS CodeStarConnections.
 type CodeStar struct {
 	client api
 }
@@ -51,7 +51,7 @@ func (c *CodeStar) WaitUntilConnectionStatusAvailable(ctx context.Context, conne
 	}
 }
 
-// ListConnections retrieves all of the CSC connections in the current account.
+// ListConnections retrieves all the CSC connections in the current account.
 func (c *CodeStar) ListConnections() ([]string, error) {
 	connections, err := c.listConnections()
 	if err != nil {

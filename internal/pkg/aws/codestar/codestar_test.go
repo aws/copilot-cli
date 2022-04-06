@@ -90,6 +90,51 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 	})
 }
 
+func TestCodeStar_ListConnections(t *testing.T) {
+	t.Run("returns wrapped error if ListConnections is unsuccessful", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		m := mocks.NewMockapi(ctrl)
+		m.EXPECT().ListConnections(gomock.Any()).Return(nil, errors.New("some error"))
+
+		connection := &CodeStar{
+			client: m,
+		}
+
+		// WHEN
+		connections, err := connection.ListConnections()
+
+		// THEN
+		require.EqualError(t, err, "get list of connections in AWS account: some error")
+		require.Equal(t, []string(nil), connections)
+	})
+
+	t.Run("returns the names of the connections", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		m := mocks.NewMockapi(ctrl)
+		m.EXPECT().ListConnections(gomock.Any()).Return(
+			&codestarconnections.ListConnectionsOutput{
+				Connections: []*codestarconnections.Connection{
+					{ConnectionName: aws.String("gouda")},
+					{ConnectionName: aws.String("fontina")},
+					{ConnectionName: aws.String("brie")},
+				},
+			}, nil)
+
+		connection := &CodeStar{
+			client: m,
+		}
+
+		// WHEN
+		connections, err := connection.ListConnections()
+
+		// THEN
+		require.Equal(t, []string{"gouda", "fontina", "brie"}, connections)
+		require.NoError(t, err)
+	})
+}
+
 func TestCodeStar_GetConnectionARN(t *testing.T) {
 	t.Run("returns wrapped error if ListConnections is unsuccessful", func(t *testing.T) {
 		// GIVEN

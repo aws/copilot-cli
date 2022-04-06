@@ -33,7 +33,7 @@ type pipelineInitMocks struct {
 	cfnClient      *mocks.MockappResourcesGetter
 	store          *mocks.Mockstore
 	prompt         *mocks.Mockprompter
-	sel            *mocks.MockpipelineEnvSelector
+	sel            *mocks.MockpipelineEnvsConnectionSelector
 	pipelineLister *mocks.MockdeployedPipelineLister
 }
 
@@ -57,6 +57,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inRepoURL           string
 		inGitHubAccessToken string
 		inGitBranch         string
+		inConnection        string
 
 		setupMocks func(m pipelineInitMocks)
 		buffer     bytes.Buffer
@@ -386,7 +387,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				prompt:         mocks.NewMockprompter(ctrl),
 				runner:         mocks.NewMockrunner(ctrl),
 				sessProvider:   mocks.NewMocksessionProvider(ctrl),
-				sel:            mocks.NewMockpipelineEnvSelector(ctrl),
+				sel:            mocks.NewMockpipelineEnvsConnectionSelector(ctrl),
 				store:          mocks.NewMockstore(ctrl),
 				pipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
 				workspace:      mocks.NewMockwsPipelineIniter(ctrl),
@@ -403,6 +404,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					repoURL:           tc.inRepoURL,
 					githubAccessToken: tc.inGitHubAccessToken,
 					repoBranch:        tc.inGitBranch,
+					connection:        tc.inConnection,
 				},
 				wsAppName:      tc.inWsAppName,
 				prompt:         mocks.prompt,

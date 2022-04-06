@@ -25,6 +25,7 @@ const (
 func TestNewProvider(t *testing.T) {
 	testCases := map[string]struct {
 		providerConfig interface{}
+		connection     string
 		expectedErr    error
 	}{
 		"successfully create GitHub provider": {
@@ -32,6 +33,7 @@ func TestNewProvider(t *testing.T) {
 				RepositoryURL: "aws/amazon-ecs-cli-v2",
 				Branch:        defaultGHBranch,
 			},
+			connection: "GHConnection",
 		},
 		"successfully create CodeCommit provider": {
 			providerConfig: &CodeCommitProperties{
@@ -43,7 +45,7 @@ func TestNewProvider(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			_, err := NewProvider(tc.providerConfig)
+			_, err := NewProvider(tc.providerConfig, tc.connection)
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
@@ -70,7 +72,7 @@ func TestNewPipelineManifest(t *testing.T) {
 				p, err := NewProvider(&GitHubProperties{
 					RepositoryURL: "aws/amazon-ecs-cli-v2",
 					Branch:        defaultGHBranch,
-				})
+				}, "")
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
@@ -82,7 +84,7 @@ func TestNewPipelineManifest(t *testing.T) {
 				p, err := NewProvider(&GitHubProperties{
 					RepositoryURL: "aws/amazon-ecs-cli-v2",
 					Branch:        defaultGHBranch,
-				})
+				}, "")
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),

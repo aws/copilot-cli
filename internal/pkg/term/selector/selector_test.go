@@ -1726,7 +1726,7 @@ func TestSelect_Connections(t *testing.T) {
 		"no error, no prompt, if no connections to select from": {
 			setupMocks: func(m connectionsMocks) {
 				gomock.InOrder(
-					m.connectionLister.EXPECT().ListConnections().Return([]*config.Environment{}, nil).Times(1),
+					m.connectionLister.EXPECT().ListConnections().Return([]string{}, nil).Times(1),
 					m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0),
 				)
 			},

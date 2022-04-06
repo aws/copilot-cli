@@ -91,6 +91,7 @@ type initPipelineVars struct {
 	repoURL           string
 	repoBranch        string
 	githubAccessToken string
+	connection        string
 }
 
 type initPipelineOpts struct {
@@ -114,7 +115,6 @@ type initPipelineOpts struct {
 	repoName   string
 	repoOwner  string
 	ccRegion   string
-	connection string
 
 	// Cached variables
 	wsAppName    string
@@ -366,6 +366,9 @@ func (o *initPipelineOpts) askEnvs() error {
 }
 
 func (o *initPipelineOpts) askConnection() error {
+	if o.connection != "" {
+		return nil
+	}
 	connection, err := o.sel.Connection(pipelineSelectConnectionPrompt, pipelineSelectConnectionHelpPrompt)
 	if err != nil {
 		return err
@@ -833,6 +836,7 @@ func buildPipelineInitCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden(githubAccessTokenFlag)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
+	cmd.Flags().StringVar(&vars.connection, connectionFlag, "", connectionFlagDescription)
 
 	return cmd
 }
