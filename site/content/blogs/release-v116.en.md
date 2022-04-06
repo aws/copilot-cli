@@ -16,7 +16,7 @@ branches in your repository. **<More details: link within blog to Multiple Pipel
 using the `filter_policy` field. **<More details: links within blog to SNS subscription header>**
 * **Lots of other improvements:**
     * Add a `--no-rollback` flag to the `deploy` commands to disable automatic stack rollback in case of a deployment failure ([#3341](https://github.com/aws/copilot-cli/pull/3341)). The new flag is useful for troubleshooting infrastructure change failures. For example, if a deployment fails CloudFormation will delete the logs that happened during the failure because it rolls back the stack. This flag will help preserve the logs to troubleshoot the issue, then you can rollback and update your manifest again.
-    * Add a `--upload-assets` flag to the `package` commands to push assets to ECR or S3 before generating CloudFormation templates ([#3268](https://github.com/aws/copilot-cli/pull/3268)). Your pipeline buildspec can now be significantly simplified with this flag. If you'd like to regenerate the buildspec, delete the file and run `copilot pipeline init` again.
+    * Add a `--upload-assets` flag to the `package` commands to push assets to ECR or S3 before generating CloudFormation templates ([#3268](https://github.com/aws/copilot-cli/pull/3268)). Your pipeline buildspec can now be significantly simplified with this flag. If you'd like to regenerate the buildspec, delete the file and run `copilot pipeline init` again, using your existing pipeline name at the prompt.
     * Allow additional security groups when running `task run` in an environment ([#3365](https://github.com/aws/copilot-cli/pull/3365)).
     * Make Docker progress updates less noisy when Copilot is running in CI environment (the environment variable `CI` is set to `true`) ([#3345](https://github.com/aws/copilot-cli/pull/3345))
     * Log a warning when deploying an App Runner service in a region where it's not available yet ([#3326](https://github.com/aws/copilot-cli/pull/3326)).
@@ -42,10 +42,10 @@ you can run just a few `copilot pipeline` commands to setup a continuous deliver
 The generated CodePipeline has the following basic structure:
 
 * Source stage: when you push to a configured GitHub, Bitbucket, or CodeCommit repository branch, a new pipeline execution is triggered.
-* Build: After your source code is pulled from your repository host, your service's container image is built and published to every environment's ECR repository and any environment files are uploaded to S3.
+* Build: After your source code is pulled from your repository host, your service's container image is built and published to every environment's ECR repository and any input files, such as addons templates, lambda function zip files, and environment variable files, are uploaded to S3
 * Deploy stages: After your code is built, you can deploy to any or all of your environments, with optional post-deployment tests or manual approvals.
 
-Previously, Copilot allowed creation of only a single pipeline per git repository. Running `copilot pipeline init` resulted in creating of a single pipeline manifest file, for example, the manifest file below models a CodePipeline that first releases to “test” and once the deployment succeeds to the “prod” environment:
+Previously, Copilot allowed creation of only a single pipeline per git repository. Running `copilot pipeline init` resulted in a single pipeline manifest file; for example, the manifest file below models a CodePipeline that first releases to “test,” then once the deployment succeeds, to the “prod” environment:
 
 ```
 $ copilot pipeline init
@@ -71,8 +71,8 @@ stages:
     # test_commands: [echo 'running tests', make test] 
 ```
 
-This model worked well for users that want every commit to the “main” branch to be released across their environments.
-An alternative model is to create a pipeline per branch. For example, I could commit several changes to “main” branch, once satisfied merge the changes to the “test” branch to deploy to the “test” environment, and then merge to the “prod” branch. Until v1.16, this model was not possible because only a single pipeline manifest was supported.
+This model works well for users that want every commit to the “main” branch to be released across their environments.
+An alternative model is to create a pipeline per branch. For example, I could commit several changes to “main” branch, then, once satisfied, merge the changes to the “test” branch to deploy to the “test” environment, and then merge to the “prod” branch. Until v1.16, this model was not possible because only a single pipeline manifest was supported.
 
 Starting with v1.16, Copilot users can now create multiple pipelines in their git repository so that they can have a separate pipeline per branch. For example, I can run `copilot pipeline init` in separate branches of my git repository without worrying about merge conflicts:
 
@@ -109,7 +109,7 @@ _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
 A common need in microservices architecture is to have an easy way to implement the robust publish/subscribe logic for passing messages between services. 
 AWS Copilot leverages a combination of Amazon SNS and Amazon SQS services to make it easy. 
-With AWS Copilot you configure single or multiple services to publish messages to named SNS topics and create worker services to receive and process those messages. 
+With AWS Copilot, you can configure single or multiple services to publish messages to named SNS topics and create worker services to receive and process those messages. 
 AWS Copilot configures and auto-provisions required pub/sub infrastructure, including SNS topics, SQS queues, and required policies. 
 You can read more about [Publish/Subscribe architecture in AWS Copilot documentation](../docs/developing/publish-subscribe.en.md).
 
@@ -141,9 +141,9 @@ subscribe:
 ```
 
 AWS Copilot will create a subscription and provision all required infrastructure, so you can focus on writing your code. 
-However, let’s say you need to create a new worker, that only processes messages of canceled orders with price value of more than $100.
+However, let’s say you need to create a new worker that only processes messages of canceled orders with price value of more than $100.
 
-With new Copilot v1.16 release, you don’t need to filter out those messages in your code, you can simply define a SNS subscription filter policy:
+Starting with the Copilot v1.16 release, you don’t need to filter out those messages in your code; you can simply define a SNS subscription filter policy:
 
 ```yaml
 name: orders-worker
@@ -167,8 +167,8 @@ subscribe:
               - 100
 ```
 
-With this filter policy in place, Amazon SNS will filter all messages by matching on their attributes. 
-You can learn more about it in [Copilot's documentation](../docs/manifest/worker-service.en.md#topic-filter-policy).
+With this filter policy in place, Amazon SNS will filter all messages by matching those attributes. 
+You can learn more about SNS filters in [Copilot's documentation](../docs/manifest/worker-service.en.md#topic-filter-policy).
 
 ## What’s next?
 
