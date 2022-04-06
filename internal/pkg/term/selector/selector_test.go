@@ -1695,7 +1695,7 @@ func TestSelect_Environments(t *testing.T) {
 					prompt: mockprompt,
 					config: mockenvLister,
 				},
-				prompt: mockprompt,
+				prompt:           mockprompt,
 				connectionLister: mockconnectionLister,
 			}
 
@@ -1713,15 +1713,15 @@ func TestSelect_Environments(t *testing.T) {
 
 type connectionsMocks struct {
 	connectionLister *mocks.MockConnectionLister
-	prompt    *mocks.MockPrompter
+	prompt           *mocks.MockPrompter
 }
 
 func TestSelect_Connections(t *testing.T) {
 
 	testCases := map[string]struct {
-		setupMocks func(m connectionsMocks)
-		wantedErr    error
-		wantedConnection       string
+		setupMocks       func(m connectionsMocks)
+		wantedErr        error
+		wantedConnection string
 	}{
 		"no error, no prompt, if no connections to select from": {
 			setupMocks: func(m connectionsMocks) {
@@ -1741,7 +1741,7 @@ func TestSelect_Connections(t *testing.T) {
 			},
 			wantedConnection: "connection2",
 		},
-		"wrap error listing connections" : {
+		"wrap error listing connections": {
 			setupMocks: func(m connectionsMocks) {
 				gomock.InOrder(
 					m.connectionLister.EXPECT().ListConnections().Return(nil, errors.New("some error")),
@@ -1770,7 +1770,7 @@ func TestSelect_Connections(t *testing.T) {
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := connectionsMocks{
 				connectionLister: mockconnectionLister,
-				prompt:    mockprompt,
+				prompt:           mockprompt,
 			}
 			tc.setupMocks(mocks)
 
@@ -1779,12 +1779,12 @@ func TestSelect_Connections(t *testing.T) {
 					prompt: mockprompt,
 					config: mockenvLister,
 				},
-				prompt: mockprompt,
+				prompt:           mockprompt,
 				connectionLister: mockconnectionLister,
 			}
 
 			got, err := sel.Connection("some prompt", "some help prompt")
-			
+
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {

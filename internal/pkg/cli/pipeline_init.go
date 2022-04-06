@@ -110,11 +110,11 @@ type initPipelineOpts struct {
 	codestar       codestarGetter
 
 	// Outputs stored on successful actions.
-	secret     string
-	provider   string
-	repoName   string
-	repoOwner  string
-	ccRegion   string
+	secret    string
+	provider  string
+	repoName  string
+	repoOwner string
+	ccRegion  string
 
 	// Cached variables
 	wsAppName    string
@@ -203,6 +203,12 @@ func (o *initPipelineOpts) Ask() error {
 		return err
 	}
 
+	if o.githubAccessToken == "" && !strings.Contains(o.repoURL, ccIdentifier) {
+		if err := o.askConnection(); err != nil {
+			return err
+		}
+	}
+
 	if len(o.environments) == 0 {
 		if err := o.askEnvs(); err != nil {
 			return err
@@ -210,12 +216,6 @@ func (o *initPipelineOpts) Ask() error {
 	}
 	if err := o.validateEnvs(); err != nil {
 		return err
-	}
-
-	if o.githubAccessToken == "" && !strings.Contains(o.repoURL, ccIdentifier) {
-		if err := o.askConnection(); err != nil {
-			return err
-		}
 	}
 
 	return nil

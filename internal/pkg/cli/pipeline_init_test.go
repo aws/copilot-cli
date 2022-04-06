@@ -39,8 +39,9 @@ type pipelineInitMocks struct {
 
 func TestInitPipelineOpts_Ask(t *testing.T) {
 	const (
-		mockAppName = "my-app"
-		wantedName  = "mypipe"
+		mockAppName    = "my-app"
+		mockConnection = "my-connection"
+		wantedName     = "mypipe"
 	)
 	mockError := errors.New("some error")
 	mockApp := &config.Application{
@@ -62,8 +63,9 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		setupMocks func(m pipelineInitMocks)
 		buffer     bytes.Buffer
 
-		expectedBranch string
-		expectedError  error
+		expectedBranch     string
+		expectedConnection string
+		expectedError      error
 	}{
 		"empty workspace app name": {
 			inWsAppName: "",
@@ -140,6 +142,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"successfully detects local branch and sets it": {
 			inWsAppName:    mockAppName,
 			inRepoURL:      "git@github.com:badgoose/goose.git",
+			inConnection:   mockConnection,
 			inEnvironments: []string{"test"},
 			inName:         wantedName,
 			buffer:         *bytes.NewBufferString("devBranch"),
@@ -159,6 +162,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"sets 'main' as branch name if error fetching it": {
 			inWsAppName:    mockAppName,
 			inRepoURL:      "git@github.com:badgoose/goose.git",
+			inConnection:   mockConnection,
 			inEnvironments: []string{"test"},
 			inName:         wantedName,
 			setupMocks: func(m pipelineInitMocks) {
@@ -201,6 +205,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inWsAppName:    mockAppName,
 			inRepoURL:      githubAnotherURL,
 			inGitBranch:    "main",
+			inConnection:   mockConnection,
 			inEnvironments: []string{"prod"},
 			setupMocks: func(m pipelineInitMocks) {
 				m.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
@@ -227,6 +232,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inWsAppName:    mockAppName,
 			inName:         wantedName,
 			inRepoURL:      "https://github.com/badGoose/chaOS",
+			inConnection:   mockConnection,
 			inEnvironments: []string{"test", "prod"},
 			inGitBranch:    "main",
 			setupMocks: func(m pipelineInitMocks) {
@@ -238,9 +244,10 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedError: errors.New("validate environment test: some error"),
 		},
-		"success with GH repo with env and repoURL flags": {
+		"success with GH repo with connection, env, and repoURL flags": {
 			inWsAppName:    mockAppName,
 			inName:         wantedName,
+			inConnection:   mockConnection,
 			inEnvironments: []string{"test", "prod"},
 			inRepoURL:      "https://github.com/badGoose/chaOS",
 			inGitBranch:    "main",
@@ -258,10 +265,11 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.workspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
 			},
 		},
-		"success with CC repo with env and repoURL flags": {
+		"success with CC repo with connection, env, and repoURL flags": {
 			inWsAppName:    mockAppName,
 			inName:         wantedName,
 			inEnvironments: []string{"test", "prod"},
+			inConnection:   mockConnection,
 			inRepoURL:      "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man",
 			inGitBranch:    "main",
 			setupMocks: func(m pipelineInitMocks) {
@@ -307,10 +315,11 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 		},
 		"returns error if fail to list environments": {
-			inWsAppName: mockAppName,
-			inName:      wantedName,
-			inRepoURL:   githubAnotherURL,
-			inGitBranch: "main",
+			inWsAppName:  mockAppName,
+			inName:       wantedName,
+			inRepoURL:    githubAnotherURL,
+			inGitBranch:  "main",
+			inConnection: mockConnection,
 			setupMocks: func(m pipelineInitMocks) {
 				m.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
@@ -324,6 +333,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inWsAppName:    mockAppName,
 			inName:         wantedName,
 			inRepoURL:      "",
+			inConnection:   mockConnection,
 			inEnvironments: []string{},
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 			setupMocks: func(m pipelineInitMocks) {
@@ -334,11 +344,70 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedError: fmt.Errorf("select URL: some error"),
 		},
+		"prompt to select connection if no GH token and not CodeCommit": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
+			inEnvironments: []string{"test", "prod"},
+			inRepoURL:      "https://github.com/badGoose/chaOS",
+			inGitBranch:    "main",
+			setupMocks: func(m pipelineInitMocks) {
+				m.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.store.EXPECT().GetEnvironment("my-app", "test").Return(
+					&config.Environment{
+						Name: "test",
+					}, nil)
+				m.store.EXPECT().GetEnvironment("my-app", "prod").Return(
+					&config.Environment{
+						Name: "prod",
+					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
+				m.workspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
+				m.sel.EXPECT().Connection(pipelineSelectConnectionPrompt, pipelineSelectConnectionHelpPrompt).Return(mockConnection, nil)
+			},
+			expectedConnection: mockConnection,
+		},
+		"returns error if fail to select connection": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
+			inEnvironments: []string{"test", "prod"},
+			inRepoURL:      "https://github.com/badGoose/chaOS",
+			inGitBranch:    "main",
+			setupMocks: func(m pipelineInitMocks) {
+				m.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
+				m.workspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
+				m.sel.EXPECT().Connection(pipelineSelectConnectionPrompt, pipelineSelectConnectionHelpPrompt).Return("", errors.New("some error"))
+			},
+			expectedError: errors.New("some error"),
+		},
+		"leaves connection empty if choose [No thanks]": {
+			inWsAppName:    mockAppName,
+			inName:         wantedName,
+			inEnvironments: []string{"test", "prod"},
+			inRepoURL:      "https://github.com/badGoose/chaOS",
+			inGitBranch:    "main",
+			setupMocks: func(m pipelineInitMocks) {
+				m.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
+				m.store.EXPECT().GetEnvironment("my-app", "test").Return(
+					&config.Environment{
+						Name: "test",
+					}, nil)
+				m.store.EXPECT().GetEnvironment("my-app", "prod").Return(
+					&config.Environment{
+						Name: "prod",
+					}, nil)
+				m.pipelineLister.EXPECT().ListDeployedPipelines(mockAppName).Return([]deploy.Pipeline{}, nil)
+				m.workspace.EXPECT().ListPipelines().Return([]workspace.PipelineManifest{}, nil)
+				m.sel.EXPECT().Connection(pipelineSelectConnectionPrompt, pipelineSelectConnectionHelpPrompt).Return("[No thanks]", nil)
+			},
+			expectedConnection: "",
+		},
 		"returns error if fail to get env config": {
 			inWsAppName:    mockAppName,
 			inName:         wantedName,
 			inRepoURL:      githubAnotherURL,
 			inGitBranch:    "main",
+			inConnection:   mockConnection,
 			inEnvironments: []string{},
 			setupMocks: func(m pipelineInitMocks) {
 				m.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
@@ -355,10 +424,11 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError: fmt.Errorf("validate environment prod: some error"),
 		},
 		"skip selector prompt if only one repo URL": {
-			inWsAppName: mockAppName,
-			inName:      wantedName,
-			inGitBranch: "main",
-			buffer:      *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
+			inWsAppName:  mockAppName,
+			inName:       wantedName,
+			inGitBranch:  "main",
+			inConnection: mockConnection,
+			buffer:       *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\n"),
 			setupMocks: func(m pipelineInitMocks) {
 				m.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil)
 				m.runner.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -427,6 +497,9 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.NoError(t, err)
 				if tc.expectedBranch != "" {
 					require.Equal(t, tc.expectedBranch, opts.repoBranch)
+				}
+				if tc.expectedConnection != "" {
+					require.Equal(t, tc.expectedConnection, opts.connection)
 				}
 			}
 		})
