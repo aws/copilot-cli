@@ -650,7 +650,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 Previously set repository URL, branch, and environment stages will remain.
 `
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+	log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
 `)
@@ -695,7 +695,7 @@ Previously set config will remain.`
 	if err != nil {
 		return err
 	}
-	log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+	log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
 	log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
 Update the "build" phase to unit test your services before pushing the images.
 `)
