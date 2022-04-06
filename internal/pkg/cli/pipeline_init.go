@@ -170,7 +170,7 @@ func (o *initPipelineOpts) Validate() error {
 // Ask prompts for required fields that are not passed in and validates them.
 func (o *initPipelineOpts) Ask() error {
 	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
-	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+	if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
 		return err
 	}
 	o.appName = o.wsAppName
@@ -207,60 +207,6 @@ func (o *initPipelineOpts) Ask() error {
 	return nil
 }
 
-// validateDuplicatePipeline checks that the pipeline name isn't already used
-// by another pipeline to reduce potential confusion with a legacy pipeline.
-func (o *initPipelineOpts) validateDuplicatePipeline() error {
-	var allPipelines []string
-
-	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
-	if err != nil {
-		return fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
-	}
-	for _, pipeline := range deployedPipelines {
-		allPipelines = append(allPipelines, pipeline.Name)
-	}
-
-	localPipelines, err := o.workspace.ListPipelines()
-	if err != nil {
-		return fmt.Errorf("get local pipelines: %w", err)
-	}
-	for _, pipeline := range localPipelines {
-		allPipelines = append(allPipelines, pipeline.Name)
-	}
-
-	fullName := fmt.Sprintf(fmtPipelineStackName, o.appName, o.name)
-	for _, pipeline := range allPipelines {
-		if strings.EqualFold(pipeline, o.name) || strings.EqualFold(pipeline, fullName) {
-			log.Warningf(`You already have a pipeline named '%s'.
-To deploy the existing pipeline, run %s instead.
-To recreate the pipeline, run %s then 
-	%s instead.
-If you have manually deleted your manifest.yml and/or buildspec.yml file(s) for that pipeline, 
-	proceed to generate new default file(s).
-To create an additional pipeline, run "copilot pipeline init" again, but with a new pipeline name.
-`, o.name, fmt.Sprintf(`"copilot pipeline deploy --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline delete --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline init --name %s"`, o.name))
-			return nil
-		}
-	}
-	return nil
-}
-
-func (o *initPipelineOpts) askOrValidatePipelineName() error {
-	if o.name == "" {
-		return o.askPipelineName()
-	}
-
-	return validatePipelineName(o.name, o.appName)
-}
-
-func (o *initPipelineOpts) askOrValidateURL() error {
-	if o.repoURL == "" {
-		return o.selectURL()
-	}
-
-	return o.validateURL(o.repoURL)
-}
-
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
 	if o.provider == manifest.GithubV1ProviderName {
@@ -290,6 +236,61 @@ func (o *initPipelineOpts) RequiredActions() []string {
 		fmt.Sprintf("Commit and push the %s directory to your repository.", color.HighlightResource("copilot/")),
 		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline deploy")),
 	}
+}
+
+// validateDuplicatePipeline checks that the pipeline name isn't already used
+// by another pipeline to reduce potential confusion with a legacy pipeline.
+func (o *initPipelineOpts) validateDuplicatePipeline() error {
+	var allPipelines []string
+
+	localPipelines, err := o.workspace.ListPipelines()
+	if err != nil {
+		return fmt.Errorf("get local pipelines: %w", err)
+	}
+	for _, pipeline := range localPipelines {
+		allPipelines = append(allPipelines, pipeline.Name)
+	}
+
+	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
+	if err != nil {
+		return fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
+	}
+	for _, pipeline := range deployedPipelines {
+		allPipelines = append(allPipelines, pipeline.Name)
+	}
+
+	fullName := fmt.Sprintf(fmtPipelineStackName, o.appName, o.name)
+	for _, pipeline := range allPipelines {
+		if strings.EqualFold(pipeline, o.name) || strings.EqualFold(pipeline, fullName) {
+			log.Warningf(`You already have a pipeline named '%s'.
+To deploy the existing pipeline, run %s.
+To recreate the pipeline, run %s,
+	optionally delete your pipeline.yml/manifest.yml and/or buildspec.yml file(s),
+	then run %s.
+If you have manually deleted your pipeline.yml/manifest.yml and/or buildspec.yml file(s) 
+	for the existing pipeline, Copilot will now generate new default file(s).
+To create an additional pipeline, run "copilot pipeline init" again, but with a new pipeline name.
+`, o.name, fmt.Sprintf(`"copilot pipeline deploy --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline delete --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline init --name %s"`, o.name))
+			return nil
+		}
+	}
+	return nil
+}
+
+func (o *initPipelineOpts) askOrValidatePipelineName() error {
+	if o.name == "" {
+		return o.askPipelineName()
+	}
+
+	return validatePipelineName(o.name, o.appName)
+}
+
+func (o *initPipelineOpts) askOrValidateURL() error {
+	if o.repoURL == "" {
+		return o.selectURL()
+	}
+
+	return o.validateURL(o.repoURL)
 }
 
 func (o *initPipelineOpts) askPipelineName() error {
@@ -645,9 +646,14 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 
 	manifestMsgFmt := "Wrote the pipeline manifest for %s at '%s'\n"
 	if manifestExists {
-		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
+		manifestMsgFmt = `Pipeline manifest file for %s already exists at %s, skipping writing it.
+Previously set repository URL, branch, and environment stages will remain.
+`
+		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+
+	} else {
+		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
 `)
@@ -683,15 +689,19 @@ func (o *initPipelineOpts) createBuildspec() error {
 		buildspecExists = true
 		buildspecPath = e.FileName
 	}
-	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
-	if buildspecExists {
-		buildspecMsgFmt = "Buildspec file for pipeline already exists at %s, skipping writing it.\n"
-	}
 	buildspecPath, err = relPath(buildspecPath)
 	if err != nil {
 		return err
 	}
-	log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
+	if buildspecExists {
+		buildspecMsgFmt = `Buildspec file for pipeline already exists at %s, skipping writing it.
+Previously set config will remain.
+`
+		log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+	} else {
+		log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+	}
 	log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
 Update the "build" phase to unit test your services before pushing the images.
 `)
@@ -771,7 +781,9 @@ func buildPipelineInitCmd() *cobra.Command {
 		Example: `
   Create a pipeline for the services in your workspace.
   /code $ copilot pipeline init \
-  /code  --url https://github.com/gitHubUserName/myFrontendApp.git \
+  /code  --name frontend-main \
+  /code  --url https://github.com/gitHubUserName/frontend.git \
+  /code  --git-branch main \
   /code  --environments "stage,prod"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitPipelineOpts(vars)

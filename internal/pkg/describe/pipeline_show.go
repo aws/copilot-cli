@@ -26,6 +26,7 @@ type pipelineGetter interface {
 
 // Pipeline contains serialized parameters for a pipeline.
 type Pipeline struct {
+	// Name is the user provided name for a pipeline
 	Name string `json:"name"`
 	codepipeline.Pipeline
 
