@@ -10,6 +10,9 @@ site_dir: 'docs'
 extra_css:
   - stylesheets/extra.css
 extra:
+  analytics:
+    provider: google
+    property: G-7S4JR3KFHK
   alternate:
     - name: English
       link: ./en/
