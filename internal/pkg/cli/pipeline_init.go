@@ -696,7 +696,8 @@ func (o *initPipelineOpts) createBuildspec() error {
 	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
 	if buildspecExists {
 		buildspecMsgFmt = `Buildspec file for pipeline already exists at %s, skipping writing it.
-Previously set config will remain.`
+Previously set config will remain.
+`
 		log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
 	} else {
 		log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
