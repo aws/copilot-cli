@@ -5,22 +5,23 @@ We welcome 7 new community developers who contributed to this release: [@codekit
 [@shingos](https://github.com/shingos), [@csantos](https://github.com/csantos), [@rfma23](https://github.com/rfma23), 
 [@g-grass](https://github.com/g-grass), [@isleys](https://github.com/isleys), 
 [@kangere](https://github.com/kangere). Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 270 people online, 
-who help each other daily and we recently passed a milestone of over 2.1k stars on [Github](http://github.com/aws/copilot-cli/). 
+who help each other daily and we recently passed a milestone of over 2.1k stars on [GitHub](http://github.com/aws/copilot-cli/). 
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.16 brings with it several new features and improvements:
 
 * **Multiple pipelines:** You can now run `copilot pipeline init` to create multiple CodePipelines that track separate 
-branches in your repository. **<More details: link within blog to Multiple Pipelines header>**
+branches in your repository. [See detailed section](./#create-multiple-pipelines-per-branch).
 * **SNS subscription filter policies:** Worker services can now filter SNS messages for each subscribed topic 
-using the `filter_policy` field. **<More details: links within blog to SNS subscription header>**
+using the `filter_policy` field. [See detailed section](./#define-messages-filter-policy-in-publishsubscribe-service-architecture).
 * **Lots of other improvements:**
     * Add a `--no-rollback` flag to the `deploy` commands to disable automatic stack rollback in case of a deployment failure ([#3341](https://github.com/aws/copilot-cli/pull/3341)). The new flag is useful for troubleshooting infrastructure change failures. For example, if a deployment fails CloudFormation will delete the logs that happened during the failure because it rolls back the stack. This flag will help preserve the logs to troubleshoot the issue, then you can rollback and update your manifest again.
     * Add a `--upload-assets` flag to the `package` commands to push assets to ECR or S3 before generating CloudFormation templates ([#3268](https://github.com/aws/copilot-cli/pull/3268)). Your pipeline buildspec can now be significantly simplified with this flag. If you'd like to regenerate the buildspec, delete the file and run `copilot pipeline init` again, using your existing pipeline name at the prompt.
     * Allow additional security groups when running `task run` in an environment ([#3365](https://github.com/aws/copilot-cli/pull/3365)).
-    * Make Docker progress updates less noisy when Copilot is running in CI environment (the environment variable `CI` is set to `true`) ([#3345](https://github.com/aws/copilot-cli/pull/3345))
+    * Make Docker progress updates less noisy when Copilot is running in CI environment (the environment variable `CI` is set to `true`) ([#3345](https://github.com/aws/copilot-cli/pull/3345)).
     * Log a warning when deploying an App Runner service in a region where it's not available yet ([#3326](https://github.com/aws/copilot-cli/pull/3326)).
     * `app show` and `env show` commands now display the deployed environments for services and jobs in a table format ([#3379](https://github.com/aws/copilot-cli/pull/3379), [#3316](https://github.com/aws/copilot-cli/pull/3316)).
+    * Customize buildspec path in the pipeline manifest with `build.buildspec` ([#3403](https://github.com/aws/copilot-cli/pull/3403)).
 
 ## What’s AWS Copilot?
 
