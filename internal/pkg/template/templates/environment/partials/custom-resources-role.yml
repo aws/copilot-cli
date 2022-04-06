@@ -1,7 +1,7 @@
 
 CustomResourceRole:
   Metadata:
-    'aws:copilot:description': 'An IAM role to manage certificates and route53 hosted zones'
+    'aws:copilot:description': 'An IAM role to manage certificates and Route53 hosted zones'
   Type: AWS::IAM::Role
   Condition: DelegateDNS
   Properties:
