@@ -16,9 +16,9 @@ $ copilot pipeline show [flags]
 ```
 
 ## Examples
-Shows info about the pipeline in the "myapp" application.
+Shows info, including resources, about the pipeline "myrepo-mybranch."
 ```bash
-$ copilot pipeline show --app myapp --resources
+$ copilot pipeline show --name myrepo-mybranch --resources
 ```
 
 ## What does it look like?

@@ -172,14 +172,14 @@ func TestValidatePipelineName(t *testing.T) {
 			val:    "myPipe!",
 			wanted: errValueBadFormat,
 		},
-		"longer than 100 characters": {
-			val:               strings.Repeat("s", 101),
-			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 90),
+		"longer than 128 characters": {
+			val:               strings.Repeat("s", 129),
+			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 118),
 		},
-		"longer than 100 characters with pipeline-[app]": {
-			val:               strings.Repeat("x", 86),
+		"longer than 128 characters with pipeline-[app]": {
+			val:               strings.Repeat("x", 114),
 			appName:           "myApp",
-			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 85),
+			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 113),
 		},
 		"does not start with letter": {
 			val:    "123chicken",
@@ -954,8 +954,8 @@ func TestValidateJobName(t *testing.T) {
 		wanted error
 	}{
 		"string as input": {
-			val:     "hello",
-			wanted:  nil,
+			val:    "hello",
+			wanted: nil,
 		},
 		"number as input": {
 			val:    1234,

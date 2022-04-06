@@ -43,7 +43,7 @@ import (
 
 const (
 	fmtPipelineInitNamePrompt  = "What would you like to %s this pipeline?"
-	pipelineInitNameHelpPrompt = "An identifier for your pipeline (e.g. release, test, prod)."
+	pipelineInitNameHelpPrompt = `A unique identifier for your pipeline (e.g., "myRepo-myBranch").`
 
 	pipelineSelectEnvPrompt     = "Which environment would you like to add to your pipeline?"
 	pipelineSelectEnvHelpPrompt = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
@@ -51,12 +51,12 @@ const (
 	pipelineSelectURLPrompt     = "Which repository would you like to use for your pipeline?"
 	pipelineSelectURLHelpPrompt = `The repository linked to your pipeline.
 Pushing to this repository will trigger your pipeline build stage.
-Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
+Please enter full repository URL, e.g., "https://github.com/myCompany/myRepo", or the owner/rep, e.g., "myCompany/myRepo"`
 )
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
-	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
+	fmtPipelineStackName  = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	defaultBranch         = deploy.DefaultPipelineBranch
 	// For a GitHub repository.
 	githubURL     = "github.com"
@@ -170,20 +170,28 @@ func (o *initPipelineOpts) Validate() error {
 // Ask prompts for required fields that are not passed in and validates them.
 func (o *initPipelineOpts) Ask() error {
 	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
-	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+	if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
 		return err
 	}
 	o.appName = o.wsAppName
+
+	if err := o.askOrValidateURL(); err != nil {
+		return err
+	}
+
+	if err := o.parseRepoDetails(); err != nil {
+		return err
+	}
+
+	if o.repoBranch == "" {
+		o.getBranch()
+	}
 
 	if err := o.askOrValidatePipelineName(); err != nil {
 		return err
 	}
 
 	if err := o.validateDuplicatePipeline(); err != nil {
-		return err
-	}
-
-	if err := o.askOrValidateURL(); err != nil {
 		return err
 	}
 
@@ -200,50 +208,40 @@ func (o *initPipelineOpts) Ask() error {
 }
 
 // validateDuplicatePipeline checks that the pipeline name isn't already used
-// by another pipeline, whether it's been deployed or just has a local manifest file.
-// We check for the existence of the name and the namespaced name to reduce
-// potential confusion with a legacy pipeline.
+// by another pipeline to reduce potential confusion with a legacy pipeline.
 func (o *initPipelineOpts) validateDuplicatePipeline() error {
+	var allPipelines []string
+
 	deployedPipelines, err := o.pipelineLister.ListDeployedPipelines(o.appName)
 	if err != nil {
-		return fmt.Errorf("list pipelines for app %s: %w", o.appName, err)
+		return fmt.Errorf("list deployed pipelines for app %s: %w", o.appName, err)
 	}
-
-	fullName := fmt.Sprintf(fmtPipelineName, o.appName, o.name)
 	for _, pipeline := range deployedPipelines {
-		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
-			log.Errorf(`It seems like you are trying to init a pipeline that already exists.
-To recreate the pipeline, please run:
-%s
-If you'd like a new default manifest, please manually delete the existing file, then run:
-%s
-`,
-				color.HighlightCode(fmt.Sprintf("copilot pipeline delete --name %s", o.name)),
-				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
-			return fmt.Errorf("pipeline %s already exists", color.HighlightUserInput(o.name))
-		}
+		allPipelines = append(allPipelines, pipeline.Name)
 	}
 
-	// make sure pipeline doesn't exist locally
 	localPipelines, err := o.workspace.ListPipelines()
 	if err != nil {
 		return fmt.Errorf("get local pipelines: %w", err)
 	}
-
 	for _, pipeline := range localPipelines {
-		if strings.EqualFold(pipeline.Name, o.name) || strings.EqualFold(pipeline.Name, fullName) {
-			log.Errorf(`It seems like you are trying to init a pipeline that exists,
-but has not been deployed. To deploy this pipeline, please run:
-%s
-If you'd like a new default manifest, please manually delete the existing file, then run:
-%s
-`,
-				color.HighlightCode(fmt.Sprintf("copilot pipeline deploy --name %s", o.name)),
-				color.HighlightCode(fmt.Sprintf("copilot pipeline init --name %s", o.name)))
-			return fmt.Errorf("pipeline %s's manifest already exists", color.HighlightUserInput(o.name))
-		}
+		allPipelines = append(allPipelines, pipeline.Name)
 	}
 
+	fullName := fmt.Sprintf(fmtPipelineStackName, o.appName, o.name)
+	for _, pipeline := range allPipelines {
+		if strings.EqualFold(pipeline, o.name) || strings.EqualFold(pipeline, fullName) {
+			log.Warningf(`You already have a pipeline named '%s'.
+To deploy the existing pipeline, run %s instead.
+To recreate the pipeline, run %s then 
+	%s instead.
+If you have manually deleted your manifest.yml and/or buildspec.yml file(s) for that pipeline, 
+	proceed to generate new default file(s).
+To create an additional pipeline, run "copilot pipeline init" again, but with a new pipeline name.
+`, o.name, fmt.Sprintf(`"copilot pipeline deploy --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline delete --name %s"`, o.name), fmt.Sprintf(`"copilot pipeline init --name %s"`, o.name))
+			return nil
+		}
+	}
 	return nil
 }
 
@@ -265,12 +263,6 @@ func (o *initPipelineOpts) askOrValidateURL() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
-	if o.repoBranch == "" {
-		o.getBranch()
-	}
-	if err := o.parseRepoDetails(); err != nil {
-		return err
-	}
 	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
@@ -295,18 +287,27 @@ func (o *initPipelineOpts) Execute() error {
 // RequiredActions returns follow-up actions the user must take after successfully executing the command.
 func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
-		fmt.Sprintf("Commit and push the %s, %s, and %s files of your %s directory to your repository.", color.HighlightResource("buildspec.yml"), color.HighlightResource("pipeline.yml"), color.HighlightResource(".workspace"), color.HighlightResource("copilot")),
+		fmt.Sprintf("Commit and push the %s directory to your repository.", color.HighlightResource("copilot/")),
 		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline deploy")),
 	}
 }
 
 func (o *initPipelineOpts) askPipelineName() error {
+	promptOpts := []prompt.PromptConfig{
+		prompt.WithFinalMessage("Pipeline name:"),
+	}
+
+	// Only show suggestion if [repo]-[branch] is a valid pipeline name.
+	suggestion := strings.ToLower(fmt.Sprintf("%s-%s", o.repoName, o.repoBranch))
+	if err := validatePipelineName(suggestion, o.appName); err == nil {
+		promptOpts = append(promptOpts, prompt.WithDefaultInput(color.Faint.Sprint(suggestion)))
+	}
+
 	name, err := o.prompt.Get(fmt.Sprintf(fmtPipelineInitNamePrompt, color.Emphasize("name")),
 		pipelineInitNameHelpPrompt,
 		func(val interface{}) error {
 			return validatePipelineName(val, o.appName)
-		},
-		prompt.WithFinalMessage("Pipeline name:"))
+		}, promptOpts...)
 	if err != nil {
 		return fmt.Errorf("get pipeline name: %w", err)
 	}
@@ -448,8 +449,7 @@ func (o *initPipelineOpts) selectURL() error {
 
 	// If there is only one returned URL, set it rather than prompt to select.
 	if len(urls) == 1 {
-		log.Infof(`Only one git repository detected. Your pipeline will follow '%s'.
-You may make changes in the generated pipeline manifest before deployment.
+		log.Infof(`Only one git remote detected. Your pipeline will follow '%s'.
 `, color.HighlightUserInput(urls[0]))
 		o.repoURL = urls[0]
 		return nil
@@ -771,7 +771,9 @@ func buildPipelineInitCmd() *cobra.Command {
 		Example: `
   Create a pipeline for the services in your workspace.
   /code $ copilot pipeline init \
-  /code  --url https://github.com/gitHubUserName/myFrontendApp.git \
+  /code  --name frontend-main \
+  /code  --url https://github.com/gitHubUserName/frontend.git \
+  /code  --git-branch main \
   /code  --environments "stage,prod"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitPipelineOpts(vars)
