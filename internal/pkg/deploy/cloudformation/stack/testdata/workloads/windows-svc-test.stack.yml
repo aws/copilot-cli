@@ -246,6 +246,8 @@ Resources:
       Runtime: nodejs12.x
 
   EnvControllerRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role for EnvControllerAction"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -346,13 +348,15 @@ Resources:
           !Sub '${AppName}-${EnvName}-VpcId'
 
   LoadBalancerDNSAlias:
+    Metadata:
+      'aws:copilot:description': !Sub 'The default alias record for the application load balancer'
     Type: AWS::Route53::RecordSetGroup
     Condition: HTTPSLoadBalancer
     Properties:
       HostedZoneId:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-HostedZone"
-      Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
+      Comment: !Sub "Default application load balancer alias for service ${WorkloadName}"
       RecordSets:
       - Name:
           !Join
@@ -379,6 +383,8 @@ Resources:
       Runtime: nodejs12.x
 
   CustomResourceRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role for CloudFormation custom resources'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -405,6 +411,8 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   HTTPSRulePriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A CloudFormation custom resource assigning priority for HTTPS listener rules'
     Condition: HTTPSLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
@@ -412,6 +420,8 @@ Resources:
       ListenerArn: EnvControllerAction.HTTPSListenerArn
 
   HTTPListenerRuleWithDomain:
+    Metadata:
+      'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -447,6 +457,8 @@ Resources:
       Priority: HTTPSRulePriorityAction.Priority
 
   HTTPRulePriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A CloudFormation custom resource assigning priority for HTTP listener rules'
     Condition: HTTPLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
@@ -454,6 +466,8 @@ Resources:
       ListenerArn: EnvControllerAction.HTTPListenerArn
 
   HTTPSListenerRule:
+    Metadata:
+      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -484,6 +498,8 @@ Resources:
 
   HTTPListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Metadata:
+      'aws:copilot:description': 'A HTTP listener rule for forwarding HTTP traffic'
     Condition: HTTPLoadBalancer
     Properties:
       Actions:

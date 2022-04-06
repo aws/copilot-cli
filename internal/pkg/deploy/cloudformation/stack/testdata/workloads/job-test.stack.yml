@@ -67,6 +67,8 @@ Resources:
       Runtime: nodejs12.x
 
   EnvControllerRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role for EnvControllerAction"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -417,6 +419,8 @@ Resources:
         }      
         
   StateMachineRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role for StateMachine'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

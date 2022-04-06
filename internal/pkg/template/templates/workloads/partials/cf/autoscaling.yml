@@ -1,6 +1,6 @@
 DynamicDesiredCountAction:
   Metadata:
-    'aws:copilot:description': 'A CloudFormation custom resource returning the ECS service's desired count'
+    'aws:copilot:description': "A CloudFormation custom resource returning the ECS service's desired count"
   Type: Custom::DynamicDesiredCountFunction
   Properties:
     ServiceToken: !GetAtt DynamicDesiredCountFunction.Arn

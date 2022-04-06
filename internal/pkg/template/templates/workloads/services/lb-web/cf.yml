@@ -207,14 +207,14 @@ Resources:
 {{if not .Aliases}}
   LoadBalancerDNSAlias:
     Metadata:
-      'aws:copilot:description': 'Load balancer alias record for service ${WorkloadName}'
+      'aws:copilot:description': 'The default alias record for the application load balancer'
     Type: AWS::Route53::RecordSetGroup
     Condition: HTTPSLoadBalancer
     Properties:
       HostedZoneId:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-HostedZone"
-      Comment: !Sub "Load balancer alias for service ${WorkloadName}"
+      Comment: !Sub "Default application load balancer alias for service ${WorkloadName}"
       RecordSets:
       - Name:
           !Join
