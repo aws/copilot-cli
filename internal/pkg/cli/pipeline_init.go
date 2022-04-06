@@ -689,18 +689,17 @@ func (o *initPipelineOpts) createBuildspec() error {
 		buildspecExists = true
 		buildspecPath = e.FileName
 	}
+	buildspecPath, err = relPath(buildspecPath)
+	if err != nil {
+		return err
+	}
 	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
 	if buildspecExists {
 		buildspecMsgFmt = `Buildspec file for pipeline already exists at %s, skipping writing it.
 Previously set config will remain.`
 		log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-
 	} else {
 		log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-	}
-	buildspecPath, err = relPath(buildspecPath)
-	if err != nil {
-		return err
 	}
 	log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
 Update the "build" phase to unit test your services before pushing the images.
