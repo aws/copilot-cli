@@ -73,7 +73,7 @@ const (
 	dockerfileFinalMsg  = "Dockerfile:"
 	topicFinalMsg       = "Topic subscriptions:"
 	pipelineFinalMsg    = "Pipeline:"
-	connectionFinalMsg  = "CodeStar Connection:"
+	connectionFinalMsg  = "Connection:"
 )
 
 var scheduleTypes = []string{
@@ -913,7 +913,7 @@ func (s *PipelineEnvsConnectionSelect) Environments(prompt, help, app string, fi
 	return selectedEnvs, nil
 }
 
-// Connection fetches all the CodeStar   in an account and prompts the user to select one.
+// Connection fetches all the CodeStar in an account and prompts the user to select one.
 func (s *PipelineEnvsConnectionSelect) Connection(msg, help string) (string, error) {
 	connections, err := s.connectionLister.ListConnections()
 	if err != nil {

@@ -52,7 +52,7 @@ const (
 	pipelineSelectURLPrompt     = "Which repository would you like to use for your pipeline?"
 	pipelineSelectURLHelpPrompt = `The repository linked to your pipeline.
 Pushing to this repository will trigger your pipeline build stage.
-Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
+Please enter full repository URL, e.g., "https://github.com/myCompany/myRepo", or the owner/repo, e.g. "myCompany/myRepo"`
 	pipelineSelectConnectionPrompt     = "Would you like to reuse a CodeStar Connections connection?"
 	pipelineSelectConnectionHelpPrompt = "You may optionally use an existing connection to your source repository. If 'No thanks', Copilot will generate one for you."
 )
