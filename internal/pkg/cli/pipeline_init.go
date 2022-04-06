@@ -170,7 +170,7 @@ func (o *initPipelineOpts) Validate() error {
 // Ask prompts for required fields that are not passed in and validates them.
 func (o *initPipelineOpts) Ask() error {
 	// This command must be executed in the app's workspace because the pipeline manifest and buildspec will be created and stored.
-	if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+	if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
 		return err
 	}
 	o.appName = o.wsAppName
@@ -781,7 +781,9 @@ func buildPipelineInitCmd() *cobra.Command {
 		Example: `
   Create a pipeline for the services in your workspace.
   /code $ copilot pipeline init \
-  /code  --url https://github.com/gitHubUserName/myFrontendApp.git \
+  /code  --name frontend-main \
+  /code  --url https://github.com/gitHubUserName/frontend.git \
+  /code  --git-branch main \
   /code  --environments "stage,prod"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitPipelineOpts(vars)

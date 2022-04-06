@@ -188,7 +188,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 func (o *initSvcOpts) Validate() error {
 	// If this app is pending creation, we'll skip validation.
 	if !o.wsPendingCreation {
-		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+		if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
 		o.appName = o.wsAppName
@@ -561,7 +561,7 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	return nil
 }
 
-func validateInputApp(wsApp, inputApp string, store store) error {
+func validateWorkspaceApp(wsApp, inputApp string, store store) error {
 	if wsApp == "" {
 		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
 		return errNoAppInWorkspace
