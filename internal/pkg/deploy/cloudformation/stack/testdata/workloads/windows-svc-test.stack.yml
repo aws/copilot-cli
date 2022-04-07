@@ -349,7 +349,7 @@ Resources:
 
   LoadBalancerDNSAlias:
     Metadata:
-      'aws:copilot:description': !Sub 'The default alias record for the application load balancer'
+      'aws:copilot:description': 'The default alias record for the application load balancer'
     Type: AWS::Route53::RecordSetGroup
     Condition: HTTPSLoadBalancer
     Properties:
