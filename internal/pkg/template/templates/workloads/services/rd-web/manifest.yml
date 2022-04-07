@@ -38,6 +38,10 @@ memory: {{.InstanceConfig.Memory}}
 #   vpc:
 #     placement: private
 
+# Enable tracing for the service.
+# observability:
+#   tracing: awsxray
+
 # Optional fields for more advanced use-cases.
 #
 # variables:                    # Pass environment variables as key value pairs.
