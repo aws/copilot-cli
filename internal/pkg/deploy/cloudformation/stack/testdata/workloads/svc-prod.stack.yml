@@ -299,6 +299,8 @@ Resources:
       NamespaceId:
         Fn::ImportValue: !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
   DynamicDesiredCountAction:
+    Metadata:
+      'aws:copilot:description': "A custom resource returning the ECS service's running task count"
     Type: Custom::DynamicDesiredCountFunction
     Properties:
       ServiceToken: !GetAtt DynamicDesiredCountFunction.Arn
@@ -322,6 +324,8 @@ Resources:
       Role: !GetAtt 'CustomResourceRole.Arn'
       Runtime: nodejs12.x
   AutoScalingRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role for container auto scaling'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -382,6 +386,8 @@ Resources:
       Role: !GetAtt 'EnvControllerRole.Arn'
       Runtime: nodejs12.x
   EnvControllerRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role to update your environment stack"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -493,6 +499,8 @@ Resources:
       Role: !GetAtt 'CustomResourceRole.Arn'
       Runtime: nodejs12.x
   CustomResourceRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -543,12 +551,16 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   HTTPSRulePriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
     Condition: HTTPSLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   HTTPListenerRuleWithDomain:
+    Metadata:
+      'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -575,6 +587,8 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
+    Metadata:
+      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -595,12 +609,16 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
   HTTPRulePriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
     Condition: HTTPLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   HTTPListenerRule:
+    Metadata:
+      'aws:copilot:description': 'A HTTP listener rule for forwarding HTTP traffic'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPLoadBalancer
     Properties:

@@ -28,6 +28,9 @@ import (
 
 const (
 	nlbSvcManifestPath = "svc-nlb-manifest.yml"
+
+	nlbCustomDomainPath  = "custom-resources/nlb-custom-domain.js"
+	nlbCertValidatorPath = "custom-resources/nlb-cert-validator.js"
 )
 
 func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
@@ -103,6 +106,12 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 		rulePriority, err := parser.Read(rulePriorityPath)
 		require.NoError(t, err)
 		rulePriorityZipFile := rulePriority.String()
+		nlbCustomDomain, err := parser.Read(nlbCustomDomainPath)
+		require.NoError(t, err)
+		nlbCustomDomainFile := nlbCustomDomain.String()
+		nlbCertValidator, err := parser.Read(nlbCertValidatorPath)
+		require.NoError(t, err)
+		nlbCertValidatorFile := nlbCertValidator.String()
 
 		t.Run(testName, func(t *testing.T) {
 			actualBytes := []byte(tpl)
@@ -113,6 +122,8 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 			actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
 			actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
+			actualString = strings.ReplaceAll(actualString, nlbCustomDomainFile, "mockNLBCustomDomainFile")
+			actualString = strings.ReplaceAll(actualString, nlbCertValidatorFile, "mockNLBCertValidatorFile")
 
 			actualBytes = []byte(actualString)
 			mActual := make(map[interface{}]interface{})
