@@ -288,7 +288,7 @@ Resources:
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:
     Metadata:
-      'aws:copilot:description': 'A Route 53 Hosted Zone for the subdomain ${EnvironmentName}.${AppName}.${AppDNSName}'
+      'aws:copilot:description': "A Route 53 Hosted Zone for the environment's subdomain"
     Type: "AWS::Route53::HostedZone"
     Condition: DelegateDNS
     Properties:
