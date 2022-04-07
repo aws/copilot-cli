@@ -55,11 +55,13 @@ This won't create your pipeline, but it will create some local files under `copi
 
 * __Pipeline name__: We suggest naming your pipeline `[repository name]-[branch name]` (press 'Enter' when asked, to accept the default name). This will distinguish it from your other pipelines, should you create multiple, and works well if you follow a pipeline-per-branch workflow.
 
-* __Release order__: You'll be prompted for environments you want to deploy to – select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
-
 * __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
 
 * __Tracking branch__: After you've selected the repository, Copilot will designate your current local branch as the branch your pipeline will follow. This can be changed in Step 2.
+
+* __Connection__: If your pipeline will track a third-party (GitHub or Bitbucket) repository, you'll need a CodeStar Connections connection (see info box below). If you have existing connections, you may designate one to be reused. If you have none, or choose not to reuse one, Copilot will create one for you in Step 5. CodeCommit repositories do not require a connection.
+
+* __Release order__: You'll be prompted for environments you want to deploy to – select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
 
 ### Step 2: Updating the Pipeline Manifest (optional)
 
