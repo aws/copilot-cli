@@ -188,11 +188,9 @@ func validateSvcName(val interface{}, svcType string) error {
 	if err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
-
 	if err := validateNotReservedWorkloadName(val); err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
-
 	return nil
 }
 

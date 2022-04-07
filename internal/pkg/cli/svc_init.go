@@ -219,6 +219,16 @@ func (o *initSvcOpts) Validate() error {
 
 // Ask prompts for and validates any required flags.
 func (o *initSvcOpts) Ask() error {
+	if o.name != "" && o.wkldType == "" {
+		// Best effort to validate the service name without type.
+		validExistingSvc, err := o.validExistingSvc()
+		if err != nil {
+			return err
+		}
+		if validExistingSvc {
+			return nil
+		}
+	}
 	if o.wkldType != "" {
 		if err := validateSvcType(o.wkldType); err != nil {
 			return err
@@ -233,30 +243,12 @@ func (o *initSvcOpts) Ask() error {
 			return err
 		}
 	}
-	if err := validateSvcName(o.name, o.wkldType); err != nil {
+	validExistingSvc, err := o.validExistingSvc()
+	if err != nil {
 		return err
 	}
-	if err := o.validateDuplicateSvc(); err != nil {
-		return err
-	}
-	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
-	if err == nil {
-		svcType, err := localMft.WorkloadType()
-		if err != nil {
-			return fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
-		}
-		if o.wkldType != svcType {
-			return fmt.Errorf("manifest file for service %s exists with a different type %s", o.name, svcType)
-		}
-		log.Infof("Manifest file for service %s already exists. Skipping configuration.\n", o.name)
+	if validExistingSvc {
 		return nil
-	}
-	var (
-		errNotFound          *workspace.ErrFileNotExists
-		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
-	)
-	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
-		return fmt.Errorf("read manifest file for service %s: %w", o.name, err)
 	}
 	err = o.askDockerfile()
 	if err != nil {
@@ -403,6 +395,39 @@ func (o *initSvcOpts) askImage() error {
 	}
 	o.image = image
 	return nil
+}
+
+func (o *initSvcOpts) validExistingSvc() (bool, error) {
+	if err := validateSvcName(o.name, o.wkldType); err != nil {
+		return false, err
+	}
+	if err := o.validateDuplicateSvc(); err != nil {
+		return false, err
+	}
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err != nil {
+		var (
+			errNotFound          *workspace.ErrFileNotExists
+			errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+		)
+		if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
+			return false, fmt.Errorf("read manifest file for service %s: %w", o.name, err)
+		}
+		return false, nil
+	}
+	svcType, err := localMft.WorkloadType()
+	if err != nil {
+		return false, fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
+	}
+	if o.wkldType != "" {
+		if o.wkldType != svcType {
+			return false, fmt.Errorf("manifest file for service %s exists with a different type %s", o.name, svcType)
+		}
+	} else {
+		o.wkldType = svcType
+	}
+	log.Infof("Manifest file for service %s already exists. Skipping configuration.\n", o.name)
+	return true, nil
 }
 
 // isDfSelected indicates if any Dockerfile is in use.
