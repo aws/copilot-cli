@@ -62,6 +62,7 @@ type LoadBalancedWebServiceConfig struct {
 	PublishConfig    PublishConfig                    `yaml:"publish"`
 	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
 	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
+	DeployConfig     DeploymentConfiguration          `yaml:"deployment"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.

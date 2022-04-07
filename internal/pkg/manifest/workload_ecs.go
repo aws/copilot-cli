@@ -74,6 +74,16 @@ type ImageWithPortAndHealthcheck struct {
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 }
 
+// DeploymentConfiguration is contains Rolling field of string
+// that decides the deployment strategy for example default or recreate
+type DeploymentConfiguration struct {
+	Rolling *string `yaml:"rolling"`
+}
+
+func (d *DeploymentConfiguration) isEmpty() bool {
+	return d == nil || d.Rolling == nil
+}
+
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
 type ImageWithHealthcheckAndOptionalPort struct {
 	ImageWithOptionalPort `yaml:",inline"`
