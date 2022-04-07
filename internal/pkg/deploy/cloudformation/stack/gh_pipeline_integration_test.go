@@ -34,9 +34,10 @@ func TestGHPipeline_Template(t *testing.T) {
 		ExecutionRoleARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
 		ManagerRoleARN:   "arn:aws:iam::1111:role/phonetool-test-EnvManagerRole",
 	}, &manifest.PipelineStage{
-		Name:         "test",
-		TestCommands: []string{`echo "test"`},
-	}, []string{"api"})
+		Name:             "test",
+		TestCommands:     []string{`echo "test"`},
+		RequiresApproval: true,
+	}, []string{"api", "frontend"})
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",

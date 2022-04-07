@@ -366,14 +366,12 @@ func TestWorkloadDeployAction_Name(t *testing.T) {
 }
 
 func TestWorkloadDeployAction_StackName(t *testing.T) {
-	// GIVEN
 	action := WorkloadDeployAction{
 		name:    "frontend",
 		envName: "test",
 		appName: "phonetool",
 	}
 
-	// THEN
 	require.Equal(t, "phonetool-test-frontend", action.StackName())
 }
 

@@ -565,13 +565,13 @@ func (a *WorkloadDeployAction) StackName() string {
 
 // TemplatePath returns the path of the CloudFormation template file generated during the build phase.
 func (a *WorkloadDeployAction) TemplatePath() string {
-	// Use path.Join instead of filepath to join with the "/" instead of OS-specific file separators.
+	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
 	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateNameFormat, a.name, a.envName))
 }
 
 // TemplateConfigPath returns the path of the CloudFormation template config file generated during the build phase.
 func (a *WorkloadDeployAction) TemplateConfigPath() string {
-	// Use path.Join instead of filepath to join with the "/" instead of OS-specific file separators.
+	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
 	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
 }
 
