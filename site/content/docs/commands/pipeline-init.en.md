@@ -9,7 +9,6 @@ $ copilot pipeline init [flags]
 ## What are the flags?
 ```bash
 -a, --app string             Name of the application.
-    --connection string      CodeStar Connections connection to your third-party repository.
 -e, --environments strings   Environments to add to the pipeline.
 -b, --git-branch string      Branch used to trigger your pipeline.
 -h, --help                   help for init
