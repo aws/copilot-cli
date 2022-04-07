@@ -355,13 +355,11 @@ func TestPipelineStage_Init(t *testing.T) {
 }
 
 func TestWorkloadDeployAction_Name(t *testing.T) {
-	// GIVEN
 	action := WorkloadDeployAction{
 		name:    "frontend",
 		envName: "test",
 	}
 
-	// THEN
 	require.Equal(t, "CreateOrUpdate-frontend-test", action.Name())
 }
 
