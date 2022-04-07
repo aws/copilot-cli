@@ -249,7 +249,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Runtime: nodejs12.x
   EnvControllerRole:
     Metadata:
-      'aws:copilot:description': "An IAM role for EnvControllerAction"
+      'aws:copilot:description': "An IAM role to update your environment stack"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -419,7 +419,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Runtime: nodejs12.x
   NLBCustomDomainRole:
     Metadata:
-      'aws:copilot:description': "An IAM role for NLBCustomDomainAction"
+      'aws:copilot:description': "An IAM role to update the environment Route 53 hosted zone"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -486,7 +486,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Runtime: nodejs12.x
   NLBCertValidatorRole:
     Metadata:
-      'aws:copilot:description': "An IAM role for NLBCertValidatorAction"
+      'aws:copilot:description': "An IAM role request and validate a certificate for your service"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

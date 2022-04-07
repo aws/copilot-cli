@@ -40,7 +40,7 @@ StateMachine:
       
 StateMachineRole:
   Metadata:
-    'aws:copilot:description': 'An IAM role for StateMachine'
+    'aws:copilot:description': 'An IAM role for a state machine to run ECS tasks in your cluster'
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

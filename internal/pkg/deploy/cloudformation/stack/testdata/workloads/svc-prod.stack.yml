@@ -300,7 +300,7 @@ Resources:
         Fn::ImportValue: !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
   DynamicDesiredCountAction:
     Metadata:
-      'aws:copilot:description': "A CloudFormation custom resource returning the ECS service's desired count"
+      'aws:copilot:description': "A custom resource returning the ECS service's running task count"
     Type: Custom::DynamicDesiredCountFunction
     Properties:
       ServiceToken: !GetAtt DynamicDesiredCountFunction.Arn
@@ -387,7 +387,7 @@ Resources:
       Runtime: nodejs12.x
   EnvControllerRole:
     Metadata:
-      'aws:copilot:description': "An IAM role for EnvControllerAction"
+      'aws:copilot:description': "An IAM role to update your environment stack"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -500,7 +500,7 @@ Resources:
       Runtime: nodejs12.x
   CustomResourceRole:
     Metadata:
-      'aws:copilot:description': 'An IAM role for CloudFormation custom resources'
+      'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -552,7 +552,7 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   HTTPSRulePriorityAction:
     Metadata:
-      'aws:copilot:description': 'A CloudFormation custom resource assigning priority for HTTPS listener rules'
+      'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
     Condition: HTTPSLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
@@ -588,7 +588,7 @@ Resources:
       Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic'
+      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -610,7 +610,7 @@ Resources:
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
   HTTPRulePriorityAction:
     Metadata:
-      'aws:copilot:description': 'A CloudFormation custom resource assigning priority for HTTP listener rules'
+      'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
     Condition: HTTPLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:

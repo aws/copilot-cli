@@ -242,7 +242,7 @@ Resources:
 
   CustomResourceRole:
     Metadata:
-      'aws:copilot:description': 'An IAM role for CloudFormation custom resources'
+      'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -299,7 +299,7 @@ Resources:
 
   HTTPSRulePriorityAction:
     Metadata:
-      'aws:copilot:description': 'A CloudFormation custom resource assigning priority for HTTPS listener rules'
+      'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
     Condition: HTTPSLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
@@ -351,7 +351,7 @@ Resources:
 
   HTTPSListenerRule:
     Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic'
+      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -396,7 +396,7 @@ Resources:
 
   HTTPRulePriorityAction:
     Metadata:
-      'aws:copilot:description': 'A CloudFormation custom resource assigning priority for HTTP listener rules'
+      'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
     Condition: HTTPLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:

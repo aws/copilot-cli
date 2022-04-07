@@ -199,7 +199,7 @@ Resources:
                   - !Ref givesOtherdogsSNSTopic
   DynamicDesiredCountAction:
     Metadata:
-      'aws:copilot:description': "A CloudFormation custom resource returning the ECS service's desired count"
+      'aws:copilot:description': "A custom resource returning the ECS service's running task count"
     Type: Custom::DynamicDesiredCountFunction
     Properties:
       ServiceToken: !GetAtt DynamicDesiredCountFunction.Arn
@@ -388,7 +388,7 @@ Resources:
         TargetValue: 900
   CustomResourceRole:
     Metadata:
-      'aws:copilot:description': 'An IAM role for CloudFormation custom resources'
+      'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -688,7 +688,7 @@ Resources:
       Runtime: nodejs12.x
   EnvControllerRole:
     Metadata:
-      'aws:copilot:description': "An IAM role for EnvControllerAction"
+      'aws:copilot:description': "An IAM role to update your environment stack"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

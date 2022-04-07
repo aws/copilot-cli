@@ -25,7 +25,7 @@ EnvControllerFunction:
 
 EnvControllerRole:
   Metadata:
-    'aws:copilot:description': "An IAM role for EnvControllerAction"
+    'aws:copilot:description': "An IAM role to update your environment stack"
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

@@ -68,7 +68,7 @@ Resources:
 
   EnvControllerRole:
     Metadata:
-      'aws:copilot:description': "An IAM role for EnvControllerAction"
+      'aws:copilot:description': "An IAM role to update your environment stack"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -420,7 +420,7 @@ Resources:
         
   StateMachineRole:
     Metadata:
-      'aws:copilot:description': 'An IAM role for StateMachine'
+      'aws:copilot:description': 'An IAM role for a state machine to run ECS tasks in your cluster'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
