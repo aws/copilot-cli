@@ -8,6 +8,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -29,6 +30,8 @@ const (
 
 	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
+
+	defaultPipelineArtifactsDir = "infrastructure"
 )
 
 var (
@@ -442,15 +445,30 @@ func (s *GitHubV1Source) Owner() (string, error) {
 	return owner, nil
 }
 
+type associatedEnvironment struct {
+	// Name of the environment, must be unique within an application.
+	// This is also the name of the pipeline stage.
+	Name string
+
+	// The region this environment is created in.
+	Region string
+
+	// AppName represents the application name the environment is part of.
+	AppName string
+
+	// AccountID of the account this environment is stored in.
+	AccountID string
+}
+
 // PipelineStage represents configuration for each deployment stage
 // of a workspace. A stage consists of the Config Environment the pipeline
 // is deploying to, the containerized services that will be deployed, and
 // test commands, if the user has opted to add any.
 type PipelineStage struct {
-	*AssociatedEnvironment
-	LocalWorkloads   []string
-	RequiresApproval bool
-	TestCommands     []string
+	*associatedEnvironment
+	localWorkloads   []string
+	requiresApproval bool
+	testCommands     []string
 
 	execRoleARN       string
 	envManagerRoleARN string
@@ -459,33 +477,31 @@ type PipelineStage struct {
 // Init populates the fields in PipelineStage against a target environment,
 // the user's manifest config, and any local workload names.
 func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.PipelineStage, workloads []string) {
-	stg.AssociatedEnvironment = &AssociatedEnvironment{
+	stg.associatedEnvironment = &associatedEnvironment{
 		AppName:   env.App,
 		Name:      mftStage.Name,
 		Region:    env.Region,
 		AccountID: env.AccountID,
 	}
-	stg.LocalWorkloads = workloads
-	stg.RequiresApproval = mftStage.RequiresApproval
-	stg.TestCommands = mftStage.TestCommands
+	stg.localWorkloads = workloads
+	stg.requiresApproval = mftStage.RequiresApproval
+	stg.testCommands = mftStage.TestCommands
 	stg.execRoleARN = env.ExecutionRoleARN
 	stg.envManagerRoleARN = env.ManagerRoleARN
 }
 
-// WorkloadTemplatePath returns the full path to the workload CFN template
-// built during the build stage.
-func (stg *PipelineStage) WorkloadTemplatePath(wlName string) string {
-	return fmt.Sprintf(WorkloadCfnTemplateNameFormat, wlName, stg.Name)
+// Name returns the stage's name.
+func (stg *PipelineStage) Name() string {
+	return stg.associatedEnvironment.Name
 }
 
-// WorkloadTemplateConfigurationPath returns the full path to the workload CFN
-// template configuration file built during the build stage.
-func (stg *PipelineStage) WorkloadTemplateConfigurationPath(wlName string) string {
-	return fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, wlName, stg.Name)
+// RequiresApproval returns true if the stage requires a manual approval before running deployments.
+func (stg *PipelineStage) RequiresApproval() bool {
+	return stg.requiresApproval
 }
 
 func (stg *PipelineStage) Region() string {
-	return stg.AssociatedEnvironment.Region
+	return stg.associatedEnvironment.Region
 }
 
 // ExecRoleARN returns the IAM role assumed by CloudFormation to create or update resources defined in a template.
@@ -498,15 +514,31 @@ func (stg *PipelineStage) EnvManagerRoleARN() string {
 	return stg.envManagerRoleARN
 }
 
+// TestCommands returns commands to run in CodeBuild once deployments finish.
+func (stg *PipelineStage) TestCommands() []string {
+	return stg.testCommands
+}
+
+// TestCommandsOrder returns the order in which the TestCommands action should run in the stage.
+func (stg *PipelineStage) TestCommandsOrder() int {
+	order := 0
+	for _, deployment := range stg.Deployments() {
+		if cur := deployment.RunOrder(); cur > order {
+			order = cur
+		}
+	}
+	return order + 1
+}
+
 // Deployments returns a list of deploy actions for the pipeline.
 func (stg *PipelineStage) Deployments() []WorkloadDeployAction {
 	var actions []WorkloadDeployAction
-	for _, workload := range stg.LocalWorkloads {
+	for _, workload := range stg.localWorkloads {
 		actions = append(actions, WorkloadDeployAction{
 			name:             workload,
-			envName:          stg.Name,
+			envName:          stg.associatedEnvironment.Name,
 			appName:          stg.AppName,
-			requiresApproval: stg.RequiresApproval,
+			requiresApproval: stg.requiresApproval,
 		})
 	}
 	return actions
@@ -531,6 +563,18 @@ func (a *WorkloadDeployAction) StackName() string {
 	return fmt.Sprintf("%s-%s-%s", a.appName, a.envName, a.name)
 }
 
+// TemplatePath returns the path of the CloudFormation template file generated during the build phase.
+func (a *WorkloadDeployAction) TemplatePath() string {
+	// Use path.Join instead of filepath to join with the "/" instead of OS-specific file separators.
+	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateNameFormat, a.name, a.envName))
+}
+
+// TemplateConfigPath returns the path of the CloudFormation template config file generated during the build phase.
+func (a *WorkloadDeployAction) TemplateConfigPath() string {
+	// Use path.Join instead of filepath to join with the "/" instead of OS-specific file separators.
+	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
+}
+
 // RunOrder returns the order in which the action should run.
 // Actions with the same RunOrder run in parallel.
 // RunOrders are in ascending order.
@@ -540,21 +584,4 @@ func (a *WorkloadDeployAction) RunOrder() int {
 		return order + 1 // Workload deployments should happen after the manual approval action.
 	}
 	return order
-}
-
-// AssociatedEnvironment defines the necessary information a pipeline stage
-// needs for an Config Environment.
-type AssociatedEnvironment struct {
-	// Name of the environment, must be unique within an application.
-	// This is also the name of the pipeline stage.
-	Name string
-
-	// The region this environment is created in.
-	Region string
-
-	// AppName represents the application name the environment is part of.
-	AppName string
-
-	// AccountID of the account this environment is stored in.
-	AccountID string
 }

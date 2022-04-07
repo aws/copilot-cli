@@ -163,14 +163,6 @@ func TestPipelineStackConfig_Template(t *testing.T) {
 	}
 }
 
-func mockAssociatedEnv(envName, region string) *deploy.AssociatedEnvironment {
-	return &deploy.AssociatedEnvironment{
-		Name:      envName,
-		Region:    region,
-		AccountID: envAccountID,
-	}
-}
-
 func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 	return &deploy.CreatePipelineInput{
 		AppName: projectName,
@@ -179,17 +171,7 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 			RepositoryURL: "hencrice/amazon-ecs-cli-v2",
 			Branch:        defaultBranch,
 		},
-		Stages: []deploy.PipelineStage{
-			{
-				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2"),
-				LocalWorkloads:        []string{"frontend", "backend"},
-				TestCommands:          []string{"echo 'bok bok bok'", "make test"},
-			},
-			{
-				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1"),
-				LocalWorkloads:        []string{"frontend", "backend"},
-			},
-		},
+		Stages: []deploy.PipelineStage{},
 		ArtifactBuckets: []deploy.ArtifactBucket{
 			{
 				BucketName: "chicken-us-east-1",

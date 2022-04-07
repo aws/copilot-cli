@@ -313,53 +313,45 @@ func TestParseOwnerAndRepo(t *testing.T) {
 	}
 }
 
-func TestPipelineStage(t *testing.T) {
-	testCases := map[string]struct {
-		inEnv       *config.Environment
-		inManifest  *manifest.PipelineStage
-		inWorkloads []string
+func TestPipelineStage_Init(t *testing.T) {
+	var stg PipelineStage
+	stg.Init(&config.Environment{
+		Name:             "test",
+		App:              "badgoose",
+		Region:           "us-west-2",
+		AccountID:        "123456789012",
+		ManagerRoleARN:   "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole",
+		ExecutionRoleARN: "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole",
+	}, &manifest.PipelineStage{
+		Name:             "test",
+		RequiresApproval: true,
+		TestCommands:     []string{"make test", "echo \"made test\""},
+	}, []string{"frontend", "backend"})
 
-		wantedRegion            string
-		wantedEnvManagerRoleARN string
-		wantedExecRoleARN       string
-	}{
-		"convert stage with all fields enabled": {
-			inEnv: &config.Environment{
-				Name:             "test",
-				App:              "badgoose",
-				Region:           "us-west-2",
-				AccountID:        "123456789012",
-				ManagerRoleARN:   "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole",
-				ExecutionRoleARN: "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole",
-			},
-			inManifest: &manifest.PipelineStage{
-				Name:             "test",
-				RequiresApproval: true,
-				TestCommands:     []string{"make test", "echo \"made test\""},
-			},
-			inWorkloads: []string{"frontend", "backend"},
-
-			wantedRegion:            "us-west-2",
-			wantedEnvManagerRoleARN: "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole",
-			wantedExecRoleARN:       "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			var stg PipelineStage
-			stg.Init(tc.inEnv, tc.inManifest, tc.inWorkloads)
-
-			// THEN
-			require.Equal(t, tc.wantedRegion, stg.Region(), "region does not match")
-			require.Equal(t, tc.wantedEnvManagerRoleARN, stg.EnvManagerRoleARN(), "env manager role ARN does not match")
-			require.Equal(t, tc.wantedExecRoleARN, stg.ExecRoleARN(), "exec role ARN does not match")
-		})
-	}
-}
-
-func TestPipelineStage_Deployments(t *testing.T) {
-	// TODO(efe)
+	t.Run("stage name matches the environment's name", func(t *testing.T) {
+		require.Equal(t, "test", stg.Name())
+	})
+	t.Run("stage region matches the environment's region", func(t *testing.T) {
+		require.Equal(t, "us-west-2", stg.Region())
+	})
+	t.Run("stage env manager role ARN matches the environment's config", func(t *testing.T) {
+		require.Equal(t, "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole", stg.EnvManagerRoleARN())
+	})
+	t.Run("stage exec role ARN matches the environment's config", func(t *testing.T) {
+		require.Equal(t, "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole", stg.ExecRoleARN())
+	})
+	t.Run("number of expected deployments match", func(t *testing.T) {
+		require.Equal(t, 2, len(stg.Deployments()))
+	})
+	t.Run("stage should require manual approval if manifest requires it", func(t *testing.T) {
+		require.True(t, stg.RequiresApproval())
+	})
+	t.Run("stage test commands match manifest input", func(t *testing.T) {
+		require.ElementsMatch(t, []string{"make test", `echo "made test"`}, stg.TestCommands())
+	})
+	t.Run("stage test commands order should come after deployments", func(t *testing.T) {
+		require.Equal(t, 3, stg.TestCommandsOrder())
+	})
 }
 
 func TestWorkloadDeployAction_Name(t *testing.T) {
@@ -408,6 +400,46 @@ func TestWorkloadDeployAction_RunOrder(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.RunOrder())
+		})
+	}
+}
+
+func TestWorkloadDeployAction_TemplatePath(t *testing.T) {
+	testCases := map[string]struct {
+		in     WorkloadDeployAction
+		wanted string
+	}{
+		"default location for workload templates": {
+			in: WorkloadDeployAction{
+				name:    "frontend",
+				envName: "test",
+			},
+			wanted: "infrastructure/frontend-test.stack.yml",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.TemplatePath())
+		})
+	}
+}
+
+func TestWorkloadDeployAction_TemplateConfigPath(t *testing.T) {
+	testCases := map[string]struct {
+		in     WorkloadDeployAction
+		wanted string
+	}{
+		"default location for workload template configs": {
+			in: WorkloadDeployAction{
+				name:    "frontend",
+				envName: "test",
+			},
+			wanted: "infrastructure/frontend-test.params.json",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.TemplateConfigPath())
 		})
 	}
 }

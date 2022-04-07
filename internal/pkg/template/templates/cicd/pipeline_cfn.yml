@@ -391,17 +391,21 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        {{- range $stage := .Stages}}{{$numDeployments := len $stage.Deployments}}{{if gt $numDeployments 0}}
+        {{- range $stage := .Stages}}
+        {{- $numDeployments := len $stage.Deployments}}{{- if gt $numDeployments 0}}
         - Name: DeployTo-{{$stage.Name}}
-          Actions:{{if $stage.RequiresApproval }}
+          Actions:
+            {{- if $stage.RequiresApproval }}
             - Name: ApprovePromotionTo-{{$stage.Name}}
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
                 Version: 1
                 Provider: Manual
-              RunOrder: 1{{end}}{{range $workload := $stage.LocalWorkloads}}
-            - Name: CreateOrUpdate-{{$workload}}-{{$stage.Name}}
+              RunOrder: 1
+            {{- end}}
+            {{- range $deployment := $stage.Deployments}}
+            - Name: {{$deployment.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
                 Category: Deploy
@@ -410,15 +414,17 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 ActionMode: CREATE_UPDATE
-                StackName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
+                StackName: {{$deployment.StackName}}
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
-                TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $workload}}
-                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $workload}}
+                TemplatePath: BuildOutput::{{$deployment.TemplatePath}}
+                TemplateConfiguration: BuildOutput::{{$deployment.TemplateConfigPath}}
                 RoleArn: {{$stage.ExecRoleARN}}
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: 2
+              RunOrder: {{$deployment.RunOrder}}
               RoleArn: {{$stage.EnvManagerRoleARN}}
+            {{- end}}
+            {{- if $stage.TestCommands }}
             - Name: TestCommands
               ActionTypeId:
                 Category: Test
@@ -427,9 +433,12 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref BuildTestCommands{{logicalIDSafe $stage.Name}}
-              RunOrder: 3
+              RunOrder: {{$stage.TestCommandsOrder}}
               InputArtifacts:
-                - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
+                - Name: SCCheckoutArtifact
+            {{- end}}
+        {{- end}} {{/* if gt $numDeployments 0 */}}
+        {{- end}} {{/* range $stage := .Stages */}}
 {{- if isCodeStarConnection .Source}}
 Outputs:
   PipelineConnectionARN:
