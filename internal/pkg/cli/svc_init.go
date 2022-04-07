@@ -221,11 +221,17 @@ func (o *initSvcOpts) Validate() error {
 func (o *initSvcOpts) Ask() error {
 	if o.name != "" && o.wkldType == "" {
 		// Best effort to validate the service name without type.
-		validExistingSvc, err := o.validExistingSvc()
+		if err := validateSvcName(o.name, o.wkldType); err != nil {
+			return err
+		}
+		if err := o.validateDuplicateSvc(); err != nil {
+			return err
+		}
+		shouldSkipAsking, err := o.shouldSkipAsking()
 		if err != nil {
 			return err
 		}
-		if validExistingSvc {
+		if shouldSkipAsking {
 			return nil
 		}
 	}
@@ -243,11 +249,17 @@ func (o *initSvcOpts) Ask() error {
 			return err
 		}
 	}
-	validExistingSvc, err := o.validExistingSvc()
+	if err := validateSvcName(o.name, o.wkldType); err != nil {
+		return err
+	}
+	if err := o.validateDuplicateSvc(); err != nil {
+		return err
+	}
+	shouldSkipAsking, err := o.shouldSkipAsking()
 	if err != nil {
 		return err
 	}
-	if validExistingSvc {
+	if shouldSkipAsking {
 		return nil
 	}
 	err = o.askDockerfile()
@@ -397,13 +409,7 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-func (o *initSvcOpts) validExistingSvc() (bool, error) {
-	if err := validateSvcName(o.name, o.wkldType); err != nil {
-		return false, err
-	}
-	if err := o.validateDuplicateSvc(); err != nil {
-		return false, err
-	}
+func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err != nil {
 		var (
