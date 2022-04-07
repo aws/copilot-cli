@@ -14,7 +14,6 @@ $ copilot pipeline init [flags]
 -h, --help                   help for init
 -n, --name string            Name of the pipeline.
 -u, --url string             The repository URL to trigger your pipeline.
-                             Supported providers are: GitHub, CodeCommit, Bitbucket.
 ```
 
 ## Examples
