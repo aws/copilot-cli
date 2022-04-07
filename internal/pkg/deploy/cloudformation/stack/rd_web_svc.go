@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -144,6 +145,10 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 
 		Publish:                  publishers,
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
+
+		Observability: template.ObservabilityOpts{
+			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
+		},
 	})
 	if err != nil {
 		return "", err
