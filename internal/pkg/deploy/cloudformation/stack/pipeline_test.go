@@ -24,7 +24,6 @@ const (
 	pipelineName = "wingspipeline"
 
 	toolsAccountID = "012345678910"
-	envAccountID   = "109876543210"
 	defaultBranch  = "main"
 )
 

@@ -35,7 +35,7 @@ func TestCC_Pipeline_Template(t *testing.T) {
 		ExecutionRoleARN: "arn:aws:iam::1111:role/phonetool-staging-test-CFNExecutionRole",
 		ManagerRoleARN:   "arn:aws:iam::1111:role/phonetool-staging-test-EnvManagerRole",
 	}, &manifest.PipelineStage{
-		Name:         "test",
+		Name:         "staging-test",
 		TestCommands: []string{`echo "test"`},
 	}, []string{"api"})
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
