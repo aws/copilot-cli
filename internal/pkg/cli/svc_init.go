@@ -221,10 +221,7 @@ func (o *initSvcOpts) Validate() error {
 func (o *initSvcOpts) Ask() error {
 	if o.name != "" && o.wkldType == "" {
 		// Best effort to validate the service name without type.
-		if err := validateSvcName(o.name, o.wkldType); err != nil {
-			return err
-		}
-		if err := o.validateDuplicateSvc(); err != nil {
+		if err := o.validateSvc(); err != nil {
 			return err
 		}
 		shouldSkipAsking, err := o.shouldSkipAsking()
@@ -249,10 +246,7 @@ func (o *initSvcOpts) Ask() error {
 			return err
 		}
 	}
-	if err := validateSvcName(o.name, o.wkldType); err != nil {
-		return err
-	}
-	if err := o.validateDuplicateSvc(); err != nil {
+	if err := o.validateSvc(); err != nil {
 		return err
 	}
 	shouldSkipAsking, err := o.shouldSkipAsking()
@@ -346,6 +340,13 @@ func (o *initSvcOpts) askSvcType() error {
 	}
 	o.wkldType = t
 	return nil
+}
+
+func (o *initSvcOpts) validateSvc() error {
+	if err := validateSvcName(o.name, o.wkldType); err != nil {
+		return err
+	}
+	return o.validateDuplicateSvc()
 }
 
 func (o *initSvcOpts) validateDuplicateSvc() error {
