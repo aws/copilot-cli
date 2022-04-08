@@ -56,7 +56,7 @@ Here's a quick guide showing you how to add environment variables to your app by
 
 ![Editing the manifest to add env vars](https://raw.githubusercontent.com/kohidave/ecs-cliv2-demos/master/env-vars-edit.svg?sanitize=true)
 
-Additionally, if you want to add environment variables in bulk, you can list them in an [env file](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations). And then specify its path (from the root of the workspace) in the `env_file` field of your[manifest](../manifest/overview.en.md).
+Additionally, if you want to add environment variables in bulk, you can list them in an [env file](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations). And then specify its path (from the root of the workspace) in the `env_file` field of your [manifest](../manifest/overview.en.md).
 
 ```yaml
 # in copilot/{service name}/manifest.yml
