@@ -315,7 +315,7 @@ func (o *initPipelineOpts) askPipelineName() error {
 	// Only show suggestion if [repo]-[branch] is a valid pipeline name.
 	suggestion := strings.ToLower(fmt.Sprintf("%s-%s", o.repoName, o.repoBranch))
 	if err := validatePipelineName(suggestion, o.appName); err == nil {
-		promptOpts = append(promptOpts, prompt.WithDefaultInput(color.Faint.Sprint(suggestion)))
+		promptOpts = append(promptOpts, prompt.WithDefaultInput(suggestion))
 	}
 
 	name, err := o.prompt.Get(fmt.Sprintf(fmtPipelineInitNamePrompt, color.Emphasize("name")),

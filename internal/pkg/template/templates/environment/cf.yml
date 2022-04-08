@@ -54,6 +54,8 @@ Resources:
   # For new environments after 1.5.0, this is "env.app.local". For upgraded environments from
   # before 1.5.0, this is app.local.
   ServiceDiscoveryNamespace:
+    Metadata:
+      'aws:copilot:description': 'A private DNS namespace for discovering services within the environment'
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
       Name: !Ref ServiceDiscoveryEndpoint
@@ -172,6 +174,8 @@ Resources:
       VpcId: !Ref VPC
 {{- end}}
   HTTPListener:
+    Metadata:
+      'aws:copilot:description': 'A load balancer listener to route HTTP traffic'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Condition: CreateALB
     Properties:
@@ -182,6 +186,8 @@ Resources:
       Port: 80
       Protocol: HTTP
   HTTPSListener:
+    Metadata:
+      'aws:copilot:description': 'A load balancer listener to route HTTPS traffic'
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn: HTTPSCert
     Condition: ExportHTTPSListener
@@ -281,6 +287,8 @@ Resources:
 {{include "environment-manager-role" . | indent 2}}
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:
+    Metadata:
+      'aws:copilot:description': "A Route 53 Hosted Zone for the environment's subdomain"
     Type: "AWS::Route53::HostedZone"
     Condition: DelegateDNS
     Properties:

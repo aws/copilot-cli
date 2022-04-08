@@ -168,7 +168,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 	const (
 		mockAppName          = "phonetool"
 		wantedSvcType        = manifest.LoadBalancedWebServiceType
+		appRunnerSvcType     = manifest.RequestDrivenWebServiceType
 		wantedSvcName        = "frontend"
+		badAppRunnerSvcName  = "iamoverfortycharacterlongandaninvalidrdwsname"
 		wantedDockerfilePath = "frontend/Dockerfile"
 		wantedSvcPort        = 80
 		wantedImage          = "mockImage"
@@ -259,7 +261,7 @@ type: Backend Service`), nil)
 			},
 			wantedErr: fmt.Errorf("manifest file for service frontend exists with a different type Backend Service"),
 		},
-		"skip asking questions if local manifest file exists": {
+		"skip asking questions if local manifest file exists by flags": {
 			inSvcType: "Worker Service",
 			inSvcName: wantedSvcName,
 
@@ -267,6 +269,23 @@ type: Backend Service`), nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte(`
 type: Worker Service`), nil)
+			},
+		},
+		"error if invalid app runner service name": {
+			inSvcType: "Request-Driven Web Service",
+			inSvcName: badAppRunnerSvcName,
+
+			setupMocks: func(m initSvcMocks) {},
+
+			wantedErr: fmt.Errorf("service name iamoverfortycharacterlongandaninvalidrdwsname is invalid: value must not exceed 40 characters"),
+		},
+		"skip asking questions if local manifest file exists by only name flag with minimal check": {
+			inSvcName: badAppRunnerSvcName,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, badAppRunnerSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(badAppRunnerSvcName).Return([]byte(`
+type: Request-Driven Web Service`), nil)
 			},
 		},
 		"return an error if fail to read local manifest": {
@@ -317,10 +336,22 @@ type: Worker Service`), nil)
 					},
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
-				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{}).Times(2)
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName}).Times(2)
 			},
 			wantedErr: nil,
+		},
+		"prompt for service type and error if the name is invalid": {
+			inSvcType: "",
+			inSvcName: badAppRunnerSvcName,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockPrompt.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(appRunnerSvcType, nil)
+				m.mockStore.EXPECT().GetService(mockAppName, badAppRunnerSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(badAppRunnerSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: badAppRunnerSvcName})
+			},
+			wantedErr: fmt.Errorf("service name iamoverfortycharacterlongandaninvalidrdwsname is invalid: value must not exceed 40 characters"),
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,
@@ -640,7 +671,6 @@ type: Worker Service`), nil)
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, wantedSvcName, opts.name)
 				if opts.dockerfilePath != "" {
 					require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
 				}
