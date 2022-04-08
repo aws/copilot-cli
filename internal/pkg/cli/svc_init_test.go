@@ -277,7 +277,7 @@ type: Worker Service`), nil)
 
 			setupMocks: func(m initSvcMocks) {},
 
-			wantedErr: fmt.Errorf("service name iamoverfourtycharacterlongandaninvalidrdwsname is invalid: value must not exceed 40 characters"),
+			wantedErr: fmt.Errorf("service name iamoverfortycharacterlongandaninvalidrdwsname is invalid: value must not exceed 40 characters"),
 		},
 		"skip asking questions if local manifest file exists by only name flag with minimal check": {
 			inSvcName: badAppRunnerSvcName,
