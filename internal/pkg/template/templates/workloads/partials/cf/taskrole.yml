@@ -2,9 +2,18 @@ TaskRole:
   Metadata:
     'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
   Type: AWS::IAM::Role
-  Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{if gt (len .NestedStack.PolicyOutputs) 0}}
-    ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}
-    - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}{{end}}
+  Properties:
+    {{if or (.NestedStack) (eq .Observability.Tracing "AWSXRAY") }}
+    ManagedPolicyArns:
+    {{end}}
+      {{if and (.NestedStack) (gt (len .NestedStack.PolicyOutputs) 0)}}
+      {{range $managedPolicy := .NestedStack.PolicyOutputs}}
+      - Fn::GetAtt: [{{$.NestedStack.StackName}}, Outputs.{{$managedPolicy}}]
+      {{end}}
+      {{end}}
+      {{if eq .Observability.Tracing "AWSXRAY"}}
+      - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      {{end}}
     AssumeRolePolicyDocument:
       Statement:
         - Effect: Allow
@@ -102,5 +111,3 @@ TaskRole:
                 - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
               {{- end}}
       {{- end}}{{- end}}
-
-

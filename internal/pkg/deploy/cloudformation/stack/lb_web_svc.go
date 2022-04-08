@@ -6,6 +6,7 @@ package stack
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -235,6 +236,9 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,
 		NLBCustomDomainFunctionLambda:  nlbConfig.customDomainLambda,
 		ALBEnabled:                     !s.manifest.RoutingRule.Disabled(),
+		Observability: template.ObservabilityOpts{
+			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
+		},
 	})
 	if err != nil {
 		return "", err

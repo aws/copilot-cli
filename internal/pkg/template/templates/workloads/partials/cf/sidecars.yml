@@ -26,6 +26,10 @@
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
 {{- end}}
+{{- if eq .Observability.Tracing "AWSXRAY"}}
+- Name: xray-daemon
+  Image: amazon/aws-xray-daemon
+{{- end}}
 {{- range $sidecar := .Sidecars}}
 - Name: {{$sidecar.Name}}
   Image: {{$sidecar.Image}}
