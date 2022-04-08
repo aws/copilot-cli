@@ -170,7 +170,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedSvcType        = manifest.LoadBalancedWebServiceType
 		appRunnerSvcType     = manifest.RequestDrivenWebServiceType
 		wantedSvcName        = "frontend"
-		badAppRunnerSvcName  = "iamoverfourtycharacterlongandaninvalidrdwsname"
+		badAppRunnerSvcName  = "iamoverfortycharacterlongandaninvalidrdwsname"
 		wantedDockerfilePath = "frontend/Dockerfile"
 		wantedSvcPort        = 80
 		wantedImage          = "mockImage"
