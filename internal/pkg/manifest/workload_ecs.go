@@ -34,6 +34,10 @@ const (
 	// Minimum CPU and mem values required for Windows-based tasks.
 	MinWindowsTaskCPU    = 1024
 	MinWindowsTaskMemory = 2048
+
+	// deployment strategies
+	ecsDefaultRollingUpdateStrategy  = "default"
+	ecsRecreateRollingUpdateStrategy = "recreate"
 )
 
 // Platform related settings.
@@ -74,8 +78,7 @@ type ImageWithPortAndHealthcheck struct {
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 }
 
-// DeploymentConfiguration is contains Rolling field of string
-// that decides the deployment strategy for example default or recreate
+// DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling *string `yaml:"rolling"`
 }

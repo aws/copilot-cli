@@ -305,7 +305,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
 		},
-		"error if fail to validate Deployment configuration": {
+		"error if fail to validate deployment": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("mockName"),
@@ -323,7 +323,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "Deployment Configuration":`,
+			wantedErrorMsgPrefix: `validate "deployment"`,
 		},
 	}
 	for name, tc := range testCases {
@@ -485,7 +485,7 @@ func TestBackendService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
 		},
-		"error if fail to validate Deployment configuration": {
+		"error if fail to validate deployment": {
 			config: BackendService{
 				Workload: Workload{
 					Name: aws.String("mockName"),
@@ -506,7 +506,7 @@ func TestBackendService_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "Deployment Configuration":`,
+			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
 	}
 	for name, tc := range testCases {
@@ -796,7 +796,7 @@ func TestWorkerService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
 		},
-		"error if fail to validate Deployment configuration": {
+		"error if fail to validate deployment": {
 			config: WorkerService{
 				Workload: Workload{
 					Name: aws.String("mockName"),
@@ -817,7 +817,7 @@ func TestWorkerService_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "Deployment Configuration":`,
+			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
 	}
 	for name, tc := range testCases {
@@ -2708,14 +2708,14 @@ func TestValidateARM(t *testing.T) {
 
 func TestDeploymentConfiguration_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		deployConfig      DeploymentConfiguration
-		wantedErrorPrefix string
+		deployConfig DeploymentConfiguration
+		wanted       string
 	}{
 		"error if deploy config has invalid rolling strategy": {
 			deployConfig: DeploymentConfiguration{
-				Rolling: aws.String("unknown-vendor"),
+				Rolling: aws.String("unknown"),
 			},
-			wantedErrorPrefix: `invalid deployment strategy `,
+			wanted: `invalid rolling deployment strategy unknown, must be one of default or recreate`,
 		},
 		"ok if deployment strategy is recreate": {
 			deployConfig: DeploymentConfiguration{
@@ -2727,7 +2727,7 @@ func TestDeploymentConfiguration_Validate(t *testing.T) {
 				Rolling: aws.String("default"),
 			},
 		},
-		"ok if observability is empty": {
+		"ok if deployment is empty": {
 			deployConfig: DeploymentConfiguration{},
 		},
 	}
@@ -2735,9 +2735,9 @@ func TestDeploymentConfiguration_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.deployConfig.Validate()
 
-			if tc.wantedErrorPrefix != "" {
+			if tc.wanted != "" {
 				require.NotNil(t, gotErr)
-				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
+				require.Contains(t, gotErr.Error(), tc.wanted)
 			} else {
 				require.NoError(t, gotErr)
 			}

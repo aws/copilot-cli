@@ -39,10 +39,6 @@ const (
 
 	// Tracing vendors.
 	awsXRAY = "awsxray"
-
-	// deployment strategies
-	defaultStrategy  = "default"
-	recreateStrategy = "recreate"
 )
 
 var (
@@ -57,7 +53,7 @@ var (
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, tls}
 	TracingValidVendors                      = []string{awsXRAY}
-	deployConfigValidStrategies              = []string{defaultStrategy, recreateStrategy}
+	ecsRollingUpdateStrategies               = []string{ecsDefaultRollingUpdateStrategy, ecsRecreateRollingUpdateStrategy}
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
@@ -68,7 +64,7 @@ var (
 func (l LoadBalancedWebService) Validate() error {
 	var err error
 	if err = l.DeployConfig.Validate(); err != nil {
-		return fmt.Errorf(`validate "Deployment Configuration": %w`, err)
+		return fmt.Errorf(`validate "deployment": %w`, err)
 	}
 	if err = l.LoadBalancedWebServiceConfig.Validate(); err != nil {
 		return err
@@ -105,15 +101,14 @@ func (d DeploymentConfiguration) Validate() error {
 	if d.isEmpty() {
 		return nil
 	}
-	for _, validStrategy := range deployConfigValidStrategies {
+	for _, validStrategy := range ecsRollingUpdateStrategies {
 		if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
 			return nil
 		}
 	}
-	return fmt.Errorf("invalid deployment strategy %s: %s %s",
+	return fmt.Errorf("invalid rolling deployment strategy %s, must be one of %s",
 		aws.StringValue(d.Rolling),
-		english.PluralWord(len(deployConfigValidStrategies), "the valid deployment strategy is", "valid deployment strategies are"),
-		english.WordSeries(deployConfigValidStrategies, "and"))
+		english.WordSeries(ecsRollingUpdateStrategies, "or"))
 }
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -184,7 +179,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 func (b BackendService) Validate() error {
 	var err error
 	if err = b.DeployConfig.Validate(); err != nil {
-		return fmt.Errorf(`validate "Deployment Configuration": %w`, err)
+		return fmt.Errorf(`validate "deployment": %w`, err)
 	}
 	if err = b.BackendServiceConfig.Validate(); err != nil {
 		return err
@@ -289,7 +284,7 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 func (w WorkerService) Validate() error {
 	var err error
 	if err = w.DeployConfig.Validate(); err != nil {
-		return fmt.Errorf(`validate "Deployment Configuration": %w`, err)
+		return fmt.Errorf(`validate "deployment": %w`, err)
 	}
 	if err = w.WorkerServiceConfig.Validate(); err != nil {
 		return err
