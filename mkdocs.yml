@@ -146,6 +146,7 @@ nav:
         - version: docs/commands/version.en.md
   - Blogs:
       - Release v1.16: blogs/release-v116.en.md
+      - Release v1.17: blogs/release-v117.en.md
   - Community:
       - Get Involved: community/get-involved.en.md
       - Guides and Resources: community/guides.en.md
