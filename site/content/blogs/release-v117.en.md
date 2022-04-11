@@ -6,8 +6,8 @@ who help each other daily. Thanks to every one of you who shows love and support
 
 Copilot v1.17 brings a brand-new feature and several improvements:
 
-* **Tracing for Request-Driven Web Service:** With the release of AWS X-Ray tracing support for AWS App runner services, you can now add `observability.tracing: awsxray` in your Request-Driven Web Service's 
-  manifest to send your traces to AWS XRay. [See detailed section](./#send-your-request-driven-web-services-traces-to-aws-xray).
+* **Tracing for Request-Driven Web Service:** With the release of AWS X-Ray tracing support for AWS App Runner services, you can now add `observability.tracing: awsxray` in your Request-Driven Web Service's 
+  manifest to send your traces to AWS X-Ray. [See detailed section](./#send-your-request-driven-web-services-traces-to-aws-xray).
 * **Allow disabling of Scheduled Jobs**: 
   Easily toggle your Scheduled Job off by setting your schedule to "none" in your manifest, disabling the event rule. ([#3447](https://github.com/aws/copilot-cli/pull/3447))
   ```yaml
@@ -37,7 +37,7 @@ To use this feature, your service needs to be first instrumented with
 [AWS Distro for OpenTelemetry](https://aws.amazon.com/otel/?otel-blogs.sort-by=item.additionalFields.createdDate&otel-blogs.sort-order=desc).
 You can either [manually instrument](https://aws-otel.github.io/docs/getting-started/python-sdk/trace-manual-instr) your service, 
 or for a quicker, easier set up, [auto-instrument](https://aws-otel.github.io/docs/getting-started/python-sdk/trace-auto-instr) 
-your service through Dockerfile without changing application code.
+your service through your Dockerfile without changing the application code.
 
 After instrumenting your service, simply modify your Request-Driven Web Service's manifest to include the [observability](../docs/manifest/rd-web-service.en.md#observability) configuration:
 ```yaml
