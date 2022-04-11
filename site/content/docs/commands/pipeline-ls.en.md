@@ -11,6 +11,7 @@ $ copilot pipeline ls [flags]
 -a, --app string   Name of the application.
 -h, --help         help for ls
     --json         Optional. Outputs in JSON format.
+    --local        Only show pipelines in the workspace.
 ```
 
 ## Examples

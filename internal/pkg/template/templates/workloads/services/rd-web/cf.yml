@@ -134,7 +134,7 @@ Resources:
           EgressType: VPC
           VpcConnectorArn: !Ref VpcConnector
       {{- end }}
-      {{- if and (contains .FeatureFlags "Tracing") (eq .Observability.Tracing "AWSXRAY")}}
+      {{- if eq .Observability.Tracing "AWSXRAY"}}
       ObservabilityConfiguration:
         ObservabilityEnabled: true
         ObservabilityConfigurationArn: !Sub 'arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:observabilityconfiguration/DefaultConfiguration/1/00000000000000000000000000000001'
@@ -178,6 +178,8 @@ Resources:
       AppDNSName: {{ .AppDNSName }}
 
   CustomResourceRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role used by custom resources to associate the custom domain'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

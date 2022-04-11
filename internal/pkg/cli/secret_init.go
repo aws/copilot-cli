@@ -9,6 +9,9 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/dustin/go-humanize/english"
@@ -390,7 +393,7 @@ func (o *secretInitOpts) askForSecretValues() error {
 		value, err := o.prompter.GetSecret(
 			fmt.Sprintf(fmtSecretInitSecretValuePrompt, color.HighlightUserInput(o.name), env.Name),
 			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name),
-			prompt.WithFinalMessage(fmt.Sprintf("%s secret value:", strings.Title(env.Name))),
+			prompt.WithFinalMessage(fmt.Sprintf("%s secret value:", cases.Title(language.English).String(env.Name))),
 		)
 		if err != nil {
 			return fmt.Errorf("get secret value for %s in environment %s: %w", color.HighlightUserInput(o.name), env.Name, err)

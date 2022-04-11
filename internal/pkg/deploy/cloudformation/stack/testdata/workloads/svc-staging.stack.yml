@@ -272,6 +272,8 @@ Resources:
       Runtime: nodejs12.x
   
   EnvControllerRole:
+    Metadata:
+      'aws:copilot:description': "An IAM role to update your environment stack"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -388,6 +390,8 @@ Resources:
       Runtime: nodejs12.x
 
   CustomResourceRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -414,6 +418,8 @@ Resources:
         - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   HTTPSRulePriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
     Condition: HTTPSLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
@@ -421,6 +427,8 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
 
   HTTPListenerRuleWithDomain:
+    Metadata:
+      'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -451,6 +459,8 @@ Resources:
       Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
 
   HTTPSListenerRule:
+    Metadata:
+      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
     Properties:
@@ -475,6 +485,8 @@ Resources:
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
 
   HTTPRulePriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
     Condition: HTTPLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
@@ -482,6 +494,8 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
 
   HTTPListenerRule:
+    Metadata:
+      'aws:copilot:description': 'A HTTP listener rule for forwarding HTTP traffic'
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPLoadBalancer
     Properties:

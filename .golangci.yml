@@ -3,3 +3,5 @@ issues:
     - path: _test\.go
       linters:
         - errcheck
+    - path: internal/pkg/exec/(.+)\.go
+      text: 'is unused'

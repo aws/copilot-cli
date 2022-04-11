@@ -349,6 +349,21 @@ func (mr *MockcfnClientMockRecorder) Outputs(stack interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockcfnClient)(nil).Outputs), stack)
 }
 
+// StackResources mocks base method.
+func (m *MockcfnClient) StackResources(name string) ([]*cloudformation0.StackResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StackResources", name)
+	ret0, _ := ret[0].([]*cloudformation0.StackResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StackResources indicates an expected call of StackResources.
+func (mr *MockcfnClientMockRecorder) StackResources(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockcfnClient)(nil).StackResources), name)
+}
+
 // TemplateBody mocks base method.
 func (m *MockcfnClient) TemplateBody(stackName string) (string, error) {
 	m.ctrl.T.Helper()

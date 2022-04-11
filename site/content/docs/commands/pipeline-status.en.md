@@ -15,9 +15,9 @@ $ copilot pipeline status [flags]
 ```
 
 ## Examples
-Shows status of the pipeline "pipeline-myapp-myrepo".
+Shows status of the pipeline "my-repo-my-branch".
 ```bash
-$ copilot pipeline status -n pipeline-myapp-myrepo
+$ copilot pipeline status -n my-repo-my-branch
 ```
 
 ## What does it look like?

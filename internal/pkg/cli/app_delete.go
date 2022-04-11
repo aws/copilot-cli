@@ -93,7 +93,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
-		pipelineLister: deploy.NewPipelineStore(vars.name, rg.New(defaultSession)),
+		pipelineLister: deploy.NewPipelineStore(rg.New(defaultSession)),
 		svcDeleteExecutor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
@@ -323,13 +323,13 @@ func (o *deleteAppOpts) emptyS3Bucket() error {
 }
 
 func (o *deleteAppOpts) deletePipelines() error {
-	pipelines, err := o.pipelineLister.ListDeployedPipelines()
+	pipelines, err := o.pipelineLister.ListDeployedPipelines(o.name)
 	if err != nil {
 		return fmt.Errorf("list pipelines for application %s: %w", o.name, err)
 	}
 
 	for _, pipeline := range pipelines {
-		cmd, err := o.pipelineDeleteExecutor(pipeline.Name())
+		cmd, err := o.pipelineDeleteExecutor(pipeline.Name)
 		if err != nil {
 			return err
 		}

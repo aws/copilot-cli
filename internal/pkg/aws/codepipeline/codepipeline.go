@@ -38,7 +38,8 @@ type CodePipeline struct {
 
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
-	Name      string    `json:"name"`
+	// Name is the resource name of the pipeline in CodePipeline, e.g. myapp-mypipeline-RANDOMSTRING.
+	Name      string    `json:"pipelineName"`
 	Region    string    `json:"region"`
 	AccountID string    `json:"accountId"`
 	Stages    []*Stage  `json:"stages"`

@@ -15,7 +15,7 @@ var (
 	successSprintf = color.HiGreenString
 	errorSprintf   = color.HiRedString
 	warningSprintf = color.YellowString
-	debugSprintf   = color.WhiteString
+	debugSprintf   = color.New(color.Faint).Sprintf
 )
 
 // Wrapper writers around standard error and standard output that work on windows.

@@ -238,7 +238,6 @@ Resources:
               Id: arn:aws:kms:us-west-2:1111:key/abcd
               Type: KMS
       RoleArn: !GetAtt PipelineRole.Arn
-      Name: !Ref AWS::StackName
       Stages:
         - Name: Source
           Actions:

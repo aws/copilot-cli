@@ -211,7 +211,7 @@ stages:
       name: prod
 `,
 			expectedErr: &ErrInvalidPipelineManifestVersion{
-				PipelineSchemaMajorVersion(-1),
+				invalidVersion: PipelineSchemaMajorVersion(-1),
 			},
 		},
 		"invalid pipeline.yml": {

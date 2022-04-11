@@ -125,7 +125,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 func (o *initJobOpts) Validate() error {
 	// If this app is pending creation, we'll skip validation.
 	if !o.wsPendingCreation {
-		if err := validateInputApp(o.wsAppName, o.appName, o.store); err != nil {
+		if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
 		o.appName = o.wsAppName

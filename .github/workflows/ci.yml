@@ -82,9 +82,9 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.34.1
+          version: v1.45.2
           args: --timeout 5m0s
 
   license:
