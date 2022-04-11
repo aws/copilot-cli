@@ -28,7 +28,7 @@
 {{- end}}
 {{- if eq .Observability.Tracing "AWSXRAY"}}
 - Name: xray-daemon
-  Image: amazon/aws-xray-daemon
+  Image: public.ecr.aws/xray/aws-xray-daemon:latest
 {{- end}}
 {{- range $sidecar := .Sidecars}}
 - Name: {{$sidecar.Name}}
