@@ -65,10 +65,16 @@ var (
 	rdwsAliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s.\n",
 		color.HighlightCode("http.alias"),
 		color.HighlightCode("copilot app init --domain example.com"))
-	ecsAliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s, or import any certificates to your environment: %s.\n",
+	ecsALBAliasUsedWithoutDomainFriendlyText = fmt.Sprintf(`To use %s, your application must be:
+* Associated with a domain: %s
+* Or, using imported certificates to your environment: %s
+`,
 		color.HighlightCode("http.alias"),
 		color.HighlightCode("copilot app init --domain example.com"),
 		color.HighlightCode("copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"))
+	ecsNLBAliasUsedWithoutDomainFriendlyText = fmt.Sprintf("To use %s, your application must be associated with a domain: %s",
+		color.HighlightCode("nlb.alias"),
+		color.HighlightCode("copilot app init --domain example.com"))
 	fmtErrTopicSubscriptionNotAllowed = "SNS topic %s does not exist in environment %s"
 	resourceNameFormat                = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
 )
@@ -137,7 +143,7 @@ type fileReader interface {
 }
 
 type aliasCertValidator interface {
-	ValidCertificatesAliases(aliases []string, certs []string) error
+	ValidateCertAliases(aliases []string, certs []string) error
 }
 
 type workloadDeployer struct {
@@ -894,7 +900,10 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 	if err != nil {
 		return nil, err
 	}
-	if err := validateLBWSRuntime(d.app, d.env, d.lbMft, d.appVersionGetter, d.aliasCertValidator); err != nil {
+	if err := d.validateALBWSRuntime(); err != nil {
+		return nil, err
+	}
+	if err := d.validateNLBWSRuntime(); err != nil {
 		return nil, err
 	}
 	var opts []stack.LoadBalancedWebServiceOption
@@ -905,11 +914,7 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 		}
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
-	albOpts, err := d.albOpts(in.RootUserARN)
-	if err != nil {
-		return nil, err
-	}
-	conf, err := stack.NewLoadBalancedWebService(d.lbMft, d.env.Name, d.app.Name, *rc, append(opts, albOpts...)...)
+	conf, err := stack.NewLoadBalancedWebService(d.lbMft, d.env.Name, d.app.Name, *rc, append(opts, d.albOpts(in.RootUserARN)...)...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -921,35 +926,23 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 	}, nil
 }
 
-func (d *lbSvcDeployer) albOpts(rootUserARN string) ([]stack.LoadBalancedWebServiceOption, error) {
+func (d *lbSvcDeployer) albOpts(rootUserARN string) []stack.LoadBalancedWebServiceOption {
 	var opts []stack.LoadBalancedWebServiceOption
-	if d.app.RequiresDNSDelegation() {
+	if d.app.DNSDelegated() {
 		opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
 			Name:                d.app.Name,
 			DNSName:             d.app.Domain,
 			AccountPrincipalARN: rootUserARN,
 		}))
 		if !d.lbMft.RoutingRule.Disabled() {
-			if d.env.HasImportedCerts() && !d.lbMft.HasAliases() {
-				return nil, &errSvcWithNoAliasDeployingToEnvWithImportedCerts{
-					name:    d.name,
-					envName: d.env.Name,
-				}
-			}
 			opts = append(opts, stack.WithHTTPS())
 		}
 	} else {
 		if !d.lbMft.RoutingRule.Disabled() && d.env.HasImportedCerts() {
-			if !d.lbMft.HasAliases() {
-				return nil, &errSvcWithNoAliasDeployingToEnvWithImportedCerts{
-					name:    d.name,
-					envName: d.env.Name,
-				}
-			}
 			opts = append(opts, stack.WithHTTPS())
 		}
 	}
-	return opts, nil
+	return opts
 }
 
 func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {
@@ -1212,32 +1205,53 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 	return nil
 }
 
-func validateLBWSRuntime(app *config.Application, env *config.Environment, mft *manifest.LoadBalancedWebService, appVersionGetter versionGetter, validator aliasCertValidator) error {
-	if !mft.HasAliases() {
+func (d *lbSvcDeployer) validateALBWSRuntime() error {
+	if d.lbMft.RoutingRule.Alias.IsEmpty() {
+		if d.env.HasImportedCerts() {
+			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
+				name:    d.name,
+				envName: d.env.Name,
+			}
+		}
 		return nil
 	}
-	if env.HasImportedCerts() {
-		aliases, err := mft.RoutingRule.Alias.ToStringSlice()
+	if d.env.HasImportedCerts() {
+		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
-		if err := validator.ValidCertificatesAliases(aliases, env.CustomConfig.ImportCertARNs); err != nil {
-			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", env.Name, err)
+		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.env.CustomConfig.ImportCertARNs); err != nil {
+			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
 		}
-		return validateLBSvcAlias(mft.NLBConfig.Aliases, app, env.Name)
+		return nil
 	}
-	if app.RequiresDNSDelegation() {
-		if err := validateAppVersionForAlias(app.Name, appVersionGetter); err != nil {
-			logAppVersionOutdatedError(aws.StringValue(mft.Name))
+	if d.app.DNSDelegated() {
+		if err := validateAppVersionForAlias(d.app.Name, d.appVersionGetter); err != nil {
+			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		if err := validateLBSvcAlias(mft.RoutingRule.Alias, app, env.Name); err != nil {
-			return err
-		}
-		return validateLBSvcAlias(mft.NLBConfig.Aliases, app, env.Name)
+		return validateLBSvcAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
 	}
-	log.Errorf(ecsAliasUsedWithoutDomainFriendlyText)
-	return fmt.Errorf("alias specified when application is not associated with a domain and env %s doesn't have any certificates", env.Name)
+	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
+	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
+}
+
+func (d *lbSvcDeployer) validateNLBWSRuntime() error {
+	if d.lbMft.NLBConfig.Aliases.IsEmpty() {
+		return nil
+	}
+	if d.env.HasImportedCerts() {
+		return fmt.Errorf("cannot specify nlb.alias when env %s imports one or more certificates", d.env.Name)
+	}
+	if !d.app.DNSDelegated() {
+		log.Errorf(ecsNLBAliasUsedWithoutDomainFriendlyText)
+		return fmt.Errorf("cannot specify nlb.alias when application is not associated with a domain")
+	}
+	if err := validateAppVersionForAlias(d.app.Name, d.appVersionGetter); err != nil {
+		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
+		return err
+	}
+	return validateLBSvcAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name)
 }
 
 func validateLBSvcAlias(aliases manifest.Alias, app *config.Application, envName string) error {

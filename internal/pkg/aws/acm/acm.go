@@ -24,7 +24,7 @@ func New(s *session.Session) *ACM {
 	}
 }
 
-// ValidCertificatesAliases is a no-op and is supposed to validates if aliases are all valid against the provided ACM certificates.
-func (a *ACM) ValidCertificatesAliases(aliases []string, certs []string) error {
+// ValidateCertAliases is a no-op and is supposed to validates if aliases are all valid against the provided ACM certificates.
+func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	return nil
 }

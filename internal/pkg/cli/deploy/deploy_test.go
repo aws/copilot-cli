@@ -288,6 +288,22 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("get service discovery endpoint: some error"),
 		},
+		"fail if alias is not specified with env has imported certs": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: mockCertARNs,
+				},
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: fmt.Errorf("cannot deploy service mockWkld without http.alias to environment mockEnv with certificate imported"),
+		},
 		"fail to validate certificate aliases": {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -304,7 +320,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockValidator.EXPECT().ValidCertificatesAliases(mockAliases, mockCertARNs).Return(mockError)
+				m.mockValidator.EXPECT().ValidateCertAliases(mockAliases, mockCertARNs).Return(mockError)
 			},
 			wantErr: fmt.Errorf("validate aliases against the imported certificate for env mockEnv: some error"),
 		},
@@ -337,7 +353,46 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
-			wantErr: errors.New("alias specified when application is not associated with a domain and env mockEnv doesn't have any certificates"),
+			wantErr: errors.New("cannot specify http.alias when application is not associated with a domain and env mockEnv doesn't import one or more certificates"),
+		},
+		"nlb alias used while app is not associated with a domain": {
+			inNLB: manifest.NetworkLoadBalancerConfiguration{
+				Port:    aws.String("80"),
+				Aliases: manifest.Alias{String: aws.String("mockAlias")},
+			},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: errors.New("cannot specify nlb.alias when application is not associated with a domain"),
+		},
+		"nlb alias used while env has imported certs": {
+			inAliases: manifest.Alias{String: aws.String("mockAlias")},
+			inNLB: manifest.NetworkLoadBalancerConfiguration{
+				Port:    aws.String("80"),
+				Aliases: manifest.Alias{String: aws.String("mockAlias")},
+			},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: mockCertARNs,
+				},
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"mockAlias"}, mockCertARNs).Return(nil)
+			},
+			wantErr: errors.New("cannot specify nlb.alias when env mockEnv imports one or more certificates"),
 		},
 		"fail to get app version": {
 			inAliases: manifest.Alias{String: aws.String("mockAlias")},
@@ -534,6 +589,20 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("force an update for service mockWkld: max retries 0 exceeded"),
 		},
+		"skip validating": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
+			},
+		},
 		"success": {
 			inAliases: manifest.Alias{
 				StringSlice: mockAliases,
@@ -551,7 +620,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockValidator.EXPECT().ValidCertificatesAliases(mockAliases, mockCertARNs).Return(nil)
+				m.mockValidator.EXPECT().ValidateCertAliases(mockAliases, mockCertARNs).Return(nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
@@ -1042,7 +1111,6 @@ func TestWorkloadDeployer_albOpts(t *testing.T) {
 		mockDomain  = "example.com"
 		mockRootARN = "mockRootARN"
 	)
-	mockError := errors.New("cannot deploy service mockWkld without custom domain to environment mockEnv with certificate imported")
 	mockAliases := manifest.Alias{StringSlice: []string{"example.com", "foobar.com"}}
 	mockCertARNs := []string{"mockCertARN"}
 	tests := map[string]struct {
@@ -1051,25 +1119,18 @@ func TestWorkloadDeployer_albOpts(t *testing.T) {
 		inImportedCerts []string
 		inALBDisabled   bool
 
-		wantErr     error
 		wantOptsLen int
 	}{
-		"succeed when ALB is disabled with app domain": {
+		"when ALB is disabled with app domain": {
 			inALBDisabled: true,
 			inDomain:      mockDomain,
 
 			wantOptsLen: 1, // only ALB
 		},
-		"succeed when ALB is disabled without app domain": {
+		"when ALB is disabled without app domain": {
 			inALBDisabled: true,
 
 			wantOptsLen: 0,
-		},
-		"domain app: fail when alias is not specify and imported certs specified": {
-			inDomain:        mockDomain,
-			inImportedCerts: mockCertARNs,
-
-			wantErr: mockError,
 		},
 		"domain app: HTTPS when alias is specified and imported certs specified": {
 			inDomain:        mockDomain,
@@ -1094,11 +1155,6 @@ func TestWorkloadDeployer_albOpts(t *testing.T) {
 			inImportedCerts: mockCertARNs,
 
 			wantOptsLen: 1, // only HTTPS
-		},
-		"app without domain: fail when imported certs without alias": {
-			inImportedCerts: mockCertARNs,
-
-			wantErr: mockError,
 		},
 		"app without domain: HTTP when no imported certs without alias": {
 			wantOptsLen: 0,
@@ -1157,14 +1213,9 @@ func TestWorkloadDeployer_albOpts(t *testing.T) {
 				}
 			}
 
-			opts, gotErr := deployer.albOpts(mockRootARN)
+			opts := deployer.albOpts(mockRootARN)
 
-			if tc.wantErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
-			} else {
-				require.NoError(t, gotErr)
-				require.Equal(t, tc.wantOptsLen, len(opts))
-			}
+			require.Equal(t, tc.wantOptsLen, len(opts))
 		})
 	}
 }

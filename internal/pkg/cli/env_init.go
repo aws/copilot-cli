@@ -262,7 +262,7 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	if app.RequiresDNSDelegation() {
+	if app.DNSDelegated() {
 		if err := o.delegateDNSFromApp(app, envCaller.Account); err != nil {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}

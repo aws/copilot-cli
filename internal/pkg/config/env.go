@@ -27,6 +27,11 @@ type Environment struct {
 	Telemetry        *Telemetry    `json:"telemetry,omitempty"`    // Optional environment telemetry features.
 }
 
+// HasImportedCerts return if the environment has imported certs.
+func (e *Environment) HasImportedCerts() bool {
+	return e.CustomConfig != nil && len(e.CustomConfig.ImportCertARNs) != 0
+}
+
 // CustomizeEnv represents the custom environment config.
 type CustomizeEnv struct {
 	ImportVPC      *ImportVPC `json:"importVPC,omitempty"`
@@ -34,14 +39,9 @@ type CustomizeEnv struct {
 	ImportCertARNs []string   `json:"importCertARNs,omitempty"`
 }
 
-// HasImportedCerts return if the environment has imported certs.
-func (e *Environment) HasImportedCerts() bool {
-	return e.CustomConfig != nil && len(e.CustomConfig.ImportCertARNs) != 0
-}
-
 // CustomizeEnvP returns a pointer to the CustomizeEnv value passed in.
 func CustomizeEnvP(input CustomizeEnv) *CustomizeEnv {
-	if input.ImportVPC == nil && input.VPCConfig == nil && input.ImportCertARNs == nil {
+	if input.ImportVPC == nil && input.VPCConfig == nil && len(input.ImportCertARNs) == 0 {
 		return nil
 	}
 	return &CustomizeEnv{

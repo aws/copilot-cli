@@ -5,11 +5,11 @@ package deploy
 
 import "fmt"
 
-type errSvcWithNoAliasDeployingToEnvWithImportedCerts struct {
+type errSvcWithNoALBAliasDeployingToEnvWithImportedCerts struct {
 	name    string
 	envName string
 }
 
-func (e *errSvcWithNoAliasDeployingToEnvWithImportedCerts) Error() string {
-	return fmt.Sprintf("cannot deploy service %s without custom domain to environment %s with certificate imported", e.name, e.envName)
+func (e *errSvcWithNoALBAliasDeployingToEnvWithImportedCerts) Error() string {
+	return fmt.Sprintf("cannot deploy service %s without http.alias to environment %s with certificate imported", e.name, e.envName)
 }

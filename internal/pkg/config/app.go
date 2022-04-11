@@ -22,8 +22,8 @@ type Application struct {
 	Tags               map[string]string `json:"tags,omitempty"`     // Labels to apply to resources created within the app.
 }
 
-// RequiresDNSDelegation returns true if we have to set up DNS Delegation resources
-func (a *Application) RequiresDNSDelegation() bool {
+// DNSDelegated returns true if the application is DNS delegated.
+func (a *Application) DNSDelegated() bool {
 	return a.Domain != ""
 }
 

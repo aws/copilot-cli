@@ -665,18 +665,18 @@ func (m *MockaliasCertValidator) EXPECT() *MockaliasCertValidatorMockRecorder {
 	return m.recorder
 }
 
-// ValidCertificatesAliases mocks base method.
-func (m *MockaliasCertValidator) ValidCertificatesAliases(aliases, certs []string) error {
+// ValidateCertAliases mocks base method.
+func (m *MockaliasCertValidator) ValidateCertAliases(aliases, certs []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidCertificatesAliases", aliases, certs)
+	ret := m.ctrl.Call(m, "ValidateCertAliases", aliases, certs)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ValidCertificatesAliases indicates an expected call of ValidCertificatesAliases.
-func (mr *MockaliasCertValidatorMockRecorder) ValidCertificatesAliases(aliases, certs interface{}) *gomock.Call {
+// ValidateCertAliases indicates an expected call of ValidateCertAliases.
+func (mr *MockaliasCertValidatorMockRecorder) ValidateCertAliases(aliases, certs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidCertificatesAliases", reflect.TypeOf((*MockaliasCertValidator)(nil).ValidCertificatesAliases), aliases, certs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCertAliases", reflect.TypeOf((*MockaliasCertValidator)(nil).ValidateCertAliases), aliases, certs)
 }
 
 // MocktimeoutError is a mock of timeoutError interface.

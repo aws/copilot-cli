@@ -89,7 +89,6 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 			actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
 			actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
 			actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
-			fmt.Println(actualString)
 
 			actualBytes = []byte(actualString)
 			mActual := make(map[interface{}]interface{})
