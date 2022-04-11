@@ -68,6 +68,7 @@ Finally, you can disable the job from triggering by setting the `schedule` field
 ```yaml
 on:
   schedule: "none"
+```
 
 <div class="separator"></div>
 
