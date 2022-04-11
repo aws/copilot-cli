@@ -9,7 +9,7 @@ Rule:
     {{- else }}
     ScheduleExpression: !Ref Schedule
     State: ENABLED 
-    {{ end }}
+    {{- end }}
     Targets:
     - Arn: !Ref StateMachine
       Id: statemachine
