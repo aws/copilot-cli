@@ -3,7 +3,7 @@ TaskRole:
     'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
   Type: AWS::IAM::Role
   Properties:
-    {{if or (.NestedStack) (eq .Observability.Tracing "AWSXRAY") }}
+    {{if or (.NestedStack) (eq .Observability.Tracing "AWSXRAY")}}
     ManagedPolicyArns:
     {{end}}
       {{if and (.NestedStack) (gt (len .NestedStack.PolicyOutputs) 0)}}
