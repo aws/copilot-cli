@@ -146,6 +146,8 @@ NLBCustomDomainFunction:
     Runtime: nodejs12.x
 
 NLBCustomDomainRole:
+  Metadata:
+    'aws:copilot:description': "An IAM role to update the environment Route 53 hosted zone"
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
@@ -219,6 +221,8 @@ NLBCertValidatorFunction:
     Runtime: nodejs12.x
 
 NLBCertValidatorRole:
+  Metadata:
+    'aws:copilot:description': "An IAM role to request and validate a certificate for your service"
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

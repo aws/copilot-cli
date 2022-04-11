@@ -308,6 +308,10 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule:  "rate(5 minutes)",
 			wantedSchedule: "rate(5 minutes)",
 		},
+		"passthrough 'none' case": {
+			inputSchedule:  "none",
+			wantedSchedule: "none",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
