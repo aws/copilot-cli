@@ -6,13 +6,13 @@ TaskRole:
     {{if or (.NestedStack) (eq .Observability.Tracing "AWSXRAY")}}
     ManagedPolicyArns:
     {{end}}
+      {{if eq .Observability.Tracing "AWSXRAY"}}
+      - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      {{end}}
       {{if and (.NestedStack) (gt (len .NestedStack.PolicyOutputs) 0)}}
       {{range $managedPolicy := .NestedStack.PolicyOutputs}}
       - Fn::GetAtt: [{{$.NestedStack.StackName}}, Outputs.{{$managedPolicy}}]
       {{end}}
-      {{end}}
-      {{if eq .Observability.Tracing "AWSXRAY"}}
-      - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
       {{end}}
     AssumeRolePolicyDocument:
       Statement:
