@@ -1,6 +1,6 @@
-# AWS Copilot v1.17: Tracing for Request-Driven Web Service.
+# AWS Copilot v1.17: Tracing for Request-Driven Web Services.
 
-Copilot v1.17 brings with it a brand-new features and several improvements:
+Copilot v1.17 brings a brand-new feature and several improvements:
 
 * **Tracing for Request-Driven Web Service:** With the release of AWS X-Ray tracing support for AWS App runner services, you can now add `observability.tracing: awsxray` in your Request-Driven Web Service's 
   manifest to send your traces to AWS XRay. [See detailed section](./#send-your-request-driven-web-services-traces-to-aws-xray).
