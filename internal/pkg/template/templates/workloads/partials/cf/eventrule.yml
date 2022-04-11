@@ -3,10 +3,10 @@ Rule:
     'aws:copilot:description': "A CloudWatch event rule to trigger the job's state machine"
   Type: AWS::Events::Rule
   Properties:
-    {{if eq .ScheduleExpression "none"}}
+    {{- if eq .ScheduleExpression "none"}}
     ScheduleExpression: "rate(5 minutes)"
     State: DISABLED 
-    {{ else }}
+    {{- else }}
     ScheduleExpression: !Ref Schedule
     State: ENABLED 
     {{ end }}
