@@ -64,6 +64,15 @@ Alternatively, you can specify a cron schedule if you'd like to trigger the job 
 * `"* * * * *"` based on the standard [cron format](https://en.wikipedia.org/wiki/Cron#Overview).
 * `"cron({fields})"` based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) with six fields.
 
+Inorder to disable the Scheduled Job you can set the `schedule` field to the value `none` for example:
+
+```yaml
+on:
+  schedule: "none"
+```
+
+This will disable the Eventbridge Rule 
+
 <div class="separator"></div>
 
 {% include 'image-config.en.md' %}
