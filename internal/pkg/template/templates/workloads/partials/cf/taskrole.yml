@@ -3,13 +3,14 @@ TaskRole:
     'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
   Type: AWS::IAM::Role
   Properties:
-    {{- if or (.NestedStack) (eq .Observability.Tracing "AWSXRAY")}}
+    {{- $hasAddonPolicies := and .NestedStack (gt (len .NestedStack.PolicyOutputs) 0)}}
+    {{- if or $hasAddonPolicies (eq .Observability.Tracing "AWSXRAY")}}
     ManagedPolicyArns:
     {{- end}}
       {{- if eq .Observability.Tracing "AWSXRAY"}}
       - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
       {{- end}}
-      {{- if and (.NestedStack) (gt (len .NestedStack.PolicyOutputs) 0)}}
+      {{- if $hasAddonPolicies}}
       {{- range $managedPolicy := .NestedStack.PolicyOutputs}}
       - Fn::GetAtt: [{{$.NestedStack.StackName}}, Outputs.{{$managedPolicy}}]
       {{- end}}
