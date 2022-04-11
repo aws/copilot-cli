@@ -1,4 +1,4 @@
-# AWS Copilot v1.17: Tracing for Request-Driven Web Service.
+# AWS Copilot v1.17: Tracing for Request-Driven Web Services.
 
 Copilot v1.17 brings with it a brand-new features and several improvements:
 
