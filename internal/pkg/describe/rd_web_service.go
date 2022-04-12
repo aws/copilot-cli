@@ -10,6 +10,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -62,6 +65,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
+	var observabilities []Observability
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var envVars envVars
@@ -86,7 +90,6 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			CPU:         service.CPU,
 			Memory:      service.Memory,
 		})
-
 		for _, v := range service.EnvironmentVariables {
 			envVars = append(envVars, &envVar{
 				Environment: env,
@@ -94,7 +97,10 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Value:       v.Value,
 			})
 		}
-
+		observabilities = append(observabilities, Observability{
+			Environment: env,
+			Tracing:     formatTracingConfiguration(service.Observability.TraceConfiguration),
+		})
 		if d.enableResources {
 			stackResources, err := d.envSvcDescribers[env].ServiceStackResources()
 			if err != nil {
@@ -102,6 +108,16 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			}
 			resources[env] = stackResources
 		}
+	}
+
+	isObservabilitiesEmpty := true
+	for _, oc := range observabilities {
+		if !oc.isEmpty() {
+			isObservabilitiesEmpty = false
+		}
+	}
+	if isObservabilitiesEmpty {
+		observabilities = nil
 	}
 
 	return &rdWebSvcDesc{
@@ -112,9 +128,36 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Routes:                  routes,
 		Variables:               envVars,
 		Resources:               resources,
+		Observability:           observabilities,
 
 		environments: environments,
 	}, nil
+}
+
+func formatTracingConfiguration(configuration *apprunner.TraceConfiguration) *Tracing {
+	if configuration == nil {
+		return nil
+	}
+	return &Tracing{
+		Vendor: aws.StringValue(configuration.Vendor),
+	}
+}
+
+type Observability struct {
+	Environment string   `json:"environment"`
+	Tracing     *Tracing `json:"tracing,omitempty"`
+}
+
+type Tracing struct {
+	Vendor string `json:"vendor"`
+}
+
+func (o *Observability) isEmpty() bool {
+	return o.Tracing.isEmpty()
+}
+
+func (t *Tracing) isEmpty() bool {
+	return t.Vendor == ""
 }
 
 // rdWebSvcDesc contains serialized parameters for a web service.
@@ -126,6 +169,7 @@ type rdWebSvcDesc struct {
 	Routes                  []*WebServiceRoute      `json:"routes"`
 	Variables               envVars                 `json:"variables"`
 	Resources               deployedSvcResources    `json:"resources,omitempty"`
+	Observability           []Observability         `json:"observability,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -151,6 +195,20 @@ func (w *rdWebSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.AppRunnerConfigurations.humanString(writer)
+	if w.hasObservabilityConfiguration() {
+		fmt.Fprint(writer, color.Bold.Sprint("\nObservability\n\n"))
+		writer.Flush()
+		headers := []string{"Environment", "Tracing"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+		for _, config := range w.Observability {
+			tracingVendor := "None"
+			if config.Tracing != nil && config.Tracing.Vendor != "" {
+				tracingVendor = config.Tracing.Vendor
+			}
+			fmt.Fprintf(writer, "  %s\t%s\n", config.Environment, tracingVendor)
+		}
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	headers := []string{"Environment", "URL"}
@@ -172,4 +230,13 @@ func (w *rdWebSvcDesc) HumanString() string {
 	}
 	writer.Flush()
 	return b.String()
+}
+
+func (w *rdWebSvcDesc) hasObservabilityConfiguration() bool {
+	for _, envObservabilityConfig := range w.Observability {
+		if !envObservabilityConfig.isEmpty() {
+			return true
+		}
+	}
+	return false
 }
