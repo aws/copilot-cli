@@ -343,15 +343,32 @@ func TestPipelineStage_Init(t *testing.T) {
 	t.Run("number of expected deployments match", func(t *testing.T) {
 		require.Equal(t, 2, len(stg.Deployments()))
 	})
-	t.Run("stage should require manual approval if manifest requires it", func(t *testing.T) {
-		require.True(t, stg.RequiresApproval())
-	})
 	t.Run("stage test commands match manifest input", func(t *testing.T) {
 		require.ElementsMatch(t, []string{"make test", `echo "made test"`}, stg.TestCommands())
 	})
 	t.Run("stage test commands order should come after deployments", func(t *testing.T) {
 		require.Equal(t, 3, stg.TestCommandsOrder())
 	})
+	t.Run("manual approval button", func(t *testing.T) {
+		require.NotNil(t, stg.Approval(), "should require approval action for stages when the manifest requires it")
+
+		stg := PipelineStage{}
+		require.Nil(t, stg.Approval(), "should return nil by default")
+	})
+}
+
+func TestManualApprovalAction_Name(t *testing.T) {
+	action := ManualApprovalAction{
+		name: "test",
+	}
+
+	require.Equal(t, "ApprovePromotionTo-test", action.Name())
+}
+
+func TestManualApprovalAction_RunOrder(t *testing.T) {
+	action := ManualApprovalAction{}
+
+	require.Equal(t, 1, action.RunOrder(), "approval actions should always run first in the stage")
 }
 
 func TestWorkloadDeployAction_Name(t *testing.T) {

@@ -395,14 +395,14 @@ Resources:
         {{- $numDeployments := len $stage.Deployments}}{{- if gt $numDeployments 0}}
         - Name: DeployTo-{{$stage.Name}}
           Actions:
-            {{- if $stage.RequiresApproval }}
-            - Name: ApprovePromotionTo-{{$stage.Name}}
+            {{- if $stage.Approval }}
+            - Name: {{$stage.Approval.Name}}
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
                 Version: 1
                 Provider: Manual
-              RunOrder: 1
+              RunOrder: {{$stage.Approval.RunOrder}}
             {{- end}}
             {{- range $deployment := $stage.Deployments}}
             - Name: {{$deployment.Name}}

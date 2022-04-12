@@ -495,9 +495,15 @@ func (stg *PipelineStage) Name() string {
 	return stg.associatedEnvironment.Name
 }
 
-// RequiresApproval returns true if the stage requires a manual approval before running deployments.
-func (stg *PipelineStage) RequiresApproval() bool {
-	return stg.requiresApproval
+// Approval returns a manual approval action for the stage.
+// If the stage does not require approval, then returns nil.
+func (stg *PipelineStage) Approval() *ManualApprovalAction {
+	if !stg.requiresApproval {
+		return nil
+	}
+	return &ManualApprovalAction{
+		name: stg.associatedEnvironment.Name,
+	}
 }
 
 func (stg *PipelineStage) Region() string {
@@ -542,6 +548,21 @@ func (stg *PipelineStage) Deployments() []WorkloadDeployAction {
 		})
 	}
 	return actions
+}
+
+// ManualApprovalAction represents a stage approval action.
+type ManualApprovalAction struct {
+	name string // Name of the stage to approve.
+}
+
+// Name returns the name of the CodePipeline approval action for the stage.
+func (a *ManualApprovalAction) Name() string {
+	return fmt.Sprintf("ApprovePromotionTo-%s", a.name)
+}
+
+// RunOrder returns the order in which the action should run.
+func (a *ManualApprovalAction) RunOrder() int {
+	return 1
 }
 
 // WorkloadDeployAction represents a CodePipeline action of category "Deploy" for a workload stack.
