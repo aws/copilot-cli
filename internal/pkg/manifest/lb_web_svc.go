@@ -62,6 +62,7 @@ type LoadBalancedWebServiceConfig struct {
 	PublishConfig    PublishConfig                    `yaml:"publish"`
 	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
 	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
+	DeployConfig     DeploymentConfiguration          `yaml:"deployment"`
 	Observability    Observability                    `yaml:"observability"`
 }
 
