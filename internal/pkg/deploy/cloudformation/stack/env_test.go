@@ -107,6 +107,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
 					ParameterValue: aws.String("env.project.local"),
 				},
+				{
+					ParameterKey:   aws.String(createHTTPSListener),
+					ParameterValue: aws.String("false"),
+				},
 			},
 		},
 		"with DNS": {
@@ -135,6 +139,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
 					ParameterValue: aws.String("env.project.local"),
+				},
+				{
+					ParameterKey:   aws.String(createHTTPSListener),
+					ParameterValue: aws.String("true"),
 				},
 			},
 		},

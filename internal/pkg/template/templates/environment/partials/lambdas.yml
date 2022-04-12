@@ -1,5 +1,4 @@
 # DNS Delegation Resources
-{{- if not .ImportCertARNs}}
 CertificateValidationFunction:
   Type: AWS::Lambda::Function
   Condition: DelegateDNS
@@ -25,7 +24,6 @@ CustomDomainFunction:
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x 
-{{- end}}
 
 DNSDelegationFunction:
   Type: AWS::Lambda::Function

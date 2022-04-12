@@ -906,15 +906,21 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 	if err := d.validateNLBWSRuntime(); err != nil {
 		return nil, err
 	}
-	var opts []stack.LoadBalancedWebServiceOption
+	var cidrBlocks []string
 	if !d.lbMft.NLBConfig.IsEmpty() {
-		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
+		cidrBlocks, err = d.publicCIDRBlocksGetter.PublicCIDRBlocks()
 		if err != nil {
 			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
 		}
-		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
-	conf, err := stack.NewLoadBalancedWebService(d.lbMft, d.env.Name, d.app.Name, *rc, append(opts, d.albOpts(in.RootUserARN)...)...)
+	conf, err := stack.NewLoadBalancedWebService(stack.NewLoadBalancedWebServiceOpts{
+		App:                    d.app,
+		Env:                    d.env,
+		Manifest:               d.lbMft,
+		RuntimeConfig:          *rc,
+		RootUserARN:            in.RootUserARN,
+		PublicSubnetCIDRBlocks: cidrBlocks,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -924,25 +930,6 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 			return ecs.New(s)
 		}),
 	}, nil
-}
-
-func (d *lbSvcDeployer) albOpts(rootUserARN string) []stack.LoadBalancedWebServiceOption {
-	var opts []stack.LoadBalancedWebServiceOption
-	if d.app.DNSDelegated() {
-		opts = append(opts, stack.WithDNSDelegation(deploy.AppInformation{
-			Name:                d.app.Name,
-			DNSName:             d.app.Domain,
-			AccountPrincipalARN: rootUserARN,
-		}))
-		if !d.lbMft.RoutingRule.Disabled() {
-			opts = append(opts, stack.WithHTTPS())
-		}
-	} else {
-		if !d.lbMft.RoutingRule.Disabled() && d.env.HasImportedCerts() {
-			opts = append(opts, stack.WithHTTPS())
-		}
-	}
-	return opts
 }
 
 func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {

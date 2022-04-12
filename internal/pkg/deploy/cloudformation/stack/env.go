@@ -44,6 +44,7 @@ const (
 	envOutputCFNExecutionRoleARN     = "CFNExecutionRoleARN"
 	envOutputManagerRoleKey          = "EnvironmentManagerRoleARN"
 	EnvParamServiceDiscoveryEndpoint = "ServiceDiscoveryEndpoint"
+	createHTTPSListener              = "CreateHTTPSListener"
 
 	// Default parameter values
 	DefaultVPCCIDR            = "10.0.0.0/16"
@@ -113,6 +114,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
+	httpsListener := "false"
+	if len(e.in.ImportCertARNs) != 0 || e.in.App.DNSDelegationRole() != "" {
+		httpsListener = "true"
+	}
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
@@ -137,6 +142,10 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
 			ParameterValue: aws.String(fmt.Sprintf(fmtServiceDiscoveryEndpoint, e.in.Name, e.in.App.Name)),
+		},
+		{
+			ParameterKey:   aws.String(createHTTPSListener),
+			ParameterValue: aws.String(httpsListener),
 		},
 	}, nil
 }

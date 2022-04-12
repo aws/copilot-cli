@@ -13,7 +13,6 @@ DelegateDNSAction:
     NameServers: !GetAtt EnvironmentHostedZone.NameServers
     RootDNSRole: !Ref AppDNSDelegationRole
 
-{{- if not .ImportCertARNs}}
 HTTPSCert:
   Metadata:
     'aws:copilot:description': 'Request and validate an ACM certificate for your domain'
@@ -46,5 +45,4 @@ CustomDomainAction:
     AppDNSRole: !Ref AppDNSDelegationRole
     DomainName: !Ref AppDNSName
     LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
-    LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID 
-{{- end}}
+    LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID

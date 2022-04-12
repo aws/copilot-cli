@@ -78,6 +78,8 @@ var (
 		"state-machine",
 		"state-machine-definition.json",
 		"efs-access-point",
+		"https-listener",
+		"http-listener",
 		"env-controller",
 		"mount-points",
 		"volumes",

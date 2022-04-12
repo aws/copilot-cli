@@ -17,7 +17,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -83,15 +83,18 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 
-		serializer, err := stack.NewLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
-			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
-			AccountID:                "123456789123",
-			Region:                   "us-west-2",
-		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}), stack.WithHTTPS(), stack.WithDNSDelegation(deploy.AppInformation{
-			AccountPrincipalARN: "arn:aws:iam::123456789123:root",
-			DNSName:             "example.com",
-			Name:                appName,
-		}))
+		serializer, err := stack.NewLoadBalancedWebService(stack.NewLoadBalancedWebServiceOpts{
+			App:      &config.Application{Name: appName, Domain: "example.com"},
+			Env:      &config.Environment{Name: tc.envName},
+			Manifest: v,
+			RuntimeConfig: stack.RuntimeConfig{
+				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
+				AccountID:                "123456789123",
+				Region:                   "us-west-2",
+			},
+			RootUserARN:            "arn:aws:iam::123456789123:root",
+			PublicSubnetCIDRBlocks: []string{"10.0.0.0/24", "10.1.0.0/24"},
+		})
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
