@@ -34,6 +34,21 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
+// DescribeObservabilityConfiguration mocks base method.
+func (m *Mockapi) DescribeObservabilityConfiguration(input *apprunner.DescribeObservabilityConfigurationInput) (*apprunner.DescribeObservabilityConfigurationOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeObservabilityConfiguration", input)
+	ret0, _ := ret[0].(*apprunner.DescribeObservabilityConfigurationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeObservabilityConfiguration indicates an expected call of DescribeObservabilityConfiguration.
+func (mr *MockapiMockRecorder) DescribeObservabilityConfiguration(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeObservabilityConfiguration", reflect.TypeOf((*Mockapi)(nil).DescribeObservabilityConfiguration), input)
+}
+
 // DescribeService mocks base method.
 func (m *Mockapi) DescribeService(input *apprunner.DescribeServiceInput) (*apprunner.DescribeServiceOutput, error) {
 	m.ctrl.T.Helper()

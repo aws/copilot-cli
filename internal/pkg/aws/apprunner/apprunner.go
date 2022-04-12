@@ -41,6 +41,7 @@ type api interface {
 	PauseService(input *apprunner.PauseServiceInput) (*apprunner.PauseServiceOutput, error)
 	ResumeService(input *apprunner.ResumeServiceInput) (*apprunner.ResumeServiceOutput, error)
 	StartDeployment(input *apprunner.StartDeploymentInput) (*apprunner.StartDeploymentOutput, error)
+	DescribeObservabilityConfiguration(input *apprunner.DescribeObservabilityConfigurationInput) (*apprunner.DescribeObservabilityConfigurationOutput, error)
 }
 
 // AppRunner wraps an AWS AppRunner client.
@@ -72,6 +73,18 @@ func (a *AppRunner) DescribeService(svcARN string) (*Service, error) {
 	}
 	sort.SliceStable(envVars, func(i int, j int) bool { return envVars[i].Name < envVars[j].Name })
 
+	var observabilityConfiguration ObservabilityConfiguration
+	if resp.Service.ObservabilityConfiguration != nil && aws.BoolValue(resp.Service.ObservabilityConfiguration.ObservabilityEnabled) {
+		if out, err := a.client.DescribeObservabilityConfiguration(&apprunner.DescribeObservabilityConfigurationInput{
+			ObservabilityConfigurationArn: resp.Service.ObservabilityConfiguration.ObservabilityConfigurationArn,
+		}); err == nil {
+			// NOTE: swallow the error otherwise, because observability is an optional description of the service.
+			// Example error: when "EnvManagerRole" doesn't have the "apprunner:ObservabilityConfiguration" permission.
+			observabilityConfiguration = ObservabilityConfiguration{
+				TraceConfiguration: (*TraceConfiguration)(out.ObservabilityConfiguration.TraceConfiguration),
+			}
+		}
+	}
 	return &Service{
 		ServiceARN:           aws.StringValue(resp.Service.ServiceArn),
 		Name:                 aws.StringValue(resp.Service.ServiceName),
@@ -85,6 +98,7 @@ func (a *AppRunner) DescribeService(svcARN string) (*Service, error) {
 		Memory:               *resp.Service.InstanceConfiguration.Memory,
 		ImageID:              *resp.Service.SourceConfiguration.ImageRepository.ImageIdentifier,
 		Port:                 *resp.Service.SourceConfiguration.ImageRepository.ImageConfiguration.Port,
+		Observability:        observabilityConfiguration,
 	}, nil
 }
 
