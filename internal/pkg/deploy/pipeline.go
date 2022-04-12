@@ -538,20 +538,49 @@ func (stg *PipelineStage) TestCommandsOrder() int {
 
 // Deployments returns a list of deploy actions for the pipeline.
 func (stg *PipelineStage) Deployments() []WorkloadDeployAction {
+	var prevActions []orderedRunner
+	if approval := stg.Approval(); approval != nil {
+		prevActions = append(prevActions, approval)
+	}
+
 	var actions []WorkloadDeployAction
 	for _, workload := range stg.localWorkloads {
 		actions = append(actions, WorkloadDeployAction{
-			name:             workload,
-			envName:          stg.associatedEnvironment.Name,
-			appName:          stg.AppName,
-			requiresApproval: stg.requiresApproval,
+			action: action{
+				prevActions: prevActions,
+			},
+			name:    workload,
+			envName: stg.associatedEnvironment.Name,
+			appName: stg.AppName,
 		})
 	}
 	return actions
 }
 
+type orderedRunner interface {
+	RunOrder() int
+}
+
+// action represents a generic CodePipeline action.
+type action struct {
+	prevActions []orderedRunner
+}
+
+// RunOrder returns the order in which the action should run. A higher numbers means the action is run later.
+// Actions with the same RunOrder run in parallel.
+func (a *action) RunOrder() int {
+	max := 0
+	for _, prevAction := range a.prevActions {
+		if cur := prevAction.RunOrder(); cur > max {
+			max = cur
+		}
+	}
+	return max + 1
+}
+
 // ManualApprovalAction represents a stage approval action.
 type ManualApprovalAction struct {
+	action
 	name string // Name of the stage to approve.
 }
 
@@ -560,18 +589,13 @@ func (a *ManualApprovalAction) Name() string {
 	return fmt.Sprintf("ApprovePromotionTo-%s", a.name)
 }
 
-// RunOrder returns the order in which the action should run.
-func (a *ManualApprovalAction) RunOrder() int {
-	return 1
-}
-
 // WorkloadDeployAction represents a CodePipeline action of category "Deploy" for a workload stack.
 type WorkloadDeployAction struct {
+	action
+
 	name    string // workload name.
 	envName string
 	appName string
-
-	requiresApproval bool
 }
 
 // Name returns the name of the CodePipeline deploy action for a workload.
@@ -596,13 +620,18 @@ func (a *WorkloadDeployAction) TemplateConfigPath() string {
 	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
 }
 
-// RunOrder returns the order in which the action should run.
-// Actions with the same RunOrder run in parallel.
-// RunOrders are in ascending order.
-func (a *WorkloadDeployAction) RunOrder() int {
-	order := 1 // By default, all workloads run in parallel.
-	if a.requiresApproval {
-		return order + 1 // Workload deployments should happen after the manual approval action.
-	}
-	return order
+// TestCommandsAction represents a CodePipeline action of category "Test" to validate deployments.
+type TestCommandsAction struct {
+	action
+	commands []string
+}
+
+// Name returns the name of the test action.
+func (a *TestCommandsAction) Name() string {
+	return "TestCommands"
+}
+
+// Commands returns the list commands to run part of the test action.
+func (a *TestCommandsAction) Commands() []string {
+	return a.commands
 }

@@ -397,15 +397,16 @@ func TestWorkloadDeployAction_RunOrder(t *testing.T) {
 	}{
 		"action has a preceding manual approval": {
 			in: WorkloadDeployAction{
-				name:             "frontend",
-				requiresApproval: true,
+				action: action{
+					prevActions: []orderedRunner{&ManualApprovalAction{}},
+				},
+				name: "frontend",
 			},
 			wanted: 2,
 		},
 		"action does not require a manual approval": {
 			in: WorkloadDeployAction{
-				name:             "frontend",
-				requiresApproval: false,
+				name: "frontend",
 			},
 			wanted: 1,
 		},
