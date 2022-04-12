@@ -2,22 +2,9 @@ TaskRole:
   Metadata:
     'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
   Type: AWS::IAM::Role
-  Properties:
-    {{- $hasAddonPolicies := false}}
-    {{- if .NestedStack}}{{- if (gt (len .NestedStack.PolicyOutputs) 0)}}
-      {{- $hasAddonPolicies = true}}
-    {{- end}}{{- end}}
-    {{- if or $hasAddonPolicies (eq .Observability.Tracing "AWSXRAY")}}
-    ManagedPolicyArns:
-    {{- end}}
-      {{- if eq .Observability.Tracing "AWSXRAY"}}
-      - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
-      {{- end}}
-      {{- if $hasAddonPolicies}}
-      {{- range $managedPolicy := .NestedStack.PolicyOutputs}}
-      - Fn::GetAtt: [{{$.NestedStack.StackName}}, Outputs.{{$managedPolicy}}]
-      {{- end}}
-      {{- end}}
+  Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{if gt (len .NestedStack.PolicyOutputs) 0}}
+    ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}
+      - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}{{end}}
     AssumeRolePolicyDocument:
       Statement:
         - Effect: Allow
@@ -115,3 +102,23 @@ TaskRole:
                 - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
               {{- end}}
       {{- end}}{{- end}}
+      {{- if eq .Observability.Tracing "AWSXRAY"}}
+      - PolicyName: 'AWSDistroOpenTelemetryPolicy' 
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'logs:PutLogEvents'
+                - 'logs:CreateLogGroup'
+                - 'logs:CreateLogStream'
+                - 'logs:DescribeLogStreams'
+                - 'logs:DescribeLogGroups'
+                - 'xray:PutTraceSegments'
+                - 'xray:PutTelemetryRecords'
+                - 'xray:GetSamplingRules'
+                - 'xray:GetSamplingTargets'
+                - 'xray:GetSamplingStatisticSummaries'
+                - 'ssm:GetParameters'
+              Resource: "*"
+      {{- end}}
