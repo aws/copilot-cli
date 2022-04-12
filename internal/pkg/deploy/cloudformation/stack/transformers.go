@@ -609,6 +609,18 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
+func getDeployConfig(deployStrategyName string) template.DeploymentConfigurationOpts {
+	var deployConfigs template.DeploymentConfigurationOpts
+	if deployStrategyName == "recreate" {
+		deployConfigs.MinHealthyPercent = 0
+		deployConfigs.MaxHealthyPercent = 100
+	} else {
+		deployConfigs.MinHealthyPercent = 100
+		deployConfigs.MaxHealthyPercent = 200
+	}
+	return deployConfigs
+}
+
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
 	out, err := command.ToStringSlice()
 	if err != nil {

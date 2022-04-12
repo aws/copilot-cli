@@ -30,3 +30,5 @@ exec: true     # Enable running commands in your container.
 #environments:
 #  test:
 #    count: 2               # Number of tasks to run for the "test" environment.
+#    deployment:            # deployment strategy for the "test" environment.
+#       rolling: 'recreate' # key is rolling deployment and value is deployment strategy name i.e. either default or recreate.

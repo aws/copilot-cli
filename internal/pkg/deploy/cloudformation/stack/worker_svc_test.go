@@ -217,6 +217,10 @@ Outputs:
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},
 					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 100,
+						MaxHealthyPercent: 200,
+					},
 					EntryPoint: []string{"enter", "from"},
 					Command:    []string{"here"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)

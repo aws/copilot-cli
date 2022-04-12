@@ -100,6 +100,8 @@ func (s *WorkerService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
+	deployConfig := getDeployConfig(aws.StringValue(s.manifest.DeployConfig.Rolling))
+
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -135,6 +137,7 @@ func (s *WorkerService) Template() (string, error) {
 		BacklogPerTaskCalculatorLambda: backlogPerTaskLambda.String(),
 		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                        convertNetworkConfig(s.manifest.Network),
+		DeploymentConfiguration:        deployConfig,
 		EntryPoint:                     entrypoint,
 		Command:                        command,
 		DependsOn:                      convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),

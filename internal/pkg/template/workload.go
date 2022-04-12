@@ -341,6 +341,12 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
+// DeploymentConfiguraitonOpts holds values for MinHealthyPercent and MaxHealthyPercent.
+type DeploymentConfigurationOpts struct {
+	MinHealthyPercent int // MinHealthyPercent parameter represents an upper limit on the number of tasks in a service
+	MaxHealthyPercent int // MaxHealthyPercent represents a lower limit on the number of tasks in a service
+}
+
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
 type ExecuteCommandOpts struct{}
 
@@ -471,12 +477,13 @@ type WorkloadOpts struct {
 	ALBEnabled               bool
 
 	// Additional options for service templates.
-	WorkloadType        string
-	HealthCheck         *ContainerHealthCheck
-	HTTPHealthCheck     HTTPHealthCheckOpts
-	DeregistrationDelay *int64
-	AllowedSourceIps    []string
-	NLB                 *NetworkLoadBalancer
+	WorkloadType            string
+	HealthCheck             *ContainerHealthCheck
+	HTTPHealthCheck         HTTPHealthCheckOpts
+	DeregistrationDelay     *int64
+	AllowedSourceIps        []string
+	NLB                     *NetworkLoadBalancer
+	DeploymentConfiguration DeploymentConfigurationOpts
 
 	// Lambda functions.
 	RulePriorityLambda             string
