@@ -1,6 +1,11 @@
 # AWS Copilot v1.17: Tracing for Request-Driven Web Services.
 
-The AWS Copilot core team is excited to announce the Copilot v1.17 release. Special shout-out to [@kangere](https://github.com/kangere)
+It's only been a week since v1.16! Today, the AWS Copilot core team is announcing together with AWS App Runner the support for integrated tracing using AWS X-Ray with OpenTelemetry.
+To learn more about App Runner's release, see [here](<placeholder>). For
+enabling tracing for your Request-Driven Web Services in Copilot, [see detailed section](./#send-your-request-driven-web-services-traces-to-aws-xray).
+
+
+Special shout-out to [@kangere](https://github.com/kangere)
 who contributed to this release. Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 270 people online,
 who help each other daily. Thanks to every one of you who shows love and support for AWS Copilot.
 
@@ -16,6 +21,8 @@ Copilot v1.17 brings a brand-new feature and several improvements:
   ```
 * **Increased visibility for progress trackers:** Now progress trackers are showing more information, such as the creation of HTTP Listener rules. ([#3430](https://github.com/aws/copilot-cli/pull/3430) & [#3432](https://github.com/aws/copilot-cli/pull/3432)).
 * **Bug fix:** Remove color formatting of suggested pipeline names ([#3437](https://github.com/aws/copilot-cli/pull/3437)).
+
+There is no breaking change in this release.
 
 ## What’s AWS Copilot?
 
