@@ -305,6 +305,26 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
 		},
+		"error if fail to validate deployment": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								ResponseTime: durationp(10 * time.Second),
+							},
+						},
+					},
+					DeployConfig: DeploymentConfiguration{
+						Rolling: aws.String("mockName"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployment"`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -464,6 +484,29 @@ func TestBackendService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
+		},
+		"error if fail to validate deployment": {
+			config: BackendService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: BackendServiceType,
+							},
+						},
+					},
+					DeployConfig: DeploymentConfiguration{
+						Rolling: aws.String("mockName"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
 	}
 	for name, tc := range testCases {
@@ -752,6 +795,29 @@ func TestWorkerService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
+		},
+		"error if fail to validate deployment": {
+			config: WorkerService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: WorkerServiceType,
+							},
+						},
+					},
+					DeployConfig: DeploymentConfiguration{
+						Rolling: aws.String("mockName"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
 	}
 	for name, tc := range testCases {
@@ -2635,6 +2701,45 @@ func TestValidateARM(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDeploymentConfiguration_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		deployConfig DeploymentConfiguration
+		wanted       string
+	}{
+		"error if deploy config has invalid rolling strategy": {
+			deployConfig: DeploymentConfiguration{
+				Rolling: aws.String("unknown"),
+			},
+			wanted: `invalid rolling deployment strategy unknown, must be one of default or recreate`,
+		},
+		"ok if deployment strategy is recreate": {
+			deployConfig: DeploymentConfiguration{
+				Rolling: aws.String("recreate"),
+			},
+		},
+		"ok if deployment strategy is default": {
+			deployConfig: DeploymentConfiguration{
+				Rolling: aws.String("default"),
+			},
+		},
+		"ok if deployment is empty": {
+			deployConfig: DeploymentConfiguration{},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.deployConfig.Validate()
+
+			if tc.wanted != "" {
+				require.NotNil(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wanted)
+			} else {
+				require.NoError(t, gotErr)
 			}
 		})
 	}
