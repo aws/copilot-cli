@@ -74,6 +74,93 @@ sidecars:
         path: '/etc/mount1'
 ```
 
+Below is an example of running the [AWS X-Ray daemon](https://docs.aws.amazon.com/xray/latest/devguide/xray-daemon-ecs.html) as a sidecar.
+X-Ray accepts trace data over UDP on port 2000.
+
+```yaml
+sidecars:
+  xray_sidecar:
+    image: 'public.ecr.aws/xray/aws-xray-daemon:3.x'
+    port: 2000/udp
+```
+
+The X-Ray sidecar needs additional IAM permissions as shown below.  Include this in addons according to the [published documentation](../developing/additional-aws-resources.en.md)
+
+``` yaml
+Resources:
+  XrayWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: CopyOfAWSXRayDaemonWriteAccess
+            Effect: Allow
+            Action:
+              - xray:PutTraceSegments
+              - xray:PutTelemetryRecords
+              - xray:GetSamplingRules
+              - xray:GetSamplingTargets
+              - xray:GetSamplingStatisticSummaries
+            Resource: "*"
+
+Outputs:
+  XrayAccessPolicyArn:
+    Description: "The ARN of the ManagedPolicy to attach to the task role."
+    Value: !Ref XrayWritePolicy
+```
+
+An alternative to the X-Ray daemon sidecar is the [AWS Distro for OpenTelemetry](https://aws-otel.github.io/).  This sidecar not only collects
+X-Ray trace data, but can also ship ECS metrics to third-parties such as DataDog or New Relic.
+
+To use the OpenTelemetry sidecar, first, create a valid configuration file and store it in an SSM parameter.  A standard parameter is limited to 4KB.
+If the configuration file is larger than 4K, an advanced SSM parameter may be used.  The example below shows an OpenTelemetry configuration that accepts X-Ray traces and
+ECS metrics.
+
+```yaml
+receivers:
+  awsxray:
+    transport: udp
+  awsecscontainermetrics:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+
+exporters:
+  awsxray:
+    region: us-west-2
+  otlp:
+    endpoint: otlp.nr-data.net:4317
+    headers: 
+      api-key: YOUR-API-KEY-HERE
+
+service:
+  pipelines:
+    traces:
+      receivers: [awsxray,otlp]
+      processors: [batch]
+      exporters: [awsxray]
+    metrics:
+      receivers: [awsecscontainermetrics]
+      exporters: [otlp]
+```
+
+Create an SSM secret using the [copilot CLI](../commands/secret-init.en.md).  If an advanced parameter was required, it will need to be created and tagged manually.
+
+The configuration for the OpenTelemetry collector will be passed into the sidecar as an environment variable.
+
+```yaml
+sidecars:
+  otel_sidecar:
+    image: 'public.ecr.aws/aws-observability/aws-otel-collector:latest'
+    secrets:
+      AOT_CONFIG_CONTENT: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/otel_config
+```
+
 ### Sidecar patterns
 Sidecar patterns are predefined Copilot sidecar configurations. For now, the only supported pattern is FireLens, but we'll add more in the future!
 
