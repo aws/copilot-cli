@@ -1,7 +1,7 @@
 # AWS Copilot v1.17: Tracing for Request-Driven Web Services.
 
 It's only been a week since v1.16! Today, the AWS Copilot core team is announcing together with AWS App Runner the support for integrated tracing using AWS X-Ray with OpenTelemetry.
-To learn more about App Runner's release, see [here](<placeholder>). For
+To learn more about App Runner's release, see [here](https://aws.amazon.com/blogs/containers/tracing-an-aws-app-runner-service-using-aws-x-ray-with-opentelemetry/). For
 enabling tracing for your Request-Driven Web Services in Copilot, [see detailed section](./#send-your-request-driven-web-services-traces-to-aws-xray).
 
 
