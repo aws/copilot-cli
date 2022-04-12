@@ -236,7 +236,8 @@ EnvironmentManagerRole:
             "apprunner:ListServices",
             "apprunner:PauseService",
             "apprunner:ResumeService",
-            "apprunner:StartDeployment"
+            "apprunner:StartDeployment",
+            "apprunner:DescribeObservabilityConfiguration"
           ]
           Resource: "*"
         - Sid: Tags
